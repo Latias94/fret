@@ -92,6 +92,11 @@ mod surface_policy_tests {
     const UI_OVERLAY_RENAME_COMMAND_RS: &str = include_str!("ui/overlays/rename_command.rs");
     const UI_OVERLAY_RENAME_LIFECYCLE_RS: &str = include_str!("ui/overlays/rename_lifecycle.rs");
     const UI_VIEWPORT_OPTIONS_RS: &str = include_str!("ui/viewport_options.rs");
+    const UI_CANVAS_WIDGET_MARQUEE_BEGIN_RS: &str =
+        include_str!("ui/canvas/widget/marquee_begin.rs");
+    const UI_CANVAS_WIDGET_MARQUEE_CX_RS: &str = include_str!("ui/canvas/widget/marquee_cx.rs");
+    const UI_CANVAS_WIDGET_MARQUEE_FINISH_RS: &str =
+        include_str!("ui/canvas/widget/marquee_finish.rs");
     const UI_CANVAS_WIDGET_PAINT_INVALIDATION_RS: &str =
         include_str!("ui/canvas/widget/paint_invalidation.rs");
     const UI_CANVAS_WIDGET_REDRAW_REQUEST_RS: &str =
@@ -393,6 +398,29 @@ mod surface_policy_tests {
             assert!(
                 !node_drag_move_tail_sources.contains(forbidden),
                 "node drag move tail helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn marquee_begin_finish_stays_off_retained_bridge() {
+        let marquee_sources = [
+            UI_CANVAS_WIDGET_MARQUEE_BEGIN_RS,
+            UI_CANVAS_WIDGET_MARQUEE_CX_RS,
+            UI_CANVAS_WIDGET_MARQUEE_FINISH_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !marquee_sources.contains(forbidden),
+                "marquee begin/finish helpers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

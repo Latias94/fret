@@ -2776,6 +2776,35 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-350 Isolate marquee begin/finish retained Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/marquee_begin.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/marquee_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/marquee_finish.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/marquee_retained_cx.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move marquee begin capture/paint invalidation and marquee finish view-state I/O/release tail
+      actions behind a retained-agnostic `MarqueeCx` seam.
+    - Keep retained `EventCx` implementation in a dedicated retained adapter module.
+    - Extend the default source-policy gate so marquee begin/finish helpers and the pure Cx seam
+      cannot re-import retained bridge Cx names.
+  - Result:
+    - Added `MarqueeCx` for retained-agnostic host access, self pointer capture, and pointer-up
+      release/paint invalidation.
+    - Added `marquee_retained_cx.rs` as the retained `EventCx` adapter.
+    - Moved `marquee_begin.rs` and `marquee_finish.rs` off direct retained `EventCx` signatures.
+    - Added `marquee_begin_finish_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas marquee_begin_finish_stays_off_retained_bridge background_click_starts_pending_marquee_and_clears_selection_on_up marquee_replace_mode_replaces_selection_even_with_ctrl_pressed marquee_selects_connected_edges_for_selected_nodes marquee_selects_connected_edges_for_selected_nodes_with_store retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/marquee_begin.rs ecosystem/fret-node/src/ui/canvas/widget/marquee_cx.rs ecosystem/fret-node/src/ui/canvas/widget/marquee_finish.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

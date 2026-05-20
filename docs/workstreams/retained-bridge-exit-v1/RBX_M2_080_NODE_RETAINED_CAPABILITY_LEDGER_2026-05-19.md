@@ -138,6 +138,12 @@ Compat-gated but retained-bridge-free support:
   - `RBX-M2-340` moved node drag move tail host I/O and paint invalidation behind the
     retained-agnostic `NodeDragMoveTailCx` seam. Retained `EventCx` implements that seam in
     `node_drag_move_tail_retained_cx.rs`.
+- `ecosystem/fret-node/src/ui/canvas/widget/marquee_begin.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/marquee_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/marquee_finish.rs`
+  - `RBX-M2-350` moved marquee begin capture/paint invalidation and marquee finish view-state
+    I/O/release tail actions behind the retained-agnostic `MarqueeCx` seam. Retained `EventCx`
+    implements that seam in `marquee_retained_cx.rs`.
 
 Deleted retained overlay files:
 
@@ -193,6 +199,7 @@ Deleted retained overlay files:
 | Pending node drag click-select release Cx seam | retained canvas still adapts retained `EventCx` host access through `pending_node_drag_release_retained_cx.rs` and release-capture/paint invalidation through `retained_widget_tail.rs` | `RBX-M2-320` moves pending node drag click-select release view-state I/O onto retained-agnostic `PendingNodeDragReleaseCx` and source-policy gates the handler plus pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Pointer-up commit Cx seam | retained canvas still adapts retained `EventCx` host/window access through `pointer_up_commit_retained_cx.rs` and release-capture/paint invalidation through `retained_widget_tail.rs` | `RBX-M2-330` moves group drag, group resize, and node resize pointer-up commit helpers onto retained-agnostic `PointerUpCommitCx` and source-policy gates those helpers plus the pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Node drag move tail Cx seam | retained canvas still adapts retained `EventCx` host access through `node_drag_move_tail_retained_cx.rs` and paint invalidation through `retained_widget_tail.rs` | `RBX-M2-340` moves node drag move tail auto-pan host I/O and paint invalidation onto retained-agnostic `NodeDragMoveTailCx` and source-policy gates the tail helper plus pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
+| Marquee begin/finish Cx seam | retained canvas still adapts retained `EventCx` host access and self pointer capture through `marquee_retained_cx.rs`; release-capture/paint invalidation still flows through `retained_widget_tail.rs` | `RBX-M2-350` moves marquee begin capture/paint invalidation and finish selection-clear/release tail actions onto retained-agnostic `MarqueeCx` and source-policy gates the begin/finish helpers plus pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 
 ## New Gate
 
