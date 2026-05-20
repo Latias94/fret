@@ -134,6 +134,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_node_drag.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DISPATCH_COMMIT_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_left_route/dispatch/commit.rs");
+    const UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DISPATCH_PENDING_RS: &str =
+        include_str!("ui/canvas/widget/pointer_up_left_route/dispatch/pending.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_GROUP_DRAG_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_commit/group_drag.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RESIZE_RS: &str =
@@ -536,6 +538,22 @@ mod surface_policy_tests {
             assert!(
                 !pointer_up_commit_sources.contains(forbidden),
                 "pointer-up commit handlers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_up_pending_dispatch_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DISPATCH_PENDING_RS.contains(forbidden),
+                "pointer-up pending dispatch must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

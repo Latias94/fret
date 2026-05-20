@@ -2,15 +2,22 @@ use fret_core::Point;
 use fret_ui::UiHost;
 
 use crate::ui::canvas::state::ViewSnapshot;
-use crate::ui::canvas::widget::*;
+use crate::ui::canvas::widget::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+    pending_node_drag_release_cx::PendingNodeDragReleaseCx,
+};
 
-pub(super) fn handle_pending_release_chain<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_pending_release_chain<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: PendingNodeDragReleaseCx<H>,
+{
     super::super::super::pointer_up_pending::handle_pending_group_drag_release(canvas, cx)
         || super::super::super::pointer_up_pending::handle_pending_group_resize_release(canvas, cx)
         || super::super::super::pointer_up_pending::handle_pending_node_drag_release(

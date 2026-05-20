@@ -18,7 +18,10 @@ use super::{
     insert_view_editor_config, make_test_graph_two_nodes_with_ports_spaced_x,
     make_test_graph_two_nodes_with_size,
 };
-use crate::ui::canvas::state::{EdgeDrag, PendingGroupDrag, PendingGroupResize, WireDragKind};
+use crate::ui::canvas::state::{
+    EdgeDrag, PendingGroupDrag, PendingGroupResize, PendingNodeDrag, PendingNodeSelectAction,
+    PendingWireDrag, WireDragKind,
+};
 use crate::ui::canvas::state::{GroupResize, NodeDrag, NodeResize, NodeResizeHandle};
 use fret_ui::{Invalidation, retained_bridge::Widget as _};
 
@@ -1141,6 +1144,134 @@ fn pending_group_resize_release_clears_session_without_committing() {
         .unwrap()
         .unwrap();
     assert_eq!(rect_after, group_rect);
+}
+
+#[test]
+fn pending_node_drag_click_select_release_toggles_selection_and_finishes() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, a, b) = make_test_graph_two_nodes_with_size();
+    let graph = host.models.insert(graph_value);
+    let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.node_click_distance = 4.0;
+    });
+    let _ = view.update(&mut host, |s, _cx| {
+        s.selected_nodes = vec![b];
+        s.draw_order = vec![a, b];
+    });
+
+    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config);
+    let snapshot = canvas.sync_view_state(&mut host);
+    let pos = Point::new(Px(12.0), Px(16.0));
+    canvas.interaction.pending_node_drag = Some(PendingNodeDrag {
+        primary: a,
+        nodes: vec![a],
+        grab_offset: Point::new(Px(0.0), Px(0.0)),
+        start_pos: pos,
+        select_action: PendingNodeSelectAction::Toggle,
+        drag_enabled: true,
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
+
+    assert!(pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    assert!(canvas.interaction.pending_node_drag.is_none());
+    assert!(canvas.interaction.node_drag.is_none());
+    let (selected_nodes, draw_order) = view
+        .read_ref(cx.app, |s| (s.selected_nodes.clone(), s.draw_order.clone()))
+        .unwrap();
+    assert_eq!(selected_nodes, vec![b, a]);
+    assert_eq!(draw_order, vec![b, a]);
+    assert!(
+        cx.invalidations
+            .iter()
+            .any(|(_, kind)| *kind == Invalidation::Paint)
+    );
+}
+
+#[test]
+fn pending_wire_drag_release_promotes_to_active_wire_drag_and_finishes() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _edge, from, _to) = make_test_graph_edge_reconnect();
+    let graph = host.models.insert(graph_value);
+    let view = insert_view(&mut host);
+    let editor_config = insert_editor_config_with(&mut host, |state| {
+        state.interaction.connect_on_click = true;
+    });
+
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
+    let snapshot = canvas.sync_view_state(&mut host);
+    let pos = Point::new(Px(30.0), Px(18.0));
+    canvas.interaction.pending_wire_drag = Some(PendingWireDrag {
+        kind: WireDragKind::New {
+            from,
+            bundle: vec![from],
+        },
+        start_pos: Point::new(Px(10.0), Px(10.0)),
+    });
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
+
+    assert!(pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        pos,
+        fret_core::MouseButton::Left,
+        1,
+        Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    assert!(canvas.interaction.pending_wire_drag.is_none());
+    assert!(canvas.interaction.click_connect);
+    let wire_drag = canvas
+        .interaction
+        .wire_drag
+        .as_ref()
+        .expect("pending wire drag should be promoted");
+    assert_eq!(wire_drag.pos, pos);
+    assert!(matches!(
+        &wire_drag.kind,
+        WireDragKind::New { from: drag_from, bundle } if *drag_from == from && bundle.as_slice() == [from]
+    ));
+    assert!(
+        cx.invalidations
+            .iter()
+            .any(|(_, kind)| *kind == Invalidation::Paint)
+    );
 }
 
 #[test]

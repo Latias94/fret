@@ -9504,3 +9504,69 @@ Broader gates not run:
   - Reason: `RBX-M2-680` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-690 pointer-up pending dispatch retained Cx route isolation
+
+Claim verified:
+
+- Pointer-up pending dispatch no longer imports or names retained bridge Cx types in
+  `pointer_up_left_route/dispatch/pending.rs`.
+- The pending release chain reuses `PendingNodeDragReleaseCx` for pending node selection host access
+  plus pointer-capture release and paint invalidation.
+- Pending group drag/resize release, pending node click-select release, and pending wire-drag
+  promotion remain green through the real `pointer_up::handle_pointer_up` path.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Red evidence:
+
+- `cargo nextest run -p fret-node --features compat-retained-canvas pointer_up_pending_dispatch_stays_off_retained_bridge`
+  - Result: failed before implementation, 1 failed test.
+  - Failure: `pointer-up pending dispatch must stay retained-Cx agnostic; found retained_bridge`.
+  - Scope proven: the new source-policy test caught direct retained Cx naming in pending dispatch
+    before the seam extraction.
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving pending dispatch
+    behind `PendingNodeDragReleaseCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_pending_dispatch_stays_off_retained_bridge) | test(pending_group_drag_release_clears_session_without_committing) | test(pending_group_resize_release_clears_session_without_committing) | test(pending_node_drag_click_select_release_toggles_selection_and_finishes) | test(pending_wire_drag_release_promotes_to_active_wire_drag_and_finishes) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 6 tests.
+  - Scope proven: source-policy locks pointer-up pending dispatch off retained bridge Cx names;
+    pending group drag/resize release, pending node click-select release, and pending wire-drag
+    promotion still work through the real pointer-up route.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/pending.rs`
+  - Result: no matches.
+  - Scope proven: the migrated pointer-up pending dispatch helper no longer depends on retained
+    bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the pointer-up pending
+    seam changes and behavior tests.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    pointer-up pending dispatch behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-690` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

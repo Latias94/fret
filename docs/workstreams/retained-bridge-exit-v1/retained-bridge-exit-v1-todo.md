@@ -3749,6 +3749,34 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-690 Isolate pointer-up pending dispatch retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/pending.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the left pointer-up pending release dispatch chain off direct retained bridge Cx names.
+    - Reuse the existing retained-agnostic `PendingNodeDragReleaseCx` seam as the composed
+      capability for pending node selection, pending group release, pending node resize release, and
+      pending wire release.
+    - Prove the real pointer-up path still completes pending group drag/resize release, pending
+      node click-select release, and pending wire-drag promotion.
+  - Result:
+    - `pointer_up_left_route/dispatch/pending.rs` now accepts `PendingNodeDragReleaseCx` instead of
+      naming retained `EventCx`.
+    - Added `pointer_up_pending_dispatch_stays_off_retained_bridge` source-policy coverage.
+    - Added real `pointer_up::handle_pointer_up` behavior coverage for pending node drag
+      click-select release and pending wire-drag release promotion.
+  - Validation:
+    - Red: `cargo nextest run -p fret-node --features compat-retained-canvas pointer_up_pending_dispatch_stays_off_retained_bridge`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_pending_dispatch_stays_off_retained_bridge) | test(pending_group_drag_release_clears_session_without_committing) | test(pending_group_resize_release_clears_session_without_committing) | test(pending_node_drag_click_select_release_toggles_selection_and_finishes) | test(pending_wire_drag_release_promotes_to_active_wire_drag_and_finishes) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/dispatch/pending.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
