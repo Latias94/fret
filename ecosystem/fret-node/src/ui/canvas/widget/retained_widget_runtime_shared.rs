@@ -1,22 +1,5 @@
 use super::*;
 
-pub(super) fn middleware_cx<'a>(
-    graph: &'a Model<Graph>,
-    view_state: &'a Model<NodeGraphViewState>,
-    style: &'a NodeGraphStyle,
-    bounds: Option<Rect>,
-    snapshot: &'a ViewSnapshot,
-) -> NodeGraphCanvasMiddlewareCx<'a> {
-    NodeGraphCanvasMiddlewareCx {
-        graph,
-        view_state,
-        style,
-        bounds,
-        pan: snapshot.pan,
-        zoom: snapshot.zoom,
-    }
-}
-
 pub(super) fn sync_runtime_theme<M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
     theme: fret_ui::ThemeSnapshot,

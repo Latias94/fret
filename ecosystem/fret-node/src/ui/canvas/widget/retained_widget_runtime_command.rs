@@ -15,23 +15,6 @@ pub(super) fn handle_retained_command<H: UiHost, M: NodeGraphCanvasMiddleware>(
         return false;
     }
 
-    let outcome = {
-        let middleware_cx = super::retained_widget_runtime_shared::middleware_cx(
-            &canvas.graph,
-            &canvas.view_state,
-            &canvas.style,
-            canvas.interaction.last_bounds,
-            &snapshot,
-        );
-        canvas
-            .middleware
-            .handle_command(cx, &middleware_cx, command)
-    };
-    if outcome == NodeGraphCanvasCommandOutcome::Handled {
-        super::retained_widget_runtime_shared::finish_middleware_handled(cx);
-        return true;
-    }
-
     canvas.handle_command(cx, &snapshot, command)
 }
 

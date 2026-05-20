@@ -1,7 +1,6 @@
-use fret_core::{AppWindowId, Event, Rect};
-use fret_runtime::{CommandId, Model};
+use fret_core::{AppWindowId, Rect};
+use fret_runtime::Model;
 use fret_ui::UiHost;
-use fret_ui::retained_bridge::{CommandCx, EventCx};
 
 use crate::core::{CanvasPoint, Graph};
 use crate::io::NodeGraphViewState;
@@ -11,18 +10,6 @@ use crate::ui::style::NodeGraphStyle;
 
 mod middleware_chain;
 mod middleware_validation;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NodeGraphCanvasEventOutcome {
-    NotHandled,
-    Handled,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NodeGraphCanvasCommandOutcome {
-    NotHandled,
-    Handled,
-}
 
 #[derive(Debug, Clone)]
 pub enum NodeGraphCanvasCommitOutcome {
@@ -41,24 +28,6 @@ pub struct NodeGraphCanvasMiddlewareCx<'a> {
 }
 
 pub trait NodeGraphCanvasMiddleware: 'static {
-    fn handle_event<H: UiHost>(
-        &mut self,
-        _cx: &mut EventCx<'_, H>,
-        _ctx: &NodeGraphCanvasMiddlewareCx<'_>,
-        _event: &Event,
-    ) -> NodeGraphCanvasEventOutcome {
-        NodeGraphCanvasEventOutcome::NotHandled
-    }
-
-    fn handle_command<H: UiHost>(
-        &mut self,
-        _cx: &mut CommandCx<'_, H>,
-        _ctx: &NodeGraphCanvasMiddlewareCx<'_>,
-        _command: &CommandId,
-    ) -> NodeGraphCanvasCommandOutcome {
-        NodeGraphCanvasCommandOutcome::NotHandled
-    }
-
     fn before_commit<H: UiHost>(
         &mut self,
         _host: &mut H,

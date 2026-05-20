@@ -2291,6 +2291,43 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-190 Remove retained event/command hooks from canvas middleware.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/canvas/middleware.rs`
+    - `ecosystem/fret-node/src/ui/canvas/middleware/middleware_chain.rs`
+    - `ecosystem/fret-node/src/ui/canvas/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_command.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_event.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_shared.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/middleware_conformance.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/lib.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Remove the retained `EventCx` / `CommandCx` middleware hook surface while preserving
+      `before_commit` as the remaining transaction guard.
+    - Move `canvas/middleware.rs` out of the retained bridge source migration ledger.
+  - Result:
+    - Deleted `NodeGraphCanvasEventOutcome`, `NodeGraphCanvasCommandOutcome`, middleware
+      `handle_event(...)`, and middleware `handle_command(...)`.
+    - Removed retained runtime dispatch through middleware event/command hooks.
+    - Kept `NodeGraphCanvasMiddleware::before_commit(...)` and the commit-rejection conformance
+      test green.
+    - `canvas/middleware.rs` no longer imports or names `retained_bridge`, `EventCx`, or
+      `CommandCx`; the retained bridge source allowlist now contains only `src/ui/canvas/widget.rs`
+      and `src/ui/canvas/widget/**`.
+  - Validation:
+    - pre-delete `cargo nextest run -p fret-node --features compat-retained-canvas middleware_can_override_select_all_command middleware_can_reject_commits_before_apply retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - post-delete `cargo check -p fret-node --features compat-retained-canvas`
+    - post-delete `cargo nextest run -p fret-node retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+    - post-delete `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound middleware_can_reject_commits_before_apply`
+    - post-delete `rg -n "retained_bridge|CommandCx|EventCx|NodeGraphCanvasCommandOutcome|NodeGraphCanvasEventOutcome|handle_event\\(|handle_command\\(" ecosystem/fret-node/src/ui/canvas/middleware.rs ecosystem/fret-node/src/ui/canvas/middleware -g '*.rs'`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

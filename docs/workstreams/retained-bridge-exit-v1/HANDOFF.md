@@ -621,6 +621,10 @@ ledger allowlist entries, and kept the actual panel placement contract on defaul
 modules (`retained_submit.rs`, `retained_event_tail.rs`, `panel_button_paint.rs`), removed their
 module entries, deleted the retained-only `begin_panel_press(...)` adapter, and left
 `panel_pointer_policy.rs` as default-only hover/release policy shared by controls and blackboard.
+`RBX-M2-190` then removed the retained middleware event/command hook surface:
+`NodeGraphCanvasMiddleware` no longer names retained `EventCx` / `CommandCx`, retained runtime
+command/event dispatch no longer calls middleware hooks, and the remaining middleware shape is a
+`before_commit` transaction guard used only inside the retained canvas island.
 
 ## Next Task
 
@@ -634,11 +638,12 @@ Recommended next implementation shape:
   retained toolbar widgets are gone; retained minimap is gone; retained blackboard is gone; retained
   rename host is gone; retained diagnostics anchors are gone; retained a11y active-descendant
   anchors are gone; retained portal host/oracle code is gone; retained editor/panel composition
-  wrappers are gone; retained overlay helper tails are gone. The remaining retained bridge source
-  ledger is now the canvas widget root, canvas middleware, and `canvas/widget/**`. The remaining
-  canvas interaction families still need default-path tests before their retained widget/event code
-  can be deleted. Each slice should first add default declarative tests, then remove or gate less
-  retained code.
+  wrappers are gone; retained overlay helper tails are gone; retained middleware event/command
+  hooks are gone. The remaining retained bridge source ledger is now the canvas widget root and
+  `canvas/widget/**`; `canvas/middleware.rs` is still compat-gated but retained-bridge-free. The
+  remaining canvas interaction families still need default-path tests before their retained
+  widget/event code can be deleted. Each slice should first add default declarative tests, then
+  remove or gate less retained code.
 - After the ledger no longer contains behavior-only retained files, remove
   `compat-retained-canvas` / `unstable-retained-bridge` from `fret-node`.
 - Keep the known independent `fret-ui` layout primitive drift
@@ -647,7 +652,20 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-180`:
+Last run on 2026-05-20 for `RBX-M2-190`:
+
+- pre-delete `cargo nextest run -p fret-node --features compat-retained-canvas middleware_can_override_select_all_command middleware_can_reject_commits_before_apply retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound` -
+  passed, 4 tests.
+- post-delete `cargo check -p fret-node --features compat-retained-canvas` - passed with the
+  pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+- post-delete `cargo nextest run -p fret-node retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound` -
+  passed, 2 tests.
+- post-delete `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound middleware_can_reject_commits_before_apply` -
+  passed, 3 tests.
+- post-delete `rg -n "retained_bridge|CommandCx|EventCx|NodeGraphCanvasCommandOutcome|NodeGraphCanvasEventOutcome|handle_event\\(|handle_command\\(" ecosystem/fret-node/src/ui/canvas/middleware.rs ecosystem/fret-node/src/ui/canvas/middleware -g '*.rs'` -
+  no matches.
+
+Previous run on 2026-05-20 for `RBX-M2-180`:
 
 - pre-delete `cargo nextest run -p fret-node --features compat-retained-canvas sync_panel_hover_only_reports_real_changes release_panel_press_only_activates_on_matching_release_target centered_text_origin_centers_within_button_rect leading_text_origin_keeps_padding_and_vertical_centering retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound` -
   passed, 6 tests.

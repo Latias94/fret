@@ -84,6 +84,5 @@ pub use viewport_options::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions}
 
 #[cfg(all(test, feature = "compat-retained-canvas"))]
 pub(crate) use canvas::{
-    NodeGraphCanvas, NodeGraphCanvasCommandOutcome, NodeGraphCanvasCommitOutcome,
-    NodeGraphCanvasMiddlewareCx,
+    NodeGraphCanvas, NodeGraphCanvasCommitOutcome, NodeGraphCanvasMiddlewareCx,
 };

@@ -359,7 +359,7 @@ mod surface_policy_tests {
         let mut files = Vec::new();
         collect_rs_files(&ui_root, &mut files);
 
-        let allowed_exact = ["src/ui/canvas/middleware.rs", "src/ui/canvas/widget.rs"];
+        let allowed_exact = ["src/ui/canvas/widget.rs"];
         let allowed_prefixes = ["src/ui/canvas/widget/"];
         let retained_terms = [
             "use fret_ui::retained_bridge",

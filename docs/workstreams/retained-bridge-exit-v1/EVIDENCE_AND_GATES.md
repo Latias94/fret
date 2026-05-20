@@ -6476,3 +6476,80 @@ Broader gates not run:
     workstream docs. No-user proof plus pre-delete helper/policy tests, post-delete default/compat
     targeted tests, compile gates, formatting, layering, catalog, and whitespace checks cover the
     changed behavior and boundary surface.
+
+## 2026-05-20 - RBX-M2-190 retained middleware event/command hook removal
+
+Claim verified:
+
+- `NodeGraphCanvasMiddleware` no longer exposes retained `EventCx` / `CommandCx` event and command
+  hooks.
+- Retained widget command/event dispatch no longer calls middleware hooks before normal canvas
+  handling.
+- The remaining middleware shape is a `before_commit` transaction guard; its commit-rejection
+  behavior stays covered.
+- `canvas/middleware.rs` no longer contains retained bridge usage and is no longer part of the
+  retained bridge source allowlist.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/middleware.rs`
+- `ecosystem/fret-node/src/ui/canvas/middleware/middleware_chain.rs`
+- `ecosystem/fret-node/src/ui/canvas/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_command.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_event.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_shared.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/middleware_conformance.rs`
+- `ecosystem/fret-node/src/ui/mod.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- Pre-delete `cargo nextest run -p fret-node --features compat-retained-canvas middleware_can_override_select_all_command middleware_can_reject_commits_before_apply retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 4 tests.
+  - Scope proven: the old retained command override hook and the commit-rejection middleware path
+    were green before deleting the event/command hook surface.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the remaining retained compatibility island compiles after removing middleware
+    event/command hooks.
+- `cargo nextest run -p fret-node retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
+  - Result: passed, 2 tests.
+  - Scope proven: the default retained source policy passes after removing `canvas/middleware.rs`
+    from the allowlist.
+- `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound middleware_can_reject_commits_before_apply`
+  - Result: passed, 3 tests.
+  - Scope proven: compat retained source policy passes, and `before_commit` still rejects a
+    middleware-blocked transaction before apply.
+- `rg -n "retained_bridge|CommandCx|EventCx|NodeGraphCanvasCommandOutcome|NodeGraphCanvasEventOutcome|handle_event\\(|handle_command\\(" ecosystem/fret-node/src/ui/canvas/middleware.rs ecosystem/fret-node/src/ui/canvas/middleware -g '*.rs'`
+  - Result: no matches.
+  - Scope proven: middleware source no longer depends on retained bridge event/command context
+    types or event/command outcome hooks.
+
+- `cargo fmt -p fret-node`
+  - Result: passed.
+  - Scope proven: touched `fret-node` Rust files were formatted.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after shrinking
+    the `fret-node` retained source ledger.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-190` narrows `fret-node` canvas middleware and updates workstream docs.
+    Pre-delete middleware oracle coverage plus post-delete default/compat targeted tests, compile
+    gates, formatting, layering, catalog, and whitespace checks cover the changed behavior and
+    boundary surface.

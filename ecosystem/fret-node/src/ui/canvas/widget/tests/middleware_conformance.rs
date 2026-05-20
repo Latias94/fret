@@ -5,43 +5,16 @@ use fret_ui::retained_bridge::Widget as _;
 
 use crate::ops::GraphTransaction;
 use crate::rules::{Diagnostic, DiagnosticSeverity, DiagnosticTarget};
-use crate::ui::commands::{CMD_NODE_GRAPH_NUDGE_RIGHT, CMD_NODE_GRAPH_SELECT_ALL};
+use crate::ui::commands::CMD_NODE_GRAPH_NUDGE_RIGHT;
 use crate::ui::{
-    NodeGraphCanvasCommandOutcome, NodeGraphCanvasMiddlewareCx,
-    canvas::NodeGraphCanvasCommitOutcome, canvas::NodeGraphCanvasMiddleware,
+    NodeGraphCanvasMiddlewareCx, canvas::NodeGraphCanvasCommitOutcome,
+    canvas::NodeGraphCanvasMiddleware,
 };
 
 use super::{
     NullServices, TestUiHostImpl, command_cx, insert_graph_view_editor_config,
-    insert_graph_view_editor_config_with, make_test_graph_two_nodes, read_node_pos,
+    make_test_graph_two_nodes, read_node_pos,
 };
-
-#[derive(Debug, Clone, Copy)]
-struct SelectAllOverride {
-    target: crate::core::NodeId,
-}
-
-impl NodeGraphCanvasMiddleware for SelectAllOverride {
-    fn handle_command<H: UiHost>(
-        &mut self,
-        cx: &mut fret_ui::retained_bridge::CommandCx<'_, H>,
-        ctx: &NodeGraphCanvasMiddlewareCx<'_>,
-        command: &CommandId,
-    ) -> NodeGraphCanvasCommandOutcome {
-        if command.as_str() != CMD_NODE_GRAPH_SELECT_ALL {
-            return NodeGraphCanvasCommandOutcome::NotHandled;
-        }
-
-        let target = self.target;
-        let _ = ctx.view_state.update(cx.app, |s, _cx| {
-            s.selected_nodes.clear();
-            s.selected_edges.clear();
-            s.selected_groups.clear();
-            s.selected_nodes.push(target);
-        });
-        NodeGraphCanvasCommandOutcome::Handled
-    }
-}
 
 #[derive(Debug, Default, Clone, Copy)]
 struct RejectNudgeCommit;
@@ -68,38 +41,6 @@ impl NodeGraphCanvasMiddleware for RejectNudgeCommit {
             }],
         }
     }
-}
-
-#[test]
-fn middleware_can_override_select_all_command() {
-    let mut host = TestUiHostImpl::default();
-    let (graph_value, a, _b) = make_test_graph_two_nodes();
-    let (graph, view, editor_config) =
-        insert_graph_view_editor_config_with(&mut host, graph_value, |state| {
-            state.interaction.elements_selectable = true;
-            state.interaction.edges_selectable = true;
-        });
-
-    view.update(&mut host, |s, _cx| {
-        s.selected_nodes.clear();
-        s.selected_edges.clear();
-        s.selected_groups.clear();
-    })
-    .unwrap();
-
-    let mut canvas = new_canvas!(host, graph, view.clone(), editor_config)
-        .with_middleware(SelectAllOverride { target: a });
-    canvas.sync_view_state(&mut host);
-
-    let mut services = NullServices::default();
-    let mut tree: fret_ui::UiTree<TestUiHostImpl> = fret_ui::UiTree::new();
-    let mut cx = command_cx(&mut host, &mut services, &mut tree);
-
-    assert!(canvas.command(&mut cx, &CommandId::from(CMD_NODE_GRAPH_SELECT_ALL)));
-    let selected = view
-        .read_ref(&host, |s| s.selected_nodes.clone())
-        .unwrap_or_default();
-    assert_eq!(selected, vec![a]);
 }
 
 #[test]

@@ -67,8 +67,8 @@ use crate::ui::{
 };
 
 use super::middleware::{
-    NodeGraphCanvasCommandOutcome, NodeGraphCanvasCommitOutcome, NodeGraphCanvasEventOutcome,
-    NodeGraphCanvasMiddleware, NodeGraphCanvasMiddlewareCx, NoopNodeGraphCanvasMiddleware,
+    NodeGraphCanvasCommitOutcome, NodeGraphCanvasMiddleware, NodeGraphCanvasMiddlewareCx,
+    NoopNodeGraphCanvasMiddleware,
 };
 use super::paint::CanvasPaintCache;
 

@@ -54,7 +54,13 @@ Retained compatibility island:
   - `compat-retained-canvas = ["fret-ui", "fret-ui/unstable-retained-bridge"]`
 - `ecosystem/fret-node/src/ui/canvas/widget.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/**`
+
+Compat-gated but retained-bridge-free support:
+
 - `ecosystem/fret-node/src/ui/canvas/middleware.rs`
+  - `RBX-M2-190` removed retained `EventCx` / `CommandCx` event and command hooks. It now carries
+    only the retained canvas transaction `before_commit` guard shape and no longer appears in the
+    retained bridge source allowlist.
 
 Deleted retained overlay files:
 
@@ -95,7 +101,7 @@ Deleted retained overlay files:
 | Editor/panel composition wrappers | deleted no-user retained `NodeGraphEditor` and `NodeGraphPanel` wrappers | default `screen_space_placement::rect_in_bounds` placement tests cover the only retained panel math; first-party apps/examples already use `node_graph_surface(...)` instead of retained editor/panel wrappers | Retained editor/panel wrapper files have been deleted after no-user proof plus deletion-preflight placement/policy gates from RBX-M2-170. |
 | Retained overlay/helper tail modules | deleted no-user retained submit, event-tail, and panel button paint helpers | default `panel_pointer_policy` hover/release tests cover the shared controls/blackboard policy; `default_overlay_policy_surfaces_stay_off_retained_bridge` now proves overlays stay retained-free even under `compat-retained-canvas` | Retained submit/event-tail/panel-paint helper files have been deleted after no-user proof and pre/post-delete policy gates from RBX-M2-180. |
 | Accessibility and diagnostics anchors | deleted retained `a11y.rs` active-descendant child-anchor oracle and deleted no-user `diag_anchors.rs` | default declarative `NodeGraphSurfaceBinding::surface_props()` / `node_graph_surface(...)` semantics tests now cover active-descendant mapping for focused port, edge, node, and port-before-edge-before-node priority; diagnostics anchors use declarative surface `test_id`/diagnostics config instead of retained anchor widgets | Retained a11y and diagnostics anchor widgets have been deleted after default proof plus deletion-preflight retained oracle coverage. |
-| Middleware extension points | retained `EventCx` / `CommandCx` based `NodeGraphCanvasMiddleware` | no public retained authoring surface; middleware is crate-private/test-only | Replace or delete retained middleware after event/command handling has a declarative host contract. |
+| Middleware extension points | retained event/command middleware hooks deleted; retained canvas still has `before_commit` commit guard | no public retained authoring surface; `NodeGraphCanvasMiddleware` no longer imports or names retained `EventCx` / `CommandCx`; commit rejection remains covered by retained canvas tests | Delete or replace the remaining retained canvas transaction guard when the canvas widget itself is deleted or converted to a declarative canvas leaf. |
 
 ## New Gate
 

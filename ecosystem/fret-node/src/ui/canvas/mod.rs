@@ -31,8 +31,7 @@ mod workflow;
 
 #[cfg(all(test, feature = "compat-retained-canvas"))]
 pub use middleware::{
-    NodeGraphCanvasCommandOutcome, NodeGraphCanvasCommitOutcome, NodeGraphCanvasMiddleware,
-    NodeGraphCanvasMiddlewareCx,
+    NodeGraphCanvasCommitOutcome, NodeGraphCanvasMiddleware, NodeGraphCanvasMiddlewareCx,
 };
 pub use resize_handle::NodeResizeHandle;
 #[cfg(all(test, feature = "compat-retained-canvas"))]
