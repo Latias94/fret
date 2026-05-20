@@ -3419,3 +3419,21 @@ Status: complete for stable cached hit-test-only replay counter coverage.
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target\fret-diag-hit-test-only-paint-cache-suite-v3 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
   with suite summary
   `target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json`.
+
+## M154: Moved Cache-Root Hit Path Reuse Gate
+
+Status: complete for the focused stale root-only hit-path-cache guard.
+
+- Added `prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path` to cover the
+  gap left by the older moving cache-root regression: the older test cleared
+  `ui.hit_test_path_cache`, while this one keeps a primed root-only cached path alive across a
+  clean view-cache root move.
+- The new test first hits the root outside the cached child, moves the clean cache root and leaf
+  under the same pointer position, reuses translated interaction records through prepaint, and then
+  proves hit testing returns the moved leaf rather than the stale root path.
+- The guard also asserts `hit_test_path_cache_misses` increments on the second hit, proving the
+  root-only cached path is rejected and full hit testing is used before accepting the moved child.
+- Gates pass:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\tree\tests\prepaint.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path prepaint_interaction_cache_replay_translates_records_when_cache_root_moves --no-fail-fast --no-capture`
+  with Nextest run id `84167c6c-c03b-4feb-aa11-0693f55659b2`.

@@ -319,6 +319,12 @@ date: 2026-05-12
   `ui-gallery-hit-test-only-paint-cache` suite with zero-warning lint policy. Suite evidence is
   anchored at
   `target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json`.
+- Moved cache-root stale hit-path update:
+  `prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path` now covers the
+  focused mechanism path where a root-only `hit_test_path_cache` entry survives across a clean
+  view-cache root move. The guard proves translated interaction-cache replay still happens, but the
+  stale root-only cached path is rejected before hit testing returns the moved leaf. Focused
+  evidence uses Nextest run id `84167c6c-c03b-4feb-aa11-0693f55659b2`.
 - Node Graph cull-window update:
   `ui-gallery-node-graph-cull`, `ui-gallery-node-graph-cull-window-shifts`, and
   `ui-gallery-node-graph-cull-window-no-shifts-small-pan` now have protocol roundtrip coverage for

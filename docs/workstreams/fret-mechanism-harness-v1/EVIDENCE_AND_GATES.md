@@ -6375,3 +6375,33 @@ Next slice recommendation:
 - suite runtime diagnostics:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target\fret-diag-hit-test-only-paint-cache-suite-v3 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
   - result: passed; run id `1779249205997`.
+
+## Moved Cache-Root Root-Only Hit Path Gate
+
+- invariant:
+  a root-only `hit_test_path_cache` entry from the previous pointer position must not hide a clean
+  view-cache child that moves under the same pointer while prepaint reuses translated interaction
+  records.
+- finding:
+  no stale hit-routing defect was reproduced. The focused guard shows the existing cached-path
+  fallback rejects a root-only cached path when the terminal node still has hit-testable children,
+  then performs a full hit test and returns the moved leaf.
+- implementation anchors:
+  `crates/fret-ui/src/tree/tests/prepaint.rs`,
+  `crates/fret-ui/src/tree/hit_test.rs`, and
+  `crates/fret-ui/src/tree/prepaint/interaction.rs`.
+- workstream/static checks:
+  `python -m json.tool docs\workstreams\fret-mechanism-harness-v1\WORKSTREAM.json > $null`;
+  `python tools\check_workstream_catalog.py`;
+  `git diff --check`
+  - result: passed.
+  - note: `check_workstream_catalog.py` required refreshing the global
+    `docs/workstreams/README.md` dedicated-directory count/date from 427 to 428 / 2026-05-20.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-ui\src\tree\tests\prepaint.rs`
+  - result: passed.
+- focused mechanism regression:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path prepaint_interaction_cache_replay_translates_records_when_cache_root_moves --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `84167c6c-c03b-4feb-aa11-0693f55659b2`.
+  - note: the run emitted the pre-existing `current_effective_opacity` dead-code warning in
+    `crates\fret-ui\src\elements\runtime.rs`; this slice did not touch that file.

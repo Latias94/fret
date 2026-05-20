@@ -1421,3 +1421,11 @@ date: 2026-05-12
     panel to `ui-gallery-hit-test-only-probe-panel`. Focused runtime passed with run id
     `1779247865248`, and the suite passed with summary
     `target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json`.
+- [x] Add a focused stale hit-path guard for clean moved view-cache roots.
+  - Result:
+    `prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path` now keeps a
+    root-only `hit_test_path_cache` entry alive across a clean view-cache root move. It proves
+    prepaint still reuses translated interaction records, but hit testing rejects the stale
+    root-only path, increments `hit_test_path_cache_misses`, and returns the moved leaf under the
+    pointer. Focused checks passed with Nextest run id
+    `84167c6c-c03b-4feb-aa11-0693f55659b2`.
