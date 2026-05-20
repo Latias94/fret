@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
 use fret_canvas::view::PanZoom2D;
+use fret_canvas::wires as canvas_wires;
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 
-use crate::core::NodeId;
-use crate::ui::MeasuredGeometryStore;
+use crate::core::{EdgeId, NodeId, PortId};
 use crate::ui::geometry_overrides::NodeGraphGeometryOverridesRef;
 use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef};
+use crate::ui::presenter::{DefaultNodeGraphPresenter, NodeGraphPresenter};
 use crate::ui::style::NodeGraphStyle;
+use crate::ui::{MeasuredGeometryStore, NodeGraphCanvasTransform, NodeGraphInternalsSnapshot};
 
 use super::surface_support::{
     read_authoritative_interaction_config_in_models, read_authoritative_runtime_tuning_in_models,
@@ -44,6 +46,134 @@ pub(super) struct PreparedPaintOnlySurfaceFrame {
     pub(super) portals_disabled: bool,
     pub(super) semantics_value: Arc<str>,
     pub(super) test_id: Arc<str>,
+}
+
+fn sync_binding_internals_for_surface(
+    models: &mut fret_runtime::ModelStore,
+    binding: &crate::ui::NodeGraphSurfaceBinding,
+    bounds: fret_core::Rect,
+    view: PanZoom2D,
+    view_state: &crate::io::NodeGraphViewState,
+    derived_cache: &super::DerivedGeometryCacheState,
+    edges_cache: &super::EdgePaintCacheState,
+    style_tokens: &NodeGraphStyle,
+) {
+    let Some(geom) = derived_cache.geom.as_deref() else {
+        binding
+            .internals_store()
+            .update(NodeGraphInternalsSnapshot::default());
+        return;
+    };
+
+    let transform = NodeGraphCanvasTransform {
+        bounds_origin: bounds.origin,
+        bounds_size: bounds.size,
+        pan: crate::core::CanvasPoint {
+            x: view.pan.x.0,
+            y: view.pan.y.0,
+        },
+        zoom: view.zoom,
+    };
+
+    let focused_node = view_state
+        .selected_nodes
+        .iter()
+        .copied()
+        .find(|node| geom.nodes.contains_key(node));
+    let focused_edge = view_state.selected_edges.iter().copied().find(|edge| {
+        edges_cache
+            .draws
+            .as_deref()
+            .is_some_and(|draws| draws.iter().any(|draw| draw.edge == *edge))
+    });
+    let focused_port = focused_node.and_then(|node| {
+        geom.ports
+            .iter()
+            .find_map(|(&port, handle)| (handle.node == node).then_some(port))
+    });
+
+    let mut next = NodeGraphInternalsSnapshot {
+        transform,
+        focused_node,
+        focused_port,
+        focused_edge,
+        ..NodeGraphInternalsSnapshot::default()
+    };
+
+    for (&node, node_geom) in &geom.nodes {
+        next.nodes_window
+            .insert(node, transform.canvas_rect_to_window(node_geom.rect));
+    }
+    for (&port, handle) in &geom.ports {
+        next.ports_window
+            .insert(port, transform.canvas_rect_to_window(handle.bounds));
+        next.port_centers_window
+            .insert(port, transform.canvas_point_to_window(handle.center));
+    }
+
+    sync_a11y_labels(
+        models,
+        binding,
+        &mut next,
+        focused_node,
+        focused_port,
+        focused_edge,
+        style_tokens,
+    );
+
+    let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
+    if let Some(edge_draws) = edges_cache.draws.as_deref() {
+        for edge in edge_draws.iter() {
+            if let (Some(from), Some(to)) = (geom.port_center(edge.from), geom.port_center(edge.to))
+            {
+                let (ctrl1, ctrl2) = canvas_wires::wire_ctrl_points(from, to, zoom);
+                let center = canvas_wires::cubic_bezier(from, ctrl1, ctrl2, to, 0.5);
+                next.edge_centers_window
+                    .insert(edge.edge, transform.canvas_point_to_window(center));
+            }
+        }
+    }
+
+    next.a11y_active_descendant_label = next
+        .a11y_focused_port_label
+        .clone()
+        .or_else(|| next.a11y_focused_edge_label.clone())
+        .or_else(|| next.a11y_focused_node_label.clone());
+
+    binding.internals_store().update(next);
+}
+
+fn sync_a11y_labels(
+    models: &mut fret_runtime::ModelStore,
+    binding: &crate::ui::NodeGraphSurfaceBinding,
+    next: &mut NodeGraphInternalsSnapshot,
+    focused_node: Option<NodeId>,
+    focused_port: Option<PortId>,
+    focused_edge: Option<EdgeId>,
+    style_tokens: &NodeGraphStyle,
+) {
+    let labels = read_authoritative_graph_in_models(models, binding, |graph| {
+        let presenter = DefaultNodeGraphPresenter::default();
+        let node_label = focused_node
+            .and_then(|node| presenter.a11y_node_label(graph, node))
+            .map(|label| label.to_string())
+            .or_else(|| focused_node.map(|node| format!("{node:?}")));
+        let port_label = focused_port
+            .and_then(|port| presenter.a11y_port_label(graph, port))
+            .map(|label| label.to_string())
+            .or_else(|| focused_port.map(|port| format!("{port:?}")));
+        let edge_label = focused_edge
+            .and_then(|edge| presenter.a11y_edge_label(graph, edge, style_tokens))
+            .map(|label| label.to_string())
+            .or_else(|| focused_edge.map(|edge| format!("{edge:?}")));
+
+        (node_label, port_label, edge_label)
+    })
+    .unwrap_or_default();
+
+    next.a11y_focused_node_label = labels.0.map(|label| format!("Node {label}"));
+    next.a11y_focused_port_label = labels.1.map(|label| format!("Port {label}"));
+    next.a11y_focused_edge_label = labels.2.map(|label| format!("Edge {label}"));
 }
 
 pub(super) struct PrepareSurfaceFrameParams<'a> {
@@ -257,6 +387,17 @@ pub(super) fn prepare_surface_frame<H: UiHost>(
         &style_tokens,
     );
     let edges_cached = edges_cache_value.draws.is_some();
+
+    sync_binding_internals_for_surface(
+        cx.app.models_mut(),
+        binding,
+        grid_cache_value.bounds,
+        view_for_paint,
+        &view_value,
+        &derived_cache_value,
+        &edges_cache_value,
+        &style_tokens,
+    );
 
     let hovered_node_value = cx
         .get_model_copied(hovered_node, Invalidation::Paint)

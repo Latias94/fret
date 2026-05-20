@@ -24,7 +24,6 @@ macro_rules! new_canvas {
     };
 }
 
-mod a11y_active_descendant_conformance;
 mod background_style_conformance;
 mod cached_edge_labels_tile_equivalence_conformance;
 mod cached_edges_tile_equivalence_conformance;

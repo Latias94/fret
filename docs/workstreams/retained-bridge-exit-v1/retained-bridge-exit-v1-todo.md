@@ -1971,12 +1971,57 @@ Related plan:
       anchor docs that pointed users at retained anchor widgets.
     - Removed `with_diagnostics_anchor_ports`, `diagnostics_anchor_ports`, and the retained layout
       publish helper because no retained or declarative caller remains.
-    - Kept `a11y.rs` for now because retained canvas active-descendant child semantics still need
-      a default declarative proof before deletion.
+    - Kept `a11y.rs` for follow-up `RBX-M2-134` because retained canvas active-descendant child
+      semantics still needed a default declarative proof before deletion.
   - Validation:
     - `cargo check -p fret-node --features compat-retained-canvas`
     - `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound`
     - `rg -n "DiagnosticsAnchorPorts|diagnostics_anchor_ports|with_diagnostics_anchor_ports|retained_widget_layout_publish|publish_diagnostics_derived_outputs|NodeGraphDiagAnchor|NodeGraphDiagConnectingFlag|diag_anchors" ecosystem/fret-node/src docs/ui-diagnostics-and-scripted-tests.md docs/workstreams/retained-bridge-exit-v1 -g '*.rs' -g '*.md'`
+- [x] RBX-M2-134 Delete retained a11y anchors after declarative active-descendant proof.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/binding.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+    - deleted `ecosystem/fret-node/src/ui/a11y.rs`
+    - deleted `ecosystem/fret-node/src/ui/canvas/widget/tests/a11y_active_descendant_conformance.rs`
+    - `ecosystem/fret-node/src/ui/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs`
+    - `ecosystem/fret-node/src/lib.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move node graph active-descendant semantics to the default declarative surface.
+    - Cover focused port, edge, and node active-descendant mapping without enabling
+      `compat-retained-canvas`.
+    - Delete the retained a11y child-anchor widgets and retained oracle tests after retained and
+      default paths agree.
+    - Shrink the retained bridge source usage ledger by removing `a11y.rs`.
+  - Result:
+    - `NodeGraphSurfaceBinding` now owns a UI-only `NodeGraphInternalsStore`, and
+      `binding.surface_props()` / `NodeGraphSurfaceProps::new(...)` automatically wire it into the
+      default declarative surface.
+    - `node_graph_surface(...)` exposes the canvas as a focusable `Viewport` semantics node,
+      syncs binding internals from the default surface frame, creates zero-size semantics-only
+      children for focused port/edge/node labels, and resolves `active_descendant` through
+      declarative element-id relations.
+    - Default declarative tests now prove the retained priority order: focused port, then focused
+      edge, then focused node.
+    - Default declarative tests also cover presenter-derived active-descendant labels and the
+      no-stale-descendant case for selected items that are missing from current graph geometry.
+    - Deleted `NodeGraphA11yFocusedPort`, `NodeGraphA11yFocusedEdge`, `NodeGraphA11yFocusedNode`,
+      their retained module, and their retained conformance test module.
+  - Validation:
+    - deletion-preflight `cargo nextest run -p fret-node node_graph_surface_active_descendant`
+    - deletion-preflight `cargo nextest run -p fret-node --features compat-retained-canvas a11y_active_descendant_conformance node_graph_surface_active_descendant`
+    - post-delete `cargo nextest run -p fret-node node_graph_surface_active_descendant retained_bridge_source_usage_stays_on_the_migration_ledger`
+    - post-delete `cargo check -p fret-node --features compat-retained-canvas`
+    - post-delete `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound node_graph_surface_active_descendant`
+    - `cargo fmt -p fret-node`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+    - `rg -n "^\\s*(pub\\s+)?mod a11y;|NodeGraphA11yActiveDescendant|NodeGraphA11yFocused|a11y_active_descendant_conformance" ecosystem/fret-node/src -S`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

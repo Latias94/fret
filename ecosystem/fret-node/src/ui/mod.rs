@@ -28,8 +28,6 @@ mod viewport_helper;
 mod viewport_options;
 
 #[cfg(feature = "compat-retained-canvas")]
-mod a11y;
-#[cfg(feature = "compat-retained-canvas")]
 mod editor;
 mod editors;
 mod overlays;
@@ -86,13 +84,7 @@ pub use style::{NodeGraphColorMode, NodeGraphStyle};
 pub use viewport_options::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions};
 
 #[cfg(all(test, feature = "compat-retained-canvas"))]
-pub(crate) use a11y::{
-    NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort,
-};
-#[cfg(all(test, feature = "compat-retained-canvas"))]
 pub(crate) use canvas::{
     NodeGraphCanvas, NodeGraphCanvasCommandOutcome, NodeGraphCanvasCommitOutcome,
     NodeGraphCanvasMiddlewareCx,
 };
-#[cfg(all(test, feature = "compat-retained-canvas"))]
-pub(crate) use editor::NodeGraphEditor;

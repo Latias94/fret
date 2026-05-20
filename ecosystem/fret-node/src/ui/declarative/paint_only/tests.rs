@@ -1,15 +1,20 @@
-use std::any::Any;
+use std::any::{Any, TypeId};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_canvas::view::PanZoom2D;
 use fret_core::{
-    AppWindowId, Modifiers, MouseButton, MouseButtons, Point, PointerId, PointerType, Px, Rect,
+    AppWindowId, MaterialDescriptor, MaterialId, MaterialRegistrationError, Modifiers, MouseButton,
+    MouseButtons, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle, Point,
+    PointerId, PointerType, Px, Rect, SemanticsRole, Size, SvgId, SvgService, TextConstraints,
+    TextMetrics, TextService,
 };
 use fret_runtime::{
-    ClipboardToken, DragKindId, DragSession, Effect, Model, ModelStore, ShareSheetToken, TickId,
-    TimerToken,
+    ClipboardToken, CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession, Effect,
+    EffectSink, FrameId, GlobalsHost, ImageUploadToken, Model, ModelHost, ModelId, ModelStore,
+    ModelsHost, ShareSheetToken, TickId, TimeHost, TimerToken,
 };
 use fret_ui::action::UiActionHost;
 
@@ -64,7 +69,9 @@ use crate::runtime::changes::NodeGraphChanges;
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::measured::MEASURED_GEOMETRY_EPSILON_PX;
 use crate::ui::paint_overrides::{NodeGraphPaintOverrides, NodeGraphPaintOverridesMap};
-use crate::ui::{MeasuredGeometryStore, NodeGraphController, NodeGraphSurfaceBinding};
+use crate::ui::{
+    MeasuredGeometryStore, NodeGraphController, NodeGraphSurfaceBinding, node_graph_surface,
+};
 use serde_json::Value;
 
 #[derive(Default)]
@@ -83,6 +90,207 @@ struct TestActionHostImpl {
     cursor_icons: Vec<fret_core::CursorIcon>,
     prevented_defaults: Vec<fret_runtime::DefaultAction>,
     bounds: Rect,
+    globals: HashMap<TypeId, Box<dyn Any>>,
+    commands: CommandRegistry,
+    tick_id: TickId,
+    frame_id: FrameId,
+    next_image_upload_token: u64,
+}
+
+impl GlobalsHost for TestActionHostImpl {
+    fn set_global<T: Any>(&mut self, value: T) {
+        self.globals.insert(TypeId::of::<T>(), Box::new(value));
+    }
+
+    fn global<T: Any>(&self) -> Option<&T> {
+        self.globals
+            .get(&TypeId::of::<T>())
+            .and_then(|value| value.downcast_ref::<T>())
+    }
+
+    fn with_global_mut<T: Any, R>(
+        &mut self,
+        init: impl FnOnce() -> T,
+        f: impl FnOnce(&mut T, &mut Self) -> R,
+    ) -> R {
+        let type_id = TypeId::of::<T>();
+        let existing = self.globals.remove(&type_id);
+        let mut value = existing
+            .and_then(|value| value.downcast::<T>().ok().map(|value| *value))
+            .unwrap_or_else(init);
+        let out = f(&mut value, self);
+        self.globals.insert(type_id, Box::new(value));
+        out
+    }
+}
+
+impl ModelHost for TestActionHostImpl {
+    fn models(&self) -> &ModelStore {
+        &self.models
+    }
+
+    fn models_mut(&mut self) -> &mut ModelStore {
+        &mut self.models
+    }
+}
+
+impl ModelsHost for TestActionHostImpl {
+    fn take_changed_models(&mut self) -> Vec<ModelId> {
+        self.models.take_changed_models()
+    }
+}
+
+impl CommandsHost for TestActionHostImpl {
+    fn commands(&self) -> &CommandRegistry {
+        &self.commands
+    }
+}
+
+impl EffectSink for TestActionHostImpl {
+    fn request_redraw(&mut self, window: AppWindowId) {
+        self.redraw_requests.push(window);
+    }
+
+    fn push_effect(&mut self, effect: Effect) {
+        self.effects.push(effect);
+    }
+}
+
+impl TimeHost for TestActionHostImpl {
+    fn tick_id(&self) -> TickId {
+        self.tick_id
+    }
+
+    fn frame_id(&self) -> FrameId {
+        self.frame_id
+    }
+
+    fn next_timer_token(&mut self) -> TimerToken {
+        self.next_timer_token = self.next_timer_token.saturating_add(1);
+        TimerToken(self.next_timer_token)
+    }
+
+    fn next_clipboard_token(&mut self) -> ClipboardToken {
+        self.next_clipboard_token = self.next_clipboard_token.saturating_add(1);
+        ClipboardToken(self.next_clipboard_token)
+    }
+
+    fn next_share_sheet_token(&mut self) -> ShareSheetToken {
+        self.next_share_sheet_token = self.next_share_sheet_token.saturating_add(1);
+        ShareSheetToken(self.next_share_sheet_token)
+    }
+
+    fn next_image_upload_token(&mut self) -> ImageUploadToken {
+        self.next_image_upload_token = self.next_image_upload_token.saturating_add(1);
+        ImageUploadToken(self.next_image_upload_token)
+    }
+}
+
+impl DragHost for TestActionHostImpl {
+    fn drag(&self, _pointer_id: PointerId) -> Option<&DragSession> {
+        None
+    }
+
+    fn drag_mut(&mut self, _pointer_id: PointerId) -> Option<&mut DragSession> {
+        None
+    }
+
+    fn cancel_drag(&mut self, _pointer_id: PointerId) {}
+
+    fn any_drag_session(&self, _predicate: impl FnMut(&DragSession) -> bool) -> bool {
+        false
+    }
+
+    fn find_drag_pointer_id(
+        &self,
+        _predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Option<PointerId> {
+        None
+    }
+
+    fn cancel_drag_sessions(
+        &mut self,
+        _predicate: impl FnMut(&DragSession) -> bool,
+    ) -> Vec<PointerId> {
+        Vec::new()
+    }
+
+    fn begin_drag_with_kind<T: Any>(
+        &mut self,
+        _pointer_id: PointerId,
+        _kind: DragKindId,
+        _source_window: AppWindowId,
+        _start: Point,
+        _payload: T,
+    ) {
+    }
+
+    fn begin_cross_window_drag_with_kind<T: Any>(
+        &mut self,
+        _pointer_id: PointerId,
+        _kind: DragKindId,
+        _source_window: AppWindowId,
+        _start: Point,
+        _payload: T,
+    ) {
+    }
+}
+
+#[derive(Default)]
+struct FakeUiServices;
+
+impl TextService for FakeUiServices {
+    fn prepare(
+        &mut self,
+        _input: &fret_core::TextInput,
+        _constraints: TextConstraints,
+    ) -> (fret_core::TextBlobId, TextMetrics) {
+        (
+            fret_core::TextBlobId::default(),
+            TextMetrics {
+                size: Size::new(Px(10.0), Px(10.0)),
+                baseline: Px(8.0),
+            },
+        )
+    }
+
+    fn release(&mut self, _blob: fret_core::TextBlobId) {}
+}
+
+impl PathService for FakeUiServices {
+    fn prepare(
+        &mut self,
+        _commands: &[PathCommand],
+        _style: PathStyle,
+        _constraints: PathConstraints,
+    ) -> (PathId, PathMetrics) {
+        (PathId::default(), PathMetrics::default())
+    }
+
+    fn release(&mut self, _path: PathId) {}
+}
+
+impl SvgService for FakeUiServices {
+    fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+        SvgId::default()
+    }
+
+    fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+        true
+    }
+}
+
+impl fret_core::MaterialService for FakeUiServices {
+    fn register_material(
+        &mut self,
+        _desc: MaterialDescriptor,
+    ) -> Result<MaterialId, MaterialRegistrationError> {
+        Err(MaterialRegistrationError::Unsupported)
+    }
+
+    fn unregister_material(&mut self, _id: MaterialId) -> bool {
+        false
+    }
 }
 
 impl UiActionHost for TestActionHostImpl {
@@ -810,6 +1018,270 @@ fn test_editor_config(f: impl FnOnce(&mut NodeGraphEditorConfig)) -> NodeGraphEd
 
 fn default_editor_config() -> NodeGraphEditorConfig {
     NodeGraphEditorConfig::default()
+}
+
+fn test_node_graph_surface_bounds() -> Rect {
+    Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    )
+}
+
+fn make_port(
+    node: NodeId,
+    key: &str,
+    dir: PortDirection,
+    kind: PortKind,
+    capacity: PortCapacity,
+) -> Port {
+    Port {
+        node,
+        key: PortKey::new(key),
+        dir,
+        kind,
+        capacity,
+        connectable: None,
+        connectable_start: None,
+        connectable_end: None,
+        ty: None,
+        data: Value::Null,
+    }
+}
+
+fn make_graph_two_nodes_with_ports() -> (Graph, NodeId, PortId, PortId, NodeId, PortId) {
+    let mut graph = Graph::new(GraphId::from_u128(0xA11));
+    let a = NodeId::from_u128(0xA110);
+    let a_in = PortId::from_u128(0xA111);
+    let a_out = PortId::from_u128(0xA112);
+    let b = NodeId::from_u128(0xA120);
+    let b_in = PortId::from_u128(0xA121);
+
+    let mut node_a = test_node(CanvasPoint { x: 10.0, y: 20.0 });
+    node_a.ports = vec![a_in, a_out];
+    let mut node_b = test_node(CanvasPoint { x: 160.0, y: 20.0 });
+    node_b.ports = vec![b_in];
+    graph.nodes.insert(a, node_a);
+    graph.nodes.insert(b, node_b);
+    graph.ports.insert(
+        a_in,
+        make_port(
+            a,
+            "in",
+            PortDirection::In,
+            PortKind::Data,
+            PortCapacity::Single,
+        ),
+    );
+    graph.ports.insert(
+        a_out,
+        make_port(
+            a,
+            "out",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+    graph.ports.insert(
+        b_in,
+        make_port(
+            b,
+            "in",
+            PortDirection::In,
+            PortKind::Data,
+            PortCapacity::Single,
+        ),
+    );
+
+    (graph, a, a_in, a_out, b, b_in)
+}
+
+fn render_surface_semantics_snapshot(
+    graph: Graph,
+    view_state: NodeGraphViewState,
+) -> fret_core::SemanticsSnapshot {
+    render_surface_semantics_snapshot_with_props(graph, view_state, |binding| {
+        binding.surface_props()
+    })
+}
+
+fn render_surface_semantics_snapshot_with_props(
+    graph: Graph,
+    view_state: NodeGraphViewState,
+    props_for_binding: impl FnOnce(&NodeGraphSurfaceBinding) -> super::NodeGraphSurfaceProps,
+) -> fret_core::SemanticsSnapshot {
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let bounds = test_node_graph_surface_bounds();
+    host.bounds = bounds;
+    let mut services = FakeUiServices;
+    let binding =
+        NodeGraphSurfaceBinding::new(&mut host.models, graph, view_state, default_editor_config());
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        "node-graph-surface-a11y",
+        |cx| {
+            let props = props_for_binding(&binding);
+            vec![node_graph_surface(cx, props)]
+        },
+    );
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut host, &mut services, bounds, 1.0);
+    ui.semantics_snapshot()
+        .cloned()
+        .expect("semantics snapshot")
+}
+
+fn assert_canvas_active_descendant_label(snapshot: &fret_core::SemanticsSnapshot, expected: &str) {
+    let canvas = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("node_graph.canvas"))
+        .expect("node graph canvas semantics node");
+    assert_eq!(canvas.role, SemanticsRole::Viewport);
+    assert_eq!(canvas.label.as_deref(), Some("Node Graph Canvas"));
+    let active = canvas
+        .active_descendant
+        .and_then(|id| snapshot.nodes.iter().find(|node| node.id == id))
+        .expect("active descendant semantics node");
+    assert_eq!(active.label.as_deref(), Some(expected));
+}
+
+fn assert_canvas_has_no_active_descendant(snapshot: &fret_core::SemanticsSnapshot) {
+    let canvas = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("node_graph.canvas"))
+        .expect("node graph canvas semantics node");
+    assert_eq!(canvas.role, SemanticsRole::Viewport);
+    assert_eq!(canvas.label.as_deref(), Some("Node Graph Canvas"));
+    assert!(
+        canvas.active_descendant.is_none(),
+        "canvas should not expose an active descendant for missing graph items"
+    );
+}
+
+#[test]
+fn node_graph_surface_active_descendant_points_to_focused_port_semantics_node() {
+    let (graph, a, _a_in, _a_out, _b, _b_in) = make_graph_two_nodes_with_ports();
+    let snapshot = render_surface_semantics_snapshot(
+        graph,
+        NodeGraphViewState {
+            selected_nodes: vec![a],
+            ..Default::default()
+        },
+    );
+
+    assert_canvas_active_descendant_label(&snapshot, "Port in");
+}
+
+#[test]
+fn node_graph_surface_props_new_wires_default_active_descendant_internals() {
+    let (graph, a, _a_in, _a_out, _b, _b_in) = make_graph_two_nodes_with_ports();
+    let snapshot = render_surface_semantics_snapshot_with_props(
+        graph,
+        NodeGraphViewState {
+            selected_nodes: vec![a],
+            ..Default::default()
+        },
+        |binding| super::NodeGraphSurfaceProps::new(binding.clone()),
+    );
+
+    assert_canvas_active_descendant_label(&snapshot, "Port in");
+}
+
+#[test]
+fn node_graph_surface_active_descendant_prefers_focused_port_over_edge_and_node() {
+    let (mut graph, a, _a_in, a_out, _b, b_in) = make_graph_two_nodes_with_ports();
+    let edge = EdgeId::from_u128(0xA130);
+    graph.edges.insert(
+        edge,
+        Edge {
+            kind: EdgeKind::Data,
+            from: a_out,
+            to: b_in,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+    let snapshot = render_surface_semantics_snapshot(
+        graph,
+        NodeGraphViewState {
+            selected_nodes: vec![a],
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+    );
+
+    assert_canvas_active_descendant_label(&snapshot, "Port in");
+}
+
+#[test]
+fn node_graph_surface_active_descendant_points_to_focused_node_without_ports() {
+    let mut graph = Graph::new(GraphId::from_u128(0xA140));
+    let node = NodeId::from_u128(0xA141);
+    graph
+        .nodes
+        .insert(node, test_node(CanvasPoint { x: 10.0, y: 20.0 }));
+    let snapshot = render_surface_semantics_snapshot(
+        graph,
+        NodeGraphViewState {
+            selected_nodes: vec![node],
+            ..Default::default()
+        },
+    );
+
+    assert_canvas_active_descendant_label(&snapshot, "Node test.node");
+}
+
+#[test]
+fn node_graph_surface_active_descendant_points_to_focused_edge_semantics_node() {
+    let (mut graph, _a, _a_in, a_out, _b, b_in) = make_graph_two_nodes_with_ports();
+    let edge = EdgeId::from_u128(0xA130);
+    graph.edges.insert(
+        edge,
+        Edge {
+            kind: EdgeKind::Data,
+            from: a_out,
+            to: b_in,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+    let snapshot = render_surface_semantics_snapshot(
+        graph,
+        NodeGraphViewState {
+            selected_edges: vec![edge],
+            ..Default::default()
+        },
+    );
+
+    assert_canvas_active_descendant_label(&snapshot, &format!("Edge {edge:?}"));
+}
+
+#[test]
+fn node_graph_surface_active_descendant_ignores_missing_selected_node() {
+    let graph = Graph::new(GraphId::from_u128(0xA150));
+    let missing = NodeId::from_u128(0xA151);
+    let snapshot = render_surface_semantics_snapshot(
+        graph,
+        NodeGraphViewState {
+            selected_nodes: vec![missing],
+            ..Default::default()
+        },
+    );
+
+    assert_canvas_has_no_active_descendant(&snapshot);
 }
 
 #[test]

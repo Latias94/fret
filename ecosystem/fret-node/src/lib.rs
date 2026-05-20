@@ -245,7 +245,7 @@ mod surface_policy_tests {
     fn binding_surface_covers_instance_style_sync_and_history_helpers() {
         let binding_surface = binding_surface();
         assert!(binding_surface.contains(
-            "pub struct NodeGraphSurfaceBinding {\n    graph: Model<Graph>,\n    view_state: Model<NodeGraphViewState>,\n    editor_config: Model<NodeGraphEditorConfig>,\n    store: Model<NodeGraphStore>,\n}"
+            "pub struct NodeGraphSurfaceBinding {\n    graph: Model<Graph>,\n    view_state: Model<NodeGraphViewState>,\n    editor_config: Model<NodeGraphEditorConfig>,\n    store: Model<NodeGraphStore>,\n    internals: Arc<NodeGraphInternalsStore>,\n}"
         ));
         assert!(binding_surface.contains("pub fn from_models_and_controller("));
         assert!(!binding_surface.contains("pub fn from_models_and_controller_with_editor_config("));
@@ -261,6 +261,10 @@ mod surface_policy_tests {
         assert!(binding_surface.contains("FnOnce(&mut NodeGraphNodeUpdate)"));
         assert!(binding_surface.contains("FnOnce(&mut NodeGraphEdgeUpdate)"));
         assert!(binding_surface.contains("pub fn store_model(&self) -> Model<NodeGraphStore> {"));
+        assert!(
+            binding_surface
+                .contains("pub fn internals_store(&self) -> Arc<NodeGraphInternalsStore> {")
+        );
         assert!(!binding_surface.contains("pub fn controller(&self) -> NodeGraphController {"));
         assert!(binding_surface.contains("pub fn replace_graph_action_host("));
         assert!(binding_surface.contains("pub fn replace_document_action_host("));
@@ -358,7 +362,6 @@ mod surface_policy_tests {
         collect_rs_files(&ui_root, &mut files);
 
         let allowed_exact = [
-            "src/ui/a11y.rs",
             "src/ui/editor.rs",
             "src/ui/panel.rs",
             "src/ui/portal.rs",

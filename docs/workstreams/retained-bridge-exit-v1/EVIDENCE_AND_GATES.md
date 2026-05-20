@@ -5846,3 +5846,94 @@ Broader gates not run:
   - Reason: `RBX-M2-133` removes no-user retained diagnostics anchor widgets and dead retained
     canvas anchor-port plumbing; the compat compile gate, retained source-policy gate, and no-user
     scan cover the changed behavior surface.
+
+## 2026-05-20 - RBX-M2-134 retained a11y anchor deletion
+
+Claim verified:
+
+- The default declarative node graph surface now owns active-descendant semantics through
+  `NodeGraphSurfaceBinding::surface_props()` and `NodeGraphSurfaceProps::new(...)`, including
+  focused port, focused edge, focused node, and the retained priority order of port before edge
+  before node.
+- The default declarative frame now publishes presenter-derived active-descendant labels and does
+  not expose stale active descendants for selected nodes/edges that are missing from current
+  geometry.
+- The retained a11y child-anchor widgets were deleted after the default declarative tests and the
+  retained compat oracle agreed in deletion preflight.
+- `a11y.rs` was removed from the retained bridge source usage ledger.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/declarative/paint_only.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+- `ecosystem/fret-node/src/ui/binding.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/surface_frame.rs`
+- deleted `ecosystem/fret-node/src/ui/a11y.rs`
+- deleted `ecosystem/fret-node/src/ui/canvas/widget/tests/a11y_active_descendant_conformance.rs`
+- `ecosystem/fret-node/src/ui/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Deletion-preflight commands:
+
+- `cargo nextest run -p fret-node node_graph_surface_active_descendant`
+  - Result: passed, 2 tests.
+  - Scope proven: the default declarative surface exposed active-descendant semantics for focused
+    port and focused node before the retained oracle was deleted.
+- `cargo nextest run -p fret-node --features compat-retained-canvas a11y_active_descendant_conformance node_graph_surface_active_descendant`
+  - Result: passed, 4 tests.
+  - Scope proven: retained child-anchor semantics and default declarative semantics agreed for the
+    focused port/node cases before deleting the retained `a11y.rs` module and retained oracle test.
+
+Post-delete commands:
+
+- `cargo nextest run -p fret-node node_graph_surface_active_descendant`
+  - Result: passed, 5 tests.
+  - Scope proven: the default declarative binding surface exposes active-descendant semantics for
+    selected/focused port, edge, and node, preserves the retained priority order of port before
+    edge before node, wires both default props entry points to the binding internals store, and
+    suppresses stale active descendants for missing graph items after deleting retained a11y
+    anchors.
+- `cargo nextest run -p fret-node node_graph_surface_active_descendant retained_bridge_source_usage_stays_on_the_migration_ledger`
+  - Result: passed, 6 tests.
+  - Scope proven: default active-descendant behavior and the retained bridge source usage ledger
+    remain green after removing `src/ui/a11y.rs`.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed.
+  - Scope proven: the remaining retained canvas compatibility island still compiles without
+    `a11y.rs`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound node_graph_surface_active_descendant`
+  - Result: passed, 7 tests.
+  - Scope proven: the compat feature still gates only the remaining retained island, while active
+    descendant behavior is supplied by the default declarative binding surface.
+- `cargo fmt -p fret-node`
+  - Result: passed.
+  - Scope proven: touched `fret-node` Rust files were formatted after adding declarative semantics
+    tests and deleting retained a11y modules.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid after shrinking
+    `fret-node` retained source usage.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 427 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^\\s*(pub\\s+)?mod a11y;|NodeGraphA11yActiveDescendant|NodeGraphA11yFocused|a11y_active_descendant_conformance" ecosystem/fret-node/src -S`
+  - Result: no matches.
+  - Scope proven: runtime source no longer declares the deleted retained a11y module or references
+    the deleted retained a11y widgets/conformance module.
+
+Broader gates:
+
+- `cargo nextest run --workspace`
+  - Reason not planned for this slice: `RBX-M2-134` changes `fret-node` declarative semantics and
+    deletes a retained `fret-node` oracle. The default semantic tests, compat compile/test gates,
+    source-policy scan, formatting, layering, catalog, and whitespace gates cover the changed
+    behavior surface.

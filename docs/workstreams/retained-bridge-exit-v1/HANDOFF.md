@@ -583,8 +583,12 @@ used that proof plus a deletion-preflight retained group/symbol rename oracle to
 retained rename host, retained rename event adapter, and retained rename oracle tests. Rename is now
 a default declarative managed-host path; `group_rename.rs` only carries overlay state. `RBX-M2-133`
 deleted the no-user retained diagnostics anchor widgets plus their dead retained canvas
-diagnostics-anchor layout plumbing. Retained `a11y.rs` remains until active-descendant child
-semantics have a default declarative proof.
+diagnostics-anchor layout plumbing. `RBX-M2-134` proved active-descendant semantics on the default
+declarative node graph binding/surface for focused port, edge, and node, preserved the retained
+active-descendant priority order of port before edge before node, verified both
+`NodeGraphSurfaceBinding::surface_props()` and `NodeGraphSurfaceProps::new(...)`, suppressed stale
+active descendants for missing graph items, then deleted retained `a11y.rs` and its retained oracle
+test after deletion-preflight retained/default coverage.
 
 ## Next Task
 
@@ -596,9 +600,9 @@ Recommended next implementation shape:
 
 - Continue M2 by shrinking the RBX-M2-080 ledger. The retained controls widget is now gone; the
   retained toolbar widgets are gone; retained minimap is gone; retained blackboard is gone; retained
-  rename host is gone; retained diagnostics anchors are gone. The remaining portal family work is
-  declarative portal subtree hosting/model lifecycle replacement, retained a11y active-descendant
-  anchors need default proof, and the remaining canvas interaction families still need default-path
+  rename host is gone; retained diagnostics anchors are gone; retained a11y active-descendant
+  anchors are gone. The remaining portal family work is declarative portal subtree hosting/model
+  lifecycle replacement, and the remaining canvas interaction families still need default-path
   tests before their retained widget/event code can be deleted. Each slice should first add default
   declarative tests, then remove or gate less retained code.
 - After the ledger no longer contains behavior-only retained files, remove
@@ -609,7 +613,29 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-133`:
+Last run on 2026-05-20 for `RBX-M2-134`:
+
+- deletion-preflight `cargo nextest run -p fret-node node_graph_surface_active_descendant` -
+  passed, 2 tests.
+- deletion-preflight `cargo nextest run -p fret-node --features compat-retained-canvas a11y_active_descendant_conformance node_graph_surface_active_descendant` -
+  passed, 4 tests.
+- post-delete `cargo nextest run -p fret-node node_graph_surface_active_descendant` -
+  passed, 5 tests.
+- post-delete `cargo nextest run -p fret-node node_graph_surface_active_descendant retained_bridge_source_usage_stays_on_the_migration_ledger` -
+  passed, 6 tests.
+- post-delete `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- post-delete `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound node_graph_surface_active_descendant` -
+  passed, 7 tests.
+- `cargo fmt -p fret-node` - passed.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `rg -n "^\\s*(pub\\s+)?mod a11y;|NodeGraphA11yActiveDescendant|NodeGraphA11yFocused|a11y_active_descendant_conformance" ecosystem/fret-node/src -S` -
+  no matches.
+
+Previous run on 2026-05-20 for `RBX-M2-133`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed.
 - `cargo nextest run -p fret-node --features compat-retained-canvas retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound` -
