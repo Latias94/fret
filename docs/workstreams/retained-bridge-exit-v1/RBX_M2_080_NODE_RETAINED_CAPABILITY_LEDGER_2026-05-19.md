@@ -91,6 +91,11 @@ Compat-gated but retained-bridge-free support:
   - `RBX-M2-260` moved sticky-wire target picker host/window access plus handled-event finish
     behavior behind the retained-agnostic `StickyWireTargetPickerCx` seam. Retained `EventCx`
     implements that seam in `sticky_wire_targets/retained_picker_cx.rs`.
+- `ecosystem/fret-node/src/ui/canvas/widget/group_drag/tail.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/group_resize/tail.rs`
+  - `RBX-M2-270` moved group drag/resize preview tail paint invalidation behind the
+    retained-agnostic `WidgetPaintInvalidationCx` seam. Retained `cx.app` auto-pan view-state I/O
+    remains in the retained event callers.
 
 Deleted retained overlay files:
 
@@ -139,6 +144,7 @@ Deleted retained overlay files:
 | Edge-insert drag move tail action | retained canvas still adapts retained `EventCx` paint invalidation through `retained_widget_tail.rs` | `RBX-M2-240` moves edge-insert drag move finish onto retained-agnostic `WidgetPaintInvalidationCx` and source-policy gates the helper | Continue migrating direct retained `EventCx` tail helpers, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Cancel cleanup tail action | retained canvas still performs retained caller timer I/O and adapts retained `EventCx` release-capture/stop-propagation through `retained_widget_tail.rs` | `RBX-M2-250` moves cancel finish tail side effects onto retained-agnostic `HandledPointerCaptureReleaseCx` and source-policy gates `cancel_cleanup.rs` | Continue migrating direct retained `EventCx` tail helpers, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Sticky-wire target picker Cx seam | retained canvas still adapts retained `EventCx` host/window access through `sticky_wire_targets/retained_picker_cx.rs` | `RBX-M2-260` moves picker host/window access and handled finish tail behavior onto retained-agnostic `StickyWireTargetPickerCx` and source-policy gates `sticky_wire_targets/picker.rs` | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
+| Group preview move tail action | retained canvas callers still own `cx.app` auto-pan view-state I/O and adapt paint invalidation through `retained_widget_tail.rs` | `RBX-M2-270` moves group drag/resize preview state update tails onto retained-agnostic `WidgetPaintInvalidationCx` and source-policy gates both helpers | Continue migrating direct retained `EventCx` tail helpers, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 
 ## New Gate
 

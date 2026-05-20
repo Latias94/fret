@@ -27,7 +27,13 @@ pub(super) fn handle_group_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         canvas, cx.app, snapshot, &resize, position, modifiers,
     );
 
-    tail::finish_group_resize_move(canvas, cx, &mut resize, new_rect, auto_pan_delta);
+    if auto_pan_delta.x != 0.0 || auto_pan_delta.y != 0.0 {
+        canvas.update_view_state(cx.app, |s| {
+            s.pan.x += auto_pan_delta.x;
+            s.pan.y += auto_pan_delta.y;
+        });
+    }
+    tail::finish_group_resize_move(canvas, cx, &mut resize, new_rect);
     true
 }
 

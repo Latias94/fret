@@ -646,7 +646,10 @@ release-capture, optional propagation stop, and paint invalidation behind
 moved sticky-wire target picker host/window access plus handled-event finish behavior behind
 `StickyWireTargetPickerCx`; retained `EventCx` implements that seam in
 `sticky_wire_targets/retained_picker_cx.rs`, and `sticky_wire_targets/picker.rs` is now
-source-policy gated as retained-bridge-free support.
+source-policy gated as retained-bridge-free support. `RBX-M2-270` then moved group drag/resize
+preview tail paint invalidation behind `WidgetPaintInvalidationCx`; retained `cx.app` auto-pan
+view-state I/O remains in the retained event callers, and `group_drag/tail.rs` /
+`group_resize/tail.rs` are now source-policy gated as retained-bridge-free support.
 
 ## Next Task
 
@@ -669,9 +672,10 @@ Recommended next implementation shape:
   seam.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
-  `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`, and
-  `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, `cancel_cleanup.rs`, and
-  `sticky_wire_targets/picker.rs` are compat-gated retained-bridge-free support. The remaining
+  `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
+  `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, `cancel_cleanup.rs`,
+  `sticky_wire_targets/picker.rs`, `group_drag/tail.rs`, and `group_resize/tail.rs` are
+  compat-gated retained-bridge-free support. The remaining
   canvas interaction families still need default-path tests before their retained widget/event code
   can be deleted. Each slice should first add default declarative tests or retained-agnostic seams,
   then remove or gate less retained code.
@@ -683,7 +687,29 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-260`:
+Last run on 2026-05-20 for `RBX-M2-270`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas update_drag_preview_state update_resize_preview_state group_resize_is_previewed_and_committed_on_pointer_up group_resize_clamps_to_children retained_canvas_tail_policy_helpers_stay_off_retained_bridge retained_bridge_source_usage_stays_on_the_migration_ledger retained_widget_compat_island_stays_crate_private_and_controller_bound` -
+  passed, 9 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/paint_invalidation.rs ecosystem/fret-node/src/ui/canvas/widget/redraw_request.rs ecosystem/fret-node/src/ui/canvas/widget/widget_tail.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_finish.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_session/cleanup.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_connect/finish.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag/tail.rs ecosystem/fret-node/src/ui/canvas/widget/cancel_cleanup.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets/picker.rs ecosystem/fret-node/src/ui/canvas/widget/group_drag/tail.rs ecosystem/fret-node/src/ui/canvas/widget/group_resize/tail.rs` -
+  no matches.
+- `cargo fmt -p fret-node` - passed.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-270` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.
+
+Previous run on 2026-05-20 for `RBX-M2-260`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.

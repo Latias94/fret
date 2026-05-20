@@ -1,27 +1,16 @@
-use fret_ui::UiHost;
-
 use crate::core::{CanvasPoint, CanvasRect};
 use crate::ui::canvas::state::GroupDrag;
 use crate::ui::canvas::widget::*;
 
-pub(super) fn finish_group_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn finish_group_drag_move<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl super::super::widget_tail::WidgetPaintInvalidationCx<H>,
     drag: &mut GroupDrag,
     delta: CanvasPoint,
-    auto_pan_delta: CanvasPoint,
 ) {
     update_drag_preview_state(drag, delta);
     canvas.interaction.group_drag = Some(drag.clone());
-
-    if auto_pan_delta.x != 0.0 || auto_pan_delta.y != 0.0 {
-        canvas.update_view_state(cx.app, |s| {
-            s.pan.x += auto_pan_delta.x;
-            s.pan.y += auto_pan_delta.y;
-        });
-    }
-
-    super::super::paint_invalidation::invalidate_paint(cx);
+    super::super::widget_tail::invalidate_widget_paint(cx);
 }
 
 fn update_drag_preview_state(drag: &mut GroupDrag, delta: CanvasPoint) {
@@ -50,5 +39,61 @@ fn update_drag_preview_state(drag: &mut GroupDrag, delta: CanvasPoint) {
         drag.current_rect = next_rect;
         drag.current_nodes = next_nodes;
         drag.preview_rev = drag.preview_rev.wrapping_add(1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fret_core::{Point, Px};
+
+    use super::*;
+    use crate::core::{CanvasSize, GroupId, NodeId};
+
+    fn rect(x: f32, y: f32, width: f32, height: f32) -> CanvasRect {
+        CanvasRect {
+            origin: CanvasPoint { x, y },
+            size: CanvasSize { width, height },
+        }
+    }
+
+    #[test]
+    fn update_drag_preview_state_updates_rect_nodes_and_preview_rev() {
+        let node = NodeId::new();
+        let mut drag = GroupDrag {
+            group: GroupId::new(),
+            start_pos: Point::new(Px(0.0), Px(0.0)),
+            start_rect: rect(10.0, 20.0, 100.0, 80.0),
+            nodes: vec![(node, CanvasPoint { x: 15.0, y: 25.0 })],
+            current_rect: rect(10.0, 20.0, 100.0, 80.0),
+            current_nodes: vec![(node, CanvasPoint { x: 15.0, y: 25.0 })],
+            preview_rev: 0,
+        };
+
+        update_drag_preview_state(&mut drag, CanvasPoint { x: 3.0, y: 4.0 });
+
+        assert_eq!(drag.current_rect.origin, CanvasPoint { x: 13.0, y: 24.0 });
+        assert_eq!(
+            drag.current_nodes,
+            vec![(node, CanvasPoint { x: 18.0, y: 29.0 })]
+        );
+        assert_eq!(drag.preview_rev, 1);
+    }
+
+    #[test]
+    fn update_drag_preview_state_skips_noop_preview_rev() {
+        let node = NodeId::new();
+        let mut drag = GroupDrag {
+            group: GroupId::new(),
+            start_pos: Point::new(Px(0.0), Px(0.0)),
+            start_rect: rect(10.0, 20.0, 100.0, 80.0),
+            nodes: vec![(node, CanvasPoint { x: 15.0, y: 25.0 })],
+            current_rect: rect(10.0, 20.0, 100.0, 80.0),
+            current_nodes: vec![(node, CanvasPoint { x: 15.0, y: 25.0 })],
+            preview_rev: 7,
+        };
+
+        update_drag_preview_state(&mut drag, CanvasPoint { x: 0.0, y: 0.0 });
+
+        assert_eq!(drag.preview_rev, 7);
     }
 }
