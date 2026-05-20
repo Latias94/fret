@@ -3237,6 +3237,34 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-520 Isolate context menu UI retained Cx tails.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/event.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/event_retained_cx.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move context menu UI open/restore/dismiss/finish/invalidate helpers off direct retained
+      bridge Cx names by using existing widget-tail seams plus a narrow context-menu focus seam.
+    - Keep retained focus-self I/O as an adapter-only implementation.
+    - Extend source-policy coverage so context menu UI tail helpers cannot re-import retained
+      bridge Cx names.
+  - Result:
+    - `context_menu/ui.rs` and `context_menu/ui/event.rs` now use retained-agnostic
+      `WidgetHandledCx`, `WidgetPaintInvalidationCx`, and `ContextMenuFocusCx`.
+    - Added `context_menu/ui/event_retained_cx.rs` as the only retained adapter for context menu
+      focus-self I/O.
+    - Added focused tests for open/focus/finish, restore/finish without focus,
+      dismiss/finish, no-menu dismiss no-op behavior, and paint invalidation.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_ui_tail_stays_off_retained_bridge) | test(open_context_menu_event_installs_menu_focuses_and_finishes) | test(restore_context_menu_event_restores_menu_and_finishes_without_focus) | test(dismiss_context_menu_event_clears_menu_and_finishes) | test(dismiss_context_menu_event_without_menu_is_side_effect_free) | test(invalidate_context_menu_paint_requests_redraw_and_paint_invalidation) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/event.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

@@ -184,6 +184,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_pending/click_select.rs");
     const UI_CANVAS_WIDGET_POINTER_DOWN_DOUBLE_CLICK_EDGE_FINISH_RS: &str =
         include_str!("ui/canvas/widget/pointer_down_double_click_edge/finish.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_UI_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/ui.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_UI_EVENT_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/ui/event.rs");
     const UI_CANVAS_WIDGET_SEARCHER_RS: &str = include_str!("ui/canvas/widget/searcher.rs");
     const UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_RS: &str =
         include_str!("ui/canvas/widget/searcher_activation.rs");
@@ -480,6 +484,28 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_SEARCHER_RS.contains(forbidden),
                 "searcher top-level route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn context_menu_ui_tail_stays_off_retained_bridge() {
+        let context_menu_ui_tail_sources = [
+            UI_CANVAS_WIDGET_CONTEXT_MENU_UI_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_UI_EVENT_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !context_menu_ui_tail_sources.contains(forbidden),
+                "context menu UI tail helpers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

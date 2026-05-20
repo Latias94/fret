@@ -760,6 +760,12 @@ release, and input seams. `searcher.rs` is now source-policy gated as retained-b
 while retained pointer/timer/capture, row activation, and widget-tail I/O stay in their existing
 adapter-only implementations. Focused top-level route tests prove Escape dismiss/finish, Enter row
 activation, and pointer-down row-drag arming without retained Cx types.
+`RBX-M2-520` then moved context menu UI open/restore/dismiss/finish/invalidate helpers behind
+retained-agnostic widget-tail seams plus a narrow `ContextMenuFocusCx` seam. `context_menu/ui.rs`
+and `context_menu/ui/event.rs` are now source-policy gated as retained-bridge-free support;
+retained focus-self I/O lives in `context_menu/ui/event_retained_cx.rs`. Focused tests prove
+open/focus/finish, restore/finish without focus, dismiss/finish, no-menu dismiss no-op behavior,
+and paint invalidation.
 
 ## Next Task
 
@@ -800,7 +806,8 @@ Recommended next implementation shape:
   outer searcher activation pointer-down/up wrapper now uses those retained-agnostic seams too;
   searcher pointer move/wheel routing now uses the retained-agnostic paint invalidation seam;
   searcher key-down routing now uses the retained-agnostic input seam; the top-level searcher route
-  wrapper now composes those seams through `SearcherCx`.
+  wrapper now composes those seams through `SearcherCx`; context menu UI open/restore/dismiss/
+  finish/invalidate tails now use retained-agnostic widget-tail seams plus `ContextMenuFocusCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -826,6 +833,7 @@ Recommended next implementation shape:
   `searcher_input.rs`, `searcher_input/dispatch.rs`, `searcher_input_query.rs`,
   `searcher_pointer.rs`, `searcher_pointer/move_event.rs`, `searcher_pointer/wheel_event.rs`,
   `searcher_ui.rs`, `searcher_ui/event.rs`,
+  `context_menu/ui.rs`, `context_menu/ui/event.rs`,
   `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, `cancel_cleanup.rs`,
   `sticky_wire_targets/picker.rs`, `group_drag/tail.rs`, `group_resize/tail.rs`,
   `group_preview_move_cx.rs`, `group_drag.rs`, `group_resize.rs`,
@@ -842,15 +850,13 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-20 for `RBX-M2-510`:
+Last run on 2026-05-21 for `RBX-M2-520`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(searcher_top_level_route_stays_off_retained_bridge) | test(searcher_top_level_escape_dismisses_and_finishes) | test(searcher_top_level_key_down_delegates_to_activation_seam) | test(searcher_top_level_pointer_down_arms_row_drag_without_retained_cx) | test(searcher_dismiss_tail_helpers_stay_off_retained_bridge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
-  passed, 6 tests.
-- `rm -rf target/debug/incremental` - completed after an initial targeted nextest attempt failed
-  with `No space left on device`; only rebuildable Cargo incremental artifacts were removed.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/searcher.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation/pointer_down.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation/pointer_up.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/arm.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/release.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_input.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_input/dispatch.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_input_query.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer/move_event.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_pointer/wheel_event.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs` -
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_ui_tail_stays_off_retained_bridge) | test(open_context_menu_event_installs_menu_focuses_and_finishes) | test(restore_context_menu_event_restores_menu_and_finishes_without_focus) | test(dismiss_context_menu_event_clears_menu_and_finishes) | test(dismiss_context_menu_event_without_menu_is_side_effect_free) | test(invalidate_context_menu_paint_requests_redraw_and_paint_invalidation) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 7 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/event.rs` -
   no matches.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
@@ -861,7 +867,7 @@ Last run on 2026-05-20 for `RBX-M2-510`:
 Broader gates not run:
 
 - `cargo nextest run --workspace`
-  - Reason: `RBX-M2-510` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+  - Reason: `RBX-M2-520` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
 
