@@ -855,6 +855,10 @@ retained-bridge-free release support, while retained `EventCx` adaptation is iso
 `pointer_up_release_retained_cx.rs`. Focused tests prove sticky-wire ignored release still clears
 the ignore flag, keeps the wire drag alive, and invalidates paint; pan inertia release and
 right-pan context-menu behavior remain green.
+`RBX-M2-670` then moved the plain double-click edge-insert pointer-up subroute behind
+`PointerUpReleaseCx`. `pointer_up_left_route/double_click.rs` is now source-policy gated as
+retained-bridge-free support, and a real `pointer_up::handle_pointer_up` test proves the route
+still opens the edge insert picker, clears edge-drag hover state, and invalidates paint.
 
 ## Next Task
 
@@ -910,7 +914,7 @@ Recommended next implementation shape:
   context-menu routing now uses the retained-agnostic `RightClickCx` seam; pointer-up guard
   dispatch now uses the retained-agnostic `PointerUpGuardCx` seam; pointer-up sticky ignored
   release and pan release helpers now use retained-agnostic `PointerUpReleaseCx` / widget-tail
-  paint seams.
+  paint seams; pointer-up left double-click edge-insert release now uses `PointerUpReleaseCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -959,6 +963,7 @@ Recommended next implementation shape:
   `context_menu/selection_activation.rs`, `context_menu/selection_activation/pointer_down.rs`,
   `event_pointer_up/dispatch.rs`,
   `pointer_up/release.rs`, `pointer_up_state/release.rs`, `pointer_up_release_cx.rs`,
+  `pointer_up_left_route/double_click.rs`,
   `right_click.rs`, `right_click/pending.rs`,
   `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, `cancel_cleanup.rs`,
   `sticky_wire_targets/picker.rs`, `group_drag/tail.rs`, `group_resize/tail.rs`,
@@ -976,13 +981,13 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-660`:
+Last run on 2026-05-21 for `RBX-M2-670`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_release_route_stays_off_retained_bridge) | test(sticky_wire_ignored_left_pointer_up_clears_ignore_and_invalidates_paint) | test(pan_inertia_emits_move_end_after_inertia_stops) | test(right_pan_defers_context_menu_until_pointer_up) | test(right_pan_drag_does_not_open_context_menu) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
-  passed, 6 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up/release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_state/release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_up_release_cx.rs` -
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_left_double_click_route_stays_off_retained_bridge) | test(plain_double_click_edge_insert_left_up_opens_picker_and_invalidates_paint) | test(should_open_edge_insert_picker_requires_plain_double_click) | test(edge_insert_left_up_does_not_open_picker_when_searcher_is_open) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 5 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/double_click.rs` -
   no matches.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
@@ -993,7 +998,7 @@ Last run on 2026-05-21 for `RBX-M2-660`:
 Broader gates not run:
 
 - `cargo nextest run --workspace`
-  - Reason: `RBX-M2-660` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+  - Reason: `RBX-M2-670` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
 

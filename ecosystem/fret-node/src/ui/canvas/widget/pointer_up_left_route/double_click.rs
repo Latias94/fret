@@ -1,11 +1,13 @@
 use fret_core::{Modifiers, Point};
 use fret_ui::UiHost;
 
-use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, pointer_up_release_cx::PointerUpReleaseCx,
+};
 
 pub(in super::super) fn handle_edge_insert_double_click<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl PointerUpReleaseCx<H>,
     position: Point,
     click_count: u8,
     modifiers: Modifiers,
@@ -18,7 +20,8 @@ pub(in super::super) fn handle_edge_insert_double_click<H: UiHost, M: NodeGraphC
         return false;
     };
 
-    canvas.open_edge_insert_node_picker(cx.app, cx.window, edge_drag.edge, position);
+    let window = cx.window();
+    canvas.open_edge_insert_node_picker(cx.host(), window, edge_drag.edge, position);
     canvas.interaction.hover_edge = None;
     cx.release_pointer_capture();
     super::super::paint_invalidation::invalidate_paint(cx);

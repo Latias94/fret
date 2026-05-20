@@ -1,5 +1,5 @@
 use fret_core::{Modifiers, MouseButton, Point, PointerEvent, Px, Rect, Size};
-use fret_ui::retained_bridge::Widget as _;
+use fret_ui::{Invalidation, retained_bridge::Widget as _};
 use serde_json::Value;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -150,6 +150,70 @@ fn edge_insert_left_up_does_not_open_picker_when_searcher_is_open() {
         canvas.interaction.searcher.as_ref().unwrap().target,
         ContextMenuTarget::EdgeInsertNodePicker(e) if e == edge_a
     ));
+}
+
+#[test]
+fn plain_double_click_edge_insert_left_up_opens_picker_and_invalidates_paint() {
+    let mut host = TestUiHostImpl::default();
+    let (mut graph_value, _a, _a_in, a_out, _b, b_in) =
+        make_test_graph_two_nodes_with_ports_spaced_x(420.0);
+
+    let edge_id = EdgeId(Uuid::from_u128(11));
+    graph_value.edges.insert(
+        edge_id,
+        Edge {
+            kind: EdgeKind::Data,
+            from: a_out,
+            to: b_in,
+            selectable: None,
+            deletable: None,
+            reconnectable: None,
+        },
+    );
+
+    let (graph, view, editor_config) = insert_graph_view_editor_config(&mut host, graph_value);
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
+    let snapshot = canvas.sync_view_state(&mut host);
+    canvas.interaction.edge_drag = Some(crate::ui::canvas::state::EdgeDrag {
+        edge: edge_id,
+        start_pos: Point::new(Px(10.0), Px(10.0)),
+    });
+    canvas.interaction.hover_edge = Some(edge_id);
+
+    let window = fret_core::AppWindowId::default();
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds(),
+        &mut prevented_default_actions,
+    );
+    cx.window = Some(window);
+
+    assert!(super::super::pointer_up::handle_pointer_up(
+        &mut canvas,
+        &mut cx,
+        &snapshot,
+        Point::new(Px(20.0), Px(20.0)),
+        fret_core::MouseButton::Left,
+        2,
+        fret_core::Modifiers::default(),
+        snapshot.zoom,
+    ));
+
+    assert!(canvas.interaction.edge_drag.is_none());
+    assert!(canvas.interaction.hover_edge.is_none());
+    assert!(matches!(
+        canvas.interaction.searcher.as_ref().map(|searcher| &searcher.target),
+        Some(ContextMenuTarget::EdgeInsertNodePicker(edge)) if *edge == edge_id
+    ));
+    assert!(
+        cx.invalidations
+            .iter()
+            .any(|(_, kind)| *kind == Invalidation::Paint)
+    );
+    assert!(cx.app.redraw.contains(&window));
 }
 
 #[test]

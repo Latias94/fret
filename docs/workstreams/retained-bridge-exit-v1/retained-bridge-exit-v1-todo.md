@@ -3693,6 +3693,33 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-670 Isolate pointer-up left double-click retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/double_click.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_conformance.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the plain double-click edge-insert pointer-up subroute off direct retained bridge Cx
+      names.
+    - Reuse the retained-agnostic `PointerUpReleaseCx` seam for host/window access, pointer capture
+      release, and paint invalidation.
+    - Prove the real pointer-up path still opens the edge insert picker and invalidates paint.
+  - Result:
+    - `pointer_up_left_route/double_click.rs` now uses `PointerUpReleaseCx` instead of retained
+      `EventCx`.
+    - Added `pointer_up_left_double_click_route_stays_off_retained_bridge` source-policy coverage.
+    - Added `plain_double_click_edge_insert_left_up_opens_picker_and_invalidates_paint` behavior
+      coverage through `pointer_up::handle_pointer_up`.
+  - Validation:
+    - Red: `cargo nextest run -p fret-node --features compat-retained-canvas pointer_up_left_double_click_route_stays_off_retained_bridge`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_left_double_click_route_stays_off_retained_bridge) | test(plain_double_click_edge_insert_left_up_opens_picker_and_invalidates_paint) | test(should_open_edge_insert_picker_requires_plain_double_click) | test(edge_insert_left_up_does_not_open_picker_when_searcher_is_open) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/double_click.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

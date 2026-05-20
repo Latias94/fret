@@ -9372,3 +9372,68 @@ Broader gates not run:
   - Reason: `RBX-M2-660` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-670 pointer-up left double-click retained Cx route isolation
+
+Claim verified:
+
+- The plain double-click edge-insert pointer-up subroute no longer imports or names retained bridge
+  Cx types.
+- The subroute reuses `PointerUpReleaseCx` for host/window access, pointer capture release, and
+  paint invalidation.
+- The real pointer-up path still opens the edge insert picker, clears edge-drag hover state, and
+  invalidates paint.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/double_click.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/edge_insert_conformance.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Red evidence:
+
+- `cargo nextest run -p fret-node --features compat-retained-canvas pointer_up_left_double_click_route_stays_off_retained_bridge`
+  - Result: failed before implementation, 1 failed test.
+  - Failure: `pointer-up left double-click route must stay retained-Cx agnostic; found retained_bridge`.
+  - Scope proven: the new source-policy test caught retained bridge naming in the left
+    double-click pointer-up helper before the seam extraction.
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving the left
+    double-click pointer-up subroute behind `PointerUpReleaseCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_left_double_click_route_stays_off_retained_bridge) | test(plain_double_click_edge_insert_left_up_opens_picker_and_invalidates_paint) | test(should_open_edge_insert_picker_requires_plain_double_click) | test(edge_insert_left_up_does_not_open_picker_when_searcher_is_open) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 5 tests.
+  - Scope proven: source-policy locks the left double-click pointer-up helper off retained bridge
+    Cx names; the real pointer-up path still opens the edge insert picker and invalidates paint.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_up_left_route/double_click.rs`
+  - Result: no matches.
+  - Scope proven: the left double-click pointer-up helper no longer depends on retained bridge Cx
+    names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the left double-click
+    seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    the left double-click pointer-up helper behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-670` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.
