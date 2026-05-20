@@ -1,9 +1,10 @@
 use super::{key_navigation, selection_activation};
+use crate::ui::canvas::widget::widget_tail::WidgetPaintInvalidationCx;
 use crate::ui::canvas::widget::*;
 
-pub(super) fn handle_context_menu_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_context_menu_pointer_down<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl selection_activation::ContextMenuPointerDownCx<H, M>,
     position: Point,
     button: MouseButton,
     zoom: f32,
@@ -11,9 +12,9 @@ pub(super) fn handle_context_menu_pointer_down<H: UiHost, M: NodeGraphCanvasMidd
     selection_activation::handle_context_menu_pointer_down_event(canvas, cx, position, button, zoom)
 }
 
-pub(super) fn handle_context_menu_pointer_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_context_menu_pointer_move<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl WidgetPaintInvalidationCx<H>,
     position: Point,
     zoom: f32,
 ) -> bool {

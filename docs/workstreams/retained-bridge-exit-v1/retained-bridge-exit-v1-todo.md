@@ -3352,6 +3352,36 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-560 Isolate context menu top-level retained Cx route.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/input.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/pointer.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the context menu top-level escape/key/pointer route wrappers off direct retained bridge
+      Cx names by composing the existing key-down and pointer-down seams through `ContextMenuCx`.
+    - Move `context_menu/input.rs` and `context_menu/pointer.rs` wrapper signatures onto the
+      narrow retained-agnostic seams they actually need.
+    - Lock the top-level context menu route files with source-policy coverage.
+  - Result:
+    - `context_menu/mod.rs` now composes top-level routing through `ContextMenuCx`, mirroring the
+      searcher top-level route pattern.
+    - `context_menu/input.rs` now takes `WidgetHandledCx` for Escape and `ContextMenuKeyDownCx` for
+      key-down routing.
+    - `context_menu/pointer.rs` now takes `ContextMenuPointerDownCx` for pointer-down routing and
+      `WidgetPaintInvalidationCx` for pointer-move routing.
+    - Added focused top-level tests proving Escape dismiss/finish, Enter active-item activation,
+      pointer-down item activation, and pointer-move hover/invalidation without retained Cx types.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_top_level_route_stays_off_retained_bridge) | test(context_menu_top_level_escape_dismisses_and_finishes) | test(context_menu_top_level_key_down_delegates_to_activation_seam) | test(context_menu_top_level_pointer_down_delegates_to_selection_activation) | test(context_menu_top_level_pointer_move_updates_hover_and_invalidates_paint) | test(context_menu_selection_activation_route_stays_off_retained_bridge) | test(context_menu_key_down_route_stays_off_retained_bridge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/mod.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/input.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/pointer.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
