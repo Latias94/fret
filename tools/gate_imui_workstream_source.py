@@ -4034,6 +4034,30 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/native_select.rs"),
+            required=[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn native_select_text_refinement(style: &TextStyle) -> fret_core::TextStyleRefinement",
+                "fn native_select_trigger_text<H: UiHost>(",
+                "decl_text::text_control_label(cx, label)",
+                "fn native_select_item_text<H: UiHost>(",
+                "decl_text::text_list_row_label(cx, label)",
+                "native_select_trigger_and_item_text_use_shared_resize_roles",
+                "assert_native_select_role_text(&trigger_text, trigger_fg);",
+                "assert_native_select_role_text(&item_text, item_fg);",
+                "assert_eq!(props.layout.flex.grow, 1.0);",
+                "assert_eq!(props.wrap, fret_core::TextWrap::None);",
+                "assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);",
+            ],
+            forbidden=[
+                "let mut content = ui::text(label)",
+                "content = content.overflow(fret_core::TextOverflow::Clip);",
+                "let mut label = ui::label(label_text.clone())",
+                ".text_size_px(label_style.size)",
+                ".fixed_line_box_px(\n                                    text_style.line_height.unwrap_or(text_style.size),\n                                )",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/calendar.rs"),
             required=[
                 "use fret_ui_kit::declarative::text as decl_text;",

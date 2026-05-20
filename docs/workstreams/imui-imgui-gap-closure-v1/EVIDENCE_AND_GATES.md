@@ -4934,6 +4934,36 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `python tools\gate_imui_workstream_source.py`,
   `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
 
+2026-05-20 shadcn NativeSelect shared text-role slice:
+
+- Source gap before fix: NativeSelect trigger selected/placeholder text and popover option labels
+  were still component-local `ui::text(...)` / `ui::label(...)` fixed-line builders. They had
+  no-wrap styling, but the resize contract lived in the recipe instead of the shared text-role
+  vocabulary, making select trigger/listbox rows easy to drift under future layout changes.
+- `native_select_trigger_text(...)` now backs the trigger value with
+  `decl_text::text_control_label(...)`; `native_select_item_text(...)` backs option labels with
+  `decl_text::text_list_row_label(...)`. Both layer NativeSelect/Command typography and state
+  foreground through inherited metadata, leaving leaf `style` and `color` empty.
+- NativeSelect still owns trigger chrome, placeholder vs selected foreground, listbox command
+  selection, check icon visibility, popover placement, and RTL ordering. No new `fret-imui` API or
+  runtime text role was added.
+- `native_select_trigger_and_item_text_use_shared_resize_roles` proves both helper paths keep
+  fill/grow/shrink/basis-zero, `min-width: 0`, no-wrap, ellipsis, inherited text style, and
+  inherited foreground.
+- `tools/gate_imui_workstream_source.py` now requires the helper/test shape and forbids the old
+  local trigger/item text builders from returning.
+- Focused Rust gates initially exposed a local partial `1.92` toolchain install (`rustup show`
+  reported a missing manifest and the toolchain bin directory lacked `rustc.exe`). A non-destructive
+  `rustup toolchain install 1.92 --profile default` repaired the pinned toolchain.
+- Focused gates passed on the pinned `1.92` toolchain:
+  `cargo fmt --check -p fret-ui-shadcn`,
+  `cargo check -p fret-ui-shadcn --lib`, and
+  `cargo nextest run -p fret-ui-shadcn --lib
+  native_select_trigger_and_item_text_use_shared_resize_roles --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`, `python tools\gate_imui_facade_teaching_source.py`,
+  and `git diff --check`.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

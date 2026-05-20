@@ -1147,6 +1147,13 @@ Readiness order for the next locally testable review slices:
    owns fixed-row no-wrap/shrink/min-width-0/ellipsis behavior. DropdownMenu's icon/currentColor
    slots are stamped on icon/custom/trailing subtrees instead of wrapping the label subtree, so menu
    label state colors are not overwritten by muted icon foreground.
+   2026-05-20 shadcn NativeSelect text-role follow-up: NativeSelect trigger value text now routes
+   through `text_control_label(...)`, and listbox option labels route through
+   `text_list_row_label(...)`, instead of component-local `ui::text(...)` /
+   `ui::label(...)` fixed-line builders. NativeSelect still owns trigger chrome, placeholder vs
+   selected foreground, command-list selection, check icon visibility, popover placement, and
+   RTL order; shared text roles own no-wrap, fill/grow/shrink, min-width-zero, ellipsis, and
+   inherited typography/foreground semantics.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

@@ -1022,6 +1022,12 @@ Exit criteria:
   `ui::text(...).text_size_px(...).nowrap()` builders. Menu recipes still own row chrome,
   destructive/disabled/focused foregrounds, shortcut/trailing slots, and icon currentColor
   inheritance.
+  2026-05-20 shadcn NativeSelect text-role result: NativeSelect selected/placeholder trigger text
+  now consumes `text_control_label(...)`, and option rows consume `text_list_row_label(...)`,
+  with shadcn NativeSelect/Command typography and state foreground layered through inherited
+  metadata. NativeSelect keeps trigger chrome, popover/listbox behavior, check icons, placeholder
+  state, and RTL ordering recipe-owned; the shared roles own the resize-critical single-line,
+  fill/grow/shrink, min-width-zero, and ellipsis contracts.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.
