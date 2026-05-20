@@ -1168,6 +1168,12 @@ Readiness order for the next locally testable review slices:
    popover/search policy, selected-value lookup, wrapping chip row layout, and RTL order; shared
    roles own the resize-sensitive no-wrap/min-width-zero/ellipsis contracts, with chip labels kept
    non-growing so pill chrome does not expand like a row label.
+   2026-05-21 shadcn Badge default-label text-role follow-up: default Badge labels now route
+   through the compact `text_chip_label(...)` shared role instead of component-local
+   `ui::text(...).text_size_px(...).fixed_line_box_px(...)` builders. Badge still owns variant
+   chrome, foreground/currentColor scope, icon sizing, link underline, action/link semantics, and
+   leading/trailing children fallback behavior; the shared role owns the default label's no-wrap,
+   min-width-zero, shrink, ellipsis, and inherited text/foreground contract.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

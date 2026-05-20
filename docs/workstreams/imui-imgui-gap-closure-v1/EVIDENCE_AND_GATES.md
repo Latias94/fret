@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-20
+Last updated: 2026-05-21
 
 ## Evidence Anchors
 
@@ -5023,6 +5023,41 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   chip_label_text_uses_xs_medium_non_growing_single_line_truncation --no-fail-fast`,
   `cargo nextest run -p fret-ui-shadcn --lib
   combobox_chips_placeholder_and_chip_text_use_shared_resize_roles --no-fail-fast`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
+
+2026-05-21 shadcn Badge default-label shared text-role slice:
+
+- Source gap before fix: Badge default labels still hand-built local
+  `ui::text(...).text_size_px(...).fixed_line_box_px(...).text_color(...)` leaves. That duplicated
+  the compact chip/tag text contract already introduced for selected ComboboxChips pill labels and
+  made the link-hover underline path easy to convert back to direct leaf style/color ownership.
+- `badge_label_text(...)` now backs default Badge labels with `decl_text::text_chip_label(...)` and
+  layers Badge-owned font, OpenType feature, weight, and foreground/currentColor behavior through
+  inherited text/foreground metadata. Badge still owns variant chrome, icon sizing, link/action
+  semantics, hover underline, foreground scoping, leading/trailing child fallback styling, and RTL
+  order.
+- `apply_badge_hover_underline(...)` now preserves `AnyElement` layout-transparent metadata when it
+  converts passive text to styled text for link-hover underline, so the shared label role does not
+  disappear only on the hovered link path.
+- `badge_default_label_uses_shared_chip_label_role` proves the default label keeps auto width,
+  non-growing shrink/min-width-zero, no-wrap, ellipsis, empty leaf style/color, inherited medium
+  typography, and inherited foreground. The font/feature and weight override tests prove Badge
+  refinements stay layered on the inherited role instead of reverting to leaf-local text styles.
+  `badge_hover_underline_preserves_default_label_role_metadata` locks the link-hover conversion
+  path.
+- `tools/gate_imui_workstream_source.py` now requires the helper/test shape and forbids the old
+  local Badge default label builder from returning.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-shadcn --check`,
+  `cargo check -p fret-ui-shadcn --lib`,
+  `cargo nextest run -p fret-ui-shadcn --lib
+  badge_default_label_uses_shared_chip_label_role
+  badge_default_label_keeps_font_and_feature_overrides_on_role
+  badge_default_label_keeps_weight_override_on_role
+  badge_hover_underline_preserves_default_label_role_metadata
+  badge_leading_icon_and_label_follow_variant_fg --no-fail-fast`,
   `python -m py_compile tools\gate_imui_workstream_source.py`,
   `python tools\gate_imui_workstream_source.py`,
   `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.

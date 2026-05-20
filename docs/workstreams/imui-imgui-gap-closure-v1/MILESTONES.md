@@ -1041,6 +1041,11 @@ Exit criteria:
   chrome can shrink safely without behaving like a row/control label. ComboboxChips keeps
   trigger/chip chrome, remove actions, popover/search policy, selected-value mapping, wrapping chip
   layout, and RTL ordering recipe-owned.
+  2026-05-21 shadcn Badge default-label result: Badge default labels now consume
+  `text_chip_label(...)` instead of local fixed-line `ui::text(...)` builders. Badge layers font,
+  feature, weight, foreground/currentColor, and link-hover underline behavior through inherited
+  metadata, while the shared chip role owns no-wrap, min-width-zero, shrink, ellipsis, and
+  non-growing inline-badge text layout.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.
