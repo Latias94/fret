@@ -1,6 +1,15 @@
 use crate::core::GroupId;
 use crate::ui::canvas::widget::*;
 
+pub(in crate::ui::canvas::widget) trait CommandContextActionCx<M: NodeGraphCanvasMiddleware> {
+    fn select_group_context_target(
+        &mut self,
+        canvas: &mut NodeGraphCanvasWith<M>,
+        group_id: GroupId,
+    );
+    fn dispatch_context_command(&mut self, command: fret_runtime::CommandId);
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum CommandContextSelectionRoute {
     Ignore,
@@ -19,19 +28,19 @@ fn command_context_selection_route(target: &ContextMenuTarget) -> CommandContext
     }
 }
 
-pub(super) fn activate_command_context_action<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn activate_command_context_action<M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl CommandContextActionCx<M>,
     target: &ContextMenuTarget,
     command: fret_runtime::CommandId,
 ) {
     match command_context_selection_route(target) {
         CommandContextSelectionRoute::SelectGroup(group_id) => {
-            canvas.select_group_context_target(cx.app, group_id);
+            cx.select_group_context_target(canvas, group_id);
         }
         CommandContextSelectionRoute::Ignore => {}
     }
-    cx.dispatch_command(command);
+    cx.dispatch_context_command(command);
 }
 
 #[cfg(test)]

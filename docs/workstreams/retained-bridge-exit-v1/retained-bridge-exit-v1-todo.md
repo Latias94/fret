@@ -3416,6 +3416,38 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-580 Isolate context menu action activation retained Cx route.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/activate.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/activate/command.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/activate/target.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/activate/retained_cx.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the context menu item action activation route off direct retained bridge Cx names by
+      introducing a retained-agnostic `ContextMenuActionCx` seam for command dispatch, target
+      selection, and target-specific action execution.
+    - Keep retained `EventCx` command dispatch and target executor calls isolated in
+      `context_menu/activate/retained_cx.rs`.
+    - Lock activation route files with source-policy coverage and prove command, target, and
+      ignored action dispatch behavior.
+  - Result:
+    - `context_menu/activate.rs`, `context_menu/activate/command.rs`, and
+      `context_menu/activate/target.rs` now route through `ContextMenuActionCx` plus narrower
+      command/target action seams.
+    - Added `activate/retained_cx.rs` as the retained adapter for command dispatch, group
+      selection sync, and existing background/edge/connection target executors.
+    - Added focused tests for group command selection-before-dispatch, non-command target action
+      delegation, and ignored target actions.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_activation_route_stays_off_retained_bridge) | test(command_items_select_group_before_dispatching_command) | test(non_command_items_delegate_to_target_action_executor) | test(ignored_target_actions_are_side_effect_free) | test(pointer_down_left_inside_enabled_item_activates_and_closes_menu) | test(key_down_enter_activates_active_item_and_closes_menu) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/activate.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/activate/command.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/activate/target.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

@@ -1,5 +1,53 @@
 use crate::ui::canvas::widget::*;
 
+pub(in crate::ui::canvas::widget) trait TargetContextActionCx<M: NodeGraphCanvasMiddleware> {
+    fn activate_background_context_action(
+        &mut self,
+        canvas: &mut NodeGraphCanvasWith<M>,
+        at: CanvasPoint,
+        action: NodeGraphContextMenuAction,
+        menu_candidates: &[InsertNodeCandidate],
+    ) -> bool;
+
+    fn activate_connection_insert_picker_action(
+        &mut self,
+        canvas: &mut NodeGraphCanvasWith<M>,
+        from: PortId,
+        at: CanvasPoint,
+        invoked_at: Point,
+        action: NodeGraphContextMenuAction,
+        menu_candidates: &[InsertNodeCandidate],
+    ) -> bool;
+
+    fn activate_edge_context_action(
+        &mut self,
+        canvas: &mut NodeGraphCanvasWith<M>,
+        edge_id: EdgeId,
+        invoked_at: Point,
+        action: NodeGraphContextMenuAction,
+    ) -> bool;
+
+    fn activate_edge_insert_picker_action(
+        &mut self,
+        canvas: &mut NodeGraphCanvasWith<M>,
+        edge_id: EdgeId,
+        invoked_at: Point,
+        action: NodeGraphContextMenuAction,
+        menu_candidates: &[InsertNodeCandidate],
+    ) -> bool;
+
+    fn activate_connection_conversion_picker_action(
+        &mut self,
+        canvas: &mut NodeGraphCanvasWith<M>,
+        from: PortId,
+        to: PortId,
+        at: CanvasPoint,
+        invoked_at: Point,
+        action: NodeGraphContextMenuAction,
+        menu_candidates: &[InsertNodeCandidate],
+    ) -> bool;
+}
+
 #[derive(Debug)]
 enum TargetContextActionRoute {
     Ignore,
@@ -74,9 +122,9 @@ fn target_context_action_route(
     }
 }
 
-pub(super) fn activate_target_context_action<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn activate_target_context_action<M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl TargetContextActionCx<M>,
     target: &ContextMenuTarget,
     invoked_at: Point,
     action: NodeGraphContextMenuAction,
@@ -84,7 +132,7 @@ pub(super) fn activate_target_context_action<H: UiHost, M: NodeGraphCanvasMiddle
 ) {
     match target_context_action_route(target, invoked_at, action) {
         TargetContextActionRoute::BackgroundInsert { at, action } => {
-            let _ = canvas.activate_background_context_action(cx, at, action, menu_candidates);
+            let _ = cx.activate_background_context_action(canvas, at, action, menu_candidates);
         }
         TargetContextActionRoute::ConnectionInsert {
             from,
@@ -92,8 +140,8 @@ pub(super) fn activate_target_context_action<H: UiHost, M: NodeGraphCanvasMiddle
             invoked_at,
             action,
         } => {
-            let _ = canvas.activate_connection_insert_picker_action(
-                cx,
+            let _ = cx.activate_connection_insert_picker_action(
+                canvas,
                 from,
                 at,
                 invoked_at,
@@ -106,16 +154,15 @@ pub(super) fn activate_target_context_action<H: UiHost, M: NodeGraphCanvasMiddle
             invoked_at,
             action,
         } => {
-            let _ = canvas.activate_edge_context_action(cx, edge_id, invoked_at, action);
+            let _ = cx.activate_edge_context_action(canvas, edge_id, invoked_at, action);
         }
         TargetContextActionRoute::EdgeInsert {
             edge_id,
             invoked_at,
             action,
         } => {
-            let _ = edge_insert::activate_edge_insert_picker_action(
+            let _ = cx.activate_edge_insert_picker_action(
                 canvas,
-                cx,
                 edge_id,
                 invoked_at,
                 action,
@@ -129,8 +176,8 @@ pub(super) fn activate_target_context_action<H: UiHost, M: NodeGraphCanvasMiddle
             invoked_at,
             action,
         } => {
-            let _ = canvas.activate_connection_conversion_picker_action(
-                cx,
+            let _ = cx.activate_connection_conversion_picker_action(
+                canvas,
                 from,
                 to,
                 at,
