@@ -248,6 +248,9 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/context_menu/selection_activation.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_SELECTION_ACTIVATION_POINTER_DOWN_RS: &str =
         include_str!("ui/canvas/widget/context_menu/selection_activation/pointer_down.rs");
+    const UI_CANVAS_WIDGET_RIGHT_CLICK_RS: &str = include_str!("ui/canvas/widget/right_click.rs");
+    const UI_CANVAS_WIDGET_RIGHT_CLICK_PENDING_RS: &str =
+        include_str!("ui/canvas/widget/right_click/pending.rs");
     const UI_CANVAS_WIDGET_SEARCHER_RS: &str = include_str!("ui/canvas/widget/searcher.rs");
     const UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_RS: &str =
         include_str!("ui/canvas/widget/searcher_activation.rs");
@@ -793,6 +796,28 @@ mod surface_policy_tests {
             assert!(
                 !context_menu_selection_sources.contains(forbidden),
                 "context menu selection activation route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn right_click_route_stays_off_retained_bridge() {
+        let right_click_sources = [
+            UI_CANVAS_WIDGET_RIGHT_CLICK_RS,
+            UI_CANVAS_WIDGET_RIGHT_CLICK_PENDING_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !right_click_sources.contains(forbidden),
+                "right-click route must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

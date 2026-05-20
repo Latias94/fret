@@ -9184,3 +9184,62 @@ Broader gates not run:
   - Reason: `RBX-M2-630` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-640 right-click retained Cx route isolation
+
+Claim verified:
+
+- Right-click context-menu routing no longer imports or names retained bridge Cx types in
+  `right_click.rs` or `right_click/pending.rs`.
+- `RightClickCx` composes the existing retained-agnostic context-menu opening and pointer-capture
+  release capabilities needed by right-click pointer-down/up routing.
+- Pending right-click release planning remains intact for ignored inputs, missing pending state,
+  drag release cleanup, and click release menu opening.
+- Retained right-click context-menu behavior remains intact for direct right-click opening,
+  deferred right-pan opening, drag-threshold rejection, and background/group/edge menu targets.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/right_click.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/right_click/pending.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving right-click
+    routing behind retained-agnostic seams.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(right_click_route_stays_off_retained_bridge) | test(pending_right_click_pointer_up_ignores_non_right_button) | test(pending_right_click_pointer_up_without_pending_state_is_side_effect_free) | test(pending_right_click_drag_release_clears_pending_and_releases_capture) | test(pending_right_click_click_release_requests_menu_open) | test(right_click_cancels_wire_drag_and_opens_context_menu) | test(right_pan_defers_context_menu_until_pointer_up) | test(right_pan_drag_does_not_open_context_menu) | test(right_click_background_opens_background_context_menu_with_paste_disabled_without_window) | test(right_click_group_opens_group_context_menu_and_selects_group) | test(right_click_edge_opens_edge_context_menu_and_selects_edge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 12 tests.
+  - Scope proven: source-policy locks right-click routing off retained bridge Cx names; pending
+    release planning and retained right-click background/group/edge context-menu behavior remain
+    green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/right_click.rs ecosystem/fret-node/src/ui/canvas/widget/right_click/pending.rs`
+  - Result: no matches.
+  - Scope proven: the right-click route files no longer depend on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the right-click seam
+    changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    right-click routing behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-640` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

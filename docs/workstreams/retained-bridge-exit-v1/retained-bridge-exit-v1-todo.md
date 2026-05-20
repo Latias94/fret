@@ -3602,6 +3602,36 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-640 Isolate right-click pending context-menu route retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/right_click.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/right_click/pending.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the right-click context-menu pointer-down/up route off direct retained bridge Cx names
+      by introducing `RightClickCx`, composed from the existing `ContextMenuOpeningCx` and
+      `PointerCaptureReleaseCx` capabilities.
+    - Lock the right-click route files with source-policy coverage.
+    - Prove pending right-click release planning plus retained right-click context-menu behavior.
+  - Result:
+    - `right_click.rs` and `right_click/pending.rs` now use `RightClickCx` instead of retained
+      `EventCx` signatures.
+    - Pending right-click pointer-up routing is split into a small retained-agnostic plan that
+      distinguishes ignored, release-only, and release-plus-open-menu outcomes.
+    - The retained adapter remains the existing composition of `ContextMenuOpeningCx` and
+      `PointerCaptureReleaseCx` implementations for retained `EventCx`; no new retained Cx file
+      was needed.
+    - Added focused tests for non-right-button ignore, missing-pending no-op, drag release
+      clearing pending state, and click release requesting menu open.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(right_click_route_stays_off_retained_bridge) | test(pending_right_click_pointer_up_ignores_non_right_button) | test(pending_right_click_pointer_up_without_pending_state_is_side_effect_free) | test(pending_right_click_drag_release_clears_pending_and_releases_capture) | test(pending_right_click_click_release_requests_menu_open) | test(right_click_cancels_wire_drag_and_opens_context_menu) | test(right_pan_defers_context_menu_until_pointer_up) | test(right_pan_drag_does_not_open_context_menu) | test(right_click_background_opens_background_context_menu_with_paste_disabled_without_window) | test(right_click_group_opens_group_context_menu_and_selects_group) | test(right_click_edge_opens_edge_context_menu_and_selects_edge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/right_click.rs ecosystem/fret-node/src/ui/canvas/widget/right_click/pending.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
