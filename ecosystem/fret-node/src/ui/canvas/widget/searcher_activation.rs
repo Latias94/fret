@@ -33,9 +33,9 @@ pub(super) fn handle_searcher_pointer_up_event<H: UiHost, M: NodeGraphCanvasMidd
 }
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
-    pub(super) fn arm_searcher_row_drag<H: UiHost>(
+    pub(super) fn arm_searcher_row_drag(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut impl super::searcher_activation_state::SearcherArmCx,
         row_ix: usize,
         position: Point,
     ) -> bool {

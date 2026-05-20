@@ -1,8 +1,14 @@
 use fret_core::PointerId;
-use fret_ui::UiHost;
+use fret_runtime::TickId;
 
-use super::super::*;
+use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::PendingInsertNodeDrag;
+
+pub(in super::super) trait SearcherArmCx {
+    fn pointer_id(&self) -> Option<PointerId>;
+    fn tick_id(&self) -> TickId;
+    fn capture_pointer(&mut self);
+}
 
 pub(in super::super) fn sync_searcher_active_row_if_selectable<M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -24,11 +30,11 @@ pub(in super::super) fn sync_searcher_active_row_if_selectable<M: NodeGraphCanva
     true
 }
 
-pub(in super::super) fn arm_searcher_row_drag<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(in super::super) fn arm_searcher_row_drag<M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl SearcherArmCx,
     row_ix: usize,
-    position: Point,
+    position: fret_core::Point,
 ) -> bool {
     if !sync_searcher_active_row_if_selectable(canvas, row_ix) {
         return false;
@@ -43,9 +49,24 @@ pub(in super::super) fn arm_searcher_row_drag<H: UiHost, M: NodeGraphCanvasMiddl
     canvas.interaction.pending_insert_node_drag = Some(PendingInsertNodeDrag {
         candidate,
         start_pos: position,
-        pointer_id: cx.pointer_id.unwrap_or(PointerId(0)),
-        start_tick: cx.app.tick_id(),
+        pointer_id: cx.pointer_id().unwrap_or(PointerId(0)),
+        start_tick: cx.tick_id(),
     });
-    cx.capture_pointer(cx.node);
+    cx.capture_pointer();
     true
 }
+
+impl SearcherArmCx for () {
+    fn pointer_id(&self) -> Option<PointerId> {
+        None
+    }
+
+    fn tick_id(&self) -> TickId {
+        TickId(0)
+    }
+
+    fn capture_pointer(&mut self) {}
+}
+
+#[cfg(test)]
+mod tests;
