@@ -194,6 +194,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/context_menu/key_navigation/key_down.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_KEY_NAVIGATION_POINTER_MOVE_RS: &str =
         include_str!("ui/canvas/widget/context_menu/key_navigation/pointer_move.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_SELECTION_ACTIVATION_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/selection_activation.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_SELECTION_ACTIVATION_POINTER_DOWN_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/selection_activation/pointer_down.rs");
     const UI_CANVAS_WIDGET_SEARCHER_RS: &str = include_str!("ui/canvas/widget/searcher.rs");
     const UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_RS: &str =
         include_str!("ui/canvas/widget/searcher_activation.rs");
@@ -550,6 +554,28 @@ mod surface_policy_tests {
             assert!(
                 !context_menu_key_down_sources.contains(forbidden),
                 "context menu key-down route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn context_menu_selection_activation_route_stays_off_retained_bridge() {
+        let context_menu_selection_sources = [
+            UI_CANVAS_WIDGET_CONTEXT_MENU_SELECTION_ACTIVATION_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_SELECTION_ACTIVATION_POINTER_DOWN_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !context_menu_selection_sources.contains(forbidden),
+                "context menu selection activation route must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

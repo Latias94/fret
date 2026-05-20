@@ -1,7 +1,6 @@
 mod active_item;
 mod hover;
 mod key_down;
-mod key_down_retained_cx;
 mod pointer_move;
 #[cfg(test)]
 mod test_support;
@@ -13,13 +12,15 @@ use crate::ui::canvas::widget::widget_tail::{WidgetHandledCx, WidgetPaintInvalid
 use crate::ui::canvas::widget::*;
 
 pub(in crate::ui::canvas::widget) trait ContextMenuKeyDownCx<H, M: NodeGraphCanvasMiddleware>:
-    WidgetHandledCx<H>
+    WidgetHandledCx<H> + super::selection_activation::ContextMenuSelectionActivationCx<H, M>
 {
-    fn activate_context_menu_active_selection(
-        &mut self,
-        canvas: &mut NodeGraphCanvasWith<M>,
-        menu: &ContextMenuState,
-    ) -> super::selection_activation::ContextMenuSelectionActivationOutcome;
+}
+
+impl<H, M, T> ContextMenuKeyDownCx<H, M> for T
+where
+    M: NodeGraphCanvasMiddleware,
+    T: WidgetHandledCx<H> + super::selection_activation::ContextMenuSelectionActivationCx<H, M>,
+{
 }
 
 pub(super) fn handle_context_menu_key_down_event<H, M: NodeGraphCanvasMiddleware>(

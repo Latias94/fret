@@ -24,7 +24,7 @@ pub(super) fn handle_context_menu_key_down_event<H, M: NodeGraphCanvasMiddleware
             return ui::restore_context_menu_event(canvas, cx, menu);
         }
         fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter => {
-            return match cx.activate_context_menu_active_selection(canvas, &menu) {
+            return match canvas.activate_context_menu_active_selection(cx, &menu) {
                 super::super::selection_activation::ContextMenuSelectionActivationOutcome::Activated => {
                     ui::finish_context_menu_event(cx)
                 }

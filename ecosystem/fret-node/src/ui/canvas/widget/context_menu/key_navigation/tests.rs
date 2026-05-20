@@ -15,8 +15,7 @@ struct StubCx {
     redraws: usize,
     paint_invalidations: usize,
     activation_calls: usize,
-    activated_menu_active_item: Option<usize>,
-    activation_outcome: super::super::selection_activation::ContextMenuSelectionActivationOutcome,
+    activated_item_label: Option<String>,
 }
 
 impl Default for StubCx {
@@ -26,9 +25,7 @@ impl Default for StubCx {
             redraws: 0,
             paint_invalidations: 0,
             activation_calls: 0,
-            activated_menu_active_item: None,
-            activation_outcome:
-                super::super::selection_activation::ContextMenuSelectionActivationOutcome::Activated,
+            activated_item_label: None,
         }
     }
 }
@@ -51,15 +48,22 @@ impl WidgetHandledCx<StubHost> for StubCx {
     }
 }
 
-impl ContextMenuKeyDownCx<StubHost, NoopNodeGraphCanvasMiddleware> for StubCx {
-    fn activate_context_menu_active_selection(
+impl
+    super::super::selection_activation::ContextMenuSelectionActivationCx<
+        StubHost,
+        NoopNodeGraphCanvasMiddleware,
+    > for StubCx
+{
+    fn activate_context_menu_item(
         &mut self,
         _canvas: &mut NodeGraphCanvasWith<NoopNodeGraphCanvasMiddleware>,
-        menu: &ContextMenuState,
-    ) -> super::super::selection_activation::ContextMenuSelectionActivationOutcome {
+        _target: &ContextMenuTarget,
+        _invoked_at: Point,
+        item: NodeGraphContextMenuItem,
+        _menu_candidates: &[InsertNodeCandidate],
+    ) {
         self.activation_calls += 1;
-        self.activated_menu_active_item = Some(menu.active_item);
-        self.activation_outcome
+        self.activated_item_label = Some(item.label.to_string());
     }
 }
 
@@ -320,7 +324,7 @@ fn key_down_enter_activates_active_item_and_closes_menu() {
     assert!(handled);
     assert!(canvas.interaction.context_menu.is_none());
     assert_eq!(cx.activation_calls, 1);
-    assert_eq!(cx.activated_menu_active_item, Some(1));
+    assert_eq!(cx.activated_item_label.as_deref(), Some("Beta"));
     assert_finished(&cx);
 }
 
@@ -328,22 +332,18 @@ fn key_down_enter_activates_active_item_and_closes_menu() {
 fn key_down_enter_keep_open_restores_menu_and_finishes() {
     let mut canvas = test_canvas();
     canvas.interaction.context_menu = Some(super::test_support::menu(
-        vec![super::test_support::item("Alpha", true)],
+        vec![super::test_support::item("Alpha", false)],
         0,
     ));
-    let mut cx = StubCx {
-        activation_outcome:
-            super::super::selection_activation::ContextMenuSelectionActivationOutcome::KeepOpen,
-        ..StubCx::default()
-    };
+    let mut cx = StubCx::default();
 
     let handled =
         handle_context_menu_key_down_event::<StubHost, _>(&mut canvas, &mut cx, KeyCode::Enter);
 
     assert!(handled);
     assert!(canvas.interaction.context_menu.is_some());
-    assert_eq!(cx.activation_calls, 1);
-    assert_eq!(cx.activated_menu_active_item, Some(0));
+    assert_eq!(cx.activation_calls, 0);
+    assert_eq!(cx.activated_item_label, None);
     assert_finished(&cx);
 }
 

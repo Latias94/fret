@@ -1,9 +1,9 @@
 use super::super::ui;
 use crate::ui::canvas::widget::*;
 
-pub(super) fn handle_context_menu_pointer_down_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_context_menu_pointer_down_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::ContextMenuPointerDownCx<H, M>,
     position: Point,
     button: MouseButton,
     zoom: f32,

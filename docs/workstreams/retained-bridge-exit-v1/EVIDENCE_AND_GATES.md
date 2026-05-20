@@ -8561,8 +8561,9 @@ Claim verified:
 - Context menu key-down routing no longer imports or names retained bridge Cx types in
   `context_menu/key_navigation.rs` or `context_menu/key_navigation/key_down.rs`.
 - Context menu key-down routing now uses the retained-agnostic `ContextMenuKeyDownCx` seam.
-- Retained context menu active-selection activation I/O remains available through the adapter-only
-  `context_menu/key_navigation/key_down_retained_cx.rs`.
+- `RBX-M2-550` superseded the original key-down-specific retained adapter; retained context menu
+  item execution I/O now lives in the shared adapter-only
+  `context_menu/selection_activation/retained_cx.rs`.
 - Context menu key-down behavior remains intact for no-menu no-op behavior, ArrowDown navigation
   and finish, Enter activation and close, Enter keep-open restore, typeahead, and Backspace
   typeahead pop behavior.
@@ -8571,7 +8572,6 @@ Evidence:
 
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/key_down.rs`
-- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/key_down_retained_cx.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/tests.rs`
 - `ecosystem/fret-node/src/lib.rs`
 - `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
@@ -8612,5 +8612,73 @@ Broader gates not run:
 
 - `cargo nextest run --workspace`
   - Reason: `RBX-M2-540` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-550 context menu selection activation retained Cx route isolation
+
+Claim verified:
+
+- Context menu shared selection activation no longer imports or names retained bridge Cx types in
+  `context_menu/selection_activation.rs`.
+- Context menu pointer-down routing no longer imports or names retained bridge Cx types in
+  `context_menu/selection_activation/pointer_down.rs`.
+- Context menu key-down routing now reuses the shared retained-agnostic
+  `ContextMenuSelectionActivationCx` seam instead of a key-down-specific retained adapter.
+- Retained context menu item execution I/O remains available through the adapter-only
+  `context_menu/selection_activation/retained_cx.rs`.
+- Context menu pointer-down behavior remains intact for no-menu no-op behavior, left enabled-item
+  activation and close, left disabled-item restore, left outside-menu close, and right-button
+  replacement-menu pass-through behavior.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation/pointer_down.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation/retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation/tests.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/key_down.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/tests.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving selection
+    activation and pointer-down routing behind retained-agnostic seams.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_selection_activation_route_stays_off_retained_bridge) | test(context_menu_key_down_route_stays_off_retained_bridge) | test(pointer_down_without_context_menu_is_side_effect_free) | test(pointer_down_left_inside_enabled_item_activates_and_closes_menu) | test(pointer_down_left_disabled_item_restores_menu_and_finishes) | test(pointer_down_left_outside_menu_closes_menu_and_finishes) | test(pointer_down_right_button_leaves_menu_taken_and_unfinished) | test(key_down_enter_activates_active_item_and_closes_menu) | test(key_down_enter_keep_open_restores_menu_and_finishes) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 10 tests.
+  - Scope proven: source-policy locks context menu selection activation and key-down routes off
+    retained bridge Cx names; pointer-down activation/restore/close/pass-through behavior, key-down
+    activation behavior, and retained ledger behavior remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation/pointer_down.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/key_down.rs`
+  - Result: no matches.
+  - Scope proven: the context menu selection activation, pointer-down, and key-down route files no
+    longer depend on retained bridge Cx names.
+
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the context menu
+    selection activation seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    context menu selection activation behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-550` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.

@@ -227,12 +227,17 @@ Compat-gated but retained-bridge-free support:
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/key_down.rs`
   - `RBX-M2-540` moved context menu key-down routing behind the retained-agnostic
     `ContextMenuKeyDownCx` seam.
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation/pointer_down.rs`
+  - `RBX-M2-550` moved shared context menu selection activation and pointer-down routing behind
+    retained-agnostic `ContextMenuSelectionActivationCx` / `ContextMenuPointerDownCx` seams.
 
 Compat-gated retained adapters:
 
-- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/key_down_retained_cx.rs`
-  - `RBX-M2-540` keeps retained context menu active-selection activation I/O as the adapter-only
-    implementation of `ContextMenuKeyDownCx`.
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation/retained_cx.rs`
+  - `RBX-M2-550` keeps retained context menu item execution I/O as the adapter-only implementation
+    of `ContextMenuSelectionActivationCx`, replacing the earlier key-down-specific
+    `key_navigation/key_down_retained_cx.rs` adapter from `RBX-M2-540`.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/event_retained_cx.rs`
   - `RBX-M2-520` keeps retained context menu focus-self I/O as the adapter-only implementation of
     `ContextMenuFocusCx`.
@@ -313,7 +318,8 @@ Deleted retained overlay files:
 | Searcher top-level route seam | retained canvas event routing still calls top-level searcher routes from retained `EventCx` callers, but `searcher.rs` itself only needs the existing retained-agnostic searcher pointer-down, release, and input capabilities | `RBX-M2-510` moves `searcher.rs` onto `SearcherCx`, source-policy gates the top-level route, and adds top-level Escape dismiss/finish, Enter activation, and pointer-down row-drag arming tests | Replace the remaining higher-level canvas event routes with a declarative/event-leaf path, or continue isolating other retained canvas interaction families such as context menu and edge insert. |
 | Context menu UI tail seam | retained context menu callers still use retained `EventCx`, but UI open/restore/dismiss/finish/invalidate helpers only need handled/paint widget-tail behavior plus a focus-self side effect on open | `RBX-M2-520` moves `context_menu/ui.rs` and `context_menu/ui/event.rs` onto `WidgetHandledCx`, `WidgetPaintInvalidationCx`, and `ContextMenuFocusCx`; retained focus-self I/O lives in `context_menu/ui/event_retained_cx.rs`; source-policy gates UI tail helpers and adds open/restore/dismiss/invalidate tests | Continue with context menu key/pointer selection routes, then replace the higher-level context menu event route with a declarative/event-leaf path. |
 | Context menu pointer-move route seam | retained context menu pointer-move callers still pass retained `EventCx`, but the pointer-move helper only needs paint invalidation after hover state changes | `RBX-M2-530` moves `context_menu/key_navigation/pointer_move.rs` onto `WidgetPaintInvalidationCx`, source-policy gates the helper, and adds no-menu, hover-update, and repeated-hover tests | Continue with context menu key-down and pointer-down selection routes, then replace the higher-level context menu event route with a declarative/event-leaf path. |
-| Context menu key-down route seam | retained context menu key-down callers still pass retained `EventCx`, but the key-down helper only needs handled finish behavior plus active-selection activation I/O | `RBX-M2-540` moves `context_menu/key_navigation.rs` and `context_menu/key_navigation/key_down.rs` onto `ContextMenuKeyDownCx`, keeps retained active-selection activation I/O in `context_menu/key_navigation/key_down_retained_cx.rs`, source-policy gates the route, and adds no-menu, ArrowDown, Enter activate, Enter keep-open, typeahead, and Backspace tests | Continue with context menu pointer-down selection activation and the higher-level context menu route wrappers, then replace them with a declarative/event-leaf path. |
+| Context menu key-down route seam | retained context menu key-down callers still pass retained `EventCx`, but the key-down helper only needs handled finish behavior plus active-selection activation I/O | `RBX-M2-540` moves `context_menu/key_navigation.rs` and `context_menu/key_navigation/key_down.rs` onto `ContextMenuKeyDownCx`, source-policy gates the route, and adds no-menu, ArrowDown, Enter activate, Enter keep-open, typeahead, and Backspace tests. `RBX-M2-550` then replaces the key-down-specific retained adapter with the shared `ContextMenuSelectionActivationCx` retained adapter. | Continue with higher-level context menu route wrappers, then replace them with a declarative/event-leaf path. |
+| Context menu selection activation and pointer-down route seam | retained context menu pointer-down callers still pass retained `EventCx`, but pointer-down routing only needs handled finish behavior plus selection activation I/O | `RBX-M2-550` moves `context_menu/selection_activation.rs` and `context_menu/selection_activation/pointer_down.rs` onto `ContextMenuSelectionActivationCx` / `ContextMenuPointerDownCx`, keeps retained item execution I/O in `context_menu/selection_activation/retained_cx.rs`, source-policy gates the route, and adds no-menu, left enabled activation, left disabled restore, left outside close, and right replacement-menu pass-through tests | Continue with higher-level context menu input/pointer wrappers, opening/target execution helpers, then replace them with a declarative/event-leaf path. |
 
 ## New Gate
 

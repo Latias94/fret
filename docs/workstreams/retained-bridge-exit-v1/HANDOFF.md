@@ -774,9 +774,16 @@ behavior, hover update paint invalidation, and repeated-hover no-op invalidation
 `ContextMenuKeyDownCx` seam. `context_menu/key_navigation.rs` and
 `context_menu/key_navigation/key_down.rs` are now source-policy gated as retained-bridge-free
 support; retained active-selection activation I/O lives in
-`context_menu/key_navigation/key_down_retained_cx.rs`. Focused tests prove no-menu no-op behavior,
-ArrowDown navigation/finish, Enter activation/close, Enter keep-open restore, typeahead, and
-Backspace typeahead pop behavior.
+the shared `context_menu/selection_activation/retained_cx.rs` adapter after `RBX-M2-550`.
+Focused tests prove no-menu no-op behavior, ArrowDown navigation/finish, Enter activation/close,
+Enter keep-open restore, typeahead, and Backspace typeahead pop behavior.
+`RBX-M2-550` then moved shared context menu selection activation and pointer-down routing behind
+retained-agnostic `ContextMenuSelectionActivationCx` / `ContextMenuPointerDownCx` seams.
+`context_menu/selection_activation.rs` and `context_menu/selection_activation/pointer_down.rs` are
+now source-policy gated as retained-bridge-free support; retained item execution I/O lives in
+`context_menu/selection_activation/retained_cx.rs`. Focused tests prove no-menu no-op behavior,
+left enabled-item activation and close, left disabled-item restore, left outside-menu close, and
+right-button replacement-menu pass-through behavior.
 
 ## Next Task
 
@@ -820,7 +827,9 @@ Recommended next implementation shape:
   wrapper now composes those seams through `SearcherCx`; context menu UI open/restore/dismiss/
   finish/invalidate tails now use retained-agnostic widget-tail seams plus `ContextMenuFocusCx`;
   context menu pointer-move routing now uses the retained-agnostic paint invalidation seam;
-  context menu key-down routing now uses the retained-agnostic key-down activation seam.
+  context menu key-down routing now uses the retained-agnostic key-down activation seam; context
+  menu selection activation and pointer-down routing now use retained-agnostic selection activation
+  seams.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -849,6 +858,7 @@ Recommended next implementation shape:
   `context_menu/ui.rs`, `context_menu/ui/event.rs`,
   `context_menu/key_navigation.rs`, `context_menu/key_navigation/key_down.rs`,
   `context_menu/key_navigation/pointer_move.rs`,
+  `context_menu/selection_activation.rs`, `context_menu/selection_activation/pointer_down.rs`,
   `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, `cancel_cleanup.rs`,
   `sticky_wire_targets/picker.rs`, `group_drag/tail.rs`, `group_resize/tail.rs`,
   `group_preview_move_cx.rs`, `group_drag.rs`, `group_resize.rs`,
@@ -865,13 +875,13 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-540`:
+Last run on 2026-05-21 for `RBX-M2-550`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_key_down_route_stays_off_retained_bridge) | test(key_down_without_context_menu_is_side_effect_free) | test(key_down_arrow_down_advances_active_item_and_finishes) | test(key_down_enter_activates_active_item_and_closes_menu) | test(key_down_enter_keep_open_restores_menu_and_finishes) | test(key_down_typeahead_updates_active_item_and_finishes) | test(key_down_backspace_pops_typeahead_and_finishes) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
-  passed, 8 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/key_down.rs` -
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_selection_activation_route_stays_off_retained_bridge) | test(context_menu_key_down_route_stays_off_retained_bridge) | test(pointer_down_without_context_menu_is_side_effect_free) | test(pointer_down_left_inside_enabled_item_activates_and_closes_menu) | test(pointer_down_left_disabled_item_restores_menu_and_finishes) | test(pointer_down_left_outside_menu_closes_menu_and_finishes) | test(pointer_down_right_button_leaves_menu_taken_and_unfinished) | test(key_down_enter_activates_active_item_and_closes_menu) | test(key_down_enter_keep_open_restores_menu_and_finishes) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 10 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/selection_activation/pointer_down.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/key_navigation/key_down.rs` -
   no matches.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
@@ -882,7 +892,7 @@ Last run on 2026-05-21 for `RBX-M2-540`:
 Broader gates not run:
 
 - `cargo nextest run --workspace`
-  - Reason: `RBX-M2-540` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+  - Reason: `RBX-M2-550` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
 
