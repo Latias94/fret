@@ -13,12 +13,12 @@ use fret::mutation::{
     MutationError, MutationHandle, MutationPolicy, MutationState,
 };
 use fret::query::{QueryError, QueryHandle, QueryKey, QueryPolicy, QueryState};
-use fret::style::{ColorRef, LayoutRefinement, Space};
+use fret::style::{LayoutRefinement, Space};
 use fret::{FretApp, shadcn};
 use fret_app::{CommandId, CommandMeta, DefaultKeybinding, KeyChord, PlatformFilter};
 use fret_core::{KeyCode, Modifiers, Px};
 use fret_ui::element::AnyElement;
-use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::{ElementContextThemeExt as _, text as decl_text};
 use sqlx::Row;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 
@@ -49,6 +49,34 @@ const TEST_ID_SETTINGS_AUTH_TOKEN: &str = "api-workbench-lite.settings.auth_toke
 const TEST_ID_HISTORY_EMPTY: &str = "api-workbench-lite.history.empty";
 const TEST_ID_HISTORY_LOADING: &str = "api-workbench-lite.history.loading";
 const TEST_ID_HISTORY_ERROR: &str = "api-workbench-lite.history.error";
+
+fn api_workbench_section_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    decl_text::text_section_chrome_label(cx.elements(), text)
+}
+
+fn api_workbench_readout_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    decl_text::text_control_readout(cx.elements(), text)
+}
+
+fn api_workbench_code_label_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    decl_text::text_code_label(cx.elements(), text)
+}
+
+fn api_workbench_paragraph_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    decl_text::text_paragraph(cx.elements(), text)
+}
 
 mod act {
     fret::actions!([
@@ -229,7 +257,6 @@ impl View for ApiWorkbenchLiteView {
             self.window,
         );
 
-        let theme = cx.theme_snapshot();
         let method = locals
             .method
             .layout_value(cx)
@@ -278,7 +305,6 @@ impl View for ApiWorkbenchLiteView {
         let shell = shell_frame(
             cx,
             &locals,
-            theme.clone(),
             method,
             &history_state,
             saved_history,
@@ -546,7 +572,6 @@ fn prepare_request_submission_ui(
 fn shell_frame<'a, Cx>(
     cx: &mut Cx,
     locals: &WorkbenchLocals,
-    theme: fret::style::ThemeSnapshot,
     method: Arc<str>,
     history_state: &QueryState<Vec<PersistedHistoryEntry>>,
     history: Vec<PersistedHistoryEntry>,
@@ -574,9 +599,7 @@ where
                             ui::h_flex(|cx| {
                                 ui::children![
                                     cx;
-                                    ui::text("API Workbench Lite")
-                                        .font_semibold()
-                                        .text_base(),
+                                    api_workbench_section_text(cx, "API Workbench Lite"),
                                     shadcn::Badge::new("consumer probe")
                                         .variant(shadcn::BadgeVariant::Secondary),
                                     status_badge,
@@ -584,11 +607,10 @@ where
                             })
                             .gap(Space::N2)
                             .items_center(),
-                            ui::text(
+                            api_workbench_paragraph_text(
+                                cx,
                                 "First-contact task: build a Postman-like tool only from Fret's public app surface.",
-                            )
-                            .text_sm()
-                            .text_color(ColorRef::Color(theme.color_token("muted-foreground"))),
+                            ),
                         ]
                     })
                     .gap(Space::N1)
@@ -698,12 +720,8 @@ where
         shadcn::SidebarHeader::new([ui::v_flex(|cx| {
             ui::children![
                 cx;
-                ui::text("Fret API Probe").font_semibold(),
-                ui::text("Postman-like first contact")
-                    .text_sm()
-                    .text_color(ColorRef::Color(
-                        cx.theme_snapshot().color_token("muted-foreground"),
-                    )),
+                api_workbench_section_text(cx, "Fret API Probe"),
+                api_workbench_readout_text(cx, "Postman-like first contact"),
             ]
         })
         .gap(Space::N1)
@@ -713,17 +731,9 @@ where
         shadcn::SidebarFooter::new([ui::v_flex(|cx| {
             ui::children![
                 cx;
-                ui::text("Active base URL").text_xs().font_semibold(),
-                ui::text(base_url)
-                    .text_xs()
-                    .text_color(ColorRef::Color(
-                        cx.theme_snapshot().color_token("muted-foreground"),
-                    )),
-                ui::text("SQLite-backed request history")
-                    .text_xs()
-                    .text_color(ColorRef::Color(
-                        cx.theme_snapshot().color_token("muted-foreground"),
-                    )),
+                api_workbench_section_text(cx, "Active base URL"),
+                api_workbench_code_label_text(cx, base_url),
+                api_workbench_readout_text(cx, "SQLite-backed request history"),
             ]
         })
         .gap(Space::N1)
@@ -774,11 +784,7 @@ where
         return ui::v_flex(|cx| {
             ui::children![
                 cx;
-                ui::text("Loading saved requests...")
-                    .text_sm()
-                    .text_color(ColorRef::Color(
-                        cx.theme_snapshot().color_token("muted-foreground"),
-                    ))
+                api_workbench_readout_text(cx, "Loading saved requests...")
                     .test_id(TEST_ID_HISTORY_LOADING),
             ]
         })
@@ -790,14 +796,8 @@ where
         return ui::v_flex(|cx| {
             ui::children![
                 cx;
-                ui::text("Saved history failed to load.")
-                    .text_sm()
-                    .font_semibold(),
-                ui::text(err.to_string())
-                    .text_sm()
-                    .text_color(ColorRef::Color(
-                        cx.theme_snapshot().color_token("muted-foreground"),
-                    ))
+                api_workbench_section_text(cx, "Saved history failed to load."),
+                api_workbench_readout_text(cx, err.to_string())
                     .test_id(TEST_ID_HISTORY_ERROR),
             ]
         })
@@ -809,11 +809,7 @@ where
         return ui::v_flex(|cx| {
             ui::children![
                 cx;
-                ui::text("No saved requests yet.")
-                    .text_sm()
-                    .text_color(ColorRef::Color(
-                        cx.theme_snapshot().color_token("muted-foreground"),
-                    ))
+                api_workbench_readout_text(cx, "No saved requests yet.")
                     .test_id(TEST_ID_HISTORY_EMPTY),
             ]
         })

@@ -6,6 +6,11 @@ fn editor_notes_device_shell_demo_keeps_shell_switch_explicit_and_reuses_inner_e
         "let theme = cx.theme_snapshot();",
         "use fret::adaptive::{DeviceShellSwitchPolicy, device_shell_switch};",
         "use fret_ui_kit::IntoUiElementInExt as _;",
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "fn device_shell_section_text<",
+        "fn device_shell_paragraph_text<",
+        "decl_text::text_section_chrome_label(cx, text)",
+        "decl_text::text_paragraph(cx, text)",
         "device_shell_switch(",
         "WorkspaceFrame::new(center)",
         ".left(left_rail)",
@@ -18,6 +23,8 @@ fn editor_notes_device_shell_demo_keeps_shell_switch_explicit_and_reuses_inner_e
         "editor_notes_demo::render_inspector_panel(",
         "\"editor-notes-device-shell-demo.drawer.trigger\"",
         "\"editor-notes-device-shell-demo.drawer.content\"",
+        "device_shell_section_text(cx, \"Compact device shell\")",
+        "device_shell_paragraph_text(\n                                    cx,\n                                    \"Keep the center surface visible and move auxiliary panels behind a drawer trigger.\",",
     ] {
         assert!(
             source.contains(needle),
@@ -39,6 +46,18 @@ fn editor_notes_device_shell_demo_keeps_shell_switch_explicit_and_reuses_inner_e
         !source.contains("                    ])\n                    .into_element(cx);"),
         "editor notes device shell demo should keep the mobile drawer root on the explicit capability-first landing path",
     );
+
+    for needle in [
+        "ui::text(\"Compact device shell\")",
+        "ui::text(\"Keep the center surface visible and move auxiliary panels behind a drawer trigger.\")",
+        ".text_color(ColorRef::Color(muted))",
+        ".wrap(fret_core::TextWrap::Word)",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "editor notes device shell mobile header text should stay on shared text roles; unexpected `{needle}`"
+        );
+    }
 }
 
 #[test]

@@ -8,6 +8,7 @@ use fret_ui::Invalidation;
 use fret_ui::element::LayoutQueryRegionProps;
 use fret_ui::element::{LayoutStyle, Length, TextProps};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -29,45 +30,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                      description: &'static str,
                      test_id: &'static str,
                      command: &'static str| {
-        let title_el = cx.text_props(TextProps {
-            layout: Default::default(),
-            text: Arc::from(title),
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: Px(14.0),
-                weight: FontWeight::MEDIUM,
-                slant: Default::default(),
-                line_height: None,
-                letter_spacing_em: None,
-                ..Default::default()
-            }),
-            color: None,
-            wrap: TextWrap::None,
-            overflow: TextOverflow::Clip,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: fret_ui::element::TextInkOverflow::None,
-        });
-        let mut description_layout = LayoutStyle::default();
-        // Upstream `line-clamp-2` outcome.
-        description_layout.size.max_height = Some(Length::Px(Px(40.0)));
-        let description_el = cx.text_props(TextProps {
-            layout: description_layout,
-            text: Arc::from(description),
-            style: Some(TextStyle {
-                font: FontId::default(),
-                size: Px(14.0),
-                weight: FontWeight::NORMAL,
-                slant: Default::default(),
-                line_height: Some(Px(20.0)),
-                letter_spacing_em: None,
-                ..Default::default()
-            }),
-            color: Some(muted_foreground),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Ellipsis,
-            align: fret_core::TextAlign::Start,
-            ink_overflow: fret_ui::element::TextInkOverflow::None,
-        });
+        let title_el = decl_text::text_button_label(cx, title);
+        let description_el = decl_text::text_compact_paragraph_line_clamp(cx, description, 2)
+            .inherit_foreground(muted_foreground);
 
         let body = ui::v_stack(move |_cx| [title_el, description_el])
             .gap(Space::N1)
@@ -88,7 +53,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     test_id: &'static str,
                     command: &'static str| {
         let icon_el = icon::icon(cx, fret_icons::IconId::new_static(icon));
-        let label_el = cx.text(label);
+        let label_el = decl_text::text_button_label(cx, label);
         let row = ui::h_row(move |_cx| [icon_el, label_el])
             .gap(Space::N2)
             .items_center()

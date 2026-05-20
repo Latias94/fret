@@ -1,3 +1,8 @@
+use std::sync::Arc;
+
+use fret::AppComponentCx;
+use fret_ui::element::AnyElement;
+
 pub mod blockquote;
 pub mod demo;
 pub mod h1;
@@ -14,3 +19,10 @@ pub mod p;
 pub mod rtl;
 pub mod small;
 pub mod table;
+
+pub(super) fn table_cell_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
+where
+    T: Into<Arc<str>>,
+{
+    fret_ui_kit::declarative::text::text_table_cell(cx, text)
+}

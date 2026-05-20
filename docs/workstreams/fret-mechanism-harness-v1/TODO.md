@@ -218,6 +218,12 @@ date: 2026-05-12
     action is externally disabled and re-enabled through `WindowCommandEnabledService`. The first
     runtime pass found a diagnostics harness gap: the Gallery driver handled the command after the
     UI tree reported it unhandled, but did not record a `handled_by_driver=true` dispatch trace.
+- [x] Fix the cached prepared wrapped-text stale-bounds path exposed by the persistent Combobox
+  RTL Long Text startup overlap.
+  - Result: `Text`, `StyledText`, and `SelectableText` now run the auto-height repair/clip check
+    even when paint reuses a prepared text blob from layout. The focused regression first failed
+    before the fix, then passed with the full `text_cache` test filter, and the screenshot-shaped
+    Combobox RTL Long Text runtime gate passed after rebuilding the Gallery.
     The driver now records handled command decisions for owned gallery command paths, and the
     strict runtime gate passes with command dispatch, `disabled`, `invoke`, and checked-state
     mutation assertions.
@@ -268,6 +274,15 @@ date: 2026-05-12
 - [x] Add internal `CommandItem` label/checkmark anchors and Combobox popup-trigger text/checkmark
   size, vertical-centering, and inset predicates for both collision-flip and bottom-room runtime
   gates.
+- [x] Add Combobox selected/unselected checkmark effective-opacity runtime coverage.
+  - Result: `element_effective_opacity_approx_eq` now reads the declarative opacity stack from
+    `ElementRuntime`, and the LTR/RTL long-text Combobox geometry scripts assert selected long
+    checkmark opacity `1.0` plus unselected short checkmark opacity `0.0`. The first focused
+    runtime run exposed a diagnostics harness gap: predicate-bearing `assert`/`wait_until` steps did
+    not borrow `ElementRuntime` unless the selector was a `global_element_id`, so the new predicate
+    evaluated false before reading the target. The script engine now recognizes predicates that need
+    element runtime data, and the focused LTR/RTL runs plus the full
+    `ui-gallery-combobox-geometry-placement` suite pass.
 - [x] Retarget Combobox popup-trigger placement gates from the internal listbox to the content shell
   and add cross-metric side-gap oracles for both top-flip and bottom-room placement.
 - [x] Add Combobox long-text truncation/ellipsis coverage for constrained trigger and popup option
@@ -793,6 +808,15 @@ date: 2026-05-12
     sub-suite passed 5/5 with `focus_mismatch_total=0` and zero lint errors/warnings. No new
     Carousel mechanism or recipe defect was reproduced; the embla-engine suite now rejects future
     diagnostics lint drift for inertia, touch, resize reInit, and loop continuity/downgrade paths.
+- [x] Split Carousel state interactions into a compact runtime suite and fix focus-triggered
+  autoplay stop.
+  - Result: `ui-gallery-carousel-state` now gates Events select/reInit, autoplay
+    stopOnLastSnap, autoplay stopOnInteraction via focus, and RTL controls as a 5/5 zero-warning
+    suite. The first strict run exposed a real shadcn Carousel defect: focus entered a nested slide
+    button and watchFocus scrolled to that slide, but autoplay stayed `playing=true` with
+    `stopped_by_interaction=false` because the focus stop path required an active timer token.
+    Carousel now treats focus entry into a slide as the interaction, cancelling a token only when
+    one is present, and the focused stopOnInteraction gate plus the compact state suite pass.
 - [x] Harden the Date Picker suite after strict lint exposed scroll/script precondition gaps.
   - Result: the mobile Drawer script now uses a mobile-branch width that the Gallery content
     viewport can actually contain, the range-roving script is independently runnable with its own
@@ -1016,3 +1040,384 @@ date: 2026-05-12
     runtime companion script now has `selected_is` assertions, but the fresh focused runtime rerun
     timed out before those assertions because the existing header-row bounds precondition stayed at
     `0,0 0x0`; treat that as a runtime convergence follow-up, not a selected semantics defect.
+- [x] Fix retained Table direct-start header-row bounds convergence.
+  - Result: the retained Table runtime precondition from F190 was a real `fret-ui` flex layout
+    defect. `layout_flex_impl_engine` queried sibling solved rects live while recursively laying
+    out earlier children; that recursion could invalidate later sibling solved stamps, so the
+    retained Table subtree skipped final layout and collapsed to `0 x 0`. The flex path now
+    snapshots ordered child rects before recursive child layout, and the direct-start Gallery
+    retained Table regression test proves the header row converges to non-zero bounds. The runtime
+    diagnostics script now reaches the selected-state click path, where a separate follow-up remains:
+    clicking row 0 currently hit-tests the enclosing scroll bar instead of the row.
+- [x] Fix retained Table sort/select/scroll row click hit region after scrollbar overlay expansion.
+  - Result: the follow-up click miss from F191 was a real `fret-ui` positioned-layout defect, not a
+    Table selection or diagnostics-targeting issue. Manual absolute-child layout paths dropped the
+    child's explicit `SizeStyle`, so the shadcn ScrollArea scrollbar gate measured its fill child
+    against the full probe bounds and expanded the hit region over table content. Absolute layout
+    now carries `InsetStyle + SizeStyle`, the focused ScrollArea-style mechanism test proves the
+    gate/opacity/scrollbar stay on the `10px` right track, and the retained Table
+    sort/select/scroll runtime gate now passes through selected-state and retained-window movement
+    assertions.
+- [x] Add retained DataTable sort/select/scroll selected-state runtime companion.
+  - Result: `ui-gallery-data-table-retained-sort-select-scroll.json` now asserts row 0 starts
+    `selected=false`, becomes `selected=true` after the row click, and that the stable post-scroll
+    visible row `ui-gallery-data-table-row-10015` remains `selected=false`. The script runs against
+    the real UI Gallery DataTable torture page with `FRET_UI_GALLERY_DATA_TABLE_RETAINED=1`, passes
+    with zero tooling warnings, and keeps the selected-state proof in diagnostics rather than only
+    in retained Table-focused unit coverage.
+- [x] Promote UI Gallery Node Graph Cull runtime gates into protocol roundtrip coverage.
+  - Result: the existing `ui-gallery-node-graph-cull`,
+    `ui-gallery-node-graph-cull-window-shifts`, and
+    `ui-gallery-node-graph-cull-window-no-shifts-small-pan` suites now have direct
+    `fret-diag-protocol` roundtrip coverage for their redirect scripts. The runtime suites pass
+    against the rebuilt `target/dev-fast/fret-ui-gallery.exe` binary: pan/zoom and large-pan
+    cull-window-shift paths stay live, and the small-pan guard stays under the zero-shift budget.
+    A prior `ensure_visible_timeout` was traced to an old `target/debug/fret-ui-gallery.exe`
+    binary whose nav search did not expose the Node Graph Cull entry, not to a mechanism defect.
+- [x] Stabilize the UI Gallery Canvas Cull runtime gate and add protocol roundtrip coverage.
+  - Result: `ui-gallery-canvas-cull-torture-pan-zoom.json` now enters the long Gallery nav through
+    search plus `ensure_visible` before clicking the Canvas Cull torture page. The first runtime
+    suite failed because the direct click targeted a nav row at `y=993` in a `720px` window and
+    hit-tested `no_hit`; this was a diagnostics authoring defect, not a Canvas Cull mechanism
+    defect. After the script fix, `ui-gallery-canvas-cull` passes with zero lint warnings and a
+    pixels-changed post-run proof.
+- [x] Add a strict Gallery nav click authoring lint for promoted cull/torture suites.
+  - Result: `tools/check_diag_scripts_registry.py` now rejects direct clicks on `ui-gallery-nav-*`
+    page rows in the Canvas Cull, Chart Torture, and Node Graph Cull suites unless the same nav row
+    has a prior `ensure_visible(within_window=true)` or
+    `scroll_into_view(require_fully_within_window=true)` guard. `ui-gallery-nav-search` and
+    `ui-gallery-nav-scroll` remain exempt as always-visible/navigation-control targets. Registry
+    self-tests now lock the bad direct-click case, the guarded case, and the search exemption.
+- [x] Harden the UI Gallery Chart Torture sampling-window runtime gate.
+  - Result: `ui-gallery-chart-torture` now requires at least two distinct nonzero
+    `chart_sampling_window_key` values instead of accepting repeated initial prepaint samples.
+    The first strict run exposed that the Gallery torture page recreated `ChartCanvas` under a
+    cached/retained boundary and lost widget-local pan/zoom state. The page now stores a shared
+    delinea `ChartEngine` in a stable local model, uses dataZoom-backed axes, and the suite passes
+    with `distinct_key_count=2` plus a delinea headless gate proving interactive pan/zoom updates
+    `output.axis_windows`.
+- [x] Add a Chart Torture dataZoom runtime oracle through UI Gallery app snapshots.
+  - Result: the Chart Torture page now exposes its shared engine dataZoom state through
+    `app_snapshot.chart_torture`, and the promoted pan/zoom script asserts
+    `x_data_zoom.active=false` before interaction and `true` after drag/wheel. The first draft
+    exposed an oracle design issue: `ChartCanvasOutput` is paint-published, so ViewCache replay can
+    keep the output model at revision `0` before interaction. The final oracle reads the shared
+    engine state and keeps `ChartCanvasOutput` as supplemental snapshot evidence.
+- [x] Add a Chart Torture tooltip/axis-output runtime oracle.
+  - Result: the promoted Chart Torture pan/zoom script now waits for
+    `x_axis_output_window.present=true`, `output_model.domain_windows_count=2`, and
+    `output_model.tooltip_lines_count=2` after scripted drag/wheel. This converts the previous
+    supplemental output counters into a hard runtime gate for paint-published axis-window and
+    tooltip payload freshness.
+- [x] Add a Chart Torture visible domain-window runtime oracle.
+  - Result: `app_snapshot.chart_torture` now exposes the fixture's full X domain, the
+    paint-published `output_model.x_domain_window`, and runtime booleans proving that both the
+    engine X axis output window and output-model X domain window match the active dataZoom window
+    after pan/zoom and differ from the initial full domain. The promoted pan/zoom script asserts
+    the full-domain baseline before interaction and all visible-window oracle booleans after
+    interaction.
+- [x] Promote UI Gallery workspace tabstrip overflow selection into the workspace shell runtime
+  suite.
+  - Result: `ui-gallery-workspace-tabstrip-overflow-select-command.json` now starts the Gallery in
+    workspace-shell mode, forces tabstrip overflow at `900 x 720`, selects the hidden Command tab
+    through the overflow menu, and asserts overflow/visibility diagnostics plus selected-page
+    state. The suite also caught a real UI Gallery policy drift: runtime
+    `WorkspaceCommandScope` tab shortcuts used the workspace crate's default MRU cycling while the
+    Gallery driver and script expected visible-order cycling. UI Gallery now sets its single-pane
+    workspace layout to `TabCycleMode::InOrder`, and the workspace shell suite passes with the new
+    overflow gate included.
+- [x] Promote workspace shell demo tab movement ownership into the runtime suite.
+  - Result: workspace tab strip drag/drop now dispatches specific-tab move commands instead of
+    relying on whichever tab is active at command-application time. The end-drop surface resolves
+    to a concrete `move_after_id` target, local and cross-pane drag state is keyed by stable
+    window/root identity, and the workspace shell demo suite covers cross-pane end-drop, overflow
+    activation, pinned-boundary rejection, preview preservation, and overflow reorder. The final
+    runtime failure in the overflow reorder script was an authoring issue: the script dragged from
+    a clipped `doc-a-0` bounds edge. It now activates `doc-a-0` through the overflow menu first,
+    waits until the active tab is visible, and then drops onto `drop_end`. The rebuilt suite then
+    exposed a command ownership defect: the demo runner and `WorkspaceCommandScope` both applied
+    non-idempotent workspace model commands. The demo now keeps scope-owned focus-transfer hooks but
+    disables scope replay of model commands already handled by the runner.
+- [x] Promote workspace shell demo dirty-close policy through the real tab close button.
+  - Result: `workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json` now marks
+    `doc-a-2` dirty, clicks the actual tab close button
+    `workspace-shell-pane-pane-a-tab-doc-a-2.close`, asserts the pointer command dispatches
+    `workspace.tab.close.doc-a-2`, cancels the dirty-close prompt to prove the dirty tab remains,
+    then repeats the widget close path and discards to prove the tab is removed. The first runtime
+    failure exposed an app-shell redraw gap: a blocked dirty-close request installed the prompt
+    model but did not request a redraw when no UI driver fallback ran. The demo now redraws when
+    `blocked_dirty_close` is present, and `fret-workspace` has focused close-by-id policy coverage.
+- [x] Promote workspace shell demo aggregate dirty-close policy through Close Other Tabs.
+  - Result: `workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json` now marks
+    `doc-a-0` and `doc-a-1` dirty, activates `doc-a-2`, invokes `Close Other Tabs` from the real
+    tab context menu, and asserts the dirty-close prompt label reports `CloseOthers`,
+    `close_count=2`, and `dirty=[doc-a-0, doc-a-1]`. Cancel preserves all tabs and dirty markers;
+    Discard closes the aggregate targets while keeping the active tab. The first runtime draft only
+    exposed script authoring issues: direct tab click did not select `doc-a-0`, and `arrowright`
+    was not a valid key token. The final script uses the existing tabstrip keyboard-selection path
+    and `arrow_right`.
+- [x] Promote workspace shell demo cross-pane close-button ownership into the runtime suite.
+  - Result: `workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json` now starts with
+    `pane-a` active, clicks the real close button for selected `doc-b-1` in `pane-b`, asserts the
+    pointer path dispatches `workspace.pane.activate.pane-b` and then `workspace.tab.close.doc-b-1`,
+    and proves only `doc-b-1` is removed while `doc-a-2` remains. No runtime defect was reproduced;
+    the gate locks the close-button ownership invariant that non-active pane tab closes must route
+    through pane activation before model mutation.
+- [x] Promote workspace shell demo cross-pane Close Other Tabs context-menu ownership into the
+  runtime suite.
+  - Result:
+    `workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json` now starts
+    with `pane-a` active and `pane-b` selected on `doc-b-1`, right-clicks the real pane-b tab,
+    waits for handled `workspace.pane.activate.pane-b`, invokes the real context-menu
+    `Close Other Tabs` item, and asserts `workspace.tab.close.others` dispatches from that menu
+    item. The final state proves only pane-b's other tab `doc-b-0` is removed, `doc-b-1` remains
+    selected with set size `1`, and pane-a tabs plus selected `doc-a-2` remain intact. No ownership
+    defect was reproduced; the first draft did expose a diagnostics attribution weakness where the
+    right-click-triggered pane activation is recorded as programmatic/driver-handled rather than
+    pointer-sourced.
+- [x] Fix workspace shell demo right-click pane activation source attribution.
+  - Result: pane-level pointer activation now records pending command dispatch source before
+    dispatching the pane activation command, using the hit pressable target when available. The
+    context-menu ownership gate now strictly asserts `workspace.pane.activate.pane-b` is
+    pointer-sourced from `workspace-shell-pane-pane-b-tab-doc-b-1`, while preserving the aggregate
+    Close Other Tabs ownership proof.
+- [x] Promote workspace shell demo window-close dirty aggregation into the runtime suite.
+  - Result: `window.close` and `Event::WindowCloseRequested` now route through workspace
+    dirty-close policy instead of closing the window directly. `WorkspaceWindowLayout` aggregates a
+    `CloseWindow` request across panes, the demo prompts when dirty tabs exist, and
+    `workspace-shell-demo-window-close-dirty-aggregation-smoke.json` marks dirty tabs in both
+    panes, invokes the real `window.close` button, proves
+    `reason=CloseWindow active=doc-a-2 close_count=5 dirty=[doc-a-2, doc-b-1]`, and verifies
+    Cancel preserves the window and dirty state. The first runtime drafts exposed diagnostics
+    authoring gaps around driver-handled `window.close` traces, debug-button pointer source, and
+    redirect shape; all are fixed in the promoted gate.
+- [x] Harden retained DataTable column-action state and stale-script gates.
+  - Result: `ui-gallery-data-table-retained-column-actions-menu.json` now asserts pointer-sourced
+    command dispatch for `pin_left`, `sort_asc`, and `hide` on `mem_mb`, then proves the hidden
+    column disappears while the retained model still reports `Sorting: mem_mb asc`,
+    `Pinning: left=[mem_mb] right=[]`, and the Columns menu reports `mem_mb` unchecked. No retained
+    DataTable UI/model stale-state defect was reproduced. The suite pass also required fixing old
+    toolbar scoped-selector drift in faceted/reset scripts and replacing the old window-boundary
+    `wheel + wait_frames` script with observable row-window assertions.
+- [x] Harden DataTable view-cache filter-shrink inputs-change gate.
+  - Result: `ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json` now declares
+    `gallery-dev`, carries its own `FRET_UI_GALLERY_VIEW_CACHE=1` default, asserts the UI Gallery
+    app snapshot reports `/view_cache/enabled=true`, and has direct protocol roundtrip coverage.
+    The focused run and suite run both pass without manually setting the environment variable,
+    proving the promoted gate is self-contained for the non-retained view-cache
+    `inputs_change` invalidation-detail path.
+- [x] Add protocol coverage to the UI Gallery View Cache model-mutation gate.
+  - Result: `ui-gallery-view-cache-model-mutation-through-cache.json` now has direct
+    `fret-diag-protocol` roundtrip coverage. Fresh focused and suite runtime runs still prove
+    cached-subtree counter mutation plus Popover open/close state through `/view_cache` app
+    snapshots while the script injects `FRET_UI_GALLERY_START_PAGE=view_cache`,
+    `FRET_UI_GALLERY_VIEW_CACHE=1`, and `FRET_UI_GALLERY_VIEW_CACHE_INNER=1`. No new view-cache
+    mechanism defect was reproduced.
+- [x] Add protocol coverage to the Resizable moving cached Combobox root-boundary gate.
+  - Result:
+    `ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json` now has direct
+    `fret-diag-protocol` roundtrip coverage. Fresh focused and suite runtime runs still prove the
+    cached Combobox source can move from the left Resizable panel to the right panel, open after the
+    move, flip to the top with shadcn `sideOffset=6`, stay inside the right panel/window boundary,
+    and preserve Combobox input/listbox relation edges. No new cached movement/root-boundary
+    mechanism defect was reproduced.
+- [x] Add protocol coverage to the Command retained active-descendant action-state gate.
+  - Result:
+    `ui-gallery-command-retained-active-descendant-action-state.json` now has direct
+    `fret-diag-protocol` roundtrip coverage. Fresh focused and full `ui-gallery-command` suite runs
+    still prove that a retained/windowed Command active row clears its active-descendant relation
+    while detached, then reattaches with refreshed `disabled=true` and `invoke=false` semantics. No
+    new retained relation/action-state mechanism defect was reproduced. The first full-suite rerun
+    exposed diagnostics authoring drift in the Command long-query script: a pre-positioning
+    `scroll_into_view` could emit a wheel with no follow-up frame when the docs demo was already
+    visible. That guard now uses `ensure_visible(within_window=true)`.
+- [x] Refresh AI FileTree protocol coverage and auto-height VirtualList runtime proof.
+  - Result: the four promoted `ui-gallery-ai-file-tree` scripts now have direct
+    `fret-diag-protocol` roundtrip coverage. The fresh suite rerun re-exposed the auto-height
+    VirtualList measured-leaf dirtying risk: expanded FileTree rows could appear in semantics while
+    the parent flow still reused the old intrinsic height, causing the following docs section to
+    overlap hit testing. `flow.rs` now marks measured Taffy leaves dirty whenever their owning
+    `UiTree` node has layout invalidation, the existing focused VirtualList growth regression is
+    green again, and the full AI FileTree diagnostics suite passes 4/4. The screenshot script was
+    also tightened to wait for `file-lib` visibility/expanded state and assert the hidden selection
+    marker through `raw_semantics_hidden_is` plus `selected_is`.
+- [x] Repair paint-time text reprepare auto-height overlap and gate Combobox Popup docs intro.
+  - Result: `Text`, `StyledText`, and `SelectableText` now schedule a layout repair when
+    paint-time width/font-stack reprepare produces a taller auto-height text blob than the current
+    layout bounds. The focused mechanism regression covers the exact wrapped-text height growth
+    path, and `ui-gallery-combobox-popup-doc-intro-non-overlap.json` locks the user-visible
+    Combobox Popup docs intro/title spacing at a screenshot-like startup size before resize
+    recovery.
+- [x] Promote Resizable multi-viewport Select root-boundary placement into the runtime suite.
+  - Result: `ui-gallery-resizable-multi-viewport-select-placement.json` adds a Select companion to
+    the existing Resizable multi-viewport Combobox proof. The fixture opens a popper-positioned
+    Select control near the bottom of the right Resizable panel while the OS window still has room
+    below, waits for a `placed_rect` trace with panel-sized `outer`, `chosen_side=top`, `flipped`,
+    and `side_offset=6`, then selects `Release Ready` and verifies it persists on reopen. No Select
+    root-boundary defect was reproduced. The first runtime drafts instead exposed script authoring
+    hazards around selecting the outer fixture instead of the Select control, over-constraining the
+    exact top-side gap, and querying underlay panel bounds after the modal overlay barrier was
+    installed.
+- [x] Clip paint-time text reprepare repair frames and gate full Combobox startup overlap.
+  - Result: the paint-time text layout repair now clips `Text`, `StyledText`, and
+    `SelectableText` drawing to the stale layout bounds on the same frame that schedules the layout
+    repair, preventing a taller newly prepared blob from visibly overlapping following content
+    before the next layout pass. The focused mechanism regression now asserts both the layout
+    invalidation/redraw and the repair-frame clip. `ui-gallery-combobox-full-page-startup-intro-non-overlap.json`
+    complements the Popup-focused gate by starting on the full Combobox page and proving the long
+    intro leaves measured space before the Basic section at screenshot-like startup size.
+- [x] Promote CommandDialog Basic overlay/focus into the Command runtime suite.
+  - Result: `ui-gallery-command-basic-dialog-overlay-focus.json` starts directly on the Command
+    Basic section, opens the real `CommandDialog` trigger, asserts dialog and close-button
+    semantics, input/listbox presence, listbox labelling, input active-descendant wiring, ArrowDown
+    active-row movement, screenshot/layout/bundle capture, Escape dismissal, and focus restoration
+    to the `Open Menu` button. The first focused run exposed a diagnostics authoring issue rather
+    than an overlay defect: the script asserted focus on the Button `.chrome` child, while the
+    runtime correctly restored focus to the outer `role=button` semantics node.
+- [x] Gate screenshot-derived short-startup Combobox Popup intro non-overlap.
+  - Result:
+    `ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json` starts directly on the
+    Combobox Popup section at logical `663x311`, derived from the observed `994x466` screenshot on
+    a 1.5x display scale, and captures layout/screenshot/bundle evidence before any manual resize
+    recovery. Current runtime did not reproduce the overlap; the new gate proves
+    `docsec-popup-title.top - ui-gallery-doc-page-intro.bottom = 24px`, keeps the assertion floor at
+    `>= 16px`, and complements the earlier `671x460` Popup/full-page startup gates.
+- [x] Harden AI transcript non-retained scroll mutation gate and suite policy.
+  - Result: `ui-gallery-ai-transcript-torture-scroll.json` now self-configures a deterministic
+    `240`-message, variable-height transcript, asserts the startup message-count semantics, appends
+    `100` messages, and proves the count advances to `340` while capturing layout, screenshot, and
+    bundle evidence. The slice also removes the transcript torture script from the retained vlist
+    reconcile tail policy because `fret-ui-ai` intentionally keeps transcript virtualization
+    non-retained to avoid a `UiHost + 'static` surface requirement. The first suite rerun exposed
+    this policy mismatch: all three scripts passed, but the suite failed a retained-only
+    non-retained-shift tail check. After rebuilding `fretboard-dev`, the suite passed 3/3 with no
+    retained-tail check file.
+- [x] Gate screenshot-corrected Combobox RTL Long Text startup intro overlap.
+  - Result:
+    `ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json` starts
+    directly on the focused `RTL Long Text` Combobox docs section at logical `1083x752`, matching
+    the latest `1624x1128` screenshot on a 1.5x scale display. It captures layout, screenshot, and
+    bundle evidence before resize recovery, then asserts the retained docs intro does not overlap
+    the `RTL Long Text` title and that title/description spacing remains stable. The slice also
+    keeps a `994x466` Popup companion to cover the earlier scale interpretation. Current runtime did
+    not reproduce the user-visible overlap; the corrected gate locks the actual screenshot target
+    that the earlier Popup and Basic startup gates did not cover.
+- [x] Repair first-paint text auto-height growth and remove input-masked startup gate recovery.
+  - Result:
+    the RTL Long Text startup gate no longer sends `Escape` before capturing layout/screenshot
+    evidence, so it no longer advances an input frame that can hide cold-start text layout defects.
+    `Text`, `StyledText`, and `SelectableText` now schedule an auto-height layout repair whenever
+    paint-time prepare produces taller metrics than the current layout bounds, including the first
+    paint prepare path and not only width/font-stack reprepare. The focused mechanism regression
+    proves first-paint height growth invalidates layout, requests redraw, and clips the repair
+    frame. The refreshed focused runtime gate and full Combobox geometry-placement suite pass
+    without manual resize or keyboard input.
+- [x] Align wrapped text startup measurement with prepared paint metrics.
+  - Result:
+    the follow-up Combobox RTL Long Text screenshot showed that layout-bounds assertions can still
+    miss a pixel-visible overlap when the backend `measure` path underestimates wrapped text height
+    relative to the prepared text blob used for paint. Wrapped `Text`, `StyledText`, and
+    `SelectableText` now prepare during measurement and store those metrics in the shared text
+    cache, so startup layout reserves the same height paint will use and first paint no longer needs
+    a repair/redraw for this class. The RTL Long Text startup gate now also asserts section
+    content/trigger spacing after the description, matching the visible overlap area from the user
+    screenshot.
+- [x] Harden Chart Torture multi-series tooltip and domain-window output coverage.
+  - Result:
+    the Chart Torture page now renders two line series on the same X/Y axes, and
+    `ui-gallery-chart-torture-pan-zoom.json` asserts the retained chart output model publishes a
+    three-line tooltip with one axis header, A/B series rows, source-series ownership on both rows,
+    and no missing values after real drag/wheel pan/zoom input. The first runtime run exposed an
+    obsolete diagnostics assertion, not a chart defect: `domain_windows_count == 2` assumed X and Y
+    link keys would both be exported, but ADR 0301 only auto-maps an axis when it uniquely resolves
+    to one `(dataset, field)`. With two Y fields on one Y axis, the Y key is ambiguous, so the
+    correct output count is one X domain window; the gate still proves the X output model window
+    matches dataZoom and changes from the full domain.
+- [x] Gate explicit ChartLinkRouter Y-axis mapping for ambiguous multi-series charts.
+  - Result:
+    `fret-chart` now has a retained-canvas regression proving an explicit host-provided
+    `AxisId -> LinkAxisKey` map publishes an otherwise ambiguous Y domain window to
+    `ChartCanvasOutput`. Chart Torture can opt into the same explicit map through
+    `FRET_UI_GALLERY_CHART_TORTURE_EXPLICIT_Y_LINK_MAP=1`; the runtime gate asserts the output
+    model publishes `dataset=1, field=2` with the fixture `[-0.25, 0.75]` Y domain window. The gate
+    lives in its own `ui-gallery-chart-linking-explicit-y-map` suite so it does not inherit the
+    pan/zoom-only `chart_sampling_window_shifts_min` tail check from `ui-gallery-chart-torture`.
+- [x] Investigate manually observed Combobox RTL Long Text overlap that current runtime gates did
+  not reproduce.
+  - Result: the screenshot was a real first-visible-frame doc scaffold issue rather than a
+    Combobox trigger defect. `muted_full_width` and `section_title` now explicitly set
+    `min-width: 0` alongside fill width, the focused helper test locks the shape, and the
+    `1083x752` RTL Long Text startup diagnostics gate now captures a clean frame-3 screenshot with
+    run id `1779230956616`.
+- [x] Add a client-height companion gate for the follow-up Combobox RTL Long Text screenshot.
+  - Result: fresh `target\dev-fast\fret-ui-gallery.exe` builds did not reproduce the new manual
+    overlap screenshot at either the existing `1083x752` client size or a shorter `1083x721`
+    client-height interpretation of the same decorated `1624x1128` screenshot. Added
+    `ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json` so the
+    promoted suite covers that outer-window/client-area ambiguity. The focused gate passed with
+    run id `1779232803236`, and the full `ui-gallery-combobox-geometry-placement` suite passed
+    13/13 with the new row run id `1779232938320`.
+- [x] Gate explicit Y linked-domain propagation into a second retained chart.
+  - Result:
+    added a retained `fret-chart` mechanism regression proving the full two-chart propagation path:
+    the source chart publishes an explicit `AxisId -> LinkAxisKey` Y domain window, `LinkedChartGroup`
+    copies it into shared linked-domain state, the target chart consumes that model through its real
+    paint-time `sync_linked_domain_windows` path, and the target `ChartCanvasOutput` publishes the
+    same explicit Y window instead of its initial local window. Focused chart checks passed with
+    Nextest run id `620beddb-8a62-4de0-81fd-d5f2fadb28f1`.
+- [x] Fix fixed-line-height word-wrap cold-start text pollution behind the Combobox RTL Long Text
+  screenshot.
+  - Result:
+    the user's follow-up screenshot exposed a real earlier-frame issue that the stable diagnostics
+    gate missed. A temporary frame-1 probe showed the docs intro rendering as the internal `Hg`
+    fixed-line-height metrics sample. `ParleyShaper::shape_paragraph_with_wrap` now computes fixed
+    line-box ascent/descent before building the real paragraph into the shared Parley layout, so the
+    internal metrics probe cannot overwrite the paragraph layout being returned for paint. The full
+    `fret-render-text` nextest suite passed with run id
+    `a16c3aa8-c5dc-4b48-a26f-df17e39f442e`; rebuilt `dev-fast` and debug Gallery focused
+    `client721` gates passed with run ids `1779237680925` and `1779238359542`.
+- [x] Promote `chart_multi_axis_demo` linked-domain propagation into a runtime app-snapshot gate.
+  - Result:
+    added a bounded app snapshot provider to `chart_multi_axis_demo` so diagnostics can assert the
+    shared linked-domain model and both chart output models, not just pixels/logs. The new
+    `chart-multi-axis-linked-domain-window-app-snapshot.json` gate waits for the demo's existing
+    deterministic diagnostics auto-zoom to set the top X window to `[-75, 75]`, then proves shared,
+    top, and bottom X windows all match. Focused runtime passed with run id `1779239505892`, and
+    the new `chart-multi-axis-linking` suite passed with summary
+    `target/fret-diag-chart-multi-axis-linking-suite-v1/sessions/1779239623009-133816/suite.summary.json`.
+- [x] Add a non-Combobox cold startup long-docs text gate.
+  - Result:
+    the follow-up manual Combobox screenshot was rechecked against rebuilt `debug`, `dev-fast`, and
+    `release` Gallery binaries plus a normal OS-window startup capture. Current binaries did not
+    reproduce the visible overlap, and `target\release\fret-ui-gallery.exe` had been an old
+    2026-05-14 build before it was refreshed. To keep fixed-line-box cold word-wrap covered beyond
+    the original Combobox page, added
+    `ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap.json`. The gate starts from a
+    cold process on the Item docs page, focuses `Item vs Field`, captures layout/screenshot/bundle
+    evidence, and asserts the long docs intro, section title, description, and content keep their
+    expected vertical separation. Focused runtime passed with run id `1779242679435`, and the
+    `ui-gallery-shadcn-runtime-evidence` suite passed with the new script run id `1779242852622`.
+- [x] Add a View Cache dynamic wrapped-text mutation gate.
+  - Result:
+    `ui-gallery-view-cache-dynamic-text-mutation-through-cache.json` now drives the View Cache
+    harness through a cached-subtree counter mutation that changes visible wrapped text from a
+    short baseline to a longer paragraph. The UI Gallery snapshot exposes
+    `/view_cache/dynamic_text_len` and `/view_cache/dynamic_text_wrapped`; the gate asserts the
+    snapshot state, visible label text, renderer text trace, layout sidecars, screenshots, bundle
+    evidence, dynamic-text size, dynamic-text-to-Popover spacing, and Popover/List non-overlap.
+    Focused runtime passed with run id `1779244734657`, and the full `ui-gallery-view-cache` suite
+    passed 2/2 with summary
+    `target/fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1/sessions/1779244758600-135808/suite.summary.json`.
+- [x] Promote HitTestOnly paint-cache replay into a runtime counter gate.
+  - Result:
+    `ui-gallery-hit-test-only-paint-cache-probe-sweep.json` now declares `gallery-dev`, injects
+    `FRET_UI_GALLERY_PAINT_CACHE=1`, navigates to the hidden HitTestOnly Paint-Cache Probe page,
+    waits for `/selected_page == "hit_test_only_paint_cache_probe"`, sweeps the pointer over the
+    stable cached region, and gates the new diagnostics predicates
+    `paint_cache_hit_test_only_replay_allowed_ge(min=1)` and
+    `paint_cache_hit_test_only_replay_rejected_key_mismatch_le(max=0)`. The new
+    `ui-gallery-hit-test-only-paint-cache` suite passed with zero-warning lint policy after the
+    probe page fixed a duplicate `ui-gallery-hit-test-only-probe-region` id by renaming the outer
+    panel to `ui-gallery-hit-test-only-probe-panel`. Focused runtime passed with run id
+    `1779247865248`, and the suite passed with summary
+    `target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json`.

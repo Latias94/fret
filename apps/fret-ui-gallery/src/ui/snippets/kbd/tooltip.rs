@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("tooltip.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_ui_kit::ui;
+use fret_ui_kit::{declarative::text as decl_text, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -13,7 +13,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             let save_content = shadcn::TooltipContent::build(cx, |_cx| {
                 [ui::h_row(|cx| {
                     vec![
-                        ui::text("Save Changes").text_sm().into_element(cx),
+                        decl_text::text_control_readout(cx, "Save Changes"),
                         shadcn::Kbd::new("S").into_element(cx),
                     ]
                 })
@@ -32,7 +32,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             let print_content = shadcn::TooltipContent::build(cx, |_cx| {
                 [ui::h_row(|cx| {
                     vec![
-                        ui::text("Print Document").text_sm().into_element(cx),
+                        decl_text::text_control_readout(cx, "Print Document"),
                         shadcn::KbdGroup::new([
                             shadcn::Kbd::new("Ctrl").into_element(cx),
                             shadcn::Kbd::new("P").into_element(cx),

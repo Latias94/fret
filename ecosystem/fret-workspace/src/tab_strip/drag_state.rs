@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use fret_core::{Point, PointerId, Rect};
 use fret_runtime::{Model, ModelStore, TickId};
-use fret_ui::{ElementContext, UiHost};
 
 use crate::tab_drag::WorkspaceTabHitRect;
 
@@ -78,11 +77,4 @@ pub(super) fn read_drag_snapshot_for_pointer(
         });
     });
     out
-}
-
-#[track_caller]
-pub(super) fn get_drag_model<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-) -> Model<WorkspaceTabStripDragState> {
-    cx.local_model(WorkspaceTabStripDragState::default)
 }

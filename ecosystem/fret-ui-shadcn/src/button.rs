@@ -1423,6 +1423,7 @@ mod tests {
     use fret_ui::element::{ContainerProps, ElementKind, LayoutStyle, Length, SizeStyle};
     use fret_ui::elements;
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::declarative::text as decl_text;
     use std::collections::HashMap;
     use std::time::Duration;
 
@@ -1929,6 +1930,28 @@ mod tests {
         }
     }
 
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
+
     fn collect_horizontal_content_texts(el: &AnyElement) -> Vec<String> {
         let content =
             find_first_horizontal_content_element(el).expect("expected horizontal content stack");
@@ -2010,6 +2033,86 @@ mod tests {
 
                 button.into_element(cx)
             },
+        );
+    }
+
+    #[test]
+    fn button_children_preserve_shared_button_label_role_contracts() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "button-children-role-contract",
+            |cx| {
+                Button::new("Ignored")
+                    .children([decl_text::text_button_label(cx, "Run Build")])
+                    .into_element(cx)
+            },
+        );
+
+        let text =
+            find_text_element(&element, "Run Build").expect("expected custom button role text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert!(text.inherited_text_style.is_some());
+        assert!(
+            find_first_inherited_foreground_node(&element).is_some(),
+            "expected Button foreground to remain inherited through the content root"
+        );
+    }
+
+    #[test]
+    fn button_inline_children_preserve_shared_button_label_role_contracts() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "button-inline-role-contract",
+            |cx| {
+                Button::new("Main")
+                    .leading_children([decl_text::text_button_label(cx, "Before")])
+                    .trailing_children([decl_text::text_button_label(cx, "After")])
+                    .into_element(cx)
+            },
+        );
+
+        for label in ["Before", "After"] {
+            let text = find_text_element(&element, label).expect("expected inline role text");
+            let ElementKind::Text(props) = &text.kind else {
+                panic!("expected text leaf");
+            };
+            assert!(props.style.is_none());
+            assert!(props.color.is_none());
+            assert_eq!(props.wrap, fret_core::TextWrap::None);
+            assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+            assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert_eq!(props.layout.flex.shrink, 1.0);
+            assert!(text.inherited_text_style.is_some());
+        }
+        assert!(
+            find_first_inherited_foreground_node(&element).is_some(),
+            "expected Button foreground to remain inherited through the content root"
         );
     }
 

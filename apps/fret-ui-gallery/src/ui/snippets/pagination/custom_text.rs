@@ -2,7 +2,8 @@ pub const SOURCE: &str = include_str!("custom_text.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_ui_kit::ui;
+use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::{declarative::text as decl_text, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 const CMD_PAGE_PREVIOUS: &str = "ui_gallery.pagination.custom_text.previous";
@@ -11,8 +12,12 @@ const CMD_PAGE_12: &str = "ui_gallery.pagination.custom_text.page_12";
 const CMD_PAGE_13: &str = "ui_gallery.pagination.custom_text.page_13";
 const CMD_PAGE_NEXT: &str = "ui_gallery.pagination.custom_text.next";
 
-fn page_number(label: &'static str) -> impl UiChild + use<> {
-    ui::text(label).tabular_nums()
+fn page_number<H, L>(cx: &mut ElementContext<'_, H>, label: L) -> impl UiChild + use<H, L>
+where
+    H: UiHost,
+    L: Into<std::sync::Arc<str>>,
+{
+    decl_text::text_button_label(cx, label)
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -28,16 +33,16 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             .action(CMD_PAGE_PREVIOUS),
                     ),
                     shadcn::pagination_item(
-                        shadcn::pagination_link(|cx| ui::children![cx; page_number("11")])
+                        shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "11")])
                             .action(CMD_PAGE_11),
                     ),
                     shadcn::pagination_item(
-                        shadcn::pagination_link(|cx| ui::children![cx; page_number("12")])
+                        shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "12")])
                             .active(true)
                             .action(CMD_PAGE_12),
                     ),
                     shadcn::pagination_item(
-                        shadcn::pagination_link(|cx| ui::children![cx; page_number("13")])
+                        shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "13")])
                             .action(CMD_PAGE_13),
                     ),
                     shadcn::pagination_item(

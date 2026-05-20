@@ -9,9 +9,9 @@ use fret::advanced::view::{AppRenderDataExt as _, ViewWindowState};
 use fret::imui::{kit::ImUiMultiSelectState, prelude::*};
 use fret::{Defaults, FretApp, advanced::prelude::*, component::prelude::*, shadcn};
 use fret_app::{CreateWindowKind, CreateWindowRequest, WindowRequest};
-use fret_core::text::TextOverflow;
 use fret_core::{
-    Color, Corners, Edges, KeyCode, Modifiers, Point, PointerId, Px, Rect, Size, TextAlign,
+    Color, Corners, Edges, KeyCode, Modifiers, PanelKind, Point, PointerId, Px, Rect, Size,
+    TextAlign,
 };
 use fret_docking::{
     DockManager, DockPanel, DockPanelElementRegistry, DockPanelElementRegistryService,
@@ -42,7 +42,7 @@ use fret_ui_editor::controls::{
     VecEditOptions,
 };
 use fret_ui_editor::imui as editor_imui;
-use fret_ui_editor::primitives::{EditSessionOutcome, EditorCompactReadoutStyle, EditorTokenKeys};
+use fret_ui_editor::primitives::{EditSessionOutcome, EditorTokenKeys};
 use fret_ui_editor::theme::EditorThemePresetV1;
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::headless::text_assist::{
@@ -240,31 +240,11 @@ fn proof_compact_readout<H: UiHost>(
     readout: String,
     test_id: Option<Arc<str>>,
 ) -> fret_ui::element::AnyElement {
-    let theme = fret_ui::Theme::global(&*cx.app);
-    let row_height = theme
-        .metric_by_key(EditorTokenKeys::DENSITY_ROW_HEIGHT)
-        .unwrap_or(Px(24.0));
-    let readout_style = EditorCompactReadoutStyle::resolve(theme, row_height);
     let readout = Arc::<str>::from(readout);
-
-    let mut el = cx.text_props(readout_style.text_props(
-        readout.clone(),
-        LayoutStyle {
-            size: SizeStyle {
-                width: Length::Fill,
-                height: Length::Auto,
-                ..Default::default()
-            },
-            ..Default::default()
-        },
-        TextAlign::Start,
-        TextOverflow::Ellipsis,
-    ));
-
+    let mut el = decl_text::text_control_readout(cx, readout.clone());
     if let Some(test_id) = test_id {
         el = el.test_id(test_id);
     }
-
     el.a11y_label(readout)
 }
 
@@ -293,6 +273,33 @@ fn proof_section_chrome_label<H: UiHost>(
     test_id: &'static str,
 ) -> AnyElement {
     decl_text::text_section_chrome_label(cx, text).test_id(test_id)
+}
+
+fn proof_imui_section_text(
+    ui: &mut (impl UiWriterImUiFacadeExt<KernelApp> + ?Sized),
+    text: impl Into<Arc<str>>,
+) {
+    let text = text.into();
+    let element = ui.with_cx_mut(move |cx| decl_text::text_section_chrome_label(cx, text));
+    ui.add(element);
+}
+
+fn proof_imui_readout_text(
+    ui: &mut (impl UiWriterImUiFacadeExt<KernelApp> + ?Sized),
+    text: impl Into<Arc<str>>,
+) {
+    let text = text.into();
+    let element = ui.with_cx_mut(move |cx| decl_text::text_control_readout(cx, text));
+    ui.add(element);
+}
+
+fn proof_imui_compact_paragraph_text(
+    ui: &mut (impl UiWriterImUiFacadeExt<KernelApp> + ?Sized),
+    text: impl Into<Arc<str>>,
+) {
+    let text = text.into();
+    let element = ui.with_cx_mut(move |cx| decl_text::text_compact_paragraph(cx, text));
+    ui.add(element);
 }
 
 fn color_hex_readout(color: Option<Color>) -> String {
@@ -818,20 +825,20 @@ where
         let root_content = fret_ui_kit::ui::v_flex_build(move |cx, out| {
             imui_build(cx, out, |ui| {
                 if !editor_review_layout {
-                    let headline = fret_ui_kit::ui::text(format!(
+                    proof_imui_section_text(
+                        ui,
+                        format!(
                             "imui editor-grade proof (M7): docking + multi-window + viewport surfaces (window={window:?})"
                         ),
-                    )
-                    .font_semibold();
-                    ui.add_ui(headline);
+                    );
 
                     if single {
-                        let hint = fret_ui_kit::ui::text(format!(
+                        proof_imui_readout_text(
+                            ui,
+                            format!(
                                 "single-window mode enabled ({ENV_SINGLE_WINDOW}=1): dock tear-off should degrade to in-window floating"
                             ),
-                        )
-                        .text_xs();
-                        ui.add_ui(hint);
+                        );
                     }
 
                     let controls = fret_ui_kit::ui::h_flex_build(move |cx, out| {
@@ -878,11 +885,10 @@ where
 
                     ui.separator();
 
-                    let parity_intro = fret_ui_kit::ui::text(
+                    proof_imui_compact_paragraph_text(
+                        ui,
                         "authoring parity proof: shared models, left declarative, right imui adapters; compare drag scrub, typed numeric entry, and bounded slider surfaces, then verify each paired row stays in sync under the same preset",
-                    )
-                    .text_xs();
-                    ui.add_ui(parity_intro);
+                    );
 
                     let parity_name_model_for_surface = parity_name_model.clone();
                     let parity_drag_value_model_for_surface = parity_drag_value_model.clone();
@@ -913,12 +919,10 @@ where
                         .into_element(cx)]
                     });
 
-                    let parity_state_hint =
-                        fret_ui_kit::ui::text(
+                    proof_imui_compact_paragraph_text(
+                        ui,
                             "shared state readout: each declarative/imui pair should mutate the same model, while drag, typed numeric, and slider stay intentionally distinct",
-                        )
-                        .text_xs();
-                    ui.add_ui(parity_state_hint);
+                    );
 
                     let parity_name_model_for_state = parity_name_model.clone();
                     let parity_drag_value_model_for_state = parity_drag_value_model.clone();
@@ -945,10 +949,10 @@ where
                     });
                     ui.separator();
 
-                    let editor_label =
-                        fret_ui_kit::ui::text("fret-ui-editor (M2): PropertyGroup + PropertyGrid + search assist")
-                            .text_xs();
-                    ui.add_ui(editor_label);
+                    proof_imui_section_text(
+                        ui,
+                        "fret-ui-editor (M2): PropertyGroup + PropertyGrid + search assist",
+                    );
                 }
                 ui.mount(|cx| {
                     let fixed_presentation = editor_fixed_decimals_presentation();
@@ -4235,7 +4239,7 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, TextWrap};
+    use fret_core::{AppWindowId, TextOverflow, TextWrap};
     use fret_ui::element::ElementKind;
     use fret_ui::elements;
 

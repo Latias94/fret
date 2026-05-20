@@ -925,6 +925,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_ui::element::{ElementKind, Length, MarginEdge, SpacingLength};
+    use fret_ui_kit::declarative::text as decl_text;
 
     use crate::rtl;
 
@@ -962,6 +963,18 @@ mod tests {
             ButtonGroupText::new("A").into(),
             ButtonGroupText::new("B").into(),
         ]
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
     }
 
     #[test]
@@ -1359,6 +1372,32 @@ mod tests {
         assert_eq!(props.layout.size.height, Length::Fill);
         assert_eq!(props.align, fret_ui::element::CrossAlign::Center);
         assert_eq!(text.children[0].children.len(), 2);
+    }
+
+    #[test]
+    fn button_group_text_children_preserve_shared_button_label_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let text =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds_320x240(), "test", |cx| {
+                ButtonGroupText::new_children([decl_text::text_button_label(cx, "Format")])
+                    .into_element(cx)
+            });
+
+        let label =
+            find_text_element(&text, "Format").expect("expected ButtonGroupText role child text");
+        let ElementKind::Text(props) = &label.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert!(label.inherited_text_style.is_some());
     }
 
     #[test]

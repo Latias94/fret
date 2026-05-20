@@ -13,7 +13,7 @@ use fret::component::prelude::*;
 use fret::{AppComponentCx, UiChild};
 use fret_runtime::Model;
 use fret_ui::CommandAvailability;
-use fret_ui_kit::IntoUiElementInExt as _;
+use fret_ui_kit::{IntoUiElementInExt as _, declarative::text as decl_text};
 use fret_ui_shadcn::facade as shadcn;
 
 mod act {
@@ -60,8 +60,8 @@ impl View for ActionFirstViewRuntimeDemo {
         ui::v_flex(|cx| {
             [
                 shadcn::Label::new("Action-first (view runtime)").into_element(cx),
-                cx.text(format!("Count: {count_value}")),
-                cx.text(format!("Last action: {last_action_value}")),
+                decl_text::text_control_readout(cx, format!("Count: {count_value}")),
+                decl_text::text_control_readout(cx, format!("Last action: {last_action_value}")),
                 shadcn::Button::new("Ping")
                     .action(act::Ping)
                     .into_element(cx)
@@ -146,7 +146,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         ui::v_flex(|cx| {
             [
                 shadcn::Label::new("Action-first (view runtime)").into_element(cx),
-                cx.text("This demo is desktop-only in v1."),
+                decl_text::text_paragraph(cx, "This demo is desktop-only in v1."),
             ]
         })
         .gap(Space::N2)

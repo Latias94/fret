@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("with_text.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -11,7 +12,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 ui::children![
                     cx;
                     shadcn::raw::icon::icon(cx, IconId::new_static("lucide.italic")),
-                    ui::text("Italic")
+                    decl_text::text_button_label(cx, "Italic")
                 ]
             })
             .a11y_label("Toggle italic with text")

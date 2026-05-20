@@ -4,7 +4,6 @@ pub const SOURCE: &str = include_str!("actions.rs");
 use std::sync::Arc;
 
 use fret::{AppComponentCx, UiChild};
-use fret_core::FontWeight;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -45,8 +44,8 @@ fn action_row(
 
         ui::children![
             cx;
-            shadcn::table_cell(ui::text(product).font_weight(FontWeight::MEDIUM)),
-            shadcn::table_cell(ui::text(price)),
+            shadcn::table_cell(super::table_cell_text_emphasis(cx, product)),
+            shadcn::table_cell(super::table_cell_text(cx, price)),
             shadcn::table_cell(dropdown).text_align_end(),
         ]
     })

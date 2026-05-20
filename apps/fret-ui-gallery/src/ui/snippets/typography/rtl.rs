@@ -136,24 +136,24 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                     shadcn::table_row(2, |cx| {
                                         ui::children![
                                             cx;
-                                            shadcn::table_cell(ui::text("فارغة")),
-                                            shadcn::table_cell(ui::text("فائضة")),
+                                            shadcn::table_cell(super::table_cell_text(cx, "فارغة")),
+                                            shadcn::table_cell(super::table_cell_text(cx, "فائضة")),
                                         ]
                                     })
                                     .into_element(cx),
                                     shadcn::table_row(2, |cx| {
                                         ui::children![
                                             cx;
-                                            shadcn::table_cell(ui::text("متواضعة")),
-                                            shadcn::table_cell(ui::text("راضٍ")),
+                                            shadcn::table_cell(super::table_cell_text(cx, "متواضعة")),
+                                            shadcn::table_cell(super::table_cell_text(cx, "راضٍ")),
                                         ]
                                     })
                                     .into_element(cx),
                                     shadcn::table_row(2, |cx| {
                                         ui::children![
                                             cx;
-                                            shadcn::table_cell(ui::text("ممتلئة")),
-                                            shadcn::table_cell(ui::text("منتشٍ")),
+                                            shadcn::table_cell(super::table_cell_text(cx, "ممتلئة")),
+                                            shadcn::table_cell(super::table_cell_text(cx, "منتشٍ")),
                                         ]
                                     })
                                     .into_element(cx),

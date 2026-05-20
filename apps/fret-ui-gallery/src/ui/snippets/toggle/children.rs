@@ -2,17 +2,18 @@ pub const SOURCE: &str = include_str!("children.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::h_row(|cx| {
         let bookmark_children = vec![
             shadcn::raw::icon::icon(cx, IconId::new_static("lucide.bookmark")),
-            ui::text("Bookmark").into_element(cx),
+            decl_text::text_button_label(cx, "Bookmark"),
         ];
         let underline_children = vec![
             shadcn::raw::icon::icon(cx, IconId::new_static("lucide.underline")),
-            ui::text("Underline").into_element(cx),
+            decl_text::text_button_label(cx, "Underline"),
         ];
 
         vec![

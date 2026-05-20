@@ -3,7 +3,7 @@
   "slug": "fret-mechanism-harness-v1",
   "title": "Fret Mechanism Harness v1",
   "status": "active",
-  "updated": "2026-05-18",
+  "updated": "2026-05-20",
   "scope_kind": "execution",
   "problem": "Self-drawn UI parity work needs a mechanism-first harness that can discover layout, invalidation, hit-test, overlay, and focus defects before they appear as manual component screenshots. This lane turns controlled mechanism fixtures plus UI Gallery or focused diagnostics gates into an end-to-end defect-finding loop.",
   "authoritative_docs": [
@@ -54,10 +54,18 @@
     {
       "role": "audit",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-18.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-19.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-20.md"
     }
   ],
   "repro": {
-    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, prepaint virtual-list window-update fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, pointer-capture owner/cancel, multi-pointer pointer-session, docking viewport-capture, and ContextMenu branch/corridor runtime gates, focus barrier routing fixtures, semantics relation fixtures, Pressable key-activation fixtures, combobox active-descendant interaction fixtures, roving focus/typeahead interaction fixtures, flat, nested, and retained-tree stale-parent focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/drawer/combobox/select/dropdown-menu/context-menu Escape, outside-press, focus-outside, and submenu restore policy outcomes, shadcn recipe typeahead fixtures for select/dropdown-menu/menubar printable-key outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, virtual-list boundary owner/reason gates, DataTable retained filter-shrink input-change runtime diagnostics, the UI Gallery checkbox underflow diagnostics gate, the UI Gallery overlay/focus diagnostics suite including Drawer underlay blocking and Combobox outside-press focus restore, the Separator hidden-semantics runtime gate, the Accordion expanded-semantics mutation gate, the Accordion focusable-disabled keyboard/action suppression runtime gate, Combobox/Command active-descendant mutation runtime gates, the Sonner live-region mutation runtime gate, Select/Tabs selected-state mutation runtime gates, Command/DataTable/retained Virtual List collection-metadata mutation runtime gates, the retained Tree hierarchy level/expanded mutation runtime gate, the DataTable pagination disabled/invoke action-state mutation runtime gate, the retained Tree selected/invoke action-state mutation runtime gate, and the retained Tree dynamic disabled/focus/invoke suppression runtime gate, and the Select cross-root relation-edge runtime gate.",
+    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, prepaint virtual-list window-update fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, pointer-capture owner/cancel, multi-pointer pointer-session, docking viewport-capture, and ContextMenu branch/corridor runtime gates, focus barrier routing fixtures, semantics relation fixtures, Pressable key-activation fixtures, combobox active-descendant interaction fixtures, roving focus/typeahead interaction fixtures, flat, nested, and retained-tree stale-parent focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/drawer/combobox/select/dropdown-menu/context-menu Escape, outside-press, focus-outside, and submenu restore policy outcomes, shadcn recipe typeahead fixtures for select/dropdown-menu/menubar printable-key outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, virtual-list boundary owner/reason gates, DataTable retained filter-shrink input-change runtime diagnostics, the UI Gallery checkbox underflow diagnostics gate, the UI Gallery overlay/focus diagnostics suite including Drawer underlay blocking and Combobox outside-press focus restore, the Separator hidden-semantics runtime gate, the Accordion expanded-semantics mutation gate, the Accordion focusable-disabled keyboard/action suppression runtime gate, Combobox/Command active-descendant mutation runtime gates, the Sonner live-region mutation runtime gate, Select/Tabs selected-state mutation runtime gates, Command/DataTable/retained Virtual List collection-metadata mutation runtime gates, the retained Tree hierarchy level/expanded mutation runtime gate, the DataTable pagination disabled/invoke action-state mutation runtime gate, the retained Tree selected/invoke action-state mutation runtime gate, and the retained Tree dynamic disabled/focus/invoke suppression runtime gate, the Select cross-root relation-edge runtime gate, and the HitTestOnly paint-cache replay runtime gate.",
     "commands": [
       "cargo test --profile dev-fast -p fret-mechanism-harness --lib mechanism_metrics_can_assert_non_geometry_facts -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture",
@@ -185,7 +193,10 @@
       "cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_respects_keep_pinned_rows_false_across_pagination table_virtualized_retained_keeps_pinned_rows_true_across_pagination --no-fail-fast",
       "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_press_keys script_v2_roundtrip_ui_gallery_table_retained_keyboard_typeahead --no-fail-fast",
       "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics history_predicates_can_match_stale_latest_snapshot retained_virtual_list_reconciles_matching_predicate_counts_ring_snapshots no_frame_keepalive_does_not_consume_wait_frames --no-fail-fast",
-      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-table-retained --dir target/fret-diag-table-retained-suite-candidate-v4 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery"
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-table-retained --dir target/fret-diag-table-retained-suite-candidate-v4 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery",
+      "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_paint_cache_hit_test_only_replay_counters_serialize script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep --no-fail-fast --no-capture",
+      "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics paint_cache_hit_test_only_replay_predicates_count_ring_snapshot_maxes --no-fail-fast --no-capture",
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target/fret-diag-hit-test-only-paint-cache-suite-v3 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery"
     ]
   },
   "gates": [
@@ -872,6 +883,18 @@
     {
       "name": "ui-gallery-table-retained-suite",
       "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-table-retained --dir target/fret-diag-table-retained-suite-candidate-v4 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery"
+    },
+    {
+      "name": "diag-protocol-hit-test-only-paint-cache-predicates-and-script",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_paint_cache_hit_test_only_replay_counters_serialize script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep --no-fail-fast --no-capture"
+    },
+    {
+      "name": "diag-bootstrap-hit-test-only-paint-cache-predicates",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics paint_cache_hit_test_only_replay_predicates_count_ring_snapshot_maxes --no-fail-fast --no-capture"
+    },
+    {
+      "name": "ui-gallery-hit-test-only-paint-cache-suite",
+      "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target/fret-diag-hit-test-only-paint-cache-suite-v3 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery"
     }
   ],
   "evidence": [
@@ -1156,7 +1179,14 @@
     "target/fret-diag-ai-file-tree-semantics-action-state-after-vlist-measured-leaf-dirty-v1/sessions/1779041323318-52900/suite.summary.json",
     "target/fret-diag-ai-file-tree-zero-warning-hidden-markers-v2/sessions/1779043283276-169328/suite.summary.json",
     "crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json",
-    "crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs"
+    "crates/fret-ui/src/declarative/tests/layout/mechanism_harness.rs",
+    "apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_only_paint_cache_probe.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/frame_stats.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs",
+    "tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-paint-cache-probe-sweep.json",
+    "tools/diag-scripts/suites/ui-gallery-hit-test-only-paint-cache/suite.json",
+    "target/fret-diag-hit-test-only-paint-cache-probe-sweep-v2/sessions/1779247851157-129852/1779247865248/ai.packet",
+    "target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

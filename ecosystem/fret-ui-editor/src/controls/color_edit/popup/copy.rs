@@ -17,9 +17,10 @@ use crate::primitives::EditorDensity;
 use crate::primitives::input_group::derived_test_id;
 use crate::primitives::popup_list::{
     EditorPopupListRowState, editor_popup_list_row_gap, editor_popup_list_row_palette,
-    editor_popup_list_row_radius, editor_popup_list_row_text_props,
+    editor_popup_list_row_radius,
 };
 use crate::primitives::popup_surface::resolve_editor_popup_surface_chrome;
+use crate::primitives::readout::editor_popup_list_row_text_props;
 
 use super::super::ColorEditCopyOptions;
 use super::super::model::format_hex;

@@ -1,10 +1,21 @@
+use std::sync::Arc;
+
 use fret::advanced::prelude::*;
 use fret_core::Px;
-use fret_ui::ElementContext;
+use fret_ui::element::AnyElement;
+use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 struct ExtrasMarqueePerfState;
+
+fn marquee_perf_title_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_section_chrome_label(cx, text)
+}
 
 pub fn run() -> anyhow::Result<()> {
     ui_app_with_hooks("extras-marquee-perf-demo", init_window, view, |d| d)
@@ -29,9 +40,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, _st: &mut ExtrasMarqueePerfState
 
     let content = ui::v_flex(|cx| {
         [
-            ui::text("Marquee perf probe (extras)")
-                .font_semibold()
-                .into_element(cx),
+            marquee_perf_title_text(cx, "Marquee perf probe (extras)"),
             marquee,
         ]
     })

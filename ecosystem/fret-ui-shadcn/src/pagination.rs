@@ -12,13 +12,12 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
-use fret_ui_kit::declarative::current_color;
-use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::viewport_queries;
+use fret_ui_kit::declarative::{current_color, icon as decl_icon, text as decl_text};
 use fret_ui_kit::{
     ColorRef, IntoUiElement, LayoutRefinement, MetricRef, Radius, Space, UiPatch, UiPatchTarget,
     UiSupportsLayout, WidgetStates,
@@ -538,13 +537,13 @@ impl PaginationPrevious {
         let mut children = Vec::with_capacity(2);
         if dir == LayoutDirection::Rtl {
             if show_text {
-                children.push(cx.text(text));
+                children.push(decl_text::text_button_label(cx, text.clone()));
             }
             children.push(icon);
         } else {
             children.push(icon);
             if show_text {
-                children.push(cx.text(text));
+                children.push(decl_text::text_button_label(cx, text.clone()));
             }
         }
 
@@ -631,11 +630,11 @@ impl PaginationNext {
         if dir == LayoutDirection::Rtl {
             children.push(icon);
             if show_text {
-                children.push(cx.text(text));
+                children.push(decl_text::text_button_label(cx, text.clone()));
             }
         } else {
             if show_text {
-                children.push(cx.text(text));
+                children.push(decl_text::text_button_label(cx, text.clone()));
             }
             children.push(icon);
         }

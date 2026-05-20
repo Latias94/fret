@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 use fret::{AppComponentCx, UiChild};
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn repository_item<H: UiHost>(
@@ -22,10 +23,8 @@ fn repository_item<H: UiHost>(
         LayoutRefinement::default().w_full().min_w_0(),
     );
 
-    cx.container(props, move |cx| {
-        vec![shadcn::raw::typography::small(name).into_element(cx)]
-    })
-    .test_id(test_id)
+    cx.container(props, move |cx| vec![decl_text::text_code_label(cx, name)])
+        .test_id(test_id)
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -39,8 +38,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .refine_layout(LayoutRefinement::default().w_px(Px(350.0)).min_w_0())
             .into_element(cx, move |cx| {
                 let header = {
-                    let title = shadcn::raw::typography::small("@peduarte starred 3 repositories")
-                        .into_element(cx);
+                    let title = decl_text::text_section_chrome_label(
+                        cx,
+                        "@peduarte starred 3 repositories",
+                    );
                     let button = shadcn::Button::new("")
                         .a11y_label("Toggle details")
                         .variant(shadcn::ButtonVariant::Ghost)

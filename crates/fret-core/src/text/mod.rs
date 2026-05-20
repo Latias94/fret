@@ -344,6 +344,12 @@ pub struct TextStyleRefinement {
     pub line_height_policy: Option<TextLineHeightPolicy>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub letter_spacing_em: Option<f32>,
+    /// Optional OpenType feature overrides applied as subtree defaults.
+    ///
+    /// Parent scopes merge before child scopes. Shaping backends canonicalize duplicate feature
+    /// tags, so a later child/default can override an earlier parent default for the same tag.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub features: Vec<TextFontFeatureSetting>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vertical_placement: Option<TextVerticalPlacement>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -360,6 +366,7 @@ impl TextStyleRefinement {
             && self.line_height_em.is_none()
             && self.line_height_policy.is_none()
             && self.letter_spacing_em.is_none()
+            && self.features.is_empty()
             && self.vertical_placement.is_none()
             && self.leading_distribution.is_none()
     }
@@ -390,6 +397,7 @@ impl TextStyleRefinement {
         if let Some(letter_spacing_em) = other.letter_spacing_em {
             self.letter_spacing_em = Some(letter_spacing_em);
         }
+        self.features.extend(other.features.iter().cloned());
         if let Some(vertical_placement) = other.vertical_placement {
             self.vertical_placement = Some(vertical_placement);
         }
@@ -432,6 +440,7 @@ impl TextStyle {
         if let Some(letter_spacing_em) = refinement.letter_spacing_em {
             self.letter_spacing_em = Some(letter_spacing_em);
         }
+        self.features.extend(refinement.features.iter().cloned());
         if let Some(vertical_placement) = refinement.vertical_placement {
             self.vertical_placement = vertical_placement;
         }
@@ -689,6 +698,13 @@ impl AttributedText {
 mod tests {
     use super::*;
 
+    fn font_feature(tag: &str, value: u32) -> TextFontFeatureSetting {
+        TextFontFeatureSetting {
+            tag: tag.into(),
+            value,
+        }
+    }
+
     #[test]
     fn attributed_text_shaping_eq_ignores_paint() {
         let text: Arc<str> = Arc::<str>::from("hello");
@@ -738,6 +754,38 @@ mod tests {
         assert!(
             !a.shaping_eq(&b),
             "shaping_eq must treat shaping changes as unequal"
+        );
+    }
+
+    #[test]
+    fn text_style_refinement_merges_font_features_in_parent_child_order() {
+        let mut parent = TextStyleRefinement::default();
+        parent.features.push(font_feature("liga", 0));
+
+        let mut child = TextStyleRefinement::default();
+        child.features.push(font_feature("tnum", 1));
+
+        parent.merge(&child);
+
+        assert_eq!(
+            parent.features,
+            vec![font_feature("liga", 0), font_feature("tnum", 1)]
+        );
+    }
+
+    #[test]
+    fn text_style_refine_applies_inherited_font_features_after_leaf_defaults() {
+        let mut style = TextStyle::default();
+        style.features.push(font_feature("liga", 0));
+
+        let mut refinement = TextStyleRefinement::default();
+        refinement.features.push(font_feature("tnum", 1));
+
+        style.refine(&refinement);
+
+        assert_eq!(
+            style.features,
+            vec![font_feature("liga", 0), font_feature("tnum", 1)]
         );
     }
 }

@@ -620,34 +620,26 @@ impl NavigationMenuLink {
 
         fn apply_link_inherited_style(
             mut element: AnyElement,
-            fg: Color,
             text_style: &TextStyle,
             icon_fg: Color,
             default_icon_color: Color,
+            role_scope_active: bool,
         ) -> AnyElement {
+            let role_scope_active = role_scope_active || element.inherited_text_style.is_some();
             match &mut element.kind {
                 ElementKind::Text(props) => {
-                    if props.style.is_none() {
+                    if props.style.is_none() && !role_scope_active {
                         props.style = Some(text_style.clone());
-                    }
-                    if props.color.is_none() {
-                        props.color = Some(fg);
                     }
                 }
                 ElementKind::StyledText(props) => {
-                    if props.style.is_none() {
+                    if props.style.is_none() && !role_scope_active {
                         props.style = Some(text_style.clone());
-                    }
-                    if props.color.is_none() {
-                        props.color = Some(fg);
                     }
                 }
                 ElementKind::SelectableText(props) => {
-                    if props.style.is_none() {
+                    if props.style.is_none() && !role_scope_active {
                         props.style = Some(text_style.clone());
-                    }
-                    if props.color.is_none() {
-                        props.color = Some(fg);
                     }
                 }
                 ElementKind::SvgIcon(props) => {
@@ -680,7 +672,13 @@ impl NavigationMenuLink {
                 .children
                 .into_iter()
                 .map(|child| {
-                    apply_link_inherited_style(child, fg, text_style, icon_fg, default_icon_color)
+                    apply_link_inherited_style(
+                        child,
+                        text_style,
+                        icon_fg,
+                        default_icon_color,
+                        role_scope_active,
+                    )
                 })
                 .collect();
             element
@@ -802,7 +800,14 @@ impl NavigationMenuLink {
             let styled: Vec<AnyElement> = content
                 .into_iter()
                 .map(|child| {
-                    apply_link_inherited_style(child, fg, &text_style, icon_fg, default_icon_color)
+                    apply_link_inherited_style(
+                        child,
+                        &text_style,
+                        icon_fg,
+                        default_icon_color,
+                        false,
+                    )
+                    .inherit_foreground(fg)
                 })
                 .collect();
 
@@ -2626,8 +2631,10 @@ mod tests {
         CommandMeta, CommandScope, FrameId, TickId, WindowCommandActionAvailabilityService,
         WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
     };
+    use fret_ui::element::TextProps;
     use fret_ui::tree::UiTree;
     use fret_ui_kit::OverlayController;
+    use fret_ui_kit::declarative::text as decl_text;
     use fret_ui_kit::primitives::direction as direction_prim;
     use fret_ui_kit::primitives::direction::LayoutDirection;
     use std::collections::HashMap;
@@ -3770,6 +3777,81 @@ mod tests {
             !icon.inherit_color,
             "expected default link icon to opt out of inheriting currentColor"
         );
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
+    }
+
+    fn text_props_for<'a>(el: &'a AnyElement, needle: &str) -> &'a TextProps {
+        let text = find_text_element(el, needle).expect("expected text element");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        props
+    }
+
+    #[test]
+    fn navigation_menu_link_applies_default_style_to_bare_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            NavigationMenuLink::new(model.clone(), [cx.text("Docs")]).into_element(cx)
+        });
+
+        let theme = Theme::global(&app).snapshot();
+        let expected = nav_menu_link_text_style(&theme);
+        let props = text_props_for(&element, "Docs");
+        let actual = props
+            .style
+            .as_ref()
+            .expect("expected bare navigation menu link text to receive default style");
+        assert_eq!(actual.size, expected.size);
+        assert_eq!(actual.line_height, expected.line_height);
+        assert_eq!(actual.weight, expected.weight);
+    }
+
+    #[test]
+    fn navigation_menu_link_preserves_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let model = app.models_mut().insert(None::<Arc<str>>);
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            NavigationMenuLink::new(
+                model.clone(),
+                [decl_text::text_button_label(cx, "Open Workbench")],
+            )
+            .into_element(cx)
+        });
+
+        let text =
+            find_text_element(&element, "Open Workbench").expect("expected link text element");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
     }
 
     #[test]

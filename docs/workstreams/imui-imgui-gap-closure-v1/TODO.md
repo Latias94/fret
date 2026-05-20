@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-18
+Last updated: 2026-05-20
 
 ## P0 - Source Baseline
 
@@ -293,15 +293,18 @@ Readiness order for the next locally testable review slices:
    2026-05-16 menu shortcut readout reuse follow-up: menu item shortcut labels now reuse
    `text_control_readout(...)` as muted compact auxiliary readouts instead of carrying local
    nowrap/clip `TextProps` policy.
+   2026-05-20 menu item row-anchor follow-up: the root pressable now owns the visible row children
+   instead of using an absolute overlay sibling, so the menu item's `test_id` and interaction box
+   stay on the same row as the visible label/shortcut/glyph children.
    2026-05-17 menu indicator glyph follow-up: menu checkbox/radio indicators and submenu chevrons
    now reuse `text_chrome_glyph(...)`, so glyph-only menu chrome no longer falls back to bare
    `cx.text(...)` default wrapping semantics.
    2026-05-17 section chrome label text follow-up: `text_section_chrome_label(...)` now owns
    compact separator/section chrome labels in `fret-ui-kit::declarative::text`, and IMUI
    `separator_text` labels route through it instead of local default-wrapping `TextProps`.
-   2026-05-17 chrome title text follow-up: `text_chrome_title(...)` now owns fill-width floating
-   window title-bar text, and floating window titles route through shared chrome text roles instead
-   of local `TextProps`.
+   2026-05-17 chrome title text follow-up: `text_chrome_title(...)` now owns medium, fill-width
+   floating window title-bar text, and floating window titles route through shared chrome text roles
+   instead of local `TextProps`.
    2026-05-17 chrome glyph text follow-up: `text_chrome_glyph(...)` now owns compact fixed-slot
    chrome glyphs in `fret-ui-kit::declarative::text`, and disclosure/tree indicators route through
    it instead of keeping a local `TextProps` constructor.
@@ -330,6 +333,10 @@ Readiness order for the next locally testable review slices:
    `editor_input_value_text(...)` for drag-value and axis-drag-value scrub readouts. The helper
    keeps numeric value text fill-width, `min-width: 0`, shrinkable, single-line, and ellipsis
    clipped without moving editor-specific density/chrome policy into `fret-imui`.
+   2026-05-19 editor input-group text ownership follow-up: `primitives/input_group.rs` no longer
+   owns direct `TextProps` construction for text segments, value text, or axis markers. Those
+   policies now live in `primitives/readout.rs` as editor text role helpers, and the source gate
+   removed `input_group.rs` from the direct editor `TextProps` allowlist.
    2026-05-17 editor status badge text follow-up: `FieldStatusBadge` now routes its compact label
    through `editor_status_badge_text_props(...)`, keeping badge text in the editor readout
    primitive layer instead of hand-rolling `TextProps` inside the control.
@@ -350,6 +357,10 @@ Readiness order for the next locally testable review slices:
    `editor_popup_empty_text_props(...)`, replacing `TextProps::new(...)` default word wrapping in
    popup/editor assist surfaces. Color-edit copy menu rows and popup option captions now reuse the
    same popup-list family through start-aligned, centered-row, and fixed-caption variants.
+   2026-05-19 popup list text ownership follow-up: the popup-list text props family moved from
+   `primitives/popup_list.rs` into the shared editor text role owner in `primitives/readout.rs`.
+   `popup_list.rs` now owns only popup-list state, dimensions, and palette policy, and the source
+   gate forbids direct text layout/wrap policy from returning there.
    2026-05-17 color preview/tooltip text follow-up: color side-preview captions and tooltip
    numeric lines now use dedicated editor readout helpers instead of local `TextProps`, keeping
    them separate from popup-list rows while preserving single-line resize behavior.
@@ -367,12 +378,25 @@ Readiness order for the next locally testable review slices:
    2026-05-17 proof teaching follow-up: `imui_editor_proof_demo` property-grid labels now use
    `row_cx.label_text(...)`, and the IMUI workstream source gate forbids representative proof
    labels from drifting back to bare `|cx| cx.text(...)` label slots.
+   2026-05-19 editor proof main text follow-up: `imui_editor_proof_demo` main headline, mode hint,
+   authoring parity explanatory copy, shared-state hint, and editor section label now route through
+   proof-local IMUI helpers backed by shared section-chrome, readout, and compact paragraph roles
+   instead of local `fret_ui_kit::ui::text(...).text_xs()` / `.font_semibold()` styling.
    2026-05-17 workspace shell proof text follow-up: `workspace_shell_demo` editor-rail buttons,
    property labels, and compact property values now teach the shared button-label, property-label,
    and control-readout text roles instead of bare `cx.text(...)`.
+   2026-05-19 workspace shell paragraph text follow-up: the remaining editor-rail header copy now
+   uses a local helper backed by shared `text_paragraph(...)` instead of local
+   `fret_ui_kit::ui::text(...).text_sm().text_color(...)` styling.
    2026-05-17 editor notes proof text follow-up: `editor_notes_demo` inspector metadata labels,
    subtitle, and compact status values now teach the same property-label and control-readout roles
    instead of relying on bare `cx.text(...)` inside fixed property rows.
+   2026-05-19 editor notes center/collection text follow-up: collection summary/readouts and
+   center preview chrome/prose now route through local helpers backed by shared readout, section,
+   and paragraph roles instead of local `ui::text(...).wrap(...)` styling.
+   2026-05-19 editor notes device shell text follow-up: compact mobile header title/body copy now
+   use device-shell local helpers backed by shared section-chrome and paragraph roles instead of
+   local `ui::text(...).font_semibold()` / `.text_color(...).wrap(...)` styling.
    2026-05-17 workspace shell prompt text follow-up: the dirty-close prompt title/details now
    reuse the shared section-chrome and control-readout text roles instead of bare dialog text.
    2026-05-17 editor proof readout follow-up: `imui_editor_proof_demo` now routes selected
@@ -458,8 +482,10 @@ Readiness order for the next locally testable review slices:
    2026-05-17 markdown proof chrome text follow-up: `markdown_demo` now routes its fixed demo
    title through `text_section_chrome_label(...)`, its explanatory preview copy through
    `text_paragraph(...)`, and its toolbar/readout state through `text_control_readout(...)`.
-   Markdown body rendering, image placeholders, and text capability probes stay owned by the
-   Markdown surface instead of being mechanically rewritten.
+   2026-05-19 markdown image placeholder text follow-up: Markdown body rendering stays owned by
+   the Markdown surface, but image placeholder copy now uses `text_paragraph_break_words(...)`
+   with app-owned muted foreground instead of local `TextProps`, so long image URLs can break under
+   narrow resize without keeping `markdown_demo` in the direct-text residual allowlist.
    2026-05-17 residual bare text capability follow-up: the remaining first-party
    `apps/fret-examples/src` bare `cx.text(...)` / `TextProps::new(...)` paths are now source-gated
    to explicit text/IME/rendering capability proofs only: `components_gallery` text smoke/font
@@ -479,6 +505,23 @@ Readiness order for the next locally testable review slices:
    `text_table_cell(...)`. Default/basic/guide/RTL/reusable-component fixed cell text and fallback
    cells no longer teach bare `cx.text(...)`; amount columns keep their existing tabular numeric
    formatting until a dedicated numeric-cell role is designed.
+   2026-05-19 table snippet table-cell text follow-up: ordinary copyable Table snippets now share
+   directory-local `table_cell_text(...)` / `table_cell_text_emphasis(...)` helpers backed by shared
+   kit roles. Demo/Usage/Footer/RTL/Actions and fixed body cells in Children no longer teach bare
+   `ui::text(...)` inside table cells. The later children-API follow-up below routes the remaining
+   rich header/caption sample text through table-cell and paragraph roles too.
+   2026-05-19 table children custom text follow-up: the explicit `table_head_children(...)` /
+   `table_caption_children(...)` sample now routes header child text through the shared
+   table-cell helper and caption copy through `text_paragraph(...)`, closing the previous
+   children-API bare text exception without changing shadcn table recipes.
+   2026-05-19 checkbox table-cell text follow-up: the checkbox table snippet now keeps its
+   action-first select-all surface while routing member/role fixed cells through a local helper
+   backed by `text_table_cell(...)`, so checkbox-table examples no longer teach bare `ui::text(id)`
+   / `ui::text(role)` inside fixed table rows.
+   2026-05-19 typography table-cell text follow-up: standalone, demo, and RTL Typography table
+   samples now share a typography-local `table_cell_text(...)` helper backed by
+   `text_table_cell(...)`, keeping typography prose/rich-link examples unchanged while removing
+   bare table-cell `ui::text(...)` from the fixed row samples.
    2026-05-18 AI AudioPlayer state-marker follow-up: copyable AudioPlayer snippets now expose
    state-only diagnostics anchors through zero-size `SpacerProps` children under generic semantics
    instead of empty `Text` nodes. This keeps test markers out of visible text layout semantics while
@@ -487,6 +530,31 @@ Readiness order for the next locally testable review slices:
    fixed titles through `text_section_chrome_label(...)`, explanatory prose through
    `text_paragraph(...)`, and compact Message action status through `text_control_readout(...)`.
    The Terminal empty-output marker also uses the same non-text spacer-marker pattern.
+   2026-05-19 AI Terminal title text-role follow-up: the `fret-ui-ai` `TerminalTitle` component
+   itself now routes its default label through `text_chrome_title(...)` instead of local
+   `ui::raw_text(...).wrap(None).overflow(Clip)` policy, so actual terminal chrome titles inherit
+   fill-width shrink/ellipsis behavior under resize.
+   2026-05-19 AI EnvironmentVariables title text-role follow-up:
+   `EnvironmentVariablesTitle` default/text paths now route through the shared medium
+   `text_chrome_title(...)` role instead of local raw-text title policy. Custom title children keep
+   the component-owned inherited title refinement because upstream accepts children.
+   2026-05-19 AI EnvironmentVariables code-label follow-up: environment variable names and
+   non-selectable masked/custom values now use the shared `text_code_label(...)` fixed identifier
+   role with inherited foreground. Revealed values intentionally remain selectable text because
+   selection is the capability surface. Empty custom-child/diagnostic paths now use the crate-local
+   non-text placeholder instead of empty `Text` nodes.
+   2026-05-19 AI PackageInfo code/paragraph follow-up: the real `PackageInfo` component family now
+   uses `text_code_label_emphasis(...)` for primary package/target-version identifiers,
+   `text_code_label(...)` for current-version/dependency identifiers,
+   `text_section_chrome_label(...)` for the Dependencies heading, and
+   `text_compact_paragraph_inherited(...)` for description copy that should keep component-owned
+   description typography while sharing the wrapping/fill-width resize contract.
+   2026-05-19 AI Agent text-role/accordion-boundary follow-up: the real `Agent` component family
+   now routes header names through `text_chrome_title(...)`, section labels through
+   `text_section_chrome_label(...)`, instruction body copy through `text_compact_paragraph(...)`,
+   and tool trigger descriptions through `text_list_row_label(...)`. `AccordionTrigger` now keeps
+   shared text-role typography/wrap/overflow metadata when a caller supplies a role child, while
+   preserving its legacy wrapping defaults for bare trigger text.
    2026-05-18 AI visible text-role follow-up 2: Artifact, CodeBlock, and Sandbox copyable snippets
    now use the same role split for fixed demo titles, explanatory prose, and compact status text.
    CodeBlock's active-language diagnostics marker also moved from an invisible empty text node to a
@@ -510,6 +578,10 @@ Readiness order for the next locally testable review slices:
    PromptInputActionMenu, and PromptInputTooltip now put their outer demo titles/body copy on the
    same shared roles while leaving inner plan prose and shadcn/Button composition for a separate
    semantics pass.
+   2026-05-19 AI PlanContent text-role follow-up: Plan's inner section headings now use
+   section-chrome text, body copy uses paragraph text, bullet rows use list-row labels, and the
+   custom Build button child uses button-label text. Plan streaming/open behavior and the
+   `fret-ui-ai` Plan component surface remain unchanged.
    2026-05-18 AI large/status snippet text-role follow-up: StackTraceLarge and TestResultsLarge
    now use generic zero-size spacer markers for opened/activated diagnostics anchors, while
    StackTraceLarge, TestResultsLarge, Tool, and Suggestions route fixed outer title/body text
@@ -533,6 +605,9 @@ Readiness order for the next locally testable review slices:
    through `text_button_label(...)`, and fixed outer title/body copy through shared roles.
    PromptInput docs now routes the custom Search label through button-label text and fixed outer
    title/body copy through section-chrome/paragraph roles.
+   2026-05-19 AI PromptInput cursor custom-text follow-up: Cursor-style PromptInput command rows,
+   file/path labels, rules hover-card text, tabs footer copy, and custom trigger counts now use
+   shared list-row/code/readout/button text roles instead of local `ui::text(...)` styling.
    2026-05-18 AI chrome/readout text-role follow-up: Reasoning, StackTrace, and VoiceSelector now
    route fixed outer title/body copy through shared section-chrome/paragraph roles; StackTrace and
    VoiceSelector compact status/diagnostics readouts use `text_control_readout(...)` instead of
@@ -561,6 +636,10 @@ Readiness order for the next locally testable review slices:
    2026-05-18 AI PromptInput referenced sources text-role follow-up: fixed referenced-sources
    title/body copy now routes through section-chrome and paragraph roles instead of bare
    `cx.text(...)`.
+   2026-05-19 AI Attachments inline hover-card text-role follow-up: app-owned hover-card
+   attachment labels now use `text_list_row_label(...)`, and media-type readouts use
+   `text_control_readout(...)` instead of default `ui::text(...)` builders. Attachment chip,
+   remove affordance, and hover-card behavior remain owned by `fret-ui-ai`.
    2026-05-18 AI Artifact code display status-marker follow-up: the docs status marker now keeps
    the diagnostic `label_contains` contract on a generic semantics marker with a zero-size spacer
    instead of an invisible bare text element.
@@ -575,6 +654,10 @@ Readiness order for the next locally testable review slices:
    2026-05-18 AI Suggestions/reasoning/transcript text-role follow-up: suggestions custom
    children, reasoning hook status, transcript torture header copy, and chat exported-status marker
    now use shared text roles or generic marker semantics instead of bare/default text surfaces.
+   2026-05-19 AI Shimmer demo chrome text follow-up: Shimmer typography/duration/elements demo
+   labels and inline non-shimmer text now use shared readout/section roles instead of local
+   `ui::text(...)` styling, while `Shimmer::new(...)` remains the explicit shimmer text capability
+   surface.
    2026-05-18 AI custom-children text-role follow-up: environment variables, package info,
    inline citations, persona, and sources custom-child snippets now route visible app-owned text
    through shared roles, including the new single-line `text_code_label(...)` identifier role.
@@ -648,6 +731,117 @@ Readiness order for the next locally testable review slices:
    2026-05-18 gallery sidebar snippet chrome text follow-up: the copyable Sidebar examples now
    route card body prose and missing-content fallbacks through paragraph roles, and debug/status
    lines through `text_control_readout(...)` instead of bare `cx.text(...)`.
+   2026-05-18 gallery command snippet chrome text follow-up: copyable Command examples now route
+   last-action/count/active-value status through `text_control_readout(...)`, short subsection
+   headings through section-chrome text, and desktop-only/prose copy through paragraph text. The
+   retained active-descendant command snippet remains an explicit text-input capability surface.
+   2026-05-18 gallery Accordion trigger text follow-up: copyable Accordion examples now route
+   trigger labels through `text_button_label(...)` instead of bare `cx.text(...)`, keeping those
+   button-like trigger rows single-line/shrinkable under resize while leaving shadcn component
+   internals and upstream parity tests untouched.
+   2026-05-18 gallery ToggleGroup item text follow-up: copyable ToggleGroup examples now route
+   ordinary item captions through `text_button_label(...)` instead of bare `cx.text(...)` /
+   `ui::text(...)`, keeping toggle buttons single-line/shrinkable under resize. The custom
+   weight-card snippet remains an explicitly styled visual sample rather than a default text-role
+   migration target.
+   2026-05-18 gallery Toggle item text follow-up: copyable Toggle examples now route ordinary
+   toggle captions through `text_button_label(...)`, and the label-association pressed-state
+   marker through `text_control_readout(...)`, so these fixed button-like snippets no longer teach
+   wrapping text inside toggle chrome.
+   2026-05-18 gallery Button children text follow-up: the copyable Button children snippet now
+   routes its custom command button label through `text_button_label(...)` instead of
+   `cx.text(...)`, keeping slotted button children on the same single-line/shrinkable role as other
+   button-like chrome.
+   2026-05-18 gallery Tabs custom text follow-up: copyable Tabs snippets now route custom
+   icon+label trigger text through `text_button_label(...)` and usage-panel body copy through
+   `text_paragraph(...)`, while leaving built-in `TabsItem` / `TabsTrigger` label handling inside
+   shadcn recipes.
+   2026-05-18 gallery Collapsible text follow-up: copyable Collapsible snippets now route trigger
+   captions through button-label text, controlled-state status through control-readout text,
+   body copy through paragraph text, repository identifiers through code-label text, and file-tree
+   row labels through list-row text.
+   2026-05-18 gallery AlertDialog custom text follow-up: rich-content body copy now uses
+   paragraph text, rich-content action children use button-label text, and small/RTL custom title
+   and description children use section-chrome/paragraph roles instead of local wrap/overflow
+   policy. Rich attributed-title text remains an explicit text capability surface.
+   2026-05-18 gallery HoverCard text follow-up: copyable HoverCard snippets now route app-owned
+   title/chrome labels through section-chrome text, body copy through paragraph/break-words roles,
+   date/status copy through control-readout text, and the usage trigger label through button-label
+   text instead of raw/default text builders.
+   2026-05-18 gallery Popover align text follow-up: the fixed align preview body labels now route
+   through shared paragraph text instead of `cx.text(...)`, keeping the overlay content examples on
+   the same resize-aware text-role vocabulary.
+   2026-05-18 gallery Tooltip keyboard shortcut text follow-up: the custom keyboard-shortcut
+   tooltip label now routes through shared control-readout text instead of bare `cx.text(...)`,
+   while built-in `TooltipContent::text(...)` recipe paths stay recipe-owned.
+   2026-05-19 gallery Kbd custom-copy text follow-up: copyable Kbd snippets now route key
+   separators through shared chrome-glyph text and tooltip/inline helper copy through
+   control-readout text instead of local `ui::text(...).text_sm()` policy. `Kbd` keycap text
+   itself remains recipe-owned by `fret-ui-shadcn`.
+   2026-05-19 gallery Separator menu text follow-up: the responsive separator menu helper now
+   routes section titles through `text_section_chrome_label(...)` and descriptions through
+   `text_control_readout(...)` instead of local `Theme`/`fixed_line_box_px` text policy, while
+   keeping Separator itself a leaf primitive.
+   2026-05-19 gallery Item slotted text follow-up: app-owned Item dropdown trigger copy now uses
+   `text_button_label(...)`, the download header uses `text_section_chrome_label(...)`, and issue
+   number side columns use `text_control_readout(...)`. Built-in `ItemTitle` /
+   `ItemDescription` text stays recipe-owned.
+   2026-05-19 gallery Spinner amount readout follow-up: Spinner item amount/status values in the
+   demo and RTL snippets now use `text_control_readout(...)` instead of local `ui::text(...)` /
+   `cx.text(...)` builders.
+   2026-05-19 gallery AvatarStack direction label follow-up: Shadcn Extras avatar-stack LTR/RTL
+   direction labels now use `text_section_chrome_label(...)` instead of local
+   `ui::text(...).font_medium()` builders. Announcement title copy remained a separate candidate
+   until the recipe-owner decision below.
+   2026-05-19 gallery Kanban card title follow-up: Shadcn Extras Kanban app-owned card title slots
+   now use `text_button_label(...)` instead of local `ui::text(item.name).font_medium().truncate()`
+   builders. Announcement title copy remained a separate candidate because it is passed into a raw
+   extras title component rather than rendered by the caller's card slot.
+   2026-05-19 Shadcn Extras AnnouncementTitle follow-up: `AnnouncementTitle` stays a children-first
+   composable title surface, matching the upstream Kibo source shape, but `fret-ui-shadcn` now owns
+   the title row contract: `text-sm` medium inherited typography, shrinkable/min-width-zero layout,
+   single-line ellipsis for nested text, and clipped title containers. The gallery snippet keeps
+   `AnnouncementTitle::new([cx.text(...)])` intentionally, and source gates prevent both the
+   component contract and the caller-side composable surface from drifting.
+   2026-05-19 gallery Dialog scroll-row text follow-up: scrollable-content and sticky-footer
+   filler rows now route through shared list-row label text instead of `ui::raw_text(format!(...))`,
+   keeping scroll proof rows single-line/shrinkable under resize while dialog title/description
+   recipe-owned text stays inside shadcn components.
+   2026-05-19 gallery Drawer scroll/side text follow-up: drawer scroll filler rows now route
+   through shared list-row label text, side body copy routes through paragraph text, and the
+   historical `paragraph_block` helper name is gone so fixed scroll rows are not described as
+   paragraph layout.
+   2026-05-19 gallery Drawer goal/diagnostics text follow-up: demo and RTL goal readouts now use
+   shared control-readout text, nested drawer guidance uses paragraph text, and the outside-press
+   probe status/description now use shared paragraph/control-readout roles instead of `ui::text`.
+   2026-05-19 gallery ScrollArea visible text follow-up: copyable ScrollArea snippets now route
+   fixed tag/RTL rows through `text_list_row_label(...)`, section headings through
+   `text_section_chrome_label(...)`, figure captions through `text_control_readout(...)`, and body
+   prose through `text_paragraph(...)` instead of local `ui::text(...)` / raw typography policy.
+   2026-05-19 gallery ContextMenu trigger text follow-up: copyable ContextMenu dashed trigger
+   surfaces now route fine/coarse pointer copy through `text_control_readout(...)` instead of
+   repeating local `ui::text(label).text_sm().text_color(...)` policy in every snippet.
+   2026-05-19 gallery Pagination text follow-up: copyable Pagination page-number helpers now
+   accept `cx` and route page labels through `text_button_label(...)` instead of no-context
+   `ui::text(...).tabular_nums()` builders, because shared resize-safe roles are theme/context
+   bound. RTL page numbers use the same helper, Fret-specific extras prose uses
+   `text_paragraph(...)`, and built-in `PaginationPrevious` / `PaginationNext` visible text in
+   `fret-ui-shadcn` now uses the shared button-label role. This keeps `fret-imui` thin while
+   moving button-like pagination text policy into the component/kit layer.
+   2026-05-19 gallery Carousel status/readout text follow-up: API/events/autoplay diagnostic
+   status lines now route through `text_control_readout(...)` instead of local centered
+   `TextProps` blocks with `TextWrap::Word`. The centering remains a layout concern in the
+   snippet shell (`h_flex + justify_center`), while the resize contract stays on the shared
+   control-readout role.
+   2026-05-19 gallery NavigationMenu link-label text follow-up: custom icon/text link labels in
+   the NavigationMenu docs/demo/RTL snippets now route through `text_button_label(...)` instead of
+   bare `cx.text(label)`. Card title/body line-clamp text remains a separate candidate because it
+   may need a list/card description role rather than a mechanical button-label migration.
+   2026-05-19 compact paragraph line-clamp follow-up: `text_compact_paragraph_line_clamp(...)`
+   now owns the dense paragraph-family `max-lines + ellipsis` contract for list/card descriptions,
+   and NavigationMenu list-item titles/descriptions use shared button-label plus clamped paragraph
+   roles instead of local `TextProps` line-clamp blocks. Featured NavigationMenu home-card brand
+   copy remains explicit visual styling outside this slice.
    2026-05-17 gallery editor preview text follow-up: code-editor, Markdown, and Web IME preview
    headers now route explanatory copy through `paragraph_text(...)`, fixed status/debug values
    through `control_readout_text(...)`, and custom pointer-region labels through
@@ -694,6 +888,225 @@ Readiness order for the next locally testable review slices:
    local helpers backed by shared list-row, control-readout, and button-label text roles. Focused
    source tests plus the IMUI workstream source gate keep those resize-sensitive panel demos from
    returning to bare `cx.text(...)`.
+   2026-05-19 imui node-graph compatibility title follow-up: `imui_node_graph_demo` keeps its
+   retained-bridge compatibility-only posture, but the fixed proof title now routes through a local
+   helper backed by `text_section_chrome_label(...)` instead of local
+   `fret_ui_kit::ui::text(...).font_semibold()` styling. This does not promote the retained
+   bridge as the default node-graph authoring path and does not widen `fret-imui`.
+   2026-05-19 embedded viewport chrome text follow-up: `embedded_viewport_demo` now routes fixed
+   ToggleGroup size labels through a button-label role and viewport status lines through a
+   control-readout role instead of local `ui::text(...).text_sm()` builders. This closes another
+   resize-sensitive app-owned chrome surface while leaving embedded viewport/input forwarding
+   behavior unchanged.
+   2026-05-19 window hit-test probe text follow-up: `window_hit_test_probe_demo` now routes its
+   fixed 44px header title through section-chrome text, the logical-window diagnostic identifier
+   through code-label text, and status through control-readout text. The multi-window hit-test
+   repro path stays unchanged; only local fixed chrome/readout text policy was removed.
+   2026-05-19 launcher utility window text follow-up: `launcher_utility_window_demo` now routes
+   its frameless-window drag title through section-chrome text, the effective-style diagnostic line
+   through code-label text, status through control-readout text, and the resize handle arrow
+   through chrome-glyph text. The BeginDrag/BeginResize/SetVisible proof path stays unchanged; only
+   local fixed chrome/readout/glyph text policy was removed.
+   2026-05-19 launcher utility window materials text follow-up:
+   `launcher_utility_window_materials_demo` now routes its fixed material-window title through
+   section-chrome text, the effective material/style diagnostic through code-label text, and the
+   status line through control-readout text. The background material request/diagnostics proof path
+   stays unchanged; only local fixed chrome/readout text policy was removed.
+   2026-05-19 API workbench lite text follow-up: `api_workbench_lite_demo` now routes its app
+   title/sidebar labels through section-chrome text, first-contact copy through paragraph text,
+   active base URL through code-label text, and history loading/error/empty states through
+   control-readout text. The request/mutation/history proof path stays unchanged, and the old
+   `shell_frame` theme-snapshot parameter was removed because it only existed to support local text
+   color policy.
+   2026-05-19 hello counter text follow-up: `hello_counter_demo` now routes its compact status
+   line through control-readout text and its step help copy through paragraph text. The large count
+   display remains an explicit visual readout until a dedicated large-display value role exists;
+   the counter action/state path stays unchanged.
+   2026-05-19 simple todo text follow-up: `simple_todo_demo` now routes its summary/footer
+   readouts through control-readout text, empty-state copy through compact paragraph text, and row
+   labels through list-row text with app-owned done/active foreground state. The demo no longer has
+   `ui::text(...)` residuals.
+   2026-05-19 todo demo text follow-up: `todo_demo` now routes title/status/progress/empty/filter
+   labels through shared text roles and uses the new attributed list-row label role for completed
+   rows that need strikethrough. The richer todo proof no longer has local `ui::text(...)` or
+   `ui::rich_text(...)` residuals.
+   2026-05-19 async playground text follow-up: `async_playground_demo` now routes fixed app chrome,
+   catalog rows, policy/status readouts, query identifiers, and result body copy through shared
+   chrome-title, section-chrome, list-row, control-readout, code-label, and compact-paragraph text
+   roles. The obsolete `ThemeSnapshot` plumbing that only supported local muted text color policy
+   was removed from the query panel helpers.
+   2026-05-19 GenUI demo text follow-up: `genui_demo` now routes JSON/log/prompt panes through
+   code-block text roles, toolbar/status/issue readouts through control-readout roles, and stream
+   guidance through compact paragraph text. The old empty `ui::text("")` spacer and local
+   `ui::text(...).text_sm()` policy were removed without moving GenUI runtime/rendering ownership
+   into `fret-imui`.
+   2026-05-19 extras marquee perf text follow-up: `extras_marquee_perf_demo` now routes its fixed
+   perf-probe title through a section-chrome text role instead of local
+   `ui::text(...).font_semibold()` styling. The marquee animation/perf path stays unchanged.
+   2026-05-19 residual bare text gate tightening follow-up: `text_role_residual_surface` now counts
+   `ui::text(...)` and `ui::rich_text(...)` in addition to `cx.text(...)`, `TextProps::new(...)`,
+   and direct `TextProps { ... }` construction. The only remaining `ui::text(...)` entries in
+   `fret-examples` are explicitly documented display/performance payloads:
+   `hello_counter_demo`'s large numeric display and `hello_world_compare_demo`'s GPUI/Fret
+   comparison title. Ordinary app/proof visible text must continue moving to shared roles instead
+   of relying on those exceptions.
+   2026-05-19 query detail text follow-up: the residual gate tightening exposed `ui::raw_text(...)`
+   as another uncounted text-policy path. `query_demo` and `query_async_tokio_demo` now route their
+   query status/error/duration/retry lines through `text_control_readout(...)` and their data values
+   through `text_code_label(...)`, preserving app-owned error foreground via `inherit_foreground`.
+   `imui_editor_proof_demo` also deleted its old direct `EditorCompactReadoutStyle::text_props(...)`
+   readout helper and now uses the shared control-readout role.
+   2026-05-19 custom effect overlay text follow-up: `custom_effect_v1_demo` and
+   `custom_effect_v2_demo` no longer keep fixed overlay labels in the direct-text residual allowlist.
+   Their pill labels now use `text_section_chrome_label(...)` with app-owned white foreground
+   inheritance, leaving custom-effect runtime/ABI ownership unchanged.
+   2026-05-19 custom effect web overlay text follow-up: `custom_effect_v2_web_demo` no longer keeps
+   its unsupported-state readout, WebGPU badge label, or keyboard hint in the direct-text residual
+   allowlist. The badge now uses section-chrome text, the status/hint use control-readout text, and
+   absolute positioning stays in layout containers instead of local `TextProps`.
+   2026-05-19 custom effect web template text follow-up:
+   `custom_effect_v2_identity_web_demo`, `custom_effect_v2_lut_web_demo`, and
+   `custom_effect_v2_glass_chrome_web_demo` no longer keep fixed overlay/control text in the
+   direct-text residual allowlist. Starter/LUT badges use section-chrome text, status/hints use
+   control-readout text, and the glass/chrome slider label/value row uses control-label/readout
+   roles.
+   2026-05-19 effect reference chrome text follow-up: `custom_effect_v3_demo`,
+   `postprocess_theme_demo`, and `liquid_glass_demo` no longer keep fixed overlay/header/card
+   titles in the direct-text residual allowlist. Effect/runtime proof ownership stays local, while
+   fixed chrome/readout text now routes through `text_section_chrome_label(...)` and
+   `text_control_readout(...)`.
+   2026-05-19 shadcn Table role-preservation follow-up: `TableCell` and `TableHead` now treat
+   recipe typography as a bare-text fallback. Caller-supplied shared text roles such as
+   `text_table_cell(...)` keep their role-owned style/wrap/overflow contract, while plain
+   `cx.text(...)` still receives table default typography and fixed-row clipping behavior.
+   2026-05-19 shadcn DataTable role-preservation follow-up: `DataTable` body-cell default text
+   styling now uses the same role-scope guard as Table. Bare cell text still receives the default
+   table typography, but caller-supplied shared text roles are not rewritten by the virtualized
+   data-table wrapper.
+   2026-05-19 shadcn NavigationMenuLink role-preservation follow-up: link children now receive
+   foreground through inherited foreground and only bare text receives the link default typography.
+   Shared button-label roles keep their single-line ellipsis contract when used as custom link
+   content.
+   2026-05-19 shadcn ItemTitle role-preservation follow-up: ItemTitle still applies its strong
+   title-slot fallback to bare and ordinary rich text children, but shared title/chrome text roles
+   are treated as protected role scopes and keep their own typography/ellipsis contract.
+   2026-05-19 shadcn CardTitle role-preservation follow-up: CardTitle now follows the same split
+   for card titles. Bare and ordinary rich title children still receive the shadcn card-title
+   typography and wrapping fallback, while explicit shared title/chrome roles keep their
+   role-owned single-line ellipsis contract under card composition.
+   2026-05-20 shadcn CardDescription children role-preservation follow-up:
+   CardDescription now has a focused gate proving shared description/body text roles keep their
+   role-owned wrap/overflow and inherited metadata when passed through the composable children
+   lane.
+   2026-05-20 shadcn Sheet/Popover description children role-preservation follow-up:
+   SheetDescription and PopoverDescription now expose composable children lanes, and focused gates
+   prove shared paragraph/body roles keep their role-owned wrap/layout and inherited metadata under
+   overlay description composition.
+   2026-05-20 shadcn existing description children role-preservation follow-up:
+   AlertDescription, DialogDescription, AlertDialogDescription, and ItemDescription now have focused
+   gates proving their existing children lanes preserve shared paragraph/body roles instead of only
+   testing inherited typography or rich/selectable text.
+   2026-05-19 shadcn AlertTitle role-preservation follow-up: AlertTitle now follows the same split
+   for alert titles. Bare and ordinary rich title children still receive the alert title fallback,
+   while explicit shared title/chrome roles keep their role-owned single-line ellipsis contract
+   under alert composition.
+   2026-05-19 shadcn AlertDialogTitle role-preservation follow-up: AlertDialogTitle now protects
+   shared title/chrome roles under alert-dialog composition while preserving the shadcn dialog-title
+   fallback for bare/rich children.
+   2026-05-19 shadcn DialogTitle children-role follow-up: DialogTitle now exposes
+   `new_children(...)` so dialog titles can carry shared title/chrome roles. Bare and ordinary rich
+   title children still receive the shadcn dialog-title fallback, while explicit shared roles keep
+   their role-owned single-line ellipsis contract.
+   2026-05-19 shadcn SheetTitle children-role follow-up: SheetTitle now exposes
+   `new_children(...)` with the same split. Bare/rich sheet-title children keep sheet defaults,
+   while explicit shared title/chrome roles keep their role-owned single-line ellipsis contract.
+   2026-05-19 shadcn PopoverTitle children-role follow-up: PopoverTitle now exposes
+   `new_children(...)` for overlay/panel title composition. Bare/rich popover-title children keep
+   popover defaults, while explicit shared title/chrome roles keep their role-owned single-line
+   ellipsis contract.
+   2026-05-19 shadcn FieldTitle children-role follow-up: FieldTitle now exposes
+   `new_children(...)` for field/property panel title composition. Bare/rich field-title children
+   keep field defaults and w-fit behavior, while explicit shared title/chrome roles keep their
+   role-owned layout and ellipsis contract.
+   2026-05-19 shadcn EmptyTitle children-role follow-up: EmptyTitle now exposes
+   `new_children(...)` for empty-state title composition. Bare/rich empty-title children keep the
+   shadcn empty-title defaults, while explicit shared title/chrome roles keep their role-owned
+   single-line ellipsis contract.
+   2026-05-20 shadcn SelectLabel menu-group text follow-up: `text_menu_group_label(...)` now owns
+   the muted, single-line, fill-width group-label text role, and `SelectLabel` consumes that role
+   instead of hand-rolling local `ui::text(...).text_size_px(...).nowrap()` policy in the overlay
+   row renderer.
+   2026-05-20 shadcn menu-family group-label follow-up: `DropdownMenuLabel`,
+   `ContextMenuLabel`, and `MenubarLabel` now consume the same shared menu-group text role through
+   local label element helpers. Menu item labels and icon/indicator color policy remain menu-owned;
+   only the non-interactive group heading text policy moved out of local builders.
+   2026-05-20 shadcn CommandGroup heading follow-up: `CommandGroup::heading(...)` now renders
+   through a command-local helper backed by the same shared menu-group text role. This covers the
+   command/listbox group-heading path used by combobox, native select, and data-table recipes
+   without changing command item label/highlight rendering or widening `fret-imui`.
+   2026-05-20 shared status-message/CommandEmpty follow-up: `text_status_message(...)` now owns
+   the muted `text-sm` non-interactive empty/loading/status message role, and shadcn
+   `CommandEmpty` / `CommandLoading` consume it instead of duplicating local text sizing/color
+   builders.
+   2026-05-20 shadcn DataTable toolbar text follow-up: DataTable toolbar faceted-trigger labels,
+   faceted option labels, count chips, clear/reset actions, and selected-count readouts now route
+   through shared button-label, list-row-label, and control-readout text roles instead of local
+   `ui::text(...)` / `ui::raw_text(...)` builders.
+   2026-05-20 inherited-feature readout follow-up: `TextStyleRefinement` now carries OpenType
+   feature settings through passive-text measurement/cache, and DataTable pagination selected/page
+   summaries consume shared tabular control-readout variants instead of local
+   `ui::text(...).tabular_nums()` builders. This keeps numeric readouts inside the control-readout
+   role family rather than adding a separate stable text role.
+   2026-05-20 tabular readout resize-gate follow-up: the tabular control-readout variants are now
+   explicitly covered by the shared narrow-layout single-line role gate and by the text role
+   matrix, so the derived readout helpers cannot exist without resize evidence.
+   2026-05-20 shadcn ButtonGroupText children-role follow-up: `ButtonGroupText::new_children(...)`
+   now has a focused gate proving caller-supplied `text_button_label(...)` children keep their
+   role-owned no-wrap, ellipsis, zero-min-width, and shrink contract under button-group chrome
+   composition. The default `ButtonGroupText::new(...)` label path remains component-owned policy.
+   2026-05-20 shadcn TabsTrigger children-role follow-up: trigger typography/foreground patching
+   now treats `inherited_text_style` as a protected role scope. Bare trigger text keeps the shadcn
+   fallback, while caller-supplied `text_button_label(...)` trigger children keep their role-owned
+   single-line shrink/ellipsis contract under tabs chrome composition.
+   2026-05-20 shadcn Toggle/ToggleGroup children-role follow-up: toggle and toggle-group item
+   foreground patching now treats `inherited_text_style` as a protected role scope. Bare custom text
+   keeps the component foreground fallback, while caller-supplied `text_button_label(...)` children
+   keep their role-owned no-wrap, ellipsis, zero-min-width, and shrink contract.
+   2026-05-20 shadcn Badge children-role follow-up: badge foreground patching now treats
+   `inherited_text_style` as a protected role scope. Bare leading/trailing text keeps the badge
+   foreground fallback, while caller-supplied `text_button_label(...)` children keep their role-owned
+   no-wrap, ellipsis, zero-min-width, and shrink contract.
+   2026-05-20 shadcn Button children-role follow-up: `Button::children(...)`,
+   `Button::leading_children(...)`, and `Button::trailing_children(...)` now have focused gates
+   proving caller-supplied `text_button_label(...)` roles keep their leaf no-wrap, ellipsis,
+   zero-min-width, shrink, and inherited metadata contract under button chrome composition.
+   2026-05-20 shadcn TooltipContent role-preservation follow-up: tooltip content defaults now treat
+   `inherited_text_style` as a protected role scope and stamp tooltip foreground as inherited
+   foreground on the content root. Bare tooltip text still receives tooltip `text-xs`/foreground
+   defaults, while caller-supplied `text_control_readout(...)` children keep their role-owned
+   no-wrap, ellipsis, zero-min-width, shrink, and inherited metadata contract.
+   2026-05-20 shadcn BreadcrumbList role-preservation follow-up: list-level muted foreground now
+   flows through inherited foreground instead of direct text leaf colors, and breadcrumb list text
+   defaults skip shared text-role scopes. Bare loose breadcrumb text still receives breadcrumb
+   typography, while caller-supplied `text_button_label(...)` children keep their role-owned
+   no-wrap, ellipsis, zero-min-width, shrink, and inherited metadata contract.
+   2026-05-20 shadcn AnnouncementTitle role-preservation follow-up: the extras title keeps its
+   recipe-owned clipped title container and bare-text single-line ellipsis fallback, but title
+   typography is now applied to bare text leaves instead of the title root. The recursive title
+   contract treats `inherited_text_style` as a protected shared-role scope, so caller-supplied
+   `text_button_label(...)` children keep their role-owned leaf style/color, no-wrap, ellipsis,
+   zero-min-width, shrink, and inherited metadata contract under the raw extras title surface.
+   2026-05-20 shadcn SidebarGroupLabel resize follow-up: the fixed-height sidebar group label no
+   longer hand-rolls `ui::text(...).wrap(TextWrap::Word)` inside a 32px chrome row. The shared
+   `text_menu_group_label(...)` role now carries `text-xs font-medium` plus fill/shrink/min-width-0
+   single-line ellipsis semantics, and `SidebarGroupLabel` consumes it while overriding foreground
+   from sidebar context. This directly targets the resize failure mode where chrome labels wrap
+   into a second line and overrun the row bottom.
+   2026-05-20 shadcn SidebarMenuBadge resize follow-up: upstream sidebar badges are fixed
+   `h-5 min-w-5 text-xs font-medium tabular-nums` counter slots. Fret now keeps that in the
+   control-readout role family via `text_control_readout_compact_tabular_emphasis(...)` instead of
+   local `component.sidebar.menu_badge.text_px` / `line_height` text builders. `SidebarMenuBadge`
+   consumes the derived readout role and keeps sidebar foreground ownership.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
@@ -745,8 +1158,8 @@ Readiness order for the next locally testable review slices:
    keyed scrollable child areas, chrome, scroll handles, nested shell panes, and app-owned
    collection behavior. The closed `imui-child-region-resize-y-v1` and
    `imui-child-region-resize-x-v1` follow-ons now cover axis-specific manual resize with
-   app-owned size state; the height-unconstrained child-region path now has a focused AutoResizeY
-   composition gate, while visibility-return, nav-flattening, and more specific auto-resize
+   app-owned size state; the unconstrained-axis child-region paths now have focused AutoResizeY and
+   AutoResizeX composition gates, while visibility-return, nav-flattening, and always-auto-resize
    behavior remain behavior-specific candidates. Do not open a generic `BeginChild()` flag-mirror
    lane.
 8. Multi-window parity: continue in `docking-multiwindow-imgui-parity`.

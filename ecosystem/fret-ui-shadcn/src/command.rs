@@ -32,6 +32,7 @@ use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::primitives::active_descendant as active_desc;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::dialog as radix_dialog;
@@ -390,18 +391,30 @@ pub(crate) fn item_text_style(theme: &ThemeSnapshot) -> TextStyle {
     style
 }
 
-fn heading_text_style(theme: &ThemeSnapshot) -> TextStyle {
-    // shadcn/ui v4: command group headings use `text-xs` / `leading-4`.
-    let size = theme
-        .metric_by_key("component.command.heading.text_px")
-        .unwrap_or(Px(12.0));
-    let line_height = theme
-        .metric_by_key("component.command.heading.line_height")
-        .unwrap_or(Px(16.0));
-
-    let mut style = typography::fixed_line_box_style(FontId::ui(), size, line_height);
-    style.weight = FontWeight::MEDIUM;
-    style
+fn command_group_heading_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    heading: Arc<str>,
+    pad_x: Px,
+) -> AnyElement {
+    cx.container(
+        ContainerProps {
+            layout: {
+                let mut layout = LayoutStyle::default();
+                layout.size.width = Length::Fill;
+                layout
+            },
+            // new-york-v4: `px-2 py-1.5`.
+            padding: Edges {
+                top: Px(6.0),
+                right: pad_x,
+                bottom: Px(6.0),
+                left: pad_x,
+            }
+            .into(),
+            ..Default::default()
+        },
+        move |cx| vec![decl_text::text_menu_group_label(cx, heading)],
+    )
 }
 
 pub(crate) fn shortcut_text_style(theme: &ThemeSnapshot) -> TextStyle {
@@ -1079,12 +1092,6 @@ impl CommandEmpty {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let (fg, text_style) = {
-            let theme = Theme::global(&*cx.app).snapshot();
-            let fg = theme.color_token("muted-foreground");
-            let text_style = item_text_style(&theme);
-            (fg, text_style)
-        };
         cx.container(
             ContainerProps {
                 layout: {
@@ -1115,25 +1122,7 @@ impl CommandEmpty {
                         justify: MainAlign::Center,
                         align: CrossAlign::Center,
                     },
-                    move |cx| {
-                        let mut text = ui::text(self.text.clone())
-                            .text_size_px(text_style.size)
-                            .font_weight(text_style.weight)
-                            .nowrap()
-                            .text_color(ColorRef::Color(fg));
-
-                        if let Some(line_height) = text_style.line_height {
-                            text = text.line_height_px(line_height).line_height_policy(
-                                fret_core::TextLineHeightPolicy::FixedFromStyle,
-                            );
-                        }
-
-                        if let Some(letter_spacing_em) = text_style.letter_spacing_em {
-                            text = text.letter_spacing_em(letter_spacing_em);
-                        }
-
-                        vec![text.into_element(cx)]
-                    },
+                    move |cx| vec![decl_text::text_status_message(cx, self.text.clone())],
                 )]
             },
         )
@@ -1186,13 +1175,6 @@ impl CommandLoading {
         let test_id = self.test_id.clone();
         let progress = self.progress;
 
-        let (fg, text_style) = {
-            let theme = Theme::global(&*cx.app).snapshot();
-            let fg = theme.color_token("muted-foreground");
-            let text_style = item_text_style(&theme);
-            (fg, text_style)
-        };
-
         let mut row = cx.container(
             ContainerProps {
                 layout: {
@@ -1223,25 +1205,7 @@ impl CommandLoading {
                         justify: MainAlign::Center,
                         align: CrossAlign::Center,
                     },
-                    move |cx| {
-                        let mut text = ui::text(text_for_render.clone())
-                            .text_size_px(text_style.size)
-                            .font_weight(text_style.weight)
-                            .nowrap()
-                            .text_color(ColorRef::Color(fg));
-
-                        if let Some(line_height) = text_style.line_height {
-                            text = text.line_height_px(line_height).line_height_policy(
-                                fret_core::TextLineHeightPolicy::FixedFromStyle,
-                            );
-                        }
-
-                        if let Some(letter_spacing_em) = text_style.letter_spacing_em {
-                            text = text.letter_spacing_em(letter_spacing_em);
-                        }
-
-                        vec![text.into_element(cx)]
-                    },
+                    move |cx| vec![decl_text::text_status_message(cx, text_for_render.clone())],
                 )]
             },
         );
@@ -1537,8 +1501,6 @@ impl CommandList {
 
             let theme = Theme::global(&*cx.app).snapshot();
             let border = border(&theme);
-            let heading_style = heading_text_style(&theme);
-            let fg_heading = theme.color_token("muted-foreground");
             let group_pad_y = MetricRef::space(Space::N1).resolve(&theme);
 
             ScrollArea::new(vec![cx.roving_flex(
@@ -1569,50 +1531,7 @@ impl CommandList {
                     for row in render_rows.into_iter() {
                         match row {
                             CommandPaletteRenderRow::Heading(heading) => {
-                                let heading = heading.clone();
-                                let heading_style = heading_style.clone();
-                                let fg_heading = fg_heading;
-                                out.push(
-                                    cx.container(
-                                        ContainerProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = Length::Fill;
-                                                layout
-                                            },
-                                            padding: Edges {
-                                                top: Px(6.0),
-                                                right: pad_x,
-                                                bottom: Px(6.0),
-                                                left: pad_x,
-                                            }
-                                            .into(),
-                                            ..Default::default()
-                                        },
-                                        move |cx| {
-                                            let mut text = ui::text( heading)
-                                                .text_size_px(heading_style.size)
-                                                .font_weight(heading_style.weight)
-                                                .nowrap()
-                                                .text_color(ColorRef::Color(fg_heading));
-
-                                            if let Some(line_height) = heading_style.line_height {
-                                                text = text
-                                                    .line_height_px(line_height)
-                                                    .line_height_policy(
-                                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                );
-                                            }
-                                            if let Some(letter_spacing_em) =
-                                                heading_style.letter_spacing_em
-                                            {
-                                                text = text.letter_spacing_em(letter_spacing_em);
-                                            }
-
-                                            vec![text.into_element(cx)]
-                                        },
-                                    ),
-                                );
+                                out.push(command_group_heading_element(cx, heading, pad_x));
                             }
                             CommandPaletteRenderRow::GroupPad => out.push(cx.container(
                                 ContainerProps {
@@ -2760,49 +2679,11 @@ impl CommandPalette {
                 .into_iter()
                 .map(|row| match row {
                     CommandPaletteRenderRow::Heading(heading) => {
-                        let fg = theme.color_token("muted-foreground");
-                        let style = heading_text_style(&theme);
                         let test_id_for_row = test_id_heading_prefix.clone().map(|prefix| {
                             let seg = sanitize_test_id_segment(heading.as_ref());
                             Arc::<str>::from(format!("{prefix}{seg}"))
                         });
-                        let mut heading_row = cx.container(
-                            ContainerProps {
-                                layout: {
-                                    let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Fill;
-                                    layout
-                                },
-                                padding: Edges {
-                                    // new-york-v4: `px-2 py-1.5`.
-                                    top: Px(6.0),
-                                    right: pad_x,
-                                    bottom: Px(6.0),
-                                    left: pad_x,
-                                }
-                                .into(),
-                                ..Default::default()
-                            },
-                            move |cx| {
-                                let mut text = ui::text( heading)
-                                    .text_size_px(style.size)
-                                    .font_weight(style.weight)
-                                    .nowrap()
-                                    .text_color(ColorRef::Color(fg));
-
-                                if let Some(line_height) = style.line_height {
-                                    text = text.line_height_px(line_height).line_height_policy(
-                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                    );
-                                }
-
-                                if let Some(letter_spacing_em) = style.letter_spacing_em {
-                                    text = text.letter_spacing_em(letter_spacing_em);
-                                }
-
-                                vec![text.into_element(cx)]
-                            },
-                        );
+                        let mut heading_row = command_group_heading_element(cx, heading, pad_x);
                         if let Some(test_id) = test_id_for_row {
                             heading_row = heading_row.test_id(test_id);
                         }
@@ -4361,6 +4242,16 @@ mod tests {
         })
     }
 
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        match &el.kind {
+            fret_ui::element::ElementKind::Text(props) if props.text.as_ref() == needle => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, needle)),
+        }
+    }
+
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -4449,6 +4340,75 @@ mod tests {
             assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
             assert!(matches!(props.layout.overflow, Overflow::Clip));
         });
+    }
+
+    #[test]
+    fn command_group_heading_uses_shared_menu_group_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                command_group_heading_element(cx, Arc::from("Suggested actions"), Px(8.0))
+            });
+
+        let text = find_text_element(&element, "Suggested actions")
+            .expect("expected command group heading text");
+        let fret_ui::element::ElementKind::Text(props) = &text.kind else {
+            panic!("expected Text element for command group heading");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, fret_ui::element::Length::Fill);
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(fret_ui::element::Length::Px(Px(0.0)))
+        );
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+        assert!(text.inherited_foreground.is_some());
+    }
+
+    fn assert_command_status_text_role(text: &AnyElement, label: &str) {
+        let fret_ui::element::ElementKind::Text(props) = &text.kind else {
+            panic!("expected Text element for {label}");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(fret_ui::element::Length::Px(Px(0.0)))
+        );
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+        assert!(text.inherited_foreground.is_some());
+    }
+
+    #[test]
+    fn command_empty_and_loading_use_shared_status_message_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let empty = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "empty", |cx| {
+            CommandEmpty::new("No matching commands").into_element(cx)
+        });
+        let empty_text = find_text_element(&empty, "No matching commands")
+            .expect("expected command empty status text");
+        assert_command_status_text_role(empty_text, "CommandEmpty");
+
+        let loading =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "loading", |cx| {
+                CommandLoading::new("Fetching commands").into_element(cx)
+            });
+        let loading_text = find_text_element(&loading, "Fetching commands")
+            .expect("expected command loading status text");
+        assert_command_status_text_role(loading_text, "CommandLoading");
     }
 
     #[test]

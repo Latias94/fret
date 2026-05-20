@@ -6,6 +6,7 @@ use fret::{AppComponentCx, UiChild};
 use std::sync::Arc;
 
 use fret_core::{AttributedText, DecorationLineStyle, TextPaintStyle, TextSpan, UnderlineStyle};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn rich_title_text() -> AttributedText {
@@ -45,14 +46,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .content_with(move |cx| {
             let description_body = ui::v_flex(|cx| {
                 vec![
-                    ui::text(
+                    decl_text::text_paragraph(
+                        cx,
                         "This removes the production project from all workspaces and revokes existing collaborator links.",
-                    )
-                    .into_element(cx),
-                    ui::text(
+                    ),
+                    decl_text::text_paragraph(
+                        cx,
                         "Export an audit archive and notify owners before continuing so the rollback plan is documented.",
-                    )
-                    .into_element(cx),
+                    ),
                 ]
             })
             .gap(Space::N1)
@@ -63,7 +64,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             let cancel_visual = ui::h_row(|cx| {
                 vec![
                     icon::icon(cx, fret_icons::IconId::new_static("lucide.arrow-left")),
-                    ui::text("Back to safety").into_element(cx),
+                    decl_text::text_button_label(cx, "Back to safety"),
                 ]
             })
             .gap(Space::N2)
@@ -73,7 +74,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             let action_visual = ui::h_row(|cx| {
                 vec![
                     icon::icon(cx, fret_icons::IconId::new_static("lucide.trash-2")),
-                    ui::text("Delete project").into_element(cx),
+                    decl_text::text_button_label(cx, "Delete project"),
                 ]
             })
             .gap(Space::N2)

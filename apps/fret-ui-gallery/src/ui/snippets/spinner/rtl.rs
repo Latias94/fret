@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("rtl.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -13,7 +14,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::ItemTitle::new("جاري معالجة الدفع...").into_element(cx)
             ])
             .into_element(cx),
-            shadcn::ItemActions::new([cx.text("١٠٠.٠٠ دولار")]).into_element(cx),
+            shadcn::ItemActions::new([decl_text::text_control_readout(cx, "١٠٠.٠٠ دولار")])
+                .into_element(cx),
         ])
         .variant(shadcn::ItemVariant::Muted)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(360.0)))

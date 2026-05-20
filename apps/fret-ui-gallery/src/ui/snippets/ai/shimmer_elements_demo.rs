@@ -5,18 +5,17 @@ use fret::{AppComponentCx, UiChild};
 use fret_core::{FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
-use fret_ui_kit::{ColorRef, LayoutRefinement, Space};
+use fret_ui_kit::{LayoutRefinement, Space};
 
 fn item<B>(label: &'static str, el: B) -> impl UiChild + use<B>
 where
     B: IntoUiElement<fret_app::App>,
 {
     ui::v_stack(move |cx| {
-        let theme = fret_ui::Theme::global(&*cx.app).snapshot();
-        let muted = ColorRef::Color(fret_ui_kit::typography::muted_foreground_color(&theme));
         vec![
-            ui::text(label).text_sm().text_color(muted).into_element(cx),
+            decl_text::text_control_readout(cx, label),
             el.into_element(cx),
         ]
     })
@@ -47,9 +46,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .into_element(cx);
     let inline = ui::h_row(move |cx| {
         vec![
-            ui::text("Processing your request").into_element(cx),
+            decl_text::text_section_chrome_label(cx, "Processing your request"),
             ui_ai::Shimmer::new("with AI magic").into_element(cx),
-            ui::text("...").into_element(cx),
+            decl_text::text_control_readout(cx, "..."),
         ]
     })
     .gap(Space::N1)

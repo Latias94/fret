@@ -855,6 +855,180 @@ impl ElementHostWidget {
         clamp_to_constraints_in_measure(desired, props.layout, measure_constraints)
     }
 
+    fn measure_prepared_plain_text<H: UiHost>(
+        &mut self,
+        cx: &mut MeasureCx<'_, H>,
+        input: &fret_core::TextInput,
+        text: &std::sync::Arc<str>,
+        style: &TextStyle,
+        constraints: TextConstraints,
+        ink_overflow: crate::element::TextInkOverflow,
+        font_stack_key: u64,
+    ) -> (TextMetrics, Px, Px) {
+        let scale_bits = cx.scale_factor.to_bits();
+        let scale_changed = self.text_cache.measured_scale_factor_bits != Some(scale_bits);
+        let text_changed = self.text_cache.last_text.as_ref() != Some(text);
+        let style_changed = self.text_cache.last_style.as_ref() != Some(style);
+        let wrap_changed = self.text_cache.last_wrap != Some(constraints.wrap);
+        let overflow_changed = self.text_cache.last_overflow != Some(constraints.overflow);
+        let align_changed = self.text_cache.last_align != Some(constraints.align);
+        let ink_overflow_changed = self.text_cache.last_ink_overflow != Some(ink_overflow);
+        let font_stack_changed = self.text_cache.last_font_stack_key != Some(font_stack_key);
+        let signature_changed = scale_changed
+            || text_changed
+            || style_changed
+            || wrap_changed
+            || overflow_changed
+            || align_changed
+            || ink_overflow_changed
+            || font_stack_changed;
+        let can_reuse_metrics = self.text_cache.metrics.is_some()
+            && !signature_changed
+            && self.text_cache.last_measure_width == constraints.max_width
+            && self.text_cache.measured_scale_factor_bits == Some(scale_bits);
+
+        let prepared_matches = self.text_cache.blob.is_some()
+            && self.text_cache.prepared_scale_factor_bits == Some(scale_bits)
+            && self.text_cache.last_align == Some(constraints.align)
+            && self.text_cache.last_width == constraints.max_width;
+
+        let metrics = if can_reuse_metrics && prepared_matches {
+            self.text_cache.metrics.unwrap_or_else(|| {
+                debug_assert!(
+                    false,
+                    "text cache metrics missing while reuse conditions are satisfied"
+                );
+                TextMetrics {
+                    size: Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                }
+            })
+        } else {
+            if signature_changed {
+                self.text_cache.release_prepared_by_width(cx.services);
+            }
+            if let Some(blob) = self.text_cache.blob.take() {
+                cx.services.text().release(blob);
+            }
+            let (blob, metrics) = cx.services.text().prepare(input, constraints);
+            self.text_cache.blob = Some(blob);
+            self.text_cache.metrics = Some(metrics);
+            self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
+            self.text_cache.measured_scale_factor_bits = Some(scale_bits);
+            self.text_cache.last_text = Some(text.clone());
+            self.text_cache.last_rich = None;
+            self.text_cache.last_style = Some(style.clone());
+            self.text_cache.last_wrap = Some(constraints.wrap);
+            self.text_cache.last_overflow = Some(constraints.overflow);
+            self.text_cache.last_align = Some(constraints.align);
+            self.text_cache.last_width = constraints.max_width;
+            self.text_cache.last_measure_width = constraints.max_width;
+            self.text_cache.last_font_stack_key = Some(font_stack_key);
+            self.text_cache.last_ink_overflow = Some(ink_overflow);
+            metrics
+        };
+
+        let (pad_top, pad_bottom) = if ink_overflow == crate::element::TextInkOverflow::AutoPad
+            && let Some(blob) = self.text_cache.blob
+        {
+            crate::text::coords::compute_text_ink_overflow_padding(cx.services.text(), blob)
+        } else {
+            (Px(0.0), Px(0.0))
+        };
+        self.text_cache.ink_pad_top = pad_top;
+        self.text_cache.ink_pad_bottom = pad_bottom;
+        (metrics, pad_top, pad_bottom)
+    }
+
+    fn measure_prepared_rich_text<H: UiHost>(
+        &mut self,
+        cx: &mut MeasureCx<'_, H>,
+        input: &fret_core::TextInput,
+        rich: &fret_core::AttributedText,
+        style: &TextStyle,
+        constraints: TextConstraints,
+        ink_overflow: crate::element::TextInkOverflow,
+        font_stack_key: u64,
+    ) -> (TextMetrics, Px, Px) {
+        let scale_bits = cx.scale_factor.to_bits();
+        let scale_changed = self.text_cache.measured_scale_factor_bits != Some(scale_bits);
+        let rich_changed = !self
+            .text_cache
+            .last_rich
+            .as_ref()
+            .is_some_and(|cached| cached.shaping_eq(rich));
+        let style_changed = self.text_cache.last_style.as_ref() != Some(style);
+        let wrap_changed = self.text_cache.last_wrap != Some(constraints.wrap);
+        let overflow_changed = self.text_cache.last_overflow != Some(constraints.overflow);
+        let align_changed = self.text_cache.last_align != Some(constraints.align);
+        let ink_overflow_changed = self.text_cache.last_ink_overflow != Some(ink_overflow);
+        let font_stack_changed = self.text_cache.last_font_stack_key != Some(font_stack_key);
+        let signature_changed = scale_changed
+            || rich_changed
+            || style_changed
+            || wrap_changed
+            || overflow_changed
+            || align_changed
+            || ink_overflow_changed
+            || font_stack_changed;
+        let can_reuse_metrics = self.text_cache.metrics.is_some()
+            && !signature_changed
+            && self.text_cache.last_measure_width == constraints.max_width
+            && self.text_cache.measured_scale_factor_bits == Some(scale_bits);
+
+        let prepared_matches = self.text_cache.blob.is_some()
+            && self.text_cache.prepared_scale_factor_bits == Some(scale_bits)
+            && self.text_cache.last_align == Some(constraints.align)
+            && self.text_cache.last_width == constraints.max_width;
+
+        let metrics = if can_reuse_metrics && prepared_matches {
+            self.text_cache.metrics.unwrap_or_else(|| {
+                debug_assert!(
+                    false,
+                    "text cache metrics missing while reuse conditions are satisfied"
+                );
+                TextMetrics {
+                    size: Size::new(Px(0.0), Px(0.0)),
+                    baseline: Px(0.0),
+                }
+            })
+        } else {
+            if signature_changed {
+                self.text_cache.release_prepared_by_width(cx.services);
+            }
+            if let Some(blob) = self.text_cache.blob.take() {
+                cx.services.text().release(blob);
+            }
+            let (blob, metrics) = cx.services.text().prepare(input, constraints);
+            self.text_cache.blob = Some(blob);
+            self.text_cache.metrics = Some(metrics);
+            self.text_cache.prepared_scale_factor_bits = Some(scale_bits);
+            self.text_cache.measured_scale_factor_bits = Some(scale_bits);
+            self.text_cache.last_text = None;
+            self.text_cache.last_rich = Some(rich.clone());
+            self.text_cache.last_style = Some(style.clone());
+            self.text_cache.last_wrap = Some(constraints.wrap);
+            self.text_cache.last_overflow = Some(constraints.overflow);
+            self.text_cache.last_align = Some(constraints.align);
+            self.text_cache.last_width = constraints.max_width;
+            self.text_cache.last_measure_width = constraints.max_width;
+            self.text_cache.last_font_stack_key = Some(font_stack_key);
+            self.text_cache.last_ink_overflow = Some(ink_overflow);
+            metrics
+        };
+
+        let (pad_top, pad_bottom) = if ink_overflow == crate::element::TextInkOverflow::AutoPad
+            && let Some(blob) = self.text_cache.blob
+        {
+            crate::text::coords::compute_text_ink_overflow_padding(cx.services.text(), blob)
+        } else {
+            (Px(0.0), Px(0.0))
+        };
+        self.text_cache.ink_pad_top = pad_top;
+        self.text_cache.ink_pad_bottom = pad_bottom;
+        (metrics, pad_top, pad_bottom)
+    }
+
     fn measure_text<H: UiHost>(
         &mut self,
         cx: &mut MeasureCx<'_, H>,
@@ -895,16 +1069,36 @@ impl ElementHostWidget {
         };
         cx.tree
             .debug_record_text_constraints_measured(cx.node, text_constraints);
-        let metrics = cx.services.text().measure(&input, text_constraints);
+        let font_stack_key = cx
+            .app
+            .global::<fret_runtime::TextFontStackKey>()
+            .map(|k| k.0)
+            .unwrap_or(0);
+        let (metrics, measured_size) = if props.wrap == TextWrap::None {
+            let metrics = cx.services.text().measure(&input, text_constraints);
+            (metrics, metrics.size)
+        } else {
+            let (metrics, pad_top, pad_bottom) = self.measure_prepared_plain_text(
+                cx,
+                &input,
+                &props.text,
+                &style,
+                text_constraints,
+                props.ink_overflow,
+                font_stack_key,
+            );
+            (
+                metrics,
+                Size::new(
+                    metrics.size.width,
+                    Px((metrics.size.height.0 + pad_top.0 + pad_bottom.0).max(0.0)),
+                ),
+            )
+        };
         let clamped =
-            clamp_to_constraints_in_measure(metrics.size, props.layout, layout_constraints);
+            clamp_to_constraints_in_measure(measured_size, props.layout, layout_constraints);
 
         if props.wrap == TextWrap::None {
-            let font_stack_key = cx
-                .app
-                .global::<fret_runtime::TextFontStackKey>()
-                .map(|k| k.0)
-                .unwrap_or(0);
             let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_plain(
                 &props.text,
                 &style,
@@ -972,16 +1166,36 @@ impl ElementHostWidget {
         };
         cx.tree
             .debug_record_text_constraints_measured(cx.node, text_constraints);
-        let metrics = cx.services.text().measure(&input, text_constraints);
+        let font_stack_key = cx
+            .app
+            .global::<fret_runtime::TextFontStackKey>()
+            .map(|k| k.0)
+            .unwrap_or(0);
+        let (metrics, measured_size) = if props.wrap == TextWrap::None {
+            let metrics = cx.services.text().measure(&input, text_constraints);
+            (metrics, metrics.size)
+        } else {
+            let (metrics, pad_top, pad_bottom) = self.measure_prepared_rich_text(
+                cx,
+                &input,
+                &props.rich,
+                &style,
+                text_constraints,
+                props.ink_overflow,
+                font_stack_key,
+            );
+            (
+                metrics,
+                Size::new(
+                    metrics.size.width,
+                    Px((metrics.size.height.0 + pad_top.0 + pad_bottom.0).max(0.0)),
+                ),
+            )
+        };
         let clamped =
-            clamp_to_constraints_in_measure(metrics.size, props.layout, layout_constraints);
+            clamp_to_constraints_in_measure(measured_size, props.layout, layout_constraints);
 
         if props.wrap == TextWrap::None {
-            let font_stack_key = cx
-                .app
-                .global::<fret_runtime::TextFontStackKey>()
-                .map(|k| k.0)
-                .unwrap_or(0);
             let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
                 &props.rich,
                 &style,
@@ -1049,16 +1263,36 @@ impl ElementHostWidget {
         };
         cx.tree
             .debug_record_text_constraints_measured(cx.node, text_constraints);
-        let metrics = cx.services.text().measure(&input, text_constraints);
+        let font_stack_key = cx
+            .app
+            .global::<fret_runtime::TextFontStackKey>()
+            .map(|k| k.0)
+            .unwrap_or(0);
+        let (metrics, measured_size) = if props.wrap == TextWrap::None {
+            let metrics = cx.services.text().measure(&input, text_constraints);
+            (metrics, metrics.size)
+        } else {
+            let (metrics, pad_top, pad_bottom) = self.measure_prepared_rich_text(
+                cx,
+                &input,
+                &props.rich,
+                &style,
+                text_constraints,
+                props.ink_overflow,
+                font_stack_key,
+            );
+            (
+                metrics,
+                Size::new(
+                    metrics.size.width,
+                    Px((metrics.size.height.0 + pad_top.0 + pad_bottom.0).max(0.0)),
+                ),
+            )
+        };
         let clamped =
-            clamp_to_constraints_in_measure(metrics.size, props.layout, layout_constraints);
+            clamp_to_constraints_in_measure(measured_size, props.layout, layout_constraints);
 
         if props.wrap == TextWrap::None {
-            let font_stack_key = cx
-                .app
-                .global::<fret_runtime::TextFontStackKey>()
-                .map(|k| k.0)
-                .unwrap_or(0);
             let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
                 &props.rich,
                 &style,

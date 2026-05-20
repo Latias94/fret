@@ -873,6 +873,44 @@ fn context_menu_docs_examples_keep_pointer_aware_trigger_copy() {
 }
 
 #[test]
+fn context_menu_trigger_copy_uses_shared_readout_text_role() {
+    for relative_path in [
+        "src/ui/snippets/context_menu/demo.rs",
+        "src/ui/snippets/context_menu/basic.rs",
+        "src/ui/snippets/context_menu/submenu.rs",
+        "src/ui/snippets/context_menu/shortcuts.rs",
+        "src/ui/snippets/context_menu/groups.rs",
+        "src/ui/snippets/context_menu/icons.rs",
+        "src/ui/snippets/context_menu/checkboxes.rs",
+        "src/ui/snippets/context_menu/radio.rs",
+        "src/ui/snippets/context_menu/destructive.rs",
+        "src/ui/snippets/context_menu/sides.rs",
+        "src/ui/snippets/context_menu/rtl.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, label)",
+            ],
+        );
+
+        for forbidden in [
+            "let fg = theme.color_token(\"muted-foreground\")",
+            "ui::text(label)",
+            ".text_sm()",
+            ".text_color(ColorRef::Color(fg))",
+        ] {
+            let forbidden = canonicalize_rust_fragment(forbidden);
+            assert!(
+                !normalized.contains(&forbidden),
+                "{relative_path} reintroduced locally styled fixed context-menu trigger text: `{forbidden}`"
+            );
+        }
+    }
+}
+
+#[test]
 fn context_menu_usage_and_basic_examples_stay_docs_aligned() {
     let usage = read("src/ui/snippets/context_menu/usage.rs");
     assert!(
@@ -1209,6 +1247,45 @@ fn selected_parts_pages_mark_adapter_surfaces_as_advanced_not_default() {
             "Advanced part surface adapters for explicit shadcn-style root-part ownership."
         ),
         "src/ui/pages/alert_dialog.rs should label the Parts section as an advanced adapter surface"
+    );
+}
+
+#[test]
+fn alert_dialog_snippet_custom_text_uses_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/alert_dialog/rich_content.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(cx, \"This removes the production project from all workspaces and revokes existing collaborator links.\")",
+            "decl_text::text_paragraph(cx, \"Export an audit archive and notify owners before continuing so the rollback plan is documented.\")",
+            "decl_text::text_button_label(cx, \"Back to safety\")",
+            "decl_text::text_button_label(cx, \"Delete project\")",
+            "cx.styled_text(rich_title_text())",
+        ],
+        &[
+            "ui::text(\"This removes the production project from all workspaces and revokes existing collaborator links.\")",
+            "ui::text(\"Export an audit archive and notify owners before continuing so the rollback plan is documented.\")",
+            "ui::text(\"Back to safety\")",
+            "ui::text(\"Delete project\")",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/alert_dialog/small_with_media.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, \"Allow accessory to connect?\")",
+            "decl_text::text_paragraph(cx, \"Do you want to allow the USB accessory to connect to this device?\")",
+        ],
+        &["ui::text(", "TextWrap", "TextOverflow"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/alert_dialog/rtl.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, \"السماح للملحق بالاتصال؟\")",
+            "decl_text::text_paragraph(cx, \"هل تريد السماح لملحق USB بالاتصال بهذا الجهاز؟\")",
+        ],
+        &["ui::text(", "TextWrap", "TextOverflow"],
     );
 }
 
@@ -1736,6 +1813,18 @@ fn button_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_sources_absent(
         "src/ui/snippets/button",
         &["pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement"],
+    );
+}
+
+#[test]
+fn button_children_snippet_text_uses_button_label_role() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/button/children.rs",
+        &[
+            "use fret_ui_kit::{IntoUiElement, declarative::text as decl_text};",
+            "decl_text::text_button_label(cx, \"Command Menu\")",
+        ],
+        &[".child(cx.text(\"Command Menu\"))"],
     );
 }
 
@@ -2849,6 +2938,66 @@ fn drawer_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn drawer_scroll_and_side_body_text_uses_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/drawer/scrollable_content.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_list_row_label(cx, format!(",
+            "\"{prefix} {}: Drawer scroll content for parity checks.\"",
+        ],
+        &["cx.text(format!("],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/drawer/sides.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(cx, format!(",
+            "\"{title} drawer example {}. Use the `direction` prop to control drawer placement.\"",
+        ],
+        &["cx.text(format!("],
+    );
+}
+
+#[test]
+fn drawer_remaining_custom_text_uses_shared_roles() {
+    for (relative_path, unit_label) in [
+        ("src/ui/snippets/drawer/demo.rs", "Calories/day"),
+        ("src/ui/snippets/drawer/rtl.rs", "سعرات حرارية/يوم"),
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, current_goal.to_string())",
+                &format!("decl_text::text_control_readout(cx, \"{unit_label}\")"),
+            ],
+            &["ui::text(current_goal.to_string())", "ui::text(\""],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/drawer/nested.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(",
+            "Open the child drawer, then drag its handle. The child should track the drag while the parent remains stationary.",
+        ],
+        &["ui::text("],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/drawer/outside_press.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(",
+            "The probe below exists only to make modal outside-press routing deterministic in the gallery and diag scripts.",
+            "decl_text::text_control_readout(cx, format!(\"Underlay activations: {probe_count}\"))",
+        ],
+        &["ui::text("],
+    );
+}
+
+#[test]
 fn drawer_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/drawer.rs",
@@ -3237,6 +3386,27 @@ fn spinner_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Extras\", extras)",
         ],
+    );
+}
+
+#[test]
+fn spinner_item_amount_text_uses_control_readout_role() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/spinner/demo.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_control_readout(cx, \"$100.00\")",
+        ],
+        &["ui::text(\"$100.00\")"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/spinner/rtl.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_control_readout(cx, \"١٠٠.٠٠ دولار\")",
+        ],
+        &["cx.text(\"١٠٠.٠٠ دولار\")"],
     );
 }
 
@@ -4126,6 +4296,79 @@ fn collapsible_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn collapsible_snippet_text_uses_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/collapsible/basic.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_button_label(cx, \"Product details\")",
+        ],
+        &["cx.text(\"Product details\")"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/collapsible/demo.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_code_label(cx, name)",
+            "decl_text::text_section_chrome_label(",
+            "\"@peduarte starred 3 repositories\"",
+        ],
+        &[
+            "shadcn::raw::typography::small(name)",
+            "shadcn::raw::typography::small(\"@peduarte starred 3 repositories\")",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/collapsible/controlled_state.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_control_readout(cx,",
+            "decl_text::text_paragraph(",
+        ],
+        &["shadcn::raw::typography::muted(", "cx.text("],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/collapsible/file_tree.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_list_row_label(cx, label)",
+        ],
+        &["cx.text(label)"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/collapsible/usage.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_button_label(",
+            "\"Can I use this in my project?\"",
+            "decl_text::text_paragraph_break_words(",
+        ],
+        &[
+            "ui::text(\"Can I use this in my project?\")",
+            "ui::text_block(",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/collapsible/rtl.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, title)",
+            "decl_text::text_paragraph(cx, detail)",
+            "decl_text::text_section_chrome_label(cx, \"الطلب #4189\")",
+            "decl_text::text_control_readout(cx, \"الحالة\")",
+            "decl_text::text_control_readout(cx, \"تم الشحن\")",
+        ],
+        &[
+            "shadcn::raw::typography::small(title)",
+            "shadcn::raw::typography::muted(detail)",
+            "shadcn::raw::typography::small(\"الطلب #4189\")",
+            "shadcn::raw::typography::muted(\"الحالة\")",
+            "shadcn::raw::typography::small(\"تم الشحن\")",
+        ],
+    );
+}
+
+#[test]
 fn collapsible_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/collapsible.rs",
@@ -4493,6 +4736,43 @@ fn kbd_page_records_docs_path_and_narrow_children_surface() {
 }
 
 #[test]
+fn kbd_snippets_route_custom_copy_through_shared_text_roles() {
+    for relative_path in ["src/ui/snippets/kbd/demo.rs", "src/ui/snippets/kbd/rtl.rs"] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_chrome_glyph(cx, \"+\")",
+            ],
+            &["ui::text(\"+\")"],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/kbd/group.rs",
+        &[
+            "use fret_ui_kit::{declarative::text as decl_text, ui};",
+            "decl_text::text_control_readout(cx, \"Use\")",
+            "decl_text::text_control_readout(cx, \"to open the command palette\")",
+        ],
+        &[
+            "ui::text(\"Use\")",
+            "ui::text(\"to open the command palette\")",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/kbd/tooltip.rs",
+        &[
+            "use fret_ui_kit::{declarative::text as decl_text, ui};",
+            "decl_text::text_control_readout(cx, \"Save Changes\")",
+            "decl_text::text_control_readout(cx, \"Print Document\")",
+        ],
+        &["ui::text(\"Save Changes\")", "ui::text(\"Print Document\")"],
+    );
+}
+
+#[test]
 fn icons_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -4748,6 +5028,64 @@ fn sidebar_snippet_chrome_text_uses_shared_roles() {
                 "cx.text(\"This example keeps the upstream AppSidebar information architecture but inlines the helper files into one copyable Fret snippet.\")",
                 "cx.text(format!(\"team={} selected={} last_action={}\", team.name, selected_value.as_ref(), last_action_value.as_ref()))",
                 "cx.text(\"Missing AppSidebar content.\")",
+            ],
+        ),
+    ];
+
+    for &(relative_path, required_markers, forbidden_markers) in cases {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            required_markers,
+            forbidden_markers,
+        );
+    }
+}
+
+#[test]
+fn command_snippet_chrome_text_uses_shared_roles() {
+    let cases: &[(&str, &[&str], &[&str])] = &[
+        (
+            "src/ui/snippets/command/composable_shell.rs",
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, format!(\"Last action: {last_action_value}\"))",
+            ],
+            &["cx.text(format!(\"Last action: {last_action_value}\"))"],
+        ),
+        (
+            "src/ui/snippets/command/behavior_demos.rs",
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_paragraph(cx, \"Controlled selection demo (cmdk `value`)\")",
+                "decl_text::text_control_readout(",
+                "\"active value: {}\"",
+                "decl_text::text_paragraph(\n                    cx,\n                    \"Demo-only: cmdk `Group forceMount` keeps headings visible even when all items are filtered out.\",\n                )",
+                "decl_text::text_section_chrome_label(cx, \"disablePointerSelection + vim/home/end navigation\")",
+                "decl_text::text_control_readout(cx, format!(\"Last action: {last_action_value}\"))",
+                "decl_text::text_section_chrome_label(cx, \"Grouped keyboard navigation\")",
+            ],
+            &[
+                "cx.text(\"Controlled selection demo (cmdk `value`)\")",
+                "cx.text(format!(\n                    \"active value: {}\"",
+                "cx.text(\n                    \"Demo-only: cmdk `Group forceMount` keeps headings visible even when all items are filtered out.\",\n                )",
+                "cx.text(\"disablePointerSelection + vim/home/end navigation\")",
+                "cx.text(format!(\"Last action: {last_action_value}\"))",
+                "cx.text(\"Grouped keyboard navigation\")",
+            ],
+        ),
+        (
+            "src/ui/snippets/command/action_first_view.rs",
+            &[
+                "declarative::text as decl_text",
+                "IntoUiElementInExt as _",
+                "decl_text::text_control_readout(cx, format!(\"Count: {count_value}\"))",
+                "decl_text::text_control_readout(cx, format!(\"Last action: {last_action_value}\"))",
+                "decl_text::text_paragraph(cx, \"This demo is desktop-only in v1.\")",
+            ],
+            &[
+                "cx.text(format!(\"Count: {count_value}\"))",
+                "cx.text(format!(\"Last action: {last_action_value}\"))",
+                "cx.text(\"This demo is desktop-only in v1.\")",
             ],
         ),
     ];
@@ -5121,6 +5459,42 @@ fn popover_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn popover_align_snippet_text_uses_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/popover/align.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(cx, \"Aligned to start\")",
+            "decl_text::text_paragraph(cx, \"Aligned to center\")",
+            "decl_text::text_paragraph(cx, \"Aligned to end\")",
+        ],
+        &[
+            "cx.text(\"Aligned to start\")",
+            "cx.text(\"Aligned to center\")",
+            "cx.text(\"Aligned to end\")",
+        ],
+    );
+}
+
+#[test]
+fn dialog_scroll_row_text_uses_shared_roles() {
+    for relative_path in [
+        "src/ui/snippets/dialog/scrollable_content.rs",
+        "src/ui/snippets/dialog/sticky_footer.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_list_row_label(cx, format!(",
+                "\"{prefix} {}: This dialog row is intentionally verbose to validate scroll behavior and footer visibility.\"",
+            ],
+            &["ui::raw_text(format!("],
+        );
+    }
+}
+
+#[test]
 fn hover_card_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -5192,6 +5566,109 @@ fn hover_card_children_snippet_prefers_explicit_content_children_followup() {
 }
 
 #[test]
+fn hover_card_snippet_text_uses_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/basic.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph_break_words(",
+            "\"HoverCard content: multiline description with WordBreak wrapping.\"",
+            "decl_text::text_control_readout(cx, \"Joined December 2021\")",
+        ],
+        &[
+            "ui::text(",
+            "ui::text_block(",
+            "TextWrap",
+            "ColorRef::Color",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/children.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, \"Release Notes\")",
+            "decl_text::text_paragraph_break_words(",
+            "decl_text::text_control_readout(cx, \"Updated 2m ago\")",
+        ],
+        &[
+            "ui::text(",
+            "ui::text_block(",
+            "TextWrap",
+            "ColorRef::Color",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/demo.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, \"@nextjs\")",
+            "decl_text::text_paragraph_break_words(cx, \"The React Framework – created and maintained by @vercel.\")",
+            "decl_text::text_control_readout(cx, \"Joined December 2021\")",
+        ],
+        &[
+            "ui::text(",
+            "ui::text_block(",
+            "TextWrap",
+            "ColorRef::Color",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/positioning.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, side_label)",
+            "decl_text::text_paragraph(cx, \"Positioning is controlled by `side` and `align`.\")",
+        ],
+        &[
+            "ui::text(",
+            "ui::text_block(",
+            "TextWrap",
+            "ColorRef::Color",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/rtl.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph_break_words(cx, \"تحقق من محاذاة HoverCard تحت RTL.\")",
+        ],
+        &["ui::text_block(", "TextWrap", "ColorRef::Color"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/sides.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph_break_words(cx, side_label)",
+        ],
+        &["ui::text_block(", "TextWrap"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/trigger_delays.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, title)",
+            "decl_text::text_paragraph_break_words(cx, desc)",
+            "decl_text::text_control_readout(cx, joined)",
+        ],
+        &[
+            "ui::text(",
+            "ui::text_block(",
+            "TextWrap",
+            "ColorRef::Color",
+        ],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/hover_card/usage.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph_break_words(",
+            "decl_text::text_button_label(cx, \"Hover\")",
+        ],
+        &["ui::raw_text("],
+    );
+}
+
+#[test]
 fn tooltip_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -5256,6 +5733,18 @@ fn tooltip_usage_snippet_keeps_a_standalone_provider_wrapped_example() {
     assert!(
         usage.contains("shadcn::Button::new(\"Hover\").variant(shadcn::ButtonVariant::Outline)"),
         "src/ui/snippets/tooltip/usage.rs should keep the standalone example aligned with the docs-style trigger surface"
+    );
+}
+
+#[test]
+fn tooltip_keyboard_shortcut_text_uses_shared_role() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/tooltip/keyboard_shortcut.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_control_readout(cx, \"Save Changes\")",
+        ],
+        &["cx.text(\"Save Changes\")"],
     );
 }
 
@@ -6026,6 +6515,36 @@ fn selected_tabs_snippets_prefer_builder_preserving_helpers() {
 }
 
 #[test]
+fn tabs_snippet_custom_text_uses_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/tabs/icons.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_button_label(cx, \"Preview\")",
+            "decl_text::text_button_label(cx, \"Code\")",
+        ],
+        &["cx.text(\"Preview\")", "cx.text(\"Code\")"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/tabs/parts.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_button_label(cx, \"Activity\")",
+        ],
+        &["cx.text(\"Activity\")"],
+    );
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/tabs/usage.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_paragraph(cx, \"Make changes to your account here.\")",
+            "decl_text::text_paragraph(cx, \"Change your password here.\")",
+        ],
+        &["ui::text("],
+    );
+}
+
+#[test]
 fn tabs_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/tabs.rs",
@@ -6543,6 +7062,28 @@ fn table_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"API Reference\", api_reference)",
             "DocSection::new(\"Children (Fret)\", children)",
+        ],
+    );
+}
+
+#[test]
+fn table_children_snippet_routes_custom_text_through_shared_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/table/children.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "super::table_cell_text(cx, \"Status \")",
+            "super::table_cell_text(cx, \"Amount \")",
+            "super::table_cell_text(cx, \"(USD)\")",
+            "decl_text::text_paragraph(cx, \"A list of your recent invoices.\")",
+            "decl_text::text_paragraph(cx, \"Use the children helpers when the compact text constructors are too narrow.\")",
+        ],
+        &[
+            "ui::text(\"Status \")",
+            "ui::text(\"Amount \")",
+            "ui::text(\"(USD)\")",
+            "ui::text(\"A list of your recent invoices.\")",
+            "ui::text(\"Use the children helpers when the compact text constructors are too narrow.\")",
         ],
     );
 }
@@ -8179,31 +8720,41 @@ fn selected_combobox_state_rows_prefer_into_ui_element_over_anyelement() {
 }
 
 #[test]
-fn selected_pagination_page_number_helpers_prefer_ui_child_over_host_bound_into_ui_element() {
+fn selected_pagination_page_number_helpers_use_shared_button_label_role() {
     for relative_path in [
         "src/ui/snippets/pagination/compact_builder.rs",
         "src/ui/snippets/pagination/custom_text.rs",
+        "src/ui/snippets/pagination/demo.rs",
         "src/ui/snippets/pagination/extras.rs",
         "src/ui/snippets/pagination/routing.rs",
+        "src/ui/snippets/pagination/rtl.rs",
         "src/ui/snippets/pagination/simple.rs",
         "src/ui/snippets/pagination/usage.rs",
     ] {
         assert_selected_page_helpers_prefer_ui_child(
             relative_path,
-            &["fn page_number(label: &'static str) -> impl UiChild + use<>"],
             &[
-                "fn page_number<H: UiHost>(label: &'static str) -> impl IntoUiElement<H> + use<H>",
-                "fn page_number<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str) -> AnyElement",
+                "use fret_ui::{ElementContext, UiHost};",
+                "declarative::text as decl_text",
+                "fn page_number<H, L>(cx: &mut ElementContext<'_, H>, label: L) -> impl UiChild + use<H, L> where H: UiHost, L: Into<std::sync::Arc<str>>",
+                "decl_text::text_button_label(cx, label)",
+            ],
+            &[
+                "fn page_number(label: &'static str) -> impl UiChild + use<>",
+                "ui::text(label).tabular_nums()",
+                "fret_ui_kit::ui::text(label).tabular_nums()",
+                "cx.text(to_arabic_numerals(",
             ],
         );
     }
 
-    assert_selected_page_helpers_prefer_ui_child(
-        "src/ui/snippets/pagination/demo.rs",
-        &["fn page_number(label: &'static str) -> impl UiChild + use<>"],
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/pagination/extras.rs",
         &[
-            "let page_number = |cx: &mut AppComponentCx<'_>, label: &'static str| {",
-            "fret_ui_kit::ui::text(label).tabular_nums().into_element(cx)",
+            "decl_text::text_paragraph(cx, \"Extras are Fret-specific recipes and regression gates (not part of upstream shadcn PaginationDemo).\")",
+        ],
+        &[
+            "shadcn::raw::typography::muted(\"Extras are Fret-specific recipes and regression gates (not part of upstream shadcn PaginationDemo).\")",
         ],
     );
 }
@@ -8457,6 +9008,35 @@ fn selected_carousel_docs_examples_follow_the_compact_builder_lane() {
         ),
         "src/ui/pages/carousel.rs should explain which examples remain on the upstream docs path compact-builder lane"
     );
+}
+
+#[test]
+fn selected_carousel_status_readouts_use_shared_control_readout_role() {
+    for relative_path in [
+        "src/ui/snippets/carousel/api.rs",
+        "src/ui/snippets/carousel/events.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_stop_on_focus.rs",
+        "src/ui/snippets/carousel/plugin_autoplay_stop_on_last_snap.rs",
+    ] {
+        let normalized = assert_normalized_markers_present(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_control_readout(cx, text)",
+                ".justify_center()",
+            ],
+        );
+        assert!(
+            !normalized.contains("cx.text_props(TextProps{"),
+            "{} should not build status/readout text with ad-hoc TextProps",
+            manifest_path(relative_path).display()
+        );
+        assert!(
+            !normalized.contains("wrap:TextWrap::Word"),
+            "{} should not let fixed Carousel status/readout text wrap under resize",
+            manifest_path(relative_path).display()
+        );
+    }
 }
 
 #[test]
@@ -9420,6 +10000,34 @@ fn toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn toggle_group_snippet_item_text_uses_button_label_role() {
+    for relative_path in [
+        "src/ui/snippets/toggle_group/children.rs",
+        "src/ui/snippets/toggle_group/flex_1_items.rs",
+        "src/ui/snippets/toggle_group/full_width_items.rs",
+        "src/ui/snippets/toggle_group/label.rs",
+        "src/ui/snippets/toggle_group/outline.rs",
+        "src/ui/snippets/toggle_group/rtl.rs",
+        "src/ui/snippets/toggle_group/spacing.rs",
+        "src/ui/snippets/toggle_group/usage.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_button_label(cx,",
+            ],
+            &[
+                "cx.text(",
+                "ui::text(\"List\")",
+                "ui::text(\"Grid\")",
+                "ui::text(\"Cards\")",
+            ],
+        );
+    }
+}
+
+#[test]
 fn toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/toggle_group.rs",
@@ -9749,6 +10357,36 @@ fn selected_toggle_snippets_prefer_builder_preserving_helpers() {
         "src/ui/snippets/toggle/label.rs",
         &["shadcn::toggle("],
         &["shadcn::Toggle::new("],
+    );
+}
+
+#[test]
+fn toggle_snippet_item_text_uses_button_label_role() {
+    for relative_path in [
+        "src/ui/snippets/toggle/children.rs",
+        "src/ui/snippets/toggle/demo.rs",
+        "src/ui/snippets/toggle/disabled.rs",
+        "src/ui/snippets/toggle/label.rs",
+        "src/ui/snippets/toggle/outline.rs",
+        "src/ui/snippets/toggle/rtl.rs",
+        "src/ui/snippets/toggle/size.rs",
+        "src/ui/snippets/toggle/usage.rs",
+        "src/ui/snippets/toggle/with_text.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_button_label(cx,",
+            ],
+            &["ui::text("],
+        );
+    }
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/toggle/label.rs",
+        &["decl_text::text_control_readout(cx, format!(\"Pressed: {pressed_now}\"))"],
+        &["shadcn::raw::typography::muted(format!(\"Pressed: {pressed_now}\"))"],
     );
 }
 
@@ -10165,6 +10803,34 @@ fn accordion_usage_snippet_keeps_the_composable_advanced_seam() {
 }
 
 #[test]
+fn accordion_snippet_trigger_text_uses_button_label_role() {
+    for relative_path in [
+        "src/ui/snippets/accordion/basic.rs",
+        "src/ui/snippets/accordion/borders.rs",
+        "src/ui/snippets/accordion/card.rs",
+        "src/ui/snippets/accordion/demo.rs",
+        "src/ui/snippets/accordion/disabled.rs",
+        "src/ui/snippets/accordion/focusable_disabled.rs",
+        "src/ui/snippets/accordion/multiple.rs",
+        "src/ui/snippets/accordion/rtl.rs",
+        "src/ui/snippets/accordion/showcase.rs",
+        "src/ui/snippets/accordion/usage.rs",
+    ] {
+        assert_selected_generic_helpers_prefer_into_ui_element(
+            relative_path,
+            &[
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "decl_text::text_button_label(cx,",
+            ],
+            &[
+                "shadcn::AccordionTrigger::new(vec![cx.text(",
+                "shadcn::AccordionTriggerPart::new(vec![cx.text(",
+            ],
+        );
+    }
+}
+
+#[test]
 fn accordion_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/accordion.rs",
@@ -10230,10 +10896,11 @@ fn selected_drawer_snippet_helpers_prefer_into_ui_element_over_anyelement() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/snippets/drawer/scrollable_content.rs",
         &[
-            "fn paragraph_block<H: UiHost>(cx: &mut ElementContext<'_, H>, prefix: &'static str, rows: usize,) -> impl IntoUiElement<H> + use<H>",
+            "fn scroll_rows<H: UiHost>(cx: &mut ElementContext<'_, H>, prefix: &'static str, rows: usize,) -> impl IntoUiElement<H> + use<H>",
         ],
         &[
-            "fn paragraph_block<H: UiHost>(cx: &mut ElementContext<'_, H>, prefix: &'static str, rows: usize,) -> AnyElement",
+            "fn paragraph_block<H: UiHost>(cx: &mut ElementContext<'_, H>, prefix: &'static str, rows: usize,)",
+            "fn scroll_rows<H: UiHost>(cx: &mut ElementContext<'_, H>, prefix: &'static str, rows: usize,) -> AnyElement",
         ],
     );
 }
@@ -10504,6 +11171,53 @@ fn shadcn_extras_page_uses_typed_doc_sections_for_app_facing_snippets() {
 }
 
 #[test]
+fn shadcn_extras_announcement_title_keeps_composable_title_surface() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/shadcn_extras/announcement.rs",
+        &[
+            "shadcn::raw::extras::AnnouncementTitle::new([cx.text(\"Shadcn Extras landed in Fret\")])",
+        ],
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_button_label(",
+            "decl_text::text_section_chrome_label(",
+        ],
+    );
+}
+
+#[test]
+fn shadcn_extras_avatar_stack_direction_labels_use_shared_chrome_text_role() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/shadcn_extras/avatar_stack.rs",
+        &[
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_section_chrome_label(cx, \"LTR\")",
+            "decl_text::text_section_chrome_label(cx, \"RTL\")",
+        ],
+        &[
+            "ui::text(\"LTR\").font_medium()",
+            "ui::text(\"RTL\").font_medium()",
+        ],
+    );
+}
+
+#[test]
+fn shadcn_extras_kanban_card_titles_use_shared_button_label_role() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/shadcn_extras/kanban.rs",
+        &[
+            "use fret_ui_kit::{declarative::text as decl_text, ui};",
+            "let title = decl_text::text_button_label(cx, item.name.clone());",
+        ],
+        &[
+            "ui::text(item.name.clone())",
+            ".font_medium()",
+            ".truncate()",
+        ],
+    );
+}
+
+#[test]
 fn gallery_sidebar_nav_scroll_is_explicit_flex_fill_slot() {
     let source = read("src/ui/nav.rs");
     let canonical = canonicalize_rust_fragment(&source);
@@ -10738,6 +11452,31 @@ fn selected_item_snippet_helpers_prefer_into_ui_element_over_anyelement() {
             "fn item_icon(cx: &mut AppComponentCx<'_>, variant: shadcn::ItemVariant, icon_id: &'static str, title: &'static str, description: Option<&'static str>, actions: Vec<AnyElement>, test_id: &'static str,) -> AnyElement",
             "fn item_avatar(cx: &mut AppComponentCx<'_>, username: &'static str, message: &'static str, initials: &'static str, test_id: Arc<str>, add_action_test_id: Arc<str>,) -> AnyElement",
             "fn item_team(cx: &mut AppComponentCx<'_>, test_id: &'static str, action_test_id: &'static str) -> AnyElement",
+        ],
+    );
+}
+
+#[test]
+fn item_snippets_route_slotted_copy_through_shared_text_roles() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/item/dropdown.rs",
+        &[
+            "use fret_ui_kit::{IntoUiElement, declarative::text as decl_text, ui};",
+            "decl_text::text_button_label(cx, \"Select\")",
+        ],
+        &["ui::text(\"Select\").text_sm()"],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/item/gallery.rs",
+        &[
+            "declarative::{style as decl_style, text as decl_text}",
+            "shadcn::ItemHeader::new([decl_text::text_section_chrome_label(cx, \"Your download has started.\")])",
+            "shadcn::ItemContent::new([decl_text::text_control_readout(cx, number_text)])",
+        ],
+        &[
+            "ui::text(\"Your download has started.\")",
+            "ui::text(number_text)",
         ],
     );
 }

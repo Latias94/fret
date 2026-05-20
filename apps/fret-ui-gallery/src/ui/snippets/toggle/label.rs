@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("label.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::primitives::control_registry::ControlId;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -30,7 +31,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     ui::children![
                         cx;
                         shadcn::raw::icon::icon(cx, IconId::new_static("lucide.bookmark")),
-                        ui::text("Bookmark")
+                        decl_text::text_button_label(cx, "Bookmark")
                     ]
                 })
                 .variant(shadcn::ToggleVariant::Outline)
@@ -42,8 +43,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             ])
             .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
             .into_element(cx),
-            shadcn::raw::typography::muted(format!("Pressed: {pressed_now}"))
-                .into_element(cx)
+            decl_text::text_control_readout(cx, format!("Pressed: {pressed_now}"))
                 .test_id("ui-gallery-toggle-label-state"),
         ]
     })

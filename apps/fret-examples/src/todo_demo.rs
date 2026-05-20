@@ -6,17 +6,17 @@ use fret::env::{
     ViewportQueryHysteresis, primary_pointer_can_hover, viewport_tailwind, viewport_width_at_least,
 };
 use fret::icons::{IconId, icon};
-use fret::style::{ChromeRefinement, ColorRef, Radius, Space, Theme, ThemeSnapshot};
+use fret::style::{ChromeRefinement, ColorRef, Radius, Space, ThemeSnapshot};
 use fret_core::scene::DashPatternV1;
 use fret_core::{
     AttributedText, Color, Corners, DecorationLineStyle, Px, StrikethroughStyle, TextPaintStyle,
     TextSpan,
 };
-use fret_ui::Invalidation;
 use fret_ui::element::AnyElement;
-use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::{WidgetStateProperty, WidgetStates, typography};
+use fret_ui_kit::declarative::{ElementContextThemeExt as _, text as decl_text};
+use fret_ui_kit::{WidgetStateProperty, WidgetStates};
 
 mod act {
     fret::actions!([
@@ -49,6 +49,50 @@ const TODO_WINDOW_RESIZE_INCREMENTS: (f64, f64) = (20.0, 20.0);
 const TODO_COMPACT_WIDTH: Px = Px(560.0);
 const TODO_COMPACT_HEIGHT: Px = Px(640.0);
 const TODO_ROOMY_HEIGHT: Px = Px(760.0);
+
+fn todo_readout_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn todo_chrome_title_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_chrome_title(cx, text)
+}
+
+fn todo_compact_paragraph_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_compact_paragraph(cx, text)
+}
+
+fn todo_filter_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_button_label(cx, text)
+}
+
+fn todo_row_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+    foreground: Color,
+) -> AnyElement {
+    decl_text::text_list_row_label(cx, text).inherit_foreground(foreground)
+}
+
+fn todo_attributed_row_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    rich: AttributedText,
+    foreground: Color,
+) -> AnyElement {
+    decl_text::text_list_row_label_attributed(cx, rich).inherit_foreground(foreground)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct TodoResponsiveLayout {
@@ -322,12 +366,10 @@ impl View for TodoDemoView {
         .shadow_sm();
 
         let status_line = if total_count == 0 {
-            ui::text("Add a task to get started")
-                .text_sm()
-                .text_color(ColorRef::Color(muted_foreground))
-                .into_element_in(cx)
+            todo_readout_text(cx.elements(), "Add a task to get started")
         } else if active_count == 0 {
             ui::h_flex(|cx| {
+                let completed_text = todo_readout_text(cx, "All tasks completed");
                 ui::children![
                     cx;
                     icon::icon_with(
@@ -336,10 +378,7 @@ impl View for TodoDemoView {
                         Some(Px(14.0)),
                         Some(ColorRef::Color(success)),
                     ),
-                    ui::text("All tasks completed")
-                        .text_sm()
-                        .text_color(ColorRef::Color(muted_foreground))
-                        .into_element(cx),
+                    completed_text,
                 ]
             })
             .gap(Space::N1)
@@ -347,16 +386,14 @@ impl View for TodoDemoView {
             .into_element_in(cx)
         } else {
             let task_label = if active_count == 1 { "task" } else { "tasks" };
-            ui::text(format!("{active_count} {task_label} left"))
-                .text_sm()
-                .text_color(ColorRef::Color(muted_foreground))
-                .into_element_in(cx)
+            todo_readout_text(cx.elements(), format!("{active_count} {task_label} left"))
         };
 
         let title_block = ui::v_flex(|cx| {
+            let title = todo_chrome_title_text(cx, "My tasks");
             ui::children![
                 cx;
-                ui::text("My tasks").text_base().font_semibold(),
+                title,
                 status_line,
             ]
         })
@@ -374,16 +411,12 @@ impl View for TodoDemoView {
                 ui::children![
                     cx;
                     ui::h_flex(|cx| {
+                        let progress_label = todo_readout_text(cx, "Progress");
+                        let progress_value = todo_readout_text(cx, format!("{:.0}%", progress_pct));
                         ui::children![
                             cx;
-                            ui::text("Progress")
-                                .text_xs()
-                                .text_color(ColorRef::Color(muted_foreground))
-                                .into_element(cx),
-                            ui::text(format!("{:.0}%", progress_pct))
-                                .text_xs()
-                                .text_color(ColorRef::Color(muted_foreground))
-                                .into_element(cx),
+                            progress_label,
+                            progress_value,
                         ]
                     })
                     .items_center()
@@ -471,12 +504,11 @@ impl View for TodoDemoView {
                 return ui::children![
                     cx;
                     ui::v_flex(|cx| {
+                        let empty_text = todo_compact_paragraph_text(cx, empty_label);
                         ui::children![
                             cx;
                             empty_icon,
-                            ui::text(empty_label)
-                                .text_sm()
-                                .text_color(ColorRef::Color(muted_foreground)),
+                            empty_text,
                         ]
                     })
                     .gap(Space::N3)
@@ -714,18 +746,16 @@ fn filter_group_item<'a, Cx>(
 where
     Cx: fret::app::ElementContextAccess<'a, App>,
 {
-    shadcn::ToggleGroupItem::new(
-        filter.value(),
-        [ui::text(filter.label()).into_element_in(cx)],
-    )
-    .a11y_label(format!("Show {} tasks", filter.label().to_lowercase()))
-    .test_id(test_id)
-    .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-    .refine_layout(
-        fret_ui_kit::LayoutRefinement::default()
-            .h_px(Px(28.0))
-            .min_h(Px(28.0)),
-    )
+    let label = todo_filter_label_text(cx.elements(), filter.label());
+    shadcn::ToggleGroupItem::new(filter.value(), [label])
+        .a11y_label(format!("Show {} tasks", filter.label().to_lowercase()))
+        .test_id(test_id)
+        .refine_style(ChromeRefinement::default().rounded(Radius::Full))
+        .refine_layout(
+            fret_ui_kit::LayoutRefinement::default()
+                .h_px(Px(28.0))
+                .min_h(Px(28.0)),
+        )
 }
 
 fn todo_row<'a, Cx>(
@@ -793,24 +823,9 @@ where
 
         let text = if row_done {
             let rich = rich_strikethrough(&row_text, muted_foreground);
-            let style = typography::TypographyPreset::control_ui(typography::UiTextSize::Sm)
-                .resolve(&theme);
-            ui::rich_text(rich)
-                .text_style(style)
-                .text_color(ColorRef::Color(muted_foreground))
-                .truncate()
-                .flex_1()
-                .min_w_0()
-                .into_element(cx)
+            todo_attributed_row_label_text(cx, rich, muted_foreground)
         } else {
-            ui::text(row_text.clone())
-                .truncate()
-                .text_sm()
-                .font_medium()
-                .flex_1()
-                .min_w_0()
-                .text_color(ColorRef::Color(foreground))
-                .into_element(cx)
+            todo_row_label_text(cx, row_text.clone(), foreground)
         };
 
         let leading = ui::h_flex(|cx| ui::children![cx; toggle, text])

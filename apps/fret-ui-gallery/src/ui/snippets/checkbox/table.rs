@@ -1,14 +1,24 @@
 pub const SOURCE: &str = include_str!("table.rs");
 
 // region: example
+use std::sync::Arc;
+
 use fret::app::AppRenderActionsExt as _;
 use fret::{AppComponentCx, UiChild};
+use fret_ui::element::AnyElement;
 use fret_ui_headless::checked_state::CheckedState;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 mod act {
     fret::actions!([ToggleAllRows = "ui-gallery.checkbox.table.toggle_all_rows.v1"]);
+}
+
+fn table_cell_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    fret_ui_kit::declarative::text::text_table_cell(cx, text)
 }
 
 fn table_row<H: UiHost>(
@@ -25,8 +35,8 @@ fn table_row<H: UiHost>(
                     .a11y_label(format!("Select {id}"))
                     .test_id(test_id),
             ),
-            shadcn::table_cell(ui::text(id)),
-            shadcn::table_cell(ui::text(role)),
+            shadcn::table_cell(table_cell_text(cx, id)),
+            shadcn::table_cell(table_cell_text(cx, role)),
         ]
     })
     .border_bottom(true)

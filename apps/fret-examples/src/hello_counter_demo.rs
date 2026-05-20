@@ -11,7 +11,9 @@ use fret::{
     style::{ChromeRefinement, ColorRef, Radius, Space, ThemeSnapshot},
 };
 use fret_core::Corners;
+use fret_ui::element::AnyElement;
 use fret_ui_kit::IntoUiElementInExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 
 mod act {
     fret::actions!([
@@ -33,6 +35,14 @@ const TEST_ID_RESET: &str = "hello-counter.reset";
 const TEST_ID_STEP_1: &str = "hello-counter.step.1";
 const TEST_ID_STEP_5: &str = "hello-counter.step.5";
 const TEST_ID_STEP_10: &str = "hello-counter.step.10";
+
+fn hello_counter_status_text(cx: &mut AppUi<'_, '_>, text: impl Into<Arc<str>>) -> AnyElement {
+    decl_text::text_control_readout(cx.elements(), text)
+}
+
+fn hello_counter_paragraph_text(cx: &mut AppUi<'_, '_>, text: impl Into<Arc<str>>) -> AnyElement {
+    decl_text::text_paragraph(cx.elements(), text)
+}
 
 fn install_demo_theme(app: &mut App) {
     shadcn::themes::apply_shadcn_new_york(
@@ -166,11 +176,7 @@ impl View for HelloCounterView {
         } else {
             "Status: decreasing"
         });
-        let status_line = ui::text(status_text)
-            .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-            .text_align(fret_core::TextAlign::Center)
-            .nowrap()
-            .into_element_in(cx);
+        let status_line = hello_counter_status_text(cx, status_text);
 
         let step_badge =
             shadcn::Badge::new(format!("Step: {effective_step}")).variant(if step_valid {
@@ -179,14 +185,14 @@ impl View for HelloCounterView {
                 shadcn::BadgeVariant::Destructive
             });
 
-        let step_help = ui::text_block(if step_valid {
-            "Edit step, then press Enter to increment."
-        } else {
-            "Step must be a positive integer (using 1)."
-        })
-        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-        .text_align(fret_core::TextAlign::Center)
-        .into_element_in(cx);
+        let step_help = hello_counter_paragraph_text(
+            cx,
+            if step_valid {
+                "Edit step, then press Enter to increment."
+            } else {
+                "Step must be a positive integer (using 1)."
+            },
+        );
 
         let step_input = shadcn::Input::new(&step_state)
             .placeholder("Step (e.g. 1)")

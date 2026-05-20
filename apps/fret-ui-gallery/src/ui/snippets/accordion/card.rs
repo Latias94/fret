@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("card.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -10,7 +11,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         [
             shadcn::AccordionItem::new(
                 "plans",
-                shadcn::AccordionTrigger::new(vec![cx.text("What subscription plans do you offer?")]),
+                shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(
+                    cx,
+                    "What subscription plans do you offer?",
+                )]),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
                     shadcn::raw::typography::p(
@@ -20,7 +24,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             ),
             shadcn::AccordionItem::new(
                 "billing",
-                shadcn::AccordionTrigger::new(vec![cx.text("How does billing work?")]),
+                shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(
+                    cx,
+                    "How does billing work?",
+                )]),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
                     shadcn::raw::typography::p(

@@ -12,6 +12,7 @@
 
 use std::sync::Arc;
 
+use fret::app::AppRenderContext;
 use fret::{FretApp, advanced::prelude::*, component::prelude::*};
 use fret_core::scene::{
     BackdropWarpFieldV2, BackdropWarpKindV1, BackdropWarpV1, BackdropWarpV2,
@@ -23,11 +24,12 @@ use fret_core::{Color, Corners, Edges, EffectId, ImageColorSpace, Px};
 use fret_render::RendererCapabilities;
 use fret_ui::Invalidation;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, EffectLayerProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PositionStyle, RowProps, SizeStyle, SpacerProps, SpacingLength, TextProps,
+    AnyElement, ContainerProps, CrossAlign, EffectLayerProps, InsetStyle, LayoutStyle, Length,
+    MainAlign, Overflow, PositionStyle, RowProps, SizeStyle, SpacerProps, SpacingLength,
 };
 use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use fret_ui_kit::custom_effects::{CustomEffectProgramV2, CustomEffectProgramV3};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{IntoUiElement, Space};
 use fret_ui_shadcn::facade as shadcn;
@@ -188,6 +190,21 @@ fn rainbow_stripe(t: f32, a: f32) -> Color {
     Color { r, g, b, a }
 }
 
+fn liquid_glass_overlay_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_section_chrome_label(cx, text).inherit_foreground(srgb(255, 255, 255, 0.92))
+}
+
+fn liquid_glass_card_title_text<'a, Cx>(cx: &mut Cx, text: impl Into<Arc<str>>) -> AnyElement
+where
+    Cx: AppRenderContext<'a>,
+{
+    decl_text::text_section_chrome_label(cx.elements(), text)
+        .inherit_foreground(srgb(255, 255, 255, 0.92))
+}
+
 fn watch_first_f32(cx: &mut AppComponentCx<'_>, model: &LocalState<Vec<f32>>, default: f32) -> f32 {
     model.layout_read_ref_in(cx, |v| v.first().copied().unwrap_or(default))
 }
@@ -310,16 +327,7 @@ fn lens_panel<H: UiHost>(
             label_layout.inset.left = Some(Px(12.0)).into();
             label_layout.inset.top = Some(Px(12.0)).into();
 
-            let title = cx.text_props(TextProps {
-                layout: Default::default(),
-                text: label.clone(),
-                style: None,
-                color: Some(srgb(255, 255, 255, 0.92)),
-                align: fret_core::TextAlign::Start,
-                wrap: fret_core::TextWrap::None,
-                overflow: fret_core::TextOverflow::Clip,
-                ink_overflow: Default::default(),
-            });
+            let title = liquid_glass_overlay_text(cx, label.clone());
 
             let pill = cx.container(
                 ContainerProps {
@@ -1185,16 +1193,7 @@ fn view(cx: &mut ElementContext<'_, KernelApp>, st: &mut LiquidGlassState) -> Vi
                                         layout.size.width = Length::Fill;
                                         layout.size.height = Length::Fill;
 
-                                        let title = cx.text_props(TextProps {
-                                            layout: Default::default(),
-                                            text: Arc::from(title),
-                                            style: None,
-                                            color: Some(srgb(255, 255, 255, 0.92)),
-                                            align: fret_core::TextAlign::Start,
-                                            wrap: fret_core::TextWrap::None,
-                                            overflow: fret_core::TextOverflow::Clip,
-                                            ink_overflow: Default::default(),
-                                        });
+                                        let title = liquid_glass_card_title_text(cx, title);
 
                                         cx.container(
                                             ContainerProps {

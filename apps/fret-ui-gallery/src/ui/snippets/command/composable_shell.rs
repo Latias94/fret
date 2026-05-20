@@ -6,6 +6,7 @@ use std::sync::Arc;
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui::Invalidation;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -79,7 +80,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
         vec![
             shell,
-            cx.text(format!("Last action: {last_action_value}"))
+            decl_text::text_control_readout(cx, format!("Last action: {last_action_value}"))
                 .test_id("ui-gallery-command-composable-shell-last-action"),
         ]
     })

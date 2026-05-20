@@ -707,6 +707,16 @@ impl ElementRuntime {
     }
 
     #[cfg(feature = "diagnostics")]
+    pub fn effective_opacity_for_element(
+        &self,
+        window: AppWindowId,
+        element: GlobalElementId,
+    ) -> Option<f32> {
+        let state = self.windows.get(&window)?;
+        state.current_effective_opacity(element)
+    }
+
+    #[cfg(feature = "diagnostics")]
     pub fn interaction_bounds_for_element(
         &self,
         window: AppWindowId,
@@ -809,6 +819,8 @@ pub struct WindowElementState {
     cur_bounds: HashMap<GlobalElementId, Rect>,
     prev_visual_bounds: HashMap<GlobalElementId, Rect>,
     cur_visual_bounds: HashMap<GlobalElementId, Rect>,
+    prev_effective_opacity: HashMap<GlobalElementId, f32>,
+    cur_effective_opacity: HashMap<GlobalElementId, f32>,
     committed_viewport_bounds: Rect,
     committed_scale_factor: f32,
     committed_color_scheme: Option<ColorScheme>,
@@ -1083,6 +1095,14 @@ impl WindowElementState {
                 .extend(self.cur_visual_bounds.drain());
         }
         self.cur_visual_bounds.clear();
+
+        if !self.cur_effective_opacity.is_empty() {
+            self.prev_effective_opacity
+                .reserve(self.cur_effective_opacity.len());
+            self.prev_effective_opacity
+                .extend(self.cur_effective_opacity.drain());
+        }
+        self.cur_effective_opacity.clear();
 
         self.focused_element = None;
         self.authoring_identities_current_frame.clear();
@@ -1932,6 +1952,10 @@ impl WindowElementState {
 
     pub(crate) fn retain_nodes(&mut self, f: impl FnMut(&GlobalElementId, &mut NodeEntry) -> bool) {
         self.nodes.retain(f);
+        self.prev_effective_opacity
+            .retain(|element, _| self.nodes.contains_key(element));
+        self.cur_effective_opacity
+            .retain(|element, _| self.nodes.contains_key(element));
         if let Some(selection) = self.active_text_selection
             && !self.nodes.contains_key(&selection.element)
         {
@@ -2142,6 +2166,19 @@ impl WindowElementState {
             .get(&element)
             .copied()
             .or_else(|| self.prev_visual_bounds.get(&element).copied())
+    }
+
+    pub(crate) fn record_effective_opacity(&mut self, element: GlobalElementId, opacity: f32) {
+        let opacity = if opacity.is_finite() { opacity } else { 1.0 };
+        self.cur_effective_opacity
+            .insert(element, opacity.clamp(0.0, 1.0));
+    }
+
+    pub(crate) fn current_effective_opacity(&self, element: GlobalElementId) -> Option<f32> {
+        self.cur_effective_opacity
+            .get(&element)
+            .copied()
+            .or_else(|| self.prev_effective_opacity.get(&element).copied())
     }
 
     pub(crate) fn committed_viewport_bounds(&self) -> Rect {

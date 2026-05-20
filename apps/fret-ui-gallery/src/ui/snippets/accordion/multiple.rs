@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("multiple.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -10,8 +11,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         [
             shadcn::AccordionItem::new(
                 "notifications",
-                shadcn::AccordionTrigger::new(vec![cx.text("Notifications")])
-                    .test_id("ui-gallery-accordion-multiple-trigger-notifications"),
+                shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(
+                    cx,
+                    "Notifications",
+                )])
+                .test_id("ui-gallery-accordion-multiple-trigger-notifications"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
                     shadcn::raw::typography::p("Configure email, push, and in-app notifications.")
@@ -20,7 +24,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             ),
             shadcn::AccordionItem::new(
                 "security",
-                shadcn::AccordionTrigger::new(vec![cx.text("Security")])
+                shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(cx, "Security")])
                     .test_id("ui-gallery-accordion-multiple-trigger-security"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;

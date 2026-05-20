@@ -3,7 +3,9 @@ use std::{any::Any, sync::Arc};
 use fret_core::{Color, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_icons::IconId;
 use fret_runtime::{ActionId, CommandId, Model};
-use fret_ui::element::{AnyElement, CrossAlign, FlexProps, Length, MainAlign, PressableProps};
+use fret_ui::element::{
+    AnyElement, CrossAlign, ElementKind, FlexProps, Length, MainAlign, PressableProps,
+};
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -184,14 +186,16 @@ fn apply_toggle_inherited_style(
     mut element: AnyElement,
     fg: Color,
     default_icon_color: Color,
+    role_scope_active: bool,
 ) -> AnyElement {
+    let role_scope_active = role_scope_active || element.inherited_text_style.is_some();
     match &mut element.kind {
-        fret_ui::element::ElementKind::Text(props) => {
-            props.color.get_or_insert(fg);
+        ElementKind::Text(props) => {
+            if !role_scope_active {
+                props.color.get_or_insert(fg);
+            }
         }
-        fret_ui::element::ElementKind::SvgIcon(fret_ui::element::SvgIconProps {
-            color, ..
-        }) => {
+        ElementKind::SvgIcon(fret_ui::element::SvgIconProps { color, .. }) => {
             // Heuristic:
             // - Older callsites may build an `SvgIcon` with the default white color.
             // - `declarative::icon::icon(...)` built outside a `currentColor` provider resolves
@@ -210,9 +214,7 @@ fn apply_toggle_inherited_style(
                 *color = fg;
             }
         }
-        fret_ui::element::ElementKind::Spinner(fret_ui::element::SpinnerProps {
-            color, ..
-        }) => {
+        ElementKind::Spinner(fret_ui::element::SpinnerProps { color, .. }) => {
             color.get_or_insert(fg);
         }
         _ => {}
@@ -221,7 +223,7 @@ fn apply_toggle_inherited_style(
     element.children = element
         .children
         .into_iter()
-        .map(|child| apply_toggle_inherited_style(child, fg, default_icon_color))
+        .map(|child| apply_toggle_inherited_style(child, fg, default_icon_color, role_scope_active))
         .collect();
     element
 }
@@ -833,7 +835,7 @@ impl Toggle {
                     let styled_children: Vec<AnyElement> = children
                         .into_iter()
                         .map(|child| {
-                            apply_toggle_inherited_style(child, fg_color, default_icon_color)
+                            apply_toggle_inherited_style(child, fg_color, default_icon_color, false)
                         })
                         .collect();
 
@@ -934,6 +936,8 @@ mod tests {
         WindowCommandGatingService, WindowCommandGatingSnapshot,
     };
     use fret_ui::UiTree;
+    use fret_ui::element::{AnyElement, ElementKind, Length};
+    use fret_ui_kit::declarative::text as decl_text;
     use std::collections::HashMap;
     use std::time::Duration;
 
@@ -1018,6 +1022,35 @@ mod tests {
         ui.request_semantics_snapshot();
         ui.layout_all(app, services, bounds, 1.0);
         root
+    }
+
+    fn bounds_320x240() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        )
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
     }
 
     #[test]
@@ -1237,6 +1270,60 @@ mod tests {
         assert!(
             labels.contains(&"Pinned"),
             "expected second landed child text in {labels:?}"
+        );
+    }
+
+    #[test]
+    fn toggle_children_apply_foreground_to_bare_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds_320x240(), "test", |cx| {
+                Toggle::uncontrolled(false)
+                    .a11y_label("Toggle bookmark")
+                    .children([cx.text("Bookmark")])
+                    .into_element(cx)
+            });
+
+        let text = find_text_element(&element, "Bookmark").expect("expected toggle child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(
+            props.color.is_some(),
+            "expected bare toggle text child to receive Toggle foreground"
+        );
+    }
+
+    #[test]
+    fn toggle_children_preserve_shared_button_label_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds_320x240(), "test", |cx| {
+                Toggle::uncontrolled(false)
+                    .a11y_label("Toggle bookmark")
+                    .children([decl_text::text_button_label(cx, "Bookmark")])
+                    .into_element(cx)
+            });
+
+        let text =
+            find_text_element(&element, "Bookmark").expect("expected toggle role child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert!(text.inherited_text_style.is_some());
+        assert!(
+            find_first_inherited_foreground_node(&element).is_some(),
+            "expected Toggle foreground to remain inherited through the content root"
         );
     }
 

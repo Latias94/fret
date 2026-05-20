@@ -1,28 +1,48 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "ui-gallery-workspace-tabstrip-overflow-select-command",
-    "tags": ["ui_gallery", "workspace_tabstrip", "overflow"],
+    "name": "UI gallery: workspace tabstrip overflow selects command tab",
+    "tags": ["ui_gallery", "workspace", "workspace_shell", "workspace_tabstrip", "overflow", "gate"],
     "env_defaults": {
-      "FRET_UI_GALLERY_DIAG_PROFILE": "workspace_shell"
-    }
+      "FRET_UI_GALLERY_DIAG_PROFILE": "workspace_shell",
+      "FRET_UI_GALLERY_START_PAGE": "overlay"
+    },
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Boots UI Gallery with the workspace_shell diag profile so the workspace tabstrip is visible.",
+      "Shrinks the window to force tabstrip overflow.",
+      "Selects the hidden Command tab through the overflow menu.",
+      "Asserts workspace tabstrip diagnostics report overflow/visibility and the selected tab/page state updates."
+    ]
   },
   "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 900.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 20 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-workspace-tabstrip" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
-    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 720.0 },
-    { "type": "wait_frames", "n": 20 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-workspace-tabstrip.overflow_button" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "workspace_tab_strip_active_overflow_is",
+        "pane_id": "ui-gallery-main-pane",
+        "overflow": true
       },
       "timeout_frames": 240
     },
@@ -57,6 +77,28 @@
         "selected": true
       },
       "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "workspace_tab_strip_active_visible_is",
+        "pane_id": "ui-gallery-main-pane",
+        "visible": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/selected_page",
+        "value": "command"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-workspace-tabstrip-overflow-select-command"
     }
   ]
 }

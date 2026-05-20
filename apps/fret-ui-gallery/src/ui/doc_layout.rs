@@ -191,7 +191,11 @@ fn render_doc_page_raw(
     ui::v_flex(move |cx| {
         let mut out: Vec<AnyElement> = Vec::with_capacity(sections.len() + 1);
         if let Some(intro) = intro {
-            out.push(muted_full_width(cx, intro).into_element(cx));
+            out.push(
+                muted_full_width(cx, intro)
+                    .into_element(cx)
+                    .test_id("ui-gallery-doc-page-intro"),
+            );
         }
         out.extend(
             sections
@@ -411,6 +415,7 @@ where
         layout: {
             let mut layout = fret_ui::element::LayoutStyle::default();
             layout.size.width = fret_ui::element::Length::Fill;
+            layout.size.min_width = Some(fret_ui::element::Length::Px(Px(0.0)));
             layout
         },
         text: text.into(),
@@ -801,7 +806,7 @@ fn slugify_for_test_id(input: &str) -> String {
 mod tests {
     use super::*;
     use fret_core::{AppWindowId, Point, Rect, Size, TextOverflow, TextWrap};
-    use fret_ui::element::ElementKind;
+    use fret_ui::element::{ElementKind, Length};
     use fret_ui::elements;
 
     #[test]
@@ -870,6 +875,29 @@ mod tests {
             el.inherited_foreground,
             Some(fret_ui_kit::typography::muted_foreground_color(theme))
         );
+    }
+
+    #[test]
+    fn doc_text_helpers_keep_fill_width_min_w_zero() {
+        let window = AppWindowId::default();
+        let mut app = fret_app::App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let muted = muted_full_width(cx, "Long wrapping docs intro").into_element(cx);
+            let title = section_title(cx, "Section").into_element(cx);
+
+            for element in [muted, title] {
+                let ElementKind::Text(props) = &element.kind else {
+                    panic!("expected doc text helper to return a text element");
+                };
+                assert_eq!(props.layout.size.width, Length::Fill);
+                assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            }
+        });
     }
 }
 
@@ -1042,6 +1070,7 @@ fn section_title(cx: &mut AppComponentCx<'_>, title: &'static str) -> impl UiChi
         layout: {
             let mut layout = fret_ui::element::LayoutStyle::default();
             layout.size.width = fret_ui::element::Length::Fill;
+            layout.size.min_width = Some(fret_ui::element::Length::Px(Px(0.0)));
             layout
         },
         text: Arc::from(title),

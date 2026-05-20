@@ -2503,6 +2503,17 @@ pub enum UiPredicateV1 {
     VisibleInWindow {
         target: UiSelectorV1,
     },
+    /// True when the target element's effective paint opacity approximately equals `opacity`.
+    ///
+    /// This reads the ElementRuntime paint-opacity stack after inherited `Opacity` wrappers are
+    /// applied, so scripts can gate paint-only selected/hidden affordances that remain present in
+    /// semantics and layout.
+    ElementEffectiveOpacityApproxEq {
+        target: UiSelectorV1,
+        opacity: f32,
+        #[serde(default)]
+        eps: f32,
+    },
     BoundsWithinWindow {
         target: UiSelectorV1,
         #[serde(default)]
@@ -2756,6 +2767,24 @@ pub enum UiPredicateV1 {
         offset_changed: Option<bool>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         upgraded_to_layout_bindings_min: Option<u64>,
+    },
+    /// True when recent debug snapshots contain a frame whose hit-test-only paint-cache replay
+    /// allowance counter is at least `min`.
+    ///
+    /// This is a mechanism-level predicate for self-drawn hit-test/cache routing. It proves that a
+    /// `HitTestOnly` invalidation reached paint-cache replay, rather than merely moving the pointer
+    /// over a cached visual surface.
+    PaintCacheHitTestOnlyReplayAllowedGe {
+        min: u64,
+    },
+    /// True when recent debug snapshots contain no frame whose hit-test-only paint-cache replay
+    /// key-mismatch rejection counter exceeds `max`.
+    ///
+    /// Stable geometry probes should keep this at zero: if the cache key changes while the script
+    /// is only exercising hit-test invalidation, paint-cache replay should be rejected and the
+    /// probe becomes a layout/paint invalidation regression instead of a hit-test-only path.
+    PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe {
+        max: u64,
     },
     /// True when `debug.input_arbitration.pointer_capture_active == active`.
     ///
@@ -4581,6 +4610,35 @@ mod tests {
     }
 
     #[test]
+    fn predicate_element_effective_opacity_approx_eq_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::ElementEffectiveOpacityApproxEq {
+            target: UiSelectorV1::TestId {
+                id: "command-item-alpha.checkmark".to_string(),
+                root_z_index: None,
+            },
+            opacity: 1.0,
+            eps: 0.125,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "element_effective_opacity_approx_eq",
+                "target": { "kind": "test_id", "id": "command-item-alpha.checkmark" },
+                "opacity": 1.0,
+                "eps": 0.125,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::ElementEffectiveOpacityApproxEq { .. }
+        ));
+    }
+
+    #[test]
     fn predicate_disabled_is_serializes_and_deserializes() {
         let value = serde_json::to_value(UiPredicateV1::DisabledIs {
             target: UiSelectorV1::TestId {
@@ -5373,6 +5431,42 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::ScrollHandleChangesMatchingGe { min: 1, .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_paint_cache_hit_test_only_replay_counters_serialize() {
+        let allowed =
+            serde_json::to_value(UiPredicateV1::PaintCacheHitTestOnlyReplayAllowedGe { min: 1 })
+                .unwrap();
+        assert_eq!(
+            allowed,
+            serde_json::json!({
+                "kind": "paint_cache_hit_test_only_replay_allowed_ge",
+                "min": 1,
+            })
+        );
+        let roundtrip: UiPredicateV1 = serde_json::from_value(allowed).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::PaintCacheHitTestOnlyReplayAllowedGe { min: 1 }
+        ));
+
+        let rejected = serde_json::to_value(
+            UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { max: 0 },
+        )
+        .unwrap();
+        assert_eq!(
+            rejected,
+            serde_json::json!({
+                "kind": "paint_cache_hit_test_only_replay_rejected_key_mismatch_le",
+                "max": 0,
+            })
+        );
+        let roundtrip: UiPredicateV1 = serde_json::from_value(rejected).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { max: 0 }
         ));
     }
 

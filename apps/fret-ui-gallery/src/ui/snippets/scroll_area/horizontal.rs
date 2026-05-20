@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("horizontal.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui::element::SemanticsDecoration;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -21,8 +22,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             )
                             .into_element(cx);
 
-                        let caption = shadcn::raw::typography::muted(format!("Photo by {artist}"))
-                            .into_element(cx);
+                        let caption =
+                            decl_text::text_control_readout(cx, format!("Photo by {artist}"));
 
                         let mut figure = ui::v_stack(|_cx| vec![art, caption])
                             .gap(Space::N2)

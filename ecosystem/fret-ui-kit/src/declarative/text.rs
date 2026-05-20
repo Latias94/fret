@@ -1,9 +1,12 @@
 use std::sync::Arc;
 
 use fret_core::{
-    FontId, FontWeight, Px, TextAlign, TextOverflow, TextStyle, TextStyleRefinement, TextWrap,
+    AttributedText, FontId, FontWeight, Px, TextAlign, TextFontFeatureSetting, TextOverflow,
+    TextStyle, TextStyleRefinement, TextWrap,
 };
-use fret_ui::element::{AnyElement, LayoutStyle, Length, TextInkOverflow, TextProps};
+use fret_ui::element::{
+    AnyElement, LayoutStyle, Length, StyledTextProps, TextInkOverflow, TextProps,
+};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 use crate::typography as ui_typography;
@@ -44,6 +47,47 @@ pub(crate) fn text_prose_refinement(theme: &Theme) -> TextStyleRefinement {
 pub(crate) fn text_button_label_refinement(theme: &Theme) -> TextStyleRefinement {
     let mut refinement = text_sm_refinement(theme);
     refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
+}
+
+pub(crate) fn text_chrome_title_refinement(theme: &Theme) -> TextStyleRefinement {
+    let mut refinement = text_sm_refinement(theme);
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
+}
+
+pub(crate) fn text_table_cell_emphasis_refinement(theme: &Theme) -> TextStyleRefinement {
+    let mut refinement = text_sm_refinement(theme);
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
+}
+
+pub(crate) fn text_control_readout_tabular_refinement(theme: &Theme) -> TextStyleRefinement {
+    let mut refinement = text_sm_refinement(theme);
+    refinement.features.push(TextFontFeatureSetting {
+        tag: "tnum".into(),
+        value: 1,
+    });
+    refinement
+}
+
+pub(crate) fn text_control_readout_tabular_emphasis_refinement(
+    theme: &Theme,
+) -> TextStyleRefinement {
+    let mut refinement = text_control_readout_tabular_refinement(theme);
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
+}
+
+pub(crate) fn text_control_readout_compact_tabular_emphasis_refinement(
+    theme: &Theme,
+) -> TextStyleRefinement {
+    let mut refinement = text_xs_refinement(theme);
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement.features.push(TextFontFeatureSetting {
+        tag: "tnum".into(),
+        value: 1,
+    });
     refinement
 }
 
@@ -174,6 +218,34 @@ pub fn text_table_cell<H: UiHost>(
     )
 }
 
+/// Declarative text helper for emphasized dense table cells.
+///
+/// Use this for row-identifying cells that need medium emphasis while retaining table-cell
+/// single-line truncation under resize.
+pub fn text_table_cell_emphasis<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_table_cell_emphasis_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
 /// Declarative text helper for list and command-row labels.
 ///
 /// Use this for dense selectable/menu/tree rows. These labels fill the row's available inline
@@ -191,6 +263,35 @@ pub fn text_list_row_label<H: UiHost>(
         cx.text_props(TextProps {
             layout: fill_shrinkable_single_line_layout(),
             text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Attributed-text variant of [`text_list_row_label`].
+///
+/// Use this for dense selectable/menu/tree rows that need per-span decoration, such as a completed
+/// todo row with strikethrough. It keeps the same fill-width, shrinkable, single-line truncation
+/// contract as plain list-row labels.
+pub fn text_list_row_label_attributed<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    rich: AttributedText,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_sm_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.styled_text_props(StyledTextProps {
+            layout: fill_shrinkable_single_line_layout(),
+            rich,
             style: None,
             color: None,
             wrap: TextWrap::None,
@@ -232,6 +333,159 @@ pub fn text_control_readout<H: UiHost>(
         }),
         refinement,
         foreground,
+    )
+}
+
+/// Declarative text helper for muted menu/select group labels.
+///
+/// Use this for non-interactive group headings inside fixed-height menu/listbox rows. These labels
+/// keep the shadcn-like `text-xs` muted treatment while truncating instead of increasing row
+/// height under resize.
+pub fn text_menu_group_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let (refinement, foreground) = {
+        let theme = Theme::global(&*cx.app);
+        let mut refinement = text_xs_refinement(theme);
+        refinement.weight = Some(FontWeight::MEDIUM);
+        (refinement, ui_typography::muted_foreground_color(theme))
+    };
+
+    ui_typography::scope_text_style_with_color(
+        cx.text_props(TextProps {
+            layout: fill_shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+        foreground,
+    )
+}
+
+/// Declarative text helper for non-interactive status messages.
+///
+/// Use this for compact empty/loading/status messages in list and command surfaces. It keeps a
+/// muted `text-sm` treatment while truncating instead of increasing fixed-row height under resize.
+pub fn text_status_message<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let (refinement, foreground) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            text_sm_refinement(theme),
+            ui_typography::muted_foreground_color(theme),
+        )
+    };
+
+    ui_typography::scope_text_style_with_color(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+        foreground,
+    )
+}
+
+/// Declarative text helper for tabular control readouts.
+///
+/// Use this for data-table and dashboard counters that must keep stable digit widths while still
+/// staying single-line, shrinkable, muted, and ellipsized under resize.
+pub fn text_control_readout_tabular<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let (refinement, foreground) = {
+        let theme = Theme::global(&*cx.app);
+        (
+            text_control_readout_tabular_refinement(theme),
+            ui_typography::muted_foreground_color(theme),
+        )
+    };
+
+    ui_typography::scope_text_style_with_color(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+        foreground,
+    )
+}
+
+/// Declarative text helper for medium-weight tabular control readouts.
+///
+/// Use this for pagination and compact dashboard summaries where the count is primary within the
+/// control row. It preserves the same single-line resize contract as numeric readouts.
+pub fn text_control_readout_tabular_emphasis<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_control_readout_tabular_emphasis_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Declarative text helper for compact medium-weight tabular control readouts.
+///
+/// Use this for fixed badge/counter slots that match shadcn's
+/// `text-xs font-medium tabular-nums` treatment. It stays in the control-readout family while
+/// preserving the shared single-line shrink/ellipsis resize contract.
+pub fn text_control_readout_compact_tabular_emphasis<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_control_readout_compact_tabular_emphasis_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
     )
 }
 
@@ -350,15 +604,15 @@ pub fn text_chrome_glyph<H: UiHost>(
 
 /// Declarative text helper for fill-width chrome titles.
 ///
-/// Use this for window/panel title bars that occupy remaining chrome row space. It keeps the same
-/// section/chrome label style while opting into fill, grow, and `min-width: 0` layout.
+/// Use this for window/panel title bars that occupy remaining chrome row space. It keeps compact
+/// medium-weight chrome text while opting into fill, grow, and `min-width: 0` layout.
 pub fn text_chrome_title<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
 ) -> AnyElement {
     let refinement = {
         let theme = Theme::global(&*cx.app);
-        text_sm_refinement(theme)
+        text_chrome_title_refinement(theme)
     };
 
     ui_typography::scope_text_style(
@@ -496,6 +750,66 @@ pub fn text_compact_paragraph<H: UiHost>(
     )
 }
 
+/// Compact paragraph/body copy that inherits typography from an owning component.
+///
+/// Use this when the surrounding component already installs a description/body text refinement but
+/// the leaf still needs the shared wrapping and fill-width resize contract.
+pub fn text_compact_paragraph_inherited<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    cx.text_props(TextProps {
+        layout: fill_growing_zero_min_layout(),
+        text: text.into(),
+        style: None,
+        color: None,
+        wrap: TextWrap::Word,
+        overflow: TextOverflow::Clip,
+        align: TextAlign::Start,
+        ink_overflow: TextInkOverflow::None,
+    })
+}
+
+/// Compact paragraph/body copy clamped to a fixed number of dense text lines.
+///
+/// This role is for list/card descriptions where prose should wrap, but the surrounding item has a
+/// fixed visual rhythm. Use plain [`text_compact_paragraph`] when the parent should grow to fit all
+/// lines.
+pub fn text_compact_paragraph_line_clamp<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+    max_lines: u16,
+) -> AnyElement {
+    let (refinement, line_height) = {
+        let theme = Theme::global(&*cx.app);
+        let style = text_sm_style(theme);
+        let line_height = style
+            .line_height
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+        (
+            ui_typography::composable_refinement_from_style(&style),
+            line_height,
+        )
+    };
+
+    let mut layout = fill_growing_zero_min_layout();
+    layout.size.max_height = Some(Length::Px(Px(line_height.0 * max_lines.max(1) as f32)));
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout,
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::Word,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
 /// Bold variant of [`text_prose`], intended for typography table headers (`<th className="... font-bold">`).
 pub fn text_prose_bold<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -541,6 +855,12 @@ fn text_code_refinement(theme: &Theme) -> TextStyleRefinement {
     ))
 }
 
+fn text_code_label_emphasis_refinement(theme: &Theme) -> TextStyleRefinement {
+    let mut refinement = text_code_refinement(theme);
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
+}
+
 /// Declarative helper intended for code-like inline text.
 ///
 /// Defaults:
@@ -569,6 +889,34 @@ pub fn text_code_label<H: UiHost>(
     let refinement = {
         let theme = Theme::global(&*cx.app);
         text_code_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Emphasized variant of [`text_code_label`].
+///
+/// Use this for primary identifier slots, such as package names or target versions, that need
+/// medium emphasis while keeping code-label single-line truncation under resize.
+pub fn text_code_label_emphasis<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_code_label_emphasis_refinement(theme)
     };
 
     ui_typography::scope_text_style(
@@ -920,6 +1268,29 @@ mod tests {
             Some(FontId::monospace())
         );
 
+        let code_label_emphasis =
+            elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+                text_code_label_emphasis(cx, "pkg/runtime-with-a-long-name")
+            });
+        let ElementKind::Text(props) = &code_label_emphasis.kind else {
+            panic!("expected text_code_label_emphasis(...) to build a Text element");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        let mut expected_code_emphasis = {
+            let theme = Theme::global(&app);
+            text_code_refinement(theme)
+        };
+        expected_code_emphasis.weight = Some(FontWeight::MEDIUM);
+        assert_eq!(
+            code_label_emphasis.inherited_text_style,
+            Some(expected_code_emphasis)
+        );
+
         let paragraph = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             text_paragraph(cx, "Paragraph body copy")
         });
@@ -1000,6 +1371,67 @@ mod tests {
     }
 
     #[test]
+    fn inherited_compact_paragraph_keeps_wrapping_layout_without_leaf_refinement() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_compact_paragraph_inherited(
+                cx,
+                "Component-owned description copy wraps inside the available row",
+            )
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_compact_paragraph_inherited(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+        assert_eq!(el.inherited_text_style, None);
+    }
+
+    #[test]
+    fn compact_paragraph_line_clamp_text_uses_two_line_clamped_layout() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_compact_paragraph_line_clamp(
+                cx,
+                "Dense card description that may occupy at most two lines",
+                2,
+            )
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_compact_paragraph_line_clamp(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.size.max_height, Some(Length::Px(Px(36.0))));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
     fn table_cell_text_uses_compact_single_line_truncation() {
         let window = AppWindowId::default();
         let mut app = test_app();
@@ -1024,6 +1456,33 @@ mod tests {
     }
 
     #[test]
+    fn table_cell_emphasis_text_keeps_single_line_truncation_and_medium_weight() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_table_cell_emphasis(cx, "Primary table cell")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_table_cell_emphasis(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_table_cell_emphasis_refinement(&theme))
+        );
+    }
+
+    #[test]
     fn list_row_label_text_uses_fill_width_single_line_truncation() {
         let window = AppWindowId::default();
         let mut app = test_app();
@@ -1036,6 +1495,36 @@ mod tests {
 
         let ElementKind::Text(props) = &el.kind else {
             panic!("expected text_list_row_label(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+    }
+
+    #[test]
+    fn attributed_list_row_label_text_uses_fill_width_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let text = Arc::<str>::from("Completed task with decoration");
+        let rich = AttributedText::new(
+            Arc::clone(&text),
+            Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(text.len())]),
+        );
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_list_row_label_attributed(cx, rich)
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::StyledText(props) = &el.kind else {
+            panic!("expected text_list_row_label_attributed(...) to build a StyledText element");
         };
 
         assert!(props.style.is_none());
@@ -1073,6 +1562,184 @@ mod tests {
         assert_eq!(
             el.inherited_foreground,
             Some(ui_typography::muted_foreground_color(theme))
+        );
+    }
+
+    #[test]
+    fn menu_group_label_text_uses_muted_medium_xs_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_menu_group_label(cx, "Recently opened projects")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_menu_group_label(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        let mut expected = text_xs_refinement(&theme);
+        expected.weight = Some(FontWeight::MEDIUM);
+        assert_eq!(el.inherited_text_style, Some(expected));
+        assert_eq!(
+            el.inherited_foreground,
+            Some(ui_typography::muted_foreground_color(theme))
+        );
+    }
+
+    #[test]
+    fn status_message_text_uses_muted_sm_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_status_message(cx, "No results found")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_status_message(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+        assert_eq!(
+            el.inherited_foreground,
+            Some(ui_typography::muted_foreground_color(theme))
+        );
+    }
+
+    #[test]
+    fn control_readout_tabular_text_uses_muted_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_control_readout_tabular(cx, "128 of 4096")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_control_readout_tabular(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_control_readout_tabular_refinement(&theme))
+        );
+        assert!(el.inherited_text_style.as_ref().is_some_and(|style| {
+            style
+                .features
+                .iter()
+                .any(|feature| feature.tag.as_str() == "tnum" && feature.value == 1)
+        }));
+        assert_eq!(
+            el.inherited_foreground,
+            Some(ui_typography::muted_foreground_color(theme))
+        );
+    }
+
+    #[test]
+    fn control_readout_tabular_emphasis_text_uses_medium_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_control_readout_tabular_emphasis(cx, "Page 12 of 128")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_control_readout_tabular_emphasis(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_control_readout_tabular_emphasis_refinement(&theme))
+        );
+        assert!(el.inherited_text_style.as_ref().is_some_and(|style| {
+            style
+                .features
+                .iter()
+                .any(|feature| feature.tag.as_str() == "tnum" && feature.value == 1)
+        }));
+        assert_eq!(
+            el.inherited_text_style
+                .as_ref()
+                .and_then(|style| style.weight),
+            Some(FontWeight::MEDIUM)
+        );
+    }
+
+    #[test]
+    fn compact_tabular_emphasis_readout_uses_xs_medium_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_control_readout_compact_tabular_emphasis(cx, "128")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!(
+                "expected text_control_readout_compact_tabular_emphasis(...) to build a Text element"
+            );
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_control_readout_compact_tabular_emphasis_refinement(
+                &theme
+            ))
+        );
+        let inherited = el
+            .inherited_text_style
+            .as_ref()
+            .expect("expected inherited compact tabular readout style");
+        assert_eq!(inherited.weight, Some(FontWeight::MEDIUM));
+        assert_eq!(inherited.size, text_xs_refinement(&theme).size);
+        assert!(
+            inherited
+                .features
+                .iter()
+                .any(|feature| { feature.tag.as_str() == "tnum" && feature.value == 1 })
         );
     }
 
@@ -1128,7 +1795,7 @@ mod tests {
     }
 
     #[test]
-    fn chrome_title_text_uses_fill_width_single_line_truncation() {
+    fn chrome_title_text_uses_medium_fill_width_single_line_truncation() {
         let window = AppWindowId::default();
         let mut app = test_app();
         let bounds = test_bounds();
@@ -1151,7 +1818,10 @@ mod tests {
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
-        assert_eq!(el.inherited_text_style, Some(text_sm_refinement(&theme)));
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_chrome_title_refinement(&theme))
+        );
     }
 
     #[test]
@@ -1212,6 +1882,17 @@ mod tests {
         assert_single_line_text_role("control-readout", Px(16.0), move |cx| {
             text_control_readout(cx, long)
         });
+        assert_single_line_text_role("control-readout-tabular", Px(18.0), move |cx| {
+            text_control_readout_tabular(cx, "128 of 4096 selected")
+        });
+        assert_single_line_text_role("control-readout-tabular-emphasis", Px(18.0), move |cx| {
+            text_control_readout_tabular_emphasis(cx, "Page 12 of 128")
+        });
+        assert_single_line_text_role(
+            "control-readout-compact-tabular-emphasis",
+            Px(18.0),
+            move |cx| text_control_readout_compact_tabular_emphasis(cx, "128"),
+        );
         assert_single_line_text_role("button-label", Px(18.0), move |cx| {
             text_button_label(cx, long)
         });

@@ -719,6 +719,35 @@ fn ai_prompt_and_plan_snippets_use_shared_outer_text_roles() {
             );
         }
     }
+
+    let plan = canonicalize_rust_fragment(include_str!("../src/ui/snippets/ai/plan_demo.rs"));
+    for marker in [
+        "decl_text::text_section_chrome_label(cx, \"Overview\")",
+        "decl_text::text_paragraph",
+        "This plan outlines the migration strategy for converting the AI Elements",
+        "library from React to SolidJS, ensuring compatibility and maintaining existing functionality.",
+        "decl_text::text_section_chrome_label(cx, \"Key Steps\")",
+        "decl_text::text_list_row_label( cx, format!(\"• {item}\"), )",
+        "decl_text::text_button_label(cx, \"Build\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            plan.contains(&marker),
+            "plan_demo should route PlanContent section/body/bullet/action text through shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in [
+        "ui::text(\"Overview\")",
+        "ui::text(\"Key Steps\")",
+        "ui::text(format!(\"• {item}\"))",
+        "ui::text(\"Build\")",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !plan.contains(&forbidden),
+            "plan_demo reintroduced local PlanContent text policy: `{forbidden}`"
+        );
+    }
 }
 
 #[test]
@@ -1405,6 +1434,120 @@ fn ai_prompt_input_provider_and_docs_use_shared_text_roles_and_non_text_markers(
 }
 
 #[test]
+fn ai_prompt_input_cursor_custom_text_uses_shared_roles() {
+    let source = include_str!("../src/ui/snippets/ai/prompt_input_cursor_demo.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_list_row_label(cx, title)",
+        "decl_text::text_code_label(cx, filename)",
+        "decl_text::text_code_label(cx, path)",
+        "decl_text::text_list_row_label(cx, \"Active Tabs\")",
+        "decl_text::text_control_readout(cx, \"✓\")",
+        "decl_text::text_section_chrome_label(cx, \"Attached Project Rules\")",
+        "decl_text::text_control_readout(cx, \"Always Apply:\")",
+        "decl_text::text_code_label(cx, \"ultracite.mdc\")",
+        "decl_text::text_control_readout(cx, \"Click to manage\")",
+        "decl_text::text_button_label(cx, \"1\")",
+        "decl_text::text_button_label(cx, \"1 Tab\")",
+        "decl_text::text_control_readout( cx, \"Only file paths are included\", )",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "prompt_input_cursor_demo should route command/rules/tabs custom text through shared roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "ui::text(title)",
+        "ui::text(filename)",
+        "ui::text(path)",
+        "ui::text(\"Active Tabs\")",
+        "ui::text(\"✓\")",
+        "ui::text(\"Attached Project Rules\")",
+        "ui::text(\"Always Apply:\")",
+        "ui::text(\"ultracite.mdc\")",
+        "ui::text(\"Click to manage\")",
+        "ui::text(\"1\")",
+        "ui::text(\"1 Tab\")",
+        "ui::text(\"Only file paths are included\")",
+        ".text_size_px(Px(",
+        ".font_weight(",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "prompt_input_cursor_demo reintroduced local custom text policy: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn ai_shimmer_demo_chrome_text_uses_shared_roles() {
+    for (name, source) in [
+        (
+            "shimmer_typography_demo",
+            include_str!("../src/ui/snippets/ai/shimmer_typography_demo.rs"),
+        ),
+        (
+            "shimmer_duration_demo",
+            include_str!("../src/ui/snippets/ai/shimmer_duration_demo.rs"),
+        ),
+        (
+            "shimmer_elements_demo",
+            include_str!("../src/ui/snippets/ai/shimmer_elements_demo.rs"),
+        ),
+    ] {
+        let canonical = canonicalize_rust_fragment(source);
+        for marker in [
+            "use fret_ui_kit::declarative::text as decl_text;",
+            "decl_text::text_control_readout(cx, label)",
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{name} should route demo labels through shared readout roles; missing `{marker}`"
+            );
+        }
+        for forbidden in [
+            "ui::text(label)",
+            ".text_sm().text_color(muted)",
+            "ColorRef::Color(typography::muted_foreground_color",
+        ] {
+            let forbidden = canonicalize_rust_fragment(forbidden);
+            assert!(
+                !canonical.contains(&forbidden),
+                "{name} reintroduced local shimmer demo label text policy: `{forbidden}`"
+            );
+        }
+    }
+
+    let elements = canonicalize_rust_fragment(include_str!(
+        "../src/ui/snippets/ai/shimmer_elements_demo.rs"
+    ));
+    for marker in [
+        "decl_text::text_section_chrome_label(cx, \"Processing your request\")",
+        "ui_ai::Shimmer::new(\"with AI magic\")",
+        "decl_text::text_control_readout(cx, \"...\")",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            elements.contains(&marker),
+            "shimmer_elements_demo should keep inline non-shimmer text on shared roles; missing `{marker}`"
+        );
+    }
+    for forbidden in ["ui::text(\"Processing your request\")", "ui::text(\"...\")"] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !elements.contains(&forbidden),
+            "shimmer_elements_demo reintroduced bare inline text outside Shimmer: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
 fn ai_reasoning_stack_trace_and_voice_selector_use_shared_chrome_text_roles() {
     for (name, source, title, body) in [
         (
@@ -1717,6 +1860,35 @@ fn ai_usage_snippets_use_shared_chrome_and_paragraph_roles() {
         assert!(
             !stack_trace.contains(&forbidden),
             "stack_trace_usage reintroduced bare fixed text: `{forbidden}`"
+        );
+    }
+}
+
+#[test]
+fn ai_attachments_inline_hover_card_uses_shared_text_roles() {
+    let source = include_str!("../src/ui/snippets/ai/attachments_inline.rs");
+    let canonical = canonicalize_rust_fragment(source);
+
+    for marker in [
+        "use fret_ui_kit::declarative::text as decl_text;",
+        "decl_text::text_list_row_label(cx, ui_ai::get_attachment_label(&item))",
+        "decl_text::text_control_readout(cx, media_type)",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "attachments_inline should route hover-card label/readout text through shared roles; missing `{marker}`"
+        );
+    }
+
+    for forbidden in [
+        "ui::text(ui_ai::get_attachment_label(&item))",
+        "ui::text(media_type).text_xs()",
+    ] {
+        let forbidden = canonicalize_rust_fragment(forbidden);
+        assert!(
+            !canonical.contains(&forbidden),
+            "attachments_inline reintroduced default wrapping hover-card text: `{forbidden}`"
         );
     }
 }

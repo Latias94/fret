@@ -30,13 +30,13 @@ use crate::primitives::input_group::{
     editor_input_group_row, editor_input_value_text,
 };
 use crate::primitives::popup_list::{
-    EditorPopupListRowState, editor_popup_empty_text_props, editor_popup_list_row_gap,
-    editor_popup_list_row_palette, editor_popup_list_row_radius, editor_popup_list_row_text_props,
-    editor_popup_side_offset, editor_popup_window_margin,
+    EditorPopupListRowState, editor_popup_list_row_gap, editor_popup_list_row_palette,
+    editor_popup_list_row_radius, editor_popup_side_offset, editor_popup_window_margin,
 };
 use crate::primitives::popup_surface::{
     EditorPopupSurfaceChrome, resolve_editor_popup_surface_chrome,
 };
+use crate::primitives::readout::{editor_popup_empty_text_props, editor_popup_list_row_text_props};
 use crate::primitives::style::EditorStyle;
 use crate::primitives::visuals::{EditorFrameSemanticState, EditorFrameState};
 use crate::primitives::{EditorDensity, EditorTokenKeys};

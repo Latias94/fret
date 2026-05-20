@@ -112,6 +112,70 @@ fn script_v2_roundtrip_ui_gallery_platform_preferences_runtime_environment_mutat
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_item_vs_field_doc_intro_client721_startup_non_overlap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/item/ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_workspace_tabstrip_overflow_select_command() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/workspace-tabstrip/ui-gallery-workspace-tabstrip-overflow-select-command.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_workspace_shell_demo_tab_cross_pane_move_to_end() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/workspace-shell-demo-tab-cross-pane-move-to-end.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_workspace_shell_demo_tab_overflow_activate_hidden_smoke() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/workspace-shell-demo-tab-overflow-activate-hidden-smoke.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_workspace_shell_demo_tab_close_button_dirty_shows_prompt_smoke() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/workspace-shell-demo-tab-close-button-dirty-shows-prompt-smoke.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_workspace_shell_demo_tab_close_others_dirty_aggregation_smoke() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/workspace-shell-demo-tab-close-others-dirty-aggregation-smoke.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_workspace_shell_demo_tab_close_cross_pane_button_ownership_smoke() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_workspace_shell_demo_tab_close_others_cross_pane_context_menu_ownership_smoke()
+ {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/workspace-shell-demo-tab-close-others-cross-pane-context-menu-ownership-smoke.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_workspace_shell_demo_window_close_dirty_aggregation_smoke() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-window-close-dirty-aggregation-smoke.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_set_window_preferences_defaults() {
     assert_script_v2_roundtrip(
         r#"{
@@ -254,9 +318,70 @@ fn script_v2_roundtrip_ui_gallery_menubar_escape_exits_active() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_canvas_cull_torture_pan_zoom() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-canvas-cull-torture-pan-zoom.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_chart_torture_pan_zoom() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-chart-torture-pan-zoom.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_chart_torture_explicit_y_link_map() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-chart-torture-explicit-y-link-map.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_chart_multi_axis_linked_domain_window_app_snapshot() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/charts/chart-multi-axis-linked-domain-window-app-snapshot.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_carousel_state_gates() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-select-gate.json"
+    ));
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-reinit-gate.json"
+    ));
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate.json"
+    ));
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate.json"
+    ));
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-controls-gate.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_node_graph_cull_torture_pan_zoom() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-node-graph-cull-torture-pan-zoom.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_node_graph_cull_window_shifts() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-node-graph-cull-window-shifts.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_node_graph_cull_window_no_shifts_small_pan() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-node-graph-cull-window-no-shifts-small-pan.json"
     ));
 }
 
@@ -373,6 +498,63 @@ fn script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_geometry() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_combobox_popup_trigger() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-popup-trigger.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_popup_trigger_bottom_room() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-popup-trigger-bottom-room.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_popup_doc_intro_non_overlap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-popup-doc-intro-non-overlap.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_popup_doc_intro_short_startup_non_overlap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-popup-doc-intro-short-startup-non-overlap.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_popup_doc_intro_logical994_startup_non_overlap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-popup-doc-intro-logical994-startup-non-overlap.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_doc_intro_logical1083_startup_non_overlap()
+{
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_rtl_long_text_doc_intro_client721_startup_non_overlap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-rtl-long-text-doc-intro-client721-startup-non-overlap.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_combobox_full_page_startup_intro_non_overlap() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-combobox-full-page-startup-intro-non-overlap.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_combobox_auto_highlight_disabled_none_on_open() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-combobox-auto-highlight-disabled-none-on-open.json"
@@ -408,9 +590,23 @@ fn script_v2_roundtrip_ui_gallery_command_docs_demo_long_query_text() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_command_basic_dialog_overlay_focus() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-command-basic-dialog-overlay-focus.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_command_scrollable_collection_metadata_mutation() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-command-scrollable-collection-metadata-mutation.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_command_retained_active_descendant_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json"
     ));
 }
 
@@ -432,6 +628,55 @@ fn script_v2_roundtrip_ui_gallery_virtual_list_retained_collection_metadata_boun
 fn script_v2_roundtrip_ui_gallery_tree_retained_hierarchy_semantics_toggle() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-tree-retained-hierarchy-semantics-toggle.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_file_tree_demo_toggle() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-file-tree-demo-toggle.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_file_tree_demo_actions() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-file-tree-demo-actions.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_file_tree_large_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-file-tree-large-scroll.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_file_tree_demo_screenshot_zinc_dark() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-file-tree-demo-screenshot-zinc-dark.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_conversation_demo_screenshot_zinc_dark() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-conversation-demo-screenshot-zinc-dark.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_conversation_demo_scroll_button() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-conversation-demo-scroll-button.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_transcript_torture_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json"
     ));
 }
 
@@ -576,6 +821,48 @@ fn script_v2_roundtrip_ui_gallery_data_table_retained_column_actions_menu() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_sort_select_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-retained-sort-select-scroll.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_data_table_retained_window_boundary_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-window-boundary-scroll-retained.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_data_table_view_cache_filter_shrink_vlist_inputs_change() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_view_cache_model_mutation_through_cache() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-model-mutation-through-cache.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_view_cache_dynamic_text_mutation_through_cache() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-dynamic-text-mutation-through-cache.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-paint-cache-probe-sweep.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_listlike_pointer_selection() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-listlike-pointer-selection.json"
@@ -684,6 +971,20 @@ fn script_v2_roundtrip_ui_gallery_combobox_placement_ownership_scroll_rtl() {
 fn script_v2_roundtrip_ui_gallery_resizable_multi_viewport_combobox_placement() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-combobox-placement.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_resizable_multi_viewport_select_placement() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-select-placement.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_root_boundary() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json"
     ));
 }
 

@@ -9,6 +9,7 @@ use fret_ui::Theme;
 use fret_ui::element::{ContainerProps, LayoutStyle, Length, SizeStyle};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -94,8 +95,6 @@ fn goal_chart<H: UiHost>(
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let goal_model = cx.local_model(|| 350);
     let current_goal = cx.watch_model(&goal_model).copied().unwrap_or(350);
-    let theme = Theme::global(&*cx.app).snapshot();
-    let muted_fg = theme.color_token("muted-foreground");
 
     with_direction_provider(cx, LayoutDirection::Rtl, move |cx| {
         shadcn::Drawer::new_controllable(cx, None, false)
@@ -124,16 +123,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                 .into_element(cx),
                                 ui::v_stack(|cx| {
                                     vec![
-                                        ui::text(current_goal.to_string())
-                                            .text_size_px(Px(56.0))
-                                            .font_bold()
-                                            .tabular_nums()
-                                            .into_element(cx),
-                                        ui::text("سعرات حرارية/يوم")
-                                            .text_sm()
-                                            .font_medium()
-                                            .text_color(ColorRef::Color(muted_fg))
-                                            .into_element(cx),
+                                        decl_text::text_control_readout(
+                                            cx,
+                                            current_goal.to_string(),
+                                        ),
+                                        decl_text::text_control_readout(cx, "سعرات حرارية/يوم"),
                                     ]
                                 })
                                 .gap(Space::N1)

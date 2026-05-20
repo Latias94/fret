@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("sides.rs");
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn side_content<H: UiHost>(
@@ -11,17 +12,11 @@ fn side_content<H: UiHost>(
     side_label: &'static str,
     test_id: &'static str,
 ) -> shadcn::HoverCardContent {
-    let body = ui::v_flex(move |cx| {
-        vec![
-            ui::text_block(side_label)
-                .wrap(TextWrap::WordBreak)
-                .into_element(cx),
-        ]
-    })
-    .layout(LayoutRefinement::default().w_full().min_w_0())
-    .gap(Space::N1)
-    .items_stretch()
-    .into_element(cx);
+    let body = ui::v_flex(move |cx| vec![decl_text::text_paragraph_break_words(cx, side_label)])
+        .layout(LayoutRefinement::default().w_full().min_w_0())
+        .gap(Space::N1)
+        .items_stretch()
+        .into_element(cx);
 
     shadcn::HoverCardContent::build(cx, |_cx| [body]).test_id(test_id)
 }

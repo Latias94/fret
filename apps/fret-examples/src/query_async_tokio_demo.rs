@@ -10,7 +10,11 @@ use fret::query::{
     QueryRetryPolicy,
 };
 use fret::style::{ColorRef, Space, ThemeSnapshot};
+use fret_core::Color;
+use fret_ui::element::AnyElement;
+use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::IntoUiElementInExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 
 mod act {
     fret::actions!([
@@ -40,6 +44,28 @@ fn query_policy() -> QueryPolicy {
         retry: QueryRetryPolicy::exponential(3, Duration::from_millis(250), Duration::from_secs(2)),
         ..Default::default()
     }
+}
+
+fn query_readout_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn query_readout_text_with_color<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+    foreground: Color,
+) -> AnyElement {
+    query_readout_text(cx, text).inherit_foreground(foreground)
+}
+
+fn query_data_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_code_label(cx, text)
 }
 
 #[derive(Debug)]
@@ -187,9 +213,9 @@ impl View for QueryAsyncTokioDemoView {
 
         let detail_body = ui::v_flex(|cx| {
             ui::children![cx;
-                ui::raw_text(info_line),
-                ui::raw_text(data_line),
-                ui::raw_text(error_line).text_color(ColorRef::Color(error_color)),
+                query_readout_text(cx, info_line),
+                query_data_text(cx, data_line),
+                query_readout_text_with_color(cx, error_line, error_color),
             ]
         })
         .gap(Space::N2)

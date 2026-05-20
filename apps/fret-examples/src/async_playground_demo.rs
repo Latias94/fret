@@ -14,10 +14,12 @@ use fret::query::{
 use fret::{FretApp, actions::CommandId, advanced::prelude::*, shadcn};
 use fret_core::{Px, SemanticsRole};
 use fret_ui::element::{AnyElement, PressableA11y, PressableProps};
+use fret_ui::{ElementContext, UiHost};
 use fret_ui_kit::IntoUiElementInExt as _;
 use fret_ui_kit::declarative::QueryHandleWatchExt as _;
 use fret_ui_kit::declarative::UiElementTestIdExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::primitives::scroll_area::ScrollAreaType;
 use fret_ui_kit::primitives::separator::SeparatorOrientation;
 use fret_ui_kit::ui;
@@ -41,6 +43,48 @@ mod act {
 const TRANSIENT_INVALIDATE_SELECTED: u64 = 0xAFA0_1002;
 const TRANSIENT_CANCEL_SELECTED: u64 = 0xAFA0_1003;
 const TRANSIENT_INVALIDATE_NAMESPACE: u64 = 0xAFA0_1004;
+
+fn async_chrome_title_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_chrome_title(cx, text)
+}
+
+fn async_section_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_section_chrome_label(cx, text)
+}
+
+fn async_list_row_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_list_row_label(cx, text)
+}
+
+fn async_readout_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn async_code_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_code_label(cx, text)
+}
+
+fn async_compact_paragraph_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_compact_paragraph(cx, text)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum QueryId {
@@ -381,16 +425,9 @@ fn header_bar<'a, Cx>(
 where
     Cx: AppRenderContext<'a>,
 {
-    let title = ui::text("Async Playground")
-        .text_sm()
-        .font_semibold()
-        .truncate()
-        .into_element_in(cx);
+    let title = async_chrome_title_text(cx.elements(), "Async Playground");
 
-    let slow_label = ui::text("Slow network (x2)")
-        .text_sm()
-        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-        .into_element_in(cx);
+    let slow_label = async_readout_text(cx.elements(), "Slow network (x2)");
     let slow_switch = shadcn::Switch::new(&locals.global_slow)
         .a11y_label("Simulate slow network")
         .into_element_in(cx);
@@ -410,16 +447,14 @@ where
         .items_center()
         .into_element_in(cx);
 
-    let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
-        .flex_grow(1.0)
-        .into_element_in(cx);
-
-    ui::h_flex(|_cx| [title, spacer, right])
+    ui::h_flex(|_cx| [title, right])
         .px(Space::N6)
         .py(Space::N3)
+        .gap(Space::N4)
         .bg(ColorRef::Color(theme.color_token("card")))
         .border_1()
         .border_color(ColorRef::Color(theme.color_token("border")))
+        .items_center()
         .into_element_in(cx)
         .test_id(format!("async-playground.header.slow={global_slow}"))
 }
@@ -465,10 +500,7 @@ where
     Cx: AppRenderContext<'a>,
 {
     let catalog_scroll = st.catalog_scroll.clone();
-    let header = ui::text("Catalog")
-        .font_semibold()
-        .text_sm()
-        .into_element_in(cx);
+    let header = async_section_text(cx.elements(), "Catalog");
     let header_row = ui::container(|_cx| vec![header])
         .px(Space::N4)
         .py(Space::N3)
@@ -540,21 +572,13 @@ where
                 bg_idle
             };
 
-            let title = ui::text(id.label())
-                .font_medium()
-                .text_sm()
-                .truncate()
-                .into_element(cx);
+            let title = async_list_row_text(cx, id.label());
             let badge = status_badge(cx, diag.as_ref());
 
-            let row = ui::h_flex(|cx| {
-                let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
-                    .flex_grow(1.0)
-                    .into_element(cx);
-                [title, spacer, badge]
-            })
-            .items_center()
-            .into_element(cx);
+            let row = ui::h_flex(|_cx| [title, badge])
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx);
 
             vec![
                 ui::container(|_cx| vec![row])
@@ -592,10 +616,7 @@ where
 {
     let mode = active_mode(cx, locals);
 
-    let title = ui::text(selected.label())
-        .font_semibold()
-        .text_sm()
-        .into_element_in(cx);
+    let title = async_section_text(cx.elements(), selected.label());
 
     let cancel = shadcn::Button::new("Cancel")
         .variant(shadcn::ButtonVariant::Secondary)
@@ -637,30 +658,14 @@ where
     .into_element_in(cx);
 
     let sync_panel = if mode == FetchMode::Sync {
-        query_panel_for_mode(
-            cx,
-            st,
-            locals,
-            theme.clone(),
-            global_slow,
-            selected,
-            FetchMode::Sync,
-        )
+        query_panel_for_mode(cx, st, locals, global_slow, selected, FetchMode::Sync)
     } else {
         ui::container(|_cx| Vec::<AnyElement>::new())
             .h_full()
             .into_element_in(cx)
     };
     let async_panel = if mode == FetchMode::Async {
-        query_panel_for_mode(
-            cx,
-            st,
-            locals,
-            theme.clone(),
-            global_slow,
-            selected,
-            FetchMode::Async,
-        )
+        query_panel_for_mode(cx, st, locals, global_slow, selected, FetchMode::Async)
     } else {
         ui::container(|_cx| Vec::<AnyElement>::new())
             .h_full()
@@ -715,39 +720,29 @@ where
     let stale = snap.as_ref().map(|s| s.stale);
 
     let summary = ui::v_flex_build(|cx, out| {
-        out.push(ui::text(key.namespace()).text_xs().into_element(cx));
-        out.push(ui::text(key.hash().to_string()).text_xs().into_element(cx));
-        out.push(
-            ui::text(format!("status: {status:?}"))
-                .text_xs()
-                .into_element(cx),
-        );
+        out.push(async_code_label_text(cx, key.namespace()));
+        out.push(async_code_label_text(cx, key.hash().to_string()));
+        out.push(async_readout_text(cx, format!("status: {status:?}")));
         if let Some(stale) = stale {
-            out.push(
-                ui::text(format!("stale: {stale}"))
-                    .text_xs()
-                    .into_element(cx),
-            );
+            out.push(async_readout_text(cx, format!("stale: {stale}")));
         }
-        out.push(
-            ui::text(format!(
+        out.push(async_readout_text(
+            cx,
+            format!(
                 "policy: stale={}s, cache={}s, keep_prev={}, cancel_mode={:?}",
                 policy.stale_time.as_secs(),
                 policy.cache_time.as_secs(),
                 policy.keep_previous_data_while_loading,
                 policy.cancel_mode
-            ))
-            .text_xs()
-            .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-            .into_element(cx),
-        );
+            ),
+        ));
     })
     .gap(Space::N1)
     .w_full()
     .items_stretch()
     .into_element_in(cx);
 
-    let policy_editor = policy_editor(cx, st, theme.clone(), selected);
+    let policy_editor = policy_editor(cx, st, selected);
 
     let ns_row = ui::h_flex(|cx| {
         let input = shadcn::Input::new(&locals.namespace_input)
@@ -794,12 +789,7 @@ where
         .into_element_in(cx)
 }
 
-fn policy_editor<'a, Cx>(
-    cx: &mut Cx,
-    st: &mut AsyncPlaygroundState,
-    theme: ThemeSnapshot,
-    id: QueryId,
-) -> AnyElement
+fn policy_editor<'a, Cx>(cx: &mut Cx, st: &mut AsyncPlaygroundState, id: QueryId) -> AnyElement
 where
     Cx: AppRenderContext<'a>,
 {
@@ -812,18 +802,12 @@ where
         .placeholder("cache_time (s)")
         .into_element_in(cx);
 
-    let keep_prev_label = ui::text("keepPreviousDataWhileLoading")
-        .text_xs()
-        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-        .into_element_in(cx);
+    let keep_prev_label = async_readout_text(cx.elements(), "keepPreviousDataWhileLoading");
     let keep_prev = shadcn::Switch::new(&config.keep_prev)
         .a11y_label("Keep previous data while loading")
         .into_element_in(cx);
 
-    let fail_label = ui::text("fail mode")
-        .text_xs()
-        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-        .into_element_in(cx);
+    let fail_label = async_readout_text(cx.elements(), "fail mode");
     let fail = shadcn::Switch::new(&config.fail_mode)
         .a11y_label("Force failures")
         .into_element_in(cx);
@@ -840,10 +824,7 @@ where
     ui::v_flex(|cx| {
         [
             shadcn::Separator::new().into_element(cx),
-            ui::text("Policy")
-                .font_semibold()
-                .text_sm()
-                .into_element(cx),
+            async_section_text(cx, "Policy"),
             ui::h_flex(|_cx| [stale, cache])
                 .gap(Space::N2)
                 .into_element(cx),
@@ -862,7 +843,6 @@ fn query_panel_for_mode<'a, Cx>(
     cx: &mut Cx,
     st: &mut AsyncPlaygroundState,
     locals: &AsyncPlaygroundLocals,
-    theme: ThemeSnapshot,
     global_slow: bool,
     selected: QueryId,
     mode: FetchMode,
@@ -911,8 +891,8 @@ where
     let snap = snapshot_entry_for_key(cx, key);
     observe_query_diag(st, id, &state, snap.as_ref());
 
-    let inputs = query_inputs_row(cx, locals, theme.clone(), id);
-    let view = query_result_view(cx, theme, id, key, &state, snap.as_ref(), &policy);
+    let inputs = query_inputs_row(cx, locals, id);
+    let view = query_result_view(cx, id, key, &state, snap.as_ref(), &policy);
     ui::v_flex(|_cx| [inputs, view])
         .gap(Space::N4)
         .w_full()
@@ -920,26 +900,19 @@ where
         .into_element_in(cx)
 }
 
-fn query_inputs_row<'a, Cx>(
-    cx: &mut Cx,
-    locals: &AsyncPlaygroundLocals,
-    theme: ThemeSnapshot,
-    id: QueryId,
-) -> AnyElement
+fn query_inputs_row<'a, Cx>(cx: &mut Cx, locals: &AsyncPlaygroundLocals, id: QueryId) -> AnyElement
 where
     Cx: AppRenderContext<'a>,
 {
     let mut children: Vec<AnyElement> = Vec::new();
-    children.push(
-        ui::text(match id {
+    children.push(async_compact_paragraph_text(
+        cx.elements(),
+        match id {
             QueryId::Tip | QueryId::Status => "No params (key is stable).",
             QueryId::Search => "Type to change key and trigger a new query.",
             QueryId::Stock => "Change symbol to create a new key.",
-        })
-        .text_xs()
-        .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-        .into_element_in(cx),
-    );
+        },
+    ));
 
     match id {
         QueryId::Search => {
@@ -970,7 +943,6 @@ where
 
 fn query_result_view<'a, Cx>(
     cx: &mut Cx,
-    theme: ThemeSnapshot,
     id: QueryId,
     key: QueryKey<Arc<str>>,
     state: &QueryState<Arc<str>>,
@@ -990,32 +962,25 @@ where
     );
 
     let meta = ui::h_flex(|cx| {
-        let left = ui::text(id.namespace())
-            .text_xs()
-            .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-            .into_element(cx);
-        let right = ui::text(key.hash().to_string())
-            .text_xs()
-            .text_color(ColorRef::Color(theme.color_token("muted-foreground")))
-            .into_element(cx);
+        let left = async_code_label_text(cx, id.namespace());
+        let right = async_code_label_text(cx, key.hash().to_string());
         [left, right]
     })
     .justify_between()
     .into_element_in(cx);
 
     let body = match state.status {
-        QueryStatus::Idle => ui::text("Idle (not fetched yet).")
-            .text_sm()
-            .into_element_in(cx),
+        QueryStatus::Idle => async_compact_paragraph_text(cx.elements(), "Idle (not fetched yet)."),
         QueryStatus::Loading => {
             let kept = policy.keep_previous_data_while_loading && state.is_refreshing();
-            ui::text(if kept {
-                "Loading… (keepPreviousDataWhileLoading=true)"
-            } else {
-                "Loading…"
-            })
-            .text_sm()
-            .into_element_in(cx)
+            async_compact_paragraph_text(
+                cx.elements(),
+                if kept {
+                    "Loading… (keepPreviousDataWhileLoading=true)"
+                } else {
+                    "Loading…"
+                },
+            )
         }
         QueryStatus::Error => {
             let msg = state
@@ -1030,22 +995,18 @@ where
             .variant(shadcn::AlertVariant::Destructive)
             .into_element_in(cx)
         }
-        QueryStatus::Success => ui::text(
+        QueryStatus::Success => async_compact_paragraph_text(
+            cx.elements(),
             state
                 .data
                 .as_deref()
                 .cloned()
                 .unwrap_or_else(|| Arc::from("<no data>")),
-        )
-        .text_sm()
-        .into_element_in(cx),
+        ),
     };
 
     let header = ui::h_flex(|cx| {
-        let title = ui::text("Result")
-            .font_semibold()
-            .text_sm()
-            .into_element(cx);
+        let title = async_section_text(cx, "Result");
         let spacer = ui::container(|_cx| Vec::<AnyElement>::new())
             .flex_grow(1.0)
             .into_element(cx);

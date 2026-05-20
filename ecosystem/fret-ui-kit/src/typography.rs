@@ -473,6 +473,7 @@ pub fn refinement_from_style(style: &TextStyle) -> TextStyleRefinement {
         line_height_em: style.line_height_em,
         line_height_policy: Some(style.line_height_policy),
         letter_spacing_em: style.letter_spacing_em,
+        features: style.features.clone(),
         vertical_placement: Some(style.vertical_placement),
         leading_distribution: Some(style.leading_distribution),
     }
@@ -495,6 +496,7 @@ pub fn composable_refinement_from_style(style: &TextStyle) -> TextStyleRefinemen
         line_height_policy: (style.line_height_policy != default.line_height_policy)
             .then_some(style.line_height_policy),
         letter_spacing_em: style.letter_spacing_em,
+        features: style.features.clone(),
         vertical_placement: (style.vertical_placement != default.vertical_placement)
             .then_some(style.vertical_placement),
         leading_distribution: (style.leading_distribution != default.leading_distribution)

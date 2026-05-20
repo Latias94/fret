@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -10,7 +11,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         [
             shadcn::AccordionItem::new(
                 "item-1",
-                shadcn::AccordionTrigger::new(vec![cx.text("Product Information")]),
+                shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(
+                    cx,
+                    "Product Information",
+                )]),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
                     shadcn::raw::typography::p(
@@ -24,7 +28,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             ),
             shadcn::AccordionItem::new(
                 "item-2",
-                shadcn::AccordionTrigger::new(vec![cx.text("Shipping Details")])
+                shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(
+                    cx,
+                    "Shipping Details",
+                )])
                     .test_id("ui-gallery-accordion-demo-shipping-trigger"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;
@@ -41,7 +48,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .test_id("ui-gallery-accordion-demo-shipping-item"),
             shadcn::AccordionItem::new(
                 "item-3",
-                shadcn::AccordionTrigger::new(vec![cx.text("Return Policy")])
+                shadcn::AccordionTrigger::new(vec![decl_text::text_button_label(
+                    cx,
+                    "Return Policy",
+                )])
                     .test_id("ui-gallery-accordion-demo-returns-trigger"),
                 shadcn::AccordionContent::new(ui::children![
                     cx;

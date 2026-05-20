@@ -25,6 +25,7 @@ use fret_ui_kit::declarative::collection_semantics::CollectionSemanticsExt as _;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::menubar as menu;
 use fret_ui_kit::primitives::menubar::trigger_row as menubar_trigger_row;
@@ -1683,6 +1684,28 @@ fn menubar_disabled_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> bool {
         .is_some_and(|st| st.disabled)
 }
 
+fn menubar_label_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: Arc<str>,
+    inset: bool,
+    pad_x: Px,
+    pad_x_inset: Px,
+    pad_y: Px,
+) -> AnyElement {
+    let dir = crate::direction::use_direction(cx, None);
+    let pad_left = if inset { pad_x_inset } else { pad_x };
+
+    cx.container(
+        ContainerProps {
+            layout: LayoutStyle::default(),
+            padding: rtl::padding_edges_with_inline_start_end(dir, pad_y, pad_y, pad_left, pad_x)
+                .into(),
+            ..Default::default()
+        },
+        move |cx| vec![decl_text::text_menu_group_label(cx, text)],
+    )
+}
+
 #[track_caller]
 fn with_menubar_provider_state<H: UiHost, R>(
     cx: &mut ElementContext<'_, H>,
@@ -2384,7 +2407,6 @@ impl MenubarMenuEntries {
                                               submenu_for_panel_for_content.clone(),
                                               move |cx| {
                                                   let entries_for_content = entries_for_content;
-                                                  let dir = crate::direction::use_direction(cx, None);
                                                   let mut out: Vec<AnyElement> =
                                                       Vec::with_capacity(entries_for_content.len());
 
@@ -2422,36 +2444,14 @@ impl MenubarMenuEntries {
                                                             ));
                                                         }
                                                         MenubarEntry::Label(label) => {
-                                                            let text = label.text.clone();
-                                                            let pad_left =
-                                                                if label.inset { pad_x_inset } else { pad_x };
-                                                            out.push(cx.container(
-                                                                ContainerProps {
-                                                                    layout: LayoutStyle::default(),
-                                                                    padding:
-                                                                        rtl::padding_edges_with_inline_start_end(
-                                                                            dir,
-                                                                            pad_y,
-                                                                            pad_y,
-                                                                            pad_left,
-                                                                            pad_x,
-                                                                        )
-                                                                        .into(),
-                                                                    ..Default::default()
-                                                                },
-                                                                move |cx| {
-                                                                        vec![ui::text( text)
-                                                                            .text_size_px(font_size)
-                                                                            .line_height_px(font_line_height)
-                                                                            .line_height_policy(
-                                                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                                            )
-                                                                            .font_medium()
-                                                                            .text_color(ColorRef::Color(fg))
-                                                                            .nowrap()
-                                                                            .into_element(cx)]
-                                                                    },
-                                                                ));
+                                                            out.push(menubar_label_element(
+                                                                cx,
+                                                                label.text,
+                                                                label.inset,
+                                                                pad_x,
+                                                                pad_x_inset,
+                                                                pad_y,
+                                                            ));
                                                         }
                                                         MenubarEntry::CheckboxItem(item) => {
                                                             let collection_index = item_ix;
@@ -3579,16 +3579,15 @@ impl MenubarMenuEntries {
                                                                 wrap: false,
                                                             },
                                                             roving,
-                                                        },
-                                                         labels_arc.clone(),
-                                                         typeahead_timeout_ticks,
-                                                         move |cx| {
-                                                             let gating: WindowCommandGatingSnapshot =
-                                                                 crate::command_gating::snapshot_for_window(
-                                                                     &*cx.app,
-                                                                     cx.window,
-                                                                 );
-                                                             let dir = crate::direction::use_direction(cx, None);
+                                                         },
+                                                          labels_arc.clone(),
+                                                          typeahead_timeout_ticks,
+                                                          move |cx| {
+                                                              let gating: WindowCommandGatingSnapshot =
+                                                                  crate::command_gating::snapshot_for_window(
+                                                                      &*cx.app,
+                                                                      cx.window,
+                                                                  );
                                                              let submenu_entries_for_panel =
                                                                  submenu_entries_for_panel;
                                                              let mut out: Vec<AnyElement> =
@@ -3621,40 +3620,15 @@ impl MenubarMenuEntries {
                                                                             },
                                                                              |_| Vec::new(),
                                                                          ));
-                                                                     }
+                                                                    }
                                                                     MenubarEntry::Label(label) => {
-                                                                        let text = label.text.clone();
-                                                                        let pad_left = if label.inset {
-                                                                            pad_x_inset
-                                                                        } else {
-                                                                            pad_x
-                                                                        };
-                                                                        out.push(cx.container(
-                                                                            ContainerProps {
-                                                                                layout: LayoutStyle::default(),
-                                                                                padding:
-                                                                                    rtl::padding_edges_with_inline_start_end(
-                                                                                        dir,
-                                                                                        pad_y,
-                                                                                        pad_y,
-                                                                                        pad_left,
-                                                                                        pad_x,
-                                                                                    )
-                                                                                    .into(),
-                                                                                ..Default::default()
-                                                                            },
-                                                                            move |cx| {
-                                                                                vec![ui::text( text)
-                                                                                    .text_size_px(font_size)
-                                                                                    .line_height_px(font_line_height)
-                                                                                    .line_height_policy(
-                                                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                                                    )
-                                                                                    .font_medium()
-                                                                                    .text_color(ColorRef::Color(fg))
-                                                                                    .nowrap()
-                                                                                    .into_element(cx)]
-                                                                            },
+                                                                        out.push(menubar_label_element(
+                                                                            cx,
+                                                                            label.text,
+                                                                            label.inset,
+                                                                            pad_x,
+                                                                            pad_x_inset,
+                                                                            pad_y,
                                                                         ));
                                                                     }
                                                                     MenubarEntry::CheckboxItem(item) => {
@@ -4355,7 +4329,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, Modifiers, MouseButton, MouseButtons, Point, Rect, TextBlobId,
-        TextConstraints, TextMetrics, TextService,
+        TextConstraints, TextMetrics, TextOverflow, TextService, TextWrap,
     };
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
@@ -4387,6 +4361,16 @@ mod tests {
         }
     }
 
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        match &el.kind {
+            fret_ui::element::ElementKind::Text(props) if props.text.as_ref() == needle => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, needle)),
+        }
+    }
+
     fn svg_sources_match(lhs: &fret_ui::SvgSource, rhs: &fret_ui::SvgSource) -> bool {
         match (lhs, rhs) {
             (fret_ui::SvgSource::Id(lhs), fret_ui::SvgSource::Id(rhs)) => lhs == rhs,
@@ -4400,6 +4384,45 @@ mod tests {
             }
             _ => false,
         }
+    }
+
+    #[test]
+    fn menubar_label_element_uses_shared_menu_group_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(96.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            menubar_label_element(
+                cx,
+                Arc::from("Appearance"),
+                false,
+                Px(8.0),
+                Px(32.0),
+                Px(6.0),
+            )
+        });
+
+        let text = find_text_element(&element, "Appearance").expect("expected menubar label text");
+        let fret_ui::element::ElementKind::Text(props) = &text.kind else {
+            panic!("expected Text element for menubar label");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, fret_ui::element::Length::Fill);
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(fret_ui::element::Length::Px(Px(0.0)))
+        );
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+        assert!(text.inherited_foreground.is_some());
     }
 
     #[test]

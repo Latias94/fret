@@ -98,8 +98,15 @@ impl ElementHostWidget {
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
             match positioned_layout_style(child_style) {
-                PositionedLayoutStyle::Absolute(inset) => {
-                    layout_absolute_child_with_probe_bounds(cx, child, base, probe_bounds, inset)
+                PositionedLayoutStyle::Absolute { inset, size } => {
+                    layout_absolute_child_with_probe_bounds(
+                        cx,
+                        child,
+                        base,
+                        probe_bounds,
+                        inset,
+                        size,
+                    )
                 }
                 PositionedLayoutStyle::Static => {
                     let child_size = non_absolute_sizes
@@ -190,8 +197,15 @@ impl ElementHostWidget {
         for &child in cx.children {
             let child_style = layout_style_for_node(cx.app, window, child);
             match positioned_layout_style(child_style) {
-                PositionedLayoutStyle::Absolute(inset) => {
-                    layout_absolute_child_with_probe_bounds(cx, child, base, probe_bounds, inset)
+                PositionedLayoutStyle::Absolute { inset, size } => {
+                    layout_absolute_child_with_probe_bounds(
+                        cx,
+                        child,
+                        base,
+                        probe_bounds,
+                        inset,
+                        size,
+                    )
                 }
                 style => layout_positioned_child(cx, child, base, style),
             }

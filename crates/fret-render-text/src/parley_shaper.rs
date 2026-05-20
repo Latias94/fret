@@ -1045,6 +1045,20 @@ impl ParleyShaper {
             )];
         }
 
+        let requested_line_height_px =
+            requested_line_height_logical_px_with_strut(base_style).map(|v| (v * scale).max(0.0));
+        let strut_forces_fixed = base_style.strut_style.as_ref().is_some_and(|s| s.force);
+        let fixed_line_box = strut_forces_fixed
+            || (base_style.line_height_policy == TextLineHeightPolicy::FixedFromStyle
+                && requested_line_height_px.is_some());
+        let fixed_ascent_descent = if fixed_line_box {
+            let style_for_metrics = style_for_strut_metrics(base_style);
+            let style_for_metrics = style_for_metrics.as_ref().unwrap_or(base_style);
+            self.base_ascent_descent_px_for_style(style_for_metrics, scale)
+        } else {
+            None
+        };
+
         let root_style = ParleyTextStyle {
             word_break,
             overflow_wrap,
@@ -1098,20 +1112,6 @@ impl ParleyShaper {
         self.layout.break_all_lines(max_width_px);
 
         let mut out: Vec<(Range<usize>, ShapedLineLayout)> = Vec::new();
-
-        let requested_line_height_px =
-            requested_line_height_logical_px_with_strut(base_style).map(|v| (v * scale).max(0.0));
-        let strut_forces_fixed = base_style.strut_style.as_ref().is_some_and(|s| s.force);
-        let fixed_line_box = strut_forces_fixed
-            || (base_style.line_height_policy == TextLineHeightPolicy::FixedFromStyle
-                && requested_line_height_px.is_some());
-        let fixed_ascent_descent = if fixed_line_box {
-            let style_for_metrics = style_for_strut_metrics(base_style);
-            let style_for_metrics = style_for_metrics.as_ref().unwrap_or(base_style);
-            self.base_ascent_descent_px_for_style(style_for_metrics, scale)
-        } else {
-            None
-        };
 
         for line in self.layout.lines() {
             let line_range = line.text_range();
@@ -1981,6 +1981,40 @@ mod tests {
                 line.line_height
             );
         }
+    }
+
+    #[test]
+    fn fixed_line_box_word_wrap_preserves_paragraph_layout_on_cold_metrics_cache() {
+        let mut shaper = shaper_with_bundled_fonts();
+
+        let style = TextStyle {
+            font: FontId::family("Inter"),
+            size: Px(12.0),
+            line_height: Some(Px(16.0)),
+            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
+            ..Default::default()
+        };
+        let text = "Preview mirrors the shadcn/Base UI Combobox docs path after folding the top \
+            preview into Basic and keeping long follow-up sections in the same document.";
+
+        let lines = shaper.shape_paragraph_word_wrap(TextInputRef::plain(text, &style), 260.0, 1.0);
+
+        assert!(
+            lines.len() >= 2,
+            "expected cold fixed-line-height word wrap to keep the real paragraph layout; lines={}",
+            lines.len()
+        );
+        assert_eq!(
+            lines.first().map(|(range, _)| range.start),
+            Some(0),
+            "expected the first wrapped line to start at the paragraph text, not an internal metrics probe"
+        );
+        assert!(
+            lines
+                .iter()
+                .all(|(_, line)| !line.glyphs().is_empty() && !line.clusters().is_empty()),
+            "expected paint shaping to produce real paragraph glyphs for every wrapped line"
+        );
     }
 
     #[test]

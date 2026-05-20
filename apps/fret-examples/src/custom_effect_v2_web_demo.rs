@@ -32,10 +32,11 @@ use fret_runtime::{Model, PlatformCapabilities};
 use fret_ui::declarative;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, EffectLayerProps, Elements, FlexProps, LayoutStyle,
-    Length, MainAlign, Overflow, SpacerProps, SpacingLength, TextProps,
+    Length, MainAlign, Overflow, SpacerProps, SpacingLength,
 };
-use fret_ui::{ElementContext, Invalidation, UiTree};
+use fret_ui::{ElementContext, Invalidation, UiHost, UiTree};
 use fret_ui_kit::custom_effects::CustomEffectProgramV2;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::on_activate_request_redraw;
 use fret_ui_kit::ui;
 use fret_ui_kit::{IntoUiElement, Space, UiExt};
@@ -195,6 +196,22 @@ impl CustomEffectV2WebDriver {
     fn with_alpha(mut c: fret_core::Color, a: f32) -> fret_core::Color {
         c.a = a.clamp(0.0, 1.0);
         c
+    }
+
+    fn overlay_label_text<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        text: impl Into<Arc<str>>,
+    ) -> AnyElement {
+        decl_text::text_section_chrome_label(cx, text)
+            .inherit_foreground(Self::srgb(255, 255, 255, 0.92))
+    }
+
+    fn overlay_readout_text<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        text: impl Into<Arc<str>>,
+        foreground: fret_core::Color,
+    ) -> AnyElement {
+        decl_text::text_control_readout(cx, text).inherit_foreground(foreground)
     }
 
     fn build_ui(app: &mut App, window: AppWindowId) -> CustomEffectV2WebWindowState {
@@ -546,17 +563,11 @@ impl CustomEffectV2WebDriver {
                     ..Default::default()
                 },
                 |cx| {
-                    let text = cx.text_props(TextProps {
-                        layout: Default::default(),
-                        text: "CustomV2 unsupported on this adapter/backend".into(),
-                        style: None,
-                        color: Some(theme.color_token("muted_foreground")),
-                        align: fret_core::TextAlign::Start,
-                        wrap: fret_core::TextWrap::None,
-                        overflow: fret_core::TextOverflow::Clip,
-                        ink_overflow: Default::default(),
-                    });
-                    vec![text]
+                    vec![Self::overlay_readout_text(
+                        cx,
+                        "CustomV2 unsupported on this adapter/backend",
+                        theme.color_token("muted_foreground"),
+                    )]
                 },
             )
         };
@@ -578,16 +589,7 @@ impl CustomEffectV2WebDriver {
                 badge_layout.inset.left = Some(Px(12.0)).into();
                 badge_layout.inset.top = Some(Px(12.0)).into();
 
-                let badge_text = cx.text_props(TextProps {
-                    layout: Default::default(),
-                    text: "Custom Effect V2 (WebGPU)".into(),
-                    style: None,
-                    color: Some(Self::srgb(255, 255, 255, 0.92)),
-                    align: fret_core::TextAlign::Start,
-                    wrap: fret_core::TextWrap::None,
-                    overflow: fret_core::TextOverflow::Clip,
-                    ink_overflow: Default::default(),
-                });
+                let badge_text = Self::overlay_label_text(cx, "Custom Effect V2 (WebGPU)");
 
                 let badge = cx.container(
                     ContainerProps {
@@ -1030,17 +1032,18 @@ impl CustomEffectV2WebDriver {
                     hint_layout.inset.left = Some(Px(16.0)).into();
                     hint_layout.inset.bottom = Some(Px(16.0)).into();
 
-                    items.push(cx.text_props(TextProps {
-                        layout: hint_layout,
-                        text:
-                            "Press V to toggle the demo surface. Press R to reset controls.".into(),
-                        style: None,
-                        color: Some(Self::with_alpha(theme.color_token("foreground"), 0.55)),
-                        align: fret_core::TextAlign::Start,
-                        wrap: fret_core::TextWrap::None,
-                        overflow: fret_core::TextOverflow::Clip,
-                        ink_overflow: Default::default(),
-                    }));
+                    let hint_text = Self::overlay_readout_text(
+                        cx,
+                        "Press V to toggle the demo surface. Press R to reset controls.",
+                        Self::with_alpha(theme.color_token("foreground"), 0.55),
+                    );
+                    items.push(cx.container(
+                        ContainerProps {
+                            layout: hint_layout,
+                            ..Default::default()
+                        },
+                        move |_cx| vec![hint_text],
+                    ));
 
                     if !visible {
                         return items;

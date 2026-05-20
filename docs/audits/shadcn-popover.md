@@ -50,6 +50,8 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - Pass: The typed compound-parts lane now covers both sides of that composition:
   `PopoverTrigger::build(...)` for the trigger and `PopoverContent::build(cx, ...)` for
   late-landing content children.
+- Pass: `PopoverDescription::new_children(...)` covers composed/rich description bodies while
+  preserving caller-supplied shared text-role children under the popover description scope.
 - Pass: `PopoverTrigger` now toggles `open` by default (shadcn/Radix trigger-like behavior), and
   supports opt-out via `PopoverTrigger::auto_toggle(false)` for controlled/manual flows.
 - Pass: Upstream exports `PopoverAnchor`; Fret provides `PopoverAnchor` and supports custom anchor
@@ -149,6 +151,7 @@ Upstream shadcn/ui exports a thin wrapper around Radix:
 - `cargo nextest run -p fret-ui-shadcn popover::tests`
 - `cargo test -p fret-ui-gallery --test popover_docs_surface`
 - Contract test: `popover_content_does_not_stretch_children_by_default`
+- Contract test: `popover_description_children_preserve_shared_text_role_contracts`
 - UI Gallery diag: `tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-inline-children-button-not-stretched.json`
 - Contract test: `popover_modal_mode_alias_sets_expected_mode`
 - Contract test: `popover_open_change_events_emit_change_and_complete_after_settle`

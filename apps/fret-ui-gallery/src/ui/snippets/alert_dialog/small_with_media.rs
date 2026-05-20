@@ -2,8 +2,9 @@ pub const SOURCE: &str = include_str!("small_with_media.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_core::{Px, TextOverflow, TextWrap};
-use fret_ui_shadcn::{facade as shadcn, prelude::ui};
+use fret_core::Px;
+use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model_keyed("open", || false);
@@ -33,21 +34,19 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             .media(media)
                             .with_children(cx, |cx| {
                                 vec![
-                                    shadcn::AlertDialogTitle::new_children([ui::text(
+                                    shadcn::AlertDialogTitle::new_children([decl_text::text_section_chrome_label(
+                                        cx,
                                         "Allow accessory to connect?",
                                     )
-                                    .wrap(TextWrap::Word)
-                                    .overflow(TextOverflow::Clip)
                                     .test_id("ui-gallery-alert-dialog-small-media-title")
-                                    .into_element(cx)])
+                                    ])
                                     .into_element(cx),
-                                    shadcn::AlertDialogDescription::new_children([ui::text(
+                                    shadcn::AlertDialogDescription::new_children([decl_text::text_paragraph(
+                                        cx,
                                         "Do you want to allow the USB accessory to connect to this device?",
                                     )
-                                    .wrap(TextWrap::Word)
-                                    .overflow(TextOverflow::Clip)
                                     .test_id("ui-gallery-alert-dialog-small-media-description")
-                                    .into_element(cx)])
+                                    ])
                                     .into_element(cx),
                                 ]
                             }),

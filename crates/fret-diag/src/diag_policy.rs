@@ -100,8 +100,7 @@ pub(crate) fn ui_gallery_script_requires_retained_vlist_reconcile_gate(script: &
 
     matches!(
         name,
-        "ui-gallery-ai-transcript-torture-scroll.json"
-            | "ui-gallery-virtual-list-window-boundary-scroll-retained.json"
+        "ui-gallery-virtual-list-window-boundary-scroll-retained.json"
             | "ui-gallery-tree-window-boundary-scroll-retained.json"
             | "ui-gallery-data-table-window-boundary-scroll-retained.json"
             | "ui-gallery-table-retained-window-boundary-scroll.json"

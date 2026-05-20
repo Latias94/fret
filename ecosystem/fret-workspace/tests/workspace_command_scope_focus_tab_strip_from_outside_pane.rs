@@ -7,7 +7,7 @@ use fret_core::{
 use fret_runtime::CommandId;
 use fret_ui::element::{FlexProps, LayoutStyle, Length, MainAlign, PressableA11y, PressableProps};
 use fret_ui::tree::UiTree;
-use fret_workspace::commands::CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP;
+use fret_workspace::commands::{CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP, CMD_WORKSPACE_TAB_TOGGLE_PIN};
 use fret_workspace::layout::{WorkspacePaneTree, WorkspaceWindowLayout};
 use fret_workspace::{
     WorkspaceCommandScope, WorkspaceTabStrip, workspace_pane_tree_element_with_resize,
@@ -85,6 +85,7 @@ fn render_frame(
     window: AppWindowId,
     bounds: Rect,
     window_layout: fret_runtime::Model<WorkspaceWindowLayout>,
+    apply_workspace_model_commands: bool,
 ) {
     let next_frame = FrameId(app.frame_id().0.saturating_add(1));
     app.set_frame_id(next_frame);
@@ -151,7 +152,11 @@ fn render_frame(
                 |_cx| vec![outside, panes],
             );
 
-            vec![WorkspaceCommandScope::new(window_layout.clone(), body).into_element(cx)]
+            vec![
+                WorkspaceCommandScope::new(window_layout.clone(), body)
+                    .apply_workspace_model_commands(apply_workspace_model_commands)
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -200,6 +205,7 @@ fn focus_tab_strip_command_works_from_outside_pane_subtree() {
         window,
         bounds,
         window_layout,
+        true,
     );
 
     let outside = find_node_by_test_id(&ui, "outside-focus-target");
@@ -214,4 +220,70 @@ fn focus_tab_strip_command_works_from_outside_pane_subtree() {
         Some(active_tab),
         "expected focus to move into the active pane tab strip even when focus starts outside the pane subtree"
     );
+}
+
+#[test]
+fn model_command_replay_can_be_disabled_without_losing_focus_hooks() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(360.0), Px(180.0)),
+    );
+
+    let mut layout = WorkspaceWindowLayout::new("main", "pane-a");
+    layout.pane_tree = WorkspacePaneTree::leaf("pane-a");
+    layout.active_pane = Some(Arc::from("pane-a"));
+    {
+        let pane = layout.pane_tree.find_pane_mut("pane-a").unwrap();
+        pane.tabs.open_and_activate(Arc::from("a"));
+        pane.tabs.open_and_activate(Arc::from("b"));
+        assert_eq!(pane.tabs.active().unwrap().as_ref(), "b");
+    }
+    let window_layout = app.models_mut().insert(layout);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        window_layout.clone(),
+        false,
+    );
+
+    let tab_command = CommandId::from(CMD_WORKSPACE_TAB_TOGGLE_PIN);
+    assert!(
+        !ui.dispatch_command(&mut app, &mut services, &tab_command),
+        "generic workspace model commands should fall through when replay is disabled"
+    );
+    let pinned_count = app
+        .models_mut()
+        .read(&window_layout, |layout| {
+            layout
+                .pane_tree
+                .find_pane("pane-a")
+                .map(|pane| pane.tabs.pinned_count())
+                .unwrap_or(usize::MAX)
+        })
+        .expect("window layout model");
+    assert_eq!(
+        pinned_count, 0,
+        "disabled model replay must not mutate the workspace layout"
+    );
+
+    let outside = find_node_by_test_id(&ui, "outside-focus-target");
+    let active_tab = find_node_by_test_id(&ui, "pane-pane-a-tab-b");
+    ui.set_focus(Some(outside));
+
+    let focus_cmd = CommandId::from(CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP);
+    assert!(
+        ui.dispatch_command(&mut app, &mut services, &focus_cmd),
+        "focus-transfer hooks should remain active when model replay is disabled"
+    );
+    assert_eq!(ui.focus(), Some(active_tab));
 }

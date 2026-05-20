@@ -7,9 +7,10 @@ use fret_runtime::{
     RunnerWindowStyleDiagnosticsStore, WindowBackgroundMaterialRequest, WindowDecorationsRequest,
     WindowStyleRequest,
 };
-use fret_ui::ElementContext;
 use fret_ui::element::{LayoutStyle, Length, SemanticsDecoration, SizeStyle};
-use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
+use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_kit::{LayoutRefinement, Space, ui};
 use fret_ui_shadcn::facade as shadcn;
 
 const CMD_TO_NONE: &str = "launcher_utility_window_materials_demo.to_none";
@@ -22,6 +23,27 @@ const TEST_ID_TO_NONE: &str = "utility-window.materials.to_none";
 const TEST_ID_TO_MICA: &str = "utility-window.materials.to_mica";
 const TEST_ID_TO_ACRYLIC: &str = "utility-window.materials.to_acrylic";
 const TEST_ID_STYLE_TEXT: &str = "utility-window.materials.style_effective";
+
+fn launcher_utility_materials_title_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_section_chrome_label(cx, text)
+}
+
+fn launcher_utility_materials_readout_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn launcher_utility_materials_code_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> fret_ui::element::AnyElement {
+    decl_text::text_code_label(cx, text)
+}
 
 fn install_commands(app: &mut KernelApp) {
     app.commands_mut().register(
@@ -121,7 +143,6 @@ fn view(
     st: &mut LauncherUtilityWindowMaterialsState,
 ) -> ViewElements {
     let theme = cx.theme().snapshot();
-    let color_muted_foreground = theme.color_token("muted-foreground");
     let color_secondary = theme.color_token("secondary");
 
     let status = st.status.layout_value_in(cx);
@@ -158,11 +179,10 @@ fn view(
             ..Default::default()
         },
         move |cx| {
-            vec![
-                ui::text("Utility Window Materials (Mica/Acrylic)")
-                    .font_semibold()
-                    .into_element(cx),
-            ]
+            vec![launcher_utility_materials_title_text(
+                cx,
+                "Utility Window Materials (Mica/Acrylic)",
+            )]
         },
     );
 
@@ -176,15 +196,9 @@ fn view(
         ])
         .into_element(cx),
         shadcn::CardContent::new([ui::v_flex(move |cx| {
-            let style_line = ui::text(style_text)
-                .font_monospace()
-                .text_sm()
-                .test_id(TEST_ID_STYLE_TEXT)
-                .into_element(cx);
-            let status_line = ui::text(status)
-                .text_sm()
-                .text_color(ColorRef::Color(color_muted_foreground))
-                .into_element(cx);
+            let style_line = launcher_utility_materials_code_label_text(cx, style_text)
+                .test_id(TEST_ID_STYLE_TEXT);
+            let status_line = launcher_utility_materials_readout_text(cx, status);
 
             let buttons_row = ui::h_flex(move |cx| {
                 [

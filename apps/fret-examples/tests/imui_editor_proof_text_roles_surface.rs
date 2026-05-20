@@ -1,0 +1,38 @@
+#[test]
+fn imui_editor_proof_main_fixed_text_uses_shared_roles() {
+    let source = include_str!("../src/imui_editor_proof_demo.rs");
+
+    for needle in [
+        "fn proof_imui_section_text(",
+        "fn proof_imui_readout_text(",
+        "fn proof_imui_compact_paragraph_text(",
+        "decl_text::text_section_chrome_label(cx, text)",
+        "decl_text::text_control_readout(cx, text)",
+        "decl_text::text_compact_paragraph(cx, text)",
+        "imui editor-grade proof (M7): docking + multi-window + viewport surfaces",
+        "single-window mode enabled",
+        "authoring parity proof: shared models",
+        "shared state readout: each declarative/imui pair",
+        "fret-ui-editor (M2): PropertyGroup + PropertyGrid + search assist",
+    ] {
+        assert!(
+            source.contains(needle),
+            "imui_editor_proof_demo main text should use shared role helpers; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "fret_ui_kit::ui::text(",
+        "let headline =",
+        "let parity_intro =",
+        "let parity_state_hint =",
+        "let editor_label =",
+        ".font_semibold()",
+        ".text_xs()",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "imui_editor_proof_demo main text should not hand-roll local text styling; unexpected `{needle}`"
+        );
+    }
+}

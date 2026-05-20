@@ -35,20 +35,34 @@ use fret_ui::{ElementContext, ElementContextAccess, Invalidation, Theme, ThemeSn
 use crate::overlay_motion;
 
 fn apply_tooltip_inherited_defaults(
-    mut element: AnyElement,
+    element: AnyElement,
     fg: fret_core::Color,
     text_style: &TextStyle,
     max_text_w: Option<Px>,
 ) -> AnyElement {
+    apply_tooltip_inherited_defaults_scoped(element, fg, text_style, max_text_w, false)
+}
+
+fn apply_tooltip_inherited_defaults_scoped(
+    mut element: AnyElement,
+    fg: fret_core::Color,
+    text_style: &TextStyle,
+    max_text_w: Option<Px>,
+    role_scope_active: bool,
+) -> AnyElement {
+    let role_scope_active = role_scope_active || element.inherited_text_style.is_some();
+
     match &mut element.kind {
         ElementKind::Text(props) => {
-            if props.color.is_none() {
+            if props.color.is_none() && !role_scope_active {
                 props.color = Some(fg);
             }
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(text_style.clone());
             }
-            if let Some(max_w) = max_text_w {
+            if let Some(max_w) = max_text_w
+                && !role_scope_active
+            {
                 props.layout.size.max_width = Some(Length::Px(max_w));
                 props.layout.size.min_width = Some(Length::Px(Px(0.0)));
             }
@@ -69,25 +83,29 @@ fn apply_tooltip_inherited_defaults(
             color.get_or_insert(fg);
         }
         ElementKind::StyledText(props) => {
-            if props.color.is_none() {
+            if props.color.is_none() && !role_scope_active {
                 props.color = Some(fg);
             }
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(text_style.clone());
             }
-            if let Some(max_w) = max_text_w {
+            if let Some(max_w) = max_text_w
+                && !role_scope_active
+            {
                 props.layout.size.max_width = Some(Length::Px(max_w));
                 props.layout.size.min_width = Some(Length::Px(Px(0.0)));
             }
         }
         ElementKind::SelectableText(props) => {
-            if props.color.is_none() {
+            if props.color.is_none() && !role_scope_active {
                 props.color = Some(fg);
             }
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(text_style.clone());
             }
-            if let Some(max_w) = max_text_w {
+            if let Some(max_w) = max_text_w
+                && !role_scope_active
+            {
                 props.layout.size.max_width = Some(Length::Px(max_w));
                 props.layout.size.min_width = Some(Length::Px(Px(0.0)));
             }
@@ -98,7 +116,15 @@ fn apply_tooltip_inherited_defaults(
     element.children = element
         .children
         .into_iter()
-        .map(|child| apply_tooltip_inherited_defaults(child, fg, text_style, max_text_w))
+        .map(|child| {
+            apply_tooltip_inherited_defaults_scoped(
+                child,
+                fg,
+                text_style,
+                max_text_w,
+                role_scope_active,
+            )
+        })
         .collect();
     element
 }
@@ -1655,7 +1681,7 @@ impl TooltipContent {
                 apply_tooltip_inherited_defaults(child, fg, &text_style, Some(inner_max_w))
             })
             .collect();
-        let container = shadcn_layout::container_flow(cx, props, children);
+        let container = shadcn_layout::container_flow(cx, props, children).inherit_foreground(fg);
         container.attach_semantics(
             SemanticsDecoration::default().role(fret_core::SemanticsRole::Tooltip),
         )
@@ -1682,6 +1708,7 @@ mod tests {
     use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
     use fret_ui::tree::UiTree;
     use fret_ui_kit::OverlayController;
+    use fret_ui_kit::declarative::text as decl_text;
     use fret_ui_kit::ui::UiElementSinkExt as _;
 
     #[test]
@@ -1879,6 +1906,28 @@ mod tests {
         }
     }
 
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
+
     #[test]
     fn tooltip_content_applies_default_fg_to_descendant_text() {
         use fret_core::Color;
@@ -1983,6 +2032,69 @@ mod tests {
 
         assert_eq!(first_props.style.as_ref().map(|s| s.size), Some(style.size));
         assert_eq!(second_props.style.as_ref().map(|s| s.size), Some(Px(18.0)));
+    }
+
+    #[test]
+    fn tooltip_content_applies_default_style_to_bare_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "tooltip-bare-text", |cx| {
+            let content = TooltipContent::new(vec![cx.text("Save changes")]).into_element(cx);
+
+            let text =
+                find_text_element(&content, "Save changes").expect("expected tooltip text child");
+            let ElementKind::Text(props) = &text.kind else {
+                panic!("expected text leaf");
+            };
+            assert!(props.style.is_some());
+            assert!(props.color.is_some());
+            assert_eq!(props.wrap, TextWrap::Word);
+            assert_eq!(props.overflow, TextOverflow::Clip);
+            assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert_eq!(props.layout.size.max_width, Some(Length::Px(Px(296.0))));
+            assert!(
+                find_first_inherited_foreground_node(&content).is_some(),
+                "expected TooltipContent foreground to remain inherited through the content root"
+            );
+        });
+    }
+
+    #[test]
+    fn tooltip_content_preserves_shared_control_readout_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "tooltip-role-text", |cx| {
+            let content =
+                TooltipContent::new(vec![decl_text::text_control_readout(cx, "Ctrl+Shift+S")])
+                    .into_element(cx);
+
+            let text = find_text_element(&content, "Ctrl+Shift+S")
+                .expect("expected tooltip role text child");
+            let ElementKind::Text(props) = &text.kind else {
+                panic!("expected text leaf");
+            };
+            assert!(props.style.is_none());
+            assert!(props.color.is_none());
+            assert_eq!(props.wrap, TextWrap::None);
+            assert_eq!(props.overflow, TextOverflow::Ellipsis);
+            assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert_eq!(props.layout.flex.shrink, 1.0);
+            assert!(text.inherited_text_style.is_some());
+            assert!(
+                find_first_inherited_foreground_node(&content).is_some(),
+                "expected TooltipContent foreground to remain inherited through the content root"
+            );
+        });
     }
 
     #[test]

@@ -28,6 +28,7 @@ use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
@@ -1495,6 +1496,28 @@ fn collect_roving_labels_and_disabled(
     }
 }
 
+fn dropdown_menu_label_element<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: Arc<str>,
+    inset: bool,
+    pad_x: Px,
+    pad_x_inset: Px,
+    pad_y: Px,
+) -> AnyElement {
+    let dir = crate::direction::use_direction(cx, None);
+    let pad_left = if inset { pad_x_inset } else { pad_x };
+
+    cx.container(
+        ContainerProps {
+            layout: LayoutStyle::default(),
+            padding: rtl::padding_edges_with_inline_start_end(dir, pad_y, pad_y, pad_left, pad_x)
+                .into(),
+            ..Default::default()
+        },
+        move |cx| vec![decl_text::text_menu_group_label(cx, text)],
+    )
+}
+
 fn take_submenu_entries_by_value(
     entries: &mut [DropdownMenuEntry],
     open_value: &str,
@@ -1591,42 +1614,14 @@ fn render_dropdown_submenu_entries<H: UiHost>(
     for entry in entries {
         match entry {
             DropdownMenuEntry::Label(label) => {
-                let text = label.text;
-                let pad_left = if label.inset {
-                    style.pad_x_inset
-                } else {
-                    style.pad_x
-                };
-                rows.push(
-                    cx.container(
-                        ContainerProps {
-                            layout: LayoutStyle::default(),
-                            padding: rtl::padding_edges_with_inline_start_end(
-                                dir,
-                                style.pad_y,
-                                style.pad_y,
-                                pad_left,
-                                style.pad_x,
-                            )
-                            .into(),
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            vec![
-                                ui::text(text)
-                                    .text_size_px(style.font_size)
-                                    .line_height_px(style.font_line_height)
-                                    .line_height_policy(
-                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                    )
-                                    .font_medium()
-                                    .nowrap()
-                                    .text_color(ColorRef::Color(style.label_fg))
-                                    .into_element(cx),
-                            ]
-                        },
-                    ),
-                );
+                rows.push(dropdown_menu_label_element(
+                    cx,
+                    label.text,
+                    label.inset,
+                    style.pad_x,
+                    style.pad_x_inset,
+                    style.pad_y,
+                ));
             }
             DropdownMenuEntry::Group(group) => {
                 let children = render_dropdown_submenu_entries(cx, group.entries, item_ix, env);
@@ -4040,7 +4035,6 @@ impl DropdownMenu {
                                                         font_size: Px,
                                                         font_line_height: Px,
                                                         text_style: TextStyle,
-                                                        label_fg: fret_core::Color,
                                                         accent: fret_core::Color,
                                                         accent_fg: fret_core::Color,
                                                         fg: fret_core::Color,
@@ -4081,7 +4075,6 @@ impl DropdownMenu {
                                                         let font_size = env.font_size;
                                                         let font_line_height = env.font_line_height;
                                                         let text_style = env.text_style.clone();
-                                                        let label_fg = env.label_fg;
                                                         let accent = env.accent;
                                                         let accent_fg = env.accent_fg;
                                                         let fg = env.fg;
@@ -4112,31 +4105,13 @@ impl DropdownMenu {
                                                         for entry in entries {
                                                             match entry {
                                                     DropdownMenuEntry::Label(label) => {
-                                                        let fg = label_fg;
-                                                        let text = label.text;
-                                                        let pad_left =
-                                                            if label.inset { pad_x_inset } else { pad_x };
-                                                        out.push(cx.container(
-                                                            ContainerProps {
-                                                                layout: LayoutStyle::default(),
-                                                                padding: rtl::padding_edges_with_inline_start_end(
-                                                                    dir, pad_y, pad_y, pad_left, pad_x,
-                                                                )
-                                                                .into(),
-                                                                ..Default::default()
-                                                            },
-                                                            move |cx| {
-                                                                vec![ui::text( text)
-                                                                    .text_size_px(font_size)
-                                                                    .line_height_px(font_line_height)
-                                                                    .line_height_policy(
-                                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                                    )
-                                                                    .font_medium()
-                                                                    .nowrap()
-                                                                    .text_color(ColorRef::Color(fg))
-                                                                    .into_element(cx)]
-                                                            },
+                                                        out.push(dropdown_menu_label_element(
+                                                            cx,
+                                                            label.text,
+                                                            label.inset,
+                                                            pad_x,
+                                                            pad_x_inset,
+                                                            pad_y,
                                                         ));
                                                     }
                                                     DropdownMenuEntry::Group(group) => {
@@ -5006,7 +4981,6 @@ impl DropdownMenu {
                                                         font_size,
                                                         font_line_height,
                                                         text_style,
-                                                        label_fg: icon_muted_fg,
                                                         accent,
                                                         accent_fg,
                                                         fg,
@@ -5194,7 +5168,6 @@ impl DropdownMenu {
                                     alpha_mul(destructive_fg, destructive_bg_alpha)
                                 });
                             let label_fg = theme.color_token("muted-foreground");
-
                             let mut text_style = typography::fixed_line_box_style(
                                 FontId::ui(),
                                 font_size,
@@ -5444,7 +5417,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, Event, KeyCode, Modifiers, MouseButtons, PathCommand, Point, PointerEvent,
-        PointerType, Rect, SvgId, SvgService,
+        PointerType, Rect, SvgId, SvgService, TextOverflow, TextWrap,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Px, SemanticsRole, Size as CoreSize};
@@ -5475,6 +5448,16 @@ mod tests {
         }
     }
 
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, needle)),
+        }
+    }
+
     fn svg_sources_match(lhs: &fret_ui::SvgSource, rhs: &fret_ui::SvgSource) -> bool {
         match (lhs, rhs) {
             (fret_ui::SvgSource::Id(lhs), fret_ui::SvgSource::Id(rhs)) => lhs == rhs,
@@ -5488,6 +5471,46 @@ mod tests {
             }
             _ => false,
         }
+    }
+
+    #[test]
+    fn dropdown_menu_label_element_uses_shared_menu_group_text_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(96.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            dropdown_menu_label_element(
+                cx,
+                Arc::from("Recently opened projects"),
+                false,
+                Px(8.0),
+                Px(32.0),
+                Px(6.0),
+            )
+        });
+
+        let text = find_text_element(&element, "Recently opened projects")
+            .expect("expected dropdown menu label text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected Text element for dropdown menu label");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, fret_ui::element::Length::Fill);
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(fret_ui::element::Length::Px(Px(0.0)))
+        );
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+        assert!(text.inherited_foreground.is_some());
     }
 
     #[test]

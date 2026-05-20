@@ -1,5 +1,6 @@
 {
   "meta": {
+    "required_launch_features": ["gallery-dev"],
     "name": "ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change",
     "required_capabilities": [
       "diag.script_v2"
@@ -15,6 +16,9 @@
       "view_cache",
       "virtual_list"
     ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_VIEW_CACHE": "1"
+    },
     "target_hints": [
       "app:fret-ui-gallery",
       "feature:gallery-dev",
@@ -63,6 +67,15 @@
           "kind": "test_id"
         },
         "text": "datatable (torture)"
+      },
+      "timeout_frames": 600,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/view_cache/enabled",
+        "value": true
       },
       "timeout_frames": 600,
       "type": "wait_until"

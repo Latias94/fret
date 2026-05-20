@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use fret_core::{Color, FontWeight, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap};
+use fret_core::{Color, Px, SemanticsRole};
 use fret_icons::IconId;
-use fret_ui::element::{AnyElement, LayoutStyle, SemanticsProps, TextProps};
+use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::typography;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, Radius, Space,
@@ -201,24 +201,8 @@ impl AgentHeader {
             Some(ColorRef::Color(muted)),
         );
 
-        let name_text = cx.text_props(TextProps {
-            layout: decl_style::layout_style(
-                &theme,
-                LayoutRefinement::default().flex_grow(1.0).min_w_0(),
-            ),
-            text: name,
-            style: Some(typography::preset_text_style_with_overrides(
-                &theme,
-                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
-                Some(FontWeight::MEDIUM),
-                None,
-            )),
-            color: Some(theme.color_required("foreground")),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let name_text = decl_text::text_chrome_title(cx, name)
+            .inherit_foreground(theme.color_required("foreground"));
 
         let model_badge = model.map(|m| {
             Badge::new(m)
@@ -374,37 +358,10 @@ impl AgentInstructions {
         let theme = Theme::global(&*cx.app).clone();
         let muted = muted_fg(&theme);
 
-        let label = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text: Arc::from("Instructions"),
-            style: Some(typography::preset_text_style_with_overrides(
-                &theme,
-                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
-                Some(FontWeight::MEDIUM),
-                None,
-            )),
-            color: Some(muted),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let label =
+            decl_text::text_section_chrome_label(cx, "Instructions").inherit_foreground(muted);
 
-        let body_text = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text: self.text,
-            style: Some(typography::preset_text_style_with_overrides(
-                &theme,
-                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
-                Some(FontWeight::NORMAL),
-                None,
-            )),
-            color: Some(muted),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let body_text = decl_text::text_compact_paragraph(cx, self.text).inherit_foreground(muted);
 
         let bg = token_color_with_alpha(&theme, "muted", "accent", 0.5);
         let props = decl_style::container_props(
@@ -430,8 +387,8 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
-    use fret_ui::element::{ElementKind, Length};
+    use fret_core::{AppWindowId, FontWeight, Point, Px, Rect, Size, TextOverflow, TextWrap};
+    use fret_ui::element::{ElementKind, Length, TextProps};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -450,11 +407,22 @@ mod tests {
         }
     }
 
+    fn find_text_element<'a>(el: &'a AnyElement, text: &str) -> Option<&'a AnyElement> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(el),
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, text)),
+        }
+    }
+
     #[test]
-    fn agent_header_label_can_shrink_within_row() {
+    fn agent_header_label_uses_chrome_title_text_role() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        let label = "A very long agent name that should wrap instead of overflowing the header row";
+        let label =
+            "A very long agent name that should truncate instead of increasing the header row";
 
         let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "agent", |cx| {
             AgentHeader::new(label)
@@ -462,12 +430,30 @@ mod tests {
                 .into_element(cx)
         });
 
-        let label = find_text_by_content(&el, label).expect("agent header label text");
-        assert_eq!(label.wrap, TextWrap::Word);
+        let label_el = find_text_element(&el, label).expect("agent header label text");
+        let ElementKind::Text(label) = &label_el.kind else {
+            panic!("expected agent header label to be text");
+        };
+        assert_eq!(label.wrap, TextWrap::None);
+        assert_eq!(label.overflow, TextOverflow::Ellipsis);
+        assert_eq!(label.layout.size.width, Length::Fill);
         assert_eq!(label.layout.flex.grow, 1.0);
         assert_eq!(label.layout.flex.shrink, 1.0);
-        assert_eq!(label.layout.flex.basis, Length::Auto);
+        assert_eq!(label.layout.flex.basis, Length::Px(Px(0.0)));
         assert_eq!(label.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert!(label.style.is_none());
+        assert!(label.color.is_none());
+        assert_eq!(
+            label_el.inherited_foreground,
+            Some(Theme::global(&app).color_required("foreground"))
+        );
+        assert_eq!(
+            label_el
+                .inherited_text_style
+                .as_ref()
+                .and_then(|style| style.weight),
+            Some(FontWeight::MEDIUM)
+        );
     }
 
     #[test]
@@ -495,10 +481,16 @@ mod tests {
 
         let label = find_text_by_content(&el, "Tools").expect("tools label text");
         assert_eq!(label.text.as_ref(), "Tools");
+        assert_eq!(label.wrap, TextWrap::None);
+        assert_eq!(label.overflow, TextOverflow::Ellipsis);
 
         let description = find_text_by_content(&el, "Search the web for information")
             .expect("tool description text");
         assert_eq!(description.text.as_ref(), "Search the web for information");
+        assert_eq!(description.wrap, TextWrap::None);
+        assert_eq!(description.overflow, TextOverflow::Ellipsis);
+        assert_eq!(description.layout.size.width, Length::Fill);
+        assert_eq!(description.layout.size.min_width, Some(Length::Px(Px(0.0))));
     }
 
     #[test]
@@ -557,7 +549,7 @@ mod tests {
     }
 
     #[test]
-    fn agent_surfaces_use_shared_sm_typography_preset() {
+    fn agent_default_text_uses_shared_resize_roles() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let header = "Alpha Agent";
@@ -575,44 +567,50 @@ mod tests {
                 .into_element(cx)
             });
 
-        let theme = Theme::global(&app).clone();
-        let expected_medium = Some(typography::preset_text_style_with_overrides(
-            &theme,
-            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
-            Some(FontWeight::MEDIUM),
-            None,
-        ));
-        let expected_normal = Some(typography::preset_text_style_with_overrides(
-            &theme,
-            typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
-            Some(FontWeight::NORMAL),
-            None,
-        ));
+        let muted = muted_fg(Theme::global(&app));
 
-        assert_eq!(
-            find_text_by_content(&el, header)
-                .expect("agent header text")
-                .style,
-            expected_medium
-        );
-        assert_eq!(
-            find_text_by_content(&el, "Instructions")
-                .expect("instructions label")
-                .style,
-            expected_medium
-        );
-        assert_eq!(
-            find_text_by_content(&el, instruction)
-                .expect("instructions body")
-                .style,
-            expected_normal
-        );
-        assert_eq!(
-            find_text_by_content(&el, "Tools")
-                .expect("tools label")
-                .style,
-            expected_medium
-        );
+        let header_el = find_text_element(&el, header).expect("agent header text");
+        let ElementKind::Text(header_props) = &header_el.kind else {
+            panic!("expected agent header text");
+        };
+        assert_eq!(header_props.wrap, TextWrap::None);
+        assert_eq!(header_props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(header_props.layout.size.width, Length::Fill);
+        assert!(header_props.style.is_none());
+        assert!(header_props.color.is_none());
+
+        for section in ["Instructions", "Tools"] {
+            let section_el = find_text_element(&el, section).expect("section label text");
+            let ElementKind::Text(section_props) = &section_el.kind else {
+                panic!("expected section label text");
+            };
+            assert_eq!(section_props.wrap, TextWrap::None);
+            assert_eq!(section_props.overflow, TextOverflow::Ellipsis);
+            assert_eq!(
+                section_props.layout.size.min_width,
+                Some(Length::Px(Px(0.0)))
+            );
+            assert!(section_props.style.is_none());
+            assert!(section_props.color.is_none());
+            assert_eq!(section_el.inherited_foreground, Some(muted));
+            assert!(section_el.inherited_text_style.is_some());
+        }
+
+        let body_el = find_text_element(&el, instruction).expect("instructions body");
+        let ElementKind::Text(body_props) = &body_el.kind else {
+            panic!("expected instructions body text");
+        };
+        assert_eq!(body_props.wrap, TextWrap::Word);
+        assert_eq!(body_props.overflow, TextOverflow::Clip);
+        assert_eq!(body_props.layout.size.width, Length::Fill);
+        assert_eq!(body_props.layout.flex.grow, 1.0);
+        assert_eq!(body_props.layout.flex.shrink, 1.0);
+        assert_eq!(body_props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(body_props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert!(body_props.style.is_none());
+        assert!(body_props.color.is_none());
+        assert_eq!(body_el.inherited_foreground, Some(muted));
+        assert!(body_el.inherited_text_style.is_some());
     }
 }
 
@@ -687,21 +685,7 @@ impl AgentTools {
         let theme = Theme::global(&*cx.app).clone();
         let muted = muted_fg(&theme);
 
-        let label = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text: Arc::from("Tools"),
-            style: Some(typography::preset_text_style_with_overrides(
-                &theme,
-                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
-                Some(FontWeight::MEDIUM),
-                None,
-            )),
-            color: Some(muted),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let label = decl_text::text_section_chrome_label(cx, "Tools").inherit_foreground(muted);
 
         let accordion = match self.content {
             AgentToolsContent::Accordion(accordion) => accordion.into_element(cx),
@@ -790,7 +774,7 @@ impl AgentTool {
             .unwrap_or_else(|| Arc::from("No description"));
         let schema = self.tool.schema_json().clone();
 
-        let desc_el = cx.text(desc);
+        let desc_el = decl_text::text_list_row_label(cx, desc);
         let mut trigger = AccordionTrigger::new(vec![desc_el])
             .refine_style(ChromeRefinement::default().px(Space::N3).py(Space::N2))
             .refine_layout(LayoutRefinement::default().w_full().min_w_0());
@@ -864,21 +848,8 @@ impl AgentOutput {
         let theme = Theme::global(&*cx.app).clone();
         let muted = muted_fg(&theme);
 
-        let label = cx.text_props(TextProps {
-            layout: LayoutStyle::default(),
-            text: Arc::from("Output Schema"),
-            style: Some(typography::preset_text_style_with_overrides(
-                &theme,
-                typography::TypographyPreset::control_ui(typography::UiTextSize::Sm),
-                Some(FontWeight::MEDIUM),
-                None,
-            )),
-            color: Some(muted),
-            wrap: TextWrap::Word,
-            overflow: TextOverflow::Clip,
-            align: TextAlign::Start,
-            ink_overflow: Default::default(),
-        });
+        let label =
+            decl_text::text_section_chrome_label(cx, "Output Schema").inherit_foreground(muted);
 
         let code = CodeBlock::new(self.schema)
             .language("typescript")

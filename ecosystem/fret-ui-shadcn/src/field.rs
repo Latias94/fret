@@ -2,7 +2,9 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 use crate::direction::LayoutDirection;
-use fret_core::{Edges, Px, SemanticsLive, SemanticsRole, TextAlign, TextOverflow, TextWrap};
+use fret_core::{
+    Edges, FontWeight, Px, SemanticsLive, SemanticsRole, TextAlign, TextOverflow, TextWrap,
+};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutQueryRegionProps,
     LayoutStyle, MainAlign, PointerRegionProps, RowProps, SemanticsDecoration, SemanticsProps,
@@ -1013,14 +1015,28 @@ impl FieldContent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct FieldTitle {
-    text: Arc<str>,
+    content: FieldTitleContent,
+}
+
+#[derive(Debug)]
+enum FieldTitleContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl FieldTitle {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: FieldTitleContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: FieldTitleContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
@@ -1050,16 +1066,41 @@ impl FieldTitle {
             LayoutDirection::Rtl => TextAlign::End,
             LayoutDirection::Ltr => TextAlign::Start,
         };
-        let el = approx_w_fit_under_stretch(
-            ui::label(self.text)
-                .text_size_px(px)
-                .line_height_px(line_height)
-                .font_medium()
-                .text_color(ColorRef::Color(fg))
-                .wrap(TextWrap::Word)
-                .text_align(align)
-                .into_element(cx),
-        );
+        let el = match self.content {
+            FieldTitleContent::Text(text) => approx_w_fit_under_stretch(
+                ui::label(text)
+                    .text_size_px(px)
+                    .line_height_px(line_height)
+                    .font_medium()
+                    .text_color(ColorRef::Color(fg))
+                    .wrap(TextWrap::Word)
+                    .text_align(align)
+                    .into_element(cx),
+            ),
+            FieldTitleContent::Children(mut children) => {
+                for child in &mut children {
+                    patch_field_title_text_style_recursive(child, px, line_height, fg, align);
+                }
+
+                let el = match children.len() {
+                    0 => ui::label("")
+                        .text_size_px(px)
+                        .line_height_px(line_height)
+                        .font_medium()
+                        .text_color(ColorRef::Color(fg))
+                        .wrap(TextWrap::Word)
+                        .text_align(align)
+                        .into_element(cx),
+                    1 => children.pop().expect("children.len() == 1"),
+                    _ => ui::v_flex(move |_cx| children)
+                        .gap(Space::N0)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full().min_w_0())
+                        .into_element(cx),
+                };
+                approx_w_fit_under_stretch(el)
+            }
+        };
 
         let field_state = field_state_prim::use_field_state_in_scope(cx, None);
         if field_state.disabled {
@@ -1067,6 +1108,74 @@ impl FieldTitle {
         } else {
             el
         }
+    }
+}
+
+fn patch_field_title_text_style_recursive(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    color: fret_core::Color,
+    align: TextAlign,
+) {
+    patch_field_title_text_style_recursive_scoped(el, px, line_height, color, align, false);
+}
+
+fn patch_field_title_text_style_recursive_scoped(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    color: fret_core::Color,
+    align: TextAlign,
+    role_scope_active: bool,
+) {
+    fn patch_text_style(style: &mut Option<fret_core::TextStyle>, px: Px, line_height: Px) {
+        let mut style_value = style.take().unwrap_or_default();
+        style_value.size = px;
+        style_value.weight = FontWeight::MEDIUM;
+        style_value.line_height = Some(line_height);
+        style_value.line_height_em = None;
+        *style = Some(style_value);
+    }
+
+    let role_scope_active = role_scope_active || el.inherited_text_style.is_some();
+    match &mut el.kind {
+        ElementKind::Text(props) => {
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                props.color = Some(color);
+                props.wrap = TextWrap::Word;
+                props.align = align;
+            }
+        }
+        ElementKind::StyledText(props) => {
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                props.color = Some(color);
+                props.wrap = TextWrap::Word;
+                props.align = align;
+            }
+        }
+        ElementKind::SelectableText(props) => {
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                props.color = Some(color);
+                props.wrap = TextWrap::Word;
+                props.align = align;
+            }
+        }
+        _ => {}
+    }
+
+    for child in &mut el.children {
+        patch_field_title_text_style_recursive_scoped(
+            child,
+            px,
+            line_height,
+            color,
+            align,
+            role_scope_active,
+        );
     }
 }
 
@@ -2159,6 +2268,7 @@ mod tests {
     use fret_ui_kit::primitives::control_registry::{ControlId, control_registry_model};
 
     use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
+    use fret_ui_kit::declarative::text as decl_text;
 
     fn bounds() -> Rect {
         Rect::new(
@@ -2173,6 +2283,24 @@ mod tests {
                 .children
                 .iter()
                 .any(|child| any_element_has_text(child, needle))
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
+    }
+
+    fn find_first_styled_text(el: &AnyElement) -> Option<&fret_ui::element::StyledTextProps> {
+        if let ElementKind::StyledText(props) = &el.kind {
+            return Some(props);
+        }
+        el.children.iter().find_map(find_first_styled_text)
     }
 
     struct FakeServices;
@@ -2339,6 +2467,84 @@ mod tests {
         let label_layout = kind_layout(&label.kind).expect("expected FieldLabel layout");
         assert_eq!(label_layout.size.width, fret_ui::element::Length::Auto);
         assert_eq!(label_layout.flex.align_self, Some(CrossAlign::Start));
+    }
+
+    #[test]
+    fn field_title_children_patch_rich_text_with_title_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                let rich = fret_core::AttributedText::new(
+                    Arc::<str>::from("Price range title"),
+                    Arc::<[fret_core::TextSpan]>::from([fret_core::TextSpan::new(
+                        "Price range title".len(),
+                    )]),
+                );
+
+                FieldTitle::new_children([cx.styled_text(rich)]).into_element(cx)
+            });
+
+        let props = find_first_styled_text(&element)
+            .expect("expected FieldTitle children to keep the rich text node");
+        let style = props
+            .style
+            .as_ref()
+            .expect("expected FieldTitle children to receive explicit title text style");
+        let theme = Theme::global(&app).snapshot();
+        let expected_px = theme
+            .metric_by_key("component.field.title_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_token("font.size"));
+        let expected_line_height = theme
+            .metric_by_key("component.field.title_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+        let expected_fg = theme
+            .color_by_key("foreground")
+            .unwrap_or_else(|| theme.color_token("foreground"));
+
+        assert_eq!(style.size, expected_px);
+        assert_eq!(style.weight, fret_core::FontWeight::MEDIUM);
+        assert_eq!(style.line_height, Some(expected_line_height));
+        assert_eq!(props.color, Some(expected_fg));
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.align, TextAlign::Start);
+
+        let layout = kind_layout(&element.kind).expect("expected FieldTitle child layout");
+        assert_eq!(layout.size.width, fret_ui::element::Length::Auto);
+        assert_eq!(layout.flex.align_self, Some(CrossAlign::Start));
+    }
+
+    #[test]
+    fn field_title_children_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                FieldTitle::new_children([decl_text::text_chrome_title(cx, "Field role title")])
+                    .into_element(cx)
+            });
+
+        let text = find_text_element(&element, "Field role title")
+            .expect("expected FieldTitle role child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
+
+        let layout = kind_layout(&element.kind).expect("expected FieldTitle role child layout");
+        assert_eq!(layout.size.width, fret_ui::element::Length::Fill);
+        assert_eq!(layout.flex.align_self, None);
     }
 
     #[test]

@@ -4,9 +4,11 @@ pub const SOURCE: &str = include_str!("gallery.rs");
 // region: example
 use fret::{AppComponentCx, UiChild};
 use fret_ui::Theme;
-use fret_ui_kit::IntoUiElement;
-use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::ui;
+use fret_ui_kit::{
+    IntoUiElement,
+    declarative::{style as decl_style, text as decl_text},
+    ui,
+};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -203,9 +205,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .max_w(MetricRef::Px(Px(520.0)));
 
     let item_download = {
-        let header =
-            shadcn::ItemHeader::new([ui::text("Your download has started.").into_element(cx)])
-                .into_element(cx);
+        let header = shadcn::ItemHeader::new([decl_text::text_section_chrome_label(
+            cx,
+            "Your download has started.",
+        )])
+        .into_element(cx);
         let media = shadcn::ItemMedia::new([shadcn::Spinner::new().into_element(cx)])
             .variant(shadcn::ItemMediaVariant::Icon)
             .into_element(cx);
@@ -558,9 +562,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .into_element(cx);
 
             let number_text: Arc<str> = Arc::from(format!("#{number}"));
-            let number_col = shadcn::ItemContent::new([ui::text(number_text).into_element(cx)])
-                .refine_layout(LayoutRefinement::default().flex_none())
-                .into_element(cx);
+            let number_col =
+                shadcn::ItemContent::new([decl_text::text_control_readout(cx, number_text)])
+                    .refine_layout(LayoutRefinement::default().flex_none())
+                    .into_element(cx);
 
             children.push(
                 shadcn::Item::new([content, number_col])

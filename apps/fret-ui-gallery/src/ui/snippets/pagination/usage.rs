@@ -2,7 +2,8 @@ pub const SOURCE: &str = include_str!("usage.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
-use fret_ui_kit::IntoUiElement;
+use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::{IntoUiElement, declarative::text as decl_text};
 use fret_ui_shadcn::facade as shadcn;
 
 const CMD_PAGE_PREVIOUS: &str = "ui_gallery.pagination.previous";
@@ -11,8 +12,12 @@ const CMD_PAGE_2: &str = "ui_gallery.pagination.page_2";
 const CMD_PAGE_3: &str = "ui_gallery.pagination.page_3";
 const CMD_PAGE_NEXT: &str = "ui_gallery.pagination.next";
 
-fn page_number(label: &'static str) -> impl UiChild + use<> {
-    fret_ui_kit::ui::text(label).tabular_nums()
+fn page_number<H, L>(cx: &mut ElementContext<'_, H>, label: L) -> impl UiChild + use<H, L>
+where
+    H: UiHost,
+    L: Into<std::sync::Arc<str>>,
+{
+    decl_text::text_button_label(cx, label)
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -24,20 +29,20 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         )
         .into_element(cx),
         shadcn::PaginationItem::new(
-            shadcn::PaginationLink::new([page_number("1").into_element(cx)])
+            shadcn::PaginationLink::new([page_number(cx, "1").into_element(cx)])
                 .action(CMD_PAGE_1)
                 .into_element(cx),
         )
         .into_element(cx),
         shadcn::PaginationItem::new(
-            shadcn::PaginationLink::new([page_number("2").into_element(cx)])
+            shadcn::PaginationLink::new([page_number(cx, "2").into_element(cx)])
                 .active(true)
                 .action(CMD_PAGE_2)
                 .into_element(cx),
         )
         .into_element(cx),
         shadcn::PaginationItem::new(
-            shadcn::PaginationLink::new([page_number("3").into_element(cx)])
+            shadcn::PaginationLink::new([page_number(cx, "3").into_element(cx)])
                 .action(CMD_PAGE_3)
                 .into_element(cx),
         )

@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("sides.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
@@ -13,7 +14,7 @@ fn side_body<H: UiHost>(
     ui::v_stack(move |cx| {
         (0..6)
             .map(|index| {
-                cx.text(format!(
+                decl_text::text_paragraph(cx, format!(
                     "{title} drawer example {}. Use the `direction` prop to control drawer placement.",
                     index + 1
                 ))

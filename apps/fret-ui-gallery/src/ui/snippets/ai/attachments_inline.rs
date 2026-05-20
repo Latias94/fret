@@ -8,6 +8,7 @@ use fret_ui::Invalidation;
 use fret_ui::Theme;
 use fret_ui::element::{ContainerProps, InteractivityGateProps};
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
 use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
 use std::sync::Arc;
@@ -127,13 +128,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 let preview = ui_ai::AttachmentPreview::new(item.clone())
                     .variant(ui_ai::AttachmentVariant::Grid)
                     .into_element(cx);
-                let label = ui::text(ui_ai::get_attachment_label(&item))
-                    .text_sm()
-                    .into_element(cx);
+                let label = decl_text::text_list_row_label(cx, ui_ai::get_attachment_label(&item));
                 let media_type = item
                     .media_type()
                     .cloned()
-                    .map(|media_type| ui::text(media_type).text_xs().into_element(cx));
+                    .map(|media_type| decl_text::text_control_readout(cx, media_type));
 
                 let hover_content = ui::v_flex(move |_cx| {
                     let mut out = vec![preview, label];

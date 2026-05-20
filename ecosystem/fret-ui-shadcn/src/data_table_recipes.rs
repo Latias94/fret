@@ -13,6 +13,7 @@ use fret_ui_headless::table::{ColumnDef, ColumnId, ColumnPinPosition, TableState
 use fret_ui_kit::declarative::icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::table::{IntoTableStateModel, TableViewOutput};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 use serde_json::Value;
 
@@ -290,6 +291,41 @@ fn data_table_toolbar_test_id(prefix: Option<&Arc<str>>, suffix: &str, fallback:
         Some(prefix) => Arc::<str>::from(format!("{prefix}-{suffix}")),
         None => Arc::<str>::from(fallback),
     }
+}
+
+fn data_table_toolbar_button_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_button_label(cx, text)
+}
+
+fn data_table_toolbar_option_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_list_row_label(cx, text)
+}
+
+fn data_table_toolbar_readout<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout(cx, text)
+}
+
+fn data_table_pagination_readout<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout_tabular(cx, text)
+}
+
+fn data_table_pagination_summary<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    decl_text::text_control_readout_tabular_emphasis(cx, text)
 }
 
 /// shadcn/ui `DataTable` toolbar (recipe).
@@ -919,7 +955,6 @@ impl<TData> DataTableToolbar<TData> {
                 sync_column_pinning(&mut *cx.app, &self.state, &desired_pinning);
 
                 let selected_count = state_value.row_selection.len();
-                let theme = Theme::global(&*cx.app).snapshot();
 
                 let column_label = Arc::clone(&self.column_label);
                 let columns = Arc::clone(&self.columns);
@@ -1096,10 +1131,10 @@ impl<TData> DataTableToolbar<TData> {
                                             cx,
                                             fret_icons::IconId::new_static("lucide.circle-plus"),
                                         ));
-                                        children.push(
-                                            ui::text( trigger_button_label.clone())
-                                                .into_element(cx),
-                                        );
+                                        children.push(data_table_toolbar_button_label(
+                                            cx,
+                                            trigger_button_label.clone(),
+                                        ));
                                         if trigger_selected_count > 0 {
                                             children.push(
                                                 crate::separator::Separator::new()
@@ -1243,9 +1278,8 @@ impl<TData> DataTableToolbar<TData> {
                                         cx.opacity(0.6, move |_cx| vec![icon])
                                     });
 
-                                    let label = ui::raw_text(it.label.clone())
-                                        .nowrap()
-                                        .into_element(cx);
+                                    let label =
+                                        data_table_toolbar_option_label(cx, it.label.clone());
 
                                     let check = icon::icon(
                                         cx,
@@ -1284,12 +1318,10 @@ impl<TData> DataTableToolbar<TData> {
                                         .get(it.value.as_ref())
                                         .copied()
                                         .map(|n| {
-                                            let fg_muted = theme.color_token("muted-foreground");
-                                            let count = ui::text( Arc::<str>::from(n.to_string()))
-                                                .text_xs()
-                                                .text_color(ColorRef::Color(fg_muted))
-                                                .nowrap()
-                                                .into_element(cx);
+                                            let count = data_table_toolbar_readout(
+                                                cx,
+                                                Arc::<str>::from(n.to_string()),
+                                            );
 
                                             ui::h_row(move |_cx| vec![count])
                                                 .layout(
@@ -1365,8 +1397,7 @@ impl<TData> DataTableToolbar<TData> {
 
                                 entries.push(CommandSeparator::new().into());
                                 let clear_row = ui::h_row(move |_cx| {
-                                    vec![ui::text(Arc::<str>::from("Clear filters"))
-                                        .into_element(_cx)]
+                                    vec![data_table_toolbar_button_label(_cx, "Clear filters")]
                                 })
                                 .layout(LayoutRefinement::default().w_full())
                                 .items_center()
@@ -1504,7 +1535,7 @@ impl<TData> DataTableToolbar<TData> {
                         .test_id(reset_test_id)
                         .children(vec![
                             icon::icon(cx, fret_icons::IconId::new_static("lucide.x")),
-                            ui::text("Reset").into_element(cx),
+                            data_table_toolbar_button_label(cx, "Reset"),
                         ])
                         .on_activate(on_activate)
                         .into_element(cx)
@@ -1512,12 +1543,10 @@ impl<TData> DataTableToolbar<TData> {
 
                 let selected_text: Option<AnyElement> =
                     (self.show_selected_text && selected_count > 0).then(|| {
-                        let mut text =
-                            ui::raw_text(Arc::from(format!("Selected: {selected_count}"))).nowrap();
-                        if let Some(color) = theme.color_by_key("muted-foreground") {
-                            text = text.text_color(ColorRef::Color(color));
-                        }
-                        text.into_element(cx)
+                        data_table_toolbar_readout(
+                            cx,
+                            Arc::from(format!("Selected: {selected_count}")),
+                        )
                     });
 
                 let trailing = self.trailing;
@@ -1770,18 +1799,8 @@ impl DataTablePagination {
             .into_element(cx);
 
         ui::h_row(move |cx| {
-            let theme = Theme::global(&*cx.app);
             let dir = use_direction(cx, None);
-            let muted_fg = theme.color_by_key("muted-foreground");
-            let mut text = ui::text(selected_label.clone())
-                .text_sm()
-                .tabular_nums()
-                .nowrap();
-            if let Some(color) = muted_fg {
-                text = text.text_color(ColorRef::Color(color));
-            }
-
-            let selected_text = text.into_element(cx);
+            let selected_text = data_table_pagination_readout(cx, selected_label.clone());
             let spacer = cx.spacer(fret_ui::element::SpacerProps::default());
 
             let page_size_group = ui::h_flex(move |cx| {
@@ -1810,20 +1829,12 @@ impl DataTablePagination {
                 .on_activate(prev_on_activate.clone())
                 .children([icon::icon(cx, rtl::chevron_inline_start(dir))])
                 .into_element(cx);
-            let page_summary = ui::h_flex(move |cx| {
-                vec![
-                    ui::text(page_label.clone())
-                        .text_sm()
-                        .font_medium()
-                        .tabular_nums()
-                        .nowrap()
-                        .into_element(cx),
-                ]
-            })
-            .layout(LayoutRefinement::default().w_px(Px(100.0)))
-            .items_center()
-            .justify_center()
-            .into_element(cx);
+            let page_summary =
+                ui::h_flex(move |cx| vec![data_table_pagination_summary(cx, page_label.clone())])
+                    .layout(LayoutRefinement::default().w_px(Px(100.0)))
+                    .items_center()
+                    .justify_center()
+                    .into_element(cx);
             let next_btn = Button::new("Go to next page")
                 .variant(ButtonVariant::Outline)
                 .size(ButtonSize::IconSm)
@@ -1875,6 +1886,9 @@ impl DataTablePagination {
 mod tests {
     use super::*;
     use crate::data_table_controls::apply_column_visibility_change;
+    use fret_app::App;
+    use fret_core::{Point, Rect, TextOverflow, TextWrap};
+    use fret_ui::element::ElementKind;
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     enum PageSizeAction {
@@ -1901,6 +1915,94 @@ mod tests {
             Ok(_) => PageSizeAction::None,
             Err(_) => PageSizeAction::SyncToState,
         }
+    }
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(240.0)),
+        )
+    }
+
+    fn assert_single_line_role(element: &AnyElement, label: &str) {
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected {label} helper to build a Text element");
+        };
+
+        assert!(
+            props.style.is_none(),
+            "{label} must leave typography on inherited role metadata"
+        );
+        assert!(
+            props.color.is_none(),
+            "{label} must leave foreground on inherited role metadata"
+        );
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(Length::Px(Px(0.0))),
+            "{label} must be shrinkable in toolbar rows"
+        );
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(
+            element.inherited_text_style.is_some(),
+            "{label} must carry shared text-role typography"
+        );
+    }
+
+    fn assert_has_tabular_feature(element: &AnyElement, label: &str) {
+        assert!(
+            element
+                .inherited_text_style
+                .as_ref()
+                .is_some_and(|style| style
+                    .features
+                    .iter()
+                    .any(|feature| feature.tag.as_str() == "tnum" && feature.value == 1)),
+            "{label} must inherit tabular numeric OpenType features"
+        );
+    }
+
+    #[test]
+    fn data_table_toolbar_fixed_text_uses_shared_roles() {
+        let window = fret_core::AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let button = data_table_toolbar_button_label(cx, "Clear filters");
+            assert_single_line_role(&button, "toolbar button label");
+
+            let option = data_table_toolbar_option_label(cx, "Really long faceted filter option");
+            assert_single_line_role(&option, "faceted option label");
+
+            let readout = data_table_toolbar_readout(cx, "Selected: 128");
+            assert_single_line_role(&readout, "toolbar readout");
+            assert!(
+                readout.inherited_foreground.is_some(),
+                "toolbar readouts must inherit muted foreground"
+            );
+
+            let pagination_readout = data_table_pagination_readout(cx, "128 of 4096 selected");
+            assert_single_line_role(&pagination_readout, "pagination readout");
+            assert_has_tabular_feature(&pagination_readout, "pagination readout");
+            assert!(
+                pagination_readout.inherited_foreground.is_some(),
+                "pagination readouts must inherit muted foreground"
+            );
+
+            let pagination_summary = data_table_pagination_summary(cx, "Page 12 of 128");
+            assert_single_line_role(&pagination_summary, "pagination summary");
+            assert_has_tabular_feature(&pagination_summary, "pagination summary");
+            assert_eq!(
+                pagination_summary
+                    .inherited_text_style
+                    .as_ref()
+                    .and_then(|style| style.weight),
+                Some(fret_core::FontWeight::MEDIUM),
+                "pagination summaries must keep the upstream-like medium emphasis"
+            );
+        });
     }
 
     #[test]

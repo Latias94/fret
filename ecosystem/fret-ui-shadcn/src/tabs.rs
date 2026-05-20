@@ -8,7 +8,7 @@ use fret_core::{Color, Corners, DrawOrder, Edges, FontId, FontWeight, Px, TextSt
 use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
     PressableProps, RovingFlexProps, RovingFocusProps, ShadowLayerStyle, ShadowStyle, SpinnerProps,
     StackProps, SvgIconProps,
 };
@@ -90,17 +90,35 @@ fn apply_trigger_inherited_style(
     fg: Color,
     text_style: &TextStyle,
     default_icon_color: Color,
+    role_scope_active: bool,
 ) -> AnyElement {
+    let role_scope_active = role_scope_active || element.inherited_text_style.is_some();
     match &mut element.kind {
-        fret_ui::element::ElementKind::Text(props) => {
-            if props.style.is_none() {
+        ElementKind::Text(props) => {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(text_style.clone());
             }
-            if props.color.is_none() {
+            if props.color.is_none() && !role_scope_active {
                 props.color = Some(fg);
             }
         }
-        fret_ui::element::ElementKind::SvgIcon(SvgIconProps { color, .. }) => {
+        ElementKind::StyledText(props) => {
+            if props.style.is_none() && !role_scope_active {
+                props.style = Some(text_style.clone());
+            }
+            if props.color.is_none() && !role_scope_active {
+                props.color = Some(fg);
+            }
+        }
+        ElementKind::SelectableText(props) => {
+            if props.style.is_none() && !role_scope_active {
+                props.style = Some(text_style.clone());
+            }
+            if props.color.is_none() && !role_scope_active {
+                props.color = Some(fg);
+            }
+        }
+        ElementKind::SvgIcon(SvgIconProps { color, .. }) => {
             // Heuristic:
             // - Older callsites may build an `SvgIcon` with the default white color.
             // - Newer callsites that use `declarative::icon::icon(...)` (outside a currentColor
@@ -119,7 +137,7 @@ fn apply_trigger_inherited_style(
                 *color = fg;
             }
         }
-        fret_ui::element::ElementKind::Spinner(SpinnerProps { color, .. }) => {
+        ElementKind::Spinner(SpinnerProps { color, .. }) => {
             color.get_or_insert(fg);
         }
         _ => {}
@@ -128,7 +146,15 @@ fn apply_trigger_inherited_style(
     element.children = element
         .children
         .into_iter()
-        .map(|child| apply_trigger_inherited_style(child, fg, text_style, default_icon_color))
+        .map(|child| {
+            apply_trigger_inherited_style(
+                child,
+                fg,
+                text_style,
+                default_icon_color,
+                role_scope_active,
+            )
+        })
         .collect();
     element
 }
@@ -2564,6 +2590,7 @@ impl Tabs {
                                                                 fg,
                                                                 &text_style,
                                                                 default_icon_color,
+                                                                false,
                                                             )
                                                         })
                                                         .collect();
@@ -2937,6 +2964,7 @@ mod tests {
     use fret_ui::elements::{ElementRuntime, GlobalElementId, node_for_element};
     use fret_ui::tree::UiTree;
     use fret_ui_kit::ColorRef;
+    use fret_ui_kit::declarative::text as decl_text;
 
     fn contains_foreground_scope(el: &AnyElement) -> bool {
         matches!(el.kind, fret_ui::element::ElementKind::ForegroundScope(_))
@@ -2964,6 +2992,18 @@ mod tests {
         el.children
             .iter()
             .find_map(|child| find_pressable_element_with_test_id(child, test_id))
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
     }
 
     #[test]
@@ -3079,6 +3119,94 @@ mod tests {
         assert!(
             !contains_foreground_scope(pressable),
             "expected tabs trigger content to attach inherited foreground without inserting a ForegroundScope"
+        );
+    }
+
+    #[test]
+    fn tabs_trigger_applies_default_style_to_bare_label_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "tabs-label", |cx| {
+            Tabs::new(model.clone())
+                .items([
+                    TabsItem::new("alpha", "Alpha", Vec::<AnyElement>::new())
+                        .trigger_test_id("tabs.trigger.alpha"),
+                    TabsItem::new("beta", "Beta", Vec::<AnyElement>::new()),
+                ])
+                .into_element(cx)
+        });
+
+        let text = find_text_element(&el, "Alpha").expect("expected default trigger label text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(
+            props.style.is_some(),
+            "expected bare trigger text to receive TabsTrigger typography"
+        );
+        assert!(
+            props.color.is_some(),
+            "expected bare trigger text to receive TabsTrigger foreground"
+        );
+    }
+
+    #[test]
+    fn tabs_trigger_children_preserve_shared_button_label_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(200.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "tabs-role", |cx| {
+            Tabs::new(model.clone())
+                .items([
+                    TabsItem::new("alpha", "Alpha", Vec::<AnyElement>::new())
+                        .trigger_children([decl_text::text_button_label(cx, "Open Workbench")])
+                        .trigger_test_id("tabs.trigger.alpha"),
+                    TabsItem::new("beta", "Beta", Vec::<AnyElement>::new()),
+                ])
+                .into_element(cx)
+        });
+
+        let text = find_text_element(&el, "Open Workbench")
+            .expect("expected role-owned trigger label text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert!(text.inherited_text_style.is_some());
+
+        let pressable = find_pressable_element_with_test_id(&el, "tabs.trigger.alpha")
+            .expect("tabs trigger pressable with test_id");
+        assert!(
+            find_first_inherited_foreground_node(pressable).is_some(),
+            "expected TabsTrigger foreground to remain inherited through the trigger content root"
         );
     }
 

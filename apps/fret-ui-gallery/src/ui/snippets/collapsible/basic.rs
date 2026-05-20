@@ -8,6 +8,7 @@ use fret_ui::element::VisualTransformProps;
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn rotated_lucide<H: UiHost>(
@@ -77,11 +78,16 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                     if is_open { 180.0 } else { 0.0 },
                                 )
                                 .into_element(cx);
-                                let row = ui::h_flex(|cx| vec![cx.text("Product details"), chevron])
-                                    .layout(LayoutRefinement::default().w_full().min_w_0())
-                                    .justify_between()
-                                    .items_center()
-                                    .into_element(cx);
+                                let row = ui::h_flex(|cx| {
+                                    vec![
+                                        decl_text::text_button_label(cx, "Product details"),
+                                        chevron,
+                                    ]
+                                })
+                                .layout(LayoutRefinement::default().w_full().min_w_0())
+                                .justify_between()
+                                .items_center()
+                                .into_element(cx);
 
                                 shadcn::Button::new("Product details")
                                     .variant(shadcn::ButtonVariant::Ghost)

@@ -9,6 +9,7 @@ use fret_ui::{Invalidation, Theme};
 use fret_ui_kit::IntoUiElement;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::declarative::primary_pointer_is_coarse;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
@@ -22,17 +23,13 @@ fn trigger_surface<H: UiHost>(
         let theme = Theme::global(&*cx.app);
         let border = theme.color_token("border");
         let bg = theme.color_token("background");
-        let fg = theme.color_token("muted-foreground");
         let label = if primary_pointer_is_coarse(cx, Invalidation::Layout, false) {
             coarse_label
         } else {
             fine_label
         };
 
-        let label = ui::text(label)
-            .text_sm()
-            .text_color(ColorRef::Color(fg))
-            .into_element(cx);
+        let label = decl_text::text_control_readout(cx, label);
 
         let content = ui::v_flex(move |_cx| vec![label])
             .layout(LayoutRefinement::default().w_full().h_full())

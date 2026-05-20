@@ -66,6 +66,7 @@ fn workspace_command_scope_focus_model<H: UiHost>(
 pub struct WorkspaceCommandScope<T = AnyElement> {
     window_layout: Model<WorkspaceWindowLayout>,
     child: T,
+    apply_workspace_model_commands: bool,
 }
 
 impl<T> WorkspaceCommandScope<T> {
@@ -73,7 +74,18 @@ impl<T> WorkspaceCommandScope<T> {
         Self {
             window_layout,
             child,
+            apply_workspace_model_commands: true,
         }
+    }
+
+    /// Controls whether this scope mutates the workspace layout model for generic
+    /// `workspace.*` commands.
+    ///
+    /// App-owned shells can disable this when their runner command handler already applies those
+    /// commands to the same model and still keep this scope's focus-transfer command hooks.
+    pub fn apply_workspace_model_commands(mut self, enabled: bool) -> Self {
+        self.apply_workspace_model_commands = enabled;
+        self
     }
 
     #[track_caller]
@@ -82,6 +94,7 @@ impl<T> WorkspaceCommandScope<T> {
         T: IntoUiElement<H>,
     {
         let window_layout = self.window_layout;
+        let apply_workspace_model_commands = self.apply_workspace_model_commands;
         let child = self.child.into_element(cx);
         let tab_element_registry = workspace_tab_element_registry_model(cx);
         let pane_content_registry = workspace_pane_content_element_registry_model(cx);
@@ -399,6 +412,9 @@ impl<T> WorkspaceCommandScope<T> {
                     }
                     _ => {
                         if !command.as_str().starts_with("workspace.") {
+                            return false;
+                        }
+                        if !apply_workspace_model_commands {
                             return false;
                         }
 

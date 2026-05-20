@@ -1,0 +1,56 @@
+fn compact(source: &str) -> String {
+    source.split_whitespace().collect()
+}
+
+#[test]
+fn api_workbench_lite_demo_keeps_fixed_text_on_roles() {
+    let source = include_str!("../src/api_workbench_lite_demo.rs");
+    let source = compact(source);
+
+    for needle in [
+        "usefret_ui_kit::declarative::{ElementContextThemeExtas_,textasdecl_text};",
+        "fnapi_workbench_section_text<'a,Cx>(",
+        "fnapi_workbench_readout_text<'a,Cx>(",
+        "fnapi_workbench_code_label_text<'a,Cx>(",
+        "fnapi_workbench_paragraph_text<'a,Cx>(",
+        "decl_text::text_section_chrome_label(cx.elements(),text)",
+        "decl_text::text_control_readout(cx.elements(),text)",
+        "decl_text::text_code_label(cx.elements(),text)",
+        "decl_text::text_paragraph(cx.elements(),text)",
+        "api_workbench_section_text(cx,\"APIWorkbenchLite\")",
+        "api_workbench_paragraph_text(cx,\"First-contacttask:buildaPostman-liketoolonlyfromFret'spublicappsurface.\",)",
+        "api_workbench_section_text(cx,\"FretAPIProbe\")",
+        "api_workbench_readout_text(cx,\"Postman-likefirstcontact\")",
+        "api_workbench_section_text(cx,\"ActivebaseURL\")",
+        "api_workbench_code_label_text(cx,base_url)",
+        "api_workbench_readout_text(cx,\"SQLite-backedrequesthistory\")",
+        "api_workbench_readout_text(cx,\"Loadingsavedrequests...\").test_id(TEST_ID_HISTORY_LOADING)",
+        "api_workbench_section_text(cx,\"Savedhistoryfailedtoload.\")",
+        "api_workbench_readout_text(cx,err.to_string()).test_id(TEST_ID_HISTORY_ERROR)",
+        "api_workbench_readout_text(cx,\"Nosavedrequestsyet.\").test_id(TEST_ID_HISTORY_EMPTY)",
+    ] {
+        assert!(
+            source.contains(needle),
+            "api workbench lite demo should keep fixed chrome/readout text on shared roles; missing `{needle}`"
+        );
+    }
+
+    for needle in [
+        "ui::text(\"APIWorkbenchLite\").font_semibold().text_base()",
+        "ui::text(\"FretAPIProbe\").font_semibold()",
+        "ui::text(\"Postman-likefirstcontact\").text_sm()",
+        "ui::text(\"ActivebaseURL\").text_xs().font_semibold()",
+        "ui::text(base_url).text_xs()",
+        "ui::text(\"SQLite-backedrequesthistory\").text_xs()",
+        "ui::text(\"Loadingsavedrequests...\").text_sm()",
+        "ui::text(\"Savedhistoryfailedtoload.\").text_sm().font_semibold()",
+        "ui::text(err.to_string()).text_sm()",
+        "ui::text(\"Nosavedrequestsyet.\").text_sm()",
+        "theme:fret::style::ThemeSnapshot,",
+    ] {
+        assert!(
+            !source.contains(needle),
+            "api workbench lite demo should not render fixed chrome/readouts with local text policy; unexpected `{needle}`"
+        );
+    }
+}

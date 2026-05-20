@@ -100,6 +100,11 @@ impl ElementHostWidget {
         };
         let ordered_children = ordered_flex_children(cx.app, window, cx.children);
         let children = ordered_children.as_ref();
+        let child_layouts: Vec<Option<Rect>> = children
+            .iter()
+            .copied()
+            .map(|child| cx.tree.layout_engine_child_local_rect(cx.node, child))
+            .collect();
 
         let mut ml_auto_tail_group_start: Option<usize> = None;
         let mut ml_auto_tail_shift_x = 0.0f32;
@@ -138,12 +143,12 @@ impl ElementHostWidget {
 
         if let Some(start) = ml_auto_tail_group_start {
             let mut tail_right = 0.0f32;
-            for &child in &children[start..] {
+            for (idx, &child) in children.iter().enumerate().skip(start) {
                 let child_style = layout_style_for_node(cx.app, window, child);
                 if !is_in_flow(&child_style) {
                     continue;
                 }
-                let Some(layout) = cx.tree.layout_engine_child_local_rect(cx.node, child) else {
+                let Some(layout) = child_layouts[idx] else {
                     continue;
                 };
                 let right_margin = match child_style.margin.right {
@@ -160,12 +165,12 @@ impl ElementHostWidget {
         }
         if let Some(start) = mt_auto_tail_group_start {
             let mut tail_bottom = 0.0f32;
-            for &child in &children[start..] {
+            for (idx, &child) in children.iter().enumerate().skip(start) {
                 let child_style = layout_style_for_node(cx.app, window, child);
                 if !is_in_flow(&child_style) {
                     continue;
                 }
-                let Some(layout) = cx.tree.layout_engine_child_local_rect(cx.node, child) else {
+                let Some(layout) = child_layouts[idx] else {
                     continue;
                 };
                 let bottom_margin = match child_style.margin.bottom {
@@ -182,7 +187,7 @@ impl ElementHostWidget {
         }
 
         for (child_index, &child) in children.iter().enumerate() {
-            let Some(layout) = cx.tree.layout_engine_child_local_rect(cx.node, child) else {
+            let Some(layout) = child_layouts[child_index] else {
                 continue;
             };
             let child_style = layout_style_for_node(cx.app, window, child);
@@ -216,12 +221,14 @@ impl ElementHostWidget {
                         // Preserve the explicit `gap` between the auto-margin item and the next
                         // sibling. Some layout-engine outcomes collapse that gap when `ml-auto`
                         // is present, but web flexbox keeps it intact.
-                        if let Some(next_child) = children[child_index + 1..]
-                            .iter()
-                            .copied()
-                            .find(|next| is_in_flow(&layout_style_for_node(cx.app, window, *next)))
-                            && let Some(next_layout) =
-                                cx.tree.layout_engine_child_local_rect(cx.node, next_child)
+                        if let Some(next_index) =
+                            children.iter().enumerate().skip(child_index + 1).find_map(
+                                |(idx, &next)| {
+                                    is_in_flow(&layout_style_for_node(cx.app, window, next))
+                                        .then_some(idx)
+                                },
+                            )
+                            && let Some(next_layout) = child_layouts[next_index]
                         {
                             let next_x = next_layout.origin.x.0 - pad_left;
                             let desired = (next_x - gap_main - layout.size.width.0).max(0.0);
@@ -302,12 +309,14 @@ impl ElementHostWidget {
                     if mt_auto_tail_group_start == Some(child_index) {
                         // Preserve the explicit `gap` between the auto-margin item and the next
                         // sibling when `margin-top: auto` aligns a trailing group to the bottom.
-                        if let Some(next_child) = children[child_index + 1..]
-                            .iter()
-                            .copied()
-                            .find(|next| is_in_flow(&layout_style_for_node(cx.app, window, *next)))
-                            && let Some(next_layout) =
-                                cx.tree.layout_engine_child_local_rect(cx.node, next_child)
+                        if let Some(next_index) =
+                            children.iter().enumerate().skip(child_index + 1).find_map(
+                                |(idx, &next)| {
+                                    is_in_flow(&layout_style_for_node(cx.app, window, next))
+                                        .then_some(idx)
+                                },
+                            )
+                            && let Some(next_layout) = child_layouts[next_index]
                         {
                             let next_y = next_layout.origin.y.0 - pad_top;
                             let desired = (next_y - gap_main - layout.size.height.0).max(0.0);

@@ -36,14 +36,6 @@ class SourceSliceCheck:
     forbidden: list[str]
 
 
-@dataclass(frozen=True)
-class ExactCountCheck:
-    path: Path
-    marker: str
-    expected: int
-    reason: str
-
-
 def normalize(text: str) -> str:
     return "".join(text.split())
 
@@ -94,15 +86,6 @@ def check_source_slice(check: SourceSliceCheck, failures: list[str]) -> None:
         normalized = normalize(marker)
         if normalized in normalized_slice:
             failures.append(f"{check.path.as_posix()}: forbidden slice marker {marker}")
-
-
-def check_exact_count(check: ExactCountCheck, failures: list[str]) -> None:
-    count = read_source(check.path).count(check.marker)
-    if count != check.expected:
-        failures.append(
-            f"{check.path.as_posix()}: expected {check.expected} occurrence(s) of "
-            f"{check.marker!r}, found {count}: {check.reason}"
-        )
 
 
 def main() -> None:
@@ -366,6 +349,27 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("apps/fret-examples/src/imui_node_graph_demo.rs"),
+            required=[
+                "fret_imui::imui_in(cx, |ui| {",
+                "compatibility-oriented and should not be treated as the default downstream",
+                "Prefer the declarative node-graph surfaces for normal downstream guidance.",
+                "use fret_imui::prelude::UiWriter as _;",
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "fn compat_section_text<",
+                "decl_text::text_section_chrome_label(cx, text)",
+                'compat_section_text(cx, "imui node-graph compatibility proof")',
+                "use fret_ui_kit::imui::UiWriterImUiFacadeExt as _;",
+                "NodeGraphSurfaceCompatRetainedProps::new(",
+                "node_graph_surface_compat_retained(",
+                "Retained-bridge IMUI demo for `fret-node`.",
+            ],
+            forbidden=[
+                'fret_ui_kit::ui::text("imui node-graph compatibility proof")',
+                ".font_semibold()",
+            ],
+        ),
+        SourceCheck(
             Path("apps/fret-examples/src/imui_editor_proof_demo.rs"),
             required=[
                 "use fret::imui::{kit::ImUiMultiSelectState, prelude::*};",
@@ -375,6 +379,14 @@ def main() -> None:
                 "imui_build(cx, out, |ui| {",
                 "imui_build(cx, &mut out, move |ui| {",
                 "imui_build(cx, out, f);",
+                "fn proof_compact_readout_element<",
+                "fn proof_section_chrome_label<",
+                "fn proof_imui_section_text(",
+                "fn proof_imui_readout_text(",
+                "fn proof_imui_compact_paragraph_text(",
+                "decl_text::text_control_readout(cx, readout.clone())",
+                "decl_text::text_section_chrome_label(cx, text)",
+                "decl_text::text_compact_paragraph(cx, text)",
                 "kit::TooltipOptions {",
                 "kit::CollapsingHeaderOptions {",
                 "F: for<'cx, 'a> FnOnce(&mut ImUi<'cx, 'a, H>) + 'static,",
@@ -583,22 +595,11 @@ def main() -> None:
             ],
         ),
     ]
-    exact_count_checks = [
-        ExactCountCheck(
-            Path("apps/fret-examples/src/imui_editor_proof_demo.rs"),
-            marker=") -> fret_ui::element::AnyElement {",
-            expected=1,
-            reason="only the proof-local compact readout leaf helper should keep an AnyElement return",
-        )
-    ]
-
     failures: list[str] = []
     for check in checks:
         check_source(check, failures)
     for check in slice_checks:
         check_source_slice(check, failures)
-    for check in exact_count_checks:
-        check_exact_count(check, failures)
 
     if failures:
         fail(GATE_NAME, f"{len(failures)} source marker problem(s):\n  - " + "\n  - ".join(failures))

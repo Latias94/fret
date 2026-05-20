@@ -2717,7 +2717,7 @@ fn build_suite_core_default_post_run_checks(
         .filter(|_| user_checks.check_hover_layout_max.is_none());
     let suite_chart_sampling_window_shifts_min = suite_profile
         .ui_gallery_chart_torture_suite
-        .then_some(1u64)
+        .then_some(2u64)
         .filter(|_| user_checks.check_chart_sampling_window_shifts_min.is_none());
     let suite_node_graph_cull_window_shifts_min = suite_profile
         .ui_gallery_node_graph_cull_window_shifts_suite
@@ -4169,6 +4169,41 @@ mod tests {
             defaults.check_pixels_changed_test_id.as_deref(),
             Some("imui-hello-demo.count-text")
         );
+    }
+
+    #[test]
+    fn build_suite_core_default_post_run_checks_sets_chart_torture_sampling_window_gate() {
+        let profile = SuiteRunProfile::from_suite_args(&["ui-gallery-chart-torture".to_string()]);
+        let defaults = build_suite_core_default_post_run_checks(
+            std::path::Path::new("ui-gallery-chart-torture-pan-zoom.json"),
+            profile,
+            Some(BuiltinSuite::UiGallery),
+            &SuiteChecks::default(),
+            false,
+        );
+
+        assert_eq!(
+            defaults.check_pixels_changed_test_id.as_deref(),
+            Some("ui-gallery-chart-torture-root")
+        );
+        assert_eq!(defaults.check_chart_sampling_window_shifts_min, Some(2));
+    }
+
+    #[test]
+    fn build_suite_core_default_post_run_checks_keeps_chart_linking_explicit_y_map_generic() {
+        let profile = SuiteRunProfile::from_suite_args(&[
+            "ui-gallery-chart-linking-explicit-y-map".to_string(),
+        ]);
+        let defaults = build_suite_core_default_post_run_checks(
+            std::path::Path::new("ui-gallery-chart-torture-explicit-y-link-map.json"),
+            profile,
+            Some(BuiltinSuite::UiGallery),
+            &SuiteChecks::default(),
+            false,
+        );
+
+        assert_eq!(defaults.check_chart_sampling_window_shifts_min, None);
+        assert_eq!(defaults.check_pixels_changed_test_id, None);
     }
 
     #[test]

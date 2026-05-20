@@ -4,7 +4,7 @@ use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_icons::IconId;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, CrossAlign, FlexProps, MainAlign, PressableProps, RovingFlexProps,
+    AnyElement, CrossAlign, ElementKind, FlexProps, MainAlign, PressableProps, RovingFlexProps,
     RovingFocusProps, SemanticsDecoration, SpinnerProps, SvgIconProps,
 };
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
@@ -100,12 +100,16 @@ fn apply_item_inherited_style(
     mut element: AnyElement,
     fg: Color,
     default_icon_color: Color,
+    role_scope_active: bool,
 ) -> AnyElement {
+    let role_scope_active = role_scope_active || element.inherited_text_style.is_some();
     match &mut element.kind {
-        fret_ui::element::ElementKind::Text(props) => {
-            props.color.get_or_insert(fg);
+        ElementKind::Text(props) => {
+            if !role_scope_active {
+                props.color.get_or_insert(fg);
+            }
         }
-        fret_ui::element::ElementKind::SvgIcon(SvgIconProps { color, .. }) => {
+        ElementKind::SvgIcon(SvgIconProps { color, .. }) => {
             // Heuristic:
             // - Older callsites may build an `SvgIcon` with the default white color.
             // - `declarative::icon::icon(...)` built outside a `currentColor` provider resolves
@@ -124,7 +128,7 @@ fn apply_item_inherited_style(
                 *color = fg;
             }
         }
-        fret_ui::element::ElementKind::Spinner(SpinnerProps { color, .. }) => {
+        ElementKind::Spinner(SpinnerProps { color, .. }) => {
             color.get_or_insert(fg);
         }
         _ => {}
@@ -133,7 +137,7 @@ fn apply_item_inherited_style(
     element.children = element
         .children
         .into_iter()
-        .map(|child| apply_item_inherited_style(child, fg, default_icon_color))
+        .map(|child| apply_item_inherited_style(child, fg, default_icon_color, role_scope_active))
         .collect();
     element
 }
@@ -964,7 +968,7 @@ impl ToggleGroup {
                                     + trailing_icon.is_some() as usize,
                             );
                             styled_children.extend(children.into_iter().map(|child| {
-                                apply_item_inherited_style(child, fg, default_icon_color)
+                                apply_item_inherited_style(child, fg, default_icon_color, false)
                             }));
 
                             let content = move |cx: &mut ElementContext<'_, H>| {
@@ -1106,6 +1110,7 @@ mod tests {
         AnyElement, CrossAlign, ElementKind, Length, PressableProps, SpacingLength,
     };
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::declarative::text as decl_text;
 
     #[derive(Default)]
     struct FakeServices;
@@ -1776,6 +1781,28 @@ mod tests {
             .find_map(|child| find_by_test_id(child, test_id))
     }
 
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
+    }
+
+    fn find_first_inherited_foreground_node(el: &AnyElement) -> Option<&AnyElement> {
+        if el.inherited_foreground.is_some() {
+            return Some(el);
+        }
+
+        el.children
+            .iter()
+            .find_map(find_first_inherited_foreground_node)
+    }
+
     #[test]
     fn toggle_group_root_defaults_to_w_fit_and_zero_gap() {
         let window = AppWindowId::default();
@@ -1888,5 +1915,74 @@ mod tests {
         assert_eq!(chrome.corner_radii.top_right, expected_radius);
         assert_eq!(chrome.corner_radii.bottom_left, expected_radius);
         assert_eq!(chrome.corner_radii.bottom_right, expected_radius);
+    }
+
+    #[test]
+    fn toggle_group_item_children_apply_foreground_to_bare_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let model = app.models_mut().insert(Some(Arc::from("normal")));
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds_320x240(),
+            "toggle-group-bare-child",
+            |cx| {
+                ToggleGroup::single(model)
+                    .items([ToggleGroupItem::new("normal", [cx.text("Bold")])])
+                    .into_element(cx)
+            },
+        );
+
+        let text = find_text_element(&el, "Bold").expect("expected toggle-group item text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(
+            props.color.is_some(),
+            "expected bare toggle-group item text to receive item foreground"
+        );
+    }
+
+    #[test]
+    fn toggle_group_item_children_preserve_shared_button_label_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let model = app.models_mut().insert(Some(Arc::from("normal")));
+        let el = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds_320x240(),
+            "toggle-group-role-child",
+            |cx| {
+                ToggleGroup::single(model)
+                    .items([ToggleGroupItem::new(
+                        "normal",
+                        [decl_text::text_button_label(cx, "Bold")],
+                    )])
+                    .into_element(cx)
+            },
+        );
+
+        let text =
+            find_text_element(&el, "Bold").expect("expected toggle-group item role child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert!(text.inherited_text_style.is_some());
+        assert!(
+            find_first_inherited_foreground_node(&el).is_some(),
+            "expected ToggleGroupItem foreground to remain inherited through the item content root"
+        );
     }
 }

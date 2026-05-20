@@ -1,5 +1,29 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-hit-test-only-paint-cache-probe-sweep",
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "required_launch_features": [
+      "gallery-dev"
+    ],
+    "tags": [
+      "ui_gallery",
+      "hit_test",
+      "paint_cache",
+      "hit_test_only",
+      "mechanism_harness",
+      "runtime"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_PAINT_CACHE": "1"
+    },
+    "target_hints": [
+      "Navigates to the gallery-dev HitTestOnly Paint-Cache Probe page.",
+      "Sweeps pointer movement over a stable cached canvas and gates hit-test-only paint-cache replay counters."
+    ]
+  },
   "steps": [
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
@@ -11,9 +35,75 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "text": "paint cache",
+      "clear_before_type": true,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-hit-test-only-paint-cache-probe"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-hit-test-only-paint-cache-probe"
+      },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-hit-test-only-paint-cache-probe"
+      },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-hit-test-only-paint-cache-probe"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/selected_page",
+        "value": "hit_test_only_paint_cache_probe"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-hit-test-only-probe-region" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
 
     { "type": "reset_diagnostics" },
@@ -42,6 +132,31 @@
     },
     { "type": "wait_frames", "n": 2 },
 
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "paint_cache_hit_test_only_replay_allowed_ge",
+        "min": 1
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "paint_cache_hit_test_only_replay_rejected_key_mismatch_le",
+        "max": 0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-hit-test-only-probe-region" },
+        "min_w_px": 700.0,
+        "min_h_px": 300.0,
+        "eps_px": 1.0
+      }
+    },
     {
       "type": "capture_bundle",
       "label": "ui-gallery-hit-test-only-paint-cache-probe-sweep"

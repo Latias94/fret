@@ -5,8 +5,9 @@ use fret::{AppComponentCx, UiChild};
 use fret_core::{Color, FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
-use fret_ui::element::{LayoutStyle, Length, TextProps};
+use fret_ui::element::TextProps;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -22,46 +23,9 @@ fn list_item(
     command: &'static str,
 ) -> shadcn::NavigationMenuLink {
     let muted_foreground = cx.with_theme(|theme| theme.color_token("muted-foreground"));
-    let title_el = cx.text_props(TextProps {
-        layout: Default::default(),
-        text: Arc::from(title),
-        style: Some(TextStyle {
-            font: FontId::default(),
-            size: Px(14.0),
-            weight: FontWeight::MEDIUM,
-            slant: Default::default(),
-            line_height: None,
-            letter_spacing_em: None,
-            ..Default::default()
-        }),
-        color: None,
-        wrap: TextWrap::None,
-        overflow: TextOverflow::Clip,
-        align: fret_core::TextAlign::Start,
-        ink_overflow: fret_ui::element::TextInkOverflow::None,
-    });
-    let description_el = cx.text_props(TextProps {
-        layout: {
-            let mut layout = LayoutStyle::default();
-            layout.size.max_height = Some(Length::Px(Px(40.0)));
-            layout
-        },
-        text: Arc::from(description),
-        style: Some(TextStyle {
-            font: FontId::default(),
-            size: Px(14.0),
-            weight: FontWeight::NORMAL,
-            slant: Default::default(),
-            line_height: Some(Px(20.0)),
-            letter_spacing_em: None,
-            ..Default::default()
-        }),
-        color: Some(muted_foreground),
-        wrap: TextWrap::Word,
-        overflow: TextOverflow::Ellipsis,
-        align: fret_core::TextAlign::Start,
-        ink_overflow: fret_ui::element::TextInkOverflow::None,
-    });
+    let title_el = decl_text::text_button_label(cx, title);
+    let description_el = decl_text::text_compact_paragraph_line_clamp(cx, description, 2)
+        .inherit_foreground(muted_foreground);
 
     let body = ui::v_stack(move |_cx| [title_el, description_el])
         .gap(Space::N1)
@@ -83,7 +47,7 @@ fn icon_row(
     command: &'static str,
 ) -> shadcn::NavigationMenuLink {
     let icon_el = icon::icon(cx, fret_icons::IconId::new_static(icon));
-    let label_el = cx.text(label);
+    let label_el = decl_text::text_button_label(cx, label);
     let row = ui::h_row(move |_cx| [icon_el, label_el])
         .gap(Space::N2)
         .items_center()
@@ -163,7 +127,8 @@ fn text_link(
     test_id: &'static str,
     command: &'static str,
 ) -> shadcn::NavigationMenuLink {
-    shadcn::NavigationMenuLink::new(model, [cx.text(label)])
+    let label_el = decl_text::text_button_label(cx, label);
+    shadcn::NavigationMenuLink::new(model, [label_el])
         .label(label)
         .test_id(test_id)
         .action(command)

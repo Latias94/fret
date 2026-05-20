@@ -314,7 +314,8 @@ fn eval_predicate_without_semantics(
         }
         UiPredicateV1::RawSemanticsHiddenIs { .. }
         | UiPredicateV1::SemanticsRelationIncludes { .. }
-        | UiPredicateV1::SemanticsRelationIsEmpty { .. } => None,
+        | UiPredicateV1::SemanticsRelationIsEmpty { .. }
+        | UiPredicateV1::ElementEffectiveOpacityApproxEq { .. } => None,
         UiPredicateV1::KnownWindowCountGe { n } => Some(open_window_count >= *n),
         UiPredicateV1::KnownWindowCountIs { n } => Some(open_window_count == *n),
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => Some(
@@ -420,12 +421,9 @@ fn eval_predicate_without_semantics(
                 None => !*active,
             })
         }
-        UiPredicateV1::DockViewportCaptureActiveIs { active } => Some(
-            docking
-                .and_then(|d| d.viewport_capture)
-                .is_some()
-                == *active,
-        ),
+        UiPredicateV1::DockViewportCaptureActiveIs { active } => {
+            Some(docking.and_then(|d| d.viewport_capture).is_some() == *active)
+        }
         UiPredicateV1::DockDropPreviewKindIs { preview_kind } => {
             let preview = docking
                 .and_then(|d| d.dock_drop_resolve.as_ref())
@@ -795,7 +793,13 @@ fn eval_predicate(
             scope_root,
         )
         .or_else(|| {
-            select_semantics_relation_endpoint_scoped(snapshot, window, element_runtime, target, None)
+            select_semantics_relation_endpoint_scoped(
+                snapshot,
+                window,
+                element_runtime,
+                target,
+                None,
+            )
         })
     };
     let select_relation_target = |target: &UiSelectorV1| {
@@ -817,7 +821,10 @@ fn eval_predicate(
             };
             let index = SemanticsIndex::new(snapshot);
             let node_id = node.id.data().as_ffi();
-            index.nearest_semantics_hidden_ancestor_or_self(node_id).is_some() == *hidden
+            index
+                .nearest_semantics_hidden_ancestor_or_self(node_id)
+                .is_some()
+                == *hidden
         }
         UiPredicateV1::ExistsUnder { scope, target } => {
             let Some(scope_node) = select_node(scope) else {
@@ -1365,6 +1372,27 @@ fn eval_predicate(
             };
             rects_intersect(node.bounds, window_bounds)
         }
+        UiPredicateV1::ElementEffectiveOpacityApproxEq {
+            target,
+            opacity,
+            eps,
+        } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            let Some(element_runtime) = element_runtime else {
+                return false;
+            };
+            let Some(element) = element_runtime.element_for_node(window, node.id) else {
+                return false;
+            };
+            let Some(got) = element_runtime.effective_opacity_for_element(window, element) else {
+                return false;
+            };
+            let want = *opacity;
+            let eps = eps.abs();
+            got.is_finite() && want.is_finite() && eps.is_finite() && (got - want).abs() <= eps
+        }
         UiPredicateV1::BoundsWithinWindow {
             target,
             padding_px,
@@ -1441,7 +1469,8 @@ fn eval_predicate(
             let Some(node) = select_node(target) else {
                 return false;
             };
-            let Some(cursor_area) = text_input_snapshot.and_then(|snapshot| snapshot.ime_cursor_area)
+            let Some(cursor_area) =
+                text_input_snapshot.and_then(|snapshot| snapshot.ime_cursor_area)
             else {
                 return false;
             };
@@ -1656,8 +1685,8 @@ fn eval_predicate(
                 return false;
             };
 
-            let delta = bounds_metric_value(a.bounds, *a_metric)
-                - bounds_metric_value(b.bounds, *b_metric);
+            let delta =
+                bounds_metric_value(a.bounds, *a_metric) - bounds_metric_value(b.bounds, *b_metric);
             compare_px_delta(delta, *comparison, *value_px, eps_px.max(0.0))
         }
         UiPredicateV1::BoundsNonOverlapping { a, b, eps_px } => {
@@ -2055,7 +2084,9 @@ fn eval_predicate(
             .and_then(|d| d.dock_graph_signature.as_ref())
             .is_some_and(|s| s.fingerprint64 == *fingerprint64),
         UiPredicateV1::EventKindSeen { event_kind: _ } => false,
-        UiPredicateV1::InputPointerCaptureActiveIs { .. } => false,
+        UiPredicateV1::InputPointerCaptureActiveIs { .. }
+        | UiPredicateV1::PaintCacheHitTestOnlyReplayAllowedGe { .. }
+        | UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { .. } => false,
     }
 }
 

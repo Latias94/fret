@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("spacing.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn item<H: UiHost>(
@@ -12,7 +13,10 @@ fn item<H: UiHost>(
 ) -> shadcn::ToggleGroupItem {
     shadcn::ToggleGroupItem::new(
         value,
-        [icon::icon(cx, IconId::new_static(icon_id)), cx.text(label)],
+        [
+            icon::icon(cx, IconId::new_static(icon_id)),
+            decl_text::text_button_label(cx, label),
+        ],
     )
     .a11y_label(format!("Toggle {}", value))
 }

@@ -742,6 +742,15 @@ impl ItemTitle {
 }
 
 fn patch_item_title_text_style_recursive(el: &mut AnyElement, px: Px, line_height: Px) {
+    patch_item_title_text_style_recursive_scoped(el, px, line_height, false);
+}
+
+fn patch_item_title_text_style_recursive_scoped(
+    el: &mut AnyElement,
+    px: Px,
+    line_height: Px,
+    role_scope_active: bool,
+) {
     fn patch_text_style(style: &mut Option<fret_core::TextStyle>, px: Px, line_height: Px) {
         let mut style_value = style.take().unwrap_or_default();
         style_value.size = px;
@@ -760,30 +769,37 @@ fn patch_item_title_text_style_recursive(el: &mut AnyElement, px: Px, line_heigh
         }
     }
 
+    let role_scope_active = role_scope_active || el.inherited_text_style.is_some();
     match &mut el.kind {
         ElementKind::Text(props) => {
-            patch_text_style(&mut props.style, px, line_height);
-            ensure_fill_width(&mut props.layout);
-            props.wrap = TextWrap::None;
-            props.overflow = TextOverflow::Ellipsis;
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                ensure_fill_width(&mut props.layout);
+                props.wrap = TextWrap::None;
+                props.overflow = TextOverflow::Ellipsis;
+            }
         }
         ElementKind::StyledText(props) => {
-            patch_text_style(&mut props.style, px, line_height);
-            ensure_fill_width(&mut props.layout);
-            props.wrap = TextWrap::None;
-            props.overflow = TextOverflow::Ellipsis;
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                ensure_fill_width(&mut props.layout);
+                props.wrap = TextWrap::None;
+                props.overflow = TextOverflow::Ellipsis;
+            }
         }
         ElementKind::SelectableText(props) => {
-            patch_text_style(&mut props.style, px, line_height);
-            ensure_fill_width(&mut props.layout);
-            props.wrap = TextWrap::None;
-            props.overflow = TextOverflow::Ellipsis;
+            if !role_scope_active {
+                patch_text_style(&mut props.style, px, line_height);
+                ensure_fill_width(&mut props.layout);
+                props.wrap = TextWrap::None;
+                props.overflow = TextOverflow::Ellipsis;
+            }
         }
         _ => {}
     }
 
     for child in &mut el.children {
-        patch_item_title_text_style_recursive(child, px, line_height);
+        patch_item_title_text_style_recursive_scoped(child, px, line_height, role_scope_active);
     }
 }
 
@@ -1253,8 +1269,9 @@ mod tests {
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::FrameId;
     use fret_ui::UiTree;
-    use fret_ui::element::{ElementKind, Length, PressableKeyActivation, SpacingLength};
+    use fret_ui::element::{ElementKind, Length, PressableKeyActivation, SpacingLength, TextProps};
     use fret_ui::elements::GlobalElementId;
+    use fret_ui_kit::declarative::text as decl_text;
     use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
     use std::cell::Cell;
     use std::rc::Rc;
@@ -1467,6 +1484,40 @@ mod tests {
     }
 
     #[test]
+    fn item_description_children_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ItemDescription::new_children([decl_text::text_compact_paragraph_line_clamp(
+                cx,
+                "Description body copy",
+                2,
+            )])
+            .into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Description body copy")
+            .expect("expected ItemDescription role child text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::Word);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert!(text.inherited_text_style.is_some());
+        assert_eq!(
+            element.component_slot.as_deref(),
+            Some(ITEM_DESCRIPTION_SLOT)
+        );
+    }
+
+    #[test]
     fn item_title_children_patch_rich_text_with_title_typography() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1519,6 +1570,80 @@ mod tests {
                     .unwrap_or_else(|| theme.color_token("foreground"))
             )
         );
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
+    }
+
+    fn text_props_for<'a>(el: &'a AnyElement, needle: &str) -> &'a TextProps {
+        let text = find_text_element(el, needle).expect("expected text element");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        props
+    }
+
+    #[test]
+    fn item_title_children_patch_bare_text_with_title_typography() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ItemTitle::new_children([cx.text("Title")]).into_element(cx)
+        });
+
+        let props = text_props_for(&element, "Title");
+        let style = props
+            .style
+            .as_ref()
+            .expect("expected bare ItemTitle child to receive title style");
+        let theme = Theme::global(&app);
+        let expected_px = theme
+            .metric_by_key("component.item.title_px")
+            .or_else(|| theme.metric_by_key("font.size"))
+            .unwrap_or_else(|| theme.metric_token("font.size"));
+        let expected_line_height = theme
+            .metric_by_key("component.item.title_line_height")
+            .or_else(|| theme.metric_by_key("font.line_height"))
+            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+
+        assert_eq!(style.size, expected_px);
+        assert_eq!(style.weight, FontWeight::MEDIUM);
+        assert_eq!(style.line_height, Some(expected_line_height));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+    }
+
+    #[test]
+    fn item_title_children_preserve_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ItemTitle::new_children([decl_text::text_chrome_title(cx, "Pinned editor surface")])
+                .into_element(cx)
+        });
+
+        let text = find_text_element(&element, "Pinned editor surface")
+            .expect("expected ItemTitle role child text element");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert!(text.inherited_text_style.is_some());
     }
 
     #[test]

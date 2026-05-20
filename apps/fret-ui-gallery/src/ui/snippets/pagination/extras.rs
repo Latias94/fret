@@ -1,17 +1,22 @@
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
-use fret::{UiChild, AppComponentCx};
+use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
-use fret_ui_kit::{IntoUiElement, ui};
+use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::{IntoUiElement, declarative::text as decl_text, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
 const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
-fn page_number(label: &'static str) -> impl UiChild + use<> {
-    ui::text(label).tabular_nums()
+fn page_number<H, L>(cx: &mut ElementContext<'_, H>, label: L) -> impl UiChild + use<H, L>
+where
+    H: UiHost,
+    L: Into<std::sync::Arc<str>>,
+{
+    decl_text::text_button_label(cx, label)
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -26,24 +31,24 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     ui::children![
                         cx;
                         shadcn::pagination_item(
-                            shadcn::pagination_link(|cx| ui::children![cx; page_number("1")])
+                            shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "1")])
                                 .action(CMD_APP_OPEN),
                         ),
                         shadcn::pagination_item(
-                            shadcn::pagination_link(|cx| ui::children![cx; page_number("2")])
+                            shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "2")])
                                 .action(CMD_APP_SAVE)
                                 .active(true),
                         ),
                         shadcn::pagination_item(
-                            shadcn::pagination_link(|cx| ui::children![cx; page_number("3")])
+                            shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "3")])
                                 .action(CMD_APP_SAVE),
                         ),
                         shadcn::pagination_item(
-                            shadcn::pagination_link(|cx| ui::children![cx; page_number("4")])
+                            shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "4")])
                                 .action(CMD_APP_SAVE),
                         ),
                         shadcn::pagination_item(
-                            shadcn::pagination_link(|cx| ui::children![cx; page_number("5")])
+                            shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "5")])
                                 .action(CMD_APP_SAVE),
                         ),
                     ]
@@ -106,7 +111,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(|cx| {
         ui::children![
             cx;
-            shadcn::raw::typography::muted(
+            decl_text::text_paragraph(
+                cx,
                 "Extras are Fret-specific recipes and regression gates (not part of upstream shadcn PaginationDemo).",
             ),
             simple,

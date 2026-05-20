@@ -6,8 +6,8 @@ use crate::element::{
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use fret_core::{
     AttributedText, MaterialDescriptor, MaterialId, MaterialRegistrationError, PathCommand,
-    PathConstraints, PathId, PathMetrics, PathStyle, SvgId, TextBlobId, TextInput,
-    TextLineHeightPolicy, TextMetrics, TextSpan, TextStyleRefinement, TextWrap,
+    PathConstraints, PathId, PathMetrics, PathStyle, SvgId, TextBlobId, TextFontFeatureSetting,
+    TextInput, TextLineHeightPolicy, TextMetrics, TextSpan, TextStyleRefinement, TextWrap,
 };
 use std::sync::Arc;
 
@@ -126,6 +126,15 @@ fn inherited_refinement(size: f32, line_height: f32) -> TextStyleRefinement {
         line_height_policy: Some(TextLineHeightPolicy::FixedFromStyle),
         ..Default::default()
     }
+}
+
+fn inherited_numeric_refinement(size: f32, line_height: f32) -> TextStyleRefinement {
+    let mut refinement = inherited_refinement(size, line_height);
+    refinement.features.push(TextFontFeatureSetting {
+        tag: "tnum".into(),
+        value: 1,
+    });
+    refinement
 }
 
 fn fixed_style(size: f32, line_height: f32) -> fret_core::TextStyle {
@@ -285,6 +294,49 @@ fn inherited_text_style_applies_to_styled_and_selectable_text_measurement() {
     );
     assert_eq!(selectable_size, Size::new(Px(21.0), Px(27.0)));
     assert_eq!(services.last_style().size, Px(21.0));
+}
+
+#[test]
+fn inherited_text_style_features_affect_passive_text_measurement() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let mut services = StyleRecordingTextService::default();
+
+    let root = render_root_for_frame_local(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds(),
+        "text-style-inheritance-features",
+        |cx| {
+            vec![
+                cx.container(ContainerProps::default(), |cx| vec![cx.text("12345")])
+                    .inherit_text_style(inherited_numeric_refinement(14.0, 20.0)),
+            ]
+        },
+    );
+
+    let scope = only_child(&ui, root);
+    let text = only_child(&ui, scope);
+    let _ = ui.measure_in(
+        &mut app,
+        &mut services,
+        text,
+        max_content_constraints(),
+        1.0,
+    );
+
+    assert!(
+        services
+            .last_style()
+            .features
+            .iter()
+            .any(|feature| feature.tag.as_str() == "tnum" && feature.value == 1),
+        "expected inherited text-style features to reach passive text measurement"
+    );
 }
 
 #[test]

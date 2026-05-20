@@ -1,5 +1,7 @@
 use fret_app::App;
 use fret_bootstrap::ui_diagnostics::UiDiagnosticsService;
+#[cfg(feature = "gallery-dev")]
+use fret_core::AppWindowId;
 use std::sync::Arc;
 
 use crate::spec::{
@@ -13,6 +15,8 @@ use crate::spec::{
 };
 use crate::ui::{card_doc_scaffold_metrics_json, nav_visibility_summary};
 
+#[cfg(feature = "gallery-dev")]
+use crate::harness::UiGalleryChartTortureOutputStore;
 #[cfg(all(feature = "gallery-dev", not(target_arch = "wasm32")))]
 use crate::harness::{
     UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER, UiGalleryCodeEditorHandlesStore,
@@ -129,6 +133,229 @@ fn theme_runtime_snapshot_json(app: &App) -> serde_json::Value {
             "easing_stack_shift_milli": cubic_bezier_milli_json(easing_stack_shift),
         },
     })
+}
+
+#[cfg(feature = "gallery-dev")]
+fn rounded_f64_json(value: f64) -> serde_json::Value {
+    if value.is_finite() && value >= i64::MIN as f64 && value <= i64::MAX as f64 {
+        serde_json::json!(value.round() as i64)
+    } else {
+        serde_json::Value::Null
+    }
+}
+
+#[cfg(feature = "gallery-dev")]
+const CHART_TORTURE_X_BASE_MS: f64 = 1_735_689_600_000.0;
+#[cfg(feature = "gallery-dev")]
+const CHART_TORTURE_X_INTERVAL_MS: f64 = 60_000.0;
+#[cfg(feature = "gallery-dev")]
+const CHART_TORTURE_POINT_COUNT: u64 = 200_000;
+#[cfg(feature = "gallery-dev")]
+const CHART_TORTURE_WINDOW_EPSILON_MS: f64 = 1.0;
+
+#[cfg(feature = "gallery-dev")]
+fn chart_torture_full_x_pair() -> (f64, f64) {
+    (
+        CHART_TORTURE_X_BASE_MS,
+        CHART_TORTURE_X_BASE_MS
+            + CHART_TORTURE_X_INTERVAL_MS * (CHART_TORTURE_POINT_COUNT.saturating_sub(1) as f64),
+    )
+}
+
+#[cfg(feature = "gallery-dev")]
+fn chart_windows_approx_eq(left: Option<(f64, f64)>, right: Option<(f64, f64)>) -> bool {
+    match (left, right) {
+        (Some((left_min, left_max)), Some((right_min, right_max))) => {
+            (left_min - right_min).abs() <= CHART_TORTURE_WINDOW_EPSILON_MS
+                && (left_max - right_max).abs() <= CHART_TORTURE_WINDOW_EPSILON_MS
+                && ((left_max - left_min) - (right_max - right_min)).abs()
+                    <= CHART_TORTURE_WINDOW_EPSILON_MS
+        }
+        _ => false,
+    }
+}
+
+#[cfg(feature = "gallery-dev")]
+fn chart_window_changed_from(window: Option<(f64, f64)>, base: (f64, f64)) -> bool {
+    window
+        .map(|(min, max)| {
+            (min - base.0).abs() > CHART_TORTURE_WINDOW_EPSILON_MS
+                || (max - base.1).abs() > CHART_TORTURE_WINDOW_EPSILON_MS
+                || ((max - min) - (base.1 - base.0)).abs() > CHART_TORTURE_WINDOW_EPSILON_MS
+        })
+        .unwrap_or(false)
+}
+
+#[cfg(feature = "gallery-dev")]
+fn chart_window_json(pair: Option<(f64, f64)>) -> serde_json::Value {
+    pair.map(|(min, max)| {
+        let span = max - min;
+        serde_json::json!({
+            "present": true,
+            "min_ms_rounded": rounded_f64_json(min),
+            "max_ms_rounded": rounded_f64_json(max),
+            "span_ms_rounded": rounded_f64_json(span),
+        })
+    })
+    .unwrap_or_else(|| {
+        serde_json::json!({
+            "present": false,
+        })
+    })
+}
+
+#[cfg(feature = "gallery-dev")]
+fn chart_numeric_window_json(pair: Option<(f64, f64)>) -> serde_json::Value {
+    pair.map(|(min, max)| {
+        let span = max - min;
+        serde_json::json!({
+            "present": true,
+            "min_milli": scaled_f32(min as f32, 1000.0),
+            "max_milli": scaled_f32(max as f32, 1000.0),
+            "span_milli": scaled_f32(span as f32, 1000.0),
+        })
+    })
+    .unwrap_or_else(|| {
+        serde_json::json!({
+            "present": false,
+        })
+    })
+}
+
+#[cfg(feature = "gallery-dev")]
+fn chart_torture_snapshot_json(app: &App, window: AppWindowId) -> Option<serde_json::Value> {
+    let handle = app
+        .global::<UiGalleryChartTortureOutputStore>()?
+        .per_window
+        .get(&window)?;
+    let output = app.models().get_cloned(&handle.output)?;
+    let x_axis = delinea::ids::AxisId::new(1);
+    let x_domain_key = fret_chart::LinkAxisKey {
+        kind: delinea::AxisKind::X,
+        dataset: delinea::ids::DatasetId::new(1),
+        field: delinea::FieldId::new(1),
+    };
+    let y_explicit_domain_key = fret_chart::LinkAxisKey {
+        kind: delinea::AxisKind::Y,
+        dataset: delinea::ids::DatasetId::new(1),
+        field: delinea::FieldId::new(2),
+    };
+    let full_x_pair = chart_torture_full_x_pair();
+    let x_output_model_domain_pair = output
+        .snapshot
+        .domain_windows_by_key
+        .get(&x_domain_key)
+        .copied()
+        .flatten()
+        .filter(|window| window.is_valid())
+        .map(|window| (window.min, window.max));
+    let y_output_model_domain_pair = output
+        .snapshot
+        .domain_windows_by_key
+        .get(&y_explicit_domain_key)
+        .copied()
+        .flatten()
+        .filter(|window| window.is_valid())
+        .map(|window| (window.min, window.max));
+    let (engine_state_revision, x_data_zoom_pair, x_axis_output_pair) = {
+        let engine = handle.shared_engine.borrow();
+        let x_data_zoom_pair = engine
+            .state()
+            .data_zoom_x
+            .get(&x_axis)
+            .and_then(|state| state.window)
+            .filter(|window| window.is_valid())
+            .map(|window| (window.min, window.max));
+        let x_axis_output_pair = engine
+            .output()
+            .axis_windows
+            .get(&x_axis)
+            .copied()
+            .filter(|window| window.is_valid())
+            .map(|window| (window.min, window.max));
+        (
+            engine.state().revision.0,
+            x_data_zoom_pair,
+            x_axis_output_pair,
+        )
+    };
+    let x_axis_output_matches_data_zoom =
+        chart_windows_approx_eq(x_axis_output_pair, x_data_zoom_pair);
+    let x_output_model_domain_matches_data_zoom =
+        chart_windows_approx_eq(x_output_model_domain_pair, x_data_zoom_pair);
+    let x_axis_output_changed_from_full_domain =
+        chart_window_changed_from(x_axis_output_pair, full_x_pair);
+    let x_output_model_domain_changed_from_full_domain =
+        chart_window_changed_from(x_output_model_domain_pair, full_x_pair);
+    let y_output_model_domain_matches_explicit_fixture =
+        chart_windows_approx_eq(y_output_model_domain_pair, Some((-0.25, 0.75)));
+    let tooltip_lines = &output.snapshot.tooltip_lines;
+    let tooltip_axis_header_count = tooltip_lines
+        .iter()
+        .filter(|line| line.kind == fret_chart::TooltipTextLineKind::AxisHeader)
+        .count() as u64;
+    let tooltip_series_labels = tooltip_lines
+        .iter()
+        .filter(|line| line.kind == fret_chart::TooltipTextLineKind::SeriesRow)
+        .filter_map(|line| {
+            line.columns
+                .as_ref()
+                .map(|(label, _)| label.clone())
+                .or_else(|| {
+                    line.text
+                        .split_once(':')
+                        .map(|(label, _)| label.to_string())
+                })
+        })
+        .collect::<Vec<_>>();
+    let tooltip_series_rows_count = tooltip_series_labels.len() as u64;
+    let tooltip_source_series_rows_count = tooltip_lines
+        .iter()
+        .filter(|line| {
+            line.kind == fret_chart::TooltipTextLineKind::SeriesRow && line.source_series.is_some()
+        })
+        .count() as u64;
+    let tooltip_missing_rows_count =
+        tooltip_lines.iter().filter(|line| line.is_missing).count() as u64;
+    let tooltip_has_series_a = tooltip_series_labels.iter().any(|label| label == "A");
+    let tooltip_has_series_b = tooltip_series_labels.iter().any(|label| label == "B");
+
+    Some(serde_json::json!({
+        "schema_version": 2,
+        "engine_present": true,
+        "engine_state_revision": engine_state_revision,
+        "x_data_zoom": {
+            "active": x_data_zoom_pair.is_some(),
+            "window": chart_window_json(x_data_zoom_pair),
+        },
+        "x_full_domain_window": chart_window_json(Some(full_x_pair)),
+        "x_axis_output_window": chart_window_json(x_axis_output_pair),
+        "output_model": {
+            "revision": output.revision,
+            "link_events_revision": output.link_events_revision,
+            "domain_windows_count": output.snapshot.domain_windows_by_key.len() as u64,
+            "x_domain_window": chart_window_json(x_output_model_domain_pair),
+            "y_explicit_domain_window": chart_numeric_window_json(y_output_model_domain_pair),
+            "tooltip_lines_count": output.snapshot.tooltip_lines.len() as u64,
+            "tooltip": {
+                "lines_count": tooltip_lines.len() as u64,
+                "axis_header_count": tooltip_axis_header_count,
+                "series_rows_count": tooltip_series_rows_count,
+                "source_series_rows_count": tooltip_source_series_rows_count,
+                "missing_rows_count": tooltip_missing_rows_count,
+                "series_labels": tooltip_series_labels,
+                "has_series_a": tooltip_has_series_a,
+                "has_series_b": tooltip_has_series_b,
+            },
+        },
+        "runtime_oracles": {
+            "x_axis_output_matches_data_zoom": x_axis_output_matches_data_zoom,
+            "x_output_model_domain_matches_data_zoom": x_output_model_domain_matches_data_zoom,
+            "x_axis_output_changed_from_full_domain": x_axis_output_changed_from_full_domain,
+            "x_output_model_domain_changed_from_full_domain": x_output_model_domain_changed_from_full_domain,
+            "y_output_model_domain_matches_explicit_fixture": y_output_model_domain_matches_explicit_fixture,
+        },
+    }))
 }
 
 fn command_registry_string_bytes_estimate(app: &App) -> serde_json::Value {
@@ -260,8 +487,14 @@ fn code_editor_paint_perf_json(
     insert_u64!("us_row_scene_key", frame.us_row_scene_key);
     insert_u64!("us_row_scene_fast_probe", frame.us_row_scene_fast_probe);
     insert_u64!("us_row_scene_full_probe", frame.us_row_scene_full_probe);
-    insert_u64!("us_row_scene_fast_key_compare", frame.us_row_scene_fast_key_compare);
-    insert_u64!("us_row_scene_full_key_compare", frame.us_row_scene_full_key_compare);
+    insert_u64!(
+        "us_row_scene_fast_key_compare",
+        frame.us_row_scene_fast_key_compare
+    );
+    insert_u64!(
+        "us_row_scene_full_key_compare",
+        frame.us_row_scene_full_key_compare
+    );
     insert_u64!("us_row_scene_replay_touch", frame.us_row_scene_replay_touch);
     insert_u64!("us_row_scene_replay_ops", frame.us_row_scene_replay_ops);
     insert_u64!(
@@ -292,10 +525,7 @@ fn code_editor_paint_perf_json(
     insert_u64!("us_row_content_resolve", frame.us_row_content_resolve);
     insert_u64!("us_row_geom_resolve", frame.us_row_geom_resolve);
     insert_u64!("us_row_overlay", frame.us_row_overlay);
-    insert_u64!(
-        "us_frame_overlay_prepare",
-        frame.us_frame_overlay_prepare
-    );
+    insert_u64!("us_frame_overlay_prepare", frame.us_frame_overlay_prepare);
     insert_u64!("surface_rows_iterated", frame.surface_rows_iterated);
     insert_u64!("surface_rows_with_rect", frame.surface_rows_with_rect);
     insert_u64!(
@@ -345,8 +575,14 @@ fn code_editor_paint_perf_json(
     insert_u64!("ns_row_scene_key", frame.ns_row_scene_key);
     insert_u64!("ns_row_scene_fast_probe", frame.ns_row_scene_fast_probe);
     insert_u64!("ns_row_scene_full_probe", frame.ns_row_scene_full_probe);
-    insert_u64!("ns_row_scene_fast_key_compare", frame.ns_row_scene_fast_key_compare);
-    insert_u64!("ns_row_scene_full_key_compare", frame.ns_row_scene_full_key_compare);
+    insert_u64!(
+        "ns_row_scene_fast_key_compare",
+        frame.ns_row_scene_fast_key_compare
+    );
+    insert_u64!(
+        "ns_row_scene_full_key_compare",
+        frame.ns_row_scene_full_key_compare
+    );
     insert_u64!("ns_row_scene_replay_touch", frame.ns_row_scene_replay_touch);
     insert_u64!("ns_row_scene_replay_ops", frame.ns_row_scene_replay_ops);
     insert_u64!(
@@ -377,10 +613,7 @@ fn code_editor_paint_perf_json(
     insert_u64!("ns_row_content_resolve", frame.ns_row_content_resolve);
     insert_u64!("ns_row_geom_resolve", frame.ns_row_geom_resolve);
     insert_u64!("ns_row_overlay", frame.ns_row_overlay);
-    insert_u64!(
-        "ns_frame_overlay_prepare",
-        frame.ns_frame_overlay_prepare
-    );
+    insert_u64!("ns_frame_overlay_prepare", frame.ns_frame_overlay_prepare);
     insert_u64!(
         "ns_windowed_surface_paint_callback",
         frame.ns_windowed_surface_paint_callback
@@ -555,6 +788,15 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                     app.models().get_cloned(&ids.view_cache_popover_open)?;
                 let view_cache_continuous = app.models().get_cloned(&ids.view_cache_continuous)?;
                 let view_cache_counter = app.models().get_cloned(&ids.view_cache_counter)?;
+                let view_cache_dynamic_text = if view_cache_counter == 0 {
+                    "Cached text mutation probe: short baseline.".to_string()
+                } else {
+                    format!(
+                        "Cached text mutation probe: counter={view_cache_counter} expands this retained subtree \
+                         paragraph into a longer wrapped sentence so text measurement, prepared text cache, \
+                         and following layout all have to update without replacing the cached subtree."
+                    )
+                };
                 let settings_open = app.models().get_cloned(&ids.settings_open)?;
                 let settings_menu_bar_os = app.models().get_cloned(&ids.settings_menu_bar_os)?;
                 let settings_menu_bar_in_window = app.models().get_cloned(&ids.settings_menu_bar_in_window)?;
@@ -904,6 +1146,10 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                     "selected_page".to_string(),
                     serde_json::Value::String(selected_page.to_string()),
                 );
+                #[cfg(feature = "gallery-dev")]
+                if let Some(chart_torture) = chart_torture_snapshot_json(app, window) {
+                    out.insert("chart_torture".to_string(), chart_torture);
+                }
                 out.insert(
                     "code_editor".to_string(),
                     serde_json::json!({
@@ -934,6 +1180,8 @@ pub(super) fn install_ui_gallery_snapshot_provider(app: &mut App) {
                         "popover_open": view_cache_popover_open,
                         "continuous": view_cache_continuous,
                         "counter": view_cache_counter,
+                        "dynamic_text_len": view_cache_dynamic_text.len(),
+                        "dynamic_text_wrapped": view_cache_counter > 0,
                     }),
                 );
                 out.insert("shell".to_string(), serde_json::Value::Object(shell));

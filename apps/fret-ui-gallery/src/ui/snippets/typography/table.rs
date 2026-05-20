@@ -26,24 +26,24 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     shadcn::table_row(2, |cx| {
                         ui::children![
                             cx;
-                            shadcn::table_cell(ui::text("Empty")),
-                            shadcn::table_cell(ui::text("Overflowing")),
+                            shadcn::table_cell(super::table_cell_text(cx, "Empty")),
+                            shadcn::table_cell(super::table_cell_text(cx, "Overflowing")),
                         ]
                     })
                     .into_element(cx),
                     shadcn::table_row(2, |cx| {
                         ui::children![
                             cx;
-                            shadcn::table_cell(ui::text("Modest")),
-                            shadcn::table_cell(ui::text("Satisfied")),
+                            shadcn::table_cell(super::table_cell_text(cx, "Modest")),
+                            shadcn::table_cell(super::table_cell_text(cx, "Satisfied")),
                         ]
                     })
                     .into_element(cx),
                     shadcn::table_row(2, |cx| {
                         ui::children![
                             cx;
-                            shadcn::table_cell(ui::text("Full")),
-                            shadcn::table_cell(ui::text("Ecstatic")),
+                            shadcn::table_cell(super::table_cell_text(cx, "Full")),
+                            shadcn::table_cell(super::table_cell_text(cx, "Ecstatic")),
                         ]
                     })
                     .into_element(cx),

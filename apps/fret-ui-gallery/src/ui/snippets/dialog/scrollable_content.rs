@@ -4,6 +4,7 @@ pub const SOURCE: &str = include_str!("scrollable_content.rs");
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_ui_kit::IntoUiElement;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 fn lorem_block<H: UiHost>(
@@ -15,17 +16,15 @@ fn lorem_block<H: UiHost>(
     ui::v_flex(move |cx| {
         (0..lines)
             .map(|index| {
-                let text = ui::raw_text(format!(
+                let text = decl_text::text_list_row_label(cx, format!(
                     "{prefix} {}: This dialog row is intentionally verbose to validate scroll behavior and footer visibility.",
                     index + 1
-                ))
-                .layout(LayoutRefinement::default().w_full().min_w_0());
+                ));
 
                 if index == 0 {
                     text.test_id("ui-gallery-dialog-scrollable-row-01")
-                        .into_element(cx)
                 } else {
-                    text.into_element(cx)
+                    text
                 }
             })
             .collect::<Vec<_>>()

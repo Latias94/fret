@@ -48,20 +48,29 @@ fn table_text_style(theme: &ThemeSnapshot) -> TextStyle {
     style
 }
 
-fn apply_default_text_style_recursive(mut el: AnyElement, style: &TextStyle) -> AnyElement {
+fn apply_default_text_style_recursive(el: AnyElement, style: &TextStyle) -> AnyElement {
+    apply_default_text_style_recursive_scoped(el, style, false)
+}
+
+fn apply_default_text_style_recursive_scoped(
+    mut el: AnyElement,
+    style: &TextStyle,
+    role_scope_active: bool,
+) -> AnyElement {
+    let role_scope_active = role_scope_active || el.inherited_text_style.is_some();
     match &mut el.kind {
         ElementKind::Text(props) => {
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(style.clone());
             }
         }
         ElementKind::StyledText(props) => {
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(style.clone());
             }
         }
         ElementKind::SelectableText(props) => {
-            if props.style.is_none() {
+            if props.style.is_none() && !role_scope_active {
                 props.style = Some(style.clone());
             }
         }
@@ -71,7 +80,7 @@ fn apply_default_text_style_recursive(mut el: AnyElement, style: &TextStyle) -> 
     let children = std::mem::take(&mut el.children);
     el.children = children
         .into_iter()
-        .map(|child| apply_default_text_style_recursive(child, style))
+        .map(|child| apply_default_text_style_recursive_scoped(child, style, role_scope_active))
         .collect();
     el
 }
@@ -1036,6 +1045,8 @@ mod tests {
     use fret_runtime::Model;
     use fret_ui::ThemeConfig;
     use fret_ui::UiTree;
+    use fret_ui::element::TextProps;
+    use fret_ui_kit::declarative::text as decl_text;
 
     #[derive(Default)]
     struct FakeServices;
@@ -1296,6 +1307,78 @@ mod tests {
                 pointer_type: PointerType::Mouse,
             }),
         );
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a AnyElement> {
+        if let ElementKind::Text(props) = &el.kind
+            && props.text.as_ref() == needle
+        {
+            return Some(el);
+        }
+        el.children
+            .iter()
+            .find_map(|child| find_text_element(child, needle))
+    }
+
+    fn text_props_for<'a>(el: &'a AnyElement, needle: &str) -> &'a TextProps {
+        let text = find_text_element(el, needle).expect("expected text element");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        props
+    }
+
+    #[test]
+    fn data_table_default_text_style_applies_to_bare_body_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(480.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app).snapshot();
+            let expected = table_text_style(&theme);
+            let cell = apply_default_text_style_recursive(cx.text("Row 1"), &expected);
+            let props = text_props_for(&cell, "Row 1");
+            let actual = props
+                .style
+                .as_ref()
+                .expect("expected data-table body default text style");
+            assert_eq!(actual.size, expected.size);
+            assert_eq!(actual.line_height, expected.line_height);
+            assert_eq!(actual.weight, expected.weight);
+        });
+    }
+
+    #[test]
+    fn data_table_default_text_style_preserves_shared_text_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(640.0), Px(480.0)),
+        );
+
+        let label = "runtime-package-with-a-long-identifier";
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app).snapshot();
+            let table_style = table_text_style(&theme);
+            let cell = apply_default_text_style_recursive(
+                decl_text::text_table_cell(cx, label),
+                &table_style,
+            );
+            let text = find_text_element(&cell, label).expect("expected data-table cell text node");
+            let ElementKind::Text(props) = &text.kind else {
+                panic!("expected text leaf");
+            };
+            assert!(props.style.is_none());
+            assert!(props.color.is_none());
+            assert_eq!(props.wrap, fret_core::TextWrap::None);
+            assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+            assert!(text.inherited_text_style.is_some());
+        });
     }
 
     #[test]

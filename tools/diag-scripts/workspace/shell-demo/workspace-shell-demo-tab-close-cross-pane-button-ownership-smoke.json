@@ -1,0 +1,108 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: cross-pane close button ownership (smoke)",
+    "tags": ["workspace", "tabstrip", "cross_pane", "close", "ownership", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2", "diag.command_dispatch_trace"],
+    "target_hints": [
+      "Starts with pane-a active while pane-b is visible.",
+      "Clicks the real close button for doc-b-1 in pane-b.",
+      "Asserts the pointer path dispatches pane-b activation before closing doc-b-1.",
+      "Proves the close removes only doc-b-1 and does not remove pane-a's active doc-a-2."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "selected_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }, "selected": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "selected_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1" }, "selected": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1.close" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "move_pointer",
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1.close" }
+    },
+    { "type": "wait_frames", "n": 1 },
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1.close" },
+      "button": "left"
+    },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.pane.activate.pane-b",
+        "handled": true,
+        "source_kind": "pointer",
+        "source_test_id": "workspace-shell-pane-pane-b-tab-doc-b-1.close"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "workspace.tab.close.doc-b-1",
+        "handled": true,
+        "source_kind": "pointer",
+        "source_test_id": "workspace-shell-pane-pane-b-tab-doc-b-1.close"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-1" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-0" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "selected_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-0" }, "selected": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "set_size_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-doc-b-0" }, "set_size": 1 },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-close-cross-pane-button-ownership-smoke" }
+  ]
+}
