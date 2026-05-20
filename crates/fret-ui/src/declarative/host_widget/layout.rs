@@ -58,6 +58,7 @@ impl ElementHostWidget {
 
         self.render_transform = None;
         self.scroll_child_transform = None;
+        self.managed_surface_hit_test_mask = None;
 
         self.hit_testable = match &instance {
             ElementInstance::Pressable(_) => true,
@@ -1582,6 +1583,9 @@ impl ElementHostWidget {
                 if let Some(on_layout) = on_layout {
                     let mut managed_cx = crate::managed_surface::ManagedSurfaceLayoutCx::new(cx);
                     (on_layout)(&mut managed_cx);
+                    self.managed_surface_hit_test_mask = managed_cx
+                        .take_hit_test_rects()
+                        .map(crate::managed_surface::ManagedSurfaceHitTestMask::new);
                 }
                 clamp_to_constraints(cx.available, props.layout, cx.available)
             }

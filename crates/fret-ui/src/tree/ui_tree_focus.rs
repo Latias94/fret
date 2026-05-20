@@ -53,6 +53,19 @@ impl<H: UiHost> UiTree<H> {
         false
     }
 
+    pub(crate) fn focus_or_pending_focus_target_in_subtree(&self, root: NodeId) -> bool {
+        if self
+            .focus
+            .is_some_and(|focus| self.is_descendant(root, focus))
+        {
+            return true;
+        }
+
+        self.pending_focus_target
+            .and_then(|target| self.resolve_live_attached_node_for_element_seeded(target, None))
+            .is_some_and(|node| self.is_descendant(root, node))
+    }
+
     #[track_caller]
     pub fn set_focus(&mut self, focus: Option<NodeId>) {
         #[cfg(debug_assertions)]

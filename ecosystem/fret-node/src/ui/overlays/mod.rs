@@ -3,23 +3,21 @@
 //! Overlays are transient, screen-space affordances that should not be serialized into the graph
 //! asset. They are hosted outside the canvas render transform (ADR 0126) so they can use regular
 //! `fret-ui` widgets (focus, IME, clipboard, semantics).
-#[cfg(feature = "compat-retained-canvas")]
-mod blackboard;
 mod blackboard_declarative;
+mod blackboard_interaction_policy;
 mod blackboard_layout;
-#[cfg(feature = "compat-retained-canvas")]
-mod blackboard_paint;
+mod blackboard_paint_plan;
 mod blackboard_policy;
-#[cfg(feature = "compat-retained-canvas")]
-mod controls;
 mod controls_declarative;
+mod controls_host_policy;
+mod controls_interaction_policy;
 mod controls_layout;
+mod controls_paint_plan;
 mod controls_policy;
 mod group_rename;
-#[cfg(feature = "compat-retained-canvas")]
-mod minimap;
 mod minimap_declarative;
 mod minimap_drag_policy;
+mod minimap_interaction_policy;
 mod minimap_navigation_policy;
 mod minimap_policy;
 mod minimap_projection;
@@ -30,35 +28,17 @@ mod panel_navigation_policy;
 mod panel_pointer_policy;
 mod rename_command;
 mod rename_declarative;
-mod rename_host_event;
 mod rename_host_layout;
+mod rename_lifecycle;
 mod rename_policy;
+mod toolbar_layout_policy;
 mod toolbar_policy;
-#[cfg(feature = "compat-retained-canvas")]
-mod toolbars;
 mod toolbars_declarative;
 
-#[cfg(all(test, feature = "compat-retained-canvas"))]
-pub use blackboard::NodeGraphBlackboardOverlay;
-#[cfg(all(test, feature = "compat-retained-canvas"))]
-pub use controls::NodeGraphControlsOverlay;
-#[cfg(all(test, feature = "compat-retained-canvas"))]
-pub use controls_policy::{NodeGraphControlsBindings, NodeGraphControlsCommandBinding};
-#[cfg(all(test, feature = "compat-retained-canvas"))]
-pub use group_rename::NodeGraphOverlayHost;
-#[cfg(any(test, feature = "compat-retained-canvas"))]
-pub use group_rename::{GroupRenameOverlay, NodeGraphOverlayState, SymbolRenameOverlay};
-#[cfg(all(test, feature = "compat-retained-canvas"))]
-pub use minimap::NodeGraphMiniMapOverlay;
 #[cfg(feature = "compat-retained-canvas")]
-pub(in crate::ui) use rename_policy::{open_group_rename_session, open_symbol_rename_session};
-#[cfg(all(test, feature = "compat-retained-canvas"))]
-pub use toolbar_policy::{NodeGraphToolbarAlign, NodeGraphToolbarPosition, NodeGraphToolbarSize};
-#[cfg(all(test, feature = "compat-retained-canvas"))]
-pub use toolbars::{NodeGraphEdgeToolbar, NodeGraphNodeToolbar};
-
+pub use group_rename::{GroupRenameOverlay, NodeGraphOverlayState};
 #[cfg(feature = "compat-retained-canvas")]
-use fret_core::{Px, Rect, Size};
+pub(in crate::ui) use rename_policy::open_group_rename_session;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OverlayPlacement {
@@ -67,21 +47,3 @@ enum OverlayPlacement {
     /// Treats `cx.bounds` as the overlay's own panel bounds (for `NodeGraphPanel` composition).
     PanelBounds,
 }
-
-#[cfg(feature = "compat-retained-canvas")]
-fn layout_hidden_child_and_release_focus<H: UiHost>(
-    cx: &mut fret_ui::retained_bridge::LayoutCx<'_, H>,
-    child: fret_core::NodeId,
-    canvas_node: fret_core::NodeId,
-) {
-    cx.layout_in(
-        child,
-        Rect::new(cx.bounds.origin, Size::new(Px(0.0), Px(0.0))),
-    );
-    if cx.focus == Some(child) {
-        cx.tree.set_focus(Some(canvas_node));
-    }
-}
-
-#[cfg(feature = "compat-retained-canvas")]
-use fret_ui::UiHost;

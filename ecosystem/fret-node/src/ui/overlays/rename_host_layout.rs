@@ -47,7 +47,7 @@ pub(super) fn plan_rename_host_layout(
 mod tests {
     use super::{RenameHostLayoutPlan, plan_rename_host_layout};
     use crate::core::{GroupId, SymbolId};
-    use crate::ui::overlays::{GroupRenameOverlay, SymbolRenameOverlay};
+    use crate::ui::overlays::group_rename::{GroupRenameOverlay, SymbolRenameOverlay};
     use crate::ui::style::NodeGraphStyle;
     use fret_core::{NodeId, Point, Px, Rect, Size};
 

@@ -674,6 +674,8 @@ pub(crate) struct ExternalDragActionHooks {
 }
 
 pub type OnActivate = Arc<dyn Fn(&mut dyn UiActionHost, ActionCx, ActivateReason) + 'static>;
+pub type OnActivateFocus =
+    Arc<dyn Fn(&mut dyn UiFocusActionHost, ActionCx, ActivateReason) + 'static>;
 
 /// Span activation payload for `SelectableText` interactive spans.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -713,6 +715,7 @@ pub type OnPressableClipboardWriteCompleted = Arc<
 #[derive(Default)]
 pub(crate) struct PressableActionHooks {
     pub on_activate: Option<OnActivate>,
+    pub on_activate_focus: Option<OnActivateFocus>,
     pub on_pointer_down: Option<OnPressablePointerDown>,
     pub on_pointer_move: Option<OnPressablePointerMove>,
     pub on_pointer_up: Option<OnPressablePointerUp>,

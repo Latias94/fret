@@ -1,9 +1,10 @@
 use std::any::Any;
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, NodeId, Rect, Size, UiServices};
+use fret_core::{AppWindowId, NodeId, Point, Rect, Size, UiServices};
 use fret_runtime::CommandId;
 
+use crate::layout_constraints::LayoutConstraints;
 use crate::layout_pass::LayoutPassKind;
 use crate::widget::{
     CommandAvailability, CommandAvailabilityCx, CommandCx, EventCx, Invalidation, LayoutCx,
@@ -54,6 +55,7 @@ impl<H: UiHost> Default for ManagedSurfaceHooks<H> {
 pub struct ManagedSurfaceLayoutCx<'a, 'b, H: UiHost> {
     cx: &'a mut LayoutCx<'b, H>,
     laid_out: Vec<NodeId>,
+    hit_test_rects: Option<Vec<Rect>>,
 }
 
 impl<'a, 'b, H: UiHost> ManagedSurfaceLayoutCx<'a, 'b, H> {
@@ -61,6 +63,7 @@ impl<'a, 'b, H: UiHost> ManagedSurfaceLayoutCx<'a, 'b, H> {
         Self {
             cx,
             laid_out: Vec::new(),
+            hit_test_rects: None,
         }
     }
 
@@ -104,6 +107,10 @@ impl<'a, 'b, H: UiHost> ManagedSurfaceLayoutCx<'a, 'b, H> {
         size
     }
 
+    pub fn measure_child(&mut self, child: NodeId, constraints: LayoutConstraints) -> Size {
+        self.cx.measure_in(child, constraints)
+    }
+
     pub fn layout_unplaced_children(&mut self, bounds: Rect) {
         let children: Vec<NodeId> = self
             .cx
@@ -115,6 +122,33 @@ impl<'a, 'b, H: UiHost> ManagedSurfaceLayoutCx<'a, 'b, H> {
         for child in children {
             let _ = self.layout_child(child, bounds);
         }
+    }
+
+    pub fn focus_in_subtree(&self) -> bool {
+        self.cx
+            .tree
+            .focus_or_pending_focus_target_in_subtree(self.cx.node)
+    }
+
+    pub fn focus(&self) -> Option<NodeId> {
+        self.cx.focus
+    }
+
+    pub fn request_focus(&mut self, node: NodeId) {
+        self.cx.tree.set_focus(Some(node));
+    }
+
+    pub fn request_focus_element(&mut self, element: crate::GlobalElementId) {
+        self.cx.tree.request_focus_element(self.cx.app, element);
+    }
+
+    pub fn set_hit_test_rects(&mut self, rects: impl IntoIterator<Item = Rect>) {
+        let rects: Vec<Rect> = rects.into_iter().collect();
+        self.hit_test_rects = Some(rects);
+    }
+
+    pub(crate) fn take_hit_test_rects(self) -> Option<Vec<Rect>> {
+        self.hit_test_rects
     }
 
     pub fn set_output<T: Any>(&mut self, value: T) {
@@ -141,6 +175,21 @@ impl<'a, 'b, H: UiHost> ManagedSurfaceLayoutCx<'a, 'b, H> {
 
     pub fn request_animation_frame(&mut self) {
         self.cx.request_animation_frame();
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct ManagedSurfaceHitTestMask {
+    rects: Vec<Rect>,
+}
+
+impl ManagedSurfaceHitTestMask {
+    pub(crate) fn new(rects: Vec<Rect>) -> Self {
+        Self { rects }
+    }
+
+    pub(crate) fn hit_test(&self, position: Point) -> bool {
+        self.rects.iter().any(|rect| rect.contains(position))
     }
 }
 
@@ -243,6 +292,10 @@ impl<'a, 'b, H: UiHost> ManagedSurfaceEventCx<'a, 'b, H> {
         self.cx.request_focus(node);
     }
 
+    pub fn request_focus_element(&mut self, element: crate::GlobalElementId) {
+        self.cx.request_focus_element(element);
+    }
+
     pub fn capture_pointer(&mut self, node: NodeId) {
         self.cx.capture_pointer(node);
     }
@@ -261,6 +314,10 @@ impl<'a, 'b, H: UiHost> ManagedSurfaceEventCx<'a, 'b, H> {
 
     pub fn request_redraw(&mut self) {
         self.cx.request_redraw();
+    }
+
+    pub fn notify(&mut self) {
+        self.cx.notify();
     }
 
     pub fn push_effect(&mut self, effect: fret_runtime::Effect) {
@@ -298,6 +355,17 @@ impl<'a, 'b, H: UiHost> ManagedSurfaceCommandCx<'a, 'b, H> {
     }
 
     pub fn request_focus(&mut self, node: NodeId) {
+        self.cx.request_focus(node);
+    }
+
+    pub fn request_focus_element(&mut self, element: crate::GlobalElementId) {
+        let Some(node) = self.cx.tree.resolve_live_attached_node_for_element(
+            self.cx.app,
+            self.cx.window,
+            element,
+        ) else {
+            return;
+        };
         self.cx.request_focus(node);
     }
 

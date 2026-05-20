@@ -1,6 +1,6 @@
 # Retained Bridge Exit v1 Handoff
 
-Updated: 2026-05-19
+Updated: 2026-05-20
 
 ## Current State
 
@@ -96,6 +96,117 @@ active-session application onto the default overlay gate in `rename_command.rs`.
 model I/O plus controller/edit-queue submission adapter. It still stays behind
 `compat-retained-canvas` as the oracle for seed-text ownership during layout, focus request/restore,
 focus-loss close integration, blackboard rename handoff, and retained paint/hit testing.
+`RBX-M2-110` then moved rename lifecycle planning onto the default overlay gate in
+`rename_lifecycle.rs`. Default tests now cover group/symbol seed text, first-open focus request,
+no reseed/refocus for already-open sessions, focus-loss close without stealing the new focus owner,
+and focus restoration when a hidden rename input still owns focus. The retained
+`NodeGraphOverlayHost` now applies that default lifecycle plan as a model/tree I/O adapter.
+`RBX-M2-111` then moved minimap keyboard/pointer interaction planning onto the default overlay gate
+in `minimap_interaction_policy.rs`. Default tests now cover keyboard pan/zoom/focus/ignore
+decisions, pointer down focus/capture/stop-propagation/repaint planning, non-left/outside pointer
+rejection, and pointer-up capture release/finish gating. The retained minimap widget now applies
+that default interaction plan as a store/view-state I/O and retained event side-effect adapter.
+`RBX-M2-112` then moved toolbar visible-target filtering, node/edge child rect planning,
+empty-size hiding, and child-bound hit testing onto the default overlay gate in
+`toolbar_layout_policy.rs`. Retained toolbar widgets now apply that default layout/hit-test plan as
+internals-target, retained child measurement, retained `layout_in`, and child-root paint adapters,
+while declarative toolbar composition reuses the same default rect planning.
+`RBX-M2-113` then moved controls overlay keyboard select/activate/focus-canvas planning plus
+pointer hover/down/up focus/capture/repaint/activation planning onto the default overlay gate in
+`controls_interaction_policy.rs`. The retained controls widget now applies that default
+interaction plan as a retained side-effect adapter for focus, cursor, capture, repaint completion,
+and command dispatch.
+`RBX-M2-114` then moved blackboard overlay keyboard select/activate/focus-canvas planning plus
+pointer hover/down/up focus/capture/repaint/activation planning onto the default overlay gate in
+`blackboard_interaction_policy.rs`. The retained blackboard widget now applies that default
+interaction plan as a retained side-effect adapter for focus, cursor, capture, repaint, and
+transaction/rename dispatch.
+`RBX-M2-115` then moved blackboard panel/button/label paint ordering, text constraints,
+active-action backgrounds, and missing-symbol fallback onto the default overlay gate in
+`blackboard_paint_plan.rs`. The retained blackboard paint module now applies that default paint
+plan as a retained `PaintCx`/text-blob/scene-op adapter.
+`RBX-M2-116` then moved controls panel/button paint ordering, text constraints, connection-mode
+labels, pressed/hovered/keyboard-active backgrounds, and focus-gated keyboard highlight rules onto
+the default overlay gate in `controls_paint_plan.rs`. The retained controls paint path now applies
+that default paint plan as a retained `PaintCx`/text-blob/scene-op adapter.
+`RBX-M2-117` then moved controls panel hit-testing and pointer-down host side-effect planning onto
+the default overlay gate in `controls_host_policy.rs`. The retained controls widget now consumes
+that default host plan for panel hit-testing plus pointer-down focus, propagation, capture, and
+repaint decisions. The declarative controls composition now wraps its panel in a `PointerRegion`
+so blank panel pointer-downs focus/stop propagation without dispatching controls commands, while
+button descendants keep their `Pressable` activation path.
+`RBX-M2-118` then proved the declarative controls button pointer-up/capture/command completion path
+without constructing the retained controls widget. The default declarative controls test now covers
+pointer-down capture, no early command dispatch, pointer-up capture release, focus transfer to the
+activated button, command dispatch on in-bounds release, and capture completion without command
+dispatch on out-of-bounds release through the existing `Pressable` mechanism.
+`RBX-M2-119` then added a narrow `ManagedSurfaceLayoutCx::measure_child(...)` mechanism and proved
+toolbar Auto child measurement plus child-root layout/paint placement on the default declarative
+path. Node and edge toolbar declarative hosts can now measure a child, compute the retained
+placement-policy rect, layout the child there, and paint it without retained toolbar widgets. The
+retained toolbar widgets remain as the oracle for deletion logistics and compatibility gating.
+`RBX-M2-120` then moved node/edge toolbar model/internals-driven target resolution onto the default
+`toolbar_policy.rs` gate. Retained toolbar widgets and declarative toolbar helpers now share the
+same selected fallback/requested target plus `NodeGraphInternalsStore` window-geometry resolver.
+Default tests cover selected fallback, requested selected/unselected targets, and missing internals
+geometry for node and edge toolbars; compat retained oracle tests remain green after the extraction.
+`RBX-M2-121` then deleted the retained node/edge toolbar widgets, retained toolbar layout adapter,
+retained toolbar conformance test module, test-only exports, and retained bridge source-policy
+allowlist entries. Toolbar behavior now lives in default `toolbar_policy.rs`,
+`toolbar_layout_policy.rs`, and `toolbars_declarative.rs`; both default and
+`compat-retained-canvas` package gates pass after deletion.
+`RBX-M2-122` then added a focus-capable `Pressable` activation hook and used it in declarative
+controls to prove pointer and keyboard activation can dispatch the bound command and restore focus
+to a node graph surface/canvas target. The retained controls widget remains behind
+`compat-retained-canvas` as the oracle for deletion logistics and any remaining retained-only
+behavior families; the focus-restore gap is now covered on the default declarative path.
+`RBX-M2-123` then moved retained controls root keyboard semantics and Escape behavior onto the
+default declarative controls path. The declarative controls root now exposes the
+`node_graph.controls` panel semantics node, retained-compatible active value fallback, pointer-down
+active value promotion, root keyboard navigation/activation, and Escape focus return without command
+dispatch. Default controls tests cover those behavior families, and the compat retained
+`overlay_minimap_controls_conformance` oracle remains green for the old retained controls/minimap
+behavior.
+`RBX-M2-124` then backfilled default declarative controls overlay/surface integration coverage
+before deleting the retained controls widget. The new default tests prove pointer-down outside the
+controls panel falls through to the surface, blank pointer-down inside the panel blocks surface
+input and focuses the controls root, focus traversal reaches controls from a focusable surface, and
+Escape returns focus to that surface without dispatching commands. The compat retained
+`overlay_minimap_controls_conformance` oracle remains green, and retained controls were deliberately
+left in place for a narrow deletion slice that must preserve retained minimap coverage.
+`RBX-M2-125` then deleted the retained controls widget, removed the retained controls module and
+test-only exports, removed `src/ui/overlays/controls.rs` from the retained bridge source migration
+ledger, and trimmed the combined retained `overlay_minimap_controls_conformance` oracle to
+minimap-only coverage. Default declarative controls tests remain green, and retained minimap
+pointer/keyboard/store/semantics coverage remains green under `compat-retained-canvas`.
+`RBX-M2-126` then upgraded the default declarative minimap from paint-only composition to a
+managed-host proof for retained minimap side effects. The declarative minimap now has a focusable
+`node_graph.minimap` semantics root, a `ManagedSurface` host with minimap-only hit testing, pointer
+focus return/capture/release, drag pan updates, keyboard pan/zoom, Escape focus return, redraw, and
+notify coverage. The retained minimap widget remains behind `compat-retained-canvas` as the oracle
+for the next narrow deletion slice.
+`RBX-M2-127` then deleted the retained minimap widget, removed the retained minimap module/export
+and retained oracle test module, and removed `src/ui/overlays/minimap.rs` from the retained bridge
+source migration ledger. A deletion-preflight compat retained oracle run proved the old minimap
+pointer/drag/keyboard/controller behavior in the current worktree before the retained source was
+removed; default declarative minimap tests now carry the behavior contract.
+`RBX-M2-128` then upgraded the default declarative blackboard from composition/action-hook coverage
+to a focusable host proof for retained blackboard side effects. The declarative blackboard now has
+a `node_graph.blackboard` semantics root with active action value, panel pointer blocking, outside
+pointer fallthrough, pressable capture/up completion, pointer/keyboard action dispatch, keyboard
+navigation, and Escape focus return coverage. The retained blackboard widget remains behind
+`compat-retained-canvas` as the oracle because graph/controller transaction submission and
+symbol-rename handoff still need default declarative integration before deletion.
+`RBX-M2-129` then wired the declarative blackboard action path to `NodeGraphSurfaceBinding` and
+`NodeGraphOverlayState`. Default tests now prove Add Symbol, Insert Symbol Ref, and Delete Symbol
+commit through the store/controller binding path, while Rename opens `symbol_rename` overlay state
+without queueing a graph transaction. The retained blackboard oracle remains green under
+`compat-retained-canvas`, so blackboard is ready for a deletion-preflight oracle run and narrow
+retained-source deletion slice.
+`RBX-M2-130` then ran the deletion-preflight retained blackboard oracle and deleted the retained
+blackboard widget, retained blackboard paint adapter, and retained blackboard conformance module.
+The retained bridge source ledger no longer allows `blackboard.rs` / `blackboard_paint.rs`; default
+declarative blackboard tests now carry the behavior contract.
 
 ## Completed Implementation
 
@@ -442,11 +553,35 @@ retained canvas/editor stack still exists inside `fret-node` behind `compat-reta
 `RBX-M2-107` added default-gated declarative toolbar overlay composition and placement coverage.
 `RBX-M2-108` added default-gated declarative rename overlay composition and submit/cancel command
 protocol coverage. `RBX-M2-109` added default rename command/session application and left retained
-rename host code as a model I/O adapter. The next M2 slice should backfill rename seed-text/focus
-ownership and focus-loss integration, minimap keyboard/pointer/focus/viewport update parity,
-toolbar child measurement/paint/hit-test parity, blackboard/controls interaction/focus/paint
-parity, or move portal subtree hosting/model lifecycles onto a declarative host before deleting
-retained code.
+rename host code as a model I/O adapter. `RBX-M2-110` added default rename lifecycle planning and
+made the retained host consume it for seed/focus/focus-loss behavior. `RBX-M2-111` added default
+minimap keyboard/pointer interaction planning and made the retained minimap widget consume it for
+focus/capture/repaint/viewport-update side effects. `RBX-M2-112` added default toolbar
+layout/hit-test planning and made retained toolbar widgets consume it for child layout and hit-test
+decisions. `RBX-M2-113` added default controls interaction planning and made the retained controls
+widget consume it for keyboard/pointer/focus/capture/repaint decisions. `RBX-M2-114` added default
+blackboard interaction planning and made the retained blackboard widget consume it for
+keyboard/pointer/focus/capture/repaint/action-dispatch decisions. `RBX-M2-115` added default
+blackboard paint planning and made retained blackboard paint consume it for panel, action button,
+label, active-state, and missing-symbol paint decisions. `RBX-M2-116` added default controls paint
+planning and made retained controls paint consume it for panel, button, label, active-state, and
+focus-gated keyboard highlight decisions. `RBX-M2-117` added default controls host planning and
+made retained controls hit-testing/pointer-down side effects consume it for panel blocking,
+focus/propagation, button capture, and repaint decisions; declarative controls now also covers
+blank panel pointer-down focus/no-command behavior without stealing button pressable activation.
+`RBX-M2-118` added default declarative controls pointer-up/capture completion coverage, proving
+the existing `Pressable` path handles capture release, focus, command dispatch timing, and
+outside-release cancellation for controls buttons.
+`RBX-M2-119` added a mechanism-level managed-surface child measurement hook and default toolbar
+managed-host tests for Auto child measurement plus child layout/paint placement. Later slices
+completed toolbar target resolution/deletion, controls retained-widget deletion, minimap
+managed-host side-effect parity/deletion, blackboard declarative host/action integration parity,
+retained blackboard deletion, and declarative rename managed-host parity. `RBX-M2-131` proved
+default rename seed/focus, submit/cancel focus restore, focus-loss close, graph/store transaction
+submission, and hit-test masking without constructing the retained rename host. `RBX-M2-132` then
+used that proof plus a deletion-preflight retained group/symbol rename oracle to delete the
+retained rename host, retained rename event adapter, and retained rename oracle tests. Rename is now
+a default declarative managed-host path; `group_rename.rs` only carries overlay state.
 
 ## Next Task
 
@@ -456,12 +591,12 @@ Pick the next task from:
 
 Recommended next implementation shape:
 
-- Continue M2 by shrinking the RBX-M2-080 ledger. The sharpest independent family is still
-  overlay/panel interaction migration: rename seed-text/focus ownership and focus-loss
-  integration, minimap keyboard/pointer/focus/viewport updates, toolbar child measurement/paint/hit testing, and
-  blackboard/controls interaction, focus, and paint parity. The remaining portal family work is
-  declarative portal subtree hosting/model lifecycle replacement. Each slice should first add
-  default declarative tests, then remove or gate less retained code.
+- Continue M2 by shrinking the RBX-M2-080 ledger. The retained controls widget is now gone; the
+  retained toolbar widgets are gone; retained minimap is gone; retained blackboard is gone; retained
+  rename host is gone. The remaining portal family work is declarative portal subtree hosting/model
+  lifecycle replacement, and the remaining canvas interaction families still need default-path tests
+  before their retained widget/event code can be deleted. Each slice should first add default
+  declarative tests, then remove or gate less retained code.
 - After the ledger no longer contains behavior-only retained files, remove
   `compat-retained-canvas` / `unstable-retained-bridge` from `fret-node`.
 - Keep the known independent `fret-ui` layout primitive drift
@@ -470,28 +605,226 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-19 for `RBX-M2-109`:
+Last run on 2026-05-20 for `RBX-M2-132`:
 
-- `cargo nextest run -p fret-node rename_command rename_declarative rename_host_event overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model` -
-  passed, 10 tests.
-- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
-- `cargo check -p fret-node --features compat-retained-canvas` - passed.
-- `cargo nextest run -p fret-node --features compat-retained-canvas rename_command rename_host_event overlay_group_rename_conformance` -
-  passed, 10 tests.
-- `cargo nextest run -p fret-node` - passed, 350 tests.
-- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 934 tests.
+- deletion-preflight `cargo nextest run -p fret-node --features compat-retained-canvas overlay_group_rename_conformance overlay_symbol_rename_conformance rename_declarative rename_lifecycle rename_command` -
+  passed, 26 tests.
+- deletion-preflight `cargo nextest run -p fret-node rename_declarative rename_lifecycle rename_command rename_host_layout` -
+  passed, 19 tests.
+- post-delete `cargo nextest run -p fret-node rename_declarative rename_lifecycle rename_command rename_host_layout` -
+  passed, 19 tests.
+- post-delete `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- post-delete `cargo nextest run -p fret-node --features compat-retained-canvas rename_declarative rename_lifecycle rename_command retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge overlay_policy_modules_compile_without_retained_canvas_compat` -
+  passed, 19 tests.
+- post-delete `cargo nextest run -p fret-ui managed_surface` - passed, 9 tests.
+- post-delete `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- `cargo fmt -p fret-node` - passed.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
 - `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
   standalone markdown files.
 - `git diff --check` - passed.
-- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/minimap_declarative.rs 2>&1); test -z "$out"` -
+- `rg -n "NodeGraphOverlayHost|rename_host_event|overlay_group_rename_conformance|overlay_symbol_rename_conformance|layout_hidden_child_and_release_focus|src/ui/overlays/group_rename\\.rs" ecosystem/fret-node/src -g '*.rs'` -
+  no matches.
+
+Earlier run on 2026-05-20 for `RBX-M2-131`:
+
+- `cargo nextest run -p fret-node rename_declarative rename_lifecycle rename_command rename_host_layout` -
+  passed, 19 tests.
+- `cargo nextest run -p fret-ui managed_surface` - passed, 9 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas overlay_group_rename_conformance overlay_symbol_rename_conformance rename_declarative rename_lifecycle rename_command` -
+  passed, 26 tests.
+- `cargo fmt --check` - passed.
+- `git diff --check -- crates/fret-ui/src/managed_surface.rs ecosystem/fret-node/src/ui/overlays/rename_declarative.rs ecosystem/fret-node/src/ui/overlays/mod.rs ecosystem/fret-node/src/ui/overlays/rename_host_layout.rs ecosystem/fret-node/src/ui/overlays/rename_policy.rs` -
   passed.
-- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs 2>&1); test -z "$out"` -
+
+Earlier run on 2026-05-20 for `RBX-M2-130`:
+
+- deletion-preflight `cargo nextest run -p fret-node --features compat-retained-canvas overlay_blackboard_conformance blackboard_declarative blackboard_interaction_policy blackboard_paint_plan` -
+  passed, 27 tests.
+- `cargo nextest run -p fret-node blackboard_declarative blackboard_interaction_policy blackboard_paint_plan overlay_policy_modules_compile_without_retained_canvas_compat default_overlay_policy_surfaces_stay_off_retained_bridge retained_bridge_source_usage_stays_on_the_migration_ledger` -
+  passed, 20 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas blackboard_declarative blackboard_interaction_policy blackboard_paint_plan retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge` -
+  passed, 19 tests.
+
+Earlier run on 2026-05-20 for `RBX-M2-127`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- deletion-preflight `cargo nextest run -p fret-node --features compat-retained-canvas minimap_declarative minimap_interaction_policy overlay_minimap_controls_conformance retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge` -
+  passed, 16 tests.
+- `cargo nextest run -p fret-node controls_declarative controls_host_policy controls_interaction_policy minimap_declarative minimap_interaction_policy retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge` -
+  passed, 31 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas controls_declarative controls_host_policy controls_interaction_policy minimap_declarative minimap_interaction_policy retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge` -
+  passed, 31 tests.
+- `rg -n "\\bNodeGraphMiniMapOverlay\\b|overlay_minimap_controls_conformance|src/ui/overlays/minimap\\.rs|include_str!\\(\\\"ui/overlays/minimap\\.rs\\\"\\)|mod minimap;|pub use minimap|MINIMAP_RS|minimap_navigation_surface_stays" ecosystem/fret-node/src -g '*.rs'` -
+  no retained minimap widget/module/export/oracle matches; only declarative
+  `NodeGraphMiniMapOverlayElementProps` names remain.
+- `cargo fmt -p fret-node` - passed.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+Earlier run on 2026-05-20 for `RBX-M2-126`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- `cargo nextest run -p fret-node minimap_declarative` - passed, 5 tests.
+- `cargo nextest run -p fret-node controls_declarative controls_host_policy controls_interaction_policy minimap_declarative minimap_interaction_policy retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge` -
+  passed, 31 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas controls_declarative controls_host_policy controls_interaction_policy minimap_declarative minimap_interaction_policy overlay_minimap_controls_conformance retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge` -
+  passed, 36 tests.
+- `cargo fmt -p fret-ui -p fret-node` - passed.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+Earlier run on 2026-05-20 for `RBX-M2-125`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- `cargo nextest run -p fret-node controls_declarative controls_host_policy controls_interaction_policy retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge` -
+  passed, 22 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas controls_declarative controls_host_policy controls_interaction_policy overlay_minimap_controls_conformance retained_bridge_source_usage_stays_on_the_migration_ledger default_overlay_policy_surfaces_stay_off_retained_bridge` -
+  passed, 27 tests.
+- `rg -n "\\bNodeGraphControlsOverlay\\b|src/ui/overlays/controls\\.rs|include_str!\\(\\\"ui/overlays/controls\\.rs\\\"\\)|mod controls;|pub use controls::|controls_overlay_requires_explicit_editor_config_model|controls_overlay_" ecosystem/fret-node/src -g '*.rs'` -
+  no retained controls widget/module/export matches; only declarative `node_graph_controls_overlay_element(...)` names remain.
+- `cargo fmt -p fret-node` - passed.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+Earlier run on 2026-05-20 for `RBX-M2-124`:
+
+- `cargo nextest run -p fret-node controls_declarative_pointer_events_fall_through_outside_panel_to_surface controls_declarative_blocks_surface_input_within_panel_even_off_button controls_declarative_focus_traversal_reaches_controls_from_surface` -
+  passed, 3 tests.
+- `cargo nextest run -p fret-node controls_declarative controls_host_policy controls_interaction_policy overlay_minimap_controls_conformance` -
+  passed, 20 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas controls_declarative controls_host_policy controls_interaction_policy overlay_minimap_controls_conformance` -
+  passed, 35 tests.
+- `cargo fmt -p fret-node` - passed.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+Earlier run on 2026-05-20 for `RBX-M2-119`:
+
+- `cargo nextest run -p fret-ui managed_surface` - passed, 7 tests.
+- `cargo nextest run -p fret-node node_toolbar_declarative_host_auto_measures_and_places_child_without_retained_widget edge_toolbar_declarative_host_auto_measures_and_hides_child_without_retained_widget toolbars_declarative toolbar_layout_policy toolbar_policy overlay_policy_modules_compile_without_retained_canvas_compat` -
+  passed, 16 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas node_toolbar_declarative_host_auto_measures_and_places_child_without_retained_widget edge_toolbar_declarative_host_auto_measures_and_hides_child_without_retained_widget toolbars_declarative toolbar_layout_policy overlay_toolbars_conformance` -
+  passed, 13 tests.
+- `cargo fmt` - passed.
+
+Earlier run on 2026-05-20 for `RBX-M2-118`:
+
+- `cargo nextest run -p fret-node controls_declarative_button_pointer_up_completes_capture_focus_and_command_dispatch controls_declarative_activation_dispatches_commands_and_honors_disabled_bindings controls_host_policy controls_interaction_policy` -
+  passed, 9 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas controls_declarative_button_pointer_up_completes_capture_focus_and_command_dispatch controls_host_policy controls_interaction_policy controls_declarative overlay_minimap_controls_conformance` -
+  passed, 27 tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `cargo nextest run -p fret-node` - passed, 382 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 958 tests.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+
+Earlier run on 2026-05-20 for `RBX-M2-117`:
+
+- `cargo nextest run -p fret-node controls_declarative_panel_blank_pointer_down_focuses_overlay_without_command controls_host_policy controls_interaction_policy controls_declarative overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model` -
+  passed, 13 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas controls_host_policy controls_interaction_policy controls_declarative overlay_minimap_controls_conformance` -
+  passed, 26 tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `cargo nextest run -p fret-node` - passed, 381 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 957 tests.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/controls_host_policy.rs 2>&1); test -z "$out"` -
   passed.
-- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/rename_declarative.rs 2>&1); test -z "$out"` -
+
+Earlier run on 2026-05-20 for `RBX-M2-116`:
+
+- `cargo nextest run -p fret-node controls_paint_plan controls_layout controls_policy panel_item_state overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model` -
+  passed, 16 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas controls_paint_plan controls_declarative overlay_minimap_controls_conformance` -
+  passed, 21 tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `cargo nextest run -p fret-node` - passed, 377 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 953 tests.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/controls_paint_plan.rs 2>&1); test -z "$out"` -
   passed.
-- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/rename_command.rs 2>&1); test -z "$out"` -
+
+Earlier run on 2026-05-20 for `RBX-M2-115`:
+
+- `cargo nextest run -p fret-node blackboard_paint_plan blackboard_layout blackboard_policy panel_item_state overlay_policy_modules_compile_without_retained_canvas_compat` -
+  passed, 14 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas blackboard_paint_plan blackboard_declarative overlay_blackboard_conformance blackboard_paint` -
+  passed, 16 tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `cargo nextest run -p fret-node` - passed, 374 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 950 tests.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/blackboard_paint_plan.rs 2>&1); test -z "$out"` -
+  passed.
+
+Earlier run on 2026-05-20 for `RBX-M2-114`:
+
+- `cargo nextest run -p fret-node blackboard_interaction_policy blackboard_declarative blackboard_layout blackboard_policy panel_navigation_policy panel_pointer_policy panel_item_state overlay_policy_modules_compile_without_retained_canvas_compat` -
+  passed, 23 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas blackboard_interaction_policy blackboard_declarative overlay_blackboard_conformance` -
+  passed, 17 tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `cargo nextest run -p fret-node` - passed, 371 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 950 tests.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/blackboard_interaction_policy.rs 2>&1); test -z "$out"` -
+  passed.
+
+Earlier run on 2026-05-19 for `RBX-M2-112`:
+
+- `cargo nextest run -p fret-node toolbar_layout_policy toolbars_declarative toolbar_policy overlay_policy_modules_compile_without_retained_canvas_compat controls_overlay_requires_explicit_editor_config_model` -
+  passed, 15 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas toolbar_layout_policy toolbars_declarative overlay_toolbars_conformance` -
+  passed, 11 tests.
+- `cargo check -p fret-node --no-default-features --features fret-ui` - passed.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `cargo nextest run -p fret-node` - passed, 363 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 942 tests.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 427 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `out=$(git diff --check --no-index /dev/null ecosystem/fret-node/src/ui/overlays/toolbar_layout_policy.rs 2>&1); test -z "$out"` -
   passed.
 
 Earlier run on 2026-05-19 for `RBX-M2-090`:

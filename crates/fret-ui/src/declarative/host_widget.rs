@@ -126,6 +126,7 @@ pub(super) struct ElementHostWidget {
     canvas_cache: crate::canvas::CanvasCache,
     render_transform: Option<fret_core::Transform2D>,
     scroll_child_transform: Option<ScrollChildTransform>,
+    managed_surface_hit_test_mask: Option<crate::managed_surface::ManagedSurfaceHitTestMask>,
     hit_testable: bool,
     hit_test_children: bool,
     focus_traversal_children: bool,
@@ -157,6 +158,7 @@ impl ElementHostWidget {
             canvas_cache: crate::canvas::CanvasCache::default(),
             render_transform: None,
             scroll_child_transform: None,
+            managed_surface_hit_test_mask: None,
             hit_testable: true,
             hit_test_children: true,
             focus_traversal_children: true,
@@ -712,6 +714,10 @@ impl<H: UiHost + 'static> Widget<H> for ElementHostWidget {
 
     fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
         self.hit_testable
+            && self
+                .managed_surface_hit_test_mask
+                .as_ref()
+                .is_none_or(|mask| mask.hit_test(_position))
     }
 
     fn hit_test_children(&self, _bounds: Rect, _position: Point) -> bool {

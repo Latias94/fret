@@ -19,9 +19,9 @@ use fret_runtime::{CommandId, Effect, FrameId, Model, ModelId, ModelUpdateError,
 use crate::action::OnHoverChange;
 use crate::action::{
     ActionRouteHooks, CommandActionHooks, CommandAvailabilityActionHooks, DismissibleActionHooks,
-    KeyActionHooks, OnActivate, OnCommand, OnCommandAvailability, OnDismissRequest,
-    OnDismissiblePointerMove, OnKeyDown, OnPinchGesture, OnPointerCancel, OnPointerDown,
-    OnPointerMove, OnPointerUp, OnPressablePointerDown, OnPressablePointerMove,
+    KeyActionHooks, OnActivate, OnActivateFocus, OnCommand, OnCommandAvailability,
+    OnDismissRequest, OnDismissiblePointerMove, OnKeyDown, OnPinchGesture, OnPointerCancel,
+    OnPointerDown, OnPointerMove, OnPointerUp, OnPressablePointerDown, OnPressablePointerMove,
     OnPressablePointerUp, OnRovingActiveChange, OnRovingNavigate, OnRovingTypeahead,
     OnSelectableTextActivateSpan, OnTimer, OnWheel, PointerActionHooks, PressableActionHooks,
     PressableHoverActionHooks, PressablePointerUpResult, RovingActionHooks,
@@ -2248,6 +2248,26 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    /// Register a focus-capable activation handler for the current pressable element.
+    ///
+    /// This is for policy surfaces that must restore focus to another declarative element after
+    /// activation while keeping the default `pressable_on_activate` contract stable.
+    pub fn pressable_on_activate_focus(&mut self, handler: OnActivateFocus) {
+        self.root_state(PressableActionHooks::default, |hooks| {
+            hooks.on_activate_focus = Some(handler);
+        });
+    }
+
+    pub fn pressable_on_activate_focus_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnActivateFocus,
+    ) {
+        self.state_for(element, PressableActionHooks::default, |hooks| {
+            hooks.on_activate_focus = Some(handler);
+        });
+    }
+
     pub fn pressable_add_on_activate(&mut self, handler: OnActivate) {
         self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_activate = match hooks.on_activate.clone() {
@@ -2278,9 +2298,49 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
+    pub fn pressable_add_on_activate_focus(&mut self, handler: OnActivateFocus) {
+        self.root_state(PressableActionHooks::default, |hooks| {
+            hooks.on_activate_focus = match hooks.on_activate_focus.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, reason| {
+                        prev(host, cx, reason);
+                        next(host, cx, reason);
+                    }))
+                }
+            };
+        });
+    }
+
+    pub fn pressable_add_on_activate_focus_for(
+        &mut self,
+        element: GlobalElementId,
+        handler: OnActivateFocus,
+    ) {
+        self.state_for(element, PressableActionHooks::default, |hooks| {
+            hooks.on_activate_focus = match hooks.on_activate_focus.clone() {
+                None => Some(handler),
+                Some(prev) => {
+                    let next = handler.clone();
+                    Some(Arc::new(move |host, cx, reason| {
+                        prev(host, cx, reason);
+                        next(host, cx, reason);
+                    }))
+                }
+            };
+        });
+    }
+
     pub fn pressable_clear_on_activate(&mut self) {
         self.root_state(PressableActionHooks::default, |hooks| {
             hooks.on_activate = None;
+        });
+    }
+
+    pub fn pressable_clear_on_activate_focus(&mut self) {
+        self.root_state(PressableActionHooks::default, |hooks| {
+            hooks.on_activate_focus = None;
         });
     }
 

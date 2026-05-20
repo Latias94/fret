@@ -282,10 +282,12 @@ impl<H: UiHost> UiTree<H> {
                 self.pending_declarative_window_snapshot_roots
                     .retain(|pending| self.nodes.contains_key(*pending));
                 self.resolve_pending_focus_target_if_needed(app);
-                let focused_element_before_revalidate = self.window.and_then(|window| {
-                    self.focus.and_then(|focused| {
-                        crate::elements::with_window_state(app, window, |state| {
-                            state.element_for_node(focused)
+                let focused_element_before_revalidate = self.focus.and_then(|focused| {
+                    self.node_element(focused).or_else(|| {
+                        self.window.and_then(|window| {
+                            crate::elements::with_window_state(app, window, |state| {
+                                state.element_for_node(focused)
+                            })
                         })
                     })
                 });

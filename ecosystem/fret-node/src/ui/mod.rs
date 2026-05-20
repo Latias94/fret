@@ -98,10 +98,3 @@ pub(crate) use canvas::{
 };
 #[cfg(all(test, feature = "compat-retained-canvas"))]
 pub(crate) use editor::NodeGraphEditor;
-#[cfg(all(test, feature = "compat-retained-canvas"))]
-pub(crate) use overlays::{
-    GroupRenameOverlay, NodeGraphBlackboardOverlay, NodeGraphControlsBindings,
-    NodeGraphControlsCommandBinding, NodeGraphControlsOverlay, NodeGraphEdgeToolbar,
-    NodeGraphMiniMapOverlay, NodeGraphNodeToolbar, NodeGraphOverlayHost, NodeGraphOverlayState,
-    NodeGraphToolbarAlign, NodeGraphToolbarPosition, NodeGraphToolbarSize, SymbolRenameOverlay,
-};

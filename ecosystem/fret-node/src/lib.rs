@@ -63,23 +63,34 @@ mod surface_policy_tests {
     const UI_EDITORS_MOD_RS: &str = include_str!("ui/editors/mod.rs");
     const UI_MOD_RS: &str = include_str!("ui/mod.rs");
     const UI_OVERLAYS_MOD_RS: &str = include_str!("ui/overlays/mod.rs");
-    const UI_OVERLAY_CONTROLS_RS: &str = include_str!("ui/overlays/controls.rs");
     const UI_OVERLAY_CONTROLS_DECLARATIVE_RS: &str =
         include_str!("ui/overlays/controls_declarative.rs");
+    const UI_OVERLAY_CONTROLS_HOST_POLICY_RS: &str =
+        include_str!("ui/overlays/controls_host_policy.rs");
+    const UI_OVERLAY_CONTROLS_INTERACTION_POLICY_RS: &str =
+        include_str!("ui/overlays/controls_interaction_policy.rs");
+    const UI_OVERLAY_CONTROLS_PAINT_PLAN_RS: &str =
+        include_str!("ui/overlays/controls_paint_plan.rs");
     const UI_OVERLAY_BLACKBOARD_DECLARATIVE_RS: &str =
         include_str!("ui/overlays/blackboard_declarative.rs");
+    const UI_OVERLAY_BLACKBOARD_INTERACTION_POLICY_RS: &str =
+        include_str!("ui/overlays/blackboard_interaction_policy.rs");
+    const UI_OVERLAY_BLACKBOARD_PAINT_PLAN_RS: &str =
+        include_str!("ui/overlays/blackboard_paint_plan.rs");
     const UI_OVERLAY_MINIMAP_DECLARATIVE_RS: &str =
         include_str!("ui/overlays/minimap_declarative.rs");
+    const UI_OVERLAY_MINIMAP_INTERACTION_POLICY_RS: &str =
+        include_str!("ui/overlays/minimap_interaction_policy.rs");
+    const UI_OVERLAY_TOOLBAR_LAYOUT_POLICY_RS: &str =
+        include_str!("ui/overlays/toolbar_layout_policy.rs");
     const UI_OVERLAY_TOOLBARS_DECLARATIVE_RS: &str =
         include_str!("ui/overlays/toolbars_declarative.rs");
     const UI_OVERLAY_RENAME_DECLARATIVE_RS: &str =
         include_str!("ui/overlays/rename_declarative.rs");
     const UI_OVERLAY_RENAME_COMMAND_RS: &str = include_str!("ui/overlays/rename_command.rs");
-    const UI_OVERLAY_GROUP_RENAME_RS: &str = include_str!("ui/overlays/group_rename.rs");
-    const UI_OVERLAY_BLACKBOARD_RS: &str = include_str!("ui/overlays/blackboard.rs");
+    const UI_OVERLAY_RENAME_LIFECYCLE_RS: &str = include_str!("ui/overlays/rename_lifecycle.rs");
     const UI_VIEWPORT_OPTIONS_RS: &str = include_str!("ui/viewport_options.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
-    const MINIMAP_RS: &str = include_str!("ui/overlays/minimap.rs");
     const PORTAL_RS: &str = include_str!("ui/portal.rs");
     const FRET_EXAMPLES_CARGO_TOML: &str = include_str!("../../../apps/fret-examples/Cargo.toml");
     const FRET_EXAMPLES_LIB_RS: &str = include_str!("../../../apps/fret-examples/src/lib.rs");
@@ -338,27 +349,6 @@ mod surface_policy_tests {
         assert!(PORTAL_RS.contains("pub(crate) fn with_edit_queue("));
         assert!(PORTAL_RS.contains("retained compatibility plumbing"));
         assert!(PORTAL_RS.contains("declarative node graph surface"));
-
-        assert!(UI_OVERLAY_GROUP_RENAME_RS.contains(
-            "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
-        ));
-        assert!(UI_OVERLAY_GROUP_RENAME_RS.contains("pub(crate) fn with_edit_queue("));
-        assert!(UI_OVERLAY_GROUP_RENAME_RS.contains("retained compatibility plumbing"));
-        assert!(UI_OVERLAY_GROUP_RENAME_RS.contains("declarative node graph surface"));
-
-        assert!(UI_OVERLAY_BLACKBOARD_RS.contains(
-            "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
-        ));
-        assert!(UI_OVERLAY_BLACKBOARD_RS.contains("pub(crate) fn with_edit_queue("));
-        assert!(UI_OVERLAY_BLACKBOARD_RS.contains("retained compatibility plumbing"));
-        assert!(UI_OVERLAY_BLACKBOARD_RS.contains("declarative node graph surface"));
-
-        assert!(MINIMAP_RS.contains(
-            "pub fn with_controller(mut self, controller: NodeGraphController) -> Self {"
-        ));
-        assert!(!MINIMAP_RS.contains("pub(crate) fn with_view_queue("));
-        assert!(MINIMAP_RS.contains("retained compatibility plumbing"));
-        assert!(MINIMAP_RS.contains("declarative node graph surface"));
     }
 
     #[test]
@@ -380,16 +370,8 @@ mod surface_policy_tests {
             "src/ui/editors/portal_text.rs",
             "src/ui/canvas/middleware.rs",
             "src/ui/canvas/widget.rs",
-            "src/ui/overlays/blackboard.rs",
-            "src/ui/overlays/blackboard_paint.rs",
-            "src/ui/overlays/controls.rs",
-            "src/ui/overlays/group_rename.rs",
-            "src/ui/overlays/minimap.rs",
-            "src/ui/overlays/mod.rs",
             "src/ui/overlays/panel_button_paint.rs",
             "src/ui/overlays/panel_pointer_policy.rs",
-            "src/ui/overlays/toolbars.rs",
-            "src/ui/overlays/toolbars_layout.rs",
         ];
         let allowed_prefixes = ["src/ui/canvas/widget/"];
         let retained_terms = [
@@ -438,12 +420,18 @@ mod surface_policy_tests {
 
         for module in [
             "mod blackboard_declarative;",
+            "mod blackboard_interaction_policy;",
             "mod blackboard_layout;",
+            "mod blackboard_paint_plan;",
             "mod blackboard_policy;",
             "mod controls_declarative;",
+            "mod controls_host_policy;",
+            "mod controls_interaction_policy;",
             "mod controls_layout;",
+            "mod controls_paint_plan;",
             "mod controls_policy;",
             "mod minimap_drag_policy;",
+            "mod minimap_interaction_policy;",
             "mod minimap_declarative;",
             "mod minimap_navigation_policy;",
             "mod minimap_policy;",
@@ -452,10 +440,11 @@ mod surface_policy_tests {
             "mod panel_navigation_policy;",
             "mod panel_pointer_policy;",
             "mod rename_command;",
-            "mod rename_host_event;",
             "mod rename_host_layout;",
+            "mod rename_lifecycle;",
             "mod rename_declarative;",
             "mod rename_policy;",
+            "mod toolbar_layout_policy;",
             "mod toolbar_policy;",
             "mod toolbars_declarative;",
         ] {
@@ -465,14 +454,7 @@ mod surface_policy_tests {
             );
         }
 
-        for retained_widget_module in [
-            "mod blackboard;",
-            "mod blackboard_paint;",
-            "mod controls;",
-            "mod minimap;",
-            "mod panel_button_paint;",
-            "mod toolbars;",
-        ] {
+        for retained_widget_module in ["mod panel_button_paint;"] {
             let marker =
                 format!("#[cfg(feature = \"compat-retained-canvas\")]\n{retained_widget_module}");
             assert!(
@@ -501,16 +483,30 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn controls_overlay_requires_explicit_editor_config_model() {
-        assert!(UI_OVERLAY_CONTROLS_RS.contains(
-            "pub fn new(\n        canvas_node: fret_core::NodeId,\n        view_state: Model<NodeGraphViewState>,\n        editor_config: Model<NodeGraphEditorConfig>,\n        style: NodeGraphStyle,\n    ) -> Self {"
-        ));
-        assert!(!UI_OVERLAY_CONTROLS_RS.contains("pub fn with_editor_config_model("));
+    fn default_overlay_policy_surfaces_stay_off_retained_bridge() {
         assert!(
             !UI_OVERLAY_CONTROLS_DECLARATIVE_RS.contains("retained_bridge")
                 && !UI_OVERLAY_CONTROLS_DECLARATIVE_RS.contains("RetainedSubtreeProps")
                 && !UI_OVERLAY_CONTROLS_DECLARATIVE_RS.contains("Widget<"),
             "declarative controls composition must not take a retained dependency"
+        );
+        assert!(
+            !UI_OVERLAY_CONTROLS_HOST_POLICY_RS.contains("retained_bridge")
+                && !UI_OVERLAY_CONTROLS_HOST_POLICY_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_CONTROLS_HOST_POLICY_RS.contains("Widget<"),
+            "default controls host policy must not take a retained dependency"
+        );
+        assert!(
+            !UI_OVERLAY_CONTROLS_INTERACTION_POLICY_RS.contains("retained_bridge")
+                && !UI_OVERLAY_CONTROLS_INTERACTION_POLICY_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_CONTROLS_INTERACTION_POLICY_RS.contains("Widget<"),
+            "default controls interaction policy must not take a retained dependency"
+        );
+        assert!(
+            !UI_OVERLAY_CONTROLS_PAINT_PLAN_RS.contains("retained_bridge")
+                && !UI_OVERLAY_CONTROLS_PAINT_PLAN_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_CONTROLS_PAINT_PLAN_RS.contains("Widget<"),
+            "default controls paint plan must not take a retained dependency"
         );
         assert!(
             !UI_OVERLAY_BLACKBOARD_DECLARATIVE_RS.contains("retained_bridge")
@@ -519,10 +515,34 @@ mod surface_policy_tests {
             "declarative blackboard composition must not take a retained dependency"
         );
         assert!(
+            !UI_OVERLAY_BLACKBOARD_INTERACTION_POLICY_RS.contains("retained_bridge")
+                && !UI_OVERLAY_BLACKBOARD_INTERACTION_POLICY_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_BLACKBOARD_INTERACTION_POLICY_RS.contains("Widget<"),
+            "default blackboard interaction policy must not take a retained dependency"
+        );
+        assert!(
+            !UI_OVERLAY_BLACKBOARD_PAINT_PLAN_RS.contains("retained_bridge")
+                && !UI_OVERLAY_BLACKBOARD_PAINT_PLAN_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_BLACKBOARD_PAINT_PLAN_RS.contains("Widget<"),
+            "default blackboard paint plan must not take a retained dependency"
+        );
+        assert!(
             !UI_OVERLAY_MINIMAP_DECLARATIVE_RS.contains("retained_bridge")
                 && !UI_OVERLAY_MINIMAP_DECLARATIVE_RS.contains("RetainedSubtreeProps")
                 && !UI_OVERLAY_MINIMAP_DECLARATIVE_RS.contains("Widget<"),
             "declarative minimap composition must not take a retained dependency"
+        );
+        assert!(
+            !UI_OVERLAY_MINIMAP_INTERACTION_POLICY_RS.contains("retained_bridge")
+                && !UI_OVERLAY_MINIMAP_INTERACTION_POLICY_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_MINIMAP_INTERACTION_POLICY_RS.contains("Widget<"),
+            "default minimap interaction policy must not take a retained dependency"
+        );
+        assert!(
+            !UI_OVERLAY_TOOLBAR_LAYOUT_POLICY_RS.contains("retained_bridge")
+                && !UI_OVERLAY_TOOLBAR_LAYOUT_POLICY_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_TOOLBAR_LAYOUT_POLICY_RS.contains("Widget<"),
+            "default toolbar layout policy must not take a retained dependency"
         );
         assert!(
             !UI_OVERLAY_TOOLBARS_DECLARATIVE_RS.contains("retained_bridge")
@@ -541,6 +561,12 @@ mod surface_policy_tests {
                 && !UI_OVERLAY_RENAME_COMMAND_RS.contains("RetainedSubtreeProps")
                 && !UI_OVERLAY_RENAME_COMMAND_RS.contains("Widget<"),
             "default rename command/session policy must not take a retained dependency"
+        );
+        assert!(
+            !UI_OVERLAY_RENAME_LIFECYCLE_RS.contains("retained_bridge")
+                && !UI_OVERLAY_RENAME_LIFECYCLE_RS.contains("RetainedSubtreeProps")
+                && !UI_OVERLAY_RENAME_LIFECYCLE_RS.contains("Widget<"),
+            "default rename lifecycle policy must not take a retained dependency"
         );
     }
 
@@ -627,13 +653,5 @@ mod surface_policy_tests {
         assert!(NODE_GRAPH_DEMO_RS.contains("node_graph_surface_in(cx, props)"));
         assert!(!NODE_GRAPH_DEMO_RS.contains("NodeGraphController"));
         assert!(!NODE_GRAPH_DEMO_RS.contains("binding.controller()"));
-    }
-
-    #[test]
-    fn minimap_navigation_surface_stays_controller_or_default_only() {
-        assert!(!MINIMAP_RS.contains("NodeGraphMiniMapNavigationBinding::ViewQueue"));
-        assert!(!MINIMAP_RS.contains("ViewQueue(Model<NodeGraphViewQueue>)"));
-        assert!(!MINIMAP_RS.contains("pub(crate) fn with_view_queue("));
-        assert!(MINIMAP_RS.contains("NodeGraphMiniMapNavigationBinding::Controller(controller)"));
     }
 }

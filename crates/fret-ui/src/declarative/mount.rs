@@ -2531,6 +2531,13 @@ fn declarative_instance_change_mask(
                 layout_changed = true;
             }
         }
+        (ElementInstance::ManagedSurface(_), ElementInstance::ManagedSurface(_)) => {
+            // Managed surface hooks are opaque element-state closures. They can capture host policy
+            // inputs that are not represented in `ManagedSurfaceProps`, so each declarative render
+            // must refresh host-selected layout, paint, and hit-test outputs.
+            layout_changed = true;
+            paint_changed = true;
+        }
         _ => {}
     }
 

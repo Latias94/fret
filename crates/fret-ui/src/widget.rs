@@ -291,6 +291,10 @@ impl<'a, H: UiHost> EventCx<'a, H> {
         self.requested_focus = Some(node);
     }
 
+    pub fn request_focus_element(&mut self, target: crate::GlobalElementId) {
+        self.requested_focus_target = Some(target);
+    }
+
     pub fn capture_pointer(&mut self, node: NodeId) {
         if self.pointer_id.is_none() {
             return;

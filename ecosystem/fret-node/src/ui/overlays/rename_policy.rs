@@ -154,7 +154,9 @@ mod tests {
         open_symbol_rename_session, rename_session_seed_text,
     };
     use crate::core::{GraphId, Group, GroupId, Symbol, SymbolId};
-    use crate::ui::overlays::{GroupRenameOverlay, NodeGraphOverlayState, SymbolRenameOverlay};
+    use crate::ui::overlays::group_rename::{
+        GroupRenameOverlay, NodeGraphOverlayState, SymbolRenameOverlay,
+    };
     use crate::{Graph, core::CanvasPoint, core::CanvasRect, core::CanvasSize};
     use fret_core::{Point, Px};
 
