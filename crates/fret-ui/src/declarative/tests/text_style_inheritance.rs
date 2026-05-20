@@ -6,8 +6,9 @@ use crate::element::{
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use fret_core::{
     AttributedText, MaterialDescriptor, MaterialId, MaterialRegistrationError, PathCommand,
-    PathConstraints, PathId, PathMetrics, PathStyle, SvgId, TextBlobId, TextFontFeatureSetting,
-    TextInput, TextLineHeightPolicy, TextMetrics, TextSpan, TextStyleRefinement, TextWrap,
+    PathConstraints, PathId, PathMetrics, PathStyle, SvgId, TextBlobId, TextFontAxisSetting,
+    TextFontFeatureSetting, TextInput, TextLineHeightPolicy, TextMetrics, TextSpan,
+    TextStyleRefinement, TextWrap,
 };
 use std::sync::Arc;
 
@@ -133,6 +134,15 @@ fn inherited_numeric_refinement(size: f32, line_height: f32) -> TextStyleRefinem
     refinement.features.push(TextFontFeatureSetting {
         tag: "tnum".into(),
         value: 1,
+    });
+    refinement
+}
+
+fn inherited_axis_refinement(size: f32, line_height: f32) -> TextStyleRefinement {
+    let mut refinement = inherited_refinement(size, line_height);
+    refinement.axes.push(TextFontAxisSetting {
+        tag: "wdth".into(),
+        value: 90.0,
     });
     refinement
 }
@@ -336,6 +346,49 @@ fn inherited_text_style_features_affect_passive_text_measurement() {
             .iter()
             .any(|feature| feature.tag.as_str() == "tnum" && feature.value == 1),
         "expected inherited text-style features to reach passive text measurement"
+    );
+}
+
+#[test]
+fn inherited_text_style_axes_affect_passive_text_measurement() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let mut services = StyleRecordingTextService::default();
+
+    let root = render_root_for_frame_local(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds(),
+        "text-style-inheritance-axes",
+        |cx| {
+            vec![
+                cx.container(ContainerProps::default(), |cx| vec![cx.text("variable")])
+                    .inherit_text_style(inherited_axis_refinement(14.0, 20.0)),
+            ]
+        },
+    );
+
+    let scope = only_child(&ui, root);
+    let text = only_child(&ui, scope);
+    let _ = ui.measure_in(
+        &mut app,
+        &mut services,
+        text,
+        max_content_constraints(),
+        1.0,
+    );
+
+    assert!(
+        services
+            .last_style()
+            .axes
+            .iter()
+            .any(|axis| axis.tag.as_str() == "wdth" && (axis.value - 90.0).abs() < f32::EPSILON),
+        "expected inherited text-style axes to reach passive text measurement"
     );
 }
 

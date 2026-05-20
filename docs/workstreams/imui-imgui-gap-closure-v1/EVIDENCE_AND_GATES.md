@@ -4766,6 +4766,32 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `cargo check -p fret-ui-shadcn --lib` passed.
 
+2026-05-20 inherited-axis + shadcn Button default-label role slice:
+
+- Source gap before fix: shadcn `Button` default labels still used a local
+  `ui::text(...).text_size_px(...).fixed_line_box_px(...).nowrap().text_color(...)` builder inside
+  fixed-height button chrome. Migrating that path directly to `text_button_label(...)` exposed a
+  mechanism gap: `TextStyleRefinement` carried OpenType features but not variable font axes, so
+  existing `Button::label_font_axis(...)` could not stay on the inherited-role path.
+- `TextStyleRefinement` now carries variable font axes as subtree defaults. Merge/refine,
+  passive-text measurement, cache fingerprints, and `fret-ui-kit` typography refinements all carry
+  axes alongside features.
+- `Button` default labels now render through a small helper backed by
+  `decl_text::text_button_label(...)`. Button-owned font, feature, axis, explicit weight,
+  foreground, and label `test_id` suffix behavior are layered through inherited text/foreground
+  metadata instead of leaf-local style/color. The default text size follows the shared shadcn
+  `text-sm font-medium whitespace-nowrap` baseline, with the existing Fret `xs/icon-xs` extension
+  mapped to the shared `text-xs` preset.
+- Focused proof:
+  `text_style_refinement_merges_font_axes_in_parent_child_order`,
+  `text_style_refine_applies_inherited_font_axes_after_leaf_defaults`,
+  `inherited_text_style_axes_affect_passive_text_measurement`,
+  `inherited_text_style_fingerprint_tracks_axis_overrides`,
+  `composable_refinement_keeps_font_features_and_axes`,
+  `button_default_label_uses_shared_button_label_role`,
+  `button_default_label_keeps_font_feature_and_axis_overrides_on_role`, and
+  `button_default_label_keeps_weight_override_on_role`.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

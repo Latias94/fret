@@ -474,6 +474,7 @@ pub fn refinement_from_style(style: &TextStyle) -> TextStyleRefinement {
         line_height_policy: Some(style.line_height_policy),
         letter_spacing_em: style.letter_spacing_em,
         features: style.features.clone(),
+        axes: style.axes.clone(),
         vertical_placement: Some(style.vertical_placement),
         leading_distribution: Some(style.leading_distribution),
     }
@@ -497,6 +498,7 @@ pub fn composable_refinement_from_style(style: &TextStyle) -> TextStyleRefinemen
             .then_some(style.line_height_policy),
         letter_spacing_em: style.letter_spacing_em,
         features: style.features.clone(),
+        axes: style.axes.clone(),
         vertical_placement: (style.vertical_placement != default.vertical_placement)
             .then_some(style.vertical_placement),
         leading_distribution: (style.leading_distribution != default.leading_distribution)
@@ -677,6 +679,31 @@ mod tests {
             refinement.vertical_placement,
             Some(TextVerticalPlacement::BoundsAsLineBox)
         );
+    }
+
+    #[test]
+    fn composable_refinement_keeps_font_features_and_axes() {
+        let mut style = TextStyle {
+            font: FontId::ui(),
+            size: Px(13.0),
+            line_height: Some(Px(18.0)),
+            line_height_policy: TextLineHeightPolicy::FixedFromStyle,
+            vertical_placement: TextVerticalPlacement::BoundsAsLineBox,
+            ..Default::default()
+        };
+        style.features.push(fret_core::TextFontFeatureSetting {
+            tag: "tnum".into(),
+            value: 1,
+        });
+        style.axes.push(fret_core::TextFontAxisSetting {
+            tag: "wdth".into(),
+            value: 90.0,
+        });
+
+        let refinement = composable_refinement_from_style(&style);
+
+        assert_eq!(refinement.features, style.features);
+        assert_eq!(refinement.axes, style.axes);
     }
 
     #[test]

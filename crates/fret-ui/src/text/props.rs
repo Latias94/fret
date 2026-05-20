@@ -190,6 +190,12 @@ pub(crate) fn text_style_refinement_fingerprint(refinement: &TextStyleRefinement
         state = mix_u64(state, u64::from(feature.value));
     }
 
+    state = mix_u64(state, refinement.axes.len() as u64);
+    for axis in &refinement.axes {
+        state = mix_bytes(state, axis.tag.as_bytes());
+        state = mix_f32(state, axis.value);
+    }
+
     state = mix_u64(state, refinement.vertical_placement.is_some() as u64);
     if let Some(vertical_placement) = refinement.vertical_placement {
         state = mix_u64(
@@ -490,6 +496,27 @@ mod tests {
             text_style_refinement_fingerprint(&first),
             text_style_refinement_fingerprint(&second),
             "inherited shaping features must participate in text measurement/cache fingerprints"
+        );
+    }
+
+    #[test]
+    fn inherited_text_style_fingerprint_tracks_axis_overrides() {
+        let mut first = TextStyleRefinement::default();
+        first.axes.push(fret_core::TextFontAxisSetting {
+            tag: "wdth".into(),
+            value: 90.0,
+        });
+
+        let mut second = TextStyleRefinement::default();
+        second.axes.push(fret_core::TextFontAxisSetting {
+            tag: "opsz".into(),
+            value: 12.0,
+        });
+
+        assert_ne!(
+            text_style_refinement_fingerprint(&first),
+            text_style_refinement_fingerprint(&second),
+            "inherited shaping axes must participate in text measurement/cache fingerprints"
         );
     }
 }

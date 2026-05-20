@@ -1114,6 +1114,13 @@ Readiness order for the next locally testable review slices:
    sidebar-local `menu_button_style(...)` / `menu_sub_button_style(...)` text builders and their
    local `text_size_px` / `line_height_px` policy. Sidebar still owns row chrome, collapse opacity,
    RTL ordering, foreground inheritance, and tooltip placement.
+   2026-05-20 inherited-axis + shadcn Button default-label follow-up: `TextStyleRefinement` now
+   carries variable font axes as subtree defaults, so role-based text paths can preserve
+   `label_font_axis(...)` without falling back to leaf-local `TextStyle` builders. shadcn `Button`
+   default labels now render through the shared button-label role and layer Button-owned font,
+   feature, axis, weight, foreground, and test-id suffix behavior through inherited metadata. This
+   removes the foundational fixed-height button path from local `ui::text(...).fixed_line_box_px(...)`
+   policy while keeping custom child and inline slot role-preservation gates intact.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus

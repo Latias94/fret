@@ -991,6 +991,12 @@ Exit criteria:
   `text_button_label_compact_fill(...)`, and collapsed tooltip labels use `text_button_label(...)`.
   This keeps upstream truncate behavior in the shared button-label family while leaving sidebar
   chrome, foreground, collapse motion, RTL ordering, and tooltip placement recipe-owned.
+  2026-05-20 inherited-axis + shadcn Button default-label result: `TextStyleRefinement` now carries
+  variable font axes as subtree defaults alongside OpenType features, with merge/refine,
+  measurement, cache-fingerprint, and typography bridge gates. shadcn `Button` default labels now
+  consume the shared button-label role instead of local `ui::text(...).fixed_line_box_px(...)`
+  builders, while preserving label font, feature, axis, weight, foreground, and `test_id` suffix
+  behavior through inherited text/foreground metadata.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

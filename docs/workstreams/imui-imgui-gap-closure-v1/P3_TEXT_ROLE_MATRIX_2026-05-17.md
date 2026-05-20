@@ -67,6 +67,10 @@ component should construct `TextProps` locally.
   for button-like rows whose label owns the remaining inline space between icons/actions. They
   remain in the button-label family, add fill/grow/basis-zero layout, and keep single-line
   ellipsis; the compact variant owns `text-xs font-medium` for small trigger rows.
+- Component-local refinements may layer font features, variable font axes, or explicit weight
+  overrides onto button-label roles through inherited text refinement. That keeps the role-owned
+  no-wrap/ellipsis layout intact instead of forcing components back to leaf-local `TextStyle`
+  builders.
 - `text_control_label(...)`: fill-width checkbox/radio/switch/combo/slider label text. It keeps
   fixed control chrome single-line under resize.
 - `text_section_chrome_label(...)`, `text_chrome_title(...)`, and `text_chrome_glyph(...)`: section,
