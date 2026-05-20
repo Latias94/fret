@@ -6509,3 +6509,60 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target\fret-diag-hit-test-only-paint-cache-suite-path-cache-v2 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
   - result: passed; script run id `1779259645062`; summary
     `target/fret-diag-hit-test-only-paint-cache-suite-path-cache-v2/sessions/1779259631852-148980/suite.summary.json`.
+
+## RadioGroup Checked-State Mutation Runtime Gate
+
+- invariant:
+  RadioGroup item `checked` semantics must move with real user selection. A visual dot and focus
+  ring are insufficient: diagnostics must prove the semantics nodes for Free, Pro, and Enterprise
+  update their `checked` flags after pointer activation.
+- finding:
+  no RadioGroup recipe/runtime defect was reproduced. The gap was missing non-list RadioGroup
+  checked-state mutation coverage; existing RadioGroup diagnostics covered label focus and RTL or
+  choice-card layout without asserting dynamic `checked` semantics. The broader
+  `ui-gallery-shadcn-runtime-evidence` suite currently has an unrelated Command
+  retained-active-descendant `script_stalled_no_frames` failure before it reaches RadioGroup, so the
+  durable gate is a focused `ui-gallery-radio-group-semantics` suite.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-checked-state-mutation.json`,
+  `tools/diag-scripts/suites/ui-gallery-radio-group-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-radio-group-checked-state-mutation-v1/sessions/1779261539435-153996/1779261557779/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-radio-group-checked-state-mutation-v1/sessions/1779261539435-153996/share/1779261557779.zip`;
+  dedicated suite summary:
+  `target/fret-diag-radio-group-semantics-suite-v4/sessions/1779263168285-151724/suite.summary.json`;
+  unrelated broad-suite Command no-frame failure:
+  `target/fret-diag-shadcn-runtime-evidence-radio-group-checked-v1/sessions/1779261599311-79120/suite.summary.json`.
+- JSON/registry:
+  `python -m json.tool tools\diag-scripts\ui-gallery\radio-group\ui-gallery-radio-group-checked-state-mutation.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-radio-group-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_radio_group_checked_state_mutation --no-fail-fast --no-capture`
+  - result: passed; latest Nextest run id `7ced9cb1-5ecc-43bd-b118-4fc3cd0c6681`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\radio-group\ui-gallery-radio-group-checked-state-mutation.json --dir target\fret-diag-radio-group-checked-state-mutation-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779261557779`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-radio-group-semantics --dir target\fret-diag-radio-group-semantics-suite-v4 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; script run id `1779263181042`.
+- broad runtime suite triage:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-radio-group-checked-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: failed before reaching RadioGroup because existing
+    `ui-gallery-command-retained-active-descendant-action-state.json` stalled with no frames at
+    step 1. A focused rerun of that Command script also failed with `script_stalled_no_frames`, so
+    this is recorded as a separate diagnostics stability follow-up.

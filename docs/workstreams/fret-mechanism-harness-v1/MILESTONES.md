@@ -3508,3 +3508,32 @@ Status: complete for the UI Gallery hit-test path-cache runtime companion.
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target\fret-diag-hit-test-only-paint-cache-suite-path-cache-v2 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
   with summary
   `target/fret-diag-hit-test-only-paint-cache-suite-path-cache-v2/sessions/1779259631852-148980/suite.summary.json`.
+
+## M158: RadioGroup Checked-State Semantics Runtime Gate
+
+Status: complete for the focused RadioGroup checked-state mutation companion.
+
+- Added `ui-gallery-radio-group-checked-state-mutation.json`, which navigates to the public
+  RadioGroup page, scrolls to the Label Association example, proves the initial Free/Pro/Enterprise
+  checked-state semantics, then clicks Pro and Enterprise and asserts checked-state transfer after
+  each pointer activation.
+- Added the focused `ui-gallery-radio-group-semantics` suite plus broad
+  `ui-gallery-shadcn-runtime-evidence` membership, registry entry, and protocol roundtrip coverage.
+- The broad runtime-evidence suite rerun exposed an unrelated existing Command
+  retained-active-descendant `script_stalled_no_frames` failure before it reached RadioGroup. The
+  RadioGroup gate therefore uses the dedicated suite for durable evidence; the Command no-frame
+  failure remains a separate diagnostics-stability follow-up.
+- Gates pass:
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_radio_group_checked_state_mutation --no-fail-fast --no-capture`
+  with latest Nextest run id `7ced9cb1-5ecc-43bd-b118-4fc3cd0c6681`; and
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\radio-group\ui-gallery-radio-group-checked-state-mutation.json --dir target\fret-diag-radio-group-checked-state-mutation-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779261557779` and AI packet
+  `target/fret-diag-radio-group-checked-state-mutation-v1/sessions/1779261539435-153996/1779261557779/ai.packet`.
+- Dedicated runtime suite passes:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-radio-group-semantics --dir target\fret-diag-radio-group-semantics-suite-v4 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with summary
+  `target/fret-diag-radio-group-semantics-suite-v4/sessions/1779263168285-151724/suite.summary.json`.

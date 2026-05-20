@@ -319,6 +319,15 @@ date: 2026-05-12
   `ui-gallery-hit-test-only-paint-cache` suite with zero-warning lint policy. Suite evidence is
   anchored at
   `target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json`.
+- RadioGroup checked-state semantics update:
+  `ui-gallery-radio-group-checked-state-mutation.json` now covers the non-list shadcn RadioGroup
+  checked-state mutation path. The gate starts from the Label Association example, proves Free is
+  checked while Pro/Enterprise are unchecked, clicks Pro and Enterprise through stable hit testing,
+  and proves `checked` semantics transfer after each selection. Focused runtime evidence is anchored
+  at
+  `target/fret-diag-radio-group-checked-state-mutation-v1/sessions/1779261539435-153996/1779261557779/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-radio-group-semantics-suite-v4/sessions/1779263168285-151724/suite.summary.json`.
 - Hit-test path-cache runtime update:
   the same promoted script now also injects `FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1` and waits for
   `hit_test_path_cache_hits_ge(min=1)`, proving real cached-path reuse during the runtime pointer

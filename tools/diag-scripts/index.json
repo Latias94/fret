@@ -10165,6 +10165,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-radio-group-checked-state-mutation",
+      "path": "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-checked-state-mutation.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-radio-group-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "checked",
+        "radio_group",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-radio-group-description-layout",
       "path": "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-description-layout.json",
       "required_capabilities": [],

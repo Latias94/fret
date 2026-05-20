@@ -653,6 +653,10 @@ date: 2026-05-12
     invalidation. No new mechanism defect was reproduced; the slice closed a harness coverage gap.
 - [ ] Add RTL/writing-mode layout primitive cases once the direction/writing-mode contract is
   explicit enough to avoid encoding a recipe policy as a mechanism oracle.
+  - 2026-05-20 audit: keep this blocked. `LayoutDirection` is currently a narrow core enum,
+    ADR 0057 covers declarative flex direction rather than a general writing-mode/logical-layout
+    primitive contract, and current RTL behavior lives in component/overlay policy surfaces. Do not
+    add fixture oracles here until that mechanism contract is explicit.
 - [x] Add a runtime UI Gallery companion for cached model/layout-query dependency mutation only if
   a real surface exposes a non-synthetic risk; otherwise continue with scroll/click stability or
   retained/component semantics mutation.
