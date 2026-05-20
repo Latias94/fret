@@ -177,6 +177,11 @@ Compat-gated but retained-bridge-free support:
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge/finish.rs`
   - `RBX-M2-420` moved edge double-click finish stop-propagation plus paint invalidation behind
     the retained-agnostic `WidgetHandledCx` seam already implemented by retained `EventCx`.
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs`
+  - `RBX-M2-430` moved searcher dismiss release-capture, handled finish, and paint invalidation
+    tails behind retained-agnostic `widget_tail` seams already implemented by retained `EventCx`.
 
 Deleted retained overlay files:
 
@@ -240,6 +245,7 @@ Deleted retained overlay files:
 | Toast timer helper seam | retained canvas still routes timer events through retained `EventCx`, but expired-toast paint invalidation now only needs the retained-agnostic widget tail seam | `RBX-M2-400` moves `event_timer_toast.rs` onto `WidgetPaintInvalidationCx`, source-policy gates the helper, and adds matching/stale toast timer behavior tests | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level timer event routing with a declarative/event-leaf path. |
 | Pending node resize move helper | retained canvas still routes pointer move through retained `EventCx`, but pending node resize threshold/activation handling does not need any Cx side effects | `RBX-M2-410` deletes the unused retained Cx parameter, source-policy gates `pending_resize.rs`, and adds below-threshold/activation handler tests | Continue deleting unused retained Cx parameters before introducing seams; then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Edge double-click finish tail seam | retained canvas still routes edge double-click gestures through retained `EventCx`, but finish side effects only need stop-propagation and paint invalidation | `RBX-M2-420` moves `pointer_down_double_click_edge/finish.rs` onto `WidgetHandledCx`, source-policy gates the helper, and keeps reroute/picker gesture tests green | Continue moving direct retained event tail helpers behind retained-agnostic seams before replacing higher-level pointer event routing. |
+| Searcher dismiss tail seam | retained canvas still routes searcher pointer/keyboard events through retained `EventCx`, but dismiss release, handled finish, and paint invalidation tails only need retained-agnostic widget-tail capabilities | `RBX-M2-430` moves `searcher_activation_state/clear.rs`, `searcher_ui.rs`, and `searcher_ui/event.rs` onto `PointerCaptureReleaseCx`, `HandledPointerCaptureReleaseCx`, `WidgetHandledCx`, and `WidgetPaintInvalidationCx`; source-policy gates those helper files and adds focused dismiss/finish/invalidation tests | Continue moving searcher activation/row activation routes behind retained-agnostic seams, then replace higher-level searcher event routing with a declarative/event-leaf path. |
 
 ## New Gate
 

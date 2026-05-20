@@ -184,6 +184,11 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_pending/click_select.rs");
     const UI_CANVAS_WIDGET_POINTER_DOWN_DOUBLE_CLICK_EDGE_FINISH_RS: &str =
         include_str!("ui/canvas/widget/pointer_down_double_click_edge/finish.rs");
+    const UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_STATE_CLEAR_RS: &str =
+        include_str!("ui/canvas/widget/searcher_activation_state/clear.rs");
+    const UI_CANVAS_WIDGET_SEARCHER_UI_RS: &str = include_str!("ui/canvas/widget/searcher_ui.rs");
+    const UI_CANVAS_WIDGET_SEARCHER_UI_EVENT_RS: &str =
+        include_str!("ui/canvas/widget/searcher_ui/event.rs");
     const UI_CANVAS_WIDGET_TIMER_MOTION_SHARED_RS: &str =
         include_str!("ui/canvas/widget/timer_motion_shared.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
@@ -436,6 +441,29 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_POINTER_DOWN_DOUBLE_CLICK_EDGE_FINISH_RS.contains(forbidden),
                 "edge double-click finish helper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn searcher_dismiss_tail_helpers_stay_off_retained_bridge() {
+        let searcher_dismiss_sources = [
+            UI_CANVAS_WIDGET_SEARCHER_ACTIVATION_STATE_CLEAR_RS,
+            UI_CANVAS_WIDGET_SEARCHER_UI_RS,
+            UI_CANVAS_WIDGET_SEARCHER_UI_EVENT_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !searcher_dismiss_sources.contains(forbidden),
+                "searcher dismiss tail helpers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

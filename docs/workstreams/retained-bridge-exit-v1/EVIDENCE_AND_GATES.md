@@ -7891,3 +7891,62 @@ Broader gates not run:
   - Reason: `RBX-M2-420` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-20 - RBX-M2-430 searcher dismiss retained Cx adapter isolation
+
+Claim verified:
+
+- Searcher dismiss release-capture, handled finish, and paint invalidation tails no longer import
+  or name retained bridge Cx types.
+- Searcher dismiss now uses retained-agnostic `PointerCaptureReleaseCx` /
+  `HandledPointerCaptureReleaseCx` seams, while searcher finish/paint invalidation use
+  `WidgetHandledCx` / `WidgetPaintInvalidationCx`.
+- Searcher dismiss behavior remains intact for overlay and pending row-drag cleanup, pointer
+  capture release, handled-event finish, and redraw/paint invalidation.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear/tests.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving searcher dismiss
+    tail side effects behind retained-agnostic widget-tail seams.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(searcher_dismiss_tail_helpers_stay_off_retained_bridge) | test(clear_pending_searcher_row_drag_reports_and_clears_state) | test(clear_searcher_overlay_clears_searcher_and_pending_drag) | test(dismiss_searcher_overlay_clears_state_and_releases_capture_without_painting) | test(invalidate_searcher_paint_requests_redraw_and_paint_invalidation) | test(finish_searcher_event_stops_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'`
+  - Result: passed, 8 tests.
+  - Scope proven: source-policy locks searcher dismiss helper files off retained bridge Cx names;
+    state cleanup, capture release, finish, redraw, and paint invalidation behavior remain covered;
+    retained bridge ledger and retained compat island gates remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs`
+  - Result: no matches.
+  - Scope proven: searcher dismiss helper files no longer depend on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the searcher dismiss
+    seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after moving
+    the searcher dismiss helper tails behind retained-agnostic seams.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-430` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

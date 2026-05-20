@@ -2995,6 +2995,34 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-430 Isolate searcher dismiss tail retained Cx adapters.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear/tests.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move searcher dismiss release-capture, finish, and paint invalidation tails behind existing
+      retained-agnostic `widget_tail` seams.
+    - Extend source-policy coverage so searcher dismiss tail helpers cannot re-import retained
+      bridge Cx names.
+  - Result:
+    - `searcher_activation_state/clear.rs`, `searcher_ui.rs`, and `searcher_ui/event.rs` no
+      longer import or name retained bridge Cx types.
+    - Added focused tests proving searcher dismiss clears overlay/pending drag state and releases
+      capture without adding paint side effects at the dismiss layer.
+    - Added focused tests proving searcher paint invalidation and handled finish still request
+      redraw/paint invalidation and stop propagation.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(searcher_dismiss_tail_helpers_stay_off_retained_bridge) | test(clear_pending_searcher_row_drag_reports_and_clears_state) | test(clear_searcher_overlay_clears_searcher_and_pending_drag) | test(dismiss_searcher_overlay_clears_state_and_releases_capture_without_painting) | test(invalidate_searcher_paint_requests_redraw_and_paint_invalidation) | test(finish_searcher_event_stops_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/searcher_activation_state/clear.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui.rs ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/event.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

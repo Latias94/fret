@@ -1,10 +1,10 @@
-use fret_ui::UiHost;
+use crate::ui::canvas::state::InteractionState;
 
-use super::super::*;
+use super::super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, widget_tail::PointerCaptureReleaseCx,
+};
 
-pub(in super::super) fn clear_searcher_overlay(
-    interaction: &mut crate::ui::canvas::state::InteractionState,
-) -> bool {
+pub(in super::super) fn clear_searcher_overlay(interaction: &mut InteractionState) -> bool {
     let mut cleared = false;
     if interaction.searcher.take().is_some() {
         cleared = true;
@@ -14,17 +14,21 @@ pub(in super::super) fn clear_searcher_overlay(
 }
 
 pub(in super::super) fn clear_pending_searcher_row_drag(
-    interaction: &mut crate::ui::canvas::state::InteractionState,
+    interaction: &mut InteractionState,
 ) -> bool {
     interaction.pending_insert_node_drag.take().is_some()
 }
 
-pub(in super::super) fn dismiss_searcher_overlay<H: UiHost, M: NodeGraphCanvasMiddleware>(
+fn release_dismissed_searcher_capture<H>(cx: &mut impl PointerCaptureReleaseCx<H>) {
+    cx.release_pointer_capture();
+}
+
+pub(in super::super) fn dismiss_searcher_overlay<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl PointerCaptureReleaseCx<H>,
 ) {
     clear_searcher_overlay(&mut canvas.interaction);
-    cx.release_pointer_capture();
+    release_dismissed_searcher_capture(cx);
 }
 
 #[cfg(test)]
