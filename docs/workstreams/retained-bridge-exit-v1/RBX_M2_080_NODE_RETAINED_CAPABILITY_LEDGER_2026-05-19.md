@@ -252,9 +252,19 @@ Compat-gated but retained-bridge-free support:
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/apply.rs`
   - `RBX-M2-590` moved background insert context-menu execution behind retained-agnostic
     `BackgroundInsertMenuCx` host/window seams.
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/open_insert.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/reroute.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/delete.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/custom_action.rs`
+  - `RBX-M2-600` moved edge context-menu execution behind retained-agnostic
+    `EdgeContextActionCx` host/window/open-insert seams.
 
 Compat-gated retained adapters:
 
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/retained_cx.rs`
+  - `RBX-M2-600` keeps retained edge context menu host/window/open-insert I/O as the adapter-only
+    implementation of `EdgeContextActionCx`.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/retained_cx.rs`
   - `RBX-M2-590` keeps retained background context menu host/window I/O as the adapter-only
     implementation of `BackgroundInsertMenuCx`.
@@ -355,6 +365,7 @@ Deleted retained overlay files:
 | Context menu opening route seam | retained canvas right-click routing still needs host reads, canvas bounds, window availability, and focus/finish side effects, but opening policy does not need direct retained Cx names | `RBX-M2-570` moves `context_menu/opening.rs` and its background/group/edge helpers onto `ContextMenuOpeningCx`, keeps retained I/O in `opening/retained_cx.rs`, source-policy gates the route, and adds right-click background/group/edge menu tests | Continue with context menu target/action execution helpers, then replace higher-level canvas event routing with a declarative/event-leaf path. |
 | Context menu action activation route seam | retained canvas still executes selected context menu/searcher items through retained `EventCx`, but top-level action routing only needs command dispatch, group selection sync, and target-specific executor capabilities | `RBX-M2-580` moves `context_menu/activate.rs`, `context_menu/activate/command.rs`, and `context_menu/activate/target.rs` onto `ContextMenuActionCx` plus command/target seams, keeps retained I/O in `activate/retained_cx.rs`, source-policy gates the route, and adds command, target, and ignored-action dispatch tests | Continue splitting background/edge/connection target-specific executors behind narrower retained-agnostic seams, then replace higher-level canvas event routing with a declarative/event-leaf path. |
 | Context menu background execution seam | retained canvas still applies background insert actions through retained `EventCx`, but background execution only needs host/window access for planning, commit, selection, and toast effects | `RBX-M2-590` moves `context_menu/background_execution.rs`, `context_menu/background_execution/activate.rs`, and `context_menu/background_execution/apply.rs` onto `BackgroundInsertMenuCx`, keeps retained I/O in `background_execution/retained_cx.rs`, source-policy gates the route, and adds missing-candidate, ignored-action, and rejection-toast tests | Continue splitting edge and connection target-specific executors behind narrower retained-agnostic seams, then replace higher-level canvas event routing with a declarative/event-leaf path. |
+| Context menu edge execution seam | retained canvas still applies edge insert/reroute/delete/custom actions through retained `EventCx`, but edge execution only needs host/window access plus an open-edge-insert menu hook | `RBX-M2-600` moves `context_menu/edge_execution.rs` and its open-insert/reroute/delete/custom helpers onto `EdgeContextActionCx`, keeps retained I/O in `edge_execution/retained_cx.rs`, source-policy gates the route, and adds open-insert, delete, reroute, custom action, and ignored-action tests | Continue splitting connection insert/conversion target-specific executors behind narrower retained-agnostic seams, then replace higher-level canvas event routing with a declarative/event-leaf path. |
 
 ## New Gate
 

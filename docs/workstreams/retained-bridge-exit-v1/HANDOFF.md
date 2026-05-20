@@ -809,6 +809,13 @@ its activate/apply helpers are now source-policy gated as retained-bridge-free s
 host/window I/O lives in `context_menu/background_execution/retained_cx.rs`. Focused tests prove
 missing-candidate no-op handling, non-candidate ignored behavior, and rejection-toast behavior with
 recent-kind recording.
+`RBX-M2-600` then moved edge context-menu execution behind the retained-agnostic
+`EdgeContextActionCx` seam for host/window access plus edge insert menu opening.
+`context_menu/edge_execution.rs` plus its open-insert/reroute/delete/custom helpers are now
+source-policy gated as retained-bridge-free support; retained host/window/open-insert I/O lives in
+`context_menu/edge_execution/retained_cx.rs`. Focused tests prove edge insert menu delegation,
+delete-edge graph/selection updates, reroute insertion, custom presenter ops, and ignored
+non-edge actions.
 
 ## Next Task
 
@@ -857,7 +864,8 @@ Recommended next implementation shape:
   seams; the top-level context menu route wrapper now composes those seams through `ContextMenuCx`;
   context menu opening routes now use the retained-agnostic `ContextMenuOpeningCx` seam; context
   menu action activation routing now uses retained-agnostic command/target action seams; context
-  menu background execution now uses retained-agnostic host/window seams.
+  menu background execution now uses retained-agnostic host/window seams; context menu edge
+  execution now uses retained-agnostic host/window/open-insert seams.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -889,6 +897,9 @@ Recommended next implementation shape:
   `context_menu/activate/target.rs`,
   `context_menu/background_execution.rs`, `context_menu/background_execution/activate.rs`,
   `context_menu/background_execution/apply.rs`,
+  `context_menu/edge_execution.rs`, `context_menu/edge_execution/open_insert.rs`,
+  `context_menu/edge_execution/reroute.rs`, `context_menu/edge_execution/delete.rs`,
+  `context_menu/edge_execution/custom_action.rs`,
   `context_menu/opening.rs`, `context_menu/opening/background.rs`,
   `context_menu/opening/edge.rs`, `context_menu/opening/group.rs`,
   `context_menu/key_navigation.rs`, `context_menu/key_navigation/key_down.rs`,
@@ -910,13 +921,13 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-590`:
+Last run on 2026-05-21 for `RBX-M2-600`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_background_execution_stays_off_retained_bridge) | test(background_insert_menu_plan_surfaces_create_node_errors) | test(background_insert_action_with_missing_candidate_is_handled_without_side_effects) | test(background_insert_action_ignores_non_candidate_actions) | test(background_insert_action_records_candidate_and_surfaces_rejection_toast) | test(context_menu_activation_route_stays_off_retained_bridge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_edge_execution_stays_off_retained_bridge) | test(open_insert_action_delegates_to_context_adapter) | test(delete_edge_action_removes_edge_and_selection) | test(insert_reroute_action_splits_edge_and_selects_inserted_node) | test(custom_edge_action_applies_presenter_ops) | test(ignored_edge_actions_are_side_effect_free) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
   passed, 7 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/activate.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/background_execution/apply.rs` -
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/open_insert.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/reroute.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/delete.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/custom_action.rs` -
   no matches.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
@@ -927,7 +938,7 @@ Last run on 2026-05-21 for `RBX-M2-590`:
 Broader gates not run:
 
 - `cargo nextest run --workspace`
-  - Reason: `RBX-M2-590` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+  - Reason: `RBX-M2-600` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
 

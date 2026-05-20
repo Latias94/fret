@@ -2,13 +2,13 @@ use crate::ui::canvas::widget::*;
 
 pub(super) fn delete_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::EdgeContextActionCx<H>,
     edge_id: EdgeId,
 ) {
     let remove_ops = {
         let this = &*canvas;
         this.graph
-            .read_ref(cx.app, |graph| {
+            .read_ref(cx.host(), |graph| {
                 graph
                     .edges
                     .get(&edge_id)
@@ -23,8 +23,9 @@ pub(super) fn delete_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
             .ok()
             .unwrap_or_default()
     };
-    canvas.apply_ops(cx.app, cx.window, remove_ops);
-    canvas.update_view_state(cx.app, |view_state| {
+    let window = cx.window();
+    canvas.apply_ops(cx.host(), window, remove_ops);
+    canvas.update_view_state(cx.host(), |view_state| {
         view_state.selected_edges.retain(|id| *id != edge_id);
     });
 }

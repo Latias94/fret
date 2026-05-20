@@ -2,7 +2,7 @@ use crate::ui::canvas::widget::*;
 
 pub(super) fn apply_custom_edge_context_action<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::EdgeContextActionCx<H>,
     edge_id: EdgeId,
     action_id: u64,
 ) {
@@ -10,7 +10,7 @@ pub(super) fn apply_custom_edge_context_action<H: UiHost, M: NodeGraphCanvasMidd
         let presenter = &mut *canvas.presenter;
         canvas
             .graph
-            .read_ref(cx.app, |graph| {
+            .read_ref(cx.host(), |graph| {
                 presenter.on_edge_context_menu_action(graph, edge_id, action_id)
             })
             .ok()
@@ -18,6 +18,7 @@ pub(super) fn apply_custom_edge_context_action<H: UiHost, M: NodeGraphCanvasMidd
             .unwrap_or_default()
     };
     if !ops.is_empty() {
-        canvas.apply_ops(cx.app, cx.window, ops);
+        let window = cx.window();
+        canvas.apply_ops(cx.host(), window, ops);
     }
 }

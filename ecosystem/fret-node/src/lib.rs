@@ -202,6 +202,16 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/context_menu/background_execution/activate.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_BACKGROUND_EXECUTION_APPLY_RS: &str =
         include_str!("ui/canvas/widget/context_menu/background_execution/apply.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/edge_execution.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_OPEN_INSERT_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/edge_execution/open_insert.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_REROUTE_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/edge_execution/reroute.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_DELETE_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/edge_execution/delete.rs");
+    const UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_CUSTOM_ACTION_RS: &str =
+        include_str!("ui/canvas/widget/context_menu/edge_execution/custom_action.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_OPENING_RS: &str =
         include_str!("ui/canvas/widget/context_menu/opening.rs");
     const UI_CANVAS_WIDGET_CONTEXT_MENU_OPENING_BACKGROUND_RS: &str =
@@ -613,6 +623,31 @@ mod surface_policy_tests {
             assert!(
                 !context_menu_background_execution_sources.contains(forbidden),
                 "context menu background execution must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn context_menu_edge_execution_stays_off_retained_bridge() {
+        let context_menu_edge_execution_sources = [
+            UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_OPEN_INSERT_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_REROUTE_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_DELETE_RS,
+            UI_CANVAS_WIDGET_CONTEXT_MENU_EDGE_EXECUTION_CUSTOM_ACTION_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !context_menu_edge_execution_sources.contains(forbidden),
+                "context menu edge execution must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

@@ -3478,6 +3478,38 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-600 Isolate context menu edge execution retained Cx route.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/open_insert.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/reroute.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/delete.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/custom_action.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/retained_cx.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move edge context-menu execution off direct retained bridge Cx names by introducing
+      `EdgeContextActionCx` for host/window access and edge insert menu opening.
+    - Keep retained `EventCx` host/window/open-insert field access isolated in
+      `context_menu/edge_execution/retained_cx.rs`.
+    - Lock edge execution files with source-policy coverage and prove open-insert, reroute,
+      delete, custom action, and ignored-action behavior.
+  - Result:
+    - `edge_execution.rs` plus its open-insert/reroute/delete/custom helpers now use
+      `EdgeContextActionCx`.
+    - Added `edge_execution/retained_cx.rs` as the retained adapter for host/window/open-insert
+      access.
+    - Added focused tests for edge insert menu delegation, edge deletion and selection cleanup,
+      reroute insertion, custom presenter ops, and ignored non-edge actions.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(context_menu_edge_execution_stays_off_retained_bridge) | test(open_insert_action_delegates_to_context_adapter) | test(delete_edge_action_removes_edge_and_selection) | test(insert_reroute_action_splits_edge_and_selects_inserted_node) | test(custom_edge_action_applies_presenter_ops) | test(ignored_edge_actions_are_side_effect_free) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/open_insert.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/reroute.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/delete.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/edge_execution/custom_action.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
