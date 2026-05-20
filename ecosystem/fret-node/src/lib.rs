@@ -176,6 +176,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pending_group_resize.rs");
     const UI_CANVAS_WIDGET_PENDING_GROUP_ACTIVATION_CX_RS: &str =
         include_str!("ui/canvas/widget/pending_group_activation_cx.rs");
+    const UI_CANVAS_WIDGET_PENDING_RESIZE_RS: &str =
+        include_str!("ui/canvas/widget/pending_resize.rs");
     const UI_CANVAS_WIDGET_PENDING_NODE_DRAG_RELEASE_CX_RS: &str =
         include_str!("ui/canvas/widget/pending_node_drag_release_cx.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_PENDING_CLICK_SELECT_RS: &str =
@@ -353,6 +355,22 @@ mod surface_policy_tests {
             assert!(
                 !pending_group_activation_sources.contains(forbidden),
                 "pending group activation handlers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pending_node_resize_move_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PENDING_RESIZE_RS.contains(forbidden),
+                "pending node resize move helper must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

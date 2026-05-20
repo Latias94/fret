@@ -86,6 +86,7 @@ mod paint_overrides_apply_to_edge_wire_paint_conformance;
 mod paint_overrides_apply_to_node_paint_conformance;
 mod paint_overrides_do_not_mutate_serialized_graph_conformance;
 mod paint_overrides_paint_only_does_not_rebuild_geometry_conformance;
+mod pending_resize_conformance;
 mod perf_cache;
 mod perf_cache_prune_conformance;
 mod portal_conformance;

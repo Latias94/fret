@@ -7784,3 +7784,57 @@ Broader gates not run:
   - Reason: `RBX-M2-400` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-20 - RBX-M2-410 pending node resize unused retained Cx parameter removal
+
+Claim verified:
+
+- Pending node resize move handling no longer accepts or names retained bridge Cx types.
+- The pointer-move dispatch path still invokes pending node resize threshold/activation handling.
+- Pending node resize behavior remains intact: below-threshold movement stays pending, and
+  above-threshold movement activates node resize.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_resize.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/node.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/pending_resize_conformance.rs`
+- `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after deleting the unused
+    retained Cx parameter from pending node resize move handling.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pending_node_resize_move_stays_off_retained_bridge) | test(pending_node_resize_move_below_threshold_keeps_pending_resize) | test(pending_node_resize_move_past_threshold_activates_resize) | test(should_activate_pending_node_resize_respects_threshold) | test(activate_pending_node_resize_moves_pending_into_active) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'`
+  - Result: passed, 7 tests.
+  - Scope proven: the source-policy gate locks pending node resize move off retained bridge Cx
+    names; direct handler tests prove below-threshold and activation behavior; existing threshold,
+    activation, retained bridge ledger, and retained compat island gates remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pending_resize.rs`
+  - Result: no matches.
+  - Scope proven: pending node resize move no longer depends on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after deleting
+    the unused retained Cx parameter.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-410` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

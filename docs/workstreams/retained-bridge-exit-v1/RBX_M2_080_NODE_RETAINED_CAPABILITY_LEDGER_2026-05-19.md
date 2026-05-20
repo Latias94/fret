@@ -171,6 +171,9 @@ Compat-gated but retained-bridge-free support:
 - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_toast.rs`
   - `RBX-M2-400` moved expired-toast timer paint invalidation behind the retained-agnostic
     `WidgetPaintInvalidationCx` seam already implemented by retained `EventCx`.
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_resize.rs`
+  - `RBX-M2-410` removed the unused retained `EventCx` parameter from pending node resize move
+    handling instead of introducing another adapter seam.
 
 Deleted retained overlay files:
 
@@ -232,6 +235,7 @@ Deleted retained overlay files:
 | Keyboard pan activation tail seam | retained canvas still adapts retained `EventCx` paint invalidation and stop-propagation through `retained_widget_tail.rs`; the higher-level keyboard event route still receives retained `EventCx` | `RBX-M2-380` moves keyboard pan activation key-down/key-up side effects onto retained-agnostic `WidgetHandledCx` / `WidgetPaintInvalidationCx` and source-policy gates the helper | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level keyboard event routing with a declarative/event-leaf path. |
 | Feedback/motion helper seams | retained canvas still adapts retained `EventCx` clipboard feedback host/window access through `event_clipboard_feedback_retained_cx.rs` and paint invalidation through `retained_widget_tail.rs`; higher-level clipboard/timer event routes still receive retained `EventCx` | `RBX-M2-390` moves clipboard feedback and timer-motion invalidation helpers onto retained-agnostic `ClipboardFeedbackCx` / `WidgetPaintInvalidationCx`, source-policy gates the helpers, and backfills clipboard-unavailable feedback behavior tests | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level clipboard/timer event routing with a declarative/event-leaf path. |
 | Toast timer helper seam | retained canvas still routes timer events through retained `EventCx`, but expired-toast paint invalidation now only needs the retained-agnostic widget tail seam | `RBX-M2-400` moves `event_timer_toast.rs` onto `WidgetPaintInvalidationCx`, source-policy gates the helper, and adds matching/stale toast timer behavior tests | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level timer event routing with a declarative/event-leaf path. |
+| Pending node resize move helper | retained canvas still routes pointer move through retained `EventCx`, but pending node resize threshold/activation handling does not need any Cx side effects | `RBX-M2-410` deletes the unused retained Cx parameter, source-policy gates `pending_resize.rs`, and adds below-threshold/activation handler tests | Continue deleting unused retained Cx parameters before introducing seams; then replace higher-level pointer event routing with a declarative/event-leaf path. |
 
 ## New Gate
 

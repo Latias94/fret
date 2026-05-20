@@ -2944,6 +2944,33 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-410 Remove unused pending resize retained Cx parameter.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pending_resize.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/node.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/pending_resize_conformance.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Delete the unused retained `EventCx` parameter from pending node resize move handling instead
+      of wrapping it in another adapter.
+    - Extend source-policy coverage so pending node resize move cannot re-import retained bridge Cx
+      names.
+    - Backfill handler behavior coverage for below-threshold and activation paths.
+  - Result:
+    - `pending_resize.rs` no longer imports or names retained bridge Cx types.
+    - Pending node resize move dispatch now calls the handler without a retained Cx parameter.
+    - Added direct handler tests proving below-threshold moves stay pending and above-threshold
+      moves activate node resize.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pending_node_resize_move_stays_off_retained_bridge) | test(pending_node_resize_move_below_threshold_keeps_pending_resize) | test(pending_node_resize_move_past_threshold_activates_resize) | test(should_activate_pending_node_resize_respects_threshold) | test(activate_pending_node_resize_moves_pending_into_active) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pending_resize.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
