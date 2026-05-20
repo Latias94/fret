@@ -557,6 +557,29 @@ pub mod primitives {
         (fg, muted)
     }
 
+    fn apply_breadcrumb_list_text_style_defaults(el: &mut AnyElement, style: &TextStyle) {
+        let role_scope_active = el.inherited_text_style.is_some();
+
+        match &mut el.kind {
+            fret_ui::element::ElementKind::Text(props) => {
+                if props.style.is_none() && !role_scope_active {
+                    props.style = Some(style.clone());
+                }
+            }
+            fret_ui::element::ElementKind::StyledText(props) => {
+                if props.style.is_none() && !role_scope_active {
+                    props.style = Some(style.clone());
+                }
+            }
+            fret_ui::element::ElementKind::SelectableText(props) => {
+                if props.style.is_none() && !role_scope_active {
+                    props.style = Some(style.clone());
+                }
+            }
+            _ => {}
+        }
+    }
+
     #[derive(Debug, Clone, Default)]
     pub struct Breadcrumb {
         chrome: ChromeRefinement,
@@ -666,17 +689,11 @@ pub mod primitives {
                             let built_children = children(cx);
                             let mut out = collect_landed_children(cx, built_children);
                             for el in &mut out {
-                                // Best-effort: only text nodes support local color overrides.
-                                if let fret_ui::element::ElementKind::Text(props) = &mut el.kind {
-                                    if props.color.is_none() {
-                                        props.color = Some(muted);
-                                    }
-                                    if props.style.is_none() {
-                                        props.style = Some(style.clone());
-                                    }
-                                }
+                                apply_breadcrumb_list_text_style_defaults(el, &style);
                             }
-                            out
+                            current_color::scope_children(cx, ColorRef::Color(muted), move |_cx| {
+                                out
+                            })
                         },
                     )
                     .attach_semantics(SemanticsDecoration::default().role(SemanticsRole::List)),
@@ -1485,6 +1502,7 @@ mod tests {
     use fret_core::{AppWindowId, Modifiers, MouseButtons, Point, Px, Rect, Size};
     use fret_ui::UiTree;
     use fret_ui::elements::GlobalElementId;
+    use fret_ui_kit::declarative::text as decl_text;
     use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
     use std::cell::Cell;
     use std::rc::Rc;
@@ -1856,6 +1874,81 @@ mod tests {
             fret_ui::element::ElementKind::Text(props) => props.text.as_ref() == expected,
             _ => el.children.iter().any(|child| any_text_eq(child, expected)),
         }
+    }
+
+    fn find_text_element<'a>(el: &'a AnyElement, expected: &str) -> Option<&'a AnyElement> {
+        match &el.kind {
+            fret_ui::element::ElementKind::Text(props) if props.text.as_ref() == expected => {
+                Some(el)
+            }
+            _ => el
+                .children
+                .iter()
+                .find_map(|child| find_text_element(child, expected)),
+        }
+    }
+
+    #[test]
+    fn breadcrumb_list_applies_default_style_to_bare_text() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            primitives::BreadcrumbList::new().into_element(cx, |cx| [cx.text("Loose crumb")])
+        });
+
+        let text = find_text_element(&element, "Loose crumb").expect("expected breadcrumb text");
+        let fret_ui::element::ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(props.style.is_some());
+        assert!(props.color.is_none());
+        assert!(
+            text.inherited_foreground.is_some(),
+            "expected BreadcrumbList muted foreground to flow through inherited foreground"
+        );
+    }
+
+    #[test]
+    fn breadcrumb_list_preserves_shared_button_label_role_contracts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            primitives::BreadcrumbList::new().into_element(cx, |cx| {
+                [decl_text::text_button_label(cx, "Project Settings")]
+            })
+        });
+
+        let text =
+            find_text_element(&element, "Project Settings").expect("expected breadcrumb role text");
+        let fret_ui::element::ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            props.layout.size.min_width,
+            Some(fret_ui::element::Length::Px(Px(0.0)))
+        );
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert!(text.inherited_text_style.is_some());
+        assert!(
+            text.inherited_foreground.is_some(),
+            "expected BreadcrumbList muted foreground to flow through inherited foreground"
+        );
     }
 
     #[test]

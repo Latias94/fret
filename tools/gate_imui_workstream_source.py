@@ -3870,6 +3870,29 @@ def main() -> None:
             ],
         ),
         SourceCheck(
+            Path("ecosystem/fret-ui-shadcn/src/breadcrumb.rs"),
+            required=[
+                "fn apply_breadcrumb_list_text_style_defaults(el: &mut AnyElement, style: &TextStyle) {",
+                "let role_scope_active = el.inherited_text_style.is_some();",
+                "if props.style.is_none() && !role_scope_active",
+                "apply_breadcrumb_list_text_style_defaults(el, &style);",
+                "current_color::scope_children(cx, ColorRef::Color(muted), move |_cx| {\n                                out\n                            })",
+                "use fret_ui_kit::declarative::text as decl_text;",
+                "breadcrumb_list_applies_default_style_to_bare_text",
+                "breadcrumb_list_preserves_shared_button_label_role_contracts",
+                "primitives::BreadcrumbList::new().into_element(cx, |cx| {\n                [decl_text::text_button_label(cx, \"Project Settings\")]\n            })",
+                "assert_eq!(props.wrap, TextWrap::None);",
+                "assert_eq!(props.overflow, TextOverflow::Ellipsis);",
+                "assert_eq!(props.layout.flex.shrink, 1.0);",
+                "assert!(text.inherited_text_style.is_some());",
+                "assert!(\n            text.inherited_foreground.is_some(),",
+            ],
+            forbidden=[
+                "if props.color.is_none() {\n                                        props.color = Some(muted);",
+                "if props.style.is_none() {\n                                        props.style = Some(style.clone());",
+            ],
+        ),
+        SourceCheck(
             Path("ecosystem/fret-ui-shadcn/src/item.rs"),
             required=[
                 "fn patch_item_title_text_style_recursive_scoped(",

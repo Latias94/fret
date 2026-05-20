@@ -4618,6 +4618,31 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_facade_teaching_source.py` passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 
+2026-05-20 shadcn BreadcrumbList role-preservation slice:
+
+- Source gap before fix: primitive `BreadcrumbList` applied list-level muted foreground and
+  breadcrumb typography by writing direct `Text` leaf props for each custom child. Shared text-role
+  helpers intentionally keep leaf `style` and `color` empty while carrying typography through
+  `inherited_text_style`, so a primitive breadcrumb list child built with `text_button_label(...)`
+  could lose its role-owned single-line shrink/ellipsis contract under breadcrumb composition.
+- `apply_breadcrumb_list_text_style_defaults(...)` now treats `inherited_text_style` as a protected
+  role scope and only applies breadcrumb typography to bare text leaves. `BreadcrumbList` now stamps
+  the muted foreground through `current_color::scope_children(...)`, so visual color remains
+  breadcrumb-list policy without mutating role-owned text leaves.
+- `breadcrumb_list_applies_default_style_to_bare_text` proves the bare loose-text fallback remains.
+  `breadcrumb_list_preserves_shared_button_label_role_contracts` proves a shared button-label role
+  survives primitive `BreadcrumbList::into_element(...)` children.
+- First focused run timed out while Cargo/Rustc was still compiling. No process was killed; after
+  Cargo/Rustc exited naturally, the combined focused run passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  breadcrumb_list_applies_default_style_to_bare_text
+  breadcrumb_list_preserves_shared_button_label_role_contracts --no-fail-fast`.
+- `cargo fmt --check -p fret-ui-shadcn` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+- `python -m py_compile tools\gate_imui_workstream_source.py` passed.
+- `python tools\gate_imui_facade_teaching_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground
