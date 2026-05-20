@@ -113,6 +113,7 @@ mod layout;
 mod media_image;
 mod menu_authoring;
 mod menu_submenu_diagnostics;
+mod menu_text;
 mod menubar;
 mod native_select;
 mod navigation_menu;

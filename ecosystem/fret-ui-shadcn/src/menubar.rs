@@ -1286,24 +1286,12 @@ fn menu_row_children<H: UiHost>(
                 row.push(menu_icon_slot_empty(cx));
             }
 
-            let mut label_text = ui::text(label.clone())
-                .w_full()
-                .min_w_0()
-                .flex_1()
-                .basis_0()
-                .text_size_px(text_style.size)
-                .font_weight(text_style.weight)
-                .text_color(ColorRef::Color(text_fg))
-                .nowrap();
-            if let Some(line_height) = text_style.line_height {
-                label_text = label_text
-                    .fixed_line_box_px(line_height)
-                    .line_box_in_bounds();
-            }
-            if let Some(letter_spacing_em) = text_style.letter_spacing_em {
-                label_text = label_text.letter_spacing_em(letter_spacing_em);
-            }
-            row.push(label_text.into_element(cx));
+            row.push(crate::menu_text::menu_item_label(
+                cx,
+                label.clone(),
+                &text_style,
+                text_fg,
+            ));
 
             if let Some(t) = trailing {
                 row.push(t);
@@ -3262,22 +3250,12 @@ impl MenubarMenuEntries {
                                                                             ),
                                                                         },
                                                                         move |cx| {
-                                                                            let mut label_text = ui::text( label.clone())
-                                                                                .text_size_px(text_style.size)
-                                                                                .font_weight(text_style.weight)
-                                                                                .text_color(ColorRef::Color(fg))
-                                                                                .nowrap();
-                                                                            if let Some(line_height) = text_style.line_height {
-                                                                                label_text = label_text
-                                                                                    .line_height_px(line_height)
-                                                                                    .line_height_policy(
-                                                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                                                    );
-                                                                            }
-                                                                            if let Some(letter_spacing_em) = text_style.letter_spacing_em {
-                                                                                label_text = label_text.letter_spacing_em(letter_spacing_em);
-                                                                            }
-                                                                            vec![label_text.into_element(cx)]
+                                                                            vec![crate::menu_text::menu_item_label(
+                                                                                cx,
+                                                                                label.clone(),
+                                                                                &text_style,
+                                                                                fg,
+                                                                            )]
                                                                         },
                                                                     )]
                                                                 },

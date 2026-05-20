@@ -267,7 +267,7 @@ pub fn text_list_row_label<H: UiHost>(
 
     ui_typography::scope_text_style(
         cx.text_props(TextProps {
-            layout: fill_shrinkable_single_line_layout(),
+            layout: fill_growing_zero_min_layout(),
             text: text.into(),
             style: None,
             color: None,
@@ -296,7 +296,7 @@ pub fn text_list_row_label_attributed<H: UiHost>(
 
     ui_typography::scope_text_style(
         cx.styled_text_props(StyledTextProps {
-            layout: fill_shrinkable_single_line_layout(),
+            layout: fill_growing_zero_min_layout(),
             rich,
             style: None,
             color: None,
@@ -1561,7 +1561,9 @@ mod tests {
         assert!(props.style.is_none());
         assert!(props.color.is_none());
         assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
         assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
@@ -1591,7 +1593,9 @@ mod tests {
         assert!(props.style.is_none());
         assert!(props.color.is_none());
         assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
         assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);

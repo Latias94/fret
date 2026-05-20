@@ -1002,6 +1002,12 @@ Exit criteria:
   `ui::label(...).line_height_px(...).nowrap()` builders. Calendar still owns fixed day-cell
   chrome, center alignment, range/selected/today foreground, and disabled opacity, while both
   single and range calendar day cells share the same single-line shrink/ellipsis text contract.
+  2026-05-20 shadcn menu item label text-role result: shared `text_list_row_label(...)` now truly
+  owns fill/grow/basis-zero row-label layout, and DropdownMenu, ContextMenu, and Menubar overlay
+  item labels consume a shared shadcn menu item label helper instead of local
+  `ui::text(...).text_size_px(...).nowrap()` builders. Menu recipes still own row chrome,
+  destructive/disabled/focused foregrounds, shortcut/trailing slots, and icon currentColor
+  inheritance.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.

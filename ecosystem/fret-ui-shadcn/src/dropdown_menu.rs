@@ -38,7 +38,7 @@ use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController,
-    OverlayPresence, Radius, Space, ui,
+    OverlayPresence, Radius, Space,
 };
 
 use crate::overlay_motion;
@@ -1785,73 +1785,50 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                                         item_style.label_fg
                                     };
 
-                                    current_color::scope_children(
+                                    let has_leading = leading.is_some()
+                                        || leading_icon.is_some()
+                                        || reserve_leading_slot_enabled;
+                                    let has_trailing = trailing.is_some();
+                                    let mut row: Vec<AnyElement> = Vec::with_capacity(
+                                        1 + usize::from(has_leading) + usize::from(has_trailing),
+                                    );
+                                    if let Some(icon) = leading_icon {
+                                        let icon_el = decl_icon::icon(cx, icon);
+                                        row.push(
+                                            menu_icon_slot(cx, icon_el).inherit_foreground(icon_fg),
+                                        );
+                                    } else if let Some(l) = leading {
+                                        row.push(menu_icon_slot(cx, l).inherit_foreground(icon_fg));
+                                    } else if reserve_leading_slot_enabled {
+                                        row.push(menu_icon_slot_empty(cx));
+                                    }
+                                    row.push(crate::menu_text::menu_item_label(
                                         cx,
-                                        ColorRef::Color(icon_fg),
-                                        |cx| {
-                                            let has_leading = leading.is_some()
-                                                || leading_icon.is_some()
-                                                || reserve_leading_slot_enabled;
-                                            let has_trailing = trailing.is_some();
-                                            let mut row: Vec<AnyElement> = Vec::with_capacity(
-                                                1 + usize::from(has_leading)
-                                                    + usize::from(has_trailing),
-                                            );
-                                            if let Some(icon) = leading_icon {
-                                                let icon_el = decl_icon::icon(cx, icon);
-                                                row.push(menu_icon_slot(cx, icon_el));
-                                            } else if let Some(l) = leading {
-                                                row.push(menu_icon_slot(cx, l));
-                                            } else if reserve_leading_slot_enabled {
-                                                row.push(menu_icon_slot_empty(cx));
-                                            }
-                                            let style = text_style.clone();
-                                            let mut text = ui::text(label.clone())
-                                                .layout(
-                                                    LayoutRefinement::default().min_w_0().flex_1(),
-                                                )
-                                                .text_size_px(style.size)
-                                                .font_weight(style.weight)
-                                                .nowrap()
-                                                .text_color(ColorRef::Color(text_fg));
+                                        label.clone(),
+                                        &text_style,
+                                        text_fg,
+                                    ));
 
-                                            if let Some(line_height) = style.line_height {
-                                                text = text
-                                                    .line_height_px(line_height)
-                                                    .line_height_policy(
-                                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                );
-                                            }
+                                    if let Some(t) = trailing {
+                                        row.push(t.inherit_foreground(icon_fg));
+                                    }
 
-                                            if let Some(letter_spacing_em) = style.letter_spacing_em
-                                            {
-                                                text = text.letter_spacing_em(letter_spacing_em);
-                                            }
-
-                                            row.push(text.into_element(cx));
-
-                                            if let Some(t) = trailing {
-                                                row.push(t);
-                                            }
-
-                                            vec![cx.flex(
-                                                FlexProps {
-                                                    layout: {
-                                                        let mut layout = LayoutStyle::default();
-                                                        layout.size.width = Length::Fill;
-                                                        layout
-                                                    },
-                                                    direction: fret_core::Axis::Horizontal,
-                                                    gap: Px(8.0).into(),
-                                                    padding: Edges::all(Px(0.0)).into(),
-                                                    justify: MainAlign::Start,
-                                                    align: CrossAlign::Center,
-                                                    wrap: false,
-                                                },
-                                                move |_cx| row,
-                                            )]
+                                    vec![cx.flex(
+                                        FlexProps {
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.width = Length::Fill;
+                                                layout
+                                            },
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: Px(8.0).into(),
+                                            padding: Edges::all(Px(0.0)).into(),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
                                         },
-                                    )
+                                        move |_cx| row,
+                                    )]
                                 },
                             ),
                         ];
@@ -2348,92 +2325,62 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                                 let mut trailing = trailing;
                                 let leading_icon = leading_icon;
 
-                                current_color::scope_children(
+                                if let Some(custom) = content.take() {
+                                    return vec![custom.inherit_foreground(icon_fg)];
+                                }
+
+                                let mut row: Vec<AnyElement> =
+                                    Vec::with_capacity(
+                                        2 + usize::from(
+                                            leading.is_some()
+                                                || leading_icon.is_some()
+                                                || reserve_leading_slot_enabled,
+                                        ) + usize::from(trailing.is_some())
+                                            + usize::from(has_submenu),
+                                    );
+                                if let Some(icon) = leading_icon {
+                                    let icon = decl_icon::icon(cx, icon);
+                                    row.push(menu_icon_slot(cx, icon).inherit_foreground(icon_fg));
+                                } else if let Some(l) = leading.take() {
+                                    row.push(menu_icon_slot(cx, l).inherit_foreground(icon_fg));
+                                } else if reserve_leading_slot_enabled {
+                                    row.push(menu_icon_slot_empty(cx));
+                                }
+                                row.push(crate::menu_text::menu_item_label(
                                     cx,
-                                    ColorRef::Color(icon_fg),
-                                    |cx| {
-                                        if let Some(custom) = content.take() {
-                                            return vec![custom];
-                                        }
+                                    label.clone(),
+                                    &text_style,
+                                    text_fg,
+                                ));
 
-                                        let mut row: Vec<AnyElement> =
-                                            Vec::with_capacity(
-                                                2 + usize::from(
-                                                    leading.is_some()
-                                                        || leading_icon.is_some()
-                                                        || reserve_leading_slot_enabled,
-                                                ) + usize::from(trailing.is_some())
-                                                    + usize::from(has_submenu),
-                                            );
-                                        if let Some(icon) = leading_icon {
-                                            let icon = decl_icon::icon(cx, icon);
-                                            row.push(menu_icon_slot(cx, icon));
-                                        } else if let Some(l) = leading.take() {
-                                            row.push(menu_icon_slot(cx, l));
-                                        } else if reserve_leading_slot_enabled {
-                                            row.push(menu_icon_slot_empty(cx));
-                                        }
-                                        let style = text_style.clone();
-                                        let mut text = ui::text(label.clone())
-                                            .layout(
-                                                LayoutRefinement::default()
-                                                    .min_w_0()
-                                                    .flex_1(),
-                                            )
-                                            .text_size_px(style.size)
-                                            .font_weight(style.weight)
-                                            .nowrap()
-                                            .text_color(ColorRef::Color(text_fg));
+                                if let Some(t) = trailing.take() {
+                                    row.push(t.inherit_foreground(icon_fg));
+                                }
+                                if has_submenu {
+                                    row.push(submenu_chevron_inline_end_text(
+                                        cx,
+                                        icon_fg,
+                                        item_style.font_size,
+                                        item_style.font_line_height,
+                                    ));
+                                }
 
-                                        if let Some(line_height) = style.line_height {
-                                            text = text
-                                                .line_height_px(line_height)
-                                                .line_height_policy(
-                                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                );
-                                        }
-
-                                        if let Some(letter_spacing_em) =
-                                            style.letter_spacing_em
-                                        {
-                                            text = text
-                                                .letter_spacing_em(letter_spacing_em);
-                                        }
-
-                                        row.push(text.into_element(cx));
-
-                                        if let Some(t) = trailing.take() {
-                                            row.push(t);
-                                        }
-                                        if has_submenu {
-                                            row.push(submenu_chevron_inline_end_text(
-                                                cx,
-                                                icon_fg,
-                                                item_style.font_size,
-                                                item_style.font_line_height,
-                                            ));
-                                        }
-
-                                        vec![cx.flex(
-                                            FlexProps {
-                                                layout: {
-                                                    let mut layout =
-                                                        LayoutStyle::default();
-                                                    layout.size.width =
-                                                        Length::Fill;
-                                                    layout
-                                                },
-                                                direction: fret_core::Axis::Horizontal,
-                                                gap: Px(8.0).into(),
-                                                padding: Edges::all(Px(0.0)).into(),
-                                                justify: MainAlign::Start,
-                                                align: CrossAlign::Center,
-                                                wrap: false,
-                                            },
-                                            move |_cx| row,
-                                        )]
+                                vec![cx.flex(
+                                    FlexProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Fill;
+                                            layout
+                                        },
+                                        direction: fret_core::Axis::Horizontal,
+                                        gap: Px(8.0).into(),
+                                        padding: Edges::all(Px(0.0)).into(),
+                                        justify: MainAlign::Start,
+                                        align: CrossAlign::Center,
+                                        wrap: false,
                                     },
-                                )
+                                    move |_cx| row,
+                                )]
                             },
                         );
 
@@ -3063,23 +3010,12 @@ fn checkable_menu_row_children<H: UiHost>(
                     row.push(menu_icon_slot_empty(cx));
                 }
 
-                let style = text_style.clone();
-                let mut text = ui::text(label.clone())
-                    .layout(LayoutRefinement::default().min_w_0().flex_1())
-                    .text_size_px(style.size)
-                    .font_weight(style.weight)
-                    .nowrap()
-                    .text_color(ColorRef::Color(effective_fg));
-
-                if let Some(line_height) = style.line_height {
-                    text = text.fixed_line_box_px(line_height).line_box_in_bounds();
-                }
-
-                if let Some(letter_spacing_em) = style.letter_spacing_em {
-                    text = text.letter_spacing_em(letter_spacing_em);
-                }
-
-                row.push(text.into_element(cx));
+                row.push(crate::menu_text::menu_item_label(
+                    cx,
+                    label.clone(),
+                    &text_style,
+                    effective_fg,
+                ));
 
                 if let Some(t) = trailing {
                     row.push(t);
@@ -4852,91 +4788,66 @@ impl DropdownMenu {
                                                                         let mut trailing = trailing;
                                                                         let leading_icon = leading_icon;
 
-                                                                        current_color::scope_children(
+                                                                        if let Some(custom) = content.take() {
+                                                                            return vec![custom.inherit_foreground(icon_fg)];
+                                                                        }
+
+                                                                        let mut row: Vec<AnyElement> =
+                                                                            Vec::with_capacity(
+                                                                                2 + usize::from(
+                                                                                    leading.is_some()
+                                                                                        || leading_icon
+                                                                                            .is_some()
+                                                                                        || reserve_leading_slot_enabled,
+                                                                                ) + usize::from(trailing.is_some())
+                                                                                    + usize::from(has_submenu),
+                                                                            );
+                                                                        if let Some(icon) = leading_icon {
+                                                                            let icon =
+                                                                                decl_icon::icon(cx, icon);
+                                                                            row.push(menu_icon_slot(cx, icon).inherit_foreground(icon_fg));
+                                                                        } else if let Some(l) = leading.take() {
+                                                                            row.push(menu_icon_slot(cx, l).inherit_foreground(icon_fg));
+                                                                        } else if reserve_leading_slot_enabled {
+                                                                            row.push(menu_icon_slot_empty(cx));
+                                                                        }
+                                                                        row.push(crate::menu_text::menu_item_label(
                                                                             cx,
-                                                                            ColorRef::Color(icon_fg),
-                                                                            |cx| {
-                                                                                if let Some(custom) = content.take() {
-                                                                                    return vec![custom];
-                                                                                }
+                                                                            label.clone(),
+                                                                            &text_style,
+                                                                            text_fg,
+                                                                        ));
 
-                                                                                let mut row: Vec<AnyElement> =
-                                                                                    Vec::with_capacity(
-                                                                                        2 + usize::from(
-                                                                                            leading.is_some()
-                                                                                                || leading_icon
-                                                                                                    .is_some()
-                                                                                                || reserve_leading_slot_enabled,
-                                                                                        ) + usize::from(trailing.is_some())
-                                                                                            + usize::from(has_submenu),
-                                                                                    );
-                                                                                if let Some(icon) = leading_icon {
-                                                                                    let icon =
-                                                                                        decl_icon::icon(cx, icon);
-                                                                                    row.push(menu_icon_slot(cx, icon));
-                                                                                } else if let Some(l) = leading.take() {
-                                                                                    row.push(menu_icon_slot(cx, l));
-                                                                                } else if reserve_leading_slot_enabled {
-                                                                                    row.push(menu_icon_slot_empty(cx));
-                                                                                }
-                                                                                let style = text_style.clone();
-                                                                                let mut text = ui::text( label.clone())
-                                                                                    .layout(LayoutRefinement::default().min_w_0().flex_1())
-                                                                                    .text_size_px(style.size)
-                                                                                    .font_weight(style.weight)
-                                                                                    .nowrap()
-                                                                                    .text_color(ColorRef::Color(text_fg));
+                                                                        if let Some(t) = trailing.take() {
+                                                                            row.push(t.inherit_foreground(icon_fg));
+                                                                        }
+                                                                        if has_submenu {
+                                                                            row.push(submenu_chevron_inline_end_text(
+                                                                                cx,
+                                                                                icon_fg,
+                                                                                font_size,
+                                                                                font_line_height,
+                                                                            ));
+                                                                        }
 
-                                                                                if let Some(line_height) =
-                                                                                    style.line_height
-                                                                                {
-                                                                                    text = text
-                                                                                        .line_height_px(line_height)
-                                                                                        .line_height_policy(
-                                                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                                                        );
-                                                                                }
-
-                                                                                if let Some(letter_spacing_em) =
-                                                                                    style.letter_spacing_em
-                                                                                {
-                                                                                    text = text.letter_spacing_em(letter_spacing_em);
-                                                                                }
-
-                                                                                row.push(text.into_element(cx));
-
-                                                                                if let Some(t) = trailing.take() {
-                                                                                    row.push(t);
-                                                                                }
-                                                                                if has_submenu {
-                                                                                    row.push(submenu_chevron_inline_end_text(
-                                                                                        cx,
-                                                                                        icon_fg,
-                                                                                        font_size,
-                                                                                        font_line_height,
-                                                                                    ));
-                                                                                }
-
-                                                                                vec![cx.flex(
-                                                                                    FlexProps {
-                                                                                        layout: {
-                                                                                            let mut layout =
-                                                                                                LayoutStyle::default();
-                                                                                            layout.size.width = Length::Fill;
-                                                                                            layout
-                                                                                        },
-                                                                                        direction:
-                                                                                            fret_core::Axis::Horizontal,
-                                                                                        gap: Px(8.0).into(),
-                                                                                        padding: Edges::all(Px(0.0)).into(),
-                                                                                        justify: MainAlign::Start,
-                                                                                        align: CrossAlign::Center,
-                                                                                        wrap: false,
-                                                                                    },
-                                                                                    move |_cx| row,
-                                                                                )]
+                                                                        vec![cx.flex(
+                                                                            FlexProps {
+                                                                                layout: {
+                                                                                    let mut layout =
+                                                                                        LayoutStyle::default();
+                                                                                    layout.size.width = Length::Fill;
+                                                                                    layout
+                                                                                },
+                                                                                direction:
+                                                                                    fret_core::Axis::Horizontal,
+                                                                                gap: Px(8.0).into(),
+                                                                                padding: Edges::all(Px(0.0)).into(),
+                                                                                justify: MainAlign::Start,
+                                                                                align: CrossAlign::Center,
+                                                                                wrap: false,
                                                                             },
-                                                                        )
+                                                                            move |_cx| row,
+                                                                        )]
                                                                      },
                                                                  );
 

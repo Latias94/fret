@@ -48,9 +48,10 @@ component should construct `TextProps` locally.
   `max-height + ellipsis` clamp contract so snippets/components do not hand-roll local
   `TextProps`.
 - `text_list_row_label(...)` and `text_list_row_label_attributed(...)`: dense command/list/tree row
-  labels. They are not button labels; they fill row width, shrink to zero, and ellipsize to keep
-  row height stable. The attributed variant exists for row labels that need per-span decoration
-  such as strikethrough without re-owning local row text layout policy.
+  labels. They are not button labels; they fill row width, grow into remaining flex space with a
+  zero basis, shrink to zero, and ellipsize to keep row height stable. The attributed variant exists
+  for row labels that need per-span decoration such as strikethrough without re-owning local row
+  text layout policy.
 - `text_menu_group_label(...)`: muted `text-xs` group headings inside menu/select/listbox surfaces.
   They are non-interactive labels, not readouts; they fill the row width, shrink to zero, and
   ellipsize so fixed menu rows do not grow under resize.
@@ -75,6 +76,10 @@ component should construct `TextProps` locally.
   component-local inherited refinements for normal weight and center alignment. The role still owns
   no-wrap, shrink, min-width-zero, and ellipsis; the calendar recipe owns cell chrome, selection
   foreground, and date/range semantics.
+- Menu-family item labels (`DropdownMenu`, `ContextMenu`, `Menubar` overlay rows) consume the
+  list-row label family with component-local inherited refinements for the resolved shadcn menu text
+  style and row foreground. Icon/currentColor slot foreground stays recipe-owned and must not wrap
+  the label subtree, because shared text-role foreground is carried as inherited metadata too.
 - `text_control_label(...)`: fill-width checkbox/radio/switch/combo/slider label text. It keeps
   fixed control chrome single-line under resize.
 - `text_section_chrome_label(...)`, `text_chrome_title(...)`, and `text_chrome_glyph(...)`: section,
@@ -127,6 +132,7 @@ component should construct `TextProps` locally.
 
 - Shared role behavior:
   - `cargo nextest run -p fret-ui-kit --features imui --lib control_readout_text_uses_muted_compact_single_line_truncation control_readout_tabular_text_uses_muted_single_line_truncation control_readout_tabular_emphasis_text_uses_medium_single_line_truncation button_label_text_uses_medium_single_line_truncation prose_variants_and_code_wrap_install_semantic_inherited_overrides table_cell_text_uses_compact_single_line_truncation attributed_list_row_label_text_uses_fill_width_single_line_truncation --no-fail-fast`
+  - `cargo nextest run -p fret-ui-kit --features imui --lib list_row_label_text_uses_fill_width_single_line_truncation attributed_list_row_label_text_uses_fill_width_single_line_truncation --no-fail-fast`
   - `cargo nextest run -p fret-ui-kit --features imui --lib menu_group_label_text_uses_muted_xs_single_line_truncation --no-fail-fast`
   - `cargo nextest run -p fret-ui-kit --features imui --lib status_message_text_uses_muted_sm_single_line_truncation --no-fail-fast`
   - `cargo nextest run -p fret-ui-kit --features imui --lib base_single_line_text_roles_stay_single_line_under_narrow_layout paragraph_text_role_measures_multiple_lines_under_narrow_layout --no-fail-fast`

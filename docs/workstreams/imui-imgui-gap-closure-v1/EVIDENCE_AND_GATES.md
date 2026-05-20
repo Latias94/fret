@@ -4818,6 +4818,38 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `cargo nextest run -p fret-ui-shadcn --lib calendar_range --no-fail-fast`, and
   `cargo check -p fret-ui-shadcn --lib`.
 
+2026-05-20 shadcn menu item label shared text-role slice:
+
+- Source gap before fix: DropdownMenu, ContextMenu, and Menubar overlay item labels still rendered
+  local `ui::text(label).text_size_px(...).font_weight(...).nowrap()` leaves inside fixed menu rows.
+  That duplicated the resize contract already assigned to `text_list_row_label(...)`, and it made
+  menu rows another place where text policy could drift from the IMUI/editor row vocabulary.
+- `text_list_row_label(...)` and its attributed variant now use the same fill/grow/basis-zero
+  single-line layout expected by dense row labels. The existing tests now assert grow and zero
+  basis instead of only checking fill/shrink/min-width-0.
+- `menu_text::menu_item_label(...)` backs shadcn menu-family item labels with
+  `decl_text::text_list_row_label(...)` and layers menu-owned resolved typography plus foreground
+  through inherited text/foreground metadata. DropdownMenu, ContextMenu, and Menubar overlay rows
+  consume that helper. Menubar's top-level trigger remains out of this slice because it is
+  button-like trigger text, not an overlay item row.
+- DropdownMenu no longer wraps entire rows in icon `currentColor` after labels moved to inherited
+  foreground. Icon/custom/trailing subtrees still receive icon foreground, while label foreground
+  remains the menu item's resolved state foreground.
+- Focused gates passed:
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  list_row_label_text_uses_fill_width_single_line_truncation
+  attributed_list_row_label_text_uses_fill_width_single_line_truncation --no-fail-fast`,
+  `cargo nextest run -p fret-ui-shadcn --lib
+  menu_item_label_uses_shared_list_row_role_with_menu_refinement
+  dropdown_menu_label_element_uses_shared_menu_group_text_role
+  context_menu_label_element_uses_shared_menu_group_text_role
+  menubar_label_element_uses_shared_menu_group_text_role --no-fail-fast`, and
+  `cargo check -p fret-ui-shadcn --lib`.
+- Source/format gates passed: `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`,
+  `cargo fmt --check -p fret-ui-kit -p fret-ui-shadcn`, and `git diff --check`.
+
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 
 - Source gap before fix: `NavigationMenuLink` recursively wrote link typography and foreground

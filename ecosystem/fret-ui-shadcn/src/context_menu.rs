@@ -41,7 +41,7 @@ use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
     ColorRef, IntoUiElement, LayoutRefinement, MetricRef, OverlayController, OverlayPresence,
-    Radius, Space, ui,
+    Radius, Space,
 };
 
 use crate::dropdown_menu::{DropdownMenuAlign, DropdownMenuSide, dropdown_menu_overlay_side};
@@ -2630,23 +2630,8 @@ fn menu_row_children<H: UiHost>(
                 row.push(menu_icon_slot_empty(cx));
             }
 
-            let style = text_style.clone();
-            let mut text = ui::text(label.clone())
-                .layout(LayoutRefinement::default().min_w_0().flex_1())
-                .text_size_px(style.size)
-                .font_weight(style.weight)
-                .text_color(ColorRef::Color(text_fg))
-                .nowrap();
-
-            if let Some(line_height) = style.line_height {
-                text = text.fixed_line_box_px(line_height).line_box_in_bounds();
-            }
-
-            if let Some(letter_spacing_em) = style.letter_spacing_em {
-                text = text.letter_spacing_em(letter_spacing_em);
-            }
-
-            let mut label_element = text.into_element(cx);
+            let mut label_element =
+                crate::menu_text::menu_item_label(cx, label.clone(), &text_style, text_fg);
             if let Some(test_id) = label_test_id.clone() {
                 label_element = label_element.test_id(test_id);
             }

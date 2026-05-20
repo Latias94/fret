@@ -1126,6 +1126,13 @@ Readiness order for the next locally testable review slices:
    `ui::label(...).line_height_px(...).nowrap()` builders. Single-date and range calendars share the
    same helper contract; Calendar remains responsible for fixed cell chrome, selected/today/range
    foreground, center alignment, and disabled opacity.
+   2026-05-20 shadcn menu item label follow-up: `text_list_row_label(...)` now includes the
+   grow/basis-zero contract its name and tests already implied, and DropdownMenu, ContextMenu, and
+   Menubar overlay item labels route through `menu_text::menu_item_label(...)`. The helper layers
+   shadcn menu typography and state foreground through inherited metadata while the list-row role
+   owns fixed-row no-wrap/shrink/min-width-0/ellipsis behavior. DropdownMenu's icon/currentColor
+   slots are stamped on icon/custom/trailing subtrees instead of wrapping the label subtree, so menu
+   label state colors are not overwritten by muted icon foreground.
 3. Design surface readiness: keep Dear ImGui-style density as an opt-in token/preset outcome, not a
    mutable runtime style stack.
    Current readiness audit: `P3_DESIGN_SURFACE_READINESS_2026-05-06.md`. `ImguiLikeDense` plus
