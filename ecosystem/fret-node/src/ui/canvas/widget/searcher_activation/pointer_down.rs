@@ -1,9 +1,23 @@
-use super::super::searcher_ui::{dismiss_searcher_event, finish_searcher_event};
-use super::super::*;
+use fret_core::{MouseButton, Point};
 
-pub(super) fn handle_searcher_pointer_down_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+use super::super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+    searcher_activation_state::SearcherArmCx,
+    searcher_ui::{dismiss_searcher_event, finish_searcher_event},
+    widget_tail::HandledPointerCaptureReleaseCx,
+};
+use super::SearcherPointerHit;
+
+pub(super) trait SearcherPointerDownCx<H>:
+    SearcherArmCx + HandledPointerCaptureReleaseCx<H>
+{
+}
+
+impl<H, T> SearcherPointerDownCx<H> for T where T: SearcherArmCx + HandledPointerCaptureReleaseCx<H> {}
+
+pub(super) fn handle_searcher_pointer_down_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl SearcherPointerDownCx<H>,
     position: Point,
     button: MouseButton,
     zoom: f32,
@@ -13,6 +27,16 @@ pub(super) fn handle_searcher_pointer_down_event<H: UiHost, M: NodeGraphCanvasMi
     }
 
     let hit = super::super::searcher_activation_hit::searcher_pointer_hit(canvas, position, zoom);
+    handle_searcher_pointer_down_hit(canvas, cx, position, button, hit)
+}
+
+fn handle_searcher_pointer_down_hit<H, M: NodeGraphCanvasMiddleware>(
+    canvas: &mut NodeGraphCanvasWith<M>,
+    cx: &mut impl SearcherPointerDownCx<H>,
+    position: Point,
+    button: MouseButton,
+    hit: SearcherPointerHit,
+) -> bool {
     match button {
         MouseButton::Left => {
             if let Some(row_ix) = hit.row_ix {
@@ -25,3 +49,6 @@ pub(super) fn handle_searcher_pointer_down_event<H: UiHost, M: NodeGraphCanvasMi
         _ => dismiss_searcher_event(canvas, cx),
     }
 }
+
+#[cfg(test)]
+mod tests;

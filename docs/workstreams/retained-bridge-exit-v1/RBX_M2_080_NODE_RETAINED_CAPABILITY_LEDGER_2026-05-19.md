@@ -190,6 +190,10 @@ Compat-gated but retained-bridge-free support:
   - `RBX-M2-450` moved searcher row-drag arming pointer id, tick id, and pointer capture access
     behind the retained-agnostic `SearcherArmCx` seam; retained pointer/timer/capture access lives
     in `searcher_activation_state/arm_retained_cx.rs`.
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_activation/pointer_down.rs`
+  - `RBX-M2-460` moved searcher pointer-down routing behind the retained-agnostic
+    `SearcherPointerDownCx` capability composed from searcher arm plus widget-tail dismiss/finish
+    seams.
 
 Deleted retained overlay files:
 
@@ -256,6 +260,7 @@ Deleted retained overlay files:
 | Searcher dismiss tail seam | retained canvas still routes searcher pointer/keyboard events through retained `EventCx`, but dismiss release, handled finish, and paint invalidation tails only need retained-agnostic widget-tail capabilities | `RBX-M2-430` moves `searcher_activation_state/clear.rs`, `searcher_ui.rs`, and `searcher_ui/event.rs` onto `PointerCaptureReleaseCx`, `HandledPointerCaptureReleaseCx`, `WidgetHandledCx`, and `WidgetPaintInvalidationCx`; source-policy gates those helper files and adds focused dismiss/finish/invalidation tests | Continue moving searcher activation/row activation routes behind retained-agnostic seams, then replace higher-level searcher event routing with a declarative/event-leaf path. |
 | Searcher row-drag release Cx seam | retained canvas still routes searcher pointer-up events through retained `EventCx`; row activation still needs retained context menu activation I/O | `RBX-M2-440` moves `searcher_activation_state/release.rs` onto retained-agnostic `SearcherReleaseCx` plus widget-tail seams, keeps retained row activation in `release_retained_cx.rs`, source-policy gates `release.rs`, and adds no-pending, row-activation, and outside-dismiss release tests | Continue moving searcher arm/pointer routes behind retained-agnostic seams, then replace higher-level searcher event routing with a declarative/event-leaf path. |
 | Searcher row-drag arm Cx seam | retained canvas still routes searcher pointer-down events through retained `EventCx`; arming needs pointer id, tick id, and pointer capture access | `RBX-M2-450` moves `searcher_activation_state/arm.rs` onto retained-agnostic `SearcherArmCx`, keeps retained pointer/timer/capture access in `arm_retained_cx.rs`, source-policy gates `arm.rs`, and adds unselectable-row plus pending-drag/capture behavior tests | Continue moving searcher pointer-down/up routes behind retained-agnostic seams, then replace higher-level searcher event routing with a declarative/event-leaf path. |
+| Searcher pointer-down route seam | retained canvas still calls searcher pointer-down from a retained event route, but the pointer-down routing helper only needs the searcher arm seam and dismiss/finish widget-tail seams | `RBX-M2-460` moves `searcher_activation/pointer_down.rs` onto `SearcherPointerDownCx`, source-policy gates the helper, and adds no-searcher, row arm/finish, outside dismiss/finish, and secondary dismiss/finish tests | Continue moving searcher pointer-up and outer searcher activation wrappers behind retained-agnostic seams, then replace higher-level searcher event routing with a declarative/event-leaf path. |
 
 ## New Gate
 
