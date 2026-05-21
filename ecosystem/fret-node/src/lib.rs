@@ -221,6 +221,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/event_pointer_up/dispatch.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_UP_RS: &str =
         include_str!("ui/canvas/widget/event_router_pointer_button/up.rs");
+    const UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_RS: &str =
+        include_str!("ui/canvas/widget/event_pointer_move.rs");
+    const UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_RELEASE_RS: &str =
+        include_str!("ui/canvas/widget/event_pointer_move/release.rs");
+    const UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_TAIL_ROUTE_RS: &str =
+        include_str!("ui/canvas/widget/event_pointer_move/tail.rs");
     const UI_CANVAS_WIDGET_CURSOR_RS: &str = include_str!("ui/canvas/widget/cursor.rs");
     const UI_CANVAS_WIDGET_CURSOR_CX_RS: &str = include_str!("ui/canvas/widget/cursor_cx.rs");
     const UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_TAIL_CURSOR_RS: &str =
@@ -233,6 +239,14 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_move_tail_cx.rs");
     const UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_TAIL_TIMER_RS: &str =
         include_str!("ui/canvas/widget/event_pointer_move_tail/timer.rs");
+    const UI_CANVAS_WIDGET_POINTER_MOVE_RELEASE_RS: &str =
+        include_str!("ui/canvas/widget/pointer_move_release.rs");
+    const UI_CANVAS_WIDGET_POINTER_MOVE_RELEASE_PAN_RS: &str =
+        include_str!("ui/canvas/widget/pointer_move_release_pan.rs");
+    const UI_CANVAS_WIDGET_POINTER_MOVE_RELEASE_PAN_MISSING_RS: &str =
+        include_str!("ui/canvas/widget/pointer_move_release_pan/missing_release.rs");
+    const UI_CANVAS_WIDGET_POINTER_MOVE_RELEASE_PAN_PENDING_RIGHT_CLICK_RS: &str =
+        include_str!("ui/canvas/widget/pointer_move_release_pan/pending_right_click.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_RELEASE_LEFT_RS: &str =
         include_str!("ui/canvas/widget/pointer_move_release_left.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_RS: &str =
@@ -1810,6 +1824,33 @@ mod surface_policy_tests {
             assert!(
                 !tail_sources.contains(forbidden),
                 "pointer-move tail wrapper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_move_release_route_stays_off_retained_bridge() {
+        let release_sources = [
+            UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_RS,
+            UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_RELEASE_RS,
+            UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_TAIL_ROUTE_RS,
+            UI_CANVAS_WIDGET_POINTER_MOVE_RELEASE_RS,
+            UI_CANVAS_WIDGET_POINTER_MOVE_RELEASE_PAN_RS,
+            UI_CANVAS_WIDGET_POINTER_MOVE_RELEASE_PAN_MISSING_RS,
+            UI_CANVAS_WIDGET_POINTER_MOVE_RELEASE_PAN_PENDING_RIGHT_CLICK_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !release_sources.contains(forbidden),
+                "pointer-move release route must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

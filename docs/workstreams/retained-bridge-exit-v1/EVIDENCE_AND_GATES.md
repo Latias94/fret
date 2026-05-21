@@ -10709,6 +10709,80 @@ Broader gates not run:
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
 
+## 2026-05-22 - RBX-M2-910 pointer-move release route retained Cx isolation
+
+Claim verified:
+
+- `event_pointer_move.rs`, `event_pointer_move/release.rs`, `event_pointer_move/tail.rs`,
+  `pointer_move_release.rs`, `pointer_move_release_pan.rs`,
+  `pointer_move_release_pan/missing_release.rs`, and
+  `pointer_move_release_pan/pending_right_click.rs` no longer import or name retained bridge Cx
+  types.
+- Pointer-move release routing now uses a composed `PointerMoveReleaseCx` over existing
+  `PointerUpCx` and `PanZoomBeginCx` capabilities without adding a new retained adapter.
+- Real retained compatibility behavior still infers missed pan pointer-up from mouse button state
+  and still starts/finishes right-button pan behavior correctly.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move/release.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move/tail.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan/missing_release.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan/pending_right_click.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the default declarative `fret-node` surface still compiles without enabling the
+    retained canvas compatibility island.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving the pointer-move
+    release route behind `PointerMoveReleaseCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_release_route_stays_off_retained_bridge) | test(pointer_move_missing_left_release_stays_off_retained_bridge) | test(missing_pan_pointer_up_can_be_inferred_from_mouse_buttons_state) | test(right_pan_drag_does_not_open_context_menu) | test(right_pan_defers_context_menu_until_pointer_up) | test(missing_pointer_up_can_be_inferred_from_mouse_buttons_state) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 9 tests.
+  - Scope proven: source-policy locks the release route off retained bridge Cx names; missed pan
+    release inference, missed left pointer-up inference, and right-button pan behavior remain green
+    through the retained compatibility path.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move/release.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move/tail.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan/missing_release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan/pending_right_click.rs`
+  - Result: no matches.
+  - Scope proven: the migrated pointer-move release route no longer depends on retained bridge Cx
+    names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after the release-route seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after isolating
+    the pointer-move release route.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-910` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
 ## 2026-05-22 - RBX-M2-900 pointer-move missing-left-release retained Cx isolation
 
 Claim verified:

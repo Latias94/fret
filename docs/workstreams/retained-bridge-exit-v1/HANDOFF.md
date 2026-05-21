@@ -991,6 +991,13 @@ wrapper only through existing branch adapters.
 existing retained-agnostic `PointerUpCx` / `PointerUpReleaseCx` seams. No new retained adapter was
 needed, and focused tests prove missed left pointer-up inference still commits node drags and ends
 wire drags.
+`RBX-M2-910` then moved the pointer-move release route and pan-release helpers in
+`event_pointer_move.rs`, `event_pointer_move/release.rs`, `event_pointer_move/tail.rs`,
+`pointer_move_release.rs`, `pointer_move_release_pan.rs`, and `pointer_move_release_pan/**` behind
+`PointerMoveReleaseCx`, a composed capability over the existing `PointerUpCx` and `PanZoomBeginCx`
+seams. No new retained adapter was needed; retained `EventCx` satisfies the route only through the
+existing pointer-up and pan-begin adapters. Focused tests prove missed pan release inference and
+right-button pan behavior remain green.
 
 ## Next Task
 
@@ -1061,8 +1068,10 @@ Recommended next implementation shape:
   `InsertNodeDragMoveCx`; the secondary pointer-move wrapper now uses `SecondaryPointerMoveCx`;
   pointer-move cursor updates now use `CanvasCursorCx`; pointer-move auto-pan timer sync now uses
   `AutoPanTimerCx`; the pointer-move tail wrapper now composes those branches through
-  `PointerMoveTailCx`; missing-left-release pointer-move inference now reuses `PointerUpCx`; and
-  the pointer-up event entry and pointer-up button router now use `PointerUpRouteCx`.
+  `PointerMoveTailCx`; missing-left-release pointer-move inference now reuses `PointerUpCx`; the
+  pointer-move release route now composes `PointerUpCx + PanZoomBeginCx` through
+  `PointerMoveReleaseCx`; and the pointer-up event entry and pointer-up button router now use
+  `PointerUpRouteCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -1160,7 +1169,31 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-22 for `RBX-M2-900`:
+Last run on 2026-05-22 for `RBX-M2-910`:
+
+- `cargo check -p fret-node` - passed with the pre-existing `fret-ui`
+  `current_effective_opacity` dead-code warning.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_release_route_stays_off_retained_bridge) | test(pointer_move_missing_left_release_stays_off_retained_bridge) | test(missing_pan_pointer_up_can_be_inferred_from_mouse_buttons_state) | test(right_pan_drag_does_not_open_context_menu) | test(right_pan_defers_context_menu_until_pointer_up) | test(missing_pointer_up_can_be_inferred_from_mouse_buttons_state) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 9 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move/release.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move/tail.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan/missing_release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan/pending_right_click.rs` -
+  no matches.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-910` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+Previous run on 2026-05-22 for `RBX-M2-900`:
 
 - `cargo check -p fret-node` - passed with the pre-existing `fret-ui`
   `current_effective_opacity` dead-code warning.

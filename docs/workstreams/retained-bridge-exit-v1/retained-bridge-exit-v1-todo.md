@@ -4431,6 +4431,42 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-910 Isolate pointer-move release route retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move/release.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move/tail.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan/missing_release.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan/pending_right_click.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/interaction_conformance.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the pointer-move release guard wrappers and pan-release helpers off direct retained bridge
+      Cx names.
+    - Introduce a composed `PointerMoveReleaseCx` over existing pointer-up and pan-begin
+      capabilities instead of adding another retained adapter.
+    - Prove missed pan pointer-up inference and right-button pan start behavior remain green.
+  - Result:
+    - `event_pointer_move.rs`, `event_pointer_move/release.rs`, `event_pointer_move/tail.rs`,
+      `pointer_move_release.rs`, `pointer_move_release_pan.rs`,
+      `pointer_move_release_pan/missing_release.rs`, and
+      `pointer_move_release_pan/pending_right_click.rs` now stay retained-Cx agnostic.
+    - `PointerMoveReleaseCx` composes `PointerUpCx` and `PanZoomBeginCx`; retained `EventCx`
+      satisfies the release route only through those existing adapter seams.
+    - Added `pointer_move_release_route_stays_off_retained_bridge` source-policy coverage and
+      `missing_pan_pointer_up_can_be_inferred_from_mouse_buttons_state` behavior coverage.
+  - Validation:
+    - `cargo check -p fret-node`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_release_route_stays_off_retained_bridge) | test(pointer_move_missing_left_release_stays_off_retained_bridge) | test(missing_pan_pointer_up_can_be_inferred_from_mouse_buttons_state) | test(right_pan_drag_does_not_open_context_menu) | test(right_pan_defers_context_menu_until_pointer_up) | test(missing_pointer_up_can_be_inferred_from_mouse_buttons_state) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move/release.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move/tail.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan/missing_release.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_pan/pending_right_click.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

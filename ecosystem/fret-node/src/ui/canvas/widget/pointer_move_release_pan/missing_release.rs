@@ -1,12 +1,15 @@
 use crate::ui::canvas::widget::*;
 
-pub(super) fn handle_missing_pan_release<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_missing_pan_release<H: UiHost, M: NodeGraphCanvasMiddleware, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     position: Point,
     buttons: fret_core::MouseButtons,
     modifiers: fret_core::Modifiers,
-) -> bool {
+) -> bool
+where
+    Cx: pointer_move_release::PointerMoveReleaseCx<H, M>,
+{
     if !canvas.interaction.panning {
         return false;
     }
@@ -15,7 +18,7 @@ pub(super) fn handle_missing_pan_release<H: UiHost, M: NodeGraphCanvasMiddleware
         return false;
     }
 
-    let snapshot = canvas.sync_view_state(cx.app);
+    let snapshot = canvas.sync_view_state(pointer_up_release_cx::PointerUpReleaseCx::host(cx));
     let button = canvas
         .interaction
         .panning_button

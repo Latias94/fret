@@ -5,15 +5,18 @@ mod tail;
 use super::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
-    pub(super) fn handle_pointer_move<H: UiHost>(
+    pub(super) fn handle_pointer_move<H: UiHost, Cx>(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut Cx,
         snapshot: &ViewSnapshot,
         position: Point,
         buttons: fret_core::MouseButtons,
         modifiers: fret_core::Modifiers,
         zoom: f32,
-    ) {
+    ) where
+        Cx: pointer_move_release::PointerMoveReleaseCx<H, M>
+            + pointer_move_tail_cx::PointerMoveTailCx<H>,
+    {
         pointer_state::sync_pointer_move_modifier_state(self, snapshot, modifiers);
 
         if release::handle_pointer_move_release_guards(

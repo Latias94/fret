@@ -3681,6 +3681,54 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state_for_new_wire_drag
 }
 
 #[test]
+fn missing_pan_pointer_up_can_be_inferred_from_mouse_buttons_state() {
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _a, _b) = make_test_graph_two_nodes_with_size();
+    let graph = host.models.insert(graph_value);
+    let (view, editor_config) = insert_view_editor_config(&mut host);
+
+    let mut canvas = new_canvas!(host, graph, view, editor_config);
+    canvas.interaction.panning = true;
+    canvas.interaction.panning_button = Some(fret_core::MouseButton::Right);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+    let mut services = NullServices::default();
+    let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();
+    let mut cx = event_cx(
+        &mut host,
+        &mut services,
+        bounds,
+        &mut prevented_default_actions,
+    );
+    let window = fret_core::AppWindowId::default();
+    cx.window = Some(window);
+
+    // Simulate a missed `PointerEvent::Up`: Move arrives with no right button held.
+    canvas.event(
+        &mut cx,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            pointer_id: fret_core::PointerId::default(),
+            position: Point::new(Px(240.0), Px(180.0)),
+            buttons: MouseButtons::default(),
+            modifiers: Modifiers::default(),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(!canvas.interaction.panning);
+    assert!(canvas.interaction.panning_button.is_none());
+    assert!(
+        cx.invalidations
+            .iter()
+            .any(|(_, kind)| *kind == Invalidation::Paint)
+    );
+    assert!(cx.app.redraw.contains(&window));
+}
+
+#[test]
 fn right_click_cancels_wire_drag_and_opens_context_menu() {
     let mut host = TestUiHostImpl::default();
     let (graph_value, edge, _from, to) = make_test_graph_edge_reconnect();

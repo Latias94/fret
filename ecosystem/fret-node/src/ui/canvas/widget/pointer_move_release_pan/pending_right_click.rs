@@ -1,13 +1,16 @@
 use crate::ui::canvas::widget::*;
 
-pub(super) fn handle_pending_right_click_pan_start<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_pending_right_click_pan_start<H: UiHost, M: NodeGraphCanvasMiddleware, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     buttons: fret_core::MouseButtons,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    Cx: pointer_move_release::PointerMoveReleaseCx<H, M>,
+{
     if !(snapshot.interaction.pan_on_drag.right
         && buttons.right
         && canvas.interaction.panning_button.is_none())
