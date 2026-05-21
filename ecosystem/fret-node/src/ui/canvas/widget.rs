@@ -123,6 +123,8 @@ mod delete_predicates;
 mod delete_removed_ids;
 mod derived_geometry;
 mod edge_drag;
+mod edge_drag_move_cx;
+mod edge_drag_move_retained_cx;
 mod edge_insert;
 mod edge_insert_drag;
 mod edge_path_ctx;

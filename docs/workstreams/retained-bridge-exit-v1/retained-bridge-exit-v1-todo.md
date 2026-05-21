@@ -4131,6 +4131,42 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-810 Isolate pointer-move secondary connection retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_drag/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_drag/move_start.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_drag/prelude.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_drag_move_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_drag_move_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/connection.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the secondary connection pointer-move route off direct retained bridge Cx names by
+      introducing a narrow edge-drag move capability.
+    - Reuse the existing `WireDragMoveCx` and `WidgetPaintInvalidationCx` seams for active wire
+      drag and edge-insert drag movement instead of adding duplicate connection capabilities.
+    - Keep retained `EventCx` adaptation isolated in `edge_drag_move_retained_cx.rs`.
+    - Prove wire move, edge-insert move, and edge reconnect drag behavior remain green through the
+      retained compatibility island.
+  - Result:
+    - Added `EdgeDragMoveCx` for host access plus paint invalidation.
+    - `edge_drag::handle_edge_drag_move(...)` and its move-start helper now accept
+      `EdgeDragMoveCx` instead of naming retained `EventCx`.
+    - `pointer_move_dispatch/secondary/connection.rs` now accepts
+      `WireDragMoveCx + EdgeDragMoveCx` and routes active wire drag, active edge-insert drag, and
+      edge reconnect drag without retained Cx names.
+    - Added source-policy coverage for edge drag move handlers and the secondary connection
+      pointer-move route.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_secondary_connection_route_stays_off_retained_bridge) | test(edge_drag_move_handlers_stay_off_retained_bridge) | test(wire_drag_move_handlers_stay_off_retained_bridge) | test(edge_insert_move_handlers_stay_off_retained_bridge) | test(edge_reconnect_requires_drag_threshold_before_starting_wire_drag) | test(edge_reconnect_drag_cancels_when_endpoint_not_reconnectable) | test(edge_reconnect_radius_is_zoom_invariant_in_screen_space) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/connection.rs ecosystem/fret-node/src/ui/canvas/widget/edge_drag/mod.rs ecosystem/fret-node/src/ui/canvas/widget/edge_drag/move_start.rs ecosystem/fret-node/src/ui/canvas/widget/edge_drag/prelude.rs ecosystem/fret-node/src/ui/canvas/widget/edge_drag_move_cx.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

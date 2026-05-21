@@ -4,13 +4,17 @@ mod prelude;
 
 use prelude::*;
 
-pub(super) fn handle_edge_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_edge_drag_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: super::edge_drag_move_cx::EdgeDragMoveCx<H>,
+{
     move_start::handle_edge_drag_move(canvas, cx, snapshot, position, zoom)
 }
 

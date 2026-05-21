@@ -939,6 +939,12 @@ access; `NodeResizeMoveCx` carries host access plus paint invalidation. Retained
 adaptation is isolated in `node_drag_move_retained_cx.rs` and
 `node_resize_move_retained_cx.rs`. Focused tests prove node drag move and node resize move behavior
 remain green through the retained compatibility island.
+`RBX-M2-810` then moved the secondary connection pointer-move route in
+`pointer_move_dispatch/secondary/connection.rs` behind `WireDragMoveCx + EdgeDragMoveCx`.
+Wire-drag move and edge-insert move reuse existing retained-agnostic seams, while edge reconnect
+drag now uses `EdgeDragMoveCx` for host access plus paint invalidation. Retained `EventCx`
+adaptation is isolated in `edge_drag_move_retained_cx.rs`. Focused tests prove wire/edge-insert
+move source policy plus edge reconnect threshold, cancel, and radius behavior remain green.
 
 ## Next Task
 
@@ -1004,7 +1010,8 @@ Recommended next implementation shape:
   primary node pointer-move route now uses `PendingNodeDragActivationCx`; the primary connection
   pointer-move route now uses `WireDragMoveCx`; the primary pointer-move wrapper now uses
   `PrimaryPointerMoveCx`; the secondary node pointer-move route now uses
-  `NodeDragMoveCx + NodeResizeMoveCx`; and the pointer-up event entry and pointer-up button router
+  `NodeDragMoveCx + NodeResizeMoveCx`; the secondary connection pointer-move route now uses
+  `WireDragMoveCx + EdgeDragMoveCx`; and the pointer-up event entry and pointer-up button router
   now use `PointerUpRouteCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
@@ -1040,6 +1047,8 @@ Recommended next implementation shape:
   `node_drag.rs`, `node_drag_move_cx.rs`,
   `node_resize/move_update.rs`, `node_resize_move_cx.rs`,
   `pointer_move_dispatch/secondary/node.rs`,
+  `edge_drag/mod.rs`, `edge_drag/move_start.rs`, `edge_drag/prelude.rs`,
+  `edge_drag_move_cx.rs`, `pointer_move_dispatch/secondary/connection.rs`,
   `keyboard_pan_activation.rs`,
   `event_clipboard_feedback.rs`, `event_clipboard_feedback_cx.rs`, `event_timer_toast.rs`,
   `timer_motion_shared.rs`,
@@ -1097,7 +1106,29 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-800`:
+Last run on 2026-05-21 for `RBX-M2-810`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_secondary_connection_route_stays_off_retained_bridge) | test(edge_drag_move_handlers_stay_off_retained_bridge) | test(wire_drag_move_handlers_stay_off_retained_bridge) | test(edge_insert_move_handlers_stay_off_retained_bridge) | test(edge_reconnect_requires_drag_threshold_before_starting_wire_drag) | test(edge_reconnect_drag_cancels_when_endpoint_not_reconnectable) | test(edge_reconnect_radius_is_zoom_invariant_in_screen_space) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 8 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/connection.rs ecosystem/fret-node/src/ui/canvas/widget/edge_drag/mod.rs ecosystem/fret-node/src/ui/canvas/widget/edge_drag/move_start.rs ecosystem/fret-node/src/ui/canvas/widget/edge_drag/prelude.rs ecosystem/fret-node/src/ui/canvas/widget/edge_drag_move_cx.rs` -
+  no matches.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-810` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+Previous run on 2026-05-21 for `RBX-M2-800`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.

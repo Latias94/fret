@@ -1,12 +1,16 @@
 use super::prelude::*;
 
-pub(super) fn handle_edge_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_edge_drag_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: EdgeDragMoveCx<H>,
+{
     let Some(drag) = canvas.interaction.edge_drag.clone() else {
         return false;
     };
@@ -16,10 +20,10 @@ pub(super) fn handle_edge_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
         return false;
     }
 
-    let geom = canvas.canvas_geometry(&*cx.app, snapshot);
+    let geom = canvas.canvas_geometry(&*cx.host(), snapshot);
     let reconnect = canvas
         .graph
-        .read_ref(cx.app, |graph| {
+        .read_ref(cx.host(), |graph| {
             canvas.pick_reconnect_endpoint(
                 graph,
                 geom.as_ref(),
@@ -37,7 +41,7 @@ pub(super) fn handle_edge_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     };
     let endpoint_allowed = canvas
         .graph
-        .read_ref(cx.app, |graph| {
+        .read_ref(cx.host(), |graph| {
             NodeGraphCanvasWith::<M>::edge_endpoint_is_reconnectable(
                 graph,
                 &snapshot.interaction,

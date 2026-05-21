@@ -170,6 +170,13 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/edge_insert_drag/pointer_up/active.rs");
     const UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_POINTER_UP_PENDING_RS: &str =
         include_str!("ui/canvas/widget/edge_insert_drag/pointer_up/pending.rs");
+    const UI_CANVAS_WIDGET_EDGE_DRAG_RS: &str = include_str!("ui/canvas/widget/edge_drag/mod.rs");
+    const UI_CANVAS_WIDGET_EDGE_DRAG_MOVE_START_RS: &str =
+        include_str!("ui/canvas/widget/edge_drag/move_start.rs");
+    const UI_CANVAS_WIDGET_EDGE_DRAG_PRELUDE_RS: &str =
+        include_str!("ui/canvas/widget/edge_drag/prelude.rs");
+    const UI_CANVAS_WIDGET_EDGE_DRAG_MOVE_CX_RS: &str =
+        include_str!("ui/canvas/widget/edge_drag_move_cx.rs");
     const UI_CANVAS_WIDGET_EDGE_DRAG_POINTER_UP_RS: &str =
         include_str!("ui/canvas/widget/edge_drag/pointer_up.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_GROUP_DRAG_RS: &str =
@@ -218,6 +225,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_move_dispatch/primary/connection.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_SECONDARY_NODE_RS: &str =
         include_str!("ui/canvas/widget/pointer_move_dispatch/secondary/node.rs");
+    const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_SECONDARY_CONNECTION_RS: &str =
+        include_str!("ui/canvas/widget/pointer_move_dispatch/secondary/connection.rs");
     const UI_CANVAS_WIDGET_CANCEL_CLEANUP_RS: &str =
         include_str!("ui/canvas/widget/cancel_cleanup.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_PICKER_RS: &str =
@@ -656,6 +665,30 @@ mod surface_policy_tests {
             assert!(
                 !edge_insert_move_sources.contains(forbidden),
                 "edge insert move handlers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn edge_drag_move_handlers_stay_off_retained_bridge() {
+        let edge_drag_move_sources = [
+            UI_CANVAS_WIDGET_EDGE_DRAG_RS,
+            UI_CANVAS_WIDGET_EDGE_DRAG_MOVE_START_RS,
+            UI_CANVAS_WIDGET_EDGE_DRAG_PRELUDE_RS,
+            UI_CANVAS_WIDGET_EDGE_DRAG_MOVE_CX_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !edge_drag_move_sources.contains(forbidden),
+                "edge drag move handlers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }
@@ -1535,6 +1568,22 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_SECONDARY_NODE_RS.contains(forbidden),
                 "pointer-move secondary node route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_move_secondary_connection_route_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_SECONDARY_CONNECTION_RS.contains(forbidden),
+                "pointer-move secondary connection route must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }
