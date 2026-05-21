@@ -7670,3 +7670,82 @@ Next slice recommendation:
   A local full-suite attempt using `target\fret-diag-shadcn-runtime-evidence-toggle-group-disabled-item-v1`
   exceeded the outer shell timeout before reaching the new ToggleGroup row, so this slice uses the
   focused runtime, dedicated Toggle suite, and row-only suite as passing evidence.
+
+## Menubar Disabled Item Action-State Runtime Gate
+
+- invariant:
+  shadcn/Radix Menubar disabled items must keep item-local ownership of disabled action-state:
+  disabled items expose `disabled=true`, suppress `focus` and `invoke`, never dispatch their command,
+  and are skipped by vertical roving focus. Enabled siblings and submenu triggers remain invokable,
+  and the current programmatic roving focus target must export a semantics `focus` action even when
+  it is outside default Tab traversal.
+- finding:
+  the gate found two real defects. First, Menubar content/submenu rows derived `focusable` by
+  comparing the active roving item index to the flattened entry index, so separators and labels could
+  shift the active tab stop onto the wrong row. Second, the `fret-ui` Pressable semantics bridge
+  suppressed `actions.focus` whenever `PressableProps::focusable=false`, even if that Pressable was
+  the current programmatic focus target used by roving focus. The fixes keep collection-index
+  roving state aligned and preserve current-focus semantics without widening default focus
+  traversal.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/host_widget/semantics.rs`,
+  `crates/fret-ui/src/declarative/tests/semantics.rs`,
+  `ecosystem/fret-ui-shadcn/src/menubar.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/menubar/demo.rs`,
+  `apps/fret-ui-gallery/src/spec.rs`,
+  `apps/fret-ui-gallery/src/driver/runtime_driver.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-disabled-item-action-state.json`,
+  `tools/diag-scripts/ui-gallery-menubar-disabled-item-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-menubar-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  Radix Menubar uses roving focus inside menu content, disabled items are skipped by focus movement
+  and are not invokable, and submenu triggers remain enabled menu items. Fret maps this to concrete
+  `menu_item` semantics, collection-position metadata, item-local disabled action suppression, and
+  current-focus semantics for the active roving tab stop.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-menubar-disabled-item-action-state-v5/sessions/1779383380213-231888/1779383395682/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-menubar-disabled-item-action-state-v5/sessions/1779383380213-231888/share/1779383395682.zip`;
+  dedicated suite summary:
+  `target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\menubar\ui-gallery-menubar-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-menubar-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-menubar-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\index.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\semantics.rs crates\fret-ui\src\declarative\tests\semantics.rs apps\fret-ui-gallery\src\spec.rs apps\fret-ui-gallery\src\ui\snippets\menubar\demo.rs ecosystem\fret-ui-shadcn\src\menubar.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui --lib declarative_pressable_current_focus_preserves_semantics_focus_action_outside_tab_order -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui --lib declarative_pressable_current_focus_preserves_semantics_focus_action_outside_tab_order`
+  - result: passed; 1 test; run id `d8524063-5d0d-43d1-ad76-ae20ffd50f3a`.
+  `cargo test --profile dev-fast -p fret-ui-shadcn menubar_disabled_item_skips_roving_focus_and_suppresses_action_state --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib menubar_disabled_item_skips_roving_focus_and_suppresses_action_state`
+  - result: passed; 1 test; run id `1b2c363f-cfb8-42fe-9db2-db5196ecd623`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app menubar_demo_disabled_item_keeps_command_and_item_action_state_on_same_control`
+  - result: passed; 1 test; run id `954f6256-29cd-4217-9c83-48301de43fbe`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_menubar_disabled_item_action_state`
+  - result: passed; 1 test; run id `92c6d28f-ad5e-46c9-9cdf-b5841dc57b3e`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\menubar\ui-gallery-menubar-disabled-item-action-state.json --dir target\fret-diag-menubar-disabled-item-action-state-v5 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779383395682`.
+- dedicated Menubar runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite tools\diag-scripts\suites\ui-gallery-menubar-semantics\suite.json --dir target\fret-diag-menubar-semantics-suite-disabled-item-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; disabled-item row run id `1779383578847`.
+- broad-suite note:
+  the script is promoted into `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`.
+  This slice uses the focused runtime and dedicated Menubar suite as passing evidence to avoid
+  burning the broad-suite timeout budget immediately after the previous long full-suite run.

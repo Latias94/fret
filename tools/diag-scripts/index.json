@@ -9681,6 +9681,34 @@
       ]
     },
     {
+      "id": "ui-gallery-menubar-disabled-item-action-state",
+      "path": "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-disabled-item-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-menubar-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "disabled",
+        "keyboard",
+        "menubar",
+        "roving_focus",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Menubar Demo section with the global status bar visible.",
+        "Verifies that a disabled Menubar item carrying a command suppresses focus/invoke and cannot dispatch through pointer activation.",
+        "Verifies vertical roving focus skips the disabled item and lands on the next enabled menu item."
+      ]
+    },
+    {
       "id": "ui-gallery-menubar-keyboard-nav",
       "path": "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-keyboard-nav.json",
       "required_capabilities": [],

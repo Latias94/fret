@@ -318,6 +318,13 @@ fn script_v2_roundtrip_ui_gallery_menubar_escape_exits_active() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_menubar_disabled_item_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-disabled-item-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_canvas_cull_torture_pan_zoom() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-canvas-cull-torture-pan-zoom.json"

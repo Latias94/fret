@@ -4287,3 +4287,49 @@ Status: complete for single-mode ToggleGroup disabled-item action-state and rovi
 - Row-only diagnostics suite pass:
   `target/fret-diag-toggle-group-disabled-item-suite-glob-v1/sessions/1779376207964-79492/suite.summary.json`
   with `stage_counts={"passed":1}` and disabled-item row run id `1779376227686`.
+
+## M176: Menubar Disabled Item Action-State Runtime Gate
+
+Status: complete for Menubar disabled-item action-state, roving-focus, and current-focus semantics coverage.
+
+- Added `ui-gallery-menubar-disabled-item-action-state.json`, which starts directly on the Menubar
+  page's `Demo` section. The gate proves the disabled `New Incognito Window` item exports
+  `role=menu_item`, `disabled=true`, `focus=false`, and `invoke=false`; proves an enabled sibling
+  remains invokable; verifies direct disabled-item click does not dispatch its command or update the
+  status bar; then drives keyboard roving focus so ArrowDown skips the disabled item and lands on
+  the enabled `Share` item.
+- Added a root redirect, a focused `ui-gallery-menubar-semantics` suite, broad-suite promotion into
+  `ui-gallery-shadcn-runtime-evidence`, registry metadata, and protocol roundtrip coverage.
+- Fixed a Menubar recipe indexing defect: content and submenu rows now compare the active roving
+  index against the collection item index instead of the flattened entry index, so separators and
+  labels no longer desynchronize active item focusability.
+- Fixed a `fret-ui` semantics/action-state defect: an enabled Pressable that is the current
+  programmatic focus target now keeps its exported semantics `focus` action even when it is outside
+  default tab traversal. This preserves roving-focus accessibility while keeping non-active roving
+  items out of Tab order.
+- JSON, registry, formatting, and diff hygiene gates pass:
+  `python -m json.tool tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery-menubar-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-menubar-semantics/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/index.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates/fret-ui/src/declarative/host_widget/semantics.rs crates/fret-ui/src/declarative/tests/semantics.rs apps/fret-ui-gallery/src/spec.rs apps/fret-ui-gallery/src/ui/snippets/menubar/demo.rs ecosystem/fret-ui-shadcn/src/menubar.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  and `git diff --check`.
+- Focused Rust gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui --lib declarative_pressable_current_focus_preserves_semantics_focus_action_outside_tab_order`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib menubar_disabled_item_skips_roving_focus_and_suppresses_action_state`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app menubar_demo_disabled_item_keeps_command_and_item_action_state_on_same_control`;
+  and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_menubar_disabled_item_action_state`.
+- Build passes:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\menubar\ui-gallery-menubar-disabled-item-action-state.json --dir target\fret-diag-menubar-disabled-item-action-state-v5 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779383395682`, AI packet
+  `target/fret-diag-menubar-disabled-item-action-state-v5/sessions/1779383380213-231888/1779383395682/ai.packet`,
+  and pack
+  `target/fret-diag-menubar-disabled-item-action-state-v5/sessions/1779383380213-231888/share/1779383395682.zip`.
+- Dedicated Menubar runtime suite passes with `stage_counts={"passed":1}` and summary
+  `target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json`;
+  the disabled-item row run id is `1779383578847`.

@@ -598,3 +598,16 @@ mechanism can visibly fail.
   `target/fret-diag-toggle-semantics-suite-disabled-item-v2/sessions/1779371056407-225584/suite.summary.json`,
   and a row-only suite evidence pass is anchored at
   `target/fret-diag-toggle-group-disabled-item-suite-glob-v1/sessions/1779376207964-79492/suite.summary.json`.
+
+- Menubar disabled item action-state update:
+  `ui-gallery-menubar-disabled-item-action-state.json` now covers the shadcn Menubar path where
+  separators, submenu triggers, disabled command items, collection metadata, and vertical roving
+  focus interact. The gate starts on the Menubar page's `Demo` section, proves the disabled
+  `New Incognito Window` item exports `disabled=true`, `focus=false`, and `invoke=false`, verifies
+  direct disabled click cannot dispatch its command, and proves ArrowDown skips the disabled item
+  while preserving focus/action semantics on the enabled row. This slice closes a Menubar
+  collection-index roving bug and a `fret-ui` current-programmatic-focus semantics bug. Focused
+  runtime evidence is anchored at
+  `target/fret-diag-menubar-disabled-item-action-state-v5/sessions/1779383380213-231888/1779383395682/ai.packet`,
+  and dedicated suite evidence is anchored at
+  `target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json`.

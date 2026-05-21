@@ -1755,6 +1755,26 @@ fn menubar_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn menubar_demo_disabled_item_keeps_command_and_item_action_state_on_same_control() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/menubar/demo.rs",
+        &[
+            "const CMD_MENU_MENUBAR_NEW_INCOGNITO: &str = \"ui_gallery.menu.menubar.new_incognito\";",
+            "MenubarItem::new(\"New Incognito Window\")",
+            ".action(CommandId::new(CMD_MENU_MENUBAR_NEW_INCOGNITO))",
+            ".disabled(true)",
+            ".test_id(\"ui-gallery-menubar-demo-new-incognito-window\")",
+            ".test_id(\"ui-gallery-menubar-demo-share\")",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("cx.interactivity_gate(true,false"),
+        "src/ui/snippets/menubar/demo.rs should rely on MenubarItem::disabled(true), not a gallery-local interactivity gate"
+    );
+}
+
+#[test]
 fn menubar_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/menubar.rs",

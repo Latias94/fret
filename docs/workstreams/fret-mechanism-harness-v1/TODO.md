@@ -1683,8 +1683,22 @@ date: 2026-05-12
     and a row-only diagnostics suite run passed with summary
     `target/fret-diag-toggle-group-disabled-item-suite-glob-v1/sessions/1779376207964-79492/suite.summary.json`.
 
+- [x] Add a Menubar disabled-item action-state and roving-focus runtime gate.
+  - Result:
+    `ui-gallery-menubar-disabled-item-action-state.json` now starts on the Menubar page's `Demo`
+    section, proves the disabled `New Incognito Window` item carries a real command but exports
+    `role=menu_item`, `disabled=true`, `focus=false`, and `invoke=false`, verifies direct click does
+    not dispatch the command or update the status bar, then proves keyboard roving focus skips that
+    disabled item and lands on the enabled `Share` item. The slice found and fixed two real gaps:
+    Menubar content/submenu rows compared the roving active item index against flattened entry
+    indices that included separators/labels, and `fret-ui` Pressable semantics dropped the
+    `focus` action from the current programmatic roving focus target when it was outside default tab
+    order. Focused runtime passed with run id `1779383395682`; the new
+    `ui-gallery-menubar-semantics` suite passed 1/1 with summary
+    `target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json`.
+
 Next slice recommendation:
 
-- Continue the action-state axis into Menu/Command disabled items where collection metadata,
-  active-descendant or roving-focus policy, disabled semantics, and invoke suppression can drift
-  independently under dynamic state.
+- Continue the action-state axis into ContextMenu disabled command items or Command disabled items,
+  where collection metadata, active-descendant or roving-focus policy, disabled semantics, and
+  invoke suppression can drift independently under dynamic state.
