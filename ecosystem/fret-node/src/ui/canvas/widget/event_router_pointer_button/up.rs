@@ -1,12 +1,16 @@
 use super::*;
 
-pub(super) fn route_pointer_up_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn route_pointer_up_event<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     event: &Event,
     snapshot: &ViewSnapshot,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: super::super::event_pointer_up::PointerUpRouteCx<H, M>,
+{
     let Event::Pointer(fret_core::PointerEvent::Up {
         position,
         button,

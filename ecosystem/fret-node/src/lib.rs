@@ -184,6 +184,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/event_pointer_up.rs");
     const UI_CANVAS_WIDGET_EVENT_POINTER_UP_DISPATCH_RS: &str =
         include_str!("ui/canvas/widget/event_pointer_up/dispatch.rs");
+    const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_UP_RS: &str =
+        include_str!("ui/canvas/widget/event_router_pointer_button/up.rs");
     const UI_CANVAS_WIDGET_CANCEL_CLEANUP_RS: &str =
         include_str!("ui/canvas/widget/cancel_cleanup.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_PICKER_RS: &str =
@@ -965,6 +967,22 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_EVENT_POINTER_UP_RS.contains(forbidden),
                 "pointer-up event entry must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_up_button_router_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_UP_RS.contains(forbidden),
+                "pointer-up button router must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }
