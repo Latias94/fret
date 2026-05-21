@@ -7,7 +7,9 @@ use super::math;
 use crate::ui::canvas::geometry::node_rect_origin_from_anchor;
 use crate::ui::canvas::geometry::{node_ports, node_size_default_px};
 use crate::ui::canvas::state::ViewSnapshot;
-use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use crate::ui::canvas::widget::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, node_resize_move_cx::NodeResizeMoveCx,
+};
 
 fn resolve_min_size_px<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -31,21 +33,25 @@ fn resolve_min_size_px<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 }
 
-pub(in super::super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(in super::super) fn handle_node_resize_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: Modifiers,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: NodeResizeMoveCx<H>,
+{
     let Some(mut resize) = canvas.interaction.node_resize.clone() else {
         return false;
     };
 
     let constraints = canvas
         .graph
-        .read_ref(cx.app, |graph| {
+        .read_ref(cx.host(), |graph| {
             canvas
                 .presenter
                 .node_resize_constraints_px(graph, resize.node, &canvas.style)
@@ -56,7 +62,7 @@ pub(in super::super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMid
 
     let min_size_px = resolve_min_size_px(
         canvas,
-        cx.app,
+        cx.host(),
         resize.node,
         constraints.min_size_px.unwrap_or((0.0, 0.0)),
     );
@@ -67,7 +73,7 @@ pub(in super::super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMid
 
     let max_bounds_canvas = canvas
         .graph
-        .read_ref(cx.app, |g| {
+        .read_ref(cx.host(), |g| {
             let mut bound = snapshot.interaction.node_extent;
             let Some(node) = g.nodes.get(&resize.node) else {
                 return bound;
@@ -126,7 +132,7 @@ pub(in super::super) fn handle_node_resize_move<H: UiHost, M: NodeGraphCanvasMid
     let current_size_opt = Some(new_size_px);
     let current_groups: Vec<(crate::core::GroupId, CanvasRect)> = canvas
         .graph
-        .read_ref(cx.app, |g| {
+        .read_ref(cx.host(), |g| {
             let Some(node) = g.nodes.get(&resize.node) else {
                 return Vec::new();
             };

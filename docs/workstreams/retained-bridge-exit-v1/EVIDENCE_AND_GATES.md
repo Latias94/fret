@@ -10243,3 +10243,74 @@ Broader gates not run:
   - Reason: `RBX-M2-790` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-800 pointer-move secondary node retained Cx isolation
+
+Claim verified:
+
+- `pointer_move_dispatch/secondary/node.rs` no longer imports or names retained bridge Cx types.
+- Node drag move handling now uses `NodeDragMoveCx`, composed from the existing node drag geometry,
+  preview, and move-tail capabilities plus bounds access.
+- Node resize move handling now uses `NodeResizeMoveCx` for host access and paint invalidation.
+- Retained `EventCx` adaptation is isolated in `node_drag_move_retained_cx.rs` and
+  `node_resize_move_retained_cx.rs`.
+- Secondary connection/insert pointer-move routing remains retained-bound for later isolation
+  slices.
+- Node drag move and node resize behavior remain green through the retained compatibility island.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/node_drag_move_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/node_drag_move_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/node_resize/move_update.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/node_resize_move_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/node_resize_move_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/node.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving the secondary node
+    pointer-move route behind `NodeDragMoveCx + NodeResizeMoveCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_secondary_node_route_stays_off_retained_bridge) | test(node_drag_move_handlers_stay_off_retained_bridge) | test(node_resize_move_handlers_stay_off_retained_bridge) | test(node_drag_move_emits_on_node_drag) | test(node_drag_respects_per_node_extent_rect) | test(group_resize_is_previewed_and_committed_on_pointer_up) | test(node_resize_expands_group_when_expand_parent_is_true) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 8 tests.
+  - Scope proven: source-policy locks the secondary node pointer-move route, node drag move
+    handlers, and node resize move handlers off retained bridge Cx names; real node drag move and
+    node resize behavior remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/node.rs ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs ecosystem/fret-node/src/ui/canvas/widget/node_drag_move_cx.rs ecosystem/fret-node/src/ui/canvas/widget/node_resize/move_update.rs ecosystem/fret-node/src/ui/canvas/widget/node_resize_move_cx.rs`
+  - Result: no matches.
+  - Scope proven: the migrated secondary node route and called node drag/resize move helpers no
+    longer depend on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after the secondary node pointer-move
+    route seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after isolating
+    the secondary node pointer-move route.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after the user's pull and this
+    slice's updates.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-800` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.

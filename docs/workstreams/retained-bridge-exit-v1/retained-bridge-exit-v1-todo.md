@@ -4093,6 +4093,44 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-800 Isolate pointer-move secondary node retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_move_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/node_drag_move_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/node_resize/move_update.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/node_resize_move_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/node_resize_move_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/node.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the secondary node pointer-move route off direct retained bridge Cx names by introducing
+      narrow node drag and node resize move capabilities.
+    - Keep retained `EventCx` adaptation isolated in `node_drag_move_retained_cx.rs` and
+      `node_resize_move_retained_cx.rs`.
+    - Leave secondary connection/insert routing as later isolation slices because those branches
+      still have retained-bound leaf helpers.
+    - Prove node drag move and node resize move behavior remain green through the retained
+      compatibility island.
+  - Result:
+    - Added `NodeDragMoveCx` as a composition of node drag geometry, preview, and move-tail
+      capabilities plus bounds access.
+    - Added `NodeResizeMoveCx` for host access plus paint invalidation.
+    - `node_drag::handle_node_drag_move(...)`, `node_resize::handle_node_resize_move(...)`, and
+      `pointer_move_dispatch/secondary/node.rs` now accept retained-agnostic capabilities instead
+      of naming retained `EventCx`.
+    - Added source-policy coverage for node drag move handlers, node resize move handlers, and the
+      secondary node pointer-move route.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_secondary_node_route_stays_off_retained_bridge) | test(node_drag_move_handlers_stay_off_retained_bridge) | test(node_resize_move_handlers_stay_off_retained_bridge) | test(node_drag_move_emits_on_node_drag) | test(node_drag_respects_per_node_extent_rect) | test(group_resize_is_previewed_and_committed_on_pointer_up) | test(node_resize_expands_group_when_expand_parent_is_true) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/node.rs ecosystem/fret-node/src/ui/canvas/widget/node_drag.rs ecosystem/fret-node/src/ui/canvas/widget/node_drag_move_cx.rs ecosystem/fret-node/src/ui/canvas/widget/node_resize/move_update.rs ecosystem/fret-node/src/ui/canvas/widget/node_resize_move_cx.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

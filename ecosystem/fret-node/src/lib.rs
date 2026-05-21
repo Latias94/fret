@@ -216,6 +216,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_move_dispatch/primary/node.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_CONNECTION_RS: &str =
         include_str!("ui/canvas/widget/pointer_move_dispatch/primary/connection.rs");
+    const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_SECONDARY_NODE_RS: &str =
+        include_str!("ui/canvas/widget/pointer_move_dispatch/secondary/node.rs");
     const UI_CANVAS_WIDGET_CANCEL_CLEANUP_RS: &str =
         include_str!("ui/canvas/widget/cancel_cleanup.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_PICKER_RS: &str =
@@ -238,6 +240,9 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/node_drag_geometry_cx.rs");
     const UI_CANVAS_WIDGET_NODE_DRAG_SNAP_RS: &str =
         include_str!("ui/canvas/widget/node_drag_snap.rs");
+    const UI_CANVAS_WIDGET_NODE_DRAG_RS: &str = include_str!("ui/canvas/widget/node_drag.rs");
+    const UI_CANVAS_WIDGET_NODE_DRAG_MOVE_CX_RS: &str =
+        include_str!("ui/canvas/widget/node_drag_move_cx.rs");
     const UI_CANVAS_WIDGET_NODE_DRAG_TAIL_RS: &str =
         include_str!("ui/canvas/widget/node_drag/tail.rs");
     const UI_CANVAS_WIDGET_NODE_DRAG_MOVE_TAIL_CX_RS: &str =
@@ -248,6 +253,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/node_drag_preview/compute.rs");
     const UI_CANVAS_WIDGET_NODE_DRAG_PREVIEW_CX_RS: &str =
         include_str!("ui/canvas/widget/node_drag_preview_cx.rs");
+    const UI_CANVAS_WIDGET_NODE_RESIZE_MOVE_RS: &str =
+        include_str!("ui/canvas/widget/node_resize/move_update.rs");
+    const UI_CANVAS_WIDGET_NODE_RESIZE_MOVE_CX_RS: &str =
+        include_str!("ui/canvas/widget/node_resize_move_cx.rs");
     const UI_CANVAS_WIDGET_PENDING_GROUP_DRAG_RS: &str =
         include_str!("ui/canvas/widget/pending_group_drag.rs");
     const UI_CANVAS_WIDGET_PENDING_GROUP_RESIZE_RS: &str =
@@ -647,6 +656,59 @@ mod surface_policy_tests {
             assert!(
                 !edge_insert_move_sources.contains(forbidden),
                 "edge insert move handlers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn node_drag_move_handlers_stay_off_retained_bridge() {
+        let node_drag_move_sources = [
+            UI_CANVAS_WIDGET_NODE_DRAG_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_MOVE_CX_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_TAIL_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_MOVE_TAIL_CX_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_CONSTRAINTS_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_CONSTRAINTS_EXTENT_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_GEOMETRY_CX_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_SNAP_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_PREVIEW_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_PREVIEW_COMPUTE_RS,
+            UI_CANVAS_WIDGET_NODE_DRAG_PREVIEW_CX_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !node_drag_move_sources.contains(forbidden),
+                "node drag move handlers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn node_resize_move_handlers_stay_off_retained_bridge() {
+        let node_resize_move_sources = [
+            UI_CANVAS_WIDGET_NODE_RESIZE_MOVE_RS,
+            UI_CANVAS_WIDGET_NODE_RESIZE_MOVE_CX_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !node_resize_move_sources.contains(forbidden),
+                "node resize move handlers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }
@@ -1457,6 +1519,22 @@ mod surface_policy_tests {
             assert!(
                 !primary_route_sources.contains(forbidden),
                 "pointer-move primary route wrapper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_move_secondary_node_route_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_SECONDARY_NODE_RS.contains(forbidden),
+                "pointer-move secondary node route must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

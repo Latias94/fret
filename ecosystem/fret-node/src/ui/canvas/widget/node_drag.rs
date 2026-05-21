@@ -6,23 +6,27 @@ use fret_ui::UiHost;
 
 use super::{
     NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot, node_drag_constraints,
-    node_drag_preview, node_drag_snap,
+    node_drag_move_cx::NodeDragMoveCx, node_drag_preview, node_drag_snap,
 };
 
-pub(super) fn handle_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_node_drag_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: fret_core::Point,
     modifiers: Modifiers,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: NodeDragMoveCx<H>,
+{
     let Some(mut drag) = canvas.interaction.node_drag.clone() else {
         return false;
     };
     let multi_drag = drag.nodes.len() > 1;
 
-    let auto_pan_delta = delta::auto_pan_delta::<M>(snapshot, position, cx.bounds);
+    let auto_pan_delta = delta::auto_pan_delta::<M>(snapshot, position, cx.bounds());
     let mut delta = delta::planned_drag_delta::<M>(snapshot, &drag, position, auto_pan_delta);
 
     delta = node_drag_snap::apply_snaplines_delta(
