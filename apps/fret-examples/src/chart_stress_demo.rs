@@ -5,18 +5,17 @@ use fret_launch::{
     FnDriver, WindowCreateSpec, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
 };
-use fret_runtime::PlatformCapabilities;
+use fret_runtime::{Model, PlatformCapabilities};
 use fret_ui::UiTree;
 
 use delinea::data::{Column, DataTable};
 use delinea::ids::{AxisId, DatasetId, FieldId, GridId, SeriesId};
 use delinea::{
-    AxisKind, AxisPointerTrigger, AxisPointerType, AxisRange, AxisScale, ChartSpec, DatasetSpec,
-    FieldSpec,
+    AxisKind, AxisPointerTrigger, AxisPointerType, AxisRange, AxisScale, ChartEngine, ChartSpec,
+    DatasetSpec, FieldSpec,
 };
 use delinea::{SeriesEncode, SeriesKind, SeriesLodSpecV1, SeriesSpec};
-use fret_chart::retained::ChartCanvas;
-use fret_ui::retained_bridge::{CommandCx, EventCx, LayoutCx, PaintCx, SemanticsCx, Widget};
+use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
 use std::time::{Duration, Instant};
 
 fn parse_env_usize(key: &str) -> Option<usize> {
@@ -45,106 +44,11 @@ fn parse_env_tri_bool(key: &str) -> Option<bool> {
     }
 }
 
-struct ChartStressCanvas {
-    points: usize,
-    canvas: ChartCanvas,
-    last_report: Option<Instant>,
-    paint_time_accum: Duration,
-    paint_frames_accum: u64,
-}
-
-impl ChartStressCanvas {
-    fn new(points: usize, canvas: ChartCanvas) -> Self {
-        Self {
-            points,
-            canvas,
-            last_report: None,
-            paint_time_accum: Duration::ZERO,
-            paint_frames_accum: 0,
-        }
-    }
-
-    fn create_node<H: fret_ui::UiHost>(
-        ui: &mut fret_ui::UiTree<H>,
-        widget: Self,
-    ) -> fret_core::NodeId {
-        use fret_ui::retained_bridge::UiTreeRetainedExt as _;
-        ui.create_node_retained(widget)
-    }
-}
-
-impl<H: fret_ui::UiHost> Widget<H> for ChartStressCanvas {
-    fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
-        <ChartCanvas as Widget<H>>::event(&mut self.canvas, cx, event);
-    }
-
-    fn command(&mut self, cx: &mut CommandCx<'_, H>, command: &fret_runtime::CommandId) -> bool {
-        <ChartCanvas as Widget<H>>::command(&mut self.canvas, cx, command)
-    }
-
-    fn cleanup_resources(&mut self, services: &mut dyn fret_core::UiServices) {
-        <ChartCanvas as Widget<H>>::cleanup_resources(&mut self.canvas, services);
-    }
-
-    fn render_transform(&self, bounds: fret_core::Rect) -> Option<fret_core::Transform2D> {
-        <ChartCanvas as Widget<H>>::render_transform(&self.canvas, bounds)
-    }
-
-    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> fret_core::Size {
-        <ChartCanvas as Widget<H>>::layout(&mut self.canvas, cx)
-    }
-
-    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        if self.last_report.is_none() {
-            self.last_report = Some(Instant::now());
-        }
-
-        let start = Instant::now();
-        <ChartCanvas as Widget<H>>::paint(&mut self.canvas, cx);
-        let elapsed = start.elapsed();
-
-        self.paint_time_accum += elapsed;
-        self.paint_frames_accum = self.paint_frames_accum.saturating_add(1);
-
-        let stats = self.canvas.engine().stats().clone();
-        if let Some(last) = self.last_report
-            && last.elapsed() >= Duration::from_secs(1)
-        {
-            let avg_us = if self.paint_frames_accum == 0 {
-                0.0
-            } else {
-                self.paint_time_accum.as_secs_f64() * 1_000_000.0 / self.paint_frames_accum as f64
-            };
-
-            println!(
-                "chart_stress_demo: points={} avg_canvas_paint={:.1}us stage_runs(data/layout/visual/marks)={}/{}/{}/{} emitted(points/marks)={}/{}",
-                self.points,
-                avg_us,
-                stats.stage_data_runs,
-                stats.stage_layout_runs,
-                stats.stage_visual_runs,
-                stats.stage_marks_runs,
-                stats.points_emitted,
-                stats.marks_emitted
-            );
-
-            self.last_report = Some(Instant::now());
-            self.paint_time_accum = Duration::ZERO;
-            self.paint_frames_accum = 0;
-        }
-
-        // Keep the widget painting even when paint caching would otherwise replay.
-        cx.request_animation_frame();
-    }
-
-    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
-        <ChartCanvas as Widget<H>>::semantics(&mut self.canvas, cx);
-    }
-}
-
 pub struct ChartStressWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
+    engine: Model<ChartEngine>,
+    spec: ChartSpec,
     frame: u64,
     max_frames: Option<u64>,
     last_driver_report: Option<Instant>,
@@ -178,7 +82,10 @@ impl ChartStressDriver {
         println!("  Esc: close");
     }
 
-    fn build_canvas(points: usize, scatter_lod: Option<SeriesLodSpecV1>) -> ChartCanvas {
+    fn build_chart(
+        points: usize,
+        scatter_lod: Option<SeriesLodSpecV1>,
+    ) -> (ChartEngine, ChartSpec) {
         let dataset_id = DatasetId::new(1);
         let grid_id = GridId::new(1);
         let x_axis = AxisId::new(1);
@@ -282,7 +189,7 @@ impl ChartStressDriver {
             ],
         };
 
-        let mut canvas = ChartCanvas::new(spec).expect("chart spec should be valid");
+        let mut engine = ChartEngine::new(spec.clone()).expect("chart spec should be valid");
 
         let n = points.max(1);
         let mut x: Vec<f64> = Vec::with_capacity(n);
@@ -313,9 +220,9 @@ impl ChartStressDriver {
         table.push_column(Column::F64(x));
         table.push_column(Column::F64(y_line));
         table.push_column(Column::F64(y_scatter));
-        canvas.engine_mut().datasets_mut().insert(dataset_id, table);
+        engine.datasets_mut().insert(dataset_id, table);
 
-        canvas
+        (engine, spec)
     }
 
     fn parse_scatter_lod() -> Option<SeriesLodSpecV1> {
@@ -560,15 +467,20 @@ impl ChartStressDriver {
 
 fn create_window_state(
     driver: &mut ChartStressDriver,
-    _app: &mut App,
+    app: &mut App,
     window: AppWindowId,
 ) -> ChartStressWindowState {
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
 
+    let (engine, spec) = ChartStressDriver::build_chart(driver.points, driver.scatter_lod);
+    let engine = app.models_mut().insert(engine);
+
     ChartStressWindowState {
         ui,
         root: None,
+        engine,
+        spec,
         frame: 0,
         max_frames: driver.max_frames,
         last_driver_report: None,
@@ -663,15 +575,25 @@ fn render(driver: &mut ChartStressDriver, context: WinitRenderContext<'_, ChartS
         state.last_driver_report = Some(Instant::now());
     }
 
-    let root = state.root.get_or_insert_with(|| {
-        let canvas = ChartStressDriver::build_canvas(driver.points, driver.scatter_lod);
-        let widget = ChartStressCanvas::new(driver.points, canvas);
-        let node = ChartStressCanvas::create_node(&mut state.ui, widget);
-        state.ui.set_root(node);
-        node
-    });
+    let engine = state.engine.clone();
+    let spec = state.spec.clone();
+    let root = fret_ui::declarative::render_root(
+        &mut state.ui,
+        app,
+        services,
+        window,
+        bounds,
+        "chart-stress-demo-root",
+        move |cx| {
+            cx.observe_model(&engine, fret_ui::Invalidation::Paint);
+            let mut props = ChartCanvasPanelProps::new(spec);
+            props.engine = Some(engine);
+            vec![chart_canvas_panel(cx, props)]
+        },
+    );
+    state.root = Some(root);
 
-    state.ui.set_root(*root);
+    state.ui.set_root(root);
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
 
@@ -694,9 +616,21 @@ fn render(driver: &mut ChartStressDriver, context: WinitRenderContext<'_, ChartS
             state.driver_time_accum.as_secs_f64() * 1_000_000.0 / state.driver_frames_accum as f64
         };
 
+        let stats = state
+            .engine
+            .read(app, |_app, engine| engine.stats().clone())
+            .unwrap_or_default();
+
         println!(
-            "chart_stress_demo: frames={} avg_driver_render={:.1}us",
-            state.frame, avg_us
+            "chart_stress_demo: points={} avg_declarative_render={:.1}us stage_runs(data/layout/visual/marks)={}/{}/{}/{} emitted(points/marks)={}/{}",
+            driver.points,
+            avg_us,
+            stats.stage_data_runs,
+            stats.stage_layout_runs,
+            stats.stage_visual_runs,
+            stats.stage_marks_runs,
+            stats.points_emitted,
+            stats.marks_emitted
         );
 
         state.last_driver_report = Some(Instant::now());

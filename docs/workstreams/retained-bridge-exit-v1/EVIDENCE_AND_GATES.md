@@ -11827,3 +11827,70 @@ Broader gates not run:
   - Reason: `RBX-M3-080` is a targeted first-party chart demo consumer migration. The three-demo
     compile gate, source-policy test, full `fret-chart` package gate, formatting, layering,
     catalog, whitespace, merge-marker, and retained-marker scans cover the changed surface.
+
+## 2026-05-22 - RBX-M3-090 Chart stress demo uses declarative panel
+
+Claim verified:
+
+- `chart_stress_demo` no longer constructs retained `ChartCanvas` widgets or retains a
+  `ChartStressCanvas` wrapper.
+- The stress demo now seeds `(ChartEngine, ChartSpec)`, stores the engine as a
+  `Model<ChartEngine>`, and renders through `fret_ui::declarative::render_root(...)` plus
+  `ChartCanvasPanelProps` + `chart_canvas_panel(...)`.
+- LOD/progressive data seeding, continuous redraw, and periodic delinea stage/emitted stats
+  reporting are preserved on the same engine model that the declarative chart panel renders.
+
+Evidence:
+
+- `apps/fret-examples/src/chart_stress_demo.rs`
+- `apps/fret-examples/tests/basic_chart_demos_surface.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-examples chart_stress_demo_uses_declarative_canvas_panel`
+  - Result: failed first as expected when the new source-policy test proved the stress demo still
+    used retained `ChartCanvas`; passed after the migration.
+  - Scope proven: the test acted as the red/green gate for replacing retained stress chart
+    authoring with the declarative chart panel.
+- `cargo check -p fret-demo --bin chart_stress_demo`
+  - Result: passed.
+  - Scope proven: the native stress demo compiles after removing the retained wrapper and moving
+    chart state into a `Model<ChartEngine>`.
+- `cargo nextest run -p fret-examples -E 'test(basic_chart_demos_use_declarative_canvas_panel) | test(chart_stress_demo_uses_declarative_canvas_panel)'`
+  - Result: passed, 2 tests.
+  - Scope proven: both basic chart demo and stress demo source-policy gates pass together after
+    the stress migration.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 43 tests, with the pre-existing `fret-ui`
+    `current_effective_opacity` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility baselines and retained chart
+    output/linking/tooltip/accessibility oracle tests remain green after migrating the stress demo
+    consumer.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the stress demo migration and source-policy test
+    extension.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid; `fret-chart`
+    intentionally remains on the retained bridge allowlist while remaining retained chart surfaces
+    are migrated.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "use fret_chart::retained::ChartCanvas|ChartStressCanvas|impl<.*Widget.*ChartStressCanvas|fret_ui::retained_bridge|ChartCanvas::new\\(|ChartCanvas::create_node|create_node_retained|avg_canvas_paint" apps/fret-examples/src/chart_stress_demo.rs`
+  - Result: no matches.
+  - Scope proven: the migrated stress demo source no longer contains retained chart widget
+    authoring markers or the deleted retained-wrapper paint metric.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-090` is a targeted first-party chart stress demo consumer migration. The
+    stress demo compile gate, source-policy red/green gate, full `fret-chart` package gate,
+    formatting, layering, catalog, whitespace, and retained-marker scans cover the changed surface.

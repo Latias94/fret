@@ -272,6 +272,12 @@ demo now seeds a `ChartEngine`, stores it as a `Model<ChartEngine>`, keeps the o
 in window state, and mounts the chart through `fret_ui::declarative::render_root(...)` plus
 `ChartCanvasPanelProps` + `chart_canvas_panel(...)`. A `fret-examples` source-policy test now
 requires those declarative markers and rejects retained `ChartCanvas` authoring in the three demos.
+`RBX-M3-090` then migrated `chart_stress_demo` off its retained `ChartStressCanvas` wrapper and
+retained `ChartCanvas` node creation. The demo now seeds `(ChartEngine, ChartSpec)`, stores the
+engine in a `Model<ChartEngine>`, renders through the declarative chart panel, and keeps periodic
+LOD/progressive stage/emitted stats reporting by reading the same live engine model that the panel
+renders. The source-policy test rejects the deleted wrapper, retained chart node creation, and old
+`avg_canvas_paint` metric.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, multi-grid

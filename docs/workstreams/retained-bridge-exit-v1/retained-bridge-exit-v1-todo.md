@@ -4810,6 +4810,33 @@ Related plan:
       invalidation before constructing `ChartCanvasPanelProps`.
     - A source-policy test requires the declarative chart panel markers and rejects retained
       `ChartCanvas` widget authoring markers in these demos.
+- [x] RBX-M3-090 Migrate `chart_stress_demo` off retained `ChartCanvas`.
+  - Scope:
+    - `apps/fret-examples/src/chart_stress_demo.rs`
+    - `apps/fret-examples/tests/basic_chart_demos_surface.rs`
+  - Goal:
+    - Remove the retained `ChartStressCanvas` wrapper and retained `ChartCanvas` node creation from
+      the stress demo.
+    - Preserve seeded LOD/progressive stress data, continuous redraw, and periodic delinea engine
+      stats reporting while mounting through `ChartCanvasPanelProps` + `chart_canvas_panel(...)`.
+  - Validation:
+    - `cargo check -p fret-demo --bin chart_stress_demo`
+    - `cargo nextest run -p fret-examples -E 'test(basic_chart_demos_use_declarative_canvas_panel) | test(chart_stress_demo_uses_declarative_canvas_panel)'`
+    - `cargo nextest run -p fret-chart`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+  - Evidence:
+    - `apps/fret-examples/src/chart_stress_demo.rs`
+    - `apps/fret-examples/tests/basic_chart_demos_surface.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-090-chart-stress-demo-uses-declarative-panel`
+  - Result:
+    - The stress demo now seeds `(ChartEngine, ChartSpec)`, stores the engine as a
+      `Model<ChartEngine>`, and renders the chart via `fret_ui::declarative::render_root(...)`.
+    - The retained wrapper's delinea stage/emitted stats report is preserved as a declarative
+      render report read from the same live engine model.
+    - A source-policy test rejects the deleted retained stress wrapper, retained chart node
+      creation, and old `avg_canvas_paint` metric.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.
