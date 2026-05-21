@@ -15,6 +15,8 @@ pub(super) fn apply_viewport_zoom<M: NodeGraphCanvasMiddleware>(
     });
 }
 
-pub(super) fn finish_viewport_zoom<H: UiHost>(cx: &mut EventCx<'_, H>) {
+pub(super) fn finish_viewport_zoom<H: UiHost>(
+    cx: &mut impl super::super::widget_tail::WidgetPaintInvalidationCx<H>,
+) {
     super::super::paint_invalidation::invalidate_paint(cx);
 }

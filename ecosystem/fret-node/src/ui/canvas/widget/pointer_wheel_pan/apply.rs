@@ -2,14 +2,18 @@ use crate::ui::canvas::widget::*;
 
 use super::resolve::ResolvedScrollPan;
 
-pub(super) fn apply_scroll_pan<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn apply_scroll_pan<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     resolved: ResolvedScrollPan,
-) {
-    canvas.bump_viewport_move_debounce(cx.app, cx.window, snapshot, ViewportMoveKind::PanScroll);
-    canvas.update_view_state(cx.app, |state| {
+) where
+    M: NodeGraphCanvasMiddleware,
+    Cx: viewport_motion_cx::ViewportMotionCx<H>,
+{
+    let window = cx.window();
+    canvas.bump_viewport_move_debounce(cx.host(), window, snapshot, ViewportMoveKind::PanScroll);
+    canvas.update_view_state(cx.host(), |state| {
         state.pan.x += resolved.dx * resolved.speed;
         state.pan.y += resolved.dy * resolved.speed;
     });

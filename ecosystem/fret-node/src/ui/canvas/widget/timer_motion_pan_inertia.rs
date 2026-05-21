@@ -4,12 +4,16 @@ mod guards;
 use super::timer_motion_shared::invalidate_motion;
 use super::*;
 
-pub(super) fn handle_pan_inertia_tick<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_pan_inertia_tick<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     token: fret_core::TimerToken,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: viewport_motion_cx::ViewportMotionCx<H>,
+{
     if !canvas
         .interaction
         .pan_inertia
@@ -29,17 +33,17 @@ pub(super) fn handle_pan_inertia_tick<H: UiHost, M: NodeGraphCanvasMiddleware>(
     let timer = inertia.timer;
 
     let end_move = if guards::should_stop_pan_inertia(canvas, &tuning, zoom) {
-        cx.app.push_effect(Effect::CancelTimer { token: timer });
+        cx.host().push_effect(Effect::CancelTimer { token: timer });
         true
     } else if advance::advance_pan_inertia_frame(
         canvas,
-        cx.app,
+        cx.host(),
         before,
         zoom,
         &tuning,
         &mut inertia,
     ) {
-        cx.app.push_effect(Effect::CancelTimer { token: timer });
+        cx.host().push_effect(Effect::CancelTimer { token: timer });
         true
     } else {
         canvas.interaction.pan_inertia = Some(inertia);
@@ -48,7 +52,7 @@ pub(super) fn handle_pan_inertia_tick<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
     invalidate_motion(cx);
     if end_move {
-        let snapshot = canvas.sync_view_state(cx.app);
+        let snapshot = canvas.sync_view_state(cx.host());
         canvas.emit_move_end(
             &snapshot,
             ViewportMoveKind::PanInertia,

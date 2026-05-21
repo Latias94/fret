@@ -5,18 +5,26 @@ use fret_ui::UiHost;
 
 use super::*;
 
-pub(super) fn handle_viewport_animation_tick<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_viewport_animation_tick<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     token: fret_core::TimerToken,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: viewport_motion_cx::ViewportMotionCx<H>,
+{
     animation::handle_viewport_animation_tick(canvas, cx, token)
 }
 
-pub(super) fn handle_viewport_move_debounce<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_viewport_move_debounce<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     token: fret_core::TimerToken,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: viewport_motion_cx::ViewportMotionCx<H>,
+{
     debounce::handle_viewport_move_debounce(canvas, cx, token)
 }

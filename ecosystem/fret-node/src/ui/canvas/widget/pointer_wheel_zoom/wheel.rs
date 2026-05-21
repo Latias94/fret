@@ -2,15 +2,19 @@ use crate::ui::canvas::widget::*;
 
 use super::apply;
 
-pub(super) fn handle_scroll_zoom<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_scroll_zoom<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     delta: Point,
     modifiers: fret_core::Modifiers,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: viewport_motion_cx::ViewportMotionCx<H>,
+{
     let zoom_active = snapshot
         .interaction
         .zoom_activation_key
@@ -19,7 +23,8 @@ pub(super) fn handle_scroll_zoom<H: UiHost, M: NodeGraphCanvasMiddleware>(
         return false;
     }
 
-    canvas.bump_viewport_move_debounce(cx.app, cx.window, snapshot, ViewportMoveKind::ZoomWheel);
+    let window = cx.window();
+    canvas.bump_viewport_move_debounce(cx.host(), window, snapshot, ViewportMoveKind::ZoomWheel);
     let speed = snapshot.interaction.zoom_on_scroll_speed.max(0.0);
     let delta_screen_y = delta.y.0 * zoom;
     let factor = fret_canvas::view::wheel_zoom_factor(
@@ -29,7 +34,7 @@ pub(super) fn handle_scroll_zoom<H: UiHost, M: NodeGraphCanvasMiddleware>(
         speed,
     )
     .unwrap_or(1.0);
-    apply::apply_viewport_zoom(canvas, cx.app, position, factor);
+    apply::apply_viewport_zoom(canvas, cx.host(), position, factor);
     apply::finish_viewport_zoom(cx);
     true
 }

@@ -4,11 +4,15 @@ use crate::ui::canvas::widget::*;
 
 use super::super::timer_motion_shared::invalidate_motion;
 
-pub(super) fn handle_viewport_animation_tick<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_viewport_animation_tick<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     token: fret_core::TimerToken,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: viewport_motion_cx::ViewportMotionCx<H>,
+{
     if !canvas
         .interaction
         .viewport_animation
@@ -23,7 +27,7 @@ pub(super) fn handle_viewport_animation_tick<H: UiHost, M: NodeGraphCanvasMiddle
     };
 
     if animation.duration.is_zero() {
-        cx.app.push_effect(Effect::CancelTimer {
+        cx.host().push_effect(Effect::CancelTimer {
             token: animation.timer,
         });
         return true;
@@ -31,13 +35,13 @@ pub(super) fn handle_viewport_animation_tick<H: UiHost, M: NodeGraphCanvasMiddle
 
     let (pan, zoom, done) = sample_animation_frame::<M>(&mut animation);
 
-    canvas.update_view_state(cx.app, |state| {
+    canvas.update_view_state(cx.host(), |state| {
         state.pan = pan;
         state.zoom = zoom;
     });
 
     if done {
-        cx.app.push_effect(Effect::CancelTimer {
+        cx.host().push_effect(Effect::CancelTimer {
             token: animation.timer,
         });
     } else {

@@ -11111,3 +11111,88 @@ Broader gates not run:
   - Reason: `RBX-M2-920` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks should cover the changed surface.
+
+## 2026-05-22 - RBX-M2-930 pointer-wheel and timer-motion retained Cx isolation
+
+Claim verified:
+
+- Pointer-wheel and timer-motion route helpers now use retained-agnostic seams instead of naming
+  retained bridge Cx types directly.
+- `EventCx` adaptation for the wheel platform seam is isolated in `pointer_wheel_retained_cx.rs`.
+- Existing wheel zoom/pan, viewport animation, auto-pan, and timer-motion behavior still passes on
+  the retained compatibility path.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel_route.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_motion.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan/apply.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/apply.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/pinch.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/wheel.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_auto_pan.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_auto_pan/dispatch.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_pan_inertia.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport/animation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport/debounce.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/viewport_motion_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/callbacks_conformance.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/pointer_move_timer_conformance.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/viewport_animation_conformance.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the default declarative `fret-node` surface still compiles after the wheel/timer
+    motion seam extraction.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after the wheel/timer motion
+    seam extraction.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_wheel_route_stays_off_retained_bridge) | test(timer_motion_route_stays_off_retained_bridge) | test(wheel_zoom_emits_move_start_and_debounced_move_end) | test(pinch_zoom_emits_move_start_and_debounced_move_end) | test(wheel_pan_emits_move_start_and_debounced_move_end) | test(wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom) | test(frame_view_animates_over_timer_ticks_and_reaches_target) | test(pointer_move_auto_pan_timer_starts_for_node_drag_near_viewport_edge) | test(pinch_gesture_zooms_in_about_pointer) | test(wheel_zoom_zooms_about_pointer) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 11 tests.
+  - Scope proven: source-policy coverage keeps wheel/timer helper files off retained bridge Cx
+    names, and the wheel/timer behavior matrix remains green on the retained compatibility path.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after the wheel/timer motion seam
+    extraction.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after the
+    wheel/timer motion seam extraction.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-930` is another narrow adapter-boundary slice in `fret-node`'s retained
+    canvas widget. The compat compile gate, targeted compat nextest gate, source-policy scan,
+    formatting, layering, catalog, whitespace, and merge-marker checks cover the changed surface.

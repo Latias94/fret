@@ -4467,6 +4467,64 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-930 Isolate pointer-wheel and timer-motion retained Cx routes.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel_route.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_motion.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan/apply.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/apply.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/pinch.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/wheel.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_auto_pan.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_auto_pan/dispatch.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_pan_inertia.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport/animation.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport/debounce.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/viewport_motion_cx.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the pointer-wheel and timer-motion route wrappers off direct retained bridge Cx names.
+    - Compose the wheel route through retained-agnostic viewport-motion plus searcher/platform
+      seams.
+    - Compose the timer route through retained-agnostic viewport-motion plus pointer-move-tail
+      seams.
+    - Keep retained `EventCx` adaptation isolated in `pointer_wheel_retained_cx.rs`.
+    - Prove wheel zoom/pan, viewport animation, auto-pan, and timer motion behavior remain green.
+  - Result:
+    - `event_pointer_wheel.rs`, `event_pointer_wheel_route.rs`, `pointer_wheel_motion.rs`,
+      `pointer_wheel_pan.rs`, `pointer_wheel_pan/apply.rs`, `pointer_wheel_viewport.rs`,
+      `pointer_wheel_zoom.rs`, `pointer_wheel_zoom/apply.rs`, `pointer_wheel_zoom/pinch.rs`,
+      `pointer_wheel_zoom/wheel.rs`, `event_timer.rs`, `event_timer_route.rs`, `timer_motion.rs`,
+      `timer_motion_auto_pan.rs`, `timer_motion_auto_pan/dispatch.rs`,
+      `timer_motion_pan_inertia.rs`, `timer_motion_viewport.rs`,
+      `timer_motion_viewport/animation.rs`, and `timer_motion_viewport/debounce.rs` now stay
+      retained-Cx agnostic.
+    - Added `ViewportMotionCx`, `PointerWheelCx`, `PointerWheelViewportCx`, and `TimerMotionCx`
+      seams; retained `EventCx` platform adaptation is isolated in `pointer_wheel_retained_cx.rs`.
+    - Added `pointer_wheel_route_stays_off_retained_bridge` and
+      `timer_motion_route_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_wheel_route_stays_off_retained_bridge) | test(timer_motion_route_stays_off_retained_bridge) | test(wheel_zoom_emits_move_start_and_debounced_move_end) | test(pinch_zoom_emits_move_start_and_debounced_move_end) | test(wheel_pan_emits_move_start_and_debounced_move_end) | test(wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom) | test(frame_view_animates_over_timer_ticks_and_reaches_target) | test(pointer_move_auto_pan_timer_starts_for_node_drag_near_viewport_edge) | test(pinch_gesture_zooms_in_about_pointer) | test(wheel_zoom_zooms_about_pointer) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel_route.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_motion.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan/apply.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/apply.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/pinch.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/wheel.rs ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_pan_inertia.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_auto_pan.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_auto_pan/dispatch.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport/animation.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport/debounce.rs ecosystem/fret-node/src/ui/canvas/widget/viewport_motion_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_cx.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_cx.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

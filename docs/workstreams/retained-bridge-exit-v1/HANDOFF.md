@@ -1033,7 +1033,9 @@ Recommended next implementation shape:
   seam; node drag snaplines and multi-drag extent helpers now use a retained-agnostic
   host/geometry-read seam; keyboard pan activation now uses retained-agnostic widget tail seams;
   clipboard feedback, toast timer, and timer-motion helpers now use retained-agnostic
-  feedback/paint seams; pending node resize move no longer takes a retained Cx parameter; edge
+  feedback/paint seams; pointer-wheel routes now use retained-agnostic viewport-motion/searcher/
+  platform seams; timer routes now use retained-agnostic viewport-motion plus pointer-move-tail
+  seams; pending node resize move no longer takes a retained Cx parameter; edge
   double-click finish now uses the retained-agnostic handled tail seam; searcher dismiss release,
   finish, and paint invalidation now use retained-agnostic widget tail seams; searcher row-drag
   release coordination now uses a retained-agnostic release seam; searcher row-drag arming now
@@ -1072,10 +1074,12 @@ Recommended next implementation shape:
   `InsertNodeDragMoveCx`; the secondary pointer-move wrapper now uses `SecondaryPointerMoveCx`;
   pointer-move cursor updates now use `CanvasCursorCx`; pointer-move auto-pan timer sync now uses
   `AutoPanTimerCx`; the pointer-move tail wrapper now composes those branches through
-  `PointerMoveTailCx`; missing-left-release pointer-move inference now reuses `PointerUpCx`; the
-  pointer-move release route now composes `PointerUpCx + PanZoomBeginCx` through
-  `PointerMoveReleaseCx`; and the pointer-up event entry and pointer-up button router now use
-  `PointerUpRouteCx`.
+  `PointerMoveTailCx`; wheel zoom/pan helpers now use `ViewportMotionCx` and
+  `PointerWheelViewportCx`; timer motion pan-inertia/viewport/auto-pan helpers now use
+  `ViewportMotionCx` plus `TimerMotionCx`; missing-left-release pointer-move inference now reuses
+  `PointerUpCx`; the pointer-move release route now composes `PointerUpCx + PanZoomBeginCx`
+  through `PointerMoveReleaseCx`; and the pointer-up event entry and pointer-up button router now
+  use `PointerUpRouteCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -1172,6 +1176,30 @@ Recommended next implementation shape:
   slice touches that layout path directly.
 
 ## Gates
+
+Last run on 2026-05-22 for `RBX-M2-930`:
+
+- `cargo check -p fret-node` - passed with the pre-existing `fret-ui`
+  `current_effective_opacity` dead-code warning.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_wheel_route_stays_off_retained_bridge) | test(timer_motion_route_stays_off_retained_bridge) | test(wheel_zoom_emits_move_start_and_debounced_move_end) | test(pinch_zoom_emits_move_start_and_debounced_move_end) | test(wheel_pan_emits_move_start_and_debounced_move_end) | test(wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom) | test(frame_view_animates_over_timer_ticks_and_reaches_target) | test(pointer_move_auto_pan_timer_starts_for_node_drag_near_viewport_edge) | test(pinch_gesture_zooms_in_about_pointer) | test(wheel_zoom_zooms_about_pointer) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 11 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel_route.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_motion.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan/apply.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/apply.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/pinch.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/wheel.rs ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_pan_inertia.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_auto_pan.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_auto_pan/dispatch.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport/animation.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport/debounce.rs ecosystem/fret-node/src/ui/canvas/widget/viewport_motion_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_cx.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_cx.rs` -
+  no matches.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-930` is another narrow adapter-boundary slice in `fret-node`'s retained
+    canvas widget. The compat compile gate, targeted compat nextest gate, source-policy scan,
+    formatting, layering, catalog, whitespace, and merge-marker checks cover the changed surface.
 
 Last run on 2026-05-22 for `RBX-M2-910`:
 

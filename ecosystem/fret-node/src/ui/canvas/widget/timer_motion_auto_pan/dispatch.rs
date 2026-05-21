@@ -3,14 +3,17 @@ use fret_ui::UiHost;
 
 use crate::ui::canvas::widget::*;
 
-pub(super) fn dispatch_auto_pan_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn dispatch_auto_pan_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: Modifiers,
     zoom: f32,
-) {
+) where
+    M: NodeGraphCanvasMiddleware,
+    Cx: pointer_move_cx::PointerMoveCx<H>,
+{
     if canvas.interaction.wire_drag.is_some() {
         let _ = wire_drag::handle_wire_drag_move(canvas, cx, snapshot, position, modifiers, zoom);
     } else if canvas.interaction.node_drag.is_some() {

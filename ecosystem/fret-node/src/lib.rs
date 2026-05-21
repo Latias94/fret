@@ -252,6 +252,28 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_move_release_pan/pending_right_click.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_RELEASE_LEFT_RS: &str =
         include_str!("ui/canvas/widget/pointer_move_release_left.rs");
+    const UI_CANVAS_WIDGET_EVENT_POINTER_WHEEL_RS: &str =
+        include_str!("ui/canvas/widget/event_pointer_wheel.rs");
+    const UI_CANVAS_WIDGET_EVENT_POINTER_WHEEL_ROUTE_RS: &str =
+        include_str!("ui/canvas/widget/event_pointer_wheel_route.rs");
+    const UI_CANVAS_WIDGET_POINTER_WHEEL_CX_RS: &str =
+        include_str!("ui/canvas/widget/pointer_wheel_cx.rs");
+    const UI_CANVAS_WIDGET_POINTER_WHEEL_MOTION_RS: &str =
+        include_str!("ui/canvas/widget/pointer_wheel_motion.rs");
+    const UI_CANVAS_WIDGET_POINTER_WHEEL_PAN_RS: &str =
+        include_str!("ui/canvas/widget/pointer_wheel_pan.rs");
+    const UI_CANVAS_WIDGET_POINTER_WHEEL_PAN_APPLY_RS: &str =
+        include_str!("ui/canvas/widget/pointer_wheel_pan/apply.rs");
+    const UI_CANVAS_WIDGET_POINTER_WHEEL_VIEWPORT_RS: &str =
+        include_str!("ui/canvas/widget/pointer_wheel_viewport.rs");
+    const UI_CANVAS_WIDGET_POINTER_WHEEL_ZOOM_RS: &str =
+        include_str!("ui/canvas/widget/pointer_wheel_zoom.rs");
+    const UI_CANVAS_WIDGET_POINTER_WHEEL_ZOOM_APPLY_RS: &str =
+        include_str!("ui/canvas/widget/pointer_wheel_zoom/apply.rs");
+    const UI_CANVAS_WIDGET_POINTER_WHEEL_ZOOM_PINCH_RS: &str =
+        include_str!("ui/canvas/widget/pointer_wheel_zoom/pinch.rs");
+    const UI_CANVAS_WIDGET_POINTER_WHEEL_ZOOM_WHEEL_RS: &str =
+        include_str!("ui/canvas/widget/pointer_wheel_zoom/wheel.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_RS: &str =
         include_str!("ui/canvas/widget/pointer_move_dispatch.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_CX_RS: &str =
@@ -440,6 +462,26 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/searcher_ui/event.rs");
     const UI_CANVAS_WIDGET_TIMER_MOTION_SHARED_RS: &str =
         include_str!("ui/canvas/widget/timer_motion_shared.rs");
+    const UI_CANVAS_WIDGET_EVENT_TIMER_RS: &str = include_str!("ui/canvas/widget/event_timer.rs");
+    const UI_CANVAS_WIDGET_EVENT_TIMER_ROUTE_RS: &str =
+        include_str!("ui/canvas/widget/event_timer_route.rs");
+    const UI_CANVAS_WIDGET_TIMER_MOTION_RS: &str = include_str!("ui/canvas/widget/timer_motion.rs");
+    const UI_CANVAS_WIDGET_TIMER_MOTION_CX_RS: &str =
+        include_str!("ui/canvas/widget/timer_motion_cx.rs");
+    const UI_CANVAS_WIDGET_TIMER_MOTION_AUTO_PAN_RS: &str =
+        include_str!("ui/canvas/widget/timer_motion_auto_pan.rs");
+    const UI_CANVAS_WIDGET_TIMER_MOTION_AUTO_PAN_DISPATCH_RS: &str =
+        include_str!("ui/canvas/widget/timer_motion_auto_pan/dispatch.rs");
+    const UI_CANVAS_WIDGET_TIMER_MOTION_PAN_INERTIA_RS: &str =
+        include_str!("ui/canvas/widget/timer_motion_pan_inertia.rs");
+    const UI_CANVAS_WIDGET_TIMER_MOTION_VIEWPORT_RS: &str =
+        include_str!("ui/canvas/widget/timer_motion_viewport.rs");
+    const UI_CANVAS_WIDGET_TIMER_MOTION_VIEWPORT_ANIMATION_RS: &str =
+        include_str!("ui/canvas/widget/timer_motion_viewport/animation.rs");
+    const UI_CANVAS_WIDGET_TIMER_MOTION_VIEWPORT_DEBOUNCE_RS: &str =
+        include_str!("ui/canvas/widget/timer_motion_viewport/debounce.rs");
+    const UI_CANVAS_WIDGET_VIEWPORT_MOTION_CX_RS: &str =
+        include_str!("ui/canvas/widget/viewport_motion_cx.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
     const FRET_EXAMPLES_CARGO_TOML: &str = include_str!("../../../apps/fret-examples/Cargo.toml");
     const FRET_EXAMPLES_LIB_RS: &str = include_str!("../../../apps/fret-examples/src/lib.rs");
@@ -1894,6 +1936,69 @@ mod surface_policy_tests {
             assert!(
                 !release_sources.contains(forbidden),
                 "pointer-move missing-left-release helper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_wheel_route_stays_off_retained_bridge() {
+        let wheel_sources = [
+            UI_CANVAS_WIDGET_EVENT_POINTER_WHEEL_RS,
+            UI_CANVAS_WIDGET_EVENT_POINTER_WHEEL_ROUTE_RS,
+            UI_CANVAS_WIDGET_POINTER_WHEEL_CX_RS,
+            UI_CANVAS_WIDGET_VIEWPORT_MOTION_CX_RS,
+            UI_CANVAS_WIDGET_POINTER_WHEEL_MOTION_RS,
+            UI_CANVAS_WIDGET_POINTER_WHEEL_PAN_RS,
+            UI_CANVAS_WIDGET_POINTER_WHEEL_PAN_APPLY_RS,
+            UI_CANVAS_WIDGET_POINTER_WHEEL_VIEWPORT_RS,
+            UI_CANVAS_WIDGET_POINTER_WHEEL_ZOOM_RS,
+            UI_CANVAS_WIDGET_POINTER_WHEEL_ZOOM_APPLY_RS,
+            UI_CANVAS_WIDGET_POINTER_WHEEL_ZOOM_PINCH_RS,
+            UI_CANVAS_WIDGET_POINTER_WHEEL_ZOOM_WHEEL_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !wheel_sources.contains(forbidden),
+                "pointer-wheel route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn timer_motion_route_stays_off_retained_bridge() {
+        let timer_sources = [
+            UI_CANVAS_WIDGET_EVENT_TIMER_RS,
+            UI_CANVAS_WIDGET_EVENT_TIMER_ROUTE_RS,
+            UI_CANVAS_WIDGET_TIMER_MOTION_RS,
+            UI_CANVAS_WIDGET_TIMER_MOTION_CX_RS,
+            UI_CANVAS_WIDGET_VIEWPORT_MOTION_CX_RS,
+            UI_CANVAS_WIDGET_TIMER_MOTION_AUTO_PAN_RS,
+            UI_CANVAS_WIDGET_TIMER_MOTION_AUTO_PAN_DISPATCH_RS,
+            UI_CANVAS_WIDGET_TIMER_MOTION_PAN_INERTIA_RS,
+            UI_CANVAS_WIDGET_TIMER_MOTION_VIEWPORT_RS,
+            UI_CANVAS_WIDGET_TIMER_MOTION_VIEWPORT_ANIMATION_RS,
+            UI_CANVAS_WIDGET_TIMER_MOTION_VIEWPORT_DEBOUNCE_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !timer_sources.contains(forbidden),
+                "timer-motion route must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

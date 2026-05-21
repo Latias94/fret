@@ -424,6 +424,34 @@ Compat-gated but retained-bridge-free support:
   - `RBX-M2-920` moved cancel/escape lifecycle cleanup behind `CancelGestureCx` plus a
     host-based viewport-state seam. Retained `EventCx` adaptation lives in
     `cancel_retained_cx.rs`; pointer-cancel and escape tests keep the cancel behavior green.
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel_route.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_motion.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan/apply.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/apply.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/pinch.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/wheel.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_auto_pan.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_auto_pan/dispatch.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_pan_inertia.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport/animation.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport/debounce.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/viewport_motion_cx.rs`
+  - `RBX-M2-930` moved pointer-wheel and timer-motion route wrappers behind
+    `PointerWheelCx` / `PointerWheelViewportCx` / `TimerMotionCx`, keeping retained `EventCx`
+    platform adaptation isolated in `pointer_wheel_retained_cx.rs` and reusing the existing
+    retained adapter seams for timer motion. Wheel zoom/pan, viewport animation, auto-pan, and
+    timer-motion tests stay green.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/event.rs`
   - `RBX-M2-520` moved context menu open/restore/dismiss/finish/invalidate tail helpers behind the
@@ -573,6 +601,7 @@ Deleted retained overlay files:
 | Node drag geometry Cx seam | retained canvas still adapts retained `EventCx` host access through `node_drag_geometry_retained_cx.rs`; the higher-level node drag event route still receives retained `EventCx` | `RBX-M2-370` moves snapline geometry reads and multi-drag extent geometry reads onto retained-agnostic `NodeDragGeometryCx` and source-policy gates the snap/constraint helpers plus pure seam | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Keyboard pan activation tail seam | retained canvas still adapts retained `EventCx` paint invalidation and stop-propagation through `retained_widget_tail.rs`; the higher-level keyboard event route still receives retained `EventCx` | `RBX-M2-380` moves keyboard pan activation key-down/key-up side effects onto retained-agnostic `WidgetHandledCx` / `WidgetPaintInvalidationCx` and source-policy gates the helper | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level keyboard event routing with a declarative/event-leaf path. |
 | Feedback/motion helper seams | retained canvas still adapts retained `EventCx` clipboard feedback host/window access through `event_clipboard_feedback_retained_cx.rs` and paint invalidation through `retained_widget_tail.rs`; higher-level clipboard/timer event routes still receive retained `EventCx` | `RBX-M2-390` moves clipboard feedback and timer-motion invalidation helpers onto retained-agnostic `ClipboardFeedbackCx` / `WidgetPaintInvalidationCx`, source-policy gates the helpers, and backfills clipboard-unavailable feedback behavior tests | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level clipboard/timer event routing with a declarative/event-leaf path. |
+| Pointer wheel and timer-motion route seams | retained canvas still routes wheel/timer events through retained `EventCx` callers; wheel pan/zoom needs platform plus viewport-motion seams, and timer motion still needs viewport-motion plus pointer-move-tail seams | `RBX-M2-930` moves `event_pointer_wheel.rs`, `event_pointer_wheel_route.rs`, `event_timer.rs`, `event_timer_route.rs`, `pointer_wheel_motion.rs`, `pointer_wheel_pan.rs`, `pointer_wheel_zoom.rs`, `timer_motion.rs`, `timer_motion_auto_pan.rs`, `timer_motion_pan_inertia.rs`, and `timer_motion_viewport.rs` onto retained-agnostic `ViewportMotionCx` / `PointerWheelCx` / `TimerMotionCx` seams, while retaining the platform bridge in `pointer_wheel_retained_cx.rs` | Continue migrating direct retained event-route helper signatures, then replace higher-level wheel/timer routing with a declarative/event-leaf path. |
 | Toast timer helper seam | retained canvas still routes timer events through retained `EventCx`, but expired-toast paint invalidation now only needs the retained-agnostic widget tail seam | `RBX-M2-400` moves `event_timer_toast.rs` onto `WidgetPaintInvalidationCx`, source-policy gates the helper, and adds matching/stale toast timer behavior tests | Continue migrating direct retained `EventCx` helper signatures, then replace higher-level timer event routing with a declarative/event-leaf path. |
 | Pending node resize move helper | retained canvas still routes pointer move through retained `EventCx`, but pending node resize threshold/activation handling does not need any Cx side effects | `RBX-M2-410` deletes the unused retained Cx parameter, source-policy gates `pending_resize.rs`, and adds below-threshold/activation handler tests | Continue deleting unused retained Cx parameters before introducing seams; then replace higher-level pointer event routing with a declarative/event-leaf path. |
 | Edge double-click finish tail seam | retained canvas still routes edge double-click gestures through retained `EventCx`, but finish side effects only need stop-propagation and paint invalidation | `RBX-M2-420` moves `pointer_down_double_click_edge/finish.rs` onto `WidgetHandledCx`, source-policy gates the helper, and keeps reroute/picker gesture tests green | Continue moving direct retained event tail helpers behind retained-agnostic seams before replacing higher-level pointer event routing. |
