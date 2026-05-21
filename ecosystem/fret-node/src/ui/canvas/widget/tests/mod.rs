@@ -89,6 +89,7 @@ mod paint_overrides_paint_only_does_not_rebuild_geometry_conformance;
 mod pending_resize_conformance;
 mod perf_cache;
 mod perf_cache_prune_conformance;
+mod pointer_move_cursor_conformance;
 mod pointer_move_hover_conformance;
 mod portal_conformance;
 mod portal_keyboard_conformance;

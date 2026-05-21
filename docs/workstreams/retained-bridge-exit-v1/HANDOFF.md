@@ -974,6 +974,10 @@ primary, secondary, and hover fallback seams. It adds no new side-effect methods
 pointer-move needs only the paint invalidation provided by `HoverMoveCx`. Focused tests prove the
 top-level wrapper source policy plus representative primary/secondary/overlay/hover behavior remain
 green.
+`RBX-M2-870` then moved pointer-move cursor updates in `cursor.rs` and
+`event_pointer_move_tail/cursor.rs` behind `CanvasCursorCx`, a narrow host-access plus cursor-icon
+side-effect seam. Retained `EventCx` adaptation is isolated in `cursor_retained_cx.rs`, and a
+retained compatibility test proves close-button pointer-move still requests the pointer cursor.
 
 ## Next Task
 
@@ -1140,7 +1144,29 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-860`:
+Last run on 2026-05-22 for `RBX-M2-870`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_cursor_update_stays_off_retained_bridge) | test(pointer_move_cursor_update_sets_close_button_cursor) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 3 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/cursor.rs ecosystem/fret-node/src/ui/canvas/widget/cursor_cx.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail/cursor.rs` -
+  no matches.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-870` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+Previous run on 2026-05-21 for `RBX-M2-860`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.

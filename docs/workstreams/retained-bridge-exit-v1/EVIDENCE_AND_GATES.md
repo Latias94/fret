@@ -10708,3 +10708,73 @@ Broader gates not run:
   - Reason: `RBX-M2-860` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-22 - RBX-M2-870 pointer-move cursor update retained Cx isolation
+
+Claim verified:
+
+- `cursor.rs` and `event_pointer_move_tail/cursor.rs` no longer import or name retained bridge Cx
+  types.
+- Pointer-move cursor updates now use `CanvasCursorCx` for host access plus cursor icon side
+  effects.
+- Retained `EventCx` adaptation is isolated in `cursor_retained_cx.rs`.
+- Real retained compatibility behavior still requests the pointer cursor when the pointer moves over
+  the node graph close button.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/cursor.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/cursor_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/cursor_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail/cursor.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/pointer_move_cursor_conformance.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the default declarative `fret-node` surface still compiles without enabling the
+    retained canvas compatibility island.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving pointer-move
+    cursor updates behind `CanvasCursorCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_cursor_update_stays_off_retained_bridge) | test(pointer_move_cursor_update_sets_close_button_cursor) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 3 tests.
+  - Scope proven: source-policy locks cursor update helpers off retained bridge Cx names; real
+    retained compatibility behavior still requests the close-button pointer cursor.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/cursor.rs ecosystem/fret-node/src/ui/canvas/widget/cursor_cx.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail/cursor.rs`
+  - Result: no matches.
+  - Scope proven: the migrated cursor update path and pure capability seam no longer depend on
+    retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after the cursor update seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after isolating
+    the pointer-move cursor update path.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-870` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.

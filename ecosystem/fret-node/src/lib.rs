@@ -221,6 +221,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/event_pointer_up/dispatch.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_UP_RS: &str =
         include_str!("ui/canvas/widget/event_router_pointer_button/up.rs");
+    const UI_CANVAS_WIDGET_CURSOR_RS: &str = include_str!("ui/canvas/widget/cursor.rs");
+    const UI_CANVAS_WIDGET_CURSOR_CX_RS: &str = include_str!("ui/canvas/widget/cursor_cx.rs");
+    const UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_TAIL_CURSOR_RS: &str =
+        include_str!("ui/canvas/widget/event_pointer_move_tail/cursor.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_RS: &str =
         include_str!("ui/canvas/widget/pointer_move_dispatch.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_CX_RS: &str =
@@ -1729,6 +1733,29 @@ mod surface_policy_tests {
             assert!(
                 !pointer_move_sources.contains(forbidden),
                 "pointer-move route wrapper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_move_cursor_update_stays_off_retained_bridge() {
+        let cursor_sources = [
+            UI_CANVAS_WIDGET_CURSOR_RS,
+            UI_CANVAS_WIDGET_CURSOR_CX_RS,
+            UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_TAIL_CURSOR_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !cursor_sources.contains(forbidden),
+                "pointer-move cursor update must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

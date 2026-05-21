@@ -1,12 +1,13 @@
 use fret_core::Point;
 use fret_ui::UiHost;
 
+use super::cursor_cx::CanvasCursorCx;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::ViewSnapshot;
 
 pub(super) fn update_cursors<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl CanvasCursorCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
@@ -18,7 +19,7 @@ pub(super) fn update_cursors<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 fn update_close_button_cursor<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl CanvasCursorCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
@@ -38,7 +39,7 @@ fn update_close_button_cursor<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 fn update_resize_handle_cursor<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl CanvasCursorCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
@@ -50,7 +51,11 @@ fn update_resize_handle_cursor<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 
     let icon = super::cursor_resolve::resolve_resize_handle_cursor(
-        canvas, cx.app, snapshot, position, zoom,
+        canvas,
+        cx.host(),
+        snapshot,
+        position,
+        zoom,
     );
     if let Some(icon) = icon {
         cx.set_cursor_icon(icon);
@@ -59,7 +64,7 @@ fn update_resize_handle_cursor<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 fn update_edge_anchor_cursor<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl CanvasCursorCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
 ) {

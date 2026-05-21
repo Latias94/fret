@@ -4321,6 +4321,36 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-870 Isolate pointer-move cursor update retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/cursor.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/cursor_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/cursor_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail/cursor.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/pointer_move_cursor_conformance.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move pointer-move cursor update helpers off direct retained bridge Cx names.
+    - Introduce a narrow `CanvasCursorCx` capability for host access plus cursor icon side effects.
+    - Keep retained `EventCx` adaptation isolated in `cursor_retained_cx.rs`.
+    - Prove real close-button pointer-move cursor behavior remains green.
+  - Result:
+    - Added `CanvasCursorCx`.
+    - `cursor::update_cursors(...)` and `event_pointer_move_tail/cursor.rs` now accept
+      `CanvasCursorCx` instead of naming retained `EventCx`.
+    - Added `pointer_move_cursor_update_stays_off_retained_bridge` source-policy coverage.
+    - Added retained compatibility behavior coverage for close-button pointer cursor updates.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_cursor_update_stays_off_retained_bridge) | test(pointer_move_cursor_update_sets_close_button_cursor) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/cursor.rs ecosystem/fret-node/src/ui/canvas/widget/cursor_cx.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail/cursor.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
