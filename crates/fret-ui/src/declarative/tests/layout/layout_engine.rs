@@ -5215,6 +5215,11 @@ fn clean_geometry_small_resize_rejects_auto_height_text_reflow() {
     );
     assert_eq!(
         ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_detail,
+        Some("text_wrap_not_none")
+    );
+    assert_eq!(
+        ui.debug_stats()
             .layout_clean_geometry_solve_skip_first_element_kind,
         Some("Text")
     );

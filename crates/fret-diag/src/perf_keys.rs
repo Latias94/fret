@@ -313,6 +313,8 @@ pub(crate) const LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_REJECTIONS: PerfKey = count_ke
 );
 pub(crate) const LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_REJECTION: PerfKey =
     label_key("layout_clean_geometry_solve_skip_first_rejection");
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_DETAIL: PerfKey =
+    label_key("layout_clean_geometry_solve_skip_first_detail");
 pub(crate) const LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_ELEMENT_KIND: PerfKey =
     label_key("layout_clean_geometry_solve_skip_first_element_kind");
 pub(crate) const LAYOUT_ENGINE_CHILD_RECT_QUERIES: PerfKey =
@@ -915,6 +917,7 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     LAYOUT_ENGINE_SOLVES,
     LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_REJECTIONS,
     LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_REJECTION,
+    LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_DETAIL,
     LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_ELEMENT_KIND,
     LAYOUT_ENGINE_SOLVE_TIME_US,
     LAYOUT_ENGINE_CHILD_RECT_QUERIES,

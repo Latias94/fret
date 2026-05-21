@@ -15855,3 +15855,34 @@ Decision:
 - This is still attribution-only. The remaining resize-jitter owner should use both the frame-level rejection fields
   and `top_layout_engine_solves[].clean_geometry_solve_skip_rejection` before widening any contained-root
   clean-geometry fast path.
+
+## 2026-05-21 15:11:58 +08:00 (frame-level clean-geometry rejection detail)
+
+Question:
+- Can frame-level clean-geometry rejection stats distinguish `text_reflow/text_wrap_not_none` from
+  `text_reflow/text_overflow_not_clip` without relying on sampled `top_layout_engine_solves[]`?
+
+Finding:
+- The previous frame-level fields exposed the first rejection reason and element kind, but not the detail. That made
+  `text_reflow` ambiguous in root-level stats even though the nested solve rejection object already carried the detail.
+- The retained text-measure bundle showed both old subcases: the now-fixed nowrap ellipsis rejection and the still
+  intentionally rejected wrapped-text reflow owner.
+
+Change:
+- `UiDebugFrameStats`, diagnostics bundle stats, `diag stats` JSON/human output, triage JSON, and the registered
+  frame-stats inventory now include `layout_clean_geometry_solve_skip_first_detail`.
+- Added source and consumer coverage so `TextWrap::Word` records `text_wrap_not_none` at the frame level, and synthetic
+  bundle stats/triage preserve the same label.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check
+cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast
+cargo nextest run -p fret-diag bundle_stats_preserves_clean_geometry_solve_skip_rejection full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_contract_keeps_stats_and_gate_keys_additive registered_perf_key_inventory_doc_is_in_sync --no-fail-fast
+cargo check -p fret-bootstrap
+git diff --check
+```
+
+Decision:
+- Keep this slice attribution-only. `TextWrap::Word` remains rejected from clean-geometry solve skipping until the text
+  layer exposes a line-break or measured-height-stability proof.

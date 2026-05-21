@@ -259,6 +259,34 @@
       "unit": "count"
     },
     {
+      "key": "layout_clean_geometry_solve_skip_rejections",
+      "kind": "counter",
+      "scope": "frame",
+      "suggested_aggregate": "max",
+      "unit": "count"
+    },
+    {
+      "key": "layout_clean_geometry_solve_skip_first_rejection",
+      "kind": "label",
+      "scope": "frame",
+      "suggested_aggregate": "none",
+      "unit": "label"
+    },
+    {
+      "key": "layout_clean_geometry_solve_skip_first_detail",
+      "kind": "label",
+      "scope": "frame",
+      "suggested_aggregate": "none",
+      "unit": "label"
+    },
+    {
+      "key": "layout_clean_geometry_solve_skip_first_element_kind",
+      "kind": "label",
+      "scope": "frame",
+      "suggested_aggregate": "none",
+      "unit": "label"
+    },
+    {
       "key": "layout_engine_solve_time_us",
       "kind": "timing",
       "scope": "frame",

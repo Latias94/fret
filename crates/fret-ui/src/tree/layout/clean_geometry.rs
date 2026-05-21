@@ -446,6 +446,9 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats
                 .layout_clean_geometry_solve_skip_first_rejection = Some(rejection.reason.as_str());
             self.debug_stats
+                .layout_clean_geometry_solve_skip_first_detail =
+                rejection.detail.map(|detail| detail.as_str());
+            self.debug_stats
                 .layout_clean_geometry_solve_skip_first_element_kind = rejection.element_kind;
         }
         let rejected_node = rejection.node.unwrap_or(root);

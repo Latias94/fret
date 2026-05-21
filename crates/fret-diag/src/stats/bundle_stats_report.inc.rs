@@ -522,6 +522,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_engine_solve_time_us: u64,
     pub(super) layout_clean_geometry_solve_skip_rejections: u32,
     pub(super) layout_clean_geometry_solve_skip_first_rejection: Option<String>,
+    pub(super) layout_clean_geometry_solve_skip_first_detail: Option<String>,
     pub(super) layout_clean_geometry_solve_skip_first_element_kind: Option<String>,
     pub(super) layout_engine_child_rect_queries: u64,
     pub(super) layout_engine_child_rect_time_us: u64,
@@ -3660,9 +3661,12 @@ impl BundleStatsReport {
             }
             if row.layout_clean_geometry_solve_skip_rejections > 0 {
                 println!(
-                    "    clean_geometry_solve_skip_rejections={} first={} kind={}",
+                    "    clean_geometry_solve_skip_rejections={} first={} detail={} kind={}",
                     row.layout_clean_geometry_solve_skip_rejections,
                     row.layout_clean_geometry_solve_skip_first_rejection
+                        .as_deref()
+                        .unwrap_or("?"),
+                    row.layout_clean_geometry_solve_skip_first_detail
                         .as_deref()
                         .unwrap_or("?"),
                     row.layout_clean_geometry_solve_skip_first_element_kind
@@ -6007,6 +6011,13 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_clean_geometry_solve_skip_first_rejection".to_string(),
                     row.layout_clean_geometry_solve_skip_first_rejection
+                        .clone()
+                        .map(Value::from)
+                        .unwrap_or(Value::Null),
+                );
+                obj.insert(
+                    "layout_clean_geometry_solve_skip_first_detail".to_string(),
+                    row.layout_clean_geometry_solve_skip_first_detail
                         .clone()
                         .map(Value::from)
                         .unwrap_or(Value::Null),

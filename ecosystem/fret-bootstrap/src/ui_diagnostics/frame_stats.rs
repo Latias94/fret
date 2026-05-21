@@ -287,6 +287,8 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub layout_clean_geometry_solve_skip_first_rejection: Option<String>,
     #[serde(default)]
+    pub layout_clean_geometry_solve_skip_first_detail: Option<String>,
+    #[serde(default)]
     pub layout_clean_geometry_solve_skip_first_element_kind: Option<String>,
     #[serde(default)]
     pub layout_engine_child_rect_queries: u64,
@@ -1051,6 +1053,9 @@ impl UiFrameStatsV1 {
                 .layout_clean_geometry_solve_skip_rejections,
             layout_clean_geometry_solve_skip_first_rejection: stats
                 .layout_clean_geometry_solve_skip_first_rejection
+                .map(str::to_owned),
+            layout_clean_geometry_solve_skip_first_detail: stats
+                .layout_clean_geometry_solve_skip_first_detail
                 .map(str::to_owned),
             layout_clean_geometry_solve_skip_first_element_kind: stats
                 .layout_clean_geometry_solve_skip_first_element_kind

@@ -159,6 +159,8 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats
                 .layout_clean_geometry_solve_skip_first_rejection = None;
             self.debug_stats
+                .layout_clean_geometry_solve_skip_first_detail = None;
+            self.debug_stats
                 .layout_clean_geometry_solve_skip_first_element_kind = None;
             self.debug_stats.layout_engine_child_rect_queries = 0;
             self.debug_stats.layout_engine_child_rect_time = Duration::default();

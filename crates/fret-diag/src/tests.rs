@@ -3361,6 +3361,7 @@ fn bundle_stats_preserves_clean_geometry_solve_skip_rejection() {
                                 "layout_engine_solve_time_us": 30,
                                 "layout_clean_geometry_solve_skip_rejections": 1,
                                 "layout_clean_geometry_solve_skip_first_rejection": "unsupported_subtree",
+                                "layout_clean_geometry_solve_skip_first_detail": "root_side_effect_boundary",
                                 "layout_clean_geometry_solve_skip_first_element_kind": "Scroll"
                             },
                             "layout_engine_solves": [
@@ -3440,6 +3441,12 @@ fn bundle_stats_preserves_clean_geometry_solve_skip_rejection() {
     );
     assert_eq!(
         report.top[0]
+            .layout_clean_geometry_solve_skip_first_detail
+            .as_deref(),
+        Some("root_side_effect_boundary")
+    );
+    assert_eq!(
+        report.top[0]
             .layout_clean_geometry_solve_skip_first_element_kind
             .as_deref(),
         Some("Scroll")
@@ -3455,6 +3462,11 @@ fn bundle_stats_preserves_clean_geometry_solve_skip_rejection() {
         json.pointer("/top/0/layout_clean_geometry_solve_skip_first_rejection")
             .and_then(|v| v.as_str()),
         Some("unsupported_subtree")
+    );
+    assert_eq!(
+        json.pointer("/top/0/layout_clean_geometry_solve_skip_first_detail")
+            .and_then(|v| v.as_str()),
+        Some("root_side_effect_boundary")
     );
     assert_eq!(
         json.pointer("/top/0/layout_clean_geometry_solve_skip_first_element_kind")
@@ -3489,6 +3501,12 @@ fn bundle_stats_preserves_clean_geometry_solve_skip_rejection() {
             .pointer("/worst/layout_clean_geometry_solve_skip_first_rejection")
             .and_then(|v| v.as_str()),
         Some("unsupported_subtree")
+    );
+    assert_eq!(
+        triage
+            .pointer("/worst/layout_clean_geometry_solve_skip_first_detail")
+            .and_then(|v| v.as_str()),
+        Some("root_side_effect_boundary")
     );
     assert_eq!(
         triage

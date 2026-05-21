@@ -1428,6 +1428,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_clean_geometry_solve_skip_first_rejection"))
                 .and_then(|v| v.as_str())
                 .map(str::to_string);
+            let layout_clean_geometry_solve_skip_first_detail = stats
+                .and_then(|m| m.get("layout_clean_geometry_solve_skip_first_detail"))
+                .and_then(|v| v.as_str())
+                .map(str::to_string);
             let layout_clean_geometry_solve_skip_first_element_kind = stats
                 .and_then(|m| m.get("layout_clean_geometry_solve_skip_first_element_kind"))
                 .and_then(|v| v.as_str())
@@ -2372,6 +2376,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_engine_solve_time_us,
                 layout_clean_geometry_solve_skip_rejections,
                 layout_clean_geometry_solve_skip_first_rejection,
+                layout_clean_geometry_solve_skip_first_detail,
                 layout_clean_geometry_solve_skip_first_element_kind,
                 layout_engine_child_rect_queries,
                 layout_engine_child_rect_time_us,
