@@ -9050,6 +9050,33 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-input-otp-invalid-required-semantics",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-otp-invalid-required-semantics.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-input-otp-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "form-state",
+        "input-otp",
+        "invalid",
+        "required",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Input OTP page.",
+        "Verifies that slot-level invalid chrome promotes invalid semantics to the hidden root OTP TextInput.",
+        "Verifies that required form-state semantics remain on the hidden root OTP TextInput in the verification form example."
+      ]
+    },
+    {
       "id": "ui-gallery-input-required-invalid-semantics",
       "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-required-invalid-semantics.json",
       "required_capabilities": [

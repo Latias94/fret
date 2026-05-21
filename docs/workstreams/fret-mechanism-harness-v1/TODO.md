@@ -1571,3 +1571,16 @@ date: 2026-05-12
     `target/fret-diag-textarea-semantics-suite-v1/sessions/1779324642363-184708/suite.summary.json`,
     and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 21/21 with the Textarea row
     run id `1779327669604`.
+
+- [x] Add an InputOTP invalid/required form-state semantics runtime gate.
+  - Result:
+    `ui-gallery-input-otp-invalid-required-semantics.json` now starts directly on the Input OTP page,
+    self-scopes the docs page to the Invalid and Form sections, proves slot-level invalid chrome
+    promotes `invalid=true` to the hidden root OTP `TextInput`, proves the Form example keeps
+    `required=true` and `invalid=null` on the same hidden root control, and verifies enabled
+    `focus`/`set_value` actions plus label-to-control focus and typed value mutation. Focused
+    runtime passed with run id `1779329877911`, the new `ui-gallery-input-otp-semantics` suite
+    passed 1/1 with summary
+    `target/fret-diag-input-otp-semantics-suite-v2/sessions/1779329954569-181280/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 22/22 with the InputOTP row
+    run id `1779331449795`.

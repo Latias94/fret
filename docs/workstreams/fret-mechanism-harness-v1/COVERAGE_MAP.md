@@ -490,3 +490,15 @@ mechanism can visibly fail.
   `target/fret-diag-textarea-required-invalid-semantics-v1/sessions/1779324589606-162572/1779324602377/ai.packet`,
   and the dedicated suite evidence is anchored at
   `target/fret-diag-textarea-semantics-suite-v1/sessions/1779324642363-184708/suite.summary.json`.
+
+- InputOTP invalid/required form-state update:
+  `ui-gallery-input-otp-invalid-required-semantics.json` now covers the multi-slot OTP form-state
+  path where visual slot chrome and the editable semantics owner are different nodes. The gate
+  starts on the Input OTP docs page, scopes rendering to Invalid and Form, proves
+  `InputOTPSlot::aria_invalid(true)` promotes `invalid=true` to the hidden root
+  `ui-gallery-input-otp-invalid.input` TextInput, proves the Form example exports `required=true`
+  and `invalid=null` on `ui-gallery-input-otp-form.input`, and verifies label focus plus typed value
+  mutation through the hidden root control. Focused runtime evidence is anchored at
+  `target/fret-diag-input-otp-invalid-required-semantics-v2/sessions/1779329862109-172384/1779329877911/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-input-otp-semantics-suite-v2/sessions/1779329954569-181280/suite.summary.json`.

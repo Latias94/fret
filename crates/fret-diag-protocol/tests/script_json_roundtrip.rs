@@ -484,6 +484,13 @@ fn script_v2_roundtrip_ui_gallery_input_required_invalid_semantics() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_input_otp_invalid_required_semantics() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/input/ui-gallery-input-otp-invalid-required-semantics.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_textarea_required_invalid_semantics() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json"

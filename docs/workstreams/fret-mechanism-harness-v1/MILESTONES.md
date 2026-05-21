@@ -3929,3 +3929,51 @@ Status: complete for the Textarea form-state semantics companion.
 - The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 21/21 with summary
   `target/fret-diag-shadcn-runtime-evidence-textarea-required-invalid-v2/sessions/1779326355415-96352/suite.summary.json`
   and Textarea row run id `1779327669604`.
+
+## M169: InputOTP Invalid/Required Form-State Runtime Gate
+
+Status: complete for the InputOTP slot-invalid and required hidden-control semantics companion.
+
+- Added `ui-gallery-input-otp-invalid-required-semantics.json`, which starts directly on the
+  Input OTP page and scopes rendering to the Invalid and Form docs sections with
+  `FRET_UI_GALLERY_START_SECTION=Invalid,Form`.
+- The gate proves the Invalid example's slot-level `InputOTPSlot::aria_invalid(true)` lane promotes
+  `invalid=true` to the hidden root OTP TextInput (`ui-gallery-input-otp-invalid.input`) while
+  keeping `required=false`, enabled `focus=true`, enabled `set_value=true`, and value `000000`.
+- The same gate proves the Form example exports `required=true`, `invalid=null`, enabled
+  `focus=true`, and enabled `set_value=true` on `ui-gallery-input-otp-form.input`; clicking
+  `ui-gallery-input-otp-form-label` focuses that hidden input, typing `123456` mutates the value,
+  and slot 5 becomes selected.
+- Added the focused `ui-gallery-input-otp-semantics` suite, promoted the script into
+  `ui-gallery-shadcn-runtime-evidence`, refreshed the registry, added a root redirect, and added
+  protocol roundtrip coverage.
+- No InputOTP recipe/runtime defect was reproduced. The first dedicated-suite draft exposed a
+  diagnostics authoring/tooling hazard on the long full docs page; the final script avoids that
+  by self-scoping to the two sections under test.
+- JSON, registry, formatting, and diff hygiene gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\input\ui-gallery-input-otp-invalid-required-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-input-otp-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-input-otp-invalid-required-semantics.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  and `git diff --check`.
+- Focused Rust gates pass:
+  `cargo test --profile dev-fast -p fret-ui-shadcn input_otp_slot_part_aria_invalid_sets_hidden_input_semantics_invalid --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-shadcn input_otp_required_builder_exposes_required_semantics --lib -- --nocapture`;
+  and
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_input_otp_invalid_required_semantics -- --nocapture`.
+- Build passes:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\input\ui-gallery-input-otp-invalid-required-semantics.json --dir target\fret-diag-input-otp-invalid-required-semantics-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779329877911`, AI packet
+  `target/fret-diag-input-otp-invalid-required-semantics-v2/sessions/1779329862109-172384/1779329877911/ai.packet`,
+  and pack
+  `target/fret-diag-input-otp-invalid-required-semantics-v2/sessions/1779329862109-172384/share/1779329877911.zip`.
+- Dedicated runtime suite passes with `stage_counts={"passed":1}` and summary
+  `target/fret-diag-input-otp-semantics-suite-v2/sessions/1779329954569-181280/suite.summary.json`.
+- The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 22/22 with summary
+  `target/fret-diag-shadcn-runtime-evidence-input-otp-invalid-required-v1/sessions/1779330056274-195352/suite.summary.json`
+  and InputOTP row run id `1779331449795`.
