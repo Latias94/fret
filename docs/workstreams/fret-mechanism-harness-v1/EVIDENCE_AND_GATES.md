@@ -7012,3 +7012,66 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-input-required-invalid-v1 --session-auto --timeout-ms 1200000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed 19/19; `stage_counts={"passed":19}`; `reason_code_counts={}`;
     Input required/invalid row run id `1779319975211`.
+
+
+## Select Invalid Form-State Runtime Gate
+
+- invariant:
+  a shadcn Select Invalid example must expose invalid form-state semantics on the concrete trigger
+  combobox while no value is selected, not only through Field chrome. After committing a value, the
+  trigger should clear invalid semantics, the FieldError should disappear, and the trigger should
+  retain enabled focus/invoke actions.
+- finding:
+  no Select recipe/runtime defect was reproduced. The slice promoted existing Select semantics
+  behavior into a live docs-path runtime gate and into the broad shadcn runtime-evidence suite.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-select-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- existing recipe anchors:
+  `ecosystem/fret-ui-shadcn/src/select.rs` (`Select::aria_invalid`, `Select::required`, and the
+  existing unit tests `select_aria_invalid_exposes_invalid_semantics` /
+  `select_required_exposes_required_semantics`).
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-select-invalid-form-state-v1/sessions/1779321642042-159492/1779321650994/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-select-invalid-form-state-v1/sessions/1779321642042-159492/share/1779321650994.zip`;
+  dedicated suite summary:
+  `target/fret-diag-select-semantics-suite-v1/sessions/1779321672604-100084/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-select-invalid-v1/sessions/1779321710285-137352/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\select\ui-gallery-select-invalid-form-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-select-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- Select recipe semantics gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn select_aria_invalid_exposes_invalid_semantics --lib -- --nocapture`
+  - result: passed; also matched `native_select::tests::native_select_aria_invalid_exposes_invalid_semantics`.
+  `cargo test --profile dev-fast -p fret-ui-shadcn select_required_exposes_required_semantics --lib -- --nocapture`
+  - result: passed; also matched `native_select::tests::native_select_required_exposes_required_semantics`.
+- protocol script roundtrip:
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_select_invalid_form_state -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\select\ui-gallery-select-invalid-form-state.json --dir target\fret-diag-select-invalid-form-state-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779321650994`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-select-semantics --dir target\fret-diag-select-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; script run id `1779321682202`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-select-invalid-v1 --session-auto --timeout-ms 1200000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 20/20; `stage_counts={"passed":20}`; `reason_code_counts={}`;
+    Select invalid row run id `1779322696285`.

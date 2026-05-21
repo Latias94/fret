@@ -3834,3 +3834,47 @@ Status: complete for the Input form-state semantics companion and diagnostics pr
   with summary
   `target/fret-diag-shadcn-runtime-evidence-input-required-invalid-v1/sessions/1779319155073-96032/suite.summary.json`
   and new row run id `1779319975211`.
+
+
+## M167: Select Invalid Form-State Runtime Gate
+
+Status: complete for the Select invalid-state runtime semantics companion.
+
+- Added `ui-gallery-select-invalid-form-state.json`, which starts directly on the Select Invalid
+  section, proves the trigger combobox owns invalid form-state semantics before selection, and proves
+  those semantics clear after committing Apple.
+- The gate reuses the existing `invalid_is` and `required_is` predicates from the Input slice; no
+  new protocol or mechanism-harness predicate shape was needed.
+- Added the focused `ui-gallery-select-semantics` suite, promoted the new script into
+  `ui-gallery-shadcn-runtime-evidence`, refreshed the registry, and added protocol roundtrip
+  coverage.
+- No Select recipe/runtime defect was reproduced. Existing recipe tests already prove
+  `Select::aria_invalid(true)` and `Select::required(true)` export semantics on the trigger; this
+  slice turns that into a live UI Gallery state-change gate.
+- JSON, registry, formatting, and diff hygiene gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\select\ui-gallery-select-invalid-form-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-select-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  and
+  `git diff --check`.
+- Focused Rust gates pass:
+  `cargo test --profile dev-fast -p fret-ui-shadcn select_aria_invalid_exposes_invalid_semantics --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-shadcn select_required_exposes_required_semantics --lib -- --nocapture`;
+  and
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_select_invalid_form_state -- --nocapture`.
+- Build passes:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\select\ui-gallery-select-invalid-form-state.json --dir target\fret-diag-select-invalid-form-state-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779321650994`, AI packet
+  `target/fret-diag-select-invalid-form-state-v1/sessions/1779321642042-159492/1779321650994/ai.packet`,
+  and pack
+  `target/fret-diag-select-invalid-form-state-v1/sessions/1779321642042-159492/share/1779321650994.zip`.
+- Dedicated runtime suite passes with `stage_counts={"passed":1}` and summary
+  `target/fret-diag-select-semantics-suite-v1/sessions/1779321672604-100084/suite.summary.json`.
+- The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 20/20 with summary
+  `target/fret-diag-shadcn-runtime-evidence-select-invalid-v1/sessions/1779321710285-137352/suite.summary.json`
+  and new row run id `1779322696285`.

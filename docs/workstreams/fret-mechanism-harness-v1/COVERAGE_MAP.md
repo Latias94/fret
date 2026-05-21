@@ -468,3 +468,14 @@ mechanism can visibly fail.
   `target/fret-diag-input-required-invalid-semantics-v2/sessions/1779318958257-166004/1779318973423/ai.packet`,
   and the dedicated suite evidence is anchored at
   `target/fret-diag-input-semantics-suite-v1/sessions/1779319043334-48440/suite.summary.json`.
+
+
+- Select invalid form-state update:
+  `ui-gallery-select-invalid-form-state.json` now covers live invalid-state mutation for the shadcn
+  Select trigger combobox. The gate starts on the Invalid section, proves the trigger exports
+  `invalid=true`, `required=false`, `focus=true`, and `invoke=true`, commits Apple, then proves the
+  trigger clears invalid semantics to `null`, keeps `required=false`, removes the field error node,
+  and exposes value text `Apple`. Focused runtime evidence is anchored at
+  `target/fret-diag-select-invalid-form-state-v1/sessions/1779321642042-159492/1779321650994/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-select-semantics-suite-v1/sessions/1779321672604-100084/suite.summary.json`.

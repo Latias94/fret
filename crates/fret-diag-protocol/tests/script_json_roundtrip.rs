@@ -975,6 +975,13 @@ fn script_v2_roundtrip_ui_gallery_select_commit_and_label_update() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_select_invalid_form_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_select_demo_open_layout() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json"

@@ -10673,6 +10673,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-select-invalid-form-state",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-select-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "form-state",
+        "invalid",
+        "select",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Select page and invalid section.",
+        "Verifies that invalid form-state semantics live on the concrete Select trigger combobox and clear after committing a value."
+      ]
+    },
+    {
       "id": "ui-gallery-select-keyboard-commit-apple",
       "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-keyboard-commit-apple.json",
       "required_capabilities": [

@@ -1544,3 +1544,16 @@ date: 2026-05-12
     `target/fret-diag-input-semantics-suite-v1/sessions/1779319043334-48440/suite.summary.json`,
     and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 19/19 with the new Input
     row run id `1779319975211`.
+
+
+- [x] Add a Select invalid form-state semantics runtime gate.
+  - Result:
+    `ui-gallery-select-invalid-form-state.json` now starts directly on the Select page's Invalid
+    section, proves the invalid Select trigger exports `role=combo_box`, `invalid=true`,
+    `required=false`, and enabled `focus`/`invoke` actions, then commits Apple and proves the
+    trigger clears to `invalid=null`, keeps `required=false`, removes the field error node, and
+    updates its value text to `Apple`. Focused runtime passed with run id `1779321650994`, the new
+    `ui-gallery-select-semantics` suite passed 1/1 with summary
+    `target/fret-diag-select-semantics-suite-v1/sessions/1779321672604-100084/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 20/20 with the new Select
+    invalid row run id `1779322696285`.
