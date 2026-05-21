@@ -233,6 +233,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_move_dispatch/primary/node.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_CONNECTION_RS: &str =
         include_str!("ui/canvas/widget/pointer_move_dispatch/primary/connection.rs");
+    const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_SECONDARY_RS: &str =
+        include_str!("ui/canvas/widget/pointer_move_dispatch/secondary.rs");
+    const UI_CANVAS_WIDGET_SECONDARY_POINTER_MOVE_CX_RS: &str =
+        include_str!("ui/canvas/widget/secondary_pointer_move_cx.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_SECONDARY_NODE_RS: &str =
         include_str!("ui/canvas/widget/pointer_move_dispatch/secondary/node.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_SECONDARY_CONNECTION_RS: &str =
@@ -1589,6 +1593,28 @@ mod surface_policy_tests {
             assert!(
                 !primary_route_sources.contains(forbidden),
                 "pointer-move primary route wrapper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_move_secondary_route_wrapper_stays_off_retained_bridge() {
+        let secondary_route_sources = [
+            UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_SECONDARY_RS,
+            UI_CANVAS_WIDGET_SECONDARY_POINTER_MOVE_CX_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !secondary_route_sources.contains(forbidden),
+                "pointer-move secondary route wrapper must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

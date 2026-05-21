@@ -953,6 +953,12 @@ invalidation seams, and retained `EventCx` adaptation is isolated in
 to `insert_node_drag/internal_event.rs`, keeping the pending move wrapper retained-free while
 leaving internal drag/drop I/O for a later slice. Focused tests prove insert-node drag threshold,
 drag start, and searcher cleanup behavior remain green.
+`RBX-M2-830` then moved the secondary pointer-move wrapper in
+`pointer_move_dispatch/secondary.rs` behind `SecondaryPointerMoveCx`, a composed capability over the
+already-isolated node, connection, and insert branch seams. This adds no new side-effect methods;
+retained `EventCx` satisfies the wrapper only through existing branch adapters. Focused tests prove
+the wrapper source policy plus representative node drag, edge reconnect, and insert-node drag
+behavior remain green.
 
 ## Next Task
 
@@ -1020,8 +1026,8 @@ Recommended next implementation shape:
   `PrimaryPointerMoveCx`; the secondary node pointer-move route now uses
   `NodeDragMoveCx + NodeResizeMoveCx`; the secondary connection pointer-move route now uses
   `WireDragMoveCx + EdgeDragMoveCx`; the secondary insert pointer-move route now uses
-  `InsertNodeDragMoveCx`; and the pointer-up event entry and pointer-up button router now use
-  `PointerUpRouteCx`.
+  `InsertNodeDragMoveCx`; the secondary pointer-move wrapper now uses `SecondaryPointerMoveCx`;
+  and the pointer-up event entry and pointer-up button router now use `PointerUpRouteCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -1061,6 +1067,7 @@ Recommended next implementation shape:
   `insert_node_drag/mod.rs`, `insert_node_drag/pending.rs`, `insert_node_drag/prelude.rs`,
   `insert_node_drag/session.rs`, `insert_node_drag_move_cx.rs`,
   `pointer_move_dispatch/secondary/insert.rs`,
+  `secondary_pointer_move_cx.rs`, `pointer_move_dispatch/secondary.rs`,
   `keyboard_pan_activation.rs`,
   `event_clipboard_feedback.rs`, `event_clipboard_feedback_cx.rs`, `event_timer_toast.rs`,
   `timer_motion_shared.rs`,
@@ -1118,7 +1125,29 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-820`:
+Last run on 2026-05-21 for `RBX-M2-830`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_secondary_route_wrapper_stays_off_retained_bridge) | test(pointer_move_secondary_node_route_stays_off_retained_bridge) | test(pointer_move_secondary_connection_route_stays_off_retained_bridge) | test(pointer_move_secondary_insert_route_stays_off_retained_bridge) | test(node_drag_move_emits_on_node_drag) | test(edge_reconnect_requires_drag_threshold_before_starting_wire_drag) | test(insert_node_drag_starts_after_threshold) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 8 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary.rs ecosystem/fret-node/src/ui/canvas/widget/secondary_pointer_move_cx.rs` -
+  no matches.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-830` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+Previous run on 2026-05-21 for `RBX-M2-820`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.

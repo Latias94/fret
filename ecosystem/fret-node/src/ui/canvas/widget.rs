@@ -354,6 +354,7 @@ mod searcher_pointer_wheel;
 mod searcher_row_activation;
 mod searcher_rows;
 mod searcher_ui;
+mod secondary_pointer_move_cx;
 mod selection;
 mod split_edge_execution;
 mod static_scene_cache_plan;
