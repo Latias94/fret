@@ -611,3 +611,14 @@ mechanism can visibly fail.
   `target/fret-diag-menubar-disabled-item-action-state-v5/sessions/1779383380213-231888/1779383395682/ai.packet`,
   and dedicated suite evidence is anchored at
   `target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json`.
+- ContextMenu disabled item action-state update:
+  `ui-gallery-context-menu-disabled-item-action-state.json` now covers the Basic ContextMenu path
+  where a disabled command row owns item-local disabled semantics, suppresses focus/invoke, skips
+  roving focus, and cannot dispatch its command through pointer activation. Focused runtime evidence
+  is anchored at
+  `target/fret-diag-context-menu-disabled-item-action-state-v2/sessions/1779387831262-20088/1779387844608/ai.packet`,
+  and the passing row-only suite evidence is anchored at
+  `target/fret-diag-context-menu-semantics-suite-disabled-item-v3/sessions/1779388133420-237500/suite.summary.json`.
+  The default-lint suite probe also records follow-up diagnostics debt for duplicate
+  `ui-gallery-context-menu-basic-content` during transition captures at
+  `target/fret-diag-context-menu-semantics-suite-disabled-item-v2/sessions/1779387897940-40144/1779387958229-ui-gallery-context-menu-disabled-item-action-state/check.lint.json`.

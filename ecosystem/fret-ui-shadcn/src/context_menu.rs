@@ -8576,6 +8576,179 @@ mod tests {
     }
 
     #[test]
+    fn context_menu_disabled_item_skips_roving_focus_and_suppresses_action_state() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let disabled_cmd = CommandId::new("context_menu.tests.disabled_forward.v1");
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let build_entries = || {
+            vec![
+                ContextMenuEntry::Item(
+                    ContextMenuItem::new("Back")
+                        .action(CommandId::new("context_menu.tests.back.v1")),
+                ),
+                ContextMenuEntry::Item(
+                    ContextMenuItem::new("Forward")
+                        .action(disabled_cmd.clone())
+                        .disabled(true),
+                ),
+                ContextMenuEntry::Item(
+                    ContextMenuItem::new("Reload")
+                        .action(CommandId::new("context_menu.tests.reload.v1")),
+                ),
+            ]
+        };
+
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let back = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Back"))
+            .expect("Back item");
+        let forward = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Forward"))
+            .expect("Forward item");
+        let reload = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Reload"))
+            .expect("Reload item");
+
+        assert!(!back.flags.disabled);
+        assert!(back.actions.focus);
+        assert!(back.actions.invoke);
+        assert!(forward.flags.disabled);
+        assert_eq!(forward.pos_in_set, Some(2));
+        assert_eq!(forward.set_size, Some(3));
+        assert!(
+            !forward.actions.focus,
+            "disabled ContextMenu items must not be roving-focus targets by default"
+        );
+        assert!(
+            !forward.actions.invoke,
+            "disabled ContextMenu items carrying commands must suppress invoke"
+        );
+        assert!(!reload.flags.disabled);
+        assert!(reload.actions.focus);
+        assert!(reload.actions.invoke);
+
+        ui.set_focus(Some(back.id));
+        app.flush_effects();
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let forward_after_nav = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Forward"))
+            .expect("Forward item after ArrowDown");
+        let reload_after_nav = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Reload"))
+            .expect("Reload item after ArrowDown");
+        let focus = ui.focus().expect("expected focus after ArrowDown");
+        let focus_path = ui.debug_node_path(focus);
+        assert!(
+            !focus_path.contains(&forward_after_nav.id),
+            "ArrowDown should skip disabled Forward"
+        );
+        assert!(
+            focus_path.contains(&reload_after_nav.id),
+            "ArrowDown should land on Reload after skipping disabled Forward"
+        );
+
+        app.flush_effects();
+        let disabled_pos = Point::new(
+            Px(forward_after_nav.bounds.origin.x.0 + forward_after_nav.bounds.size.width.0 / 2.0),
+            Px(forward_after_nav.bounds.origin.y.0 + forward_after_nav.bounds.size.height.0 / 2.0),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: disabled_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: disabled_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().all(
+                |effect| !matches!(effect, Effect::Command { command, .. } if command.as_str() == disabled_cmd.as_str())
+            ),
+            "disabled ContextMenu item click should not dispatch {disabled_cmd:?}, got {effects:?}"
+        );
+    }
+
+    #[test]
     fn context_menu_ignores_right_mouse_up_directly_under_anchor_before_move() {
         let window = AppWindowId::default();
         let mut app = App::new();

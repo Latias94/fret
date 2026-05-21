@@ -929,6 +929,30 @@ fn context_menu_usage_and_basic_examples_stay_docs_aligned() {
 }
 
 #[test]
+fn context_menu_basic_disabled_item_keeps_command_and_item_action_state_on_same_control() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/context_menu/basic.rs",
+        &[
+            "shadcn::ContextMenuItem::new(\"Back\")",
+            ".action(CommandId::new(\"ui_gallery.context_menu.basic.back\"))",
+            ".test_id(\"ui-gallery-context-menu-basic-back\")",
+            "shadcn::ContextMenuItem::new(\"Forward\")",
+            ".action(CommandId::new(\"ui_gallery.context_menu.basic.forward\"))",
+            ".disabled(true)",
+            ".test_id(\"ui-gallery-context-menu-basic-forward\")",
+            "shadcn::ContextMenuItem::new(\"Reload\")",
+            ".action(CommandId::new(\"ui_gallery.context_menu.basic.reload\"))",
+            ".test_id(\"ui-gallery-context-menu-basic-reload\")",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("cx.interactivity_gate(true,false"),
+        "src/ui/snippets/context_menu/basic.rs should rely on ContextMenuItem::disabled(true), not a gallery-local interactivity gate"
+    );
+}
+
+#[test]
 fn context_menu_rtl_example_keeps_the_richer_upstream_preview_shape() {
     let rtl = read("src/ui/snippets/context_menu/rtl.rs");
     assert!(

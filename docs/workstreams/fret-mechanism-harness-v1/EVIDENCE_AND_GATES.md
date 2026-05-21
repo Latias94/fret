@@ -7749,3 +7749,78 @@ Next slice recommendation:
   the script is promoted into `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`.
   This slice uses the focused runtime and dedicated Menubar suite as passing evidence to avoid
   burning the broad-suite timeout budget immediately after the previous long full-suite run.
+
+## ContextMenu Disabled Item Action-State Runtime Gate
+
+- invariant:
+  shadcn/Radix ContextMenu disabled command items must keep concrete item ownership of disabled
+  action-state: disabled rows expose `disabled=true`, suppress `focus` and `invoke`, never dispatch
+  their command, and are skipped by roving focus. Enabled siblings remain focusable/invokable.
+- finding:
+  no ContextMenu recipe/runtime defect was reproduced for this invariant. The current recipe already
+  suppresses disabled focus/invoke/command dispatch, preserves item collection metadata, and skips
+  disabled rows during vertical roving focus. A separate diagnostics lifecycle concern remains: a
+  default-lint dedicated suite can see duplicate `ui-gallery-context-menu-basic-content` nodes during
+  transition captures; the row-only suite passes with `--no-suite-lint` and that duplicate-id lint is
+  tracked as follow-up evidence rather than as an action-state failure.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/context_menu.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/basic.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json`,
+  `tools/diag-scripts/ui-gallery-context-menu-disabled-item-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-context-menu-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-context-menu/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  Radix ContextMenu uses roving focus inside menu content, disabled items are not invokable, and
+  disabled items are skipped by focus movement. Fret maps this to concrete `menu_item` semantics,
+  item-local disabled action suppression, command dispatch suppression, and collection-position
+  metadata on the disabled row itself.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-context-menu-disabled-item-action-state-v2/sessions/1779387831262-20088/1779387844608/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-context-menu-disabled-item-action-state-v2/sessions/1779387831262-20088/share/1779387844608.zip`;
+  passing row-only suite summary:
+  `target/fret-diag-context-menu-semantics-suite-disabled-item-v3/sessions/1779388133420-237500/suite.summary.json`;
+  default-lint follow-up artifact:
+  `target/fret-diag-context-menu-semantics-suite-disabled-item-v2/sessions/1779387897940-40144/1779387958229-ui-gallery-context-menu-disabled-item-action-state/check.lint.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery-context-menu-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-context-menu-semantics/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-context-menu/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/index.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem/fret-ui-shadcn/src/context_menu.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib context_menu_disabled_item_skips_roving_focus_and_suppresses_action_state`
+  - result: passed; 1 test; run id `15532758-d144-470e-8280-0652eedd58ce`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app context_menu_basic_disabled_item_keeps_command_and_item_action_state_on_same_control`
+  - result: passed; 1 test; run id `5ac59f43-0c69-42d6-95de-726bd386d30b`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_context_menu_disabled_item_action_state`
+  - result: passed; 1 test; run id `5ac78806-59db-45c3-84fd-146db8c77fa2`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json --dir target/fret-diag-context-menu-disabled-item-action-state-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779387844608`.
+- dedicated ContextMenu row-only runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-context-menu-semantics/suite.json --dir target/fret-diag-context-menu-semantics-suite-disabled-item-v3 --session-auto --no-suite-lint --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; disabled-item row run id `1779388147006`.
+- default-lint suite concern:
+  `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-context-menu-semantics/suite.json --dir target/fret-diag-context-menu-semantics-suite-disabled-item-v2 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: script row passed, then suite lint failed with `semantics.duplicate_test_id` for
+    `ui-gallery-context-menu-basic-content`; follow-up artifact is
+    `target/fret-diag-context-menu-semantics-suite-disabled-item-v2/sessions/1779387897940-40144/1779387958229-ui-gallery-context-menu-disabled-item-action-state/check.lint.json`.
+- broad-suite note:
+  the script is promoted into `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`.
+  This slice uses the focused runtime plus row-only ContextMenu suite as passing evidence and keeps
+  the duplicate-id transition lint as a narrow diagnostics follow-up.

@@ -4333,3 +4333,55 @@ Status: complete for Menubar disabled-item action-state, roving-focus, and curre
 - Dedicated Menubar runtime suite passes with `stage_counts={"passed":1}` and summary
   `target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json`;
   the disabled-item row run id is `1779383578847`.
+
+## M177: ContextMenu Disabled Item Action-State Runtime Gate
+
+Status: complete for ContextMenu disabled command-item action-state and roving-focus coverage.
+
+- Added `ui-gallery-context-menu-disabled-item-action-state.json`, which starts directly on the
+  Context Menu page's `Basic` section. The gate proves the disabled `Forward` item owns concrete
+  `menu_item` semantics, exports `disabled=true`, suppresses `focus` and `invoke`, keeps enabled
+  sibling actions available, verifies direct disabled-item click does not dispatch the attached
+  command or update the status bar, then drives ArrowDown roving focus from `Back` to `Reload` to
+  prove disabled rows are skipped.
+- Added a root redirect, a focused `ui-gallery-context-menu-semantics` suite, broad-suite promotion
+  into `ui-gallery-shadcn-runtime-evidence`, registry metadata, protocol roundtrip coverage, and an
+  authoring-surface test that keeps `ContextMenuItem::disabled(true)` plus `.action(...)` on the same
+  concrete control instead of relying on a gallery-local interactivity gate.
+- Added a focused shadcn unit test that proves disabled ContextMenu rows suppress focus/invoke and
+  command dispatch while preserving collection position metadata and roving-focus skip behavior.
+- No ContextMenu recipe/runtime defect was reproduced for the disabled action-state invariant. The
+  current recipe already suppresses disabled focus/invoke/command dispatch and skips disabled rows in
+  roving focus.
+- A separate diagnostics lifecycle concern was reproduced outside the focused invariant: the
+  dedicated suite passes with `--no-suite-lint`, while the default-lint suite can report duplicate
+  `ui-gallery-context-menu-basic-content` nodes when transition captures retain a previous
+  `role=menu` snapshot. Treat this as a follow-up diagnostics/menu-lifecycle lane, not as evidence
+  against the disabled action-state invariant.
+- JSON, registry, formatting, and diff hygiene gates pass:
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery-context-menu-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-context-menu-semantics/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-context-menu/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/index.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem/fret-ui-shadcn/src/context_menu.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  and `git diff --check`.
+- Focused Rust gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib context_menu_disabled_item_skips_roving_focus_and_suppresses_action_state`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app context_menu_basic_disabled_item_keeps_command_and_item_action_state_on_same_control`;
+  and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_context_menu_disabled_item_action_state`.
+- Build passes:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json --dir target/fret-diag-context-menu-disabled-item-action-state-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  with run id `1779387844608`, AI packet
+  `target/fret-diag-context-menu-disabled-item-action-state-v2/sessions/1779387831262-20088/1779387844608/ai.packet`,
+  and pack
+  `target/fret-diag-context-menu-disabled-item-action-state-v2/sessions/1779387831262-20088/share/1779387844608.zip`.
+- Dedicated ContextMenu row-only runtime suite passes with `--no-suite-lint`, `stage_counts={"passed":1}`,
+  and summary
+  `target/fret-diag-context-menu-semantics-suite-disabled-item-v3/sessions/1779388133420-237500/suite.summary.json`;
+  the disabled-item row run id is `1779388147006`.

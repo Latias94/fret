@@ -7304,6 +7304,37 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-context-menu-disabled-item-action-state",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-context-menu",
+        "ui-gallery-context-menu-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "context_menu",
+        "disabled",
+        "keyboard",
+        "mouse",
+        "roving_focus",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Context Menu Basic section with the global status bar visible.",
+        "Verifies that the disabled Forward item carrying a command exports disabled=true while suppressing focus/invoke.",
+        "Verifies vertical roving focus skips the disabled item and that pointer activation cannot dispatch the disabled command.",
+        "Focused run uses default bundle lint; suite runs currently use --no-suite-lint because ContextMenu transition captures can keep the previous role=menu snapshot long enough to duplicate the content test id."
+      ]
+    },
+    {
       "id": "ui-gallery-context-menu-keyboard-escape-focus-restore",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-keyboard-escape-focus-restore.json",
       "required_capabilities": [],

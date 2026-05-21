@@ -1697,8 +1697,27 @@ date: 2026-05-12
     `ui-gallery-menubar-semantics` suite passed 1/1 with summary
     `target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json`.
 
+- [x] Add a ContextMenu disabled command-item action-state and roving-focus runtime gate.
+  - Result:
+    `ui-gallery-context-menu-disabled-item-action-state.json` now starts on the Context Menu page's
+    `Basic` section, proves the disabled `Forward` item still carries a command while exporting
+    `role=menu_item`, `disabled=true`, `focus=false`, and `invoke=false`, verifies direct disabled
+    click does not dispatch the command or update the status bar, then proves ArrowDown roving focus
+    skips the disabled item and lands on the enabled `Reload` item. No ContextMenu recipe/runtime
+    defect was reproduced for disabled item ownership: the current implementation already suppresses
+    disabled focus/invoke/command dispatch and skips disabled rows in roving focus. Focused runtime
+    passed with run id `1779387844608`; the row-only `ui-gallery-context-menu-semantics` suite passed
+    with `--no-suite-lint` and summary
+    `target/fret-diag-context-menu-semantics-suite-disabled-item-v3/sessions/1779388133420-237500/suite.summary.json`.
+    A default-lint suite run exposed a separate diagnostics lifecycle concern: transition captures can
+    retain a previous `role=menu` snapshot long enough to duplicate
+    `ui-gallery-context-menu-basic-content`; this is tracked as follow-up evidence rather than an
+    action-state defect.
+
 Next slice recommendation:
 
-- Continue the action-state axis into ContextMenu disabled command items or Command disabled items,
-  where collection metadata, active-descendant or roving-focus policy, disabled semantics, and
-  invoke suppression can drift independently under dynamic state.
+- Investigate the separate ContextMenu diagnostics lifecycle/keyboard-entry gaps surfaced while
+  building this gate: default suite lint can see duplicate content test ids during menu transition
+  captures, and pointer-open content ArrowDown does not yet have a promoted runtime gate. If that
+  stabilizes quickly, convert the finding into a small diagnostics/recipe fix; otherwise continue
+  the action-state axis into Command disabled active-descendant rows.

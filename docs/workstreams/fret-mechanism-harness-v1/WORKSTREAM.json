@@ -1922,8 +1922,22 @@
     "target/fret-diag-toggle-group-disabled-item-suite-glob-v1/sessions/1779376207964-79492/suite.summary.json",
     "target/fret-diag-menubar-disabled-item-action-state-v5/sessions/1779383380213-231888/1779383395682/ai.packet",
     "target/fret-diag-menubar-disabled-item-action-state-v5/sessions/1779383380213-231888/share/1779383395682.zip",
-    "target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json"
+    "target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json",
+    "ecosystem/fret-ui-shadcn/src/context_menu.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/context_menu/basic.rs",
+    "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+    "crates/fret-diag-protocol/tests/script_json_roundtrip.rs",
+    "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json",
+    "tools/diag-scripts/ui-gallery-context-menu-disabled-item-action-state.json",
+    "tools/diag-scripts/suites/ui-gallery-context-menu-semantics/suite.json",
+    "tools/diag-scripts/suites/ui-gallery-context-menu/suite.json",
+    "tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json",
+    "target/fret-diag-context-menu-disabled-item-action-state-v2/sessions/1779387831262-20088/1779387844608/ai.packet",
+    "target/fret-diag-context-menu-disabled-item-action-state-v2/sessions/1779387831262-20088/share/1779387844608.zip",
+    "target/fret-diag-context-menu-semantics-suite-disabled-item-v3/sessions/1779388133420-237500/suite.summary.json",
+    "target/fret-diag-context-menu-semantics-suite-disabled-item-v2/sessions/1779387897940-40144/1779387958229-ui-gallery-context-menu-disabled-item-action-state/check.lint.json"
   ],
+
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
     "docs/adr/0051-model-observation-and-ui-invalidation-propagation.md"
