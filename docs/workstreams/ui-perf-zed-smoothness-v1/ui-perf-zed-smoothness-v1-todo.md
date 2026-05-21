@@ -400,6 +400,26 @@ not update checked-in baselines.
       - Treat this as a small mechanism cleanup with single-run smoke evidence. It does not close the broader
         resize-smoothness claim; the remaining measured owner is still paint/cache text-width change work plus the
         residual `layout_roots_time_us` / `layout_request_build_roots_time_us` cost.
+    - [x] Propagate clean geometry through pure interaction wrappers.
+      - Mechanism fix: `clean_engine_geometry_propagation_supported_element(...)` now accepts `HoverRegion` and
+        `HitTestGate` as pure geometry-propagation wrappers. Scroll, ViewCache, TextInput, and layout-owned side-effect
+        elements remain solve boundaries.
+      - Focused gates:
+        `cargo check -p fret-ui --lib`;
+        `cargo fmt -p fret-ui --check`;
+        `cargo nextest run -p fret-ui -E 'test(clean_geometry_small_resize_propagates_through_hover_and_hit_test_wrappers) | test(clean_geometry_small_resize_propagates_through_semantics_wrapper) | test(clean_geometry_small_resize_propagates_through_pressable_wrapper) | test(clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary) | test(clean_geometry_skips_default_shrink_fixed_px_horizontal_flex_with_free_space) | test(clean_geometry_rejects_default_shrink_fixed_px_horizontal_flex_without_free_space) | test(clean_geometry_skips_nested_fixed_size_horizontal_flex_origin_only_move)' --no-fail-fast`;
+        `cargo build -p fret-ui-gallery --features gallery-dev`;
+        `git diff --check`.
+      - Evidence:
+        - r24 bundle:
+          `target/fret-diag/text-clean-geometry-current-20260521-r24-hover-hit-test-clean-prop/sessions/1779401974317-157548/1779402006880-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+        - r25 repeat bundle:
+          `target/fret-diag/text-clean-geometry-current-20260521-r25-hover-hit-test-clean-prop-repeat/sessions/1779402139244-229784/1779402168609-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+      - Result versus r23: top resize ticks moved from `layout.nodes=3` with `HoverRegion` / `HitTestGate` wrapper
+        hotspots to `layout.nodes=1`; r24/r25 leave `Scroll` (`ui-gallery-content-viewport`) as the only measured
+        layout hotspot and keep `layout.engine_solve=0`.
+      - Treat this as a geometry-propagation surface reduction, not a whole-frame p95 claim. r24/r25 still show noisy
+        total/layout p95 dominated by request-build/proof/root traversal, Scroll layout, and renderer variance.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
     Windows RTX4090 evidence.
 

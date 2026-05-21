@@ -2610,7 +2610,9 @@ impl<H: UiHost> UiTree<H> {
             match &record.instance {
                 crate::declarative::frame::ElementInstance::Stack(_)
                 | crate::declarative::frame::ElementInstance::Pressable(_)
-                | crate::declarative::frame::ElementInstance::Semantics(_) => true,
+                | crate::declarative::frame::ElementInstance::Semantics(_)
+                | crate::declarative::frame::ElementInstance::HoverRegion(_)
+                | crate::declarative::frame::ElementInstance::HitTestGate(_) => true,
                 crate::declarative::frame::ElementInstance::Container(_) => true,
                 crate::declarative::frame::ElementInstance::Grid(_) => true,
                 crate::declarative::frame::ElementInstance::Flex(props) => {

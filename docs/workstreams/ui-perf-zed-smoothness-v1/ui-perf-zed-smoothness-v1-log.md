@@ -16349,3 +16349,53 @@ Post-fix evidence:
 - Interpretation: the targeted host-widget lookup owner improved repeatably, and observed-deps calls stayed stable,
   so passthrough did not drop paint observations. Whole-frame p95 remains dominated by resize layout and renderer
   finish/upload variance in this script, so this is not a checked-in baseline improvement claim.
+
+## 2026-05-22 06:26:00 +08:00 (clean geometry through interaction wrappers)
+
+Question:
+- After paint-wrapper passthrough, can the remaining resize-jitter `layout.nodes=3` surface be narrowed without
+  weakening scroll extent correctness?
+
+Finding:
+- r23 layout-node profiling kept `layout.engine_solve=0`, but top resize ticks still ran three layout nodes. The
+  measured owners were the content `Scroll` node plus pure wrapper work from `HoverRegion` and `HitTestGate`.
+- `HitTestGate` state sync is mount-owned, and `HoverRegion` state is derived from runtime hover/hit-test state. These
+  wrappers can propagate clean bounds when their child subtree is already clean. Scroll remains a boundary because it
+  owns viewport/extent work.
+
+Change:
+- Added `HoverRegion` and `HitTestGate` to the clean-geometry propagated wrapper set.
+- Added a focused regression test that resizes a precomputed clean child tree through `HoverRegion -> HitTestGate ->
+  Flex`, checks zero engine solves/rejections, keeps performed layout at the invalidated parent only, and verifies
+  descendant element bounds refresh to the new width.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui -E 'test(clean_geometry_small_resize_propagates_through_hover_and_hit_test_wrappers) | test(clean_geometry_small_resize_propagates_through_semantics_wrapper) | test(clean_geometry_small_resize_propagates_through_pressable_wrapper) | test(clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary) | test(clean_geometry_skips_default_shrink_fixed_px_horizontal_flex_with_free_space) | test(clean_geometry_rejects_default_shrink_fixed_px_horizontal_flex_without_free_space) | test(clean_geometry_skips_nested_fixed_size_horizontal_flex_origin_only_move)' --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r24-hover-hit-test-clean-prop --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r25-hover-hit-test-clean-prop-repeat --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+git diff --check
+```
+
+Notes:
+- The first two `cargo nextest` attempts timed out while compiling/linking the large `fret-ui` test binary. The
+  compile continued and finished naturally; direct binary runs passed the new test and related clean-geometry
+  regressions, and the final selector-based nextest run passed 7 tests once the binary was warm.
+- `cargo check` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Post-fix evidence:
+- r24 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r24-hover-hit-test-clean-prop/sessions/1779401974317-157548/1779402006880-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r25 repeat bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r25-hover-hit-test-clean-prop-repeat/sessions/1779402139244-229784/1779402168609-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r24 `diag stats --sort time --top 15` reports p50/p95 total `104/1195us`, layout `31/694us`, paint `37/468us`,
+  and `layout.engine_solve=0` at p95. Top resize ticks move to `layout.nodes=1`; the remaining hotspot is `Scroll`
+  (`79/136/80us` across the sampled resize ticks).
+- r25 repeat reports p50/p95 total `91/1089us`, layout `27/728us`, paint `31/323us`, and `layout.engine_solve=0` at
+  p95. Top resize ticks again stay at `layout.nodes=1`; only `Scroll` remains (`93/144/76us`).
+- Interpretation: wrapper layout work was removed repeatably, but whole-frame/layout p95 is still noisy. The next
+  owner is Scroll plus request-build/proof/root traversal timing, not another pure wrapper.

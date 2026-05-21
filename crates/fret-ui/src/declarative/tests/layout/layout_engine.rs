@@ -1360,6 +1360,169 @@ fn clean_geometry_small_resize_propagates_through_pressable_wrapper() {
 }
 
 #[test]
+fn clean_geometry_small_resize_propagates_through_hover_and_hit_test_wrappers() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+    let first_row_id = Arc::new(std::sync::Mutex::new(None));
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-hover-hit-test-wrapper-child",
+        |cx| {
+            let wrapper_layout = crate::element::LayoutStyle {
+                size: crate::element::SizeStyle {
+                    width: Length::Fill,
+                    height: Length::Fill,
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let hover = crate::element::HoverRegionProps {
+                layout: wrapper_layout,
+            };
+            let hit_test = crate::element::HitTestGateProps {
+                layout: wrapper_layout,
+                hit_test: false,
+            };
+            let flex = crate::element::FlexProps {
+                direction: fret_core::Axis::Vertical,
+                gap: Px(1.0).into(),
+                layout: wrapper_layout,
+                ..Default::default()
+            };
+            let first_row_id = first_row_id.clone();
+            vec![cx.hover_region(hover, move |cx, _hovered| {
+                vec![cx.hit_test_gate_props(hit_test, |cx| {
+                    vec![cx.flex(flex, |cx| {
+                        (0..8)
+                            .map(|idx| {
+                                let mut props = crate::element::ContainerProps::default();
+                                props.layout.size.width = Length::Fill;
+                                props.layout.size.height = Length::Px(Px(8.0));
+                                let row = cx.container(props, |_cx| Vec::<AnyElement>::new());
+                                if idx == 0 {
+                                    *first_row_id.lock().unwrap() = Some(row.id);
+                                }
+                                row
+                            })
+                            .collect::<Vec<_>>()
+                    })]
+                })]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "expected the initial barrier layout to solve"
+    );
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "pure interaction wrappers should not force a root solve during clean width-only resize"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted pure interaction wrapper geometry skips should not report rejection noise"
+    );
+
+    let performed = ui.debug_stats().layout_nodes_performed;
+    assert_eq!(
+        performed, 1,
+        "clean-geometry propagation should only run the invalidated parent layout; performed={performed}"
+    );
+
+    let hover_node = ui.children(child)[0];
+    let hit_test_node = ui.children(hover_node)[0];
+    let flex_node = ui.children(hit_test_node)[0];
+    let hover_bounds = ui.debug_node_bounds(hover_node).expect("hover bounds");
+    let hit_test_bounds = ui
+        .debug_node_bounds(hit_test_node)
+        .expect("hit-test bounds");
+    let flex_bounds = ui.debug_node_bounds(flex_node).expect("flex bounds");
+    assert!((hover_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01);
+    assert!((hit_test_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01);
+    assert!((flex_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01);
+
+    let first_row_id = first_row_id
+        .lock()
+        .unwrap()
+        .expect("first row id should be recorded");
+    let first_row_bounds =
+        crate::elements::current_bounds_for_element(&mut app, window, first_row_id)
+            .expect("first row element bounds");
+    assert!(
+        (first_row_bounds.size.width.0 - rect_b.size.width.0).abs() < 0.01,
+        "fast-path propagation must refresh descendant element bounds through pure interaction wrappers"
+    );
+}
+
+#[test]
 fn clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary() {
     struct PrecomputeThenResize {
         child: NodeId,
