@@ -10709,6 +10709,72 @@ Broader gates not run:
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
 
+## 2026-05-22 - RBX-M2-890 pointer-move tail wrapper retained Cx isolation
+
+Claim verified:
+
+- `event_pointer_move_tail.rs` and `pointer_move_tail_cx.rs` no longer import or name retained
+  bridge Cx types.
+- Pointer-move tail dispatch now uses `PointerMoveTailCx`, composed from the already-isolated
+  cursor, pointer-move route, and auto-pan timer capabilities.
+- Representative retained compatibility behavior for cursor updates and auto-pan timer scheduling
+  remains green.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_tail_cx.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the default declarative `fret-node` surface still compiles without enabling the
+    retained canvas compatibility island.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving the pointer-move
+    tail wrapper behind `PointerMoveTailCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_tail_wrapper_stays_off_retained_bridge) | test(pointer_move_auto_pan_timer_starts_for_node_drag_near_viewport_edge) | test(pointer_move_cursor_update_sets_close_button_cursor) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 4 tests.
+  - Scope proven: source-policy locks the tail wrapper off retained bridge Cx names; representative
+    cursor and auto-pan timer behavior remain green through the retained compatibility path.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_tail_cx.rs`
+  - Result: no matches.
+  - Scope proven: the migrated tail wrapper and composed capability seam no longer depend on
+    retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after the pointer-move tail wrapper seam
+    changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after isolating
+    the pointer-move tail wrapper.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-890` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
 ## 2026-05-22 - RBX-M2-880 pointer-move auto-pan timer retained Cx isolation
 
 Claim verified:

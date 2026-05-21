@@ -398,6 +398,12 @@ Compat-gated but retained-bridge-free support:
   - `RBX-M2-880` moved pointer-move auto-pan timer sync behind `AutoPanTimerCx`, a
     retained-agnostic capability for host, window, and bounds access. Retained `EventCx` adaptation
     remains isolated in `auto_pan_timer_retained_cx.rs`.
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_tail_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail.rs`
+  - `RBX-M2-890` moved the pointer-move tail wrapper behind `PointerMoveTailCx`, a composed
+    capability over `CanvasCursorCx`, `PointerMoveCx`, and `AutoPanTimerCx`. This adds no new
+    side-effect methods; retained `EventCx` only satisfies the wrapper through the existing branch
+    adapters.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/event.rs`
   - `RBX-M2-520` moved context menu open/restore/dismiss/finish/invalidate tail helpers behind the

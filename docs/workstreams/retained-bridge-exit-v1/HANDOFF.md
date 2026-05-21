@@ -983,6 +983,10 @@ retained compatibility test proves close-button pointer-move still requests the 
 Retained `EventCx` adaptation is isolated in `auto_pan_timer_retained_cx.rs`, and a retained
 compatibility test proves pointer-move node dragging near the viewport edge still starts a
 repeating auto-pan timer.
+`RBX-M2-890` then moved the pointer-move tail wrapper in `event_pointer_move_tail.rs` behind
+`PointerMoveTailCx`, a composed capability over the already-isolated cursor, pointer-move dispatch,
+and auto-pan timer seams. It adds no new side-effect methods; retained `EventCx` satisfies the
+wrapper only through existing branch adapters.
 
 ## Next Task
 
@@ -1052,7 +1056,8 @@ Recommended next implementation shape:
   `WireDragMoveCx + EdgeDragMoveCx`; the secondary insert pointer-move route now uses
   `InsertNodeDragMoveCx`; the secondary pointer-move wrapper now uses `SecondaryPointerMoveCx`;
   pointer-move cursor updates now use `CanvasCursorCx`; pointer-move auto-pan timer sync now uses
-  `AutoPanTimerCx`; and the pointer-up event entry and pointer-up button router now use
+  `AutoPanTimerCx`; the pointer-move tail wrapper now composes those branches through
+  `PointerMoveTailCx`; and the pointer-up event entry and pointer-up button router now use
   `PointerUpRouteCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
@@ -1151,7 +1156,31 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-22 for `RBX-M2-880`:
+Last run on 2026-05-22 for `RBX-M2-890`:
+
+- `cargo check -p fret-node` - passed with the pre-existing `fret-ui`
+  `current_effective_opacity` dead-code warning.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_tail_wrapper_stays_off_retained_bridge) | test(pointer_move_auto_pan_timer_starts_for_node_drag_near_viewport_edge) | test(pointer_move_cursor_update_sets_close_button_cursor) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 4 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_tail_cx.rs` -
+  no matches.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-890` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+Previous run on 2026-05-22 for `RBX-M2-880`:
 
 - `cargo check -p fret-node` - passed with the pre-existing `fret-ui`
   `current_effective_opacity` dead-code warning.
@@ -1172,28 +1201,6 @@ Broader gates not run:
 
 - `cargo nextest run --workspace`
   - Reason: `RBX-M2-880` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
-    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
-    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
-
-Previous run on 2026-05-22 for `RBX-M2-870`:
-
-- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
-  `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_cursor_update_stays_off_retained_bridge) | test(pointer_move_cursor_update_sets_close_button_cursor) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
-  passed, 3 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/cursor.rs ecosystem/fret-node/src/ui/canvas/widget/cursor_cx.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail/cursor.rs` -
-  no matches.
-- `cargo fmt --check` - passed.
-- `python3 tools/check_layering.py` - passed.
-- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
-  standalone markdown files.
-- `git diff --check` - passed.
-- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
-
-Broader gates not run:
-
-- `cargo nextest run --workspace`
-  - Reason: `RBX-M2-870` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
 

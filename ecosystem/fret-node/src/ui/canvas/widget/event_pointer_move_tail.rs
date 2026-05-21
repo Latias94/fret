@@ -1,11 +1,12 @@
 mod cursor;
 mod timer;
 
+use super::pointer_move_tail_cx::PointerMoveTailCx;
 use super::*;
 
 pub(super) fn dispatch_pointer_move_tail<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl PointerMoveTailCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     buttons: fret_core::MouseButtons,

@@ -4382,6 +4382,32 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-890 Isolate pointer-move tail wrapper retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_tail_cx.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the pointer-move tail wrapper off direct retained bridge Cx names.
+    - Compose the already-isolated cursor, pointer-move dispatch, and auto-pan timer capabilities
+      through `PointerMoveTailCx`.
+    - Prove representative cursor and auto-pan pointer-move behavior remains green.
+  - Result:
+    - Added `PointerMoveTailCx`.
+    - `event_pointer_move_tail.rs` now accepts `PointerMoveTailCx` instead of naming retained
+      `EventCx`.
+    - Added `pointer_move_tail_wrapper_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_tail_wrapper_stays_off_retained_bridge) | test(pointer_move_auto_pan_timer_starts_for_node_drag_near_viewport_edge) | test(pointer_move_cursor_update_sets_close_button_cursor) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_tail_cx.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
