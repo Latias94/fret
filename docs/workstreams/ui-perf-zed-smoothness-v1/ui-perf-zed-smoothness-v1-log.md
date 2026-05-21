@@ -15731,3 +15731,34 @@ cargo test -p fret-ui interactive_resize_wrapped_text_ -- --nocapture
 
 Decision:
 - Keep the default UX exact. Treat width bucketing as a deliberate experiment, not a correctness path.
+
+## 2026-05-21 17:20:00 +08:00 (runner monitor topology global-change de-noise)
+
+Question:
+- Was the retained row-fragment follow-up's changed `RunnerMonitorTopologyDiagnosticsStore` signal real topology
+  churn, or a diagnostics global being marked changed even when the snapshot was unchanged?
+
+Finding:
+- `RunnerMonitorTopologyDiagnosticsStore::update_snapshot` already returned `false` for identical snapshots, but the
+  desktop runner refreshed it through tracked `App::with_global_mut` during `about_to_wait`.
+- In `App`, tracked global mutation always queues the global type for propagation. This made an unchanged per-frame
+  monitor-topology refresh visible as global-change work to UI drivers and diagnostics.
+
+Change:
+- Added `fret_runtime::update_runner_monitor_topology_diagnostics(...)`, which checks the current snapshot before
+  entering the tracked mutation path.
+- `WinitRunner::refresh_runner_monitor_topology_diagnostics` now calls the helper, so unchanged monitor snapshots do
+  not produce `changed_globals`; real topology changes still update the store and propagate.
+
+Validation:
+```powershell
+cargo nextest run -p fret-app monitor_topology_refresh_tracks_only_real_snapshot_changes --no-fail-fast
+cargo nextest run -p fret-runtime topology_update_marks_global_changed_only_for_real_snapshot_changes update_snapshot_detects_real_changes clear_snapshot_removes_last_topology --no-fail-fast
+cargo check -p fret-launch
+cargo fmt -p fret-app -p fret-runtime -p fret-launch --check
+```
+
+Decision:
+- Treat the earlier diagnostics-global signal as fixed instrumentation noise, not as a new editor paint owner.
+- The remaining resize-jitter owner is still the changing-bounds layout/root solve under the content `Scroll`; this
+  slice does not replace the required repeat=3 resize-jitter bundle for that owner.

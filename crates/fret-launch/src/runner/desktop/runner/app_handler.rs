@@ -343,12 +343,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         event_loop: &dyn ActiveEventLoop,
     ) {
         let snapshot = collect_runner_monitor_topology_snapshot(event_loop);
-        self.app.with_global_mut(
-            fret_runtime::RunnerMonitorTopologyDiagnosticsStore::default,
-            |store, _app| {
-                let _ = store.update_snapshot(snapshot);
-            },
-        );
+        let _ = fret_runtime::update_runner_monitor_topology_diagnostics(&mut self.app, snapshot);
     }
 
     fn try_create_missing_surfaces(&mut self) {

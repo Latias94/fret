@@ -247,6 +247,20 @@ not update checked-in baselines.
     - Next owner: changing-bounds layout/root solve under the content `Scroll` (`layout_roots_time_us=812us`,
       `layout_engine_solve_time_us=346us` in the worst bundle), not another editor paint, renderer text, or shadcn
       recipe slice.
+  - [x] Remove no-op runner monitor topology refreshes from per-frame global-change propagation.
+    - Discovery: earlier resize-jitter attribution showed `RunnerMonitorTopologyDiagnosticsStore` in the changed
+      globals list on a frame that was otherwise dominated by layout/semantics work. The store already rejected
+      identical snapshots internally, but the desktop runner used tracked `with_global_mut`, so `App` still queued the
+      global as changed every refresh.
+    - Fix: `fret_runtime::update_runner_monitor_topology_diagnostics` now checks the current snapshot before entering
+      the tracked mutation path. The desktop runner calls this helper, so unchanged `about_to_wait` monitor refreshes
+      no longer generate global-change invalidation work, while true topology changes still propagate.
+    - Gate: `cargo nextest run -p fret-app monitor_topology_refresh_tracks_only_real_snapshot_changes --no-fail-fast`;
+      `cargo nextest run -p fret-runtime topology_update_marks_global_changed_only_for_real_snapshot_changes update_snapshot_detects_real_changes clear_snapshot_removes_last_topology --no-fail-fast`;
+      `cargo check -p fret-launch`.
+    - Decision: this closes the diagnostics-global noise found in the retained row-fragment follow-up. It does not
+      close the remaining changing-bounds root-solve owner below, which still needs a focused layout gate and a
+      repeat=3 resize-jitter bundle.
   - [ ] Reduce the remaining resize-jitter changing-bounds layout/root solve cost without weakening scroll extent
     correctness.
     - Candidate: a contained-root apply/solve path that handles bounds-only changes after the cache-root remains reused.
