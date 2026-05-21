@@ -909,7 +909,7 @@ impl<H: UiHost> UiTree<H> {
                     .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
                     .at_node(node));
                 }
-                if props.overflow != TextOverflow::Clip {
+                if !matches!(props.overflow, TextOverflow::Clip | TextOverflow::Ellipsis) {
                     return Err(CleanGeometrySolveSkipRejection::for_kind(
                         CleanGeometrySolveSkipRejectionReason::TextReflow,
                         element_kind,
@@ -945,7 +945,7 @@ impl<H: UiHost> UiTree<H> {
                     .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
                     .at_node(node));
                 }
-                if props.overflow != TextOverflow::Clip {
+                if !matches!(props.overflow, TextOverflow::Clip | TextOverflow::Ellipsis) {
                     return Err(CleanGeometrySolveSkipRejection::for_kind(
                         CleanGeometrySolveSkipRejectionReason::TextReflow,
                         element_kind,
@@ -981,7 +981,7 @@ impl<H: UiHost> UiTree<H> {
                     .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
                     .at_node(node));
                 }
-                if props.overflow != TextOverflow::Clip {
+                if !matches!(props.overflow, TextOverflow::Clip | TextOverflow::Ellipsis) {
                     return Err(CleanGeometrySolveSkipRejection::for_kind(
                         CleanGeometrySolveSkipRejectionReason::TextReflow,
                         element_kind,
@@ -1026,7 +1026,24 @@ impl<H: UiHost> UiTree<H> {
             .with_detail(CleanGeometrySolveSkipRejectionDetail::TextMissingWrapNoneMeasureCache)
             .at_node(node));
         };
-        if !Self::clean_size_matches(cached_size, bounds.size) {
+        let expected_size = if matches!(
+            instance,
+            crate::declarative::frame::ElementInstance::Text(props)
+                if props.overflow == TextOverflow::Ellipsis
+        ) || matches!(
+            instance,
+            crate::declarative::frame::ElementInstance::StyledText(props)
+                if props.overflow == TextOverflow::Ellipsis
+        ) || matches!(
+            instance,
+            crate::declarative::frame::ElementInstance::SelectableText(props)
+                if props.overflow == TextOverflow::Ellipsis
+        ) {
+            Size::new(bounds.size.width, cached_size.height)
+        } else {
+            cached_size
+        };
+        if !Self::clean_size_matches(expected_size, bounds.size) {
             return Err(CleanGeometrySolveSkipRejection::for_kind(
                 CleanGeometrySolveSkipRejectionReason::TextReflow,
                 element_kind,

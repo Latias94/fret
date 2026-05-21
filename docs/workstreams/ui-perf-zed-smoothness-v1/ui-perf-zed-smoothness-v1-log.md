@@ -15794,3 +15794,34 @@ Decision:
 - The next repeat resize-jitter bundle should inspect
   `top_layout_engine_solves[].clean_geometry_solve_skip_rejection` before choosing the contained-root apply/solve
   optimization.
+
+## 2026-05-21 13:54:10 +08:00 (nowrap ellipsis clean-geometry resize propagation)
+
+Question:
+- Which clean-geometry rejection can be safely removed from the resize-jitter root-solve owner without weakening text
+  correctness?
+
+Finding:
+- The retained text-measure resize bundle already contained runtime `clean_geometry_solve_skip_rejection` objects even
+  before `fret-diag` surfaced them. Its root `Stack` solve was blocked by
+  `text_reflow/text_overflow_not_clip` on `TextWrap::None + Ellipsis`; a nested `Semantics` root was separately blocked
+  by `text_reflow/text_wrap_not_none`.
+- `TextWrap::None + Ellipsis` is a safe narrower case than wrapped text: measurement already records a wrap-none
+  fingerprint and stable cached height, and the visible text remains single-line while the parent width changes.
+
+Change:
+- `clean_nowrap_text_cached_metrics_supported` now accepts `TextOverflow::Ellipsis` for `TextWrap::None` text when the
+  cached wrap-none fingerprint matches and the propagated bounds keep the cached height.
+- Added a layout-engine regression test proving a small width-only resize skips the authoritative engine solve for
+  fill-width ellipsis text while preserving the single-line height.
+
+Validation:
+```powershell
+cargo nextest run -p fret-ui clean_geometry_small_resize --no-fail-fast
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+```
+
+Decision:
+- Keep `TextWrap::Word` rejected for now. That remaining owner requires a separate line-break-stability proof before
+  clean propagation can bypass the authoritative solve.

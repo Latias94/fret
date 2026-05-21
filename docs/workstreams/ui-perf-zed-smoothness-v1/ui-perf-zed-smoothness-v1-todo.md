@@ -273,6 +273,16 @@ not update checked-in baselines.
     - Decision: this is attribution-only and does not change layout behavior. The next resize-jitter bundle should use
       `top_layout_engine_solves[].clean_geometry_solve_skip_rejection` to decide whether the remaining owner is a
       side-effect-boundary rule, missing interactive-resize small-step state, or another clean-subtree precondition.
+  - [x] Allow clean-geometry resize propagation through cached single-line ellipsis text.
+    - Discovery: the retained text-measure resize bundle already carried runtime rejection objects. The window root was
+      blocked by `text_reflow/text_overflow_not_clip` on `TextWrap::None + Ellipsis`, while the nested preview root was
+      still blocked by `text_reflow/text_wrap_not_none`.
+    - Fix: `TextWrap::None + Ellipsis` now uses the existing wrap-none measure fingerprint/cache as a stable-height
+      proof. Clean propagation may stretch the text bounds width while preserving the cached single-line height.
+    - Gate: `cargo nextest run -p fret-ui clean_geometry_small_resize --no-fail-fast`; `cargo check -p fret-ui --lib`;
+      `cargo fmt -p fret-ui --check`.
+    - Decision: this closes the safe single-line ellipsis subcase only. `TextWrap::Word` remains intentionally rejected
+      until a line-break-stability proof exists for the exact width delta and text content.
   - [ ] Reduce the remaining resize-jitter changing-bounds layout/root solve cost without weakening scroll extent
     correctness.
     - Candidate: a contained-root apply/solve path that handles bounds-only changes after the cache-root remains reused,
