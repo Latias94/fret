@@ -16008,3 +16008,52 @@ Post-fix evidence:
 - r6 summary from `diag stats --sort time --top 20 --json`: layout sum `6659us`, p95 layout `1054us`, and p95 engine
   solve `358us`.
 - Next slice should investigate `non_px_margin` before broadening margin handling or contained-root propagation.
+
+## 2026-05-21 18:36:38 +08:00 (vertical flex horizontal auto-margin resize propagation)
+
+Question:
+- Can clean geometry accept the r6 `non_px_margin` owner without treating all non-px margins as stable?
+
+Finding:
+- The r6 owner was the gallery preview page column under `ui-gallery-preview-card-content`. It uses horizontal
+  `auto` margins to center a fill-width, max-width doc column.
+- Auto margins are not equivalent to zero margins: for `mx-auto`, the cross-axis origin changes when the parent width
+  changes even if the child width stays clamped by `max_width`.
+- There is a narrow stable case for vertical, no-wrap flex: when only left/right margins are `Auto`, top/bottom margins
+  are px, and the child width resolves from `Fill`/`Px` plus px min/max constraints, clean geometry can recompute the
+  centered x origin from the new inner width.
+
+Change:
+- The vertical flex width-delta propagation path now accepts horizontal `auto` margins only for the centered
+  left/right-auto case. It recomputes child width from the next inner width plus px constraints, then recomputes the
+  centered origin.
+- The propagation supported-element prefilter now uses the same narrow flex margin predicate, so root solve skipping
+  and post-solve clean propagation agree.
+- Added a focused test proving `width: Fill + max_width + mx-auto` recentering skips the layout solve while preserving
+  child width and updating the x origin. Vertical auto margins, fractional/fill min/max constraints, and non-vertical
+  flex still remain outside this proof.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui clean_geometry_small_resize_skips_horizontal_auto_margin_vertical_flex_child clean_geometry_small_resize_skips_items_start_vertical_flex_child clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r7 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+git diff --check
+```
+
+Notes:
+- One intermediate nextest rebuild hit `rustc-LLVM ERROR: out of memory` while compiling the `fret-ui` test binary on
+  Windows. After stale/background compile pressure cleared, the same focused nextest command passed.
+
+Post-fix evidence:
+- Rerun bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r7/sessions/1779359695078-201076/1779359724805-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r7 top frames no longer report `non_px_margin`; the first remaining clean-geometry rejection is
+  `unsupported_kind` on `Canvas`.
+- r7 summary from `diag stats --sort time --top 20 --json`: layout sum `7742us`, p95 layout `1175us`, and p95 engine
+  solve `393us`. Treat the higher layout sum versus r6 as evidence to attribute the new Canvas owner and run repeated
+  confirmation before claiming a monotonic perf win.
+- Next slice should investigate whether Canvas can expose a stable clean-geometry contract for this resize page, or
+  whether the remaining solve is required by canvas text-measure side effects.

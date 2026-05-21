@@ -1705,7 +1705,9 @@ impl<H: UiHost> UiTree<H> {
                     element_kind,
                 ));
             }
-            if !Self::clean_margin_edges_are_px(child_style.margin) {
+            let horizontal_auto_margin =
+                Self::clean_vertical_flex_horizontal_auto_margin_centered(child_style.margin);
+            if !Self::clean_margin_edges_are_px(child_style.margin) && !horizontal_auto_margin {
                 return Err(CleanGeometrySolveSkipRejection::for_kind(
                     CleanGeometrySolveSkipRejectionReason::NonPxMargin,
                     element_kind,
@@ -1727,7 +1729,13 @@ impl<H: UiHost> UiTree<H> {
             let local_y = prev_child.origin.y.0 - prev_bounds.origin.y.0;
             let width = match align {
                 crate::element::CrossAlign::Stretch => {
-                    if (prev_child.size.width.0 - prev_inner_width).abs() <= 0.01
+                    if horizontal_auto_margin {
+                        Self::clean_vertical_flex_horizontal_auto_margin_child_width(
+                            child_style,
+                            next_inner_width,
+                            element_kind,
+                        )?
+                    } else if (prev_child.size.width.0 - prev_inner_width).abs() <= 0.01
                         || matches!(child_style.size.width, crate::element::Length::Fill)
                     {
                         Px(next_inner_width)
@@ -1735,21 +1743,93 @@ impl<H: UiHost> UiTree<H> {
                         prev_child.size.width
                     }
                 }
-                crate::element::CrossAlign::Start => prev_child.size.width,
+                crate::element::CrossAlign::Start => {
+                    if horizontal_auto_margin {
+                        Self::clean_vertical_flex_horizontal_auto_margin_child_width(
+                            child_style,
+                            next_inner_width,
+                            element_kind,
+                        )?
+                    } else {
+                        prev_child.size.width
+                    }
+                }
                 _ => unreachable!("unsupported vertical flex cross-axis alignment rejected above"),
+            };
+            let origin_x = if horizontal_auto_margin {
+                Px(bounds.origin.x.0 + pad_left + (next_inner_width - width.0).max(0.0) * 0.5)
+            } else {
+                Px(bounds.origin.x.0 + local_x)
             };
             out.push((
                 child,
                 Rect::new(
-                    Point::new(
-                        Px(bounds.origin.x.0 + local_x),
-                        Px(bounds.origin.y.0 + local_y),
-                    ),
+                    Point::new(origin_x, Px(bounds.origin.y.0 + local_y)),
                     Size::new(width, prev_child.size.height),
                 ),
             ));
         }
         Ok(out)
+    }
+
+    fn clean_vertical_flex_horizontal_auto_margin_centered(
+        margin: crate::element::MarginEdges,
+    ) -> bool {
+        matches!(margin.left, crate::element::MarginEdge::Auto)
+            && matches!(margin.right, crate::element::MarginEdge::Auto)
+            && matches!(margin.top, crate::element::MarginEdge::Px(_))
+            && matches!(margin.bottom, crate::element::MarginEdge::Px(_))
+    }
+
+    fn clean_vertical_flex_horizontal_auto_margin_child_width(
+        child_style: crate::element::LayoutStyle,
+        next_inner_width: f32,
+        element_kind: &'static str,
+    ) -> Result<Px, CleanGeometrySolveSkipRejection> {
+        let mut width = match child_style.size.width {
+            crate::element::Length::Fill => next_inner_width,
+            crate::element::Length::Px(px) => px.0.max(0.0),
+            crate::element::Length::Auto => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::NonPxMargin,
+                    element_kind,
+                ));
+            }
+            crate::element::Length::Fraction(_) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                    element_kind,
+                ));
+            }
+        };
+
+        match child_style.size.min_width {
+            Some(crate::element::Length::Px(px)) => {
+                width = width.max(px.0.max(0.0));
+            }
+            Some(crate::element::Length::Auto) | None => {}
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                    element_kind,
+                ));
+            }
+        }
+
+        match child_style.size.max_width {
+            Some(crate::element::Length::Px(px)) => {
+                width = width.min(px.0.max(0.0));
+            }
+            Some(crate::element::Length::Auto) | None => {}
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                    element_kind,
+                ));
+            }
+        }
+
+        Ok(Px(width.max(0.0)))
     }
 
     fn clean_horizontal_fixed_flex_width_delta_child_bounds(
@@ -2391,45 +2471,56 @@ impl<H: UiHost> UiTree<H> {
             return None;
         };
 
-        let supported = match &record.instance {
-            crate::declarative::frame::ElementInstance::Stack(_)
-            | crate::declarative::frame::ElementInstance::Pressable(_)
-            | crate::declarative::frame::ElementInstance::Semantics(_) => true,
-            crate::declarative::frame::ElementInstance::Container(_) => true,
-            crate::declarative::frame::ElementInstance::Grid(_) => true,
-            crate::declarative::frame::ElementInstance::Flex(_)
-            | crate::declarative::frame::ElementInstance::SemanticFlex(_)
-            | crate::declarative::frame::ElementInstance::RovingFlex(_) => {
-                !children.iter().copied().any(|child| {
-                    let style =
-                        crate::declarative::frame::layout_style_for_node(app, window, child);
-                    matches!(style.margin.left, crate::element::MarginEdge::Auto)
-                        || matches!(style.margin.right, crate::element::MarginEdge::Auto)
-                        || matches!(style.margin.top, crate::element::MarginEdge::Auto)
-                        || matches!(style.margin.bottom, crate::element::MarginEdge::Auto)
-                })
-            }
-            crate::declarative::frame::ElementInstance::Spacer(_) => children.is_empty(),
-            crate::declarative::frame::ElementInstance::Text(_)
-            | crate::declarative::frame::ElementInstance::StyledText(_)
-            | crate::declarative::frame::ElementInstance::SelectableText(_) => {
-                children.is_empty()
-                    && self
-                        .clean_text_cached_metrics_supported(
-                            app,
-                            window,
-                            node,
-                            bounds,
-                            prev_bounds,
-                            &record.instance,
-                            record.instance.kind_name(),
-                            scale_factor,
-                        )
-                        .is_ok()
-            }
-            _ => false,
-        };
+        let supported =
+            match &record.instance {
+                crate::declarative::frame::ElementInstance::Stack(_)
+                | crate::declarative::frame::ElementInstance::Pressable(_)
+                | crate::declarative::frame::ElementInstance::Semantics(_) => true,
+                crate::declarative::frame::ElementInstance::Container(_) => true,
+                crate::declarative::frame::ElementInstance::Grid(_) => true,
+                crate::declarative::frame::ElementInstance::Flex(props) => {
+                    self.clean_engine_geometry_flex_margin_supported(app, window, children, *props)
+                }
+                crate::declarative::frame::ElementInstance::SemanticFlex(props) => self
+                    .clean_engine_geometry_flex_margin_supported(app, window, children, props.flex),
+                crate::declarative::frame::ElementInstance::RovingFlex(props) => self
+                    .clean_engine_geometry_flex_margin_supported(app, window, children, props.flex),
+                crate::declarative::frame::ElementInstance::Spacer(_) => children.is_empty(),
+                crate::declarative::frame::ElementInstance::Text(_)
+                | crate::declarative::frame::ElementInstance::StyledText(_)
+                | crate::declarative::frame::ElementInstance::SelectableText(_) => {
+                    children.is_empty()
+                        && self
+                            .clean_text_cached_metrics_supported(
+                                app,
+                                window,
+                                node,
+                                bounds,
+                                prev_bounds,
+                                &record.instance,
+                                record.instance.kind_name(),
+                                scale_factor,
+                            )
+                            .is_ok()
+                }
+                _ => false,
+            };
         supported.then_some(record.element)
+    }
+
+    fn clean_engine_geometry_flex_margin_supported(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        children: &[NodeId],
+        props: crate::element::FlexProps,
+    ) -> bool {
+        children.iter().copied().all(|child| {
+            let style = crate::declarative::frame::layout_style_for_node(app, window, child);
+            Self::clean_margin_edges_are_px(style.margin)
+                || (props.direction == fret_core::Axis::Vertical
+                    && Self::clean_vertical_flex_horizontal_auto_margin_centered(style.margin))
+        })
     }
 
     fn clean_engine_geometry_propagation_requires_manual_child_bounds(

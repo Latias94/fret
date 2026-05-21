@@ -299,10 +299,13 @@ not update checked-in baselines.
     - Follow-up fix: vertical, no-wrap `CrossAlign::Start` flex containers now reuse clean geometry for width-only
       deltas by preserving child cross-axis origin and width. The r6 text-measure rerun no longer reports
       `flex_cross_align`; the next owner is `non_px_margin` on a `Flex` node.
+    - Follow-up fix: vertical, no-wrap flex now accepts the narrow horizontal `mx-auto` centering case and recomputes
+      the child x origin from the next inner width. The r7 text-measure rerun no longer reports `non_px_margin`; the
+      next owner is `unsupported_kind` on `Canvas`.
   - [ ] Reduce the remaining resize-jitter changing-bounds layout/root solve cost without weakening scroll extent
     correctness.
     - Candidate: a contained-root apply/solve path that handles bounds-only changes after the cache-root remains reused,
-      informed by the current `non_px_margin` clean-geometry solve-skip rejection.
+      informed by the current `Canvas` / `unsupported_kind` clean-geometry solve-skip rejection.
     - Required proof: one focused Rust gate plus a repeat=3 resize-jitter bundle preserving the row replay/store and
       view-cache reuse invariants above.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
