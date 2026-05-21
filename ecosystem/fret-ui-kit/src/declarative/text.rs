@@ -734,8 +734,9 @@ pub fn text_chrome_glyph<H: UiHost>(
 
 /// Declarative text helper for fill-width chrome titles.
 ///
-/// Use this for window/panel title bars that occupy remaining chrome row space. It keeps compact
-/// medium-weight chrome text while opting into fill, grow, and `min-width: 0` layout.
+/// Use this for window/panel title bars that fill the available inline space while staying
+/// shrinkable for ellipsis. It avoids main-axis growth so the same title helper remains safe in
+/// vertical chrome lanes.
 pub fn text_chrome_title<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
@@ -747,7 +748,7 @@ pub fn text_chrome_title<H: UiHost>(
 
     ui_typography::scope_text_style(
         cx.text_props(TextProps {
-            layout: fill_growing_single_line_layout(),
+            layout: fill_shrinkable_single_line_layout(),
             text: text.into(),
             style: None,
             color: None,
@@ -2070,7 +2071,7 @@ mod tests {
     }
 
     #[test]
-    fn chrome_title_text_uses_medium_fill_width_single_line_truncation() {
+    fn chrome_title_text_fills_width_without_main_axis_growth() {
         let window = AppWindowId::default();
         let mut app = test_app();
         let bounds = test_bounds();
@@ -2087,9 +2088,9 @@ mod tests {
         assert!(props.style.is_none());
         assert!(props.color.is_none());
         assert_eq!(props.layout.size.width, Length::Fill);
-        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.grow, 0.0);
         assert_eq!(props.layout.flex.shrink, 1.0);
-        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.flex.basis, Length::Auto);
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);

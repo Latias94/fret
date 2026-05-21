@@ -306,6 +306,22 @@ not update checked-in baselines.
       longer reports `Canvas` / `unsupported_kind`; top frames have zero clean-geometry solve-skip rejections. The
       next owner should be attributed from request-build/layout-roots/paint timing and repeated-bundle stability, not
       from another known clean-geometry precondition.
+  - [x] Keep chrome title text out of main-axis growth in vertical lanes.
+    - Discovery: after r8 removed clean-geometry rejection owners, r9 still showed one layout invalidation walk rooted
+      at the content header title text (`text_chrome_title`, node `4294968222`). The source stayed `other`/unknown
+      because the owner was paint-time text auto-height repair, not declarative diff propagation.
+    - Root cause: `text_chrome_title` used `fill_growing_single_line_layout()`. That is correct for horizontal rows
+      that want a label to take leftover inline space, but unsafe for a vertical title lane because `flex-grow: 1`
+      plus `flex-basis: 0` applies on the vertical main axis and can allocate the single-line title `0px` height.
+    - Fix: `text_chrome_title` now uses fill-width shrinkable single-line layout without main-axis growth. It keeps
+      `width: Fill`, `min-width: 0`, shrink, nowrap, and ellipsis, but leaves `grow=0` and `basis=Auto`.
+    - Gate: `cargo nextest run -p fret-ui-kit chrome_title_text_fills_width_without_main_axis_growth --no-fail-fast`;
+      `cargo check -p fret-ui-kit`; `cargo fmt -p fret-ui-kit --check`; `git diff --check`.
+    - Evidence: r10 bundle
+      `target/fret-diag/text-clean-geometry-current-20260521-r10/sessions/1779367085442-198548/1779367130341-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+      shows the header title text at `h=20.0` instead of `h=0.0`, and `diag stats --sort cpu_cycles --top 30` reports
+      `inv.calls=0` / `inv.nodes=0` on sampled top frames. Treat this as removing the spurious repair invalidation,
+      not as a single-run p95 speedup claim.
   - [ ] Reduce the remaining resize-jitter changing-bounds layout/root solve cost without weakening scroll extent
     correctness.
     - Candidate: a contained-root apply/solve path that handles bounds-only changes after the cache-root remains reused,

@@ -16097,3 +16097,43 @@ Post-fix evidence:
 - Next slice should stop chasing clean-geometry rejection owners for this page unless repeated evidence reintroduces
   one. Remaining top-frame work should be attributed through request-build/layout-roots/paint timing with repeat
   confirmation before claiming the broader perf win.
+
+## 2026-05-21 20:56:07 +08:00 (chrome title vertical lane height repair)
+
+Question:
+- After r8 removed clean-geometry solve-skip rejection owners, why did r9 still show a repeated layout invalidation
+  walk rooted at the content header title text?
+
+Finding:
+- The remaining owner was not declarative diff propagation. The r9 layout invalidation walk stayed
+  `source=other`, `detail=null`, and rooted at `text_chrome_title` (`ecosystem/fret-ui-kit/src/declarative/text.rs`).
+- The title text had a `0px` semantic height in the content header while the sibling readout had a normal text height.
+- `text_chrome_title` used `fill_growing_single_line_layout()`, so `flex-grow: 1` and `flex-basis: 0` applied to the
+  vertical main axis when the helper was used in a vertical header-copy lane. Paint-time text prepare then repaired
+  the auto-height mismatch by invalidating layout.
+
+Change:
+- `text_chrome_title` now uses fill-width shrinkable single-line layout instead of the growing variant.
+- The helper still keeps `width: Fill`, shrink, `min-width: 0`, nowrap, and ellipsis, but leaves the main-axis
+  `grow=0` and `basis=Auto` so it is safe in vertical chrome lanes.
+
+Validation:
+```powershell
+cargo nextest run -p fret-ui-kit chrome_title_text_fills_width_without_main_axis_growth --no-fail-fast
+cargo check -p fret-ui-kit
+cargo fmt -p fret-ui-kit --check
+cargo fmt -p fret-ui --check
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r10 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r10\sessions\1779367085442-198548\1779367130341-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort cpu_cycles --top 30
+git diff --check
+```
+
+Post-fix evidence:
+- Rerun bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r10/sessions/1779367085442-198548/1779367130341-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r10 semantics show the header title text (`4294968222`, "Text / Measured Bounds Overlay") at `h=20.0` instead of
+  the r9 `h=0.0` owner.
+- r10 `diag stats --sort cpu_cycles --top 30` reports sampled top frames with `inv.calls=0` and `inv.nodes=0`.
+- This should be treated as a correctness and repair-invalidation fix. Do not claim a broad p95 win from this single
+  run; the next local owner remains request-build/layout-roots/paint timing with repeat confirmation.
