@@ -502,3 +502,22 @@ mechanism can visibly fail.
   `target/fret-diag-input-otp-invalid-required-semantics-v2/sessions/1779329862109-172384/1779329877911/ai.packet`,
   and the dedicated suite evidence is anchored at
   `target/fret-diag-input-otp-semantics-suite-v2/sessions/1779329954569-181280/suite.summary.json`.
+
+- DatePicker required/invalid trigger semantics update:
+  `ui-gallery-date-picker-required-invalid-semantics.json` now covers required/invalid semantics on
+  the concrete shadcn DatePicker trigger button. The gate starts on the Date Picker docs page,
+  scopes rendering to Compact Builder and Invalid, proves the compact builder trigger exports
+  `role=button`, `required=true`, `invalid=null`, `focus=true`, and `invoke=true`, then proves the
+  Invalid trigger exports `required=true`, `invalid=true`, `focus=true`, and `invoke=true`.
+  It also verifies caller-owned error copy, associated-label focus, and popover/calendar creation.
+  The Date Picker page now has a first-party Invalid example that keeps `DatePicker::required(true)`
+  / `DatePicker::aria_invalid(true)` on the trigger while keeping `Field::invalid(true)` and
+  `FieldError` copy outside the recipe. The slice also hardened the existing
+  `ui-gallery-select-invalid-form-state.json` gate by replacing a transient overlay-option
+  `click_stable` with direct semantic `click` after existence convergence. Focused DatePicker
+  runtime evidence is anchored at
+  `target/fret-diag-date-picker-required-invalid-semantics-v1/sessions/1779334955994-144056/1779334968449/ai.packet`,
+  the dedicated suite evidence is anchored at
+  `target/fret-diag-date-picker-semantics-suite-v1/sessions/1779335003408-192508/suite.summary.json`,
+  and the broad runtime suite now passes 23/23 with summary
+  `target/fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2/sessions/1779337267974-91608/suite.summary.json`.

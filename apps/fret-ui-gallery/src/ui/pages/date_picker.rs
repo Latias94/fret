@@ -15,6 +15,7 @@ pub(super) fn preview_date_picker(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement
     let natural_language = snippets::natural_language::render(cx);
     let rtl = snippets::rtl::render(cx);
     let presets = snippets::presets::render(cx);
+    let invalid = snippets::invalid::render(cx);
     let label = snippets::label::render(cx);
     let dropdowns = snippets::dropdowns::render(cx);
     let notes_stack = snippets::notes::render(cx);
@@ -82,6 +83,12 @@ pub(super) fn preview_date_picker(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement
         .code_rust_from_file_region(snippets::compact_builder::SOURCE, "example")
         .max_w(Px(980.0))
         .no_shell();
+    let invalid = DocSection::build(cx, "Invalid", invalid)
+        .description("`DatePicker::aria_invalid(true)` and `DatePicker::required(true)` stay on the trigger for chrome/semantics; surrounding `Field::invalid(true)` and `FieldError` copy remain caller-owned.")
+        .test_id_prefix("ui-gallery-date-picker-invalid")
+        .code_rust_from_file_region(snippets::invalid::SOURCE, "example")
+        .max_w(Px(980.0))
+        .no_shell();
     let label = DocSection::build(cx, "Label Association", label)
         .description("Use `FieldLabel::for_control`, `DatePicker::control_id`, and `DatePicker::test_id_prefix` to focus the trigger and keep derived automation anchors stable.")
         .test_id_prefix("ui-gallery-date-picker-label")
@@ -99,7 +106,7 @@ pub(super) fn preview_date_picker(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows the shadcn Date Picker docs flow first: Demo -> Usage -> Basic -> Range -> Date of birth -> Input -> Time -> Natural language -> RTL. `With Presets` stays as the upstream registry follow-up; `Compact Builder (Fret)`, `Label Association`, and `With Dropdowns` remain focused Fret/gallery extensions, including root trigger-level form semantics such as `DatePicker::required(true)`.",
+            "Preview follows the shadcn Date Picker docs flow first: Demo -> Usage -> Basic -> Range -> Date of birth -> Input -> Time -> Natural language -> RTL. `With Presets` stays as the upstream registry follow-up; `Compact Builder (Fret)`, `Invalid`, `Label Association`, and `With Dropdowns` remain focused Fret/gallery extensions, including root trigger-level form semantics such as `DatePicker::required(true)`. Invalid state keeps root `DatePicker::aria_invalid(true)` on the trigger and caller-owned field error copy.",
         ),
         vec![
             demo,
@@ -113,6 +120,7 @@ pub(super) fn preview_date_picker(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement
             rtl,
             presets,
             compact_builder,
+            invalid,
             label,
             dropdowns,
             notes_stack,

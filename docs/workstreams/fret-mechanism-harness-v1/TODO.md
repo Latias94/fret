@@ -1584,3 +1584,22 @@ date: 2026-05-12
     `target/fret-diag-input-otp-semantics-suite-v2/sessions/1779329954569-181280/suite.summary.json`,
     and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 22/22 with the InputOTP row
     run id `1779331449795`.
+
+- [x] Add a DatePicker required/invalid trigger semantics runtime gate.
+  - Result:
+    `ui-gallery-date-picker-required-invalid-semantics.json` now starts directly on the Date Picker
+    page, self-scopes the docs page to `Compact Builder (Fret),Invalid`, proves the compact builder
+    trigger exports `role=button`, `required=true`, `invalid=null`, and enabled `focus`/`invoke`,
+    then proves the Invalid example trigger exports `required=true`, `invalid=true`, enabled
+    `focus`/`invoke`, caller-owned `FieldError` copy, label-to-trigger focus, and popover/calendar
+    creation. The Date Picker page now has a focused Invalid snippet that keeps
+    `DatePicker::required(true)` / `DatePicker::aria_invalid(true)` on the trigger while leaving
+    `Field::invalid(true)` and error copy caller-owned. The first broad-suite run exposed a
+    diagnostics authoring hazard in the existing Select invalid gate (`click_stable` over a live
+    overlay option could stall with no frames under the long suite); the script now uses a direct
+    semantic `click` for the already-resolved Apple option and the hardening was re-verified
+    focused. Focused DatePicker runtime passed with run id `1779334968449`, the new
+    `ui-gallery-date-picker-semantics` suite passed 1/1 with summary
+    `target/fret-diag-date-picker-semantics-suite-v1/sessions/1779335003408-192508/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 23/23 with the DatePicker
+    row run id `1779338165138` and hardened Select row run id `1779338502088`.

@@ -7217,3 +7217,89 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-input-otp-invalid-required-v1 --session-auto --timeout-ms 1800000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed 22/22; `stage_counts={"passed":22}`; `reason_code_counts={}`;
     InputOTP row run id `1779331449795`.
+
+## DatePicker Required/Invalid Trigger Semantics Runtime Gate
+
+- invariant:
+  shadcn DatePicker is a button-backed popover trigger, so required and invalid form-state semantics
+  must be exported by the trigger button that owns focus/invoke and opens the calendar. Surrounding
+  `Field::invalid(true)` styling and `FieldError` copy remain caller-owned.
+- finding:
+  no DatePicker recipe/runtime defect was reproduced. Existing trigger semantics were correct; this
+  slice closed the missing UI Gallery invalid teaching surface and promoted the required/invalid
+  trigger contract into a deterministic runtime gate. The first broad-suite run also exposed a
+  diagnostics authoring hazard in the existing Select invalid gate: `click_stable` on an already
+  visible transient overlay option could stall with `timeout.no_frames`. The Select script now uses
+  direct semantic `click` for that committed option.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/date_picker/invalid.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/date_picker/mod.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/date_picker.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json`,
+  `tools/diag-scripts/ui-gallery-date-picker-required-invalid-semantics.json`,
+  `tools/diag-scripts/suites/ui-gallery-date-picker-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- existing recipe anchors:
+  `ecosystem/fret-ui-shadcn/src/date_picker.rs`
+  (`DatePicker::required`, `DatePicker::aria_invalid`, and the existing unit tests
+  `date_picker_required_exposes_required_semantics` /
+  `date_picker_aria_invalid_exposes_invalid_semantics`).
+- evidence anchors:
+  focused DatePicker runtime AI packet:
+  `target/fret-diag-date-picker-required-invalid-semantics-v1/sessions/1779334955994-144056/1779334968449/ai.packet`;
+  focused DatePicker runtime pack:
+  `target/fret-diag-date-picker-required-invalid-semantics-v1/sessions/1779334955994-144056/share/1779334968449.zip`;
+  dedicated DatePicker suite summary:
+  `target/fret-diag-date-picker-semantics-suite-v1/sessions/1779335003408-192508/suite.summary.json`;
+  hardened Select focused runtime AI packet:
+  `target/fret-diag-select-invalid-form-state-click-hardening-v1/sessions/1779337219903-189420/1779337229373/ai.packet`;
+  hardened Select focused runtime pack:
+  `target/fret-diag-select-invalid-form-state-click-hardening-v1/sessions/1779337219903-189420/share/1779337229373.zip`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2/sessions/1779337267974-91608/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\date-picker\ui-gallery-date-picker-required-invalid-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\select\ui-gallery-select-invalid-form-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-date-picker-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-date-picker-required-invalid-semantics.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\date_picker\invalid.rs apps\fret-ui-gallery\src\ui\snippets\date_picker\mod.rs apps\fret-ui-gallery\src\ui\pages\date_picker.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn date_picker_required_exposes_required_semantics --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-shadcn date_picker_aria_invalid_exposes_invalid_semantics --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_date_picker_required_invalid_semantics -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_and_input_otp_docs_keep_required_ownership_on_the_control_surface -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_docs_keep_invalid_ownership_on_trigger_with_caller_owned_error_copy -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_select_invalid_form_state -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused DatePicker runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\date-picker\ui-gallery-date-picker-required-invalid-semantics.json --dir target\fret-diag-date-picker-required-invalid-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779334968449`.
+- hardened Select focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\select\ui-gallery-select-invalid-form-state.json --dir target\fret-diag-select-invalid-form-state-click-hardening-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779337229373`.
+- dedicated DatePicker runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-date-picker-semantics --dir target\fret-diag-date-picker-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; script run id `1779335013570`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2 --session-auto --timeout-ms 2400000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 23/23; `stage_counts={"passed":23}`; `reason_code_counts={}`;
+    DatePicker row run id `1779338165138`; hardened Select row run id `1779338502088`.

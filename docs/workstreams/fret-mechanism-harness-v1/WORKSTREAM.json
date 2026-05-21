@@ -69,7 +69,7 @@
     }
   ],
   "repro": {
-    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, prepaint virtual-list window-update fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, pointer-capture owner/cancel, multi-pointer pointer-session, docking viewport-capture, and ContextMenu branch/corridor runtime gates, focus barrier routing fixtures, semantics relation fixtures, Pressable key-activation fixtures, combobox active-descendant interaction fixtures, roving focus/typeahead interaction fixtures, flat, nested, and retained-tree stale-parent focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/drawer/combobox/select/dropdown-menu/context-menu Escape, outside-press, focus-outside, and submenu restore policy outcomes, shadcn recipe typeahead fixtures for select/dropdown-menu/menubar printable-key outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, virtual-list boundary owner/reason gates, DataTable retained filter-shrink input-change runtime diagnostics, the UI Gallery checkbox underflow diagnostics gate, the UI Gallery overlay/focus diagnostics suite including Drawer underlay blocking and Combobox outside-press focus restore, the Separator hidden-semantics runtime gate, the Accordion expanded-semantics mutation gate, the Accordion focusable-disabled keyboard/action suppression runtime gate, Combobox/Command active-descendant mutation runtime gates, the Sonner live-region mutation runtime gate, Select/Tabs selected-state mutation runtime gates, the Switch choice-card checked-state semantics runtime gate, the Checkbox disabled action-state runtime gate, the Slider numeric action-state runtime gate plus duplicate thumb test-id repair, the Checkbox table mixed checked-state runtime gate and checked_state_is diagnostics predicate, the Toggle pressed-state runtime gate and pressed_state_is diagnostics predicate, the Input required/invalid form-state runtime gate and required_is/invalid_is diagnostics predicates, the Select invalid form-state runtime gate, the Textarea required/invalid form-state runtime gate, and the InputOTP invalid/required form-state runtime gate, Command/DataTable/retained Virtual List collection-metadata mutation runtime gates, the retained Tree hierarchy level/expanded mutation runtime gate, the DataTable pagination disabled/invoke action-state mutation runtime gate, the retained Tree selected/invoke action-state mutation runtime gate, and the retained Tree dynamic disabled/focus/invoke suppression runtime gate, the Select cross-root relation-edge runtime gate, the HitTestOnly paint-cache replay runtime gate, and the desktop repeating-timer redraw-starvation repair that unblocks the broad shadcn runtime-evidence suite, and the runner repeating-timer overlap stress gate.",
+    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, prepaint virtual-list window-update fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, pointer-capture owner/cancel, multi-pointer pointer-session, docking viewport-capture, and ContextMenu branch/corridor runtime gates, focus barrier routing fixtures, semantics relation fixtures, Pressable key-activation fixtures, combobox active-descendant interaction fixtures, roving focus/typeahead interaction fixtures, flat, nested, and retained-tree stale-parent focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/drawer/combobox/select/dropdown-menu/context-menu Escape, outside-press, focus-outside, and submenu restore policy outcomes, shadcn recipe typeahead fixtures for select/dropdown-menu/menubar printable-key outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, virtual-list boundary owner/reason gates, DataTable retained filter-shrink input-change runtime diagnostics, the UI Gallery checkbox underflow diagnostics gate, the UI Gallery overlay/focus diagnostics suite including Drawer underlay blocking and Combobox outside-press focus restore, the Separator hidden-semantics runtime gate, the Accordion expanded-semantics mutation gate, the Accordion focusable-disabled keyboard/action suppression runtime gate, Combobox/Command active-descendant mutation runtime gates, the Sonner live-region mutation runtime gate, Select/Tabs selected-state mutation runtime gates, the Switch choice-card checked-state semantics runtime gate, the Checkbox disabled action-state runtime gate, the Slider numeric action-state runtime gate plus duplicate thumb test-id repair, the Checkbox table mixed checked-state runtime gate and checked_state_is diagnostics predicate, the Toggle pressed-state runtime gate and pressed_state_is diagnostics predicate, the Input required/invalid form-state runtime gate and required_is/invalid_is diagnostics predicates, the Select invalid form-state runtime gate, the Textarea required/invalid form-state runtime gate, and the InputOTP invalid/required form-state runtime gate, the DatePicker required/invalid trigger semantics runtime gate, the Select invalid transient option click hardening, Command/DataTable/retained Virtual List collection-metadata mutation runtime gates, the retained Tree hierarchy level/expanded mutation runtime gate, the DataTable pagination disabled/invoke action-state mutation runtime gate, the retained Tree selected/invoke action-state mutation runtime gate, and the retained Tree dynamic disabled/focus/invoke suppression runtime gate, the Select cross-root relation-edge runtime gate, the HitTestOnly paint-cache replay runtime gate, and the desktop repeating-timer redraw-starvation repair that unblocks the broad shadcn runtime-evidence suite, and the runner repeating-timer overlap stress gate.",
     "commands": [
       "cargo test --profile dev-fast -p fret-mechanism-harness --lib mechanism_metrics_can_assert_non_geometry_facts -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture",
@@ -280,7 +280,20 @@
       "cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_input_otp_invalid_required_semantics -- --nocapture",
       "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/input/ui-gallery-input-otp-invalid-required-semantics.json --dir target/fret-diag-input-otp-invalid-required-semantics-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe",
       "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-input-otp-semantics --dir target/fret-diag-input-otp-semantics-suite-v2 --session-auto --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe",
-      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-input-otp-invalid-required-v1 --session-auto --timeout-ms 1800000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-input-otp-invalid-required-v1 --session-auto --timeout-ms 1800000 --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "python -m json.tool tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json > $null",
+      "python -m json.tool tools/diag-scripts/suites/ui-gallery-date-picker-semantics/suite.json > $null",
+      "python -m json.tool tools/diag-scripts/ui-gallery-date-picker-required-invalid-semantics.json > $null",
+      "rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/date_picker/invalid.rs apps/fret-ui-gallery/src/ui/snippets/date_picker/mod.rs apps/fret-ui-gallery/src/ui/pages/date_picker.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs",
+      "cargo test --profile dev-fast -p fret-ui-shadcn date_picker_required_exposes_required_semantics --lib -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui-shadcn date_picker_aria_invalid_exposes_invalid_semantics --lib -- --nocapture",
+      "cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_date_picker_required_invalid_semantics -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_and_input_otp_docs_keep_required_ownership_on_the_control_surface -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_docs_keep_invalid_ownership_on_trigger_with_caller_owned_error_copy -- --nocapture",
+      "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json --dir target/fret-diag-date-picker-required-invalid-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json --dir target/fret-diag-select-invalid-form-state-click-hardening-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-date-picker-semantics --dir target/fret-diag-date-picker-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2 --session-auto --timeout-ms 2400000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     ]
   },
   "gates": [
@@ -1292,6 +1305,51 @@
     },
     {
       "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-input-otp-invalid-required-v1 --session-auto --timeout-ms 1800000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json > $null"
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json > $null"
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/suites/ui-gallery-date-picker-semantics/suite.json > $null"
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery-date-picker-required-invalid-semantics.json > $null"
+    },
+    {
+      "command": "rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/date_picker/invalid.rs apps/fret-ui-gallery/src/ui/snippets/date_picker/mod.rs apps/fret-ui-gallery/src/ui/pages/date_picker.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn date_picker_required_exposes_required_semantics --lib -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn date_picker_aria_invalid_exposes_invalid_semantics --lib -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_date_picker_required_invalid_semantics -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_and_input_otp_docs_keep_required_ownership_on_the_control_surface -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_docs_keep_invalid_ownership_on_trigger_with_caller_owned_error_copy -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_select_invalid_form_state -- --nocapture"
+    },
+    {
+      "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json --dir target/fret-diag-date-picker-required-invalid-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json --dir target/fret-diag-select-invalid-form-state-click-hardening-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-date-picker-semantics --dir target/fret-diag-date-picker-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2 --session-auto --timeout-ms 2400000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     }
   ],
   "evidence": [
@@ -1653,7 +1711,22 @@
     "target/fret-diag-input-otp-invalid-required-semantics-v2/sessions/1779329862109-172384/1779329877911/ai.packet",
     "target/fret-diag-input-otp-invalid-required-semantics-v2/sessions/1779329862109-172384/share/1779329877911.zip",
     "target/fret-diag-input-otp-semantics-suite-v2/sessions/1779329954569-181280/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-input-otp-invalid-required-v1/sessions/1779330056274-195352/suite.summary.json"
+    "target/fret-diag-shadcn-runtime-evidence-input-otp-invalid-required-v1/sessions/1779330056274-195352/suite.summary.json",
+    "ecosystem/fret-ui-shadcn/src/date_picker.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/date_picker/compact_builder.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/date_picker/invalid.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/date_picker/mod.rs",
+    "apps/fret-ui-gallery/src/ui/pages/date_picker.rs",
+    "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+    "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json",
+    "tools/diag-scripts/ui-gallery-date-picker-required-invalid-semantics.json",
+    "tools/diag-scripts/suites/ui-gallery-date-picker-semantics/suite.json",
+    "target/fret-diag-date-picker-required-invalid-semantics-v1/sessions/1779334955994-144056/1779334968449/ai.packet",
+    "target/fret-diag-date-picker-required-invalid-semantics-v1/sessions/1779334955994-144056/share/1779334968449.zip",
+    "target/fret-diag-date-picker-semantics-suite-v1/sessions/1779335003408-192508/suite.summary.json",
+    "target/fret-diag-select-invalid-form-state-click-hardening-v1/sessions/1779337219903-189420/1779337229373/ai.packet",
+    "target/fret-diag-select-invalid-form-state-click-hardening-v1/sessions/1779337219903-189420/share/1779337229373.zip",
+    "target/fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2/sessions/1779337267974-91608/suite.summary.json"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

@@ -8038,6 +8038,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-date-picker-required-invalid-semantics",
+      "path": "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-date-picker-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "date-picker",
+        "form-state",
+        "invalid",
+        "required",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Date Picker page and scopes rendering to the Compact Builder and Invalid sections.",
+        "Verifies that required and invalid form-state semantics live on the DatePicker trigger button rather than only on Field chrome."
+      ]
+    },
+    {
       "id": "ui-gallery-dialog-detached-trigger-focus-restore",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json",
       "required_capabilities": [

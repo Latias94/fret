@@ -3962,6 +3962,45 @@ fn input_otp_docs_keep_invalid_ownership_on_slots_with_caller_owned_error_copy()
 }
 
 #[test]
+fn date_picker_docs_keep_invalid_ownership_on_trigger_with_caller_owned_error_copy() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/date_picker/invalid.rs",
+            vec![
+                "shadcn::DatePicker::new(open,month,selected)",
+                ".control_id(control_id.clone())",
+                ".required(true)",
+                ".aria_invalid(true)",
+                ".test_id_prefix(\"ui-gallery-date-picker-invalid\")",
+                "shadcn::FieldError::new(\"Please select a date.\").for_control(control_id.clone())",
+                ".invalid(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/date_picker.rs",
+            vec![
+                "`DatePicker::aria_invalid(true)` and `DatePicker::required(true)` stay on the trigger for chrome/semantics",
+                "Invalid state keeps root `DatePicker::aria_invalid(true)` on the trigger and caller-owned field error copy.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing invalid ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
 fn label_input_group_and_slider_docs_keep_label_association_on_the_control_registry_surface() {
     for (relative_path, required_markers) in [
         (
