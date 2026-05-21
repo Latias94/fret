@@ -7303,3 +7303,71 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2 --session-auto --timeout-ms 2400000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed 23/23; `stage_counts={"passed":23}`; `reason_code_counts={}`;
     DatePicker row run id `1779338165138`; hardened Select row run id `1779338502088`.
+
+## Form Submit Validation Semantics Runtime Gate
+
+- invariant:
+  submit-driven `FormState` validation must mutate the semantics on the concrete controls decorated
+  by `FormField`, not only the surrounding visual field chrome. Required semantics are present
+  before submit; invalid semantics and caller-owned alert copy appear only after submit; on-change
+  repair clears invalid state; a final valid submit reports success.
+- finding:
+  no Form/FormField recipe or runtime defect was reproduced. Existing form registration,
+  submit-validation, and on-change revalidation behavior was correct; this slice promoted the
+  user-level multi-control validation journey into a deterministic runtime gate.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/form/submit_validation.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/form/mod.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/form.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/form/ui-gallery-form-submit-validation-semantics.json`,
+  `tools/diag-scripts/ui-gallery-form-submit-validation-semantics.json`,
+  `tools/diag-scripts/suites/ui-gallery-form-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- existing recipe anchors:
+  `ecosystem/fret-ui-shadcn/src/form_field.rs`,
+  `ecosystem/fret-ui-kit/src/declarative/form.rs`, and
+  `ecosystem/fret-ui-headless/src/form_state.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-form-submit-validation-semantics-v1/sessions/1779342775326-181112/1779342789863/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-form-submit-validation-semantics-v1/sessions/1779342775326-181112/share/1779342789863.zip`;
+  dedicated suite summary:
+  `target/fret-diag-form-semantics-suite-v1/sessions/1779342834313-22100/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-form-submit-validation-v2/sessions/1779344474432-184028/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\form\ui-gallery-form-submit-validation-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-form-submit-validation-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-form-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\form\submit_validation.rs apps\fret-ui-gallery\src\ui\snippets\form\mod.rs apps\fret-ui-gallery\src\ui\pages\form.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn form_field_ --lib -- --nocapture`
+  - result: passed; 29 tests.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app form_ -- --nocapture`
+  - result: passed; 8 tests.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_form_submit_validation_semantics -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\form\ui-gallery-form-submit-validation-semantics.json --dir target\fret-diag-form-submit-validation-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779342789863`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-form-semantics --dir target\fret-diag-form-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; script run id `1779342849187`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-form-submit-validation-v2 --session-auto --timeout-ms 2400000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 24/24; `stage_counts={"passed":24}`; `reason_code_counts={}`;
+    Form row run id `1779345780709`.

@@ -4035,3 +4035,49 @@ Status: complete for the DatePicker required/invalid trigger semantics companion
 - The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 23/23 with summary
   `target/fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2/sessions/1779337267974-91608/suite.summary.json`,
   DatePicker row run id `1779338165138`, and hardened Select row run id `1779338502088`.
+
+## M171: Form Submit Validation Runtime Gate
+
+Status: complete for the submit-driven `FormState` validation semantics companion.
+
+- Added a Form page `Submit Validation` section that uses `FormState { validate_mode:
+  FormValidateMode::OnSubmit }`, a `FormRegistry`, and `FormField` wrappers around a concrete
+  shadcn `Input` plus shadcn `RadioGroup`.
+- Added `ui-gallery-form-submit-validation-semantics.json`, which starts directly on the Form page
+  and scopes rendering to `Submit Validation`. The gate proves required semantics exist before
+  submit, invalid semantics are absent before submit, submit mutates both decorated controls to
+  `invalid=true`, caller-owned `FormMessage` copy appears as `role=alert`, on-change repair clears
+  invalid semantics and alerts, and the final submit reaches `status=valid`.
+- Added the focused `ui-gallery-form-semantics` suite, promoted the script into
+  `ui-gallery-shadcn-runtime-evidence`, refreshed the registry, added a root redirect, and added
+  protocol roundtrip coverage.
+- No Form/FormField recipe or runtime defect was reproduced. This slice closes the dynamic
+  user-level validation path that the previous static required/invalid component gates did not
+  cover.
+- JSON, registry, formatting, and diff hygiene gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\form\ui-gallery-form-submit-validation-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-form-submit-validation-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-form-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\form\submit_validation.rs apps\fret-ui-gallery\src\ui\snippets\form\mod.rs apps\fret-ui-gallery\src\ui\pages\form.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  and `git diff --check`.
+- Focused Rust gates pass:
+  `cargo test --profile dev-fast -p fret-ui-shadcn form_field_ --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app form_ -- --nocapture`;
+  and
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_form_submit_validation_semantics -- --nocapture`.
+- Build passes:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\form\ui-gallery-form-submit-validation-semantics.json --dir target\fret-diag-form-submit-validation-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779342789863`, AI packet
+  `target/fret-diag-form-submit-validation-semantics-v1/sessions/1779342775326-181112/1779342789863/ai.packet`,
+  and pack
+  `target/fret-diag-form-submit-validation-semantics-v1/sessions/1779342775326-181112/share/1779342789863.zip`.
+- Dedicated runtime suite passes with `stage_counts={"passed":1}` and summary
+  `target/fret-diag-form-semantics-suite-v1/sessions/1779342834313-22100/suite.summary.json`.
+- The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 24/24 with summary
+  `target/fret-diag-shadcn-runtime-evidence-form-submit-validation-v2/sessions/1779344474432-184028/suite.summary.json`
+  and Form row run id `1779345780709`.

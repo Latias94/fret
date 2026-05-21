@@ -3422,6 +3422,7 @@ fn form_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/form/fieldset.rs",
             "src/ui/snippets/form/input.rs",
             "src/ui/snippets/form/rtl.rs",
+            "src/ui/snippets/form/submit_validation.rs",
             "src/ui/snippets/form/textarea.rs",
             "src/ui/snippets/form/upstream_demo.rs",
             "src/ui/snippets/form/usage.rs",
@@ -3446,6 +3447,7 @@ fn form_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::build(cx, \"Form Demo\", upstream_demo)",
             "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Submit Validation\", submit_validation)",
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Input\", input)",
             "DocSection::build(cx, \"Textarea\", textarea)",
@@ -3457,6 +3459,7 @@ fn form_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::new(\"Form Demo\", upstream_demo)",
             "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Submit Validation\", submit_validation)",
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Input\", input)",
             "DocSection::new(\"Textarea\", textarea)",
@@ -3465,6 +3468,43 @@ fn form_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Notes\", notes)",
         ],
+    );
+}
+
+#[test]
+fn form_submit_validation_snippet_keeps_submit_driven_form_state_runtime_surface() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/form/submit_validation.rs",
+        &[
+            "use fret::app::AppRenderActionsExt as _;",
+            "FormState { validate_mode: FormValidateMode::OnSubmit,",
+            "FormRegistry::new().options(FormRegistryOptions {",
+            "touch_on_change: true,",
+            "revalidate_mode: FormRevalidateMode::OnChange,",
+            "registry.register_field(\"username\", username.clone(), String::new(), |value|",
+            "registry.register_field(\"plan\", plan.clone(), None::<Arc<str>>, |value|",
+            "registry.register_into_form_state(&mut *cx.app, &form_state);",
+            "registry.handle_model_changes(&mut *cx.app, &form_state, &[username.id(), plan.id()]);",
+            "registry.submit_action_host(host, &form_state)",
+            ".test_id(\"ui-gallery-form-submit-validation-username-control\")",
+            ".test_id_prefix(\"ui-gallery-form-submit-validation-plan\")",
+            "decl_text::text_control_readout(cx, format!(\"status={result_status}\"))",
+            ".test_id(\"ui-gallery-form-submit-validation-result\")",
+        ],
+        &[
+            "use fret_ui::action::OnActivate",
+            "let on_activate: fret_ui::action::OnActivate",
+            "shadcn::RadioGroup::new(plan.clone())",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/form.rs",
+        &[
+            "Submit-driven FormState validation mutates FormField-decorated controls",
+            "copyable Usage and submit-validation sections",
+        ],
+        &[],
     );
 }
 

@@ -11,6 +11,7 @@
     "tools/diag-scripts/ui-gallery-command-scrollable-collection-metadata-mutation.json",
     "tools/diag-scripts/ui-gallery-data-table-default-pagination-collection-metadata.json",
     "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json",
+    "tools/diag-scripts/ui-gallery/form/ui-gallery-form-submit-validation-semantics.json",
     "tools/diag-scripts/ui-gallery/input/ui-gallery-input-disabled-action-state.json",
     "tools/diag-scripts/ui-gallery/input/ui-gallery-input-otp-invalid-required-semantics.json",
     "tools/diag-scripts/ui-gallery/input/ui-gallery-input-required-invalid-semantics.json",

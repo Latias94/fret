@@ -4,6 +4,7 @@ pub mod fieldset;
 pub mod input;
 pub mod notes;
 pub mod rtl;
+pub mod submit_validation;
 pub mod textarea;
 pub mod upstream_demo;
 pub mod usage;

@@ -8,6 +8,7 @@ pub(super) fn preview_forms(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let upstream_demo = snippets::upstream_demo::render(cx);
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
+    let submit_validation = snippets::submit_validation::render(cx);
     let input = snippets::input::render(cx);
     let textarea = snippets::textarea::render(cx);
     let controls = snippets::controls::render(cx);
@@ -26,6 +27,12 @@ pub(super) fn preview_forms(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
             "Copyable minimal usage for the framework-agnostic `Form` + `FormField` surface, including field-level `required` ownership on `FormField::required(true)`, keeping field-level required semantics on `FormField`, and wrapper-owned invalid decoration from `FormState`.",
         )
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
+    let submit_validation = DocSection::build(cx, "Submit Validation", submit_validation)
+        .description(
+            "Submit-driven FormState validation mutates FormField-decorated controls: required semantics are present before submit, invalid semantics and FormMessage copy appear only after submit, and correction clears invalid state.",
+        )
+        .test_id_prefix("ui-gallery-form-submit-validation")
+        .code_rust_from_file_region(snippets::submit_validation::SOURCE, "example");
     let demo = DocSection::build(cx, "Demo", demo)
         .description("FieldSet + FieldGroup recipe with multiple controls.")
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
@@ -50,11 +57,12 @@ pub(super) fn preview_forms(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Start with an upstream-aligned FormDemo, then provide a copyable Usage section and gallery recipes for composing Input/Textarea/Checkbox/Switch/FieldSet while keeping field-level required semantics and `FormState`-driven invalid decoration on `FormField`.",
+            "Start with an upstream-aligned FormDemo, then provide copyable Usage and submit-validation sections plus gallery recipes for composing Input/Textarea/Checkbox/Switch/FieldSet while keeping field-level required semantics and `FormState`-driven invalid decoration on `FormField`.",
         ),
         vec![
             upstream_demo,
             usage,
+            submit_validation,
             demo,
             input,
             textarea,

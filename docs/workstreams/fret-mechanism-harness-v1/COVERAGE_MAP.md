@@ -521,3 +521,17 @@ mechanism can visibly fail.
   `target/fret-diag-date-picker-semantics-suite-v1/sessions/1779335003408-192508/suite.summary.json`,
   and the broad runtime suite now passes 23/23 with summary
   `target/fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2/sessions/1779337267974-91608/suite.summary.json`.
+
+- Form submit validation semantics update:
+  `ui-gallery-form-submit-validation-semantics.json` now covers submit-driven `FormState` mutation
+  across `FormField`-decorated shadcn `Input` and `RadioGroup` controls. The gate starts on the
+  Form page's `Submit Validation` section, proves both controls export `required=true` and
+  `invalid=null` before submit, submits the empty form, proves both controls mutate to
+  `invalid=true` with caller-owned alert copy and `status=invalid`, repairs both controls through
+  diagnostics actions, proves invalid semantics and alerts clear, then submits again and proves
+  `status=valid`. Focused runtime evidence is anchored at
+  `target/fret-diag-form-submit-validation-semantics-v1/sessions/1779342775326-181112/1779342789863/ai.packet`,
+  the dedicated suite evidence is anchored at
+  `target/fret-diag-form-semantics-suite-v1/sessions/1779342834313-22100/suite.summary.json`,
+  and the broad runtime suite now passes 24/24 with summary
+  `target/fret-diag-shadcn-runtime-evidence-form-submit-validation-v2/sessions/1779344474432-184028/suite.summary.json`.

@@ -1603,3 +1603,20 @@ date: 2026-05-12
     `target/fret-diag-date-picker-semantics-suite-v1/sessions/1779335003408-192508/suite.summary.json`,
     and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 23/23 with the DatePicker
     row run id `1779338165138` and hardened Select row run id `1779338502088`.
+
+- [x] Add a Field/Form submit-driven validation semantics runtime gate.
+  - Result:
+    The Form page now includes a `Submit Validation` section backed by a real `FormState` in
+    `FormValidateMode::OnSubmit`, a `FormRegistry`, and two `FormField`-decorated controls:
+    a concrete shadcn `Input` and a shadcn `RadioGroup`. The
+    `ui-gallery-form-submit-validation-semantics.json` gate starts directly on that section,
+    proves both controls export `required=true` and `invalid=null` before submit, submits the empty
+    form, then proves the concrete input and radio group mutate to `invalid=true`, publish
+    caller-visible `alert` messages, and update the status readout to `status=invalid`. It then
+    repairs both controls, proves invalid semantics and alert copy clear via on-change
+    revalidation, submits again, and proves `status=valid`. Focused runtime passed with run id
+    `1779342789863`, the new `ui-gallery-form-semantics` suite passed 1/1 with summary
+    `target/fret-diag-form-semantics-suite-v1/sessions/1779342834313-22100/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 24/24 with the Form row run
+    id `1779345780709` and summary
+    `target/fret-diag-shadcn-runtime-evidence-form-submit-validation-v2/sessions/1779344474432-184028/suite.summary.json`.
