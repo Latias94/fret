@@ -1999,12 +1999,82 @@ pub(super) struct BundleStatsLayoutEngineSolve {
     pub(super) root_element_path: Option<String>,
     pub(super) solve_time_us: u64,
     pub(super) solve_profile: Option<BundleStatsLayoutEngineSolveProfile>,
+    pub(super) clean_geometry_solve_skip_rejection:
+        Option<BundleStatsCleanGeometrySolveSkipRejection>,
     pub(super) measure_calls: u64,
     pub(super) measure_cache_hits: u64,
     pub(super) measure_time_us: u64,
     pub(super) top_measures: Vec<BundleStatsLayoutEngineMeasureHotspot>,
     pub(super) root_role: Option<String>,
     pub(super) root_test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsCleanGeometrySolveSkipRejection {
+    pub(super) reason: String,
+    pub(super) detail: Option<String>,
+    pub(super) node: Option<u64>,
+    pub(super) element: Option<u64>,
+    pub(super) element_kind: Option<String>,
+    pub(super) element_path: Option<String>,
+    pub(super) role: Option<String>,
+    pub(super) test_id: Option<String>,
+}
+
+pub(super) fn clean_geometry_solve_skip_rejection_to_json(
+    rejection: &BundleStatsCleanGeometrySolveSkipRejection,
+) -> Value {
+    let mut obj = Map::new();
+    obj.insert("reason".to_string(), Value::from(rejection.reason.clone()));
+    obj.insert(
+        "detail".to_string(),
+        rejection
+            .detail
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    obj.insert(
+        "node".to_string(),
+        rejection.node.map(Value::from).unwrap_or(Value::Null),
+    );
+    obj.insert(
+        "element".to_string(),
+        rejection.element.map(Value::from).unwrap_or(Value::Null),
+    );
+    obj.insert(
+        "element_kind".to_string(),
+        rejection
+            .element_kind
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    obj.insert(
+        "element_path".to_string(),
+        rejection
+            .element_path
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    obj.insert(
+        "role".to_string(),
+        rejection
+            .role
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    obj.insert(
+        "test_id".to_string(),
+        rejection
+            .test_id
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    Value::Object(obj)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -4050,6 +4120,40 @@ impl BundleStatsReport {
                             }
                             if let Some(frame_delta) = profile.previous_frame_delta {
                                 out.push_str(&format!(" frame_delta={frame_delta}"));
+                            }
+                        }
+                        if let Some(rejection) = s.clean_geometry_solve_skip_rejection.as_ref() {
+                            if !rejection.reason.is_empty() {
+                                out.push_str(&format!(" clean.reject={}", rejection.reason));
+                            }
+                            if let Some(detail) = rejection.detail.as_deref()
+                                && !detail.is_empty()
+                            {
+                                out.push_str(&format!(" clean.detail={detail}"));
+                            }
+                            if let Some(node) = rejection.node {
+                                out.push_str(&format!(" clean.node={node}"));
+                            }
+                            if let Some(kind) = rejection.element_kind.as_deref()
+                                && !kind.is_empty()
+                            {
+                                out.push_str(&format!(" clean.kind={kind}"));
+                            }
+                            if let Some(test_id) = rejection.test_id.as_deref()
+                                && !test_id.is_empty()
+                            {
+                                out.push_str(&format!(" clean.test_id={test_id}"));
+                            }
+                            if let Some(role) = rejection.role.as_deref()
+                                && !role.is_empty()
+                            {
+                                out.push_str(&format!(" clean.role={role}"));
+                            }
+                            if let Some(path) = rejection.element_path.as_deref()
+                                && !path.is_empty()
+                            {
+                                let path = compact_debug_path(path);
+                                out.push_str(&format!(" clean.path={path}"));
                             }
                         }
                         if let Some(el) = s.root_element {
@@ -6988,6 +7092,13 @@ impl BundleStatsReport {
                                     );
                                     Value::Object(p_obj)
                                 })
+                                .unwrap_or(Value::Null),
+                        );
+                        s_obj.insert(
+                            "clean_geometry_solve_skip_rejection".to_string(),
+                            s.clean_geometry_solve_skip_rejection
+                                .as_ref()
+                                .map(clean_geometry_solve_skip_rejection_to_json)
                                 .unwrap_or(Value::Null),
                         );
                         s_obj.insert("measure_calls".to_string(), Value::from(s.measure_calls));

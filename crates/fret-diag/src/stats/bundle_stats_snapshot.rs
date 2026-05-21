@@ -1,8 +1,9 @@
 use super::{
-    BundleStatsCommandAvailabilityHotspot, BundleStatsGlobalChangeHotspot,
-    BundleStatsGlobalChangeUnobserved, BundleStatsLayoutDirtyDescendant,
-    BundleStatsLayoutEngineMeasureChildHotspot, BundleStatsLayoutEngineMeasureHotspot,
-    BundleStatsLayoutEngineSolve, BundleStatsLayoutEngineSolveProfile, BundleStatsLayoutHotspot,
+    BundleStatsCleanGeometrySolveSkipRejection, BundleStatsCommandAvailabilityHotspot,
+    BundleStatsGlobalChangeHotspot, BundleStatsGlobalChangeUnobserved,
+    BundleStatsLayoutDirtyDescendant, BundleStatsLayoutEngineMeasureChildHotspot,
+    BundleStatsLayoutEngineMeasureHotspot, BundleStatsLayoutEngineSolve,
+    BundleStatsLayoutEngineSolveProfile, BundleStatsLayoutHotspot,
     BundleStatsLayoutRequestBuildRoot, BundleStatsModelChangeHotspot,
     BundleStatsModelChangeUnobserved, BundleStatsPaintTextPrepareHotspot,
     BundleStatsPaintWidgetHotspot, BundleStatsScrollLayoutKindProfile,
@@ -946,6 +947,41 @@ pub(super) fn snapshot_layout_engine_solves(
                 }
             });
 
+            let mut clean_geometry_solve_skip_rejection = s
+                .get("clean_geometry_solve_skip_rejection")
+                .and_then(|v| v.as_object())
+                .map(|r| BundleStatsCleanGeometrySolveSkipRejection {
+                    reason: r
+                        .get("reason")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    detail: r
+                        .get("detail")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string()),
+                    node: r.get("node").and_then(|v| v.as_u64()),
+                    element: r.get("element").and_then(|v| v.as_u64()),
+                    element_kind: r
+                        .get("element_kind")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string()),
+                    element_path: r
+                        .get("element_path")
+                        .and_then(|v| v.as_str())
+                        .map(|s| s.to_string()),
+                    role: None,
+                    test_id: None,
+                });
+
+            if let Some(rejection) = clean_geometry_solve_skip_rejection.as_mut()
+                && let Some(node) = rejection.node
+            {
+                let (role, test_id) = semantics_index.lookup_for_node_or_ancestor_test_id(node);
+                rejection.role = role;
+                rejection.test_id = test_id;
+            }
+
             BundleStatsLayoutEngineSolve {
                 root_node: s.get("root_node").and_then(|v| v.as_u64()).unwrap_or(0),
                 root_element: s.get("root_element").and_then(|v| v.as_u64()),
@@ -959,6 +995,7 @@ pub(super) fn snapshot_layout_engine_solves(
                     .map(|s| s.to_string()),
                 solve_time_us: s.get("solve_time_us").and_then(|v| v.as_u64()).unwrap_or(0),
                 solve_profile,
+                clean_geometry_solve_skip_rejection,
                 measure_calls: s.get("measure_calls").and_then(|v| v.as_u64()).unwrap_or(0),
                 measure_cache_hits: s
                     .get("measure_cache_hits")

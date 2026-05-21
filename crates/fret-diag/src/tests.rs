@@ -3341,6 +3341,129 @@ fn bundle_stats_preserves_cache_root_boundary_summary() {
 }
 
 #[test]
+fn bundle_stats_preserves_clean_geometry_solve_skip_rejection() {
+    let bundle = json!({
+        "schema_version": 1,
+        "windows": [
+            {
+                "window": 1,
+                "snapshots": [
+                    {
+                        "tick_id": 1,
+                        "frame_id": 1,
+                        "changed_models": [],
+                        "changed_globals": [],
+                        "debug": {
+                            "stats": {
+                                "total_time_us": 50,
+                                "layout_time_us": 40,
+                                "layout_engine_solves": 1,
+                                "layout_engine_solve_time_us": 30
+                            },
+                            "layout_engine_solves": [
+                                {
+                                    "root_node": 42,
+                                    "root_element": 100,
+                                    "root_element_kind": "Semantics",
+                                    "root_element_path": "root/editor/semantics",
+                                    "solve_time_us": 30,
+                                    "solve_profile": {
+                                        "reason": "new_frame_key_changed",
+                                        "available_w_kind": "definite",
+                                        "available_h_kind": "definite",
+                                        "available_w": 800.0,
+                                        "available_h": 600.0,
+                                        "available_w_delta": -4.0,
+                                        "available_h_delta": 0.0,
+                                        "scale_factor": 1.0,
+                                        "batch_roots": 1,
+                                        "subtree_nodes": 136
+                                    },
+                                    "clean_geometry_solve_skip_rejection": {
+                                        "reason": "unsupported_subtree",
+                                        "detail": "root_side_effect_boundary",
+                                        "node": 43,
+                                        "element": 101,
+                                        "element_kind": "Scroll",
+                                        "element_path": "root/editor/semantics/scroll"
+                                    }
+                                }
+                            ],
+                            "semantics": {
+                                "nodes": [
+                                    { "id": 40, "role": "application" },
+                                    { "id": 43, "parent": 40, "role": "region", "test_id": "editor.scroll" }
+                                ]
+                            }
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let report = bundle_stats_from_json_with_options(
+        &bundle,
+        1,
+        BundleStatsSort::Time,
+        BundleStatsOptions::default(),
+    )
+    .unwrap();
+
+    let solve = report.top[0]
+        .top_layout_engine_solves
+        .first()
+        .expect("top layout engine solve");
+    let rejection = solve
+        .clean_geometry_solve_skip_rejection
+        .as_ref()
+        .expect("clean geometry rejection");
+    assert_eq!(rejection.reason, "unsupported_subtree");
+    assert_eq!(
+        rejection.detail.as_deref(),
+        Some("root_side_effect_boundary")
+    );
+    assert_eq!(rejection.node, Some(43));
+    assert_eq!(rejection.element, Some(101));
+    assert_eq!(rejection.element_kind.as_deref(), Some("Scroll"));
+    assert_eq!(rejection.role.as_deref(), Some("region"));
+    assert_eq!(rejection.test_id.as_deref(), Some("editor.scroll"));
+
+    let json = report.to_json();
+    assert_eq!(
+        json.pointer(
+            "/top/0/top_layout_engine_solves/0/clean_geometry_solve_skip_rejection/reason"
+        )
+        .and_then(|v| v.as_str()),
+        Some("unsupported_subtree")
+    );
+    assert_eq!(
+        json.pointer(
+            "/top/0/top_layout_engine_solves/0/clean_geometry_solve_skip_rejection/test_id"
+        )
+        .and_then(|v| v.as_str()),
+        Some("editor.scroll")
+    );
+
+    let triage =
+        triage_json_from_stats(Path::new("bundle.json"), &report, BundleStatsSort::Time, 0);
+    assert_eq!(
+        triage
+            .pointer("/worst/top_layout_engine_solves/0/clean_geometry_solve_skip_rejection/reason")
+            .and_then(|v| v.as_str()),
+        Some("unsupported_subtree")
+    );
+    assert_eq!(
+        triage
+            .pointer(
+                "/worst/top_layout_engine_solves/0/clean_geometry_solve_skip_rejection/test_id"
+            )
+            .and_then(|v| v.as_str()),
+        Some("editor.scroll")
+    );
+}
+
+#[test]
 fn bundle_stats_reports_dispatch_unattributed_time() {
     let bundle = json!({
         "schema_version": 1,

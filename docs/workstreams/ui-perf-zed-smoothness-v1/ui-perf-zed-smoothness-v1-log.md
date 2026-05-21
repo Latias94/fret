@@ -15762,3 +15762,35 @@ Decision:
 - Treat the earlier diagnostics-global signal as fixed instrumentation noise, not as a new editor paint owner.
 - The remaining resize-jitter owner is still the changing-bounds layout/root solve under the content `Scroll`; this
   slice does not replace the required repeat=3 resize-jitter bundle for that owner.
+
+## 2026-05-21 13:12:37 +08:00 (clean-geometry solve-skip attribution in diag stats)
+
+Question:
+- Before widening the changing-bounds layout/root fast path, can `diag stats` explain why a top root solve did not use
+  the existing clean-geometry resize skip?
+
+Finding:
+- `fret-ui` already records `clean_geometry_solve_skip_rejection` on `UiDebugLayoutEngineSolve`, but `fret-diag`
+  dropped that nested object while building `top_layout_engine_solves`.
+- The local resize-jitter evidence therefore showed the top root-solve owners and solve profiles, but not the
+  precondition that rejected the clean-geometry skip.
+
+Change:
+- `BundleStatsLayoutEngineSolve` now preserves the nested clean-geometry rejection with reason, detail, node, element,
+  element kind, element path, and semantics role/test_id when available.
+- `diag stats` human output, stats JSON, and triage JSON expose the same rejection object.
+- Added a focused synthetic-bundle test that verifies stats JSON and triage JSON both preserve the rejection and its
+  semantics test id.
+
+Validation:
+```powershell
+cargo nextest run -p fret-diag bundle_stats_preserves_clean_geometry_solve_skip_rejection --no-fail-fast
+cargo check -p fret-diag
+cargo fmt -p fret-diag --check
+```
+
+Decision:
+- Treat this as attribution-only; no layout behavior changed.
+- The next repeat resize-jitter bundle should inspect
+  `top_layout_engine_solves[].clean_geometry_solve_skip_rejection` before choosing the contained-root apply/solve
+  optimization.

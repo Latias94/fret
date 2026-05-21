@@ -261,9 +261,22 @@ not update checked-in baselines.
     - Decision: this closes the diagnostics-global noise found in the retained row-fragment follow-up. It does not
       close the remaining changing-bounds root-solve owner below, which still needs a focused layout gate and a
       repeat=3 resize-jitter bundle.
+  - [x] Surface clean-geometry solve-skip rejection reasons in `diag stats` before widening the fast path.
+    - Discovery: runtime layout solves already carried `clean_geometry_solve_skip_rejection`, but `fret-diag` dropped
+      the field while building `top_layout_engine_solves`. That made resize-jitter root-solve samples show the solve
+      owner without explaining why the existing clean-geometry resize skip did not apply.
+    - Fix: `diag stats` now preserves the nested rejection object in stats JSON, triage JSON, and the human
+      `top_layout_engine_solves` line, including reason/detail/node/element/path plus semantics role/test_id when
+      available.
+    - Gate: `cargo nextest run -p fret-diag bundle_stats_preserves_clean_geometry_solve_skip_rejection --no-fail-fast`;
+      `cargo check -p fret-diag`; `cargo fmt -p fret-diag --check`.
+    - Decision: this is attribution-only and does not change layout behavior. The next resize-jitter bundle should use
+      `top_layout_engine_solves[].clean_geometry_solve_skip_rejection` to decide whether the remaining owner is a
+      side-effect-boundary rule, missing interactive-resize small-step state, or another clean-subtree precondition.
   - [ ] Reduce the remaining resize-jitter changing-bounds layout/root solve cost without weakening scroll extent
     correctness.
-    - Candidate: a contained-root apply/solve path that handles bounds-only changes after the cache-root remains reused.
+    - Candidate: a contained-root apply/solve path that handles bounds-only changes after the cache-root remains reused,
+      informed by the clean-geometry solve-skip rejection reason from the next bundle.
     - Required proof: one focused Rust gate plus a repeat=3 resize-jitter bundle preserving the row replay/store and
       view-cache reuse invariants above.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and

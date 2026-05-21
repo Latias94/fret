@@ -1,7 +1,9 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use crate::stats::{BundleStatsReport, BundleStatsSort};
+use crate::stats::{
+    BundleStatsReport, BundleStatsSort, clean_geometry_solve_skip_rejection_to_json,
+};
 use fret_diag_protocol::{FilesystemCapabilitiesV1, UiScriptResultV1};
 
 fn candidate_sidecar_paths(bundle_dir: &Path, file_name: &str) -> [PathBuf; 2] {
@@ -1341,6 +1343,7 @@ pub(crate) fn triage_json_from_stats(
                         "flex_wrap_patch_mutations": p.flex_wrap_patch_mutations,
                         "flex_wrap_patch_skipped_no_wrap_descendant": p.flex_wrap_patch_skipped_no_wrap_descendant,
                     })),
+                    "clean_geometry_solve_skip_rejection": s.clean_geometry_solve_skip_rejection.as_ref().map(clean_geometry_solve_skip_rejection_to_json),
                     "measure_calls": s.measure_calls,
                     "measure_cache_hits": s.measure_cache_hits,
                     "measure_time_us": s.measure_time_us,
