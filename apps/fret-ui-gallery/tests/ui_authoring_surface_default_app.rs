@@ -10622,6 +10622,7 @@ fn radio_group_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/radio_group/fieldset.rs",
             "src/ui/snippets/radio_group/invalid.rs",
             "src/ui/snippets/radio_group/label.rs",
+            "src/ui/snippets/radio_group/required_disabled.rs",
             "src/ui/snippets/radio_group/rtl.rs",
             "src/ui/snippets/radio_group/usage.rs",
         ],
@@ -10649,6 +10650,7 @@ fn radio_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Choice Card\", choice_card)",
             "DocSection::build(cx, \"Fieldset\", fieldset)",
             "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Required Disabled\", required_disabled)",
             "DocSection::build(cx, \"Invalid\", invalid)",
             "DocSection::build(cx, \"RTL\", rtl)",
             "DocSection::build(cx, \"Label Association (Fret)\", label)",
@@ -10660,6 +10662,7 @@ fn radio_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Choice Card\", choice_card)",
             "DocSection::new(\"Fieldset\", fieldset)",
             "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Required Disabled\", required_disabled)",
             "DocSection::new(\"Invalid\", invalid)",
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Label Association (Fret)\", label)",
@@ -10679,6 +10682,12 @@ fn radio_group_page_teaches_docs_parity_parts_without_generic_children_api() {
     );
     assert!(
         radio_group_page.contains(
+            "`Required Disabled` keeps required semantics on the radio group root while disabled semantics and action suppression stay on the disabled item control and its `FieldLabel::for_control(...)` bridge."
+        ),
+        "src/ui/pages/radio_group.rs should describe the required/disabled grouped-control action-state split"
+    );
+    assert!(
+        radio_group_page.contains(
             "Selection semantics, roving navigation, icon chrome, border, and focus ring remain recipe-owned; surrounding fieldset and row layout remain caller-owned composition, so a generic root children API is still unnecessary here."
         ),
         "src/ui/pages/radio_group.rs should explain why parts are sufficient without widening to a generic root children API"
@@ -10691,9 +10700,45 @@ fn radio_group_page_teaches_docs_parity_parts_without_generic_children_api() {
     );
     assert!(
         radio_group_page.contains(
-            "Preview mirrors the shadcn Radio Group docs path first: Demo, Usage, Description, Choice Card, Fieldset, Disabled, Invalid, RTL, and API Reference. The docs-path rows now use `into_element_parts(...)` for source-shaped composition, while `Label Association` stays as a focused Fret follow-up."
+            "Preview mirrors the shadcn Radio Group docs path first: Demo, Usage, Description, Choice Card, Fieldset, Disabled, Required Disabled, Invalid, RTL, and API Reference. The docs-path rows now use `into_element_parts(...)` for source-shaped composition, while `Label Association` stays as a focused Fret follow-up."
         ),
         "src/ui/pages/radio_group.rs should summarize the shift to the docs-shaped parts lane"
+    );
+}
+
+#[test]
+fn radio_group_required_disabled_snippet_keeps_group_required_and_item_action_state_separate() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/radio_group/required_disabled.rs",
+        &[
+            "shadcn::RadioGroup::new(value)",
+            ".required(true)",
+            ".a11y_label(\"Support plan\")",
+            ".test_id_prefix(\"ui-gallery-radio-group-required-disabled\")",
+            "RadioGroupItem::new(\"self-service\", \"Self-service\")",
+            ".disabled(true)",
+            ".control_id(self_service_id)",
+            "FieldLabel::new(\"Self-service\")",
+            ".for_control(self_service_id)",
+            ".test_id(\"ui-gallery-radio-group-required-disabled-item-0-label\")",
+            "FieldLabel::new(\"Team\")",
+            ".test_id(\"ui-gallery-radio-group-required-disabled-item-1-label\")",
+            "FieldLabel::new(\"Enterprise\")",
+            ".test_id(\"ui-gallery-radio-group-required-disabled-item-2-label\")",
+            "FieldLegend::new(\"Support plan\")",
+            "Disabled plans cannot be selected, even when their label is clicked.",
+            "Disabled rows keep disabled action-state on the concrete radio item.",
+            ".test_id(\"ui-gallery-radio-group-required-disabled\")",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("field_state_prim::with_field_state_provider"),
+        "src/ui/snippets/radio_group/required_disabled.rs should use public Field/RadioGroup surfaces instead of reaching into field-state internals"
+    );
+    assert!(
+        !normalized.contains("cx.interactivity_gate(true,false"),
+        "src/ui/snippets/radio_group/required_disabled.rs should not fake disabled action-state with a gallery-local interactivity gate"
     );
 }
 

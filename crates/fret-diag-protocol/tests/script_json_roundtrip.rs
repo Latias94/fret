@@ -1101,6 +1101,13 @@ fn script_v2_roundtrip_ui_gallery_radio_group_checked_state_mutation() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_radio_group_required_disabled_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-required-disabled-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_toolbar_faceted_responsive() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-toolbar-faceted-responsive.json"

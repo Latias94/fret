@@ -2,6 +2,7 @@
   "schema_version": 1,
   "kind": "diag_script_suite_manifest",
   "scripts": [
-    "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-checked-state-mutation.json"
+    "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-checked-state-mutation.json",
+    "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-required-disabled-action-state.json"
   ]
 }

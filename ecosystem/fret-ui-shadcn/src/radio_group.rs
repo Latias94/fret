@@ -2319,6 +2319,10 @@ mod tests {
             .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some("Alpha"))
             .expect("Alpha radio");
         assert_eq!(alpha.flags.checked, Some(false));
+        assert_eq!(
+            alpha.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::False)
+        );
         assert_eq!(alpha.pos_in_set, Some(1));
         assert_eq!(alpha.set_size, Some(2));
 
@@ -2328,6 +2332,10 @@ mod tests {
             .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some("Beta"))
             .expect("Beta radio");
         assert_eq!(beta.flags.checked, Some(true));
+        assert_eq!(
+            beta.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::True)
+        );
         assert_eq!(beta.pos_in_set, Some(2));
         assert_eq!(beta.set_size, Some(2));
     }

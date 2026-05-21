@@ -10380,6 +10380,33 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-radio-group-required-disabled-action-state",
+      "path": "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-required-disabled-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-radio-group-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "disabled",
+        "form",
+        "radio_group",
+        "required",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Radio Group page and scopes rendering to the Required Disabled section.",
+        "Verifies that group-level required semantics stay on the RadioGroup root while disabled item semantics and action suppression stay on the concrete radio item and its label bridge."
+      ]
+    },
+    {
       "id": "ui-gallery-resizable-multi-viewport-combobox-placement",
       "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-combobox-placement.json",
       "required_capabilities": [

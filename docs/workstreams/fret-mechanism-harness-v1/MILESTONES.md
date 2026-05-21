@@ -4125,3 +4125,59 @@ Status: complete for the disabled Field action-state semantics companion.
 - The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 25/25 with summary
   `target/fret-diag-shadcn-runtime-evidence-form-disabled-field-v1/sessions/1779352876487-190332/suite.summary.json`
   and disabled Field row run id `1779354050679`.
+
+## M173: RadioGroup Required Disabled Action-State Runtime Gate
+
+Status: complete for the grouped RadioGroup required/disabled action-state semantics companion.
+
+- Added a Radio Group page `Required Disabled` section that intentionally separates group-level
+  required semantics from item-level disabled action-state. The group root owns `required=true`,
+  while the disabled item and its associated `FieldLabel::for_control(...)` bridge own disabled
+  selection suppression.
+- Fixed a semantics completeness gap in `fret-ui-kit` RadioGroup primitives: radio buttons now
+  export explicit `checked_state=true|false` in addition to the legacy binary `checked` flag, so
+  diagnostics and accessibility consumers can use the same structured checked-state channel as the
+  rest of the modern semantics gates.
+- Added `ui-gallery-radio-group-required-disabled-action-state.json`, which starts directly on the
+  Radio Group page and scopes rendering to `Required Disabled`. The gate proves the RadioGroup root
+  exports `role=radio_group`, `required=true`, and `disabled=false`; proves the disabled radio item
+  exports `role=radio_button`, `checked_state=false`, `checked=false`, `disabled=true`,
+  `focus=false`, and `invoke=false`; verifies direct disabled-item click and disabled-label click
+  cannot mutate selection; then proves an enabled label still selects the Enterprise item.
+- Added a root redirect, promoted the script into `ui-gallery-radio-group-semantics`, promoted it
+  into `ui-gallery-shadcn-runtime-evidence`, refreshed the registry, and added protocol roundtrip
+  coverage.
+- No disabled-action runtime defect was reproduced. The confirmed defect class was semantics
+  completeness: RadioGroup items lacked explicit `checked_state`, which made the new durable gate
+  impossible without using the older boolean-only predicate.
+- JSON, registry, formatting, and diff hygiene gates pass:
+  `python -m json.tool tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-required-disabled-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery-radio-group-required-disabled-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-radio-group-semantics/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/index.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem/fret-ui-kit/src/primitives/radio_group.rs ecosystem/fret-ui-shadcn/src/radio_group.rs apps/fret-ui-gallery/src/ui/snippets/radio_group/required_disabled.rs apps/fret-ui-gallery/src/ui/snippets/radio_group/mod.rs apps/fret-ui-gallery/src/ui/pages/radio_group.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  and `git diff --check`.
+- Focused Rust gates pass:
+  `cargo test --profile dev-fast -p fret-ui-shadcn radio_group_emits_radio_group_and_radio_button_semantics --lib -- --nocapture`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib radio_group_emits_radio_group_and_radio_button_semantics`;
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app radio_group_ -- --nocapture`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app radio_group_required_disabled_snippet_keeps_group_required_and_item_action_state_separate`;
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_radio_group_required_disabled_action_state -- --nocapture`;
+  and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_radio_group_required_disabled_action_state`.
+- Build passes:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\radio-group\ui-gallery-radio-group-required-disabled-action-state.json --dir target\fret-diag-radio-group-required-disabled-action-state-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779358468383`, AI packet
+  `target/fret-diag-radio-group-required-disabled-action-state-v1/sessions/1779358454419-182932/1779358468383/ai.packet`,
+  and pack
+  `target/fret-diag-radio-group-required-disabled-action-state-v1/sessions/1779358454419-182932/share/1779358468383.zip`.
+- Dedicated runtime suite passes with `stage_counts={"passed":2}` and summary
+  `target/fret-diag-radio-group-semantics-suite-required-disabled-v1/sessions/1779358495275-211416/suite.summary.json`;
+  the required/disabled row run id is `1779358534244`.
+- The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 26/26 with summary
+  `target/fret-diag-shadcn-runtime-evidence-radio-group-required-disabled-v1/sessions/1779358567107-208948/suite.summary.json`,
+  `reason_code_counts={}`, and required/disabled row run id `1779360562701`.

@@ -1633,3 +1633,20 @@ date: 2026-05-12
     and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 25/25 with the disabled
     Field row run id `1779354050679` and summary
     `target/fret-diag-shadcn-runtime-evidence-form-disabled-field-v1/sessions/1779352876487-190332/suite.summary.json`.
+
+- [x] Add a RadioGroup required/disabled grouped-control action-state runtime gate.
+  - Result:
+    `ui-gallery-radio-group-required-disabled-action-state.json` now starts on the Radio Group page's
+    `Required Disabled` section, proves the `RadioGroup` root exports `role=radio_group`,
+    `required=true`, and `disabled=false`, proves the disabled item exports
+    `role=radio_button`, `checked_state=false`, `checked=false`, `disabled=true`, `focus=false`,
+    and `invoke=false`, verifies both direct item click and associated label click cannot select the
+    disabled item, then proves an enabled label can still mutate selection to the Enterprise item.
+    The slice found and fixed a semantics completeness gap: RadioGroup items previously exported
+    legacy binary `checked` only; they now also export explicit `checked_state=true|false`. Focused
+    runtime passed with run id `1779358468383`; the rebuilt `ui-gallery-radio-group-semantics`
+    suite passed 2/2 with summary
+    `target/fret-diag-radio-group-semantics-suite-required-disabled-v1/sessions/1779358495275-211416/suite.summary.json`;
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 26/26 with the RadioGroup
+    required/disabled row run id `1779360562701` and summary
+    `target/fret-diag-shadcn-runtime-evidence-radio-group-required-disabled-v1/sessions/1779358567107-208948/suite.summary.json`.

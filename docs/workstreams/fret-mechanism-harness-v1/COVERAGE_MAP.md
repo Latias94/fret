@@ -548,3 +548,20 @@ mechanism can visibly fail.
   `target/fret-diag-form-semantics-suite-disabled-field-rebuilt-v1/sessions/1779352801343-181708/suite.summary.json`,
   and the broad runtime suite now passes 25/25 with summary
   `target/fret-diag-shadcn-runtime-evidence-form-disabled-field-v1/sessions/1779352876487-190332/suite.summary.json`.
+
+- RadioGroup required/disabled action-state update:
+  `ui-gallery-radio-group-required-disabled-action-state.json` now covers the grouped-control path
+  where required semantics live on the shadcn `RadioGroup` root while disabled action-state lives on
+  an individual `RadioGroupItem` plus its `FieldLabel::for_control(...)` bridge. The gate starts on
+  the Radio Group page's `Required Disabled` section, proves the root exports `required=true` and
+  `disabled=false`, proves the disabled item exports `checked_state=false`, `checked=false`,
+  `disabled=true`, `focus=false`, and `invoke=false`, verifies disabled item and disabled-label
+  clicks do not mutate selection, then proves an enabled label can still select the Enterprise item.
+  This slice also closes the RadioGroup checked-state semantics gap by stamping explicit
+  `checked_state=true|false` on radio buttons while preserving legacy `checked`. Focused runtime
+  evidence is anchored at
+  `target/fret-diag-radio-group-required-disabled-action-state-v1/sessions/1779358454419-182932/1779358468383/ai.packet`,
+  the dedicated suite evidence is anchored at
+  `target/fret-diag-radio-group-semantics-suite-required-disabled-v1/sessions/1779358495275-211416/suite.summary.json`,
+  and the broad runtime suite now passes 26/26 with summary
+  `target/fret-diag-shadcn-runtime-evidence-radio-group-required-disabled-v1/sessions/1779358567107-208948/suite.summary.json`.
