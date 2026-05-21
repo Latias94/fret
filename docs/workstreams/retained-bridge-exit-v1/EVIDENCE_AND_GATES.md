@@ -11758,3 +11758,72 @@ Broader gates not run:
   - Reason: `RBX-M3-070` is a targeted cookbook chart consumer migration. The cookbook example
     check, cookbook source-policy test, full `fret-chart` package gate, formatting, layering,
     catalog, whitespace, and retained-marker scan cover the changed surface.
+
+## 2026-05-22 - RBX-M3-080 Basic chart demos use declarative panel
+
+Claim verified:
+
+- `chart_demo`, `category_line_demo`, and `horizontal_bars_demo` no longer construct retained
+  `ChartCanvas` widgets through `ChartCanvas::new(...)` / `ChartCanvas::create_node(...)`.
+- The demos now seed `ChartEngine` directly, store it as a `Model<ChartEngine>`, and render through
+  `fret_ui::declarative::render_root(...)` plus `ChartCanvasPanelProps` +
+  `chart_canvas_panel(...)`.
+- The existing chart specs, datasets, and initial category-line data window are preserved on the
+  same engine that the declarative chart panel observes and paints.
+
+Evidence:
+
+- `apps/fret-examples/src/chart_demo.rs`
+- `apps/fret-examples/src/category_line_demo.rs`
+- `apps/fret-examples/src/horizontal_bars_demo.rs`
+- `apps/fret-examples/tests/basic_chart_demos_surface.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-demo --bin chart_demo --bin category_line_demo --bin horizontal_bars_demo`
+  - Result: passed.
+  - Scope proven: the three native demo bins compile after moving from retained `ChartCanvas`
+    node creation to model-backed declarative chart panel roots.
+- `cargo nextest run -p fret-examples basic_chart_demos_use_declarative_canvas_panel`
+  - Result: passed, 1 test.
+  - Scope proven: the new first-party examples source-policy gate requires
+    `ChartCanvasPanelProps`, `chart_canvas_panel(...)`, `Model<ChartEngine>`, and
+    `fret_ui::declarative::render_root(...)` while rejecting retained chart widget authoring
+    markers.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 43 tests, with the pre-existing `fret-ui`
+    `current_effective_opacity` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility baselines and retained chart
+    output/linking/tooltip/accessibility oracle tests remain green after migrating these demo
+    consumers.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after the demo migration and new source-policy test.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid; `fret-chart`
+    intentionally remains on the retained bridge allowlist while remaining retained chart surfaces
+    are migrated.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" apps/fret-examples/src/chart_demo.rs apps/fret-examples/src/category_line_demo.rs apps/fret-examples/src/horizontal_bars_demo.rs apps/fret-examples/tests/basic_chart_demos_surface.rs docs/workstreams/retained-bridge-exit-v1`
+  - Result: no matches.
+  - Scope proven: the changed demo, test, and workstream files have no textual merge-conflict
+    markers after the pull/rebase state check.
+- `rg -n "use fret_chart::retained::ChartCanvas|ChartCanvas::new\\(|ChartCanvas::new_shared|ChartCanvas::create_node|create_node_retained" apps/fret-examples/src/chart_demo.rs apps/fret-examples/src/category_line_demo.rs apps/fret-examples/src/horizontal_bars_demo.rs`
+  - Result: no matches.
+  - Scope proven: the migrated demo sources no longer contain retained chart widget authoring
+    markers.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-080` is a targeted first-party chart demo consumer migration. The three-demo
+    compile gate, source-policy test, full `fret-chart` package gate, formatting, layering,
+    catalog, whitespace, merge-marker, and retained-marker scans cover the changed surface.

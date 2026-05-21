@@ -1,7 +1,7 @@
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
 use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
-use fret_runtime::PlatformCapabilities;
+use fret_runtime::{Model, PlatformCapabilities};
 use fret_ui::UiTree;
 
 use anyhow::Context as _;
@@ -10,28 +10,39 @@ use delinea::data::{Column, DataTable};
 use delinea::engine::window::DataWindow;
 use delinea::ids::{AxisId, DataZoomId, DatasetId, FieldId, GridId, SeriesId};
 use delinea::{
-    Action, AxisKind, AxisPointerTrigger, AxisPointerType, AxisScale, ChartSpec, DataZoomXSpec,
-    DatasetSpec, FieldSpec, FilterMode, GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
+    Action, AxisKind, AxisPointerTrigger, AxisPointerType, AxisScale, ChartEngine, ChartSpec,
+    DataZoomXSpec, DatasetSpec, FieldSpec, FilterMode, GridSpec, SeriesEncode, SeriesKind,
+    SeriesSpec,
 };
-use fret_chart::retained::ChartCanvas;
+use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
 
 struct CategoryLineDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
+    engine: Model<ChartEngine>,
+    spec: ChartSpec,
 }
 
 #[derive(Default)]
 struct CategoryLineDemoDriver;
 
 impl CategoryLineDemoDriver {
-    fn build_ui(_app: &mut App, window: AppWindowId) -> CategoryLineDemoWindowState {
+    fn build_ui(app: &mut App, window: AppWindowId) -> CategoryLineDemoWindowState {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        CategoryLineDemoWindowState { ui, root: None }
+        let (engine, spec) = Self::build_chart();
+        let engine = app.models_mut().insert(engine);
+
+        CategoryLineDemoWindowState {
+            ui,
+            root: None,
+            engine,
+            spec,
+        }
     }
 
-    fn build_canvas() -> ChartCanvas {
+    fn build_chart() -> (ChartEngine, ChartSpec) {
         let dataset_id = DatasetId::new(1);
         let grid_id = GridId::new(1);
         let x_axis = AxisId::new(1);
@@ -148,7 +159,7 @@ impl CategoryLineDemoDriver {
             ],
         };
 
-        let mut canvas = ChartCanvas::new(spec).expect("chart spec should be valid");
+        let mut engine = ChartEngine::new(spec.clone()).expect("chart spec should be valid");
 
         let n = 128usize;
         let mut x: Vec<f64> = Vec::with_capacity(n);
@@ -166,9 +177,9 @@ impl CategoryLineDemoDriver {
         table.push_column(Column::F64(x));
         table.push_column(Column::F64(y_line));
         table.push_column(Column::F64(y_scatter));
-        canvas.engine_mut().datasets_mut().insert(dataset_id, table);
+        engine.datasets_mut().insert(dataset_id, table);
 
-        canvas.engine_mut().apply_action(Action::SetDataWindowX {
+        engine.apply_action(Action::SetDataWindowX {
             axis: x_axis,
             window: Some(DataWindow {
                 min: 16.0,
@@ -176,7 +187,7 @@ impl CategoryLineDemoDriver {
             }),
         });
 
-        canvas
+        (engine, spec)
     }
 }
 
@@ -229,14 +240,25 @@ fn render(
         scene,
     } = context;
 
-    let root = state.root.get_or_insert_with(|| {
-        let canvas = CategoryLineDemoDriver::build_canvas();
-        let node = ChartCanvas::create_node(&mut state.ui, canvas);
-        state.ui.set_root(node);
-        node
-    });
+    let engine = state.engine.clone();
+    let spec = state.spec.clone();
+    let root = fret_ui::declarative::render_root(
+        &mut state.ui,
+        app,
+        services,
+        window,
+        bounds,
+        "category-line-demo-root",
+        move |cx| {
+            cx.observe_model(&engine, fret_ui::Invalidation::Paint);
+            let mut props = ChartCanvasPanelProps::new(spec);
+            props.engine = Some(engine);
+            vec![chart_canvas_panel(cx, props)]
+        },
+    );
+    state.root = Some(root);
 
-    state.ui.set_root(*root);
+    state.ui.set_root(root);
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
 

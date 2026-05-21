@@ -4778,6 +4778,38 @@ Related plan:
       "Select hovered" still reads hover state from the live chart engine.
     - A cookbook source-policy test now requires declarative chart panel markers and rejects
       retained chart authoring markers.
+- [x] RBX-M3-080 Migrate basic first-party chart demos off retained `ChartCanvas`.
+  - Scope:
+    - `apps/fret-examples/src/chart_demo.rs`
+    - `apps/fret-examples/src/category_line_demo.rs`
+    - `apps/fret-examples/src/horizontal_bars_demo.rs`
+    - `apps/fret-examples/tests/basic_chart_demos_surface.rs`
+  - Goal:
+    - Stop the basic first-party chart demos from creating retained `ChartCanvas` widgets through
+      `ChartCanvas::new(...)` / `ChartCanvas::create_node(...)`.
+    - Preserve the seeded chart specs and datasets while mounting each demo through
+      `fret_ui::declarative::render_root(...)` and `ChartCanvasPanelProps` +
+      `chart_canvas_panel(...)`.
+  - Validation:
+    - `cargo check -p fret-demo --bin chart_demo --bin category_line_demo --bin horizontal_bars_demo`
+    - `cargo nextest run -p fret-examples basic_chart_demos_use_declarative_canvas_panel`
+    - `cargo nextest run -p fret-chart`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+  - Evidence:
+    - `apps/fret-examples/src/chart_demo.rs`
+    - `apps/fret-examples/src/category_line_demo.rs`
+    - `apps/fret-examples/src/horizontal_bars_demo.rs`
+    - `apps/fret-examples/tests/basic_chart_demos_surface.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-080-basic-chart-demos-use-declarative-panel`
+  - Result:
+    - Each demo now stores its seeded `ChartEngine` as a `Model<ChartEngine>` and keeps the
+      `ChartSpec` in window state.
+    - Each render pass rebuilds the declarative root and observes the chart engine for paint
+      invalidation before constructing `ChartCanvasPanelProps`.
+    - A source-policy test requires the declarative chart panel markers and rejects retained
+      `ChartCanvas` widget authoring markers in these demos.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

@@ -5,34 +5,45 @@ use fret_core::{AppWindowId, Event};
 #[cfg(not(target_arch = "wasm32"))]
 use fret_launch::run_app;
 use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
-use fret_runtime::PlatformCapabilities;
+use fret_runtime::{Model, PlatformCapabilities};
 use fret_ui::UiTree;
 
 use delinea::data::{Column, DataTable};
 use delinea::ids::{AxisId, FieldId, StackId};
 use delinea::{
-    AreaBaseline, AxisKind, AxisPosition, AxisRange, AxisScale, SeriesKind, TimeAxisScale,
+    AreaBaseline, AxisKind, AxisPosition, AxisRange, AxisScale, ChartEngine, SeriesKind,
+    TimeAxisScale,
 };
 use delinea::{ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesSpec};
-use fret_chart::retained::ChartCanvas;
+use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel};
 
 struct ChartDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
+    engine: Model<ChartEngine>,
+    spec: ChartSpec,
 }
 
 #[derive(Default)]
 struct ChartDemoDriver;
 
 impl ChartDemoDriver {
-    fn build_ui(_app: &mut App, window: AppWindowId) -> ChartDemoWindowState {
+    fn build_ui(app: &mut App, window: AppWindowId) -> ChartDemoWindowState {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        ChartDemoWindowState { ui, root: None }
+        let (engine, spec) = Self::build_chart();
+        let engine = app.models_mut().insert(engine);
+
+        ChartDemoWindowState {
+            ui,
+            root: None,
+            engine,
+            spec,
+        }
     }
 
-    fn build_canvas() -> ChartCanvas {
+    fn build_chart() -> (ChartEngine, ChartSpec) {
         let dataset_id = delinea::ids::DatasetId::new(1);
         let grid_id = delinea::ids::GridId::new(1);
         let x_axis = AxisId::new(1);
@@ -173,7 +184,7 @@ impl ChartDemoDriver {
             ],
         };
 
-        let mut canvas = ChartCanvas::new(spec).expect("chart spec should be valid");
+        let mut engine = ChartEngine::new(spec.clone()).expect("chart spec should be valid");
 
         // 2025-01-01T00:00:00Z in epoch milliseconds.
         let base_ms = 1_735_689_600_000.0;
@@ -202,9 +213,9 @@ impl ChartDemoDriver {
         table.push_column(Column::F64(y_a));
         table.push_column(Column::F64(y_b));
         table.push_column(Column::F64(y_c));
-        canvas.engine_mut().datasets_mut().insert(dataset_id, table);
+        engine.datasets_mut().insert(dataset_id, table);
 
-        canvas
+        (engine, spec)
     }
 }
 
@@ -254,14 +265,25 @@ fn render(_driver: &mut ChartDemoDriver, context: WinitRenderContext<'_, ChartDe
         scene,
     } = context;
 
-    let root = state.root.get_or_insert_with(|| {
-        let canvas = ChartDemoDriver::build_canvas();
-        let node = ChartCanvas::create_node(&mut state.ui, canvas);
-        state.ui.set_root(node);
-        node
-    });
+    let engine = state.engine.clone();
+    let spec = state.spec.clone();
+    let root = fret_ui::declarative::render_root(
+        &mut state.ui,
+        app,
+        services,
+        window,
+        bounds,
+        "chart-demo-root",
+        move |cx| {
+            cx.observe_model(&engine, fret_ui::Invalidation::Paint);
+            let mut props = ChartCanvasPanelProps::new(spec);
+            props.engine = Some(engine);
+            vec![chart_canvas_panel(cx, props)]
+        },
+    );
+    state.root = Some(root);
 
-    state.ui.set_root(*root);
+    state.ui.set_root(root);
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
 

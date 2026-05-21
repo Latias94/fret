@@ -266,6 +266,17 @@ and preserves the app-owned zoom/reset/selection commands, accessibility layer, 
 id, default input map, and live hover selection against the same engine that the panel renders. A
 cookbook source-policy test now requires declarative chart panel authoring and rejects retained
 chart markers in the example.
+`RBX-M3-080` then migrated the basic first-party chart demos (`chart_demo`,
+`category_line_demo`, and `horizontal_bars_demo`) off retained `ChartCanvas` node creation. Each
+demo now seeds a `ChartEngine`, stores it as a `Model<ChartEngine>`, keeps the original `ChartSpec`
+in window state, and mounts the chart through `fret_ui::declarative::render_root(...)` plus
+`ChartCanvasPanelProps` + `chart_canvas_panel(...)`. A `fret-examples` source-policy test now
+requires those declarative markers and rejects retained `ChartCanvas` authoring in the three demos.
+
+Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
+source: retained chart interactive controls such as axes, visual-map, data-zoom, multi-grid
+surfaces, and any remaining public/demo/gallery/cookbook consumers that still rely on retained
+`ChartCanvas` behavior.
 
 ## Completed Implementation
 
