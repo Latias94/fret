@@ -1,20 +1,24 @@
 use super::coords::canvas_to_window;
 use super::prelude::*;
 
-pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     buttons: MouseButtons,
     zoom: f32,
     drag_kind: DragKindId,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: InsertNodeDragMoveCx<H>,
+{
     let Some(pending) = canvas.interaction.pending_insert_node_drag.clone() else {
         return false;
     };
 
-    let Some(pointer_id) = cx.pointer_id else {
+    let Some(pointer_id) = cx.pointer_id() else {
         return super::session::abort_pending_insert_node_drag(&mut canvas.interaction, cx);
     };
     if pending.pointer_id != pointer_id {
@@ -30,19 +34,19 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
         );
     }
 
-    if cx.window.is_none() {
+    if cx.window().is_none() {
         // Can't start an internal drag without a window id.
         return super::session::abort_pending_insert_node_drag(&mut canvas.interaction, cx);
     }
 
-    let Some(window) = cx.window else {
+    let Some(window) = cx.window() else {
         return false;
     };
-    let start_window = canvas_to_window::<M>(cx.bounds, pending.start_pos, snapshot.pan, zoom);
-    let current_window = canvas_to_window::<M>(cx.bounds, position, snapshot.pan, zoom);
+    let start_window = canvas_to_window::<M>(cx.bounds(), pending.start_pos, snapshot.pan, zoom);
+    let current_window = canvas_to_window::<M>(cx.bounds(), position, snapshot.pan, zoom);
 
-    let dnd = ui_dnd::dnd_service_model_global(cx.app);
-    let tick_id = cx.app.tick_id();
+    let dnd = ui_dnd::dnd_service_model_global(cx.host());
+    let tick_id = cx.tick_id();
     let activation_probe = ui_dnd::DndActivationProbe::new(
         dnd.clone(),
         ui_dnd::DndActivationProbeConfig::for_kind(drag_kind)
@@ -52,7 +56,7 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
         candidate: pending.candidate.clone(),
     };
     let sensor = ui_dnd::try_begin_cross_window_drag_on_activation(
-        cx.app,
+        cx.host(),
         &activation_probe,
         window,
         pointer_id,

@@ -208,6 +208,8 @@ mod insert_execution_feedback;
 mod insert_execution_plan;
 mod insert_execution_point;
 mod insert_node_drag;
+mod insert_node_drag_move_cx;
+mod insert_node_drag_move_retained_cx;
 mod interaction_gate;
 mod interaction_policy;
 mod keyboard_pan_activation;

@@ -1,3 +1,5 @@
+use fret_ui::retained_bridge::EventCx;
+
 use super::prelude::*;
 
 pub(super) fn handle_drop<H: UiHost, M: NodeGraphCanvasMiddleware>(

@@ -10384,3 +10384,76 @@ Broader gates not run:
   - Reason: `RBX-M2-810` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-820 pointer-move secondary insert retained Cx isolation
+
+Claim verified:
+
+- `pointer_move_dispatch/secondary/insert.rs` no longer imports or names retained bridge Cx types.
+- Pending insert-node drag movement now uses `InsertNodeDragMoveCx` for
+  pointer/window/bounds/tick/host access plus pointer-capture release and paint invalidation.
+- Retained `EventCx` adaptation is isolated in `insert_node_drag_move_retained_cx.rs`.
+- `insert_node_drag/mod.rs` no longer owns the retained internal drag event body; that retained
+  entry is isolated in `insert_node_drag/internal_event.rs`.
+- Internal drag enter/over/drop I/O remains retained-bound for a later slice.
+- Insert-node drag threshold, drag start, and searcher cleanup behavior remain green through the
+  retained compatibility island.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/prelude.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/session.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/internal_event.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/internal_move.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/internal_drop.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag_move_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag_move_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/insert.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving the secondary
+    insert pointer-move route behind `InsertNodeDragMoveCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_secondary_insert_route_stays_off_retained_bridge) | test(insert_node_drag_move_handlers_stay_off_retained_bridge) | test(insert_node_drag_does_not_start_until_threshold) | test(insert_node_drag_starts_after_threshold) | test(insert_node_drag_start_clears_searcher_overlay_state) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 6 tests.
+  - Scope proven: source-policy locks the secondary insert pointer-move route and pending
+    insert-node drag move helpers off retained bridge Cx names; insert-node drag threshold, drag
+    start, and searcher cleanup behavior remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/insert.rs ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/mod.rs ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/pending.rs ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/prelude.rs ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/session.rs ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag_move_cx.rs`
+  - Result: no matches.
+  - Scope proven: the migrated secondary insert route and pending insert-node drag move helpers no
+    longer depend on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after the secondary insert pointer-move
+    route seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after isolating
+    the secondary insert pointer-move route.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-820` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.

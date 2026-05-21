@@ -4167,6 +4167,47 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-820 Isolate pointer-move secondary insert retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/pending.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/prelude.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/session.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/internal_event.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/internal_move.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/internal_drop.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag_move_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag_move_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/insert.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the secondary insert pointer-move route and pending insert-node drag move helper off
+      direct retained bridge Cx names.
+    - Introduce a narrow `InsertNodeDragMoveCx` capability for pointer/window/bounds/tick/host
+      access plus pointer-capture release and paint invalidation.
+    - Keep retained `EventCx` adaptation isolated in `insert_node_drag_move_retained_cx.rs`.
+    - Move the retained internal drag enter/over/drop entry into `insert_node_drag/internal_event.rs`
+      so `insert_node_drag/mod.rs` can stay retained-free for the pending move wrapper.
+  - Result:
+    - Added `InsertNodeDragMoveCx`.
+    - `insert_node_drag::handle_pending_insert_node_drag_move(...)`,
+      `insert_node_drag/pending.rs`, `insert_node_drag/session.rs`, and
+      `pointer_move_dispatch/secondary/insert.rs` now accept retained-agnostic capabilities instead
+      of naming retained `EventCx`.
+    - `insert_node_drag/internal_event.rs` owns the still-retained internal drag event entry for
+      enter/over/leave/cancel/drop; internal move/drop retained I/O remains a later slice.
+    - Added source-policy coverage for insert-node drag move handlers and the secondary insert
+      pointer-move route.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_secondary_insert_route_stays_off_retained_bridge) | test(insert_node_drag_move_handlers_stay_off_retained_bridge) | test(insert_node_drag_does_not_start_until_threshold) | test(insert_node_drag_starts_after_threshold) | test(insert_node_drag_start_clears_searcher_overlay_state) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/secondary/insert.rs ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/mod.rs ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/pending.rs ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/prelude.rs ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag/session.rs ecosystem/fret-node/src/ui/canvas/widget/insert_node_drag_move_cx.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

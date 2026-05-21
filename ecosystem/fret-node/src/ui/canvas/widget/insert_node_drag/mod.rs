@@ -1,11 +1,14 @@
 mod coords;
 mod internal_drop;
+mod internal_event;
 mod internal_move;
 mod pending;
 mod prelude;
 mod session;
 
 use prelude::*;
+
+pub(super) use internal_event::handle_internal_drag_event;
 
 /// Payload type for "drag a node from the palette/searcher into the canvas".
 #[derive(Debug, Clone)]
@@ -21,14 +24,18 @@ pub(super) fn clear_insert_node_drag_state(
     session::clear_insert_node_drag_state(interaction)
 }
 
-pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     buttons: MouseButtons,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: InsertNodeDragMoveCx<H>,
+{
     pending::handle_pending_insert_node_drag_move(
         canvas,
         cx,
@@ -38,36 +45,4 @@ pub(super) fn handle_pending_insert_node_drag_move<H: UiHost, M: NodeGraphCanvas
         zoom,
         DRAG_KIND_INSERT_NODE,
     )
-}
-
-pub(super) fn handle_internal_drag_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
-    canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
-    snapshot: &ViewSnapshot,
-    event: &InternalDragEvent,
-    zoom: f32,
-) -> bool {
-    let pointer_id = event.pointer_id;
-    let payload = cx
-        .app
-        .drag(pointer_id)
-        .and_then(|d| d.payload::<InsertNodeDragPayload>())
-        .cloned();
-    let Some(payload) = payload else {
-        session::clear_insert_node_drag_preview(&mut canvas.interaction, cx);
-        return false;
-    };
-
-    match event.kind {
-        InternalDragKind::Enter | InternalDragKind::Over => {
-            internal_move::handle_enter_over(canvas, cx, snapshot, event, &payload, zoom)
-        }
-        InternalDragKind::Leave | InternalDragKind::Cancel => {
-            session::clear_insert_node_drag_preview(&mut canvas.interaction, cx);
-            session::finish_insert_node_drag_event(cx)
-        }
-        InternalDragKind::Drop => {
-            internal_drop::handle_drop(canvas, cx, snapshot, event, payload, zoom)
-        }
-    }
 }

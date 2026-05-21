@@ -1,3 +1,5 @@
+use fret_ui::retained_bridge::EventCx;
+
 use super::prelude::*;
 
 pub(super) fn handle_enter_over<H: UiHost, M: NodeGraphCanvasMiddleware>(
