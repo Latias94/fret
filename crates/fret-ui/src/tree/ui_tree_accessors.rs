@@ -79,4 +79,20 @@ impl<H: UiHost> UiTree<H> {
                 .map(|cache| (cache.fingerprint, cache.size))
         })
     }
+
+    pub(crate) fn node_text_wrapped_measure_cache(
+        &self,
+        node: NodeId,
+    ) -> Option<(u64, Option<Px>, Size, Size)> {
+        self.nodes.get(node).and_then(|n| {
+            n.text_wrapped_measure_cache.map(|cache| {
+                (
+                    cache.fingerprint,
+                    cache.constraints_max_width,
+                    cache.measured_size,
+                    cache.clamped_size,
+                )
+            })
+        })
+    }
 }

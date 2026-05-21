@@ -293,10 +293,13 @@ not update checked-in baselines.
     - Follow-up evidence: the current `gallery-dev` text-measure resize rerun showed the single-line header copy no
       longer rejected clean geometry with `text_fingerprint_mismatch`; remaining top-frame rejections are
       `text_reflow/text_wrap_not_none` on the preview card header path.
+    - Follow-up fix: `TextWrap::Word + Clip + Start` now has a narrow clean-geometry proof for width shrink steps when
+      the previous measured line width still fits inside the new max width. The text-measure rerun no longer reports
+      `text_wrap_not_none`; the next owner is `flex_cross_align` on the preview card/content path.
   - [ ] Reduce the remaining resize-jitter changing-bounds layout/root solve cost without weakening scroll extent
     correctness.
     - Candidate: a contained-root apply/solve path that handles bounds-only changes after the cache-root remains reused,
-      informed by the clean-geometry solve-skip rejection reason from the next bundle.
+      informed by the current `flex_cross_align` clean-geometry solve-skip rejection.
     - Required proof: one focused Rust gate plus a repeat=3 resize-jitter bundle preserving the row replay/store and
       view-cache reuse invariants above.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and

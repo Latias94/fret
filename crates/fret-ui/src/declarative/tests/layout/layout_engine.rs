@@ -5239,6 +5239,292 @@ fn clean_geometry_small_resize_rejects_auto_height_text_reflow() {
 }
 
 #[test]
+fn clean_geometry_small_resize_skips_wrapped_text_shrink_when_cached_line_width_still_fits() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(316.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-wrapped-text-stable-shrink-child",
+        |cx| {
+            let mut container = crate::element::ContainerProps::default();
+            container.layout.size.width = Length::Fill;
+            container.layout.size.height = Length::Fill;
+
+            let mut text_props = crate::element::TextProps::new("Preview");
+            text_props.layout.size.width = Length::Fill;
+            text_props.layout.size.height = Length::Auto;
+
+            vec![cx.container(container, |cx| {
+                vec![
+                    cx.text_props(text_props)
+                        .test_id("clean-geometry-wrapped-stable-text"),
+                ]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+    let container_node = ui.children(child)[0];
+    let text_node = ui.children(container_node)[0];
+    let text_bounds_before = ui.debug_node_bounds(text_node).expect("text bounds before");
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "wrapped text should skip the authoritative solve when the previous line width still fits the smaller bounds"
+    );
+    assert_eq!(
+        ui.debug_node_bounds(text_node).expect("text bounds after"),
+        Rect::new(
+            text_bounds_before.origin,
+            Size::new(rect_b.size.width, text_bounds_before.size.height)
+        )
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        None
+    );
+}
+
+#[test]
+fn clean_geometry_small_resize_rejects_wrapped_text_shrink_below_cached_line_width() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    #[derive(Default)]
+    struct WidthSensitiveTextService;
+
+    impl TextService for WidthSensitiveTextService {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            constraints: TextConstraints,
+        ) -> (fret_core::TextBlobId, TextMetrics) {
+            let max_width = constraints.max_width.map(|w| w.0).unwrap_or(120.0);
+            let natural_width = 100.0;
+            let wrapped = max_width + 0.01 < natural_width;
+            (
+                fret_core::TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(
+                        Px(natural_width.min(max_width)),
+                        Px(if wrapped { 20.0 } else { 10.0 }),
+                    ),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for WidthSensitiveTextService {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for WidthSensitiveTextService {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            false
+        }
+    }
+
+    impl fret_core::MaterialService for WidthSensitiveTextService {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            false
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(300.0), Px(180.0)),
+    );
+    let mut text = WidthSensitiveTextService;
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-wrapped-text-reflow-shrink-child",
+        |cx| {
+            let mut container = crate::element::ContainerProps::default();
+            container.layout.size.width = Length::Fill;
+            container.layout.size.height = Length::Fill;
+
+            let mut text_props = crate::element::TextProps::new("Preview title");
+            text_props.layout.size.width = Length::Fill;
+            text_props.layout.size.height = Length::Auto;
+
+            vec![cx.container(container, |cx| {
+                vec![
+                    cx.text_props(text_props)
+                        .test_id("clean-geometry-wrapped-reflow-text"),
+                ]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(140.0)));
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert![
+        ui.debug_stats().layout_engine_solves > 0,
+        "wrapped text must keep the authoritative solve when the smaller width cannot contain the previous line width"
+    ];
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_rejection,
+        Some("text_reflow")
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_detail,
+        Some("text_wrap_not_none")
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_solve_skip_first_element_kind,
+        Some("Text")
+    );
+}
+
+#[test]
 fn clean_geometry_small_resize_skips_nowrap_text_width_delta_when_height_stable() {
     struct PrecomputeThenResize {
         child: NodeId,

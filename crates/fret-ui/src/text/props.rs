@@ -70,6 +70,27 @@ pub(crate) fn text_wrap_none_measure_fingerprint_plain(
     state
 }
 
+pub(crate) fn text_wrapped_measure_fingerprint_plain(
+    text: &std::sync::Arc<str>,
+    resolved_style: &TextStyle,
+    wrap: TextWrap,
+    overflow: TextOverflow,
+    align: TextAlign,
+    scale_factor: f32,
+    font_stack_key: u64,
+) -> u64 {
+    let mut state = 0u64;
+    state = mix_u64(state, 4);
+    state = mix_bytes(state, text.as_bytes());
+    state = mix_u64(state, font_stack_key);
+    state = mix_f32(state, scale_factor);
+    state = mix_text_wrap(state, wrap);
+    state = mix_text_overflow(state, overflow);
+    state = mix_text_align(state, align);
+    state = mix_text_style(state, resolved_style);
+    state
+}
+
 pub(crate) fn text_wrap_none_measure_fingerprint_rich(
     rich: &AttributedText,
     resolved_style: &TextStyle,

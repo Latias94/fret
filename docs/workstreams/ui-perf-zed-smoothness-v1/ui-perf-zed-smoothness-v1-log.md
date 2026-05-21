@@ -15928,3 +15928,43 @@ Post-fix evidence:
   `text_wrap_not_none`; `text_fingerprint_mismatch` no longer appears in the top-frame rejecting solves.
 - The remaining rejection is still the intentionally blocked wrapped-text owner and should not be bypassed until text
   layout exposes a line-break or measured-height-stability proof.
+
+## 2026-05-21 16:58:01 +08:00 (wrapped text shrink stability proof)
+
+Question:
+- Can clean geometry skip the remaining `TextWrap::Word` owner without changing shadcn `CardTitle` semantics or
+  pretending all wrapped text is stable under resize?
+
+Finding:
+- `CardTitle::new("Preview")` intentionally uses `TextWrap::Word + Clip` to match the shadcn card title policy, so
+  changing the component to single-line text would be a policy regression.
+- Fret text metrics do not expose line-break spans yet, so broad wrapped-text clean propagation is still unsafe.
+- There is a smaller proof: if a width-only resize shrinks the text bounds, and the previous measured line width still
+  fits inside the new max width, the previously prepared lines remain valid and the measured height stays stable.
+
+Change:
+- Added a node-local wrapped text measure cache for plain `TextWrap::Word + Clip + Start` text, keyed by content,
+  resolved style, wrap/overflow/align, scale factor, and font stack key.
+- Clean geometry now accepts that narrow wrapped-text shrink case only when the cached measured line width still fits
+  the new max width and the propagated bounds keep the cached height.
+- Expansion, rich/selectable text, non-start alignment, non-clip overflow, and shrink-below-line-width cases still
+  reject and use the authoritative layout solve.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow clean_geometry_small_resize_skips_nowrap_text_width_delta_when_height_stable clean_geometry_small_resize_skips_nowrap_ellipsis_text_width_delta_when_height_stable clean_geometry_small_resize_skips_wrapped_text_shrink_when_cached_line_width_still_fits clean_geometry_small_resize_rejects_wrapped_text_shrink_below_cached_line_width --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r5 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+git diff --check
+```
+
+Post-fix evidence:
+- Rerun bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r5/sessions/1779353781500-189308/1779353805755-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r4 top frames: remaining clean-geometry rejection was `text_reflow/text_wrap_not_none`, with layout sum
+  `9815us` and p95 layout `1488us`.
+- r5 top frames: `text_wrap_not_none` no longer appears; the next rejection is `flex_cross_align` on the preview
+  card/content path. Layout sum dropped to `7892us`, p95 layout to `1115us`, and p95 engine solve to `403us`.
+- Next slice should investigate the `flex_cross_align` owner before widening any more text layout contracts.

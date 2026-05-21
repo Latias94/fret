@@ -135,7 +135,7 @@ enum CleanGeometryWidthDeltaSizeStability {
     Propagated,
     /// `TextWrap::None` text with cached width-independent metrics may keep stable height while
     /// its parent-provided width changes.
-    NoWrapTextCachedMetrics,
+    TextCachedMetrics,
 }
 
 impl CleanGeometryNodeContract {
@@ -722,8 +722,8 @@ impl<H: UiHost> UiTree<H> {
         }
         match contract.size_stability {
             CleanGeometryWidthDeltaSizeStability::Propagated => {}
-            CleanGeometryWidthDeltaSizeStability::NoWrapTextCachedMetrics => {
-                self.clean_nowrap_text_cached_metrics_supported(
+            CleanGeometryWidthDeltaSizeStability::TextCachedMetrics => {
+                self.clean_text_cached_metrics_supported(
                     app,
                     window,
                     node,
@@ -853,7 +853,7 @@ impl<H: UiHost> UiTree<H> {
                 Ok(CleanGeometryNodeContract {
                     layout_effect: CleanGeometryLayoutEffect::Pure,
                     child_bounds: CleanGeometryChildBoundsStrategy::None,
-                    size_stability: CleanGeometryWidthDeltaSizeStability::NoWrapTextCachedMetrics,
+                    size_stability: CleanGeometryWidthDeltaSizeStability::TextCachedMetrics,
                 })
             }
             crate::declarative::frame::ElementInstance::Spacer(_)
@@ -873,7 +873,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn clean_nowrap_text_cached_metrics_supported(
+    fn clean_text_cached_metrics_supported(
         &mut self,
         app: &mut H,
         window: AppWindowId,
@@ -904,14 +904,6 @@ impl<H: UiHost> UiTree<H> {
             .unwrap_or(0);
         let fingerprint = match instance {
             crate::declarative::frame::ElementInstance::Text(props) => {
-                if props.wrap != TextWrap::None {
-                    return Err(CleanGeometrySolveSkipRejection::for_kind(
-                        CleanGeometrySolveSkipRejectionReason::TextReflow,
-                        element_kind,
-                    )
-                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
-                    .at_node(node));
-                }
                 if !matches!(props.overflow, TextOverflow::Clip | TextOverflow::Ellipsis) {
                     return Err(CleanGeometrySolveSkipRejection::for_kind(
                         CleanGeometrySolveSkipRejectionReason::TextReflow,
@@ -930,14 +922,42 @@ impl<H: UiHost> UiTree<H> {
                 }
                 let resolved_style =
                     props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
-                crate::text_props::text_wrap_none_measure_fingerprint_plain(
-                    &props.text,
-                    &resolved_style,
-                    props.overflow,
-                    props.align,
-                    scale_factor,
-                    font_stack_key,
-                )
+                match props.wrap {
+                    TextWrap::None => crate::text_props::text_wrap_none_measure_fingerprint_plain(
+                        &props.text,
+                        &resolved_style,
+                        props.overflow,
+                        props.align,
+                        scale_factor,
+                        font_stack_key,
+                    ),
+                    TextWrap::Word if props.overflow == TextOverflow::Clip => {
+                        let fingerprint = crate::text_props::text_wrapped_measure_fingerprint_plain(
+                            &props.text,
+                            &resolved_style,
+                            props.wrap,
+                            props.overflow,
+                            props.align,
+                            scale_factor,
+                            font_stack_key,
+                        );
+                        return self.clean_wrapped_text_cached_metrics_supported(
+                            node,
+                            bounds,
+                            instance,
+                            element_kind,
+                            fingerprint,
+                        );
+                    }
+                    _ => {
+                        return Err(CleanGeometrySolveSkipRejection::for_kind(
+                            CleanGeometrySolveSkipRejectionReason::TextReflow,
+                            element_kind,
+                        )
+                        .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+                        .at_node(node));
+                    }
+                }
             }
             crate::declarative::frame::ElementInstance::StyledText(props) => {
                 if props.wrap != TextWrap::None {
@@ -1060,6 +1080,74 @@ impl<H: UiHost> UiTree<H> {
                 element_kind,
             )
             .with_detail(CleanGeometrySolveSkipRejectionDetail::TextFingerprintMismatch)
+            .at_node(node));
+        }
+
+        Ok(())
+    }
+
+    fn clean_wrapped_text_cached_metrics_supported(
+        &self,
+        node: NodeId,
+        bounds: Rect,
+        instance: &crate::declarative::frame::ElementInstance,
+        element_kind: &'static str,
+        fingerprint: u64,
+    ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        let Some((cached_fingerprint, constraints_max_width, measured_size, clamped_size)) =
+            self.node_text_wrapped_measure_cache(node)
+        else {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextMissingWrapNoneMeasureCache)
+            .at_node(node));
+        };
+        if fingerprint != cached_fingerprint {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextFingerprintMismatch)
+            .at_node(node));
+        }
+
+        let next_max_width = match instance {
+            crate::declarative::frame::ElementInstance::Text(props) => {
+                match props.layout.size.width {
+                    crate::element::Length::Fill => Some(bounds.size.width),
+                    _ => constraints_max_width,
+                }
+            }
+            _ => constraints_max_width,
+        };
+
+        let Some(next_max_width) = next_max_width else {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+            .at_node(node));
+        };
+        if measured_size.width.0 > next_max_width.0 + 0.01
+            || next_max_width.0 > constraints_max_width.map(|w| w.0).unwrap_or(f32::INFINITY) + 0.01
+        {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+            .at_node(node));
+        }
+        let expected_size = Size::new(bounds.size.width, clamped_size.height);
+        if !Self::clean_size_matches(expected_size, bounds.size) {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextCachedSizeMismatch)
             .at_node(node));
         }
 
@@ -2317,7 +2405,7 @@ impl<H: UiHost> UiTree<H> {
             | crate::declarative::frame::ElementInstance::SelectableText(_) => {
                 children.is_empty()
                     && self
-                        .clean_nowrap_text_cached_metrics_supported(
+                        .clean_text_cached_metrics_supported(
                             app,
                             window,
                             node,
