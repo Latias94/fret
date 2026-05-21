@@ -4065,6 +4065,34 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-790 Isolate pointer-move primary route wrapper retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/primary_pointer_move_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the primary pointer-move wrapper off direct retained bridge Cx names now that its
+      surface, group, node, and connection branches all have retained-agnostic seams.
+    - Introduce only a composed `PrimaryPointerMoveCx` capability over existing branch seams, with
+      no new side-effect surface.
+    - Prove branch source-policy gates and representative primary pointer-move behavior stay green.
+  - Result:
+    - Added `PrimaryPointerMoveCx` as a composition of `MarqueeCx`,
+      `PendingGroupActivationCx`, `GroupPreviewMoveCx`, `PendingNodeDragActivationCx`, and
+      `WireDragMoveCx`.
+    - `pointer_move_dispatch/primary.rs` now accepts `PrimaryPointerMoveCx` instead of naming
+      retained `EventCx`.
+    - Added `pointer_move_primary_route_wrapper_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_primary_route_wrapper_stays_off_retained_bridge) | test(pointer_move_primary_surface_route_stays_off_retained_bridge) | test(pointer_move_primary_group_route_stays_off_retained_bridge) | test(pointer_move_primary_node_route_stays_off_retained_bridge) | test(pointer_move_primary_connection_route_stays_off_retained_bridge) | test(background_click_starts_pending_marquee_and_clears_selection_on_up) | test(group_header_click_selects_group_and_arms_pending_group_drag) | test(node_drag_threshold_is_zoom_invariant_in_screen_space) | test(connection_drag_threshold_is_zoom_invariant_in_screen_space) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary.rs ecosystem/fret-node/src/ui/canvas/widget/primary_pointer_move_cx.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

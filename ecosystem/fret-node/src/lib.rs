@@ -204,6 +204,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/event_pointer_up/dispatch.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_UP_RS: &str =
         include_str!("ui/canvas/widget/event_router_pointer_button/up.rs");
+    const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_RS: &str =
+        include_str!("ui/canvas/widget/pointer_move_dispatch/primary.rs");
+    const UI_CANVAS_WIDGET_PRIMARY_POINTER_MOVE_CX_RS: &str =
+        include_str!("ui/canvas/widget/primary_pointer_move_cx.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_SURFACE_RS: &str =
         include_str!("ui/canvas/widget/pointer_move_dispatch/primary/surface.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_GROUP_RS: &str =
@@ -1431,6 +1435,28 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_CONNECTION_RS.contains(forbidden),
                 "pointer-move primary connection route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_move_primary_route_wrapper_stays_off_retained_bridge() {
+        let primary_route_sources = [
+            UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_RS,
+            UI_CANVAS_WIDGET_PRIMARY_POINTER_MOVE_CX_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !primary_route_sources.contains(forbidden),
+                "pointer-move primary route wrapper must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

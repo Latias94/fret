@@ -926,6 +926,12 @@ adaptation is isolated in `wire_drag_move_retained_cx.rs`. Pending and active ed
 helpers now use the existing `WidgetPaintInvalidationCx` seam because they only need paint
 invalidation. The primary wrapper remains retained-bound for a later isolation slice, but all four
 primary branches now have retained-agnostic seams.
+`RBX-M2-790` then moved the primary pointer-move wrapper in
+`pointer_move_dispatch/primary.rs` behind `PrimaryPointerMoveCx`, a composed capability over the
+already-isolated surface, group, node, and connection branch seams. This adds no new side-effect
+methods; retained `EventCx` only satisfies the wrapper through existing branch adapters. Focused
+tests prove the wrapper source policy plus representative marquee, group, node, and connection
+behavior remain green.
 
 ## Next Task
 
@@ -989,8 +995,9 @@ Recommended next implementation shape:
   move now uses `PanZoomCx`; the primary surface pointer-move route now uses `MarqueeCx`; the
   primary group pointer-move route now uses `PendingGroupActivationCx + GroupPreviewMoveCx`; the
   primary node pointer-move route now uses `PendingNodeDragActivationCx`; the primary connection
-  pointer-move route now uses `WireDragMoveCx`; and the pointer-up event entry and pointer-up
-  button router now use `PointerUpRouteCx`.
+  pointer-move route now uses `WireDragMoveCx`; the primary pointer-move wrapper now uses
+  `PrimaryPointerMoveCx`; and the pointer-up event entry and pointer-up button router now use
+  `PointerUpRouteCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -1021,6 +1028,7 @@ Recommended next implementation shape:
   `pending_wire_drag.rs`, `wire_drag_move_cx.rs`, `wire_drag/move_update/mod.rs`,
   `wire_drag/move_update/auto_pan.rs`, `wire_drag/move_update/prelude.rs`,
   `pointer_move_dispatch/primary/connection.rs`,
+  `primary_pointer_move_cx.rs`, `pointer_move_dispatch/primary.rs`,
   `keyboard_pan_activation.rs`,
   `event_clipboard_feedback.rs`, `event_clipboard_feedback_cx.rs`, `event_timer_toast.rs`,
   `timer_motion_shared.rs`,
@@ -1078,7 +1086,29 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-780`:
+Last run on 2026-05-21 for `RBX-M2-790`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_primary_route_wrapper_stays_off_retained_bridge) | test(pointer_move_primary_surface_route_stays_off_retained_bridge) | test(pointer_move_primary_group_route_stays_off_retained_bridge) | test(pointer_move_primary_node_route_stays_off_retained_bridge) | test(pointer_move_primary_connection_route_stays_off_retained_bridge) | test(background_click_starts_pending_marquee_and_clears_selection_on_up) | test(group_header_click_selects_group_and_arms_pending_group_drag) | test(node_drag_threshold_is_zoom_invariant_in_screen_space) | test(connection_drag_threshold_is_zoom_invariant_in_screen_space) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 10 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary.rs ecosystem/fret-node/src/ui/canvas/widget/primary_pointer_move_cx.rs` -
+  no matches.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-790` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+Previous run on 2026-05-21 for `RBX-M2-780`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
@@ -1092,13 +1122,6 @@ Last run on 2026-05-21 for `RBX-M2-780`:
   standalone markdown files.
 - `git diff --check` - passed.
 - `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
-
-Broader gates not run:
-
-- `cargo nextest run --workspace`
-  - Reason: `RBX-M2-780` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
-    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
-    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
 
 Previous run on 2026-05-21 for `RBX-M2-770`:
 

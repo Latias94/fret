@@ -304,6 +304,7 @@ mod pointer_up_release_cx;
 mod pointer_up_release_retained_cx;
 mod pointer_up_state;
 mod preview;
+mod primary_pointer_move_cx;
 mod reconnect;
 mod rect_math;
 mod rect_math_core;

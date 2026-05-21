@@ -10180,3 +10180,66 @@ Broader gates not run:
   - Reason: `RBX-M2-780` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-790 pointer-move primary route wrapper retained Cx isolation
+
+Claim verified:
+
+- `pointer_move_dispatch/primary.rs` no longer imports or names retained bridge Cx types.
+- The primary pointer-move wrapper now uses `PrimaryPointerMoveCx`, composed from the already
+  retained-agnostic surface, group, node, and connection branch capabilities.
+- `PrimaryPointerMoveCx` adds no new side-effect methods; retained `EventCx` satisfies it only
+  through existing branch adapters.
+- Representative primary pointer-move behavior remains green for marquee, group drag activation,
+  node drag threshold, and connection drag threshold.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/primary_pointer_move_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving the primary
+    pointer-move wrapper behind `PrimaryPointerMoveCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_primary_route_wrapper_stays_off_retained_bridge) | test(pointer_move_primary_surface_route_stays_off_retained_bridge) | test(pointer_move_primary_group_route_stays_off_retained_bridge) | test(pointer_move_primary_node_route_stays_off_retained_bridge) | test(pointer_move_primary_connection_route_stays_off_retained_bridge) | test(background_click_starts_pending_marquee_and_clears_selection_on_up) | test(group_header_click_selects_group_and_arms_pending_group_drag) | test(node_drag_threshold_is_zoom_invariant_in_screen_space) | test(connection_drag_threshold_is_zoom_invariant_in_screen_space) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 10 tests.
+  - Scope proven: source-policy locks the primary pointer-move wrapper plus all four primary
+    branches off retained bridge Cx names; representative marquee, group, node, and connection
+    primary pointer-move behavior remains green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary.rs ecosystem/fret-node/src/ui/canvas/widget/primary_pointer_move_cx.rs`
+  - Result: no matches.
+  - Scope proven: the migrated primary pointer-move wrapper and composed capability no longer
+    depend on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after the primary pointer-move wrapper
+    seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after isolating
+    the primary pointer-move wrapper.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-790` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
