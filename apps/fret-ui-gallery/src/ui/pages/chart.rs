@@ -27,7 +27,7 @@ pub(super) fn preview_chart(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         "Unlike the Recharts docs path, `Add Grid` and `Add Axis` stay inside `delinea::ChartSpec` today instead of surfacing as separate child widgets on the gallery page.",
         "The remaining parity gaps are full Recharts `payload.payload[...]` field lookup on engine-derived payloads and DOM-native overlay composition details.",
         "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
-        "`fret-chart::ChartCanvas` exposes an accessibility layer via keyboard focus + arrow navigation, mirroring Recharts `accessibilityLayer` outcomes at a high level.",
+        "`fret-chart::ChartCanvasPanelProps::accessibility_layer(true)` exposes keyboard focus + arrow navigation, mirroring Recharts `accessibilityLayer` outcomes at a high level.",
     ]);
     let notes_stack = DocSection::build(cx, "Notes", notes_stack)
         .description("Fret-specific API surface and parity notes.");
@@ -74,7 +74,7 @@ pub(super) fn preview_chart(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-chart-legend")
         .code_rust_from_file_region(snippets::legend::SOURCE, "example");
     let accessibility = DocSection::build(cx, "Accessibility", accessibility)
-        .description("Native chart accessibility lives on `fret-chart::ChartCanvas`, with a reusable helper for the common defaults.")
+        .description("Native chart accessibility lives on the declarative chart panel, with a reusable helper for the common defaults.")
         .test_id_prefix("ui-gallery-chart-accessibility")
         .code_rust_from_file_region(snippets::accessibility::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)

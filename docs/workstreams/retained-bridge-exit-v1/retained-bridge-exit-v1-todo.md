@@ -4671,6 +4671,46 @@ Related plan:
       authoring markers.
     - Accessibility-specific docs still mention retained `ChartCanvas` because keyboard point
       navigation remains a separate declarative parity slice before that helper can be migrated.
+- [x] RBX-M3-050 Move chart accessibility keyboard navigation onto the declarative panel.
+  - Scope:
+    - `ecosystem/fret-chart/src/a11y.rs`
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/chart/usage.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/chart/accessibility.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/chart.rs`
+    - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+  - Goal:
+    - Give `chart_canvas_panel(...)` retained-compatible focusable chart semantics and arrow-key
+      point navigation before deleting retained chart code.
+    - Migrate Gallery chart accessibility docs away from retained `ChartCanvas` helper authoring.
+  - Validation:
+    - `cargo nextest run -p fret-chart`
+    - `cargo nextest run -p fret-ui-gallery --features gallery-chart chart_first_chart_keyboard_navigation_shows_auto_wired_tooltip_under_default_cache_policy chart_snippets_prefer_declarative_canvas_panel`
+    - `cargo check -p fret-ui-gallery --features gallery-chart`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+  - Evidence:
+    - `ecosystem/fret-chart/src/a11y.rs`
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/chart/usage.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/chart/accessibility.rs`
+    - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-050-chart-declarative-accessibility-navigation`
+  - Result:
+    - Added shared crate-private `ChartA11yIndex` so retained and declarative chart paths use the
+      same mark-to-data-index accessibility index.
+    - Added `ChartCanvasPanelProps::accessibility_layer(true)`, `test_id(...)`, and
+      `input_map(...)`.
+    - Declarative chart panels now expose a focusable viewport semantics node, collection
+      position, tooltip value, and arrow-key navigation that updates hover/axis-pointer output.
+    - The new declarative test mirrors the retained keyboard-navigation oracle: `ArrowRight`
+      advances `pos_in_set` from 1 to 2 and publishes non-empty tooltip lines to
+      `ChartCanvasOutput`.
+    - Gallery's first-chart snippet now opts into declarative chart accessibility, and Gallery
+      accessibility docs/source-policy no longer teach retained `ChartCanvas` authoring.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

@@ -11526,3 +11526,87 @@ Broader gates not run:
   - Reason: `RBX-M3-045` is a targeted UI Gallery chart docs/consumer migration slice. The planned
     package feature check, targeted source-policy test, formatting, layering, catalog, whitespace,
     and merge-marker checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-050 Chart declarative accessibility navigation
+
+Claim verified:
+
+- `chart_canvas_panel(...)` now supports a declarative chart accessibility layer without
+  constructing retained `ChartCanvas`.
+- The retained chart accessibility index has been extracted into a crate-private shared helper so
+  retained and declarative paths use the same mark/data-index mapping.
+- Declarative chart panels can expose a focusable viewport semantics node with collection position,
+  tooltip value, and arrow-key point navigation.
+- UI Gallery's first-chart example now opts into declarative chart accessibility, and its
+  accessibility snippet no longer teaches retained `ChartCanvas` helper authoring.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/a11y.rs`
+- `ecosystem/fret-chart/src/declarative/panel.rs`
+- `ecosystem/fret-chart/src/retained/canvas.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/chart/usage.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/chart/accessibility.rs`
+- `apps/fret-ui-gallery/src/ui/pages/chart.rs`
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-chart`
+  - Result: passed.
+  - Scope proven: `fret-chart` type-checks after adding declarative accessibility props and moving
+    `ChartA11yIndex` into the shared crate-private module.
+- `cargo nextest run -p fret-chart chart_canvas_panel_keyboard_navigation_publishes_tooltip_lines_on_declarative_path`
+  - Result: passed, 1 test.
+  - Scope proven: the new declarative accessibility oracle advances semantics `pos_in_set` from 1
+    to 2 on `ArrowRight` and publishes non-empty tooltip lines to `ChartCanvasOutput`.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 43 tests.
+  - Scope proven: declarative chart accessibility, existing declarative output/paint baselines, and
+    retained chart accessibility/output/tooltip oracle tests remain green together.
+- `cargo nextest run -p fret-ui-gallery --features gallery-chart chart_snippets_prefer_declarative_canvas_panel`
+  - Result: passed, 1 test.
+  - Scope proven: Gallery chart snippets, including accessibility docs, teach declarative
+    `ChartCanvasPanelProps` and reject retained chart authoring markers.
+- `cargo nextest run -p fret-ui-gallery --features gallery-chart chart_first_chart_keyboard_navigation_shows_auto_wired_tooltip_under_default_cache_policy`
+  - Result: passed, 1 test.
+  - Scope proven: the real Gallery first-chart path exposes focusable chart semantics, handles
+    `ArrowRight`, advances the accessibility index, publishes an accessibility value, and shows the
+    auto-wired tooltip.
+- `cargo nextest run -p fret-ui-gallery --features gallery-chart chart_first_chart_keyboard_navigation_shows_auto_wired_tooltip_under_default_cache_policy chart_snippets_prefer_declarative_canvas_panel`
+  - Result: passed, 2 tests.
+  - Scope proven: the final post-extraction Gallery behavior and source-policy gates pass together.
+- `cargo check -p fret-ui-gallery --features gallery-chart`
+  - Result: passed.
+  - Scope proven: Gallery chart docs compile with declarative accessibility props after the
+    retained helper migration.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after chart accessibility and Gallery docs updates.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+- `rg -n "RetainedSubtreeProps|UiTreeRetainedExt|cx\\.retained_subtree|ChartCanvas::new\\(|use fret_chart::ChartCanvas;|use fret_chart::\\{ChartCanvas,|fret_chart::ChartCanvas" apps/fret-ui-gallery/src/ui/snippets/chart/usage.rs apps/fret-ui-gallery/src/ui/snippets/chart/demo.rs apps/fret-ui-gallery/src/ui/snippets/chart/accessibility.rs apps/fret-ui-gallery/src/ui/pages/chart.rs`
+  - Result: only `ChartCanvasOutput` / `ChartCanvasPanelProps` matches; no retained `ChartCanvas`
+    widget-authoring markers.
+  - Scope proven: Gallery chart docs no longer teach retained chart authoring for usage/demo or
+    accessibility helper code.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-050` is a targeted `fret-chart` accessibility parity and UI Gallery chart-docs
+    migration slice. The package gate, Gallery feature check, focused Gallery integration/source
+    gates, formatting, layering, catalog, whitespace, and merge-marker checks cover the changed
+    surface.

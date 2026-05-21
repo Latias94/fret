@@ -15,14 +15,17 @@ use fret_canvas::ui::{
 };
 use fret_core::{
     Color, Corners, DrawOrder, Edges, KeyCode, MouseButton, PathCommand, PathStyle, Point, Px,
-    Rect, Size, StrokeStyle,
+    Rect, SemanticsRole, Size, StrokeStyle,
 };
 use fret_runtime::Model;
 use fret_ui::action::OnKeyDown;
 use fret_ui::canvas::CanvasPainter;
-use fret_ui::element::{AnyElement, CanvasProps, FocusScopeProps, Length, PointerRegionProps};
+use fret_ui::element::{
+    AnyElement, CanvasProps, FocusScopeProps, Length, PointerRegionProps, SemanticsProps,
+};
 use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 
+use crate::a11y::ChartA11yIndex;
 use crate::input_map::{ChartInputMap, ModifierKey};
 use crate::linking::{ChartLinkRouter, LinkAxisKey};
 use crate::output::{
@@ -151,6 +154,354 @@ struct AxisPointerPaintData {
 }
 
 #[derive(Debug, Default, Clone)]
+struct ChartA11yState {
+    index: ChartA11yIndex,
+    last_key: Option<(delinea::SeriesId, u32)>,
+    marks_rev: delinea::ids::Revision,
+    series_rank_by_id: BTreeMap<delinea::SeriesId, usize>,
+}
+
+#[derive(Debug, Default, Clone)]
+struct ChartA11ySemanticsState {
+    pos_in_set: Option<u32>,
+    set_size: Option<u32>,
+    value: Option<Arc<str>>,
+}
+
+fn a11y_tooltip_value(engine: &ChartEngine, formatter: &dyn TooltipFormatter) -> Option<Arc<str>> {
+    let output = engine.output();
+    let axis_pointer = output.axis_pointer.as_ref()?;
+
+    let mut parts: Vec<String> = Vec::new();
+    match &axis_pointer.tooltip {
+        TooltipOutput::Item(item) => {
+            let x_window = output
+                .axis_windows
+                .get(&item.x_axis)
+                .copied()
+                .unwrap_or_default();
+            let x_label = engine
+                .model()
+                .axes
+                .get(&item.x_axis)
+                .and_then(|axis| axis.name.as_deref())
+                .unwrap_or("X");
+            let x_value = delinea::engine::axis::format_value_for(
+                engine.model(),
+                item.x_axis,
+                x_window,
+                item.x_value,
+            );
+            parts.push(format!("{x_label}: {x_value}"));
+        }
+        TooltipOutput::Axis(axis) => {
+            let axis_window = output
+                .axis_windows
+                .get(&axis.axis)
+                .copied()
+                .unwrap_or_default();
+            let axis_label = engine
+                .model()
+                .axes
+                .get(&axis.axis)
+                .and_then(|axis| axis.name.as_deref())
+                .unwrap_or("Axis");
+            let axis_value = delinea::engine::axis::format_value_for(
+                engine.model(),
+                axis.axis,
+                axis_window,
+                axis.axis_value,
+            );
+            parts.push(format!("{axis_label}: {axis_value}"));
+        }
+    }
+
+    let lines = formatter.format_axis_pointer(engine, &output.axis_windows, axis_pointer);
+    for line in lines {
+        parts.push(if let Some((left, right)) = line.columns {
+            format!("{left}: {right}")
+        } else {
+            line.text
+        });
+    }
+
+    (!parts.is_empty()).then(|| Arc::from(parts.join(" | ")))
+}
+
+fn series_row_count(engine: &mut ChartEngine, series: delinea::SeriesId) -> Option<u32> {
+    let dataset = {
+        let model = engine.model();
+        let series = model.series.get(&series)?;
+        model.root_dataset_id(series.dataset)
+    };
+
+    engine
+        .datasets_mut()
+        .dataset(dataset)
+        .and_then(|table| u32::try_from(table.row_count()).ok())
+}
+
+fn current_a11y_key_from_engine(
+    engine: &mut ChartEngine,
+    a11y_state: &ChartA11yState,
+) -> Option<(delinea::SeriesId, u32)> {
+    let first_from_marks = a11y_state
+        .index
+        .series_by_index
+        .iter()
+        .next()
+        .and_then(|(data_index, series)| Some((*series.first()?, *data_index)));
+    let engine_hit = engine
+        .output()
+        .axis_pointer
+        .as_ref()
+        .and_then(|o| o.hit)
+        .map(|hit| (hit.series, hit.data_index));
+    let fallback_first = engine
+        .model()
+        .series_order
+        .clone()
+        .into_iter()
+        .find(|s| series_row_count(engine, *s).is_some_and(|n| n > 0))
+        .map(|s| (s, 0));
+
+    a11y_state
+        .last_key
+        .or(engine_hit)
+        .or(first_from_marks)
+        .or(fallback_first)
+}
+
+fn a11y_semantics_for_engine(
+    engine: &mut ChartEngine,
+    a11y_state: &ChartA11yState,
+    formatter: &dyn TooltipFormatter,
+) -> ChartA11ySemanticsState {
+    let mut semantics = ChartA11ySemanticsState {
+        value: a11y_tooltip_value(engine, formatter),
+        ..Default::default()
+    };
+    let Some((series, data_index)) = current_a11y_key_from_engine(engine, a11y_state) else {
+        return semantics;
+    };
+
+    if let Some(indices) = a11y_state.index.indices_by_series.get(&series) {
+        semantics.set_size = u32::try_from(indices.len()).ok().filter(|n| *n > 0);
+        semantics.pos_in_set = indices
+            .binary_search(&data_index)
+            .ok()
+            .and_then(|pos| u32::try_from(pos + 1).ok());
+        return semantics;
+    }
+
+    if let Some(set_size) = series_row_count(engine, series).filter(|n| *n > 0) {
+        semantics.set_size = Some(set_size);
+        semantics.pos_in_set = Some(data_index.min(set_size.saturating_sub(1)) + 1);
+    }
+
+    semantics
+}
+
+fn px_at_data(window: DataWindow, value: f64, origin_px: f32, span_px: f32) -> f32 {
+    let mut window = window;
+    window.clamp_non_degenerate();
+    let span = window.span();
+    if !span.is_finite() || span <= 0.0 || !span_px.is_finite() || span_px <= 0.0 {
+        return origin_px;
+    }
+    let t = ((value - window.min) / span).clamp(0.0, 1.0) as f32;
+    origin_px + t * span_px
+}
+
+fn y_local_for_data_value(window: DataWindow, value: f64, plot_height_px: f32) -> f32 {
+    let mut window = window;
+    window.clamp_non_degenerate();
+    let span = window.span();
+    if !span.is_finite() || span <= 0.0 || !value.is_finite() {
+        return plot_height_px;
+    }
+    let t = ((value - window.min) / span).clamp(0.0, 1.0) as f32;
+    plot_height_px * (1.0 - t)
+}
+
+fn point_for_series_data_index(
+    engine: &mut ChartEngine,
+    bounds: Rect,
+    series: delinea::SeriesId,
+    data_index: u32,
+) -> Option<Point> {
+    let plot_w = bounds.size.width.0;
+    let plot_h = bounds.size.height.0;
+    if plot_w <= 0.0 || plot_h <= 0.0 {
+        return None;
+    }
+
+    let (x_axis, y_axis, x_value, y_value) = {
+        let (dataset, x_axis, y_axis, x_col, y_col) = {
+            let model = engine.model();
+            let series = model.series.get(&series)?;
+            let dataset = model.root_dataset_id(series.dataset);
+            let dataset_model = model.datasets.get(&series.dataset)?;
+            let x_col = *dataset_model.fields.get(&series.encode.x)?;
+            let y_col = *dataset_model.fields.get(&series.encode.y)?;
+            (dataset, series.x_axis, series.y_axis, x_col, y_col)
+        };
+
+        let table = engine.datasets_mut().dataset(dataset)?;
+        let idx = usize::try_from(data_index).ok()?;
+        let x_value = table.column_f64(x_col)?.get(idx).copied()?;
+        let y_value = table.column_f64(y_col)?.get(idx).copied()?;
+        (x_axis, y_axis, x_value, y_value)
+    };
+
+    let x_window = window_for_axis_x(engine, x_axis);
+    let y_window = window_for_axis_y(engine, y_axis);
+    let x_local = px_at_data(x_window, x_value, 0.0, plot_w);
+    let y_local = y_local_for_data_value(y_window, y_value, plot_h);
+    Some(Point::new(
+        Px(bounds.origin.x.0 + x_local),
+        Px(bounds.origin.y.0 + y_local),
+    ))
+}
+
+fn navigate_a11y_index(
+    a11y_state: &ChartA11yState,
+    current: (delinea::SeriesId, u32),
+    key: KeyCode,
+) -> Option<(delinea::SeriesId, u32)> {
+    let (series, data_index) = current;
+    match key {
+        KeyCode::ArrowLeft => a11y_state
+            .index
+            .indices_by_series
+            .get(&series)
+            .and_then(|indices| match indices.binary_search(&data_index) {
+                Ok(pos) | Err(pos) => pos.checked_sub(1).and_then(|i| indices.get(i).copied()),
+            })
+            .map(|next_index| (series, next_index)),
+        KeyCode::ArrowRight => a11y_state
+            .index
+            .indices_by_series
+            .get(&series)
+            .and_then(|indices| match indices.binary_search(&data_index) {
+                Ok(pos) => indices.get(pos + 1).copied(),
+                Err(pos) => indices.get(pos).copied(),
+            })
+            .map(|next_index| (series, next_index)),
+        KeyCode::ArrowUp | KeyCode::ArrowDown => a11y_state
+            .index
+            .series_by_index
+            .get(&data_index)
+            .and_then(|series_ids| {
+                let pos = series_ids.iter().position(|s| *s == series).unwrap_or(0);
+                let next_pos = match key {
+                    KeyCode::ArrowUp => pos.checked_sub(1),
+                    KeyCode::ArrowDown => (pos + 1 < series_ids.len()).then_some(pos + 1),
+                    _ => None,
+                }?;
+                series_ids.get(next_pos).copied().map(|s| (s, data_index))
+            }),
+        _ => None,
+    }
+}
+
+fn navigate_a11y_fallback(
+    engine: &mut ChartEngine,
+    current: Option<(delinea::SeriesId, u32)>,
+    key: KeyCode,
+) -> Option<(delinea::SeriesId, u32)> {
+    let series_order = engine.model().series_order.clone();
+    if series_order.is_empty() {
+        return None;
+    }
+
+    let mut current_series = current.map(|(s, _)| s);
+    let mut current_index = current.map(|(_, i)| i).unwrap_or(0);
+    if current_series
+        .and_then(|s| series_row_count(engine, s).filter(|n| *n > 0))
+        .is_none()
+    {
+        current_series = series_order
+            .iter()
+            .copied()
+            .find(|s| series_row_count(engine, *s).is_some_and(|n| n > 0));
+    }
+
+    let current_series = current_series?;
+    let current_row_count = series_row_count(engine, current_series).filter(|n| *n > 0)?;
+    current_index = current_index.min(current_row_count.saturating_sub(1));
+
+    match key {
+        KeyCode::ArrowLeft => Some((current_series, current_index.saturating_sub(1))),
+        KeyCode::ArrowRight => Some((
+            current_series,
+            (current_index + 1).min(current_row_count.saturating_sub(1)),
+        )),
+        KeyCode::ArrowUp | KeyCode::ArrowDown => {
+            let pos = series_order
+                .iter()
+                .position(|s| *s == current_series)
+                .unwrap_or(0) as i32;
+            let step = if key == KeyCode::ArrowUp { -1 } else { 1 };
+            let mut next_pos = pos + step;
+            let mut next_series = current_series;
+            while next_pos >= 0 && (next_pos as usize) < series_order.len() {
+                let candidate = series_order[next_pos as usize];
+                if series_row_count(engine, candidate).is_some_and(|n| n > 0) {
+                    next_series = candidate;
+                    break;
+                }
+                next_pos += step;
+            }
+
+            let next_row_count = series_row_count(engine, next_series).unwrap_or(0);
+            if next_row_count == 0 {
+                return None;
+            }
+            Some((
+                next_series,
+                current_index.min(next_row_count.saturating_sub(1)),
+            ))
+        }
+        _ => None,
+    }
+}
+
+fn handle_a11y_navigation(
+    engine: &mut ChartEngine,
+    a11y_state: &mut ChartA11yState,
+    bounds: Rect,
+    key: KeyCode,
+) -> bool {
+    if !matches!(
+        key,
+        KeyCode::ArrowLeft | KeyCode::ArrowRight | KeyCode::ArrowUp | KeyCode::ArrowDown
+    ) {
+        return false;
+    }
+
+    let current = current_a11y_key_from_engine(engine, a11y_state);
+    let next = current
+        .and_then(|current| navigate_a11y_index(a11y_state, current, key))
+        .or_else(|| navigate_a11y_fallback(engine, current, key));
+    let Some((next_series, next_index)) = next else {
+        return false;
+    };
+
+    let point = a11y_state
+        .index
+        .point(next_series, next_index)
+        .or_else(|| point_for_series_data_index(engine, bounds, next_series, next_index));
+    let Some(point) = point else {
+        return false;
+    };
+
+    engine.apply_action(Action::HoverAt { point });
+    a11y_state.last_key = Some((next_series, next_index));
+    true
+}
+
+#[derive(Debug, Default, Clone)]
 struct ChartCanvasPanelOutputState {
     output: ChartCanvasOutput,
 }
@@ -164,6 +515,10 @@ pub struct ChartCanvasPanelProps {
     pub engine: Option<Model<ChartEngine>>,
     pub spec: delinea::ChartSpec,
     pub output_model: Option<Model<ChartCanvasOutput>>,
+
+    /// Enables the focusable chart semantics layer with arrow-key point navigation.
+    pub accessibility_layer: bool,
+    pub test_id: Option<Arc<str>>,
 
     /// Optional formatter hook for axis-trigger tooltips (ADR 0209).
     ///
@@ -186,6 +541,8 @@ impl ChartCanvasPanelProps {
             engine: None,
             spec,
             output_model: None,
+            accessibility_layer: false,
+            test_id: None,
             tooltip_formatter: None,
             input_map: default_chart_input_map_safe(),
             link_axis_map: BTreeMap::new(),
@@ -200,6 +557,21 @@ impl ChartCanvasPanelProps {
 
     pub fn link_axis_map(mut self, map: BTreeMap<delinea::AxisId, LinkAxisKey>) -> Self {
         self.link_axis_map = map;
+        self
+    }
+
+    pub fn input_map(mut self, map: ChartInputMap) -> Self {
+        self.input_map = map;
+        self
+    }
+
+    pub fn accessibility_layer(mut self, enabled: bool) -> Self {
+        self.accessibility_layer = enabled;
+        self
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
         self
     }
 }
@@ -218,6 +590,7 @@ pub fn chart_canvas_panel<H: UiHost>(
 
     // Tool-local drag model.
     let pan_drag: Model<Option<ChartPanDrag>> = cx.local_model(|| None::<ChartPanDrag>);
+    let a11y_state_model: Model<ChartA11yState> = cx.local_model(ChartA11yState::default);
 
     let legend_state: Arc<Mutex<LegendOverlayState>> = cx.slot_state(
         || Arc::new(Mutex::new(LegendOverlayState::default())),
@@ -247,6 +620,7 @@ pub fn chart_canvas_panel<H: UiHost>(
             (cache.marks_rev, cache.output_rev)
         });
     let output_state_slot = cx.slot_id();
+    let a11y_semantics_state_slot = cx.slot_id();
 
     let mut marks_rev = prev_marks_rev;
     let mut output_rev = prev_output_rev;
@@ -475,7 +849,39 @@ pub fn chart_canvas_panel<H: UiHost>(
         st.axis_pointer = axis_pointer_output;
         st.axis_pointer_labels = std::mem::take(&mut axis_pointer_labels);
         st.lines = tooltip_lines;
-        st.series_rank_by_id = series_rank_by_id;
+        st.series_rank_by_id = series_rank_by_id.clone();
+    }
+
+    if props.accessibility_layer {
+        let marks_for_a11y = output_marks.clone();
+        let _ = a11y_state_model.update(cx.app, |state, _cx| {
+            if state.marks_rev != marks_rev
+                && let Some(marks) = marks_for_a11y.as_ref()
+            {
+                state.index.rebuild(marks, &series_rank_by_id);
+                state.marks_rev = marks_rev;
+                state.series_rank_by_id = series_rank_by_id.clone();
+            } else if state.series_rank_by_id != series_rank_by_id {
+                state.series_rank_by_id = series_rank_by_id.clone();
+            }
+        });
+
+        let a11y_state = a11y_state_model
+            .read(cx.app, |_app, state| state.clone())
+            .unwrap_or_default();
+        let formatter_for_semantics = tooltip_formatter.clone();
+        let next_semantics = engine
+            .update(cx.app, |engine, _cx| {
+                a11y_semantics_for_engine(engine, &a11y_state, &*formatter_for_semantics)
+            })
+            .unwrap_or_default();
+        cx.state_for(
+            a11y_semantics_state_slot,
+            ChartA11ySemanticsState::default,
+            |state| {
+                *state = next_semantics;
+            },
+        );
     }
 
     let (cache, axis_pointer, hover_point_px) =
@@ -1048,8 +1454,41 @@ pub fn chart_canvas_panel<H: UiHost>(
     };
 
     let engine_k = engine.clone();
+    let engine_a11y_k = engine.clone();
+    let a11y_state_k = a11y_state_model.clone();
     let legend_state_k = legend_state.clone();
+    let accessibility_layer = props.accessibility_layer;
+    let bounds_for_a11y = bounds;
     let on_key_down: OnKeyDown = Arc::new(move |host, action_cx, down| {
+        if accessibility_layer
+            && !down.repeat
+            && !down.modifiers.shift
+            && !down.modifiers.ctrl
+            && !down.modifiers.alt
+            && !down.modifiers.alt_gr
+            && !down.modifiers.meta
+        {
+            let mut a11y_state = host
+                .models_mut()
+                .read(&a11y_state_k, |state| state.clone())
+                .ok()
+                .unwrap_or_default();
+            let handled = host
+                .models_mut()
+                .update(&engine_a11y_k, |engine| {
+                    handle_a11y_navigation(engine, &mut a11y_state, bounds_for_a11y, down.key)
+                })
+                .ok()
+                .unwrap_or(false);
+            if handled {
+                let _ = host.models_mut().update(&a11y_state_k, |state| {
+                    *state = a11y_state;
+                });
+                host.request_redraw(action_cx.window);
+                return true;
+            }
+        }
+
         let modifiers = down.modifiers;
         let legend_mods_ok =
             modifiers.ctrl && !modifiers.alt && !modifiers.alt_gr && !modifiers.meta;
@@ -1099,10 +1538,39 @@ pub fn chart_canvas_panel<H: UiHost>(
     });
 
     let focus_props = FocusScopeProps::default();
-    cx.focus_scope_with_id(focus_props, move |cx, focus_id| {
-        cx.key_add_on_key_down_for(focus_id, on_key_down);
+    let on_key_down_focus = on_key_down.clone();
+    let inner = cx.focus_scope_with_id(focus_props, move |cx, focus_id| {
+        cx.key_add_on_key_down_for(focus_id, on_key_down_focus.clone());
         vec![canvas_tool_router_panel(cx, router_props, tools, paint)]
-    })
+    });
+
+    if props.accessibility_layer {
+        let semantics_state = cx.state_for(
+            a11y_semantics_state_slot,
+            ChartA11ySemanticsState::default,
+            |state| state.clone(),
+        );
+        let mut semantics = SemanticsProps {
+            role: SemanticsRole::Viewport,
+            label: Some(Arc::from("Chart")),
+            test_id: props.test_id.clone(),
+            pos_in_set: semantics_state.pos_in_set,
+            set_size: semantics_state.set_size,
+            value: semantics_state.value,
+            focusable: true,
+            ..Default::default()
+        };
+        semantics.layout.size.width = Length::Fill;
+        semantics.layout.size.height = Length::Fill;
+        cx.semantics_with_id(semantics, move |cx, semantics_id| {
+            cx.key_add_on_key_down_for(semantics_id, on_key_down);
+            vec![inner]
+        })
+    } else if let Some(test_id) = props.test_id.clone() {
+        inner.test_id(test_id)
+    } else {
+        inner
+    }
 }
 
 /// Capability-first adapter for [`chart_canvas_panel`] when the caller only owns
@@ -1129,8 +1597,8 @@ mod tests {
     };
     use fret_app::App;
     use fret_core::{
-        AppWindowId, PathConstraints, PathId, PathMetrics, Scene, SceneOp, TextBlobId,
-        TextConstraints, TextMetrics,
+        AppWindowId, Event, Modifiers, PathConstraints, PathId, PathMetrics, Scene, SceneOp,
+        TextBlobId, TextConstraints, TextMetrics,
     };
     use fret_runtime::{FrameId, Model};
     use fret_ui::declarative::render_root;
@@ -1662,6 +2130,122 @@ mod tests {
         assert!(
             published.link_events_revision > 0,
             "declarative chart should advance the link events revision when publishing link events"
+        );
+    }
+
+    #[test]
+    fn chart_canvas_panel_keyboard_navigation_publishes_tooltip_lines_on_declarative_path() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(293.5), Px(296.5)),
+            Size::new(Px(560.0), Px(208.0)),
+        );
+        let mut services = FakeServices;
+        let (spec, dataset_id, x, y) = chart_spec();
+
+        let engine: Model<ChartEngine> = app
+            .models_mut()
+            .insert(ChartEngine::new(spec.clone()).expect("chart spec should be valid"));
+        app.models_mut()
+            .update(&engine, |engine| seed_dataset(engine, dataset_id, x, y))
+            .expect("chart engine model should exist");
+        let output: Model<ChartCanvasOutput> =
+            app.models_mut().insert(ChartCanvasOutput::default());
+
+        let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let engine = engine.clone();
+            let output = output.clone();
+            let spec = spec.clone();
+            let root = render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "chart-declarative-a11y-panel",
+                |cx| {
+                    let mut props = ChartCanvasPanelProps::new(spec.clone())
+                        .output_model(output)
+                        .accessibility_layer(true)
+                        .test_id("chart-keyboard-canvas");
+                    props.engine = Some(engine);
+                    props.input_map = crate::input_map::ChartInputMap::default();
+                    vec![chart_canvas_panel(cx, props)]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            let mut scene = Scene::default();
+            ui.paint_all(app, services, bounds, &mut scene, 1.0);
+        };
+
+        render_frame(&mut ui, &mut app, &mut services);
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        render_frame(&mut ui, &mut app, &mut services);
+
+        let before = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot before keyboard navigation");
+        let before_node = before
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("chart-keyboard-canvas"))
+            .expect("expected chart semantics node before keyboard navigation");
+        assert_eq!(
+            before_node.pos_in_set,
+            Some(1),
+            "expected initial chart semantics collection position to point at the first item"
+        );
+
+        ui.set_focus(Some(before_node.id));
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        render_frame(&mut ui, &mut app, &mut services);
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        render_frame(&mut ui, &mut app, &mut services);
+
+        let after = ui
+            .semantics_snapshot()
+            .expect("expected semantics snapshot after keyboard navigation");
+        let after_node = after
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some("chart-keyboard-canvas"))
+            .expect("expected chart semantics node after keyboard navigation");
+        let published = output
+            .read(&mut app, |_app, state| state.clone())
+            .expect("expected output model to be readable");
+
+        assert_eq!(
+            after_node.pos_in_set,
+            Some(2),
+            "expected keyboard accessibility navigation to update chart semantics collection position"
+        );
+        assert!(
+            published.revision > 0,
+            "expected keyboard accessibility navigation to advance the shared output model revision; after_pos_in_set={:?} after_value={:?} tooltip_lines={}",
+            after_node.pos_in_set,
+            after_node.value,
+            published.snapshot.tooltip_lines.len()
+        );
+        assert!(
+            !published.snapshot.tooltip_lines.is_empty(),
+            "expected keyboard accessibility navigation to publish tooltip lines"
         );
     }
 

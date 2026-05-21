@@ -6257,15 +6257,25 @@ fn chart_snippets_prefer_declarative_canvas_panel() {
     for relative_path in [
         "src/ui/snippets/chart/usage.rs",
         "src/ui/snippets/chart/demo.rs",
+        "src/ui/snippets/chart/accessibility.rs",
     ] {
         let source = read(relative_path);
         let canonical = canonicalize_rust_fragment(&source);
-        for marker in [
-            "ChartEngine::new",
-            "ChartCanvasPanelProps::new",
-            "cx.local_model_keyed",
-            "chart_canvas_panel_in(cx, props)",
-        ] {
+        let required_markers: &[&str] = if relative_path.ends_with("accessibility.rs") {
+            &[
+                "ChartCanvasPanelProps",
+                ".accessibility_layer(true)",
+                "ChartInputMap::default()",
+            ]
+        } else {
+            &[
+                "ChartEngine::new",
+                "ChartCanvasPanelProps::new",
+                "cx.local_model_keyed",
+                "chart_canvas_panel_in(cx, props)",
+            ]
+        };
+        for marker in required_markers {
             let marker = canonicalize_rust_fragment(marker);
             assert!(
                 canonical.contains(&marker),

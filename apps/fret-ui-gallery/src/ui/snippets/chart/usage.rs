@@ -142,11 +142,14 @@ fn sample_chart_canvas(
         engine
     });
 
-    let mut props = ChartCanvasPanelProps::new(spec).output_model(output);
+    let mut props = ChartCanvasPanelProps::new(spec)
+        .output_model(output)
+        .accessibility_layer(true)
+        .test_id(test_id.clone());
     props.engine = Some(engine);
     props.input_map = fret_chart::input_map::ChartInputMap::default();
 
-    ui::v_flex(move |cx| vec![chart_canvas_panel_in(cx, props).test_id(test_id.clone())])
+    ui::v_flex(move |cx| vec![chart_canvas_panel_in(cx, props)])
         .layout(LayoutRefinement::default().w_full().h_px(Px(208.0)))
         .into_element(cx)
 }

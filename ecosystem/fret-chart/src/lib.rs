@@ -12,6 +12,7 @@ pub mod linking;
 pub mod output;
 pub mod retained;
 
+mod a11y;
 mod legend_logic;
 mod tooltip_layout;
 

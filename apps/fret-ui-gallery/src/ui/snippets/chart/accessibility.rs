@@ -6,9 +6,12 @@ use fret_core::Px;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 #[allow(dead_code)]
-pub fn apply_chart_accessibility_defaults(canvas: &mut fret_chart::ChartCanvas) {
-    canvas.set_accessibility_layer(true);
-    canvas.set_input_map(fret_chart::input_map::ChartInputMap::default());
+pub fn apply_chart_accessibility_defaults(
+    props: fret_chart::ChartCanvasPanelProps,
+) -> fret_chart::ChartCanvasPanelProps {
+    props
+        .accessibility_layer(true)
+        .input_map(fret_chart::input_map::ChartInputMap::default())
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -19,7 +22,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             )
             .into_element(cx),
             shadcn::raw::typography::muted(
-                "Fret mirrors the high-level `accessibilityLayer` outcome through `ChartCanvas` rather than DOM nodes.",
+                "Fret mirrors the high-level `accessibilityLayer` outcome through the declarative chart panel rather than DOM nodes.",
             )
             .into_element(cx),
             shadcn::raw::typography::muted(

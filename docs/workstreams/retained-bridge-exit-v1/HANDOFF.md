@@ -244,6 +244,15 @@ snippets from cached retained `ChartCanvas` subtrees to controlled `ChartEngine`
 the shared output contract. A Gallery source-policy test prevents those ordinary chart snippets
 from teaching retained chart authoring again. Accessibility-specific docs still mention retained
 `ChartCanvas` because arrow-key point navigation remains a separate declarative parity slice.
+`RBX-M3-050` then moved that accessibility parity slice onto the declarative chart panel. The
+mark/data-index accessibility index now lives in shared crate-private `a11y.rs` and is consumed by
+both retained and declarative chart paths. `ChartCanvasPanelProps` now exposes
+`accessibility_layer(true)`, `test_id(...)`, and `input_map(...)`; the declarative panel publishes
+a focusable viewport semantics node with collection position, tooltip value, and arrow-key point
+navigation that updates hover/axis-pointer output. The new declarative oracle mirrors the retained
+keyboard-navigation test (`ArrowRight` moves `pos_in_set` from 1 to 2 and publishes tooltip lines),
+and UI Gallery's first-chart/accessibility snippets no longer teach retained `ChartCanvas`
+authoring.
 
 ## Completed Implementation
 
@@ -1211,6 +1220,11 @@ Recommended next implementation shape:
 - Keep the known independent `fret-ui` layout primitive drift
   (`chrome-container-stretch-keeps-outer-box`) separate from retained-bridge exit unless a future
   slice touches that layout path directly.
+- For M3 chart, retained `ChartCanvas` still cannot be deleted yet. Remaining retained-only chart
+  areas include axes/chrome UI, visual map, data zoom, multi-grid surfaces, and first-party demos or
+  torture paths still mounted through retained chart widgets. Continue by migrating or explicitly
+  covering one of those capability families before removing `fret-chart` from the retained bridge
+  allowlist.
 
 ## Gates
 
