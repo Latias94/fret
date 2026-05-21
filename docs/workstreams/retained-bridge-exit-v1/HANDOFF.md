@@ -213,6 +213,14 @@ declarative viewport-surface panel. `fret-plot3d` no longer enables
 first-party Plot3D demos now mount `plot3d_panel(...)` through
 `declarative::RenderRootContext::render_root(...)`. The remaining retained bridge allowlist entries
 are now `fret-chart`, `fret-node`, and `fret-plot`.
+`RBX-M3-020` then added the first default-feature declarative `fret-chart` capability baseline.
+The new test renders `chart_canvas_panel(...)` with a controlled `Model<ChartEngine>` through
+`fret_ui::declarative::render_root(...)`, lays out and paints the real `UiTree`, and proves the
+seeded bar chart produces rect marks plus non-background, non-zero chart mark quads without
+constructing `retained::ChartCanvas`. This intentionally does not delete retained chart code yet:
+first-party chart demos, cookbook/gallery chart paths, `ChartCanvasOutput`, multi-grid helpers, and
+linking output types still consume retained chart APIs and need migration before `fret-chart` can
+leave the retained bridge allowlist.
 
 ## Completed Implementation
 

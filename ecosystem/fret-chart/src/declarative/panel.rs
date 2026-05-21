@@ -1030,3 +1030,284 @@ where
 {
     chart_canvas_panel(cx.elements(), props)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use delinea::data::{Column, DataTable};
+    use delinea::ids::{AxisId, ChartId, DatasetId, FieldId, GridId, SeriesId};
+    use delinea::{
+        AxisKind, AxisScale, ChartSpec, DatasetSpec, FieldSpec, GridSpec, SeriesEncode, SeriesKind,
+        SeriesSpec,
+    };
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, PathConstraints, PathId, PathMetrics, Scene, SceneOp, TextBlobId,
+        TextConstraints, TextMetrics,
+    };
+    use fret_runtime::{FrameId, Model};
+    use fret_ui::declarative::render_root;
+    use fret_ui::tree::UiTree;
+
+    fn chart_spec() -> (ChartSpec, DatasetId, Vec<f64>, Vec<f64>) {
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let x_field = FieldId::new(1);
+        let y_field = FieldId::new(2);
+        let series_id = SeriesId::new(1);
+
+        let spec = ChartSpec {
+            id: ChartId::new(1),
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_field,
+                        column: 1,
+                    },
+                ],
+                ..Default::default()
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                delinea::AxisSpec {
+                    id: x_axis,
+                    name: Some("Month".to_string()),
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: AxisScale::Category(delinea::CategoryAxisScale {
+                        categories: vec![
+                            "Jan".to_string(),
+                            "Feb".to_string(),
+                            "Mar".to_string(),
+                            "Apr".to_string(),
+                        ],
+                    }),
+                    range: None,
+                },
+                delinea::AxisSpec {
+                    id: y_axis,
+                    name: Some("Visitors".to_string()),
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            data_zoom_y: vec![],
+            tooltip: None,
+            axis_pointer: Some(delinea::AxisPointerSpec::default()),
+            visual_maps: vec![],
+            series: vec![SeriesSpec {
+                id: series_id,
+                name: Some("Desktop".to_string()),
+                kind: SeriesKind::Bar,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            }],
+        };
+
+        (
+            spec,
+            dataset_id,
+            vec![0.0, 1.0, 2.0, 3.0],
+            vec![186.0, 305.0, 237.0, 73.0],
+        )
+    }
+
+    fn seed_dataset(engine: &mut ChartEngine, dataset_id: DatasetId, x: Vec<f64>, y: Vec<f64>) {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(x));
+        table.push_column(Column::F64(y));
+        engine.datasets_mut().insert(dataset_id, table);
+    }
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl fret_core::TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn chart_canvas_panel_paints_seeded_chart_marks_on_declarative_path() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+        let (spec, dataset_id, x, y) = chart_spec();
+
+        let engine: Model<ChartEngine> = app
+            .models_mut()
+            .insert(ChartEngine::new(spec.clone()).expect("chart spec should be valid"));
+        app.models_mut()
+            .update(&engine, |engine| seed_dataset(engine, dataset_id, x, y))
+            .expect("chart engine model should exist");
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "chart-declarative-canvas-panel",
+            |cx| {
+                vec![chart_canvas_panel(
+                    cx,
+                    ChartCanvasPanelProps {
+                        engine: Some(engine.clone()),
+                        spec: spec.clone(),
+                        ..ChartCanvasPanelProps::new(spec.clone())
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let root_bounds = ui.debug_node_bounds(root).expect("root should be laid out");
+        assert!(root_bounds.size.width.0 > 0.0);
+        assert!(root_bounds.size.height.0 > 0.0);
+
+        let mut stack = ui.debug_node_children(root);
+        let mut non_zero_descendants = 0usize;
+        while let Some(node) = stack.pop() {
+            if let Some(node_bounds) = ui.debug_node_bounds(node)
+                && node_bounds.size.width.0 > 0.0
+                && node_bounds.size.height.0 > 0.0
+            {
+                non_zero_descendants = non_zero_descendants.saturating_add(1);
+            }
+            stack.extend(ui.debug_node_children(node));
+        }
+        assert!(
+            non_zero_descendants > 0,
+            "declarative chart panel should lay out a non-zero child surface"
+        );
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let has_rect_marks = app
+            .models()
+            .read(&engine, |engine| {
+                engine.output().marks.nodes.iter().any(|node| {
+                    matches!(
+                        (node.kind, &node.payload),
+                        (MarkKind::Rect, MarkPayloadRef::Rect(rects))
+                            if rects.rects.end > rects.rects.start
+                    )
+                })
+            })
+            .expect("chart engine model should exist");
+        assert!(
+            has_rect_marks,
+            "seeded bar chart should produce rect marks before declarative paint"
+        );
+
+        let chart_mark_quads = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    SceneOp::Quad { rect, order, .. }
+                        if order.0 >= ChartStyle::default().draw_order.0
+                            && rect.size.width.0 > 0.0
+                            && rect.size.height.0 > 0.0
+                            && *rect != bounds
+                )
+            })
+            .count();
+        assert!(
+            chart_mark_quads > 0,
+            "declarative chart canvas should paint non-zero chart quads"
+        );
+
+        let viewport = app
+            .models()
+            .read(&engine, |engine| engine.model().viewport)
+            .expect("chart engine model should exist");
+        assert_eq!(viewport, Some(bounds));
+
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+}

@@ -11288,3 +11288,64 @@ Broader gates not run:
   - Reason: `RBX-M3-010` is a targeted Plot3D bridge-exit slice. The package compile/test gate,
     first-party demo compile gates, retained-bridge no-user proof, formatting, layering, catalog,
     whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-020 Chart declarative canvas capability baseline
+
+Claim verified:
+
+- `fret-chart` now has a behavior baseline proving `chart_canvas_panel(...)` can render a seeded,
+  controlled `Model<ChartEngine>` through a real declarative UI frame without constructing
+  `retained::ChartCanvas`.
+- The test proves more than compilation: the declarative chart subtree has non-zero layout, the
+  engine records viewport bounds, delinea produces rect marks for the seeded bar chart, and the
+  declarative canvas emits non-background, non-zero chart mark quads.
+- This is deliberately a pre-delete baseline. `retained::ChartCanvas`, `ChartCanvasOutput`,
+  multi-grid helpers, and retained demo/gallery consumers remain because deleting them before
+  consumer migration would remove chart capabilities.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/declarative/panel.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-chart chart_canvas_panel_paints_seeded_chart_marks_on_declarative_path`
+  - Result: passed, 1 test.
+  - Scope proven: the new declarative chart capability test passes in the default `fret-chart`
+    feature set.
+- `rg -n "fret_chart::retained|ChartCanvas::|retained::ChartCanvas|chart_canvas_panel\\(" apps ecosystem crates -g '*.rs'`
+  - Result: found retained `ChartCanvas` consumers in first-party chart demos, cookbook/gallery
+    chart paths, `retained::multi_grid`, and `linking` output types; found existing declarative
+    `chart_canvas_panel(...)` usage in `apps/fret-examples/src/echarts_demo.rs`.
+  - Scope proven: retained chart removal is not safe in this slice; the correct next work is
+    consumer migration plus output/multi-grid replacement, using the new declarative baseline as a
+    regression gate.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 40 tests.
+  - Scope proven: the declarative capability baseline and existing retained chart oracle tests
+    remain green together.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after adding the declarative chart baseline test.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid; `fret-chart`
+    intentionally remains on the allowlist for the retained public/demo/gallery migration follow-up.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task and evidence updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-020` adds a targeted `fret-chart` declarative capability baseline without
+    changing shared runtime contracts. The package test gate, formatting, layering, catalog,
+    whitespace, and merge-marker checks cover the changed surface.

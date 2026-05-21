@@ -4561,6 +4561,31 @@ Related plan:
     - Public Plot3D authoring is now `plot3d_panel(...)` / `Plot3dPanelProps`, backed by
       `fret-ui-kit`'s declarative `viewport_surface_panel(...)`.
     - First-party Plot3D demos now mount through `declarative::RenderRootContext::render_root(...)`.
+- [x] RBX-M3-020 Add a declarative `fret-chart` canvas capability baseline before deleting
+  retained chart code.
+  - Scope:
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+  - Goal:
+    - Prove `chart_canvas_panel(...)` can render a controlled `Model<ChartEngine>` through a real
+      declarative UI frame without constructing `retained::ChartCanvas`.
+    - Lock the migration-critical behavior before moving public/demo/gallery consumers off retained
+      chart entry points.
+  - Validation:
+    - `cargo nextest run -p fret-chart chart_canvas_panel_paints_seeded_chart_marks_on_declarative_path`
+    - `cargo nextest run -p fret-chart`
+  - Evidence:
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-020-chart-declarative-canvas-capability-baseline`
+  - Result:
+    - The new behavior test seeds a bar-chart dataset into a controlled `ChartEngine`, renders
+      `chart_canvas_panel(...)` through `fret_ui::declarative::render_root(...)`, lays out and
+      paints the real `UiTree`, and asserts:
+      - the declarative chart subtree has non-zero layout,
+      - the engine records the viewport bounds,
+      - delinea produces rect marks for the seeded bar chart,
+      - the declarative canvas emits non-background, non-zero chart mark quads.
+    - This is a pre-delete baseline only; retained chart public/demo/gallery entry points still
+      need consumer migration before `fret-chart` can leave the retained bridge allowlist.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.
