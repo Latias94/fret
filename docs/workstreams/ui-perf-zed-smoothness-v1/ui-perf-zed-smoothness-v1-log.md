@@ -16399,3 +16399,38 @@ Post-fix evidence:
   p95. Top resize ticks again stay at `layout.nodes=1`; only `Scroll` remains (`93/144/76us`).
 - Interpretation: wrapper layout work was removed repeatably, but whole-frame/layout p95 is still noisy. The next
   owner is Scroll plus request-build/proof/root traversal timing, not another pure wrapper.
+
+## 2026-05-22 07:31:00 +08:00 (post-wrapper resize root attribution)
+
+Question:
+- After r24/r25 reduced resize-jitter top frames to a single `Scroll` layout node, is the remaining tail actually
+  inside Scroll layout, or is it dominated by root request/build and root traversal work around the clean-geometry
+  path?
+
+Command:
+```powershell
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r26-scroll-phase-profile --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r26-scroll-phase-profile\sessions\1779402798867-239144\1779402829741-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 20
+```
+
+Evidence:
+- r26 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r26-scroll-phase-profile/sessions/1779402798867-239144/1779402829741-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r26 reports p50/p95 total `101/860us`, layout `30/503us`, prepaint `33/42us`, paint `34/327us`, and
+  `layout.engine_solve=0` at p95.
+- Top resize ticks:
+  - tick 214: total/layout/prepaint/paint `860/503/30/327us`, request-build roots `209us`, layout roots `258us`,
+    `layout.nodes=1`.
+  - tick 208: `809/482/25/302us`, request-build roots `211us`, layout roots `240us`, `layout.nodes=1`.
+  - tick 211: `785/457/26/302us`, request-build roots `185us`, layout roots `239us`, `layout.nodes=1`.
+- The remaining `Scroll` node is not the dominant cost by itself. Its per-node profile is roughly `68..75us` on the
+  sampled resize ticks, with `solve_barrier=29..33us` and `layout_children_first_pass=23..26us`.
+- The sampled cached-flow root record is also only `26..35us` while it marks `134` retained nodes seen, so the current
+  `layout_request_build_roots_time_us` aggregate is missing internal attribution for the rest of the `185..211us`.
+
+Interpretation:
+- Do not widen the Scroll layout fast path from this evidence. Scroll extent work is now a secondary owner.
+- The next slice should split request-build/root traversal timing before another mechanism change: the measured tail is
+  `request_build_roots + layout_roots` around clean-geometry proof/application, not a clear Scroll-internal hotspot.
+- A speculative proof recursion shortcut was left unlanded because the gallery rebuild/runtime evidence was not
+  available; keep this lane evidence-led.

@@ -420,6 +420,16 @@ not update checked-in baselines.
         layout hotspot and keep `layout.engine_solve=0`.
       - Treat this as a geometry-propagation surface reduction, not a whole-frame p95 claim. r24/r25 still show noisy
         total/layout p95 dominated by request-build/proof/root traversal, Scroll layout, and renderer variance.
+    - [ ] Split request-build/root traversal attribution before widening another clean-geometry fast path.
+      - r26 evidence:
+        `target/fret-diag/text-clean-geometry-current-20260521-r26-scroll-phase-profile/sessions/1779402798867-239144/1779402829741-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+      - Finding: after wrapper propagation, top resize ticks still have `layout.nodes=1` and `layout.engine_solve=0`,
+        but `layout_request_build_roots_time_us + layout_roots_time_us` accounts for roughly `424..467us`.
+      - Scroll self profile is only `68..75us` on those ticks (`solve_barrier=29..33us`,
+        `layout_children_first_pass=23..26us`), so the next owner is root request/build and root traversal/proof
+        attribution, not a broad Scroll semantics shortcut.
+      - Next gate shape: add subphase counters around cached-flow request-build and clean-geometry root traversal, then
+        re-run the same text-measure resize-jitter repro before proposing an optimization.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
     Windows RTX4090 evidence.
 
