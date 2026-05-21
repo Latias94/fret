@@ -419,6 +419,11 @@ Compat-gated but retained-bridge-free support:
     `PointerMoveReleaseCx`, a composed retained-agnostic capability over `PointerUpCx` and
     `PanZoomBeginCx`. This adds no new retained adapter; retained `EventCx` satisfies the route
     only through those existing adapter seams.
+- `ecosystem/fret-node/src/ui/canvas/widget/cancel.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/cancel_viewport_state.rs`
+  - `RBX-M2-920` moved cancel/escape lifecycle cleanup behind `CancelGestureCx` plus a
+    host-based viewport-state seam. Retained `EventCx` adaptation lives in
+    `cancel_retained_cx.rs`; pointer-cancel and escape tests keep the cancel behavior green.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/event.rs`
   - `RBX-M2-520` moved context menu open/restore/dismiss/finish/invalidate tail helpers behind the

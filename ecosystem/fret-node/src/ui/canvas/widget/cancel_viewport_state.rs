@@ -7,7 +7,7 @@ use crate::ui::canvas::state::ViewSnapshot;
 
 pub(super) fn cancel_viewport_state<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    host: &mut H,
     snapshot: &ViewSnapshot,
 ) -> bool {
     let mut canceled = false;
@@ -22,7 +22,7 @@ pub(super) fn cancel_viewport_state<H: UiHost, M: NodeGraphCanvasMiddleware>(
         canceled = true;
     }
     if canvas.interaction.pan_inertia.is_some() {
-        canvas.stop_pan_inertia_timer(cx.app);
+        canvas.stop_pan_inertia_timer(host);
         canvas.emit_move_end(
             snapshot,
             ViewportMoveKind::PanInertia,
@@ -31,12 +31,11 @@ pub(super) fn cancel_viewport_state<H: UiHost, M: NodeGraphCanvasMiddleware>(
         canceled = true;
     }
     if canvas.interaction.viewport_animation.is_some() {
-        canvas.stop_viewport_animation_timer(cx.app);
+        canvas.stop_viewport_animation_timer(host);
         canceled = true;
     }
     if let Some(state) = canvas.interaction.viewport_move_debounce.take() {
-        cx.app
-            .push_effect(Effect::CancelTimer { token: state.timer });
+        host.push_effect(Effect::CancelTimer { token: state.timer });
         canvas.emit_move_end(snapshot, state.kind, ViewportMoveEndOutcome::Canceled);
         canceled = true;
     }

@@ -152,6 +152,9 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_left_route/dispatch.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DOUBLE_CLICK_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_left_route/double_click.rs");
+    const UI_CANVAS_WIDGET_CANCEL_RS: &str = include_str!("ui/canvas/widget/cancel.rs");
+    const UI_CANVAS_WIDGET_CANCEL_VIEWPORT_STATE_RS: &str =
+        include_str!("ui/canvas/widget/cancel_viewport_state.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_CX_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_commit_cx.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RS: &str =
@@ -1302,6 +1305,28 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DOUBLE_CLICK_RS.contains(forbidden),
                 "pointer-up left double-click route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn cancel_lifecycle_helpers_stay_off_retained_bridge() {
+        let cancel_sources = [
+            UI_CANVAS_WIDGET_CANCEL_RS,
+            UI_CANVAS_WIDGET_CANCEL_VIEWPORT_STATE_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !cancel_sources.contains(forbidden),
+                "cancel lifecycle helpers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

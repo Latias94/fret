@@ -11051,3 +11051,63 @@ Broader gates not run:
   - Reason: `RBX-M2-870` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-22 - RBX-M2-920 cancel/escape lifecycle retained Cx isolation
+
+Claim verified:
+
+- `cancel.rs` and `cancel_viewport_state.rs` no longer import or name retained bridge Cx types.
+- Cancel/escape lifecycle cleanup now uses `CancelGestureCx` plus a host-based viewport-state seam.
+- Retained `EventCx` adaptation is isolated in `cancel_retained_cx.rs`.
+- Existing cancel/escape behavior still releases pointer capture, cancels viewport motion, and
+  emits the expected canceled end callbacks.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/cancel.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/cancel_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/cancel_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/cancel_viewport_state.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/callbacks_conformance.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/escape_cancel_releases_pointer_capture_conformance.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node`
+  - Result: pending.
+  - Scope planned: confirm the default declarative `fret-node` surface still compiles after the
+    cancel/escape lifecycle refactor.
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: pending.
+  - Scope planned: confirm the retained canvas compatibility island still compiles with the new
+    cancel retained adapter.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(cancel_lifecycle_helpers_stay_off_retained_bridge) | test(escape_cancel_emits_connect_end_canceled) | test(escape_cancel_panning_emits_move_end_canceled) | test(node_drag_start_and_escape_cancel_emits_node_drag_end_canceled) | test(escape_cancel_releases_pointer_capture_during_panning) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: pending.
+  - Scope planned: prove the cancel/escape lifecycle still behaves correctly on the retained
+    compatibility path.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/cancel.rs ecosystem/fret-node/src/ui/canvas/widget/cancel_viewport_state.rs ecosystem/fret-node/src/ui/canvas/widget/cancel_cx.rs`
+  - Result: pending.
+  - Scope planned: prove the pure cancel/viewport-state helpers no longer depend on retained bridge
+    Cx names.
+- `cargo fmt --check`
+  - Result: pending.
+- `python3 tools/check_layering.py`
+  - Result: pending.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: pending.
+- `git diff --check`
+  - Result: pending.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: pending.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-920` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks should cover the changed surface.

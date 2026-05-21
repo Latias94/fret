@@ -998,6 +998,10 @@ wire drags.
 seams. No new retained adapter was needed; retained `EventCx` satisfies the route only through the
 existing pointer-up and pan-begin adapters. Focused tests prove missed pan release inference and
 right-button pan behavior remain green.
+`RBX-M2-920` then moved cancel/escape lifecycle cleanup in `cancel.rs` and
+`cancel_viewport_state.rs` behind `CancelGestureCx` plus a host-based viewport-state seam. Retained
+`EventCx` adaptation now lives in `cancel_retained_cx.rs`, and focused cancel/escape tests keep the
+behavior green.
 
 ## Next Task
 
