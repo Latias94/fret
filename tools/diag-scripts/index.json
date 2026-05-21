@@ -5450,6 +5450,34 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-checkbox-required-disabled-group-action-state",
+      "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-required-disabled-group-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-checkbox-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "checkbox",
+        "disabled",
+        "form",
+        "grouped-control",
+        "required",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Checkbox page and scopes rendering to the Required Disabled Group section.",
+        "Verifies that required semantics stay on each concrete checkbox while disabled action suppression and label forwarding are item-local."
+      ]
+    },
+    {
       "id": "ui-gallery-checkbox-rtl-and-checked-wrap",
       "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-rtl-and-checked-wrap.json",
       "required_capabilities": [

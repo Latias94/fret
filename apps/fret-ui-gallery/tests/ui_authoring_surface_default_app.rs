@@ -10323,6 +10323,7 @@ fn checkbox_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/checkbox/group.rs",
             "src/ui/snippets/checkbox/invalid_state.rs",
             "src/ui/snippets/checkbox/label.rs",
+            "src/ui/snippets/checkbox/required_disabled_group.rs",
             "src/ui/snippets/checkbox/rtl.rs",
             "src/ui/snippets/checkbox/table.rs",
             "src/ui/snippets/checkbox/usage.rs",
@@ -10354,6 +10355,7 @@ fn checkbox_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Description\", description_section)",
             "DocSection::build(cx, \"Disabled\", disabled_section)",
             "DocSection::build(cx, \"Group\", group)",
+            "DocSection::build(cx, \"Required Disabled Group\", required_disabled_group)",
             "DocSection::build(cx, \"Table\", table)",
             "DocSection::build(cx, \"RTL\", rtl_section)",
             "DocSection::build(cx, \"Label Association (Fret)\", label)",
@@ -10368,11 +10370,50 @@ fn checkbox_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Description\", description_section)",
             "DocSection::new(\"Disabled\", disabled_section)",
             "DocSection::new(\"Group\", group)",
+            "DocSection::new(\"Required Disabled Group\", required_disabled_group)",
             "DocSection::new(\"Table\", table)",
             "DocSection::new(\"RTL\", rtl_section)",
             "DocSection::new(\"Label Association (Fret)\", label)",
             "DocSection::new(\"With Title (Fret)\", with_title_section)",
         ],
+    );
+}
+
+#[test]
+fn checkbox_required_disabled_group_snippet_keeps_required_and_disabled_action_state_on_concrete_controls()
+ {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/checkbox/required_disabled_group.rs",
+        &[
+            "shadcn::Checkbox::new(value)",
+            ".required(true)",
+            ".control_id(test_id)",
+            ".a11y_label(label)",
+            ".test_id(test_id)",
+            "checkbox.disabled(true)",
+            "FieldLabel::new(label)",
+            ".for_control(test_id)",
+            ".test_id(label_test_id)",
+            "FieldLegend::new(\"Required desktop items\")",
+            "Choose required items. Disabled managed options cannot be toggled.",
+            "ui-gallery-checkbox-required-disabled-backups",
+            "ui-gallery-checkbox-required-disabled-backups-label",
+            "ui-gallery-checkbox-required-disabled-analytics",
+            "ui-gallery-checkbox-required-disabled-analytics-label",
+            "ui-gallery-checkbox-required-disabled-beta",
+            "ui-gallery-checkbox-required-disabled-beta-label",
+            "Enabled option used by diagnostics to prove mutation still works.",
+            ".test_id(\"ui-gallery-checkbox-required-disabled-group\")",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("field_state_prim::with_field_state_provider"),
+        "src/ui/snippets/checkbox/required_disabled_group.rs should use public Field/Checkbox surfaces instead of reaching into field-state internals"
+    );
+    assert!(
+        !normalized.contains("cx.interactivity_gate(true,false"),
+        "src/ui/snippets/checkbox/required_disabled_group.rs should not fake disabled action-state with a gallery-local interactivity gate"
     );
 }
 

@@ -6,6 +6,7 @@ pub mod disabled;
 pub mod group;
 pub mod invalid_state;
 pub mod label;
+pub mod required_disabled_group;
 pub mod rtl;
 pub mod table;
 pub mod usage;

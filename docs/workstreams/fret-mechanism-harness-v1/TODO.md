@@ -1650,3 +1650,25 @@ date: 2026-05-12
     and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 26/26 with the RadioGroup
     required/disabled row run id `1779360562701` and summary
     `target/fret-diag-shadcn-runtime-evidence-radio-group-required-disabled-v1/sessions/1779358567107-208948/suite.summary.json`.
+
+
+- [x] Add a Checkbox required/disabled grouped-control action-state runtime gate.
+  - Result:
+    `ui-gallery-checkbox-required-disabled-group-action-state.json` now starts on the Checkbox page's
+    `Required Disabled Group` section, proves each concrete Checkbox owns `required=true`, proves the
+    disabled Usage analytics item exports `role=checkbox`, `checked_state=false`, `checked=false`,
+    `disabled=true`, `focus=false`, and `invoke=false`, verifies both direct disabled-control click
+    and associated label click cannot toggle the disabled item, then proves enabled label forwarding
+    can still toggle the Beta updates and Backups items. No Checkbox recipe/runtime defect was
+    reproduced. Focused runtime passed with run id `1779363101513`; the rebuilt
+    `ui-gallery-checkbox-semantics` suite passed 3/3 with summary
+    `target/fret-diag-checkbox-semantics-suite-required-disabled-group-v1/sessions/1779363128715-208764/suite.summary.json`;
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 27/27 with the Checkbox
+    required/disabled group row run id `1779364468762` and summary
+    `target/fret-diag-shadcn-runtime-evidence-checkbox-required-disabled-group-v1/sessions/1779363773383-195668/suite.summary.json`.
+
+Next slice recommendation:
+
+- Continue the concrete action-state axis into a different owner split, preferably ToggleGroup or
+  Menu/Command disabled items where collection metadata, roving focus, disabled semantics, and
+  invoke suppression can drift independently under dynamic state.

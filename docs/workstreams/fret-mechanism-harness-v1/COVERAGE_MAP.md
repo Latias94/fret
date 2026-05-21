@@ -565,3 +565,19 @@ mechanism can visibly fail.
   `target/fret-diag-radio-group-semantics-suite-required-disabled-v1/sessions/1779358495275-211416/suite.summary.json`,
   and the broad runtime suite now passes 26/26 with summary
   `target/fret-diag-shadcn-runtime-evidence-radio-group-required-disabled-v1/sessions/1779358567107-208948/suite.summary.json`.
+
+
+- Checkbox required/disabled group action-state update:
+  `ui-gallery-checkbox-required-disabled-group-action-state.json` now covers the grouped Checkbox
+  path where the fieldset/field-group shell is caller-owned while each concrete checkbox owns
+  `required=true`, checked-state, disabled state, and action semantics. The gate starts on the
+  Checkbox page's `Required Disabled Group` section, proves the disabled Usage analytics checkbox
+  exports `checked_state=false`, `checked=false`, `required=true`, `disabled=true`, `focus=false`,
+  and `invoke=false`, verifies direct disabled-control and disabled-label clicks do not toggle it,
+  then proves enabled sibling labels still mutate the Beta updates and Backups checkbox states.
+  Focused runtime evidence is anchored at
+  `target/fret-diag-checkbox-required-disabled-group-action-state-v1/sessions/1779363089819-213872/1779363101513/ai.packet`,
+  the dedicated suite evidence is anchored at
+  `target/fret-diag-checkbox-semantics-suite-required-disabled-group-v1/sessions/1779363128715-208764/suite.summary.json`,
+  and the broad runtime suite now passes 27/27 with summary
+  `target/fret-diag-shadcn-runtime-evidence-checkbox-required-disabled-group-v1/sessions/1779363773383-195668/suite.summary.json`.

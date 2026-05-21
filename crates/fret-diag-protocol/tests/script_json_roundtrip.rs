@@ -512,6 +512,13 @@ fn script_v2_roundtrip_ui_gallery_checkbox_disabled_action_state() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_checkbox_required_disabled_group_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-required-disabled-group-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_button_group_input_group_long_text() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-button-group-input-group-long-text.json"

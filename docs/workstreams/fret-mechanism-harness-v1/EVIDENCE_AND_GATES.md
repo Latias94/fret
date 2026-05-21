@@ -7513,3 +7513,77 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-radio-group-required-disabled-v1 --session-auto --timeout-ms 2400000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed 26/26; `stage_counts={"passed":26}`; `reason_code_counts={}`;
     required/disabled row run id `1779360562701`.
+
+
+## Checkbox Required Disabled Group Action-State Runtime Gate
+
+- invariant:
+  shadcn Checkbox required semantics live on each concrete checkbox control, not on the caller-owned
+  fieldset/field-group shell. Disabled rows must suppress `focus`/`invoke` and label-forwarded
+  toggles only for the disabled checkbox, while enabled sibling labels remain able to mutate their
+  own checked state.
+- finding:
+  no Checkbox recipe/runtime defect was reproduced. The gate confirms that `Checkbox::required(true)`
+  composes correctly with item-level `Checkbox::disabled(true)`, `Field::disabled(true)` chrome, and
+  `FieldLabel::for_control(...)` forwarding in a grouped-control section.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/checkbox/required_disabled_group.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/checkbox/mod.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/checkbox.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-required-disabled-group-action-state.json`,
+  `tools/diag-scripts/ui-gallery-checkbox-required-disabled-group-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-checkbox-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  upstream `repo-ref/ui/apps/v4/registry/new-york-v4/ui/checkbox.tsx` keeps disabled/required
+  semantics on `CheckboxPrimitive.Root`; caller docs compose grouped rows through surrounding
+  field/fieldset structure rather than widening Checkbox into a generic children container.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-checkbox-required-disabled-group-action-state-v1/sessions/1779363089819-213872/1779363101513/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-checkbox-required-disabled-group-action-state-v1/sessions/1779363089819-213872/share/1779363101513.zip`;
+  dedicated suite summary:
+  `target/fret-diag-checkbox-semantics-suite-required-disabled-group-v1/sessions/1779363128715-208764/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-checkbox-required-disabled-group-v1/sessions/1779363773383-195668/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\checkbox\ui-gallery-checkbox-required-disabled-group-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-checkbox-required-disabled-group-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-checkbox-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\index.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\checkbox\required_disabled_group.rs apps\fret-ui-gallery\src\ui\snippets\checkbox\mod.rs apps\fret-ui-gallery\src\ui\pages\checkbox.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn checkbox_required_exposes_required_semantics --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib checkbox_required_exposes_required_semantics`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_ -- --nocapture`
+  - result: passed; 7 tests.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_required_disabled_group_snippet_keeps_required_and_disabled_action_state_on_concrete_controls`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_checkbox_required_disabled_group_action_state -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_checkbox_required_disabled_group_action_state`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\checkbox\ui-gallery-checkbox-required-disabled-group-action-state.json --dir target\fret-diag-checkbox-required-disabled-group-action-state-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779363101513`.
+- dedicated Checkbox runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite tools\diag-scripts\suites\ui-gallery-checkbox-semantics\suite.json --dir target\fret-diag-checkbox-semantics-suite-required-disabled-group-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 3/3; `stage_counts={"passed":3}`; required/disabled group row run id
+    `1779363388286`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-checkbox-required-disabled-group-v1 --session-auto --timeout-ms 2400000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 27/27; `stage_counts={"passed":27}`; `reason_code_counts={}`;
+    required/disabled group row run id `1779364468762`.
