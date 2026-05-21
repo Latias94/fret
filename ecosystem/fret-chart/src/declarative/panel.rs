@@ -27,7 +27,7 @@ use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 
 use crate::a11y::ChartA11yIndex;
 use crate::input_map::{ChartInputMap, ModifierKey};
-use crate::linking::{ChartLinkRouter, LinkAxisKey};
+use crate::linking::{AxisPointerLinkAnchor, BrushSelectionLink2D, ChartLinkRouter, LinkAxisKey};
 use crate::output::{
     ChartCanvasOutput, chart_canvas_output_link_events_batch,
     chart_canvas_output_snapshot_for_engine, update_chart_canvas_output,
@@ -364,6 +364,42 @@ fn point_for_series_data_index(
     ))
 }
 
+fn point_for_axis_pointer_anchor(
+    engine: &ChartEngine,
+    router: &ChartLinkRouter,
+    axis: delinea::AxisId,
+    value: f64,
+) -> Option<Point> {
+    if !value.is_finite() {
+        return None;
+    }
+
+    let output = engine.output();
+    let axis_model = engine.model().axes.get(&axis)?;
+    let plot = output
+        .plot_viewports_by_grid
+        .get(&axis_model.grid)
+        .copied()
+        .or(output.viewport)
+        .or_else(|| output.plot_viewports_by_grid.values().next().copied())?;
+    let axis_window = output.axis_windows.get(&axis).copied()?;
+
+    let px = match router.axis_key(axis)?.kind {
+        delinea::AxisKind::X => {
+            let x = delinea::engine::axis::x_px_at_data_in_rect(axis_window, value, plot);
+            let y = plot.origin.y.0 + 0.5 * plot.size.height.0;
+            Point::new(Px(x), Px(y))
+        }
+        delinea::AxisKind::Y => {
+            let x = plot.origin.x.0 + 0.5 * plot.size.width.0;
+            let y = delinea::engine::axis::y_px_at_data_in_rect(axis_window, value, plot);
+            Point::new(Px(x), Px(y))
+        }
+    };
+
+    (px.x.0.is_finite() && px.y.0.is_finite()).then_some(px)
+}
+
 fn navigate_a11y_index(
     a11y_state: &ChartA11yState,
     current: (delinea::SeriesId, u32),
@@ -506,6 +542,11 @@ struct ChartCanvasPanelOutputState {
     output: ChartCanvasOutput,
 }
 
+#[derive(Debug, Default, Clone)]
+struct ChartCanvasPanelLinkedState {
+    domain_windows_model_revision: Option<u64>,
+}
+
 #[derive(Clone)]
 pub struct ChartCanvasPanelProps {
     pub pointer_region: PointerRegionProps,
@@ -529,6 +570,9 @@ pub struct ChartCanvasPanelProps {
     /// (zoom requires Ctrl), because charts are often embedded inside scroll containers.
     pub input_map: ChartInputMap,
     pub link_axis_map: BTreeMap<delinea::AxisId, LinkAxisKey>,
+    pub linked_brush_model: Option<Model<Option<BrushSelectionLink2D>>>,
+    pub linked_axis_pointer_model: Option<Model<Option<AxisPointerLinkAnchor>>>,
+    pub linked_domain_windows_model: Option<Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>>,
 
     pub style: ChartStyle,
 }
@@ -546,6 +590,9 @@ impl ChartCanvasPanelProps {
             tooltip_formatter: None,
             input_map: default_chart_input_map_safe(),
             link_axis_map: BTreeMap::new(),
+            linked_brush_model: None,
+            linked_axis_pointer_model: None,
+            linked_domain_windows_model: None,
             style: ChartStyle::default(),
         }
     }
@@ -557,6 +604,27 @@ impl ChartCanvasPanelProps {
 
     pub fn link_axis_map(mut self, map: BTreeMap<delinea::AxisId, LinkAxisKey>) -> Self {
         self.link_axis_map = map;
+        self
+    }
+
+    pub fn linked_brush(mut self, brush: Model<Option<BrushSelectionLink2D>>) -> Self {
+        self.linked_brush_model = Some(brush);
+        self
+    }
+
+    pub fn linked_axis_pointer(
+        mut self,
+        axis_pointer: Model<Option<AxisPointerLinkAnchor>>,
+    ) -> Self {
+        self.linked_axis_pointer_model = Some(axis_pointer);
+        self
+    }
+
+    pub fn linked_domain_windows(
+        mut self,
+        windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
+    ) -> Self {
+        self.linked_domain_windows_model = Some(windows);
         self
     }
 
@@ -621,6 +689,7 @@ pub fn chart_canvas_panel<H: UiHost>(
         });
     let output_state_slot = cx.slot_id();
     let a11y_semantics_state_slot = cx.slot_id();
+    let linked_state_slot = cx.slot_id();
 
     let mut marks_rev = prev_marks_rev;
     let mut output_rev = prev_output_rev;
@@ -650,6 +719,53 @@ pub fn chart_canvas_panel<H: UiHost>(
 
     let tooltip_formatter_c = tooltip_formatter.clone();
     let explicit_link_axis_map = props.link_axis_map.clone();
+    let linked_brush_model = props.linked_brush_model.clone();
+    let linked_axis_pointer_model = props.linked_axis_pointer_model.clone();
+    let linked_domain_windows_model = props.linked_domain_windows_model.clone();
+
+    if let Some(model) = linked_brush_model.as_ref() {
+        cx.observe_model(model, fret_ui::Invalidation::Paint);
+    }
+    if let Some(model) = linked_axis_pointer_model.as_ref() {
+        cx.observe_model(model, fret_ui::Invalidation::Paint);
+    }
+    if let Some(model) = linked_domain_windows_model.as_ref() {
+        cx.observe_model(model, fret_ui::Invalidation::Paint);
+    }
+
+    let linked_domain_windows_revision = linked_domain_windows_model
+        .as_ref()
+        .and_then(|model| model.revision(cx.app));
+    let linked_domain_windows_should_sync = linked_domain_windows_model.is_some()
+        && linked_domain_windows_revision.is_some_and(|rev| {
+            cx.state_for(
+                linked_state_slot,
+                ChartCanvasPanelLinkedState::default,
+                |state| {
+                    if state.domain_windows_model_revision == Some(rev) {
+                        false
+                    } else {
+                        state.domain_windows_model_revision = Some(rev);
+                        true
+                    }
+                },
+            )
+        });
+    let linked_brush = linked_brush_model
+        .as_ref()
+        .and_then(|model| model.read(cx.app, |_app, selection| *selection).ok());
+    let linked_axis_pointer = linked_axis_pointer_model
+        .as_ref()
+        .and_then(|model| model.read(cx.app, |_app, anchor| anchor.clone()).ok());
+    let linked_domain_windows = if linked_domain_windows_should_sync {
+        linked_domain_windows_model
+            .as_ref()
+            .and_then(|model| model.read(cx.app, |_app, windows| windows.clone()).ok())
+    } else {
+        None
+    };
+    let mut linked_inputs_changed = false;
+
     let _ = engine.update(cx.app, |engine, _cx| {
         if engine.model().viewport != Some(bounds) {
             let _ = engine.apply_patch(
@@ -659,6 +775,111 @@ pub fn chart_canvas_panel<H: UiHost>(
                 },
                 PatchMode::Merge,
             );
+        }
+
+        let mut router = ChartLinkRouter::from_model(engine.model());
+        if !explicit_link_axis_map.is_empty() {
+            let explicit = explicit_link_axis_map
+                .iter()
+                .filter_map(|(axis, key)| {
+                    engine
+                        .model()
+                        .axes
+                        .contains_key(axis)
+                        .then_some((*axis, *key))
+                })
+                .collect();
+            router = router.with_explicit_axis_map(explicit);
+        }
+
+        if let Some(selection) = linked_brush {
+            let current = engine.state().brush_selection_2d.and_then(|sel| {
+                let x_axis = router.axis_key(sel.x_axis)?;
+                let y_axis = router.axis_key(sel.y_axis)?;
+                Some(BrushSelectionLink2D {
+                    x_axis,
+                    y_axis,
+                    x: sel.x,
+                    y: sel.y,
+                })
+            });
+            if selection != current {
+                match selection {
+                    Some(sel) => {
+                        if let (Some(x_axis), Some(y_axis)) = (
+                            router.axis_for_key(sel.x_axis),
+                            router.axis_for_key(sel.y_axis),
+                        ) {
+                            engine.apply_action(Action::SetBrushSelection2D {
+                                x_axis,
+                                y_axis,
+                                x: sel.x,
+                                y: sel.y,
+                            });
+                            linked_inputs_changed = true;
+                        }
+                    }
+                    None => {
+                        engine.apply_action(Action::ClearBrushSelection);
+                        linked_inputs_changed = true;
+                    }
+                }
+            }
+        }
+
+        if let Some(windows) = linked_domain_windows {
+            for (key, window) in windows {
+                let Some(axis) = router.axis_for_key(key) else {
+                    continue;
+                };
+
+                match key.kind {
+                    delinea::AxisKind::X => {
+                        let current = engine.state().data_zoom_x.get(&axis).and_then(|s| s.window);
+                        if current != window {
+                            engine.apply_action(Action::SetDataWindowX { axis, window });
+                            linked_inputs_changed = true;
+                        }
+                    }
+                    delinea::AxisKind::Y => {
+                        let current = engine.state().data_window_y.get(&axis).copied();
+                        if current != window {
+                            engine.apply_action(Action::SetDataWindowY { axis, window });
+                            linked_inputs_changed = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(anchor) = linked_axis_pointer {
+            let current = engine.output().axis_pointer.as_ref().and_then(|o| {
+                let axis = router.axis_key(o.axis)?;
+                o.axis_value.is_finite().then_some(AxisPointerLinkAnchor {
+                    axis,
+                    value: o.axis_value,
+                })
+            });
+
+            if anchor != current {
+                match anchor {
+                    Some(anchor) => {
+                        if let Some(axis) = router.axis_for_key(anchor.axis)
+                            && let Some(point) =
+                                point_for_axis_pointer_anchor(engine, &router, axis, anchor.value)
+                        {
+                            engine.apply_action(Action::HoverAt { point });
+                            linked_inputs_changed = true;
+                        }
+                    }
+                    None => {
+                        engine.apply_action(Action::HoverAt {
+                            point: Point::new(Px(1.0e9), Px(1.0e9)),
+                        });
+                        linked_inputs_changed = true;
+                    }
+                }
+            }
         }
 
         let mut measurer = NullTextMeasurer;
@@ -826,6 +1047,10 @@ pub fn chart_canvas_panel<H: UiHost>(
             }
         }
     });
+
+    if linked_inputs_changed {
+        cx.request_animation_frame();
+    }
 
     if let Some(next_output) = next_published_output {
         cx.state_for(
@@ -1805,6 +2030,108 @@ mod tests {
         )
     }
 
+    fn multi_axis_spec() -> ChartSpec {
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_left = AxisId::new(2);
+        let y_right = AxisId::new(3);
+        let x_field = FieldId::new(1);
+        let y_field = FieldId::new(2);
+
+        ChartSpec {
+            id: ChartId::new(1),
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_field,
+                        column: 1,
+                    },
+                ],
+                ..Default::default()
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                delinea::AxisSpec {
+                    id: x_axis,
+                    name: None,
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: AxisScale::default(),
+                    range: None,
+                },
+                delinea::AxisSpec {
+                    id: y_left,
+                    name: None,
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: AxisScale::default(),
+                    range: None,
+                },
+                delinea::AxisSpec {
+                    id: y_right,
+                    name: None,
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: AxisScale::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            data_zoom_y: vec![],
+            tooltip: None,
+            axis_pointer: None,
+            visual_maps: vec![],
+            series: vec![
+                SeriesSpec {
+                    id: SeriesId::new(1),
+                    name: None,
+                    kind: SeriesKind::Line,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis: y_left,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                    lod: None,
+                },
+                SeriesSpec {
+                    id: SeriesId::new(2),
+                    name: None,
+                    kind: SeriesKind::Line,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis: y_right,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                    lod: None,
+                },
+            ],
+        }
+    }
+
     fn seed_line_scatter_dataset(
         engine: &mut ChartEngine,
         dataset_id: DatasetId,
@@ -1817,6 +2144,18 @@ mod tests {
         table.push_column(Column::F64(y_line));
         table.push_column(Column::F64(y_scatter));
         engine.datasets_mut().insert(dataset_id, table);
+    }
+
+    fn pump_chart_frame(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut FakeServices,
+        bounds: Rect,
+    ) {
+        ui.layout_all(app, services, bounds, 1.0);
+        let mut scene = Scene::default();
+        ui.paint_all(app, services, bounds, &mut scene, 1.0);
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
     }
 
     #[derive(Default)]
@@ -2130,6 +2469,162 @@ mod tests {
         assert!(
             published.link_events_revision > 0,
             "declarative chart should advance the link events revision when publishing link events"
+        );
+    }
+
+    #[test]
+    fn explicit_y_domain_window_propagates_to_second_declarative_chart_output_model() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(400.0)),
+        );
+        let mut services = FakeServices;
+
+        let source_output: Model<ChartCanvasOutput> =
+            app.models_mut().insert(ChartCanvasOutput::default());
+        let target_output: Model<ChartCanvasOutput> =
+            app.models_mut().insert(ChartCanvasOutput::default());
+        let shared_domain_windows = app
+            .models_mut()
+            .insert(BTreeMap::<LinkAxisKey, Option<DataWindow>>::default());
+        let shared_brush = app.models_mut().insert(None::<BrushSelectionLink2D>);
+        let shared_axis_pointer = app.models_mut().insert(None::<AxisPointerLinkAnchor>);
+
+        let y_axis = AxisId::new(3);
+        let y_key = LinkAxisKey {
+            kind: AxisKind::Y,
+            dataset: DatasetId::new(1),
+            field: FieldId::new(2),
+        };
+        let source_window = DataWindow {
+            min: -0.25,
+            max: 0.75,
+        };
+        let target_initial_window = DataWindow {
+            min: -5.0,
+            max: 5.0,
+        };
+        let explicit = BTreeMap::from([(y_axis, y_key)]);
+        let spec = multi_axis_spec();
+
+        let mut source_engine =
+            ChartEngine::new(spec.clone()).expect("source spec should be valid");
+        source_engine.apply_action(Action::SetDataWindowY {
+            axis: y_axis,
+            window: Some(source_window),
+        });
+        let source_router = ChartLinkRouter::from_model(source_engine.model())
+            .with_explicit_axis_map(explicit.clone());
+        let source_snapshot = chart_canvas_output_snapshot_for_engine(
+            &source_engine,
+            &source_router,
+            Vec::new(),
+            &DefaultTooltipFormatter,
+        );
+        app.models_mut()
+            .update(&source_output, |output| {
+                let link_events_revision = output.link_events_revision.saturating_add(1);
+                assert!(update_chart_canvas_output(
+                    output,
+                    source_snapshot,
+                    link_events_revision
+                ));
+            })
+            .expect("source output model should be writable");
+
+        let target_engine: Model<ChartEngine> = app
+            .models_mut()
+            .insert(ChartEngine::new(spec.clone()).expect("target spec should be valid"));
+        app.models_mut()
+            .update(&target_engine, |engine| {
+                engine.apply_action(Action::SetDataWindowY {
+                    axis: y_axis,
+                    window: Some(target_initial_window),
+                });
+            })
+            .expect("target engine model should be writable");
+        let target_router =
+            ChartLinkRouter::from_spec(&spec).with_explicit_axis_map(explicit.clone());
+
+        let mut linked = crate::linking::LinkedChartGroup::new(
+            crate::linking::ChartLinkPolicy {
+                brush: false,
+                axis_pointer: false,
+                domain_windows: true,
+            },
+            shared_brush,
+            shared_axis_pointer,
+            shared_domain_windows.clone(),
+        );
+        linked
+            .push(crate::linking::LinkedChartMember {
+                router: source_router,
+                output: source_output.clone(),
+            })
+            .push(crate::linking::LinkedChartMember {
+                router: target_router,
+                output: target_output.clone(),
+            });
+
+        assert!(
+            linked.tick(&mut app),
+            "linked group should copy the source domain window into shared state"
+        );
+        let shared = shared_domain_windows
+            .read(&mut app, |_app, windows| windows.clone())
+            .expect("shared domain windows model should be readable");
+        assert_eq!(
+            shared.get(&y_key).copied(),
+            Some(Some(source_window)),
+            "shared linked-domain state should contain the source explicit Y window"
+        );
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "chart-linked-target-panel",
+            |cx| {
+                let mut props = ChartCanvasPanelProps::new(spec.clone())
+                    .output_model(target_output.clone())
+                    .link_axis_map(explicit.clone())
+                    .linked_domain_windows(shared_domain_windows.clone())
+                    .test_id("linked-target-chart");
+                props.engine = Some(target_engine.clone());
+                vec![chart_canvas_panel(cx, props)]
+            },
+        );
+        ui.set_root(root);
+        pump_chart_frame(&mut ui, &mut app, &mut services, bounds);
+        pump_chart_frame(&mut ui, &mut app, &mut services, bounds);
+
+        let target_published = target_output
+            .read(&mut app, |_app, state| state.clone())
+            .expect("target output model should be readable");
+        assert_eq!(
+            target_published
+                .snapshot
+                .domain_windows_by_key
+                .get(&y_key)
+                .copied(),
+            Some(Some(source_window)),
+            "target declarative chart should apply the shared explicit Y window and publish it back"
+        );
+        assert_ne!(
+            target_published
+                .snapshot
+                .domain_windows_by_key
+                .get(&y_key)
+                .copied(),
+            Some(Some(target_initial_window)),
+            "target declarative chart output should not remain at its initial local Y window"
         );
     }
 

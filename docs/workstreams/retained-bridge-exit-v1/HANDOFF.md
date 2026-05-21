@@ -278,6 +278,14 @@ engine in a `Model<ChartEngine>`, renders through the declarative chart panel, a
 LOD/progressive stage/emitted stats reporting by reading the same live engine model that the panel
 renders. The source-policy test rejects the deleted wrapper, retained chart node creation, and old
 `avg_canvas_paint` metric.
+`RBX-M3-100` then migrated `chart_multi_axis_demo` off retained `ChartCanvas::new_shared(...)`,
+retained chart node creation, and retained `FixedSplit` node composition. `ChartCanvasPanelProps`
+now accepts linked brush, linked axis pointer, and linked domain-window models, with a declarative
+parity test proving explicit linked Y domain windows propagate through `LinkedChartGroup` into a
+second declarative chart panel output model. The demo now builds `(ChartEngine, ChartSpec,
+ChartLinkRouter)` pairs, stores engines as `Model<ChartEngine>`, owns `LinkedChartGroup` directly
+in window state, and renders the two charts through a declarative vertical flex root while keeping
+diagnostics snapshots and deterministic diag auto-zoom behavior.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, multi-grid

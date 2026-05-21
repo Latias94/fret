@@ -11894,3 +11894,95 @@ Broader gates not run:
   - Reason: `RBX-M3-090` is a targeted first-party chart stress demo consumer migration. The
     stress demo compile gate, source-policy red/green gate, full `fret-chart` package gate,
     formatting, layering, catalog, whitespace, and retained-marker scans cover the changed surface.
+
+## 2026-05-22 - RBX-M3-100 Chart multi-axis demo uses declarative panel
+
+Claim verified:
+
+- `chart_multi_axis_demo` no longer constructs retained `ChartCanvas` widgets through
+  `ChartCanvas::new_shared(...)` / `ChartCanvas::create_node(...)`.
+- The demo no longer composes the two chart panes through retained `FixedSplit` node creation.
+- The multi-axis demo now stores each chart engine as a `Model<ChartEngine>` and renders both
+  charts through `ChartCanvasPanelProps` + `chart_canvas_panel(...)` inside a declarative vertical
+  flex root.
+- Declarative chart panels now consume linked brush, linked axis pointer, and linked domain-window
+  shared models before stepping/publishing output, preserving the linked chart behavior needed by
+  the multi-axis demo and diagnostics auto-zoom.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/declarative/panel.rs`
+- `apps/fret-examples/src/chart_multi_axis_demo.rs`
+- `apps/fret-examples/tests/basic_chart_demos_surface.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `git status --short --branch && git ls-files -u`
+  - Result: no unmerged index entries; branch `main...origin/main [ahead 92]`; only the in-flight
+    chart panel file was modified at session start.
+  - Scope proven: the user pull left no Git-level conflict entries for this slice.
+- `rg -n "<<<<<<<|=======|>>>>>>>" . -g '!target' -g '!repo-ref'`
+  - Result: no source merge-conflict markers; matches were only strings in code/docs that mention
+    separator patterns.
+  - Scope proven: no unresolved textual conflict marker blocked this slice.
+- `cargo check -p fret-chart`
+  - Result: passed, with the pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+  - Scope proven: the new declarative linked-input panel API compiles.
+- `cargo nextest run -p fret-chart explicit_y_domain_window_propagates_to_second_declarative_chart_output_model`
+  - Result: passed, 1 test.
+  - Scope proven: a linked explicit Y domain window can propagate through `LinkedChartGroup` into a
+    second declarative chart panel output model without constructing retained `ChartCanvas`.
+- `cargo check -p fret-demo --bin chart_multi_axis_demo`
+  - Result: passed.
+  - Scope proven: the native multi-axis demo compiles after replacing retained chart/split nodes
+    with a model-backed declarative root.
+- `cargo nextest run -p fret-examples chart_multi_axis_demo_uses_declarative_canvas_panel_with_linked_inputs`
+  - Result: failed after `cargo fmt` because an intentionally strict source-policy marker still
+    expected a pre-rustfmt function signature; passed after adjusting the marker to the formatted
+    declarative build shape.
+  - Scope proven: the source-policy gate caught marker drift and was re-run green.
+- `cargo nextest run -p fret-examples --test basic_chart_demos_surface`
+  - Result: passed, 3 tests.
+  - Scope proven: the first-party chart demo source-policy target now covers basic demos, stress
+    demo, and multi-axis demo retained-authoring bans together.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 44 tests, with the pre-existing `fret-ui`
+    `current_effective_opacity` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility/linking baselines and retained
+    chart output/linking/tooltip/accessibility oracle tests remain green after migrating the
+    multi-axis demo and adding declarative linked-input consumption.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after the linked-input API, demo migration, and
+    source-policy update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid; `fret-chart`
+    intentionally remains on the retained bridge allowlist while remaining retained chart surfaces
+    are migrated.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "ChartCanvas|FixedSplit|Rc<|RefCell|create_node_retained|new_shared|create_node" apps/fret-examples/src/chart_multi_axis_demo.rs`
+  - Result: only `ChartCanvasOutput` type-name matches remain; no retained chart widget authoring,
+    retained split node composition, `Rc<RefCell<ChartEngine>>`, or retained create-node markers.
+  - Scope proven: the migrated multi-axis demo source no longer teaches retained chart/split
+    authoring.
+- `cargo nextest run -p fret-examples basic_chart_demos_surface`
+  - Result: failed with `error: no tests to run` because this filter does not match individual
+    test names.
+  - Follow-up: `cargo nextest run -p fret-examples --test basic_chart_demos_surface` passed and is
+    the recorded source-policy target for this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-100` is a targeted first-party chart multi-axis demo migration plus
+    declarative chart linked-input parity slice. The demo compile gate, declarative linked-domain
+    parity test, full `fret-chart` package gate, source-policy test target, formatting, layering,
+    catalog, whitespace, conflict-marker, and retained-marker scans cover the changed surface.

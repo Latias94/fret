@@ -10,7 +10,11 @@ use fret_launch::{
     WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
-use fret_ui::{FixedSplit, Invalidation, UiTree};
+use fret_ui::declarative;
+use fret_ui::element::{
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+};
+use fret_ui::{ElementContext, Invalidation, UiTree};
 use serde_json::json;
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -23,10 +27,10 @@ use delinea::{
     SeriesEncode, SeriesSpec, VisualMapSpec,
 };
 use delinea::{AxisKind, AxisPosition, AxisScale, SeriesKind};
-use fret_chart::retained::{ChartCanvas, ChartCanvasOutput};
 use fret_chart::{
-    AxisPointerLinkAnchor, BrushSelectionLink2D, ChartLinkPolicy, ChartLinkRouter, LinkAxisKey,
-    LinkedChartGroup, LinkedChartMember,
+    AxisPointerLinkAnchor, BrushSelectionLink2D, ChartCanvasOutput, ChartCanvasPanelProps,
+    ChartLinkPolicy, ChartLinkRouter, LinkAxisKey, LinkedChartGroup, LinkedChartMember,
+    chart_canvas_panel,
 };
 use fret_runtime::Model;
 
@@ -45,11 +49,11 @@ struct ChartMultiAxisDemoDiagnosticsStore {
 pub struct ChartMultiAxisDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    top_node: Option<fret_core::NodeId>,
-    bottom_node: Option<fret_core::NodeId>,
-    top_engine: Option<std::rc::Rc<std::cell::RefCell<ChartEngine>>>,
-    bottom_engine: Option<std::rc::Rc<std::cell::RefCell<ChartEngine>>>,
-    linked: Option<LinkedChartGroup>,
+    top_engine: Model<ChartEngine>,
+    bottom_engine: Model<ChartEngine>,
+    top_spec: ChartSpec,
+    bottom_spec: ChartSpec,
+    linked: LinkedChartGroup,
     shared_brush: Model<Option<BrushSelectionLink2D>>,
     shared_axis_pointer: Model<Option<AxisPointerLinkAnchor>>,
     shared_domain_windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
@@ -207,6 +211,33 @@ impl ChartMultiAxisDemoDriver {
         let top_output = app.models_mut().insert(ChartCanvasOutput::default());
         let bottom_output = app.models_mut().insert(ChartCanvasOutput::default());
 
+        let (top_engine, top_spec, top_router) =
+            ChartMultiAxisDemoDriver::build_chart(delinea::ids::ChartId::new(1));
+        let (bottom_engine, bottom_spec, bottom_router) =
+            ChartMultiAxisDemoDriver::build_chart(delinea::ids::ChartId::new(2));
+        let top_engine = app.models_mut().insert(top_engine);
+        let bottom_engine = app.models_mut().insert(bottom_engine);
+
+        let mut linked = LinkedChartGroup::new(
+            ChartLinkPolicy {
+                brush: true,
+                axis_pointer: true,
+                domain_windows: true,
+            },
+            shared_brush.clone(),
+            shared_axis_pointer.clone(),
+            shared_domain_windows.clone(),
+        );
+        linked
+            .push(LinkedChartMember {
+                router: top_router,
+                output: top_output.clone(),
+            })
+            .push(LinkedChartMember {
+                router: bottom_router,
+                output: bottom_output.clone(),
+            });
+
         app.with_global_mut_untracked(
             ChartMultiAxisDemoDiagnosticsStore::default,
             |store, _app| {
@@ -224,11 +255,11 @@ impl ChartMultiAxisDemoDriver {
         ChartMultiAxisDemoWindowState {
             ui,
             root: None,
-            top_node: None,
-            bottom_node: None,
-            top_engine: None,
-            bottom_engine: None,
-            linked: None,
+            top_engine,
+            bottom_engine,
+            top_spec,
+            bottom_spec,
+            linked,
             shared_brush,
             shared_axis_pointer,
             shared_domain_windows,
@@ -242,17 +273,7 @@ impl ChartMultiAxisDemoDriver {
         }
     }
 
-    fn build_canvas(
-        chart_id: delinea::ids::ChartId,
-        shared_brush: Model<Option<BrushSelectionLink2D>>,
-        shared_axis_pointer: Model<Option<AxisPointerLinkAnchor>>,
-        shared_domain_windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
-        output: Model<ChartCanvasOutput>,
-    ) -> (
-        ChartCanvas,
-        ChartLinkRouter,
-        std::rc::Rc<std::cell::RefCell<ChartEngine>>,
-    ) {
+    fn build_chart(chart_id: delinea::ids::ChartId) -> (ChartEngine, ChartSpec, ChartLinkRouter) {
         let dataset_id = delinea::ids::DatasetId::new(1);
         let grid_id = delinea::ids::GridId::new(1);
 
@@ -483,108 +504,101 @@ impl ChartMultiAxisDemoDriver {
         };
 
         let router = ChartLinkRouter::from_spec(&spec);
-        let test_id = if chart_id.0 == 1 {
-            "chart-multi-axis-top"
-        } else {
-            "chart-multi-axis-bottom"
-        };
-        let engine = std::rc::Rc::new(std::cell::RefCell::new(
-            ChartEngine::new(spec).expect("chart spec should be valid"),
-        ));
+        let mut engine = ChartEngine::new(spec.clone()).expect("chart spec should be valid");
 
-        {
-            let mut e = engine.borrow_mut();
-            e.apply_action(Action::SetLinkGroup {
-                group: Some(LinkGroupId::new(1)),
-            });
+        engine.apply_action(Action::SetLinkGroup {
+            group: Some(LinkGroupId::new(1)),
+        });
 
-            let n = 4096usize;
-            let mut x1: Vec<f64> = Vec::with_capacity(n);
-            let mut x2: Vec<f64> = Vec::with_capacity(n);
-            let mut y_left_a: Vec<f64> = Vec::with_capacity(n);
-            let mut y_left_b: Vec<f64> = Vec::with_capacity(n);
-            let mut y_right_a: Vec<f64> = Vec::with_capacity(n);
-            let mut y_right_b: Vec<f64> = Vec::with_capacity(n);
+        let n = 4096usize;
+        let mut x1: Vec<f64> = Vec::with_capacity(n);
+        let mut x2: Vec<f64> = Vec::with_capacity(n);
+        let mut y_left_a: Vec<f64> = Vec::with_capacity(n);
+        let mut y_left_b: Vec<f64> = Vec::with_capacity(n);
+        let mut y_right_a: Vec<f64> = Vec::with_capacity(n);
+        let mut y_right_b: Vec<f64> = Vec::with_capacity(n);
 
-            for i in 0..n {
-                let t = i as f64 / (n - 1).max(1) as f64;
-                let theta = t * std::f64::consts::TAU;
+        for i in 0..n {
+            let t = i as f64 / (n - 1).max(1) as f64;
+            let theta = t * std::f64::consts::TAU;
 
-                let x = (t * 2000.0) - 1000.0;
-                x1.push(x);
-                x2.push(x);
+            let x = (t * 2000.0) - 1000.0;
+            x1.push(x);
+            x2.push(x);
 
-                y_left_a.push((theta * 2.0).sin() * 20.0);
-                y_left_b.push((theta * 16.0).sin() * 2.0 + (theta * 3.0).cos() * 1.5);
+            y_left_a.push((theta * 2.0).sin() * 20.0);
+            y_left_b.push((theta * 16.0).sin() * 2.0 + (theta * 3.0).cos() * 1.5);
 
-                y_right_a.push((theta * 1.25).cos() * 400.0 + 1000.0);
-                y_right_b.push((theta * 8.0).cos() * 75.0 + 200.0);
-            }
-
-            let mut table = DataTable::default();
-            table.push_column(Column::F64(x1));
-            table.push_column(Column::F64(x2));
-            table.push_column(Column::F64(y_left_a));
-            table.push_column(Column::F64(y_left_b));
-            table.push_column(Column::F64(y_right_a));
-            table.push_column(Column::F64(y_right_b));
-            e.datasets_mut().insert(dataset_id, table);
-
-            e.apply_action(Action::SetDataWindowX {
-                axis: x_bottom,
-                window: Some(DataWindow {
-                    min: -200.0,
-                    max: 200.0,
-                }),
-            });
-            e.apply_action(Action::SetDataWindowX {
-                axis: x_top,
-                window: Some(DataWindow {
-                    min: -200.0,
-                    max: 200.0,
-                }),
-            });
-
-            e.apply_action(Action::SetDataWindowY {
-                axis: y_left,
-                window: Some(DataWindow {
-                    min: -15.0,
-                    max: 15.0,
-                }),
-            });
-            e.apply_action(Action::SetDataWindowY {
-                axis: y_right,
-                window: Some(DataWindow {
-                    min: 0.0,
-                    max: 1600.0,
-                }),
-            });
+            y_right_a.push((theta * 1.25).cos() * 400.0 + 1000.0);
+            y_right_b.push((theta * 8.0).cos() * 75.0 + 200.0);
         }
 
-        let canvas = ChartCanvas::new_shared(engine.clone())
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(x1));
+        table.push_column(Column::F64(x2));
+        table.push_column(Column::F64(y_left_a));
+        table.push_column(Column::F64(y_left_b));
+        table.push_column(Column::F64(y_right_a));
+        table.push_column(Column::F64(y_right_b));
+        engine.datasets_mut().insert(dataset_id, table);
+
+        engine.apply_action(Action::SetDataWindowX {
+            axis: x_bottom,
+            window: Some(DataWindow {
+                min: -200.0,
+                max: 200.0,
+            }),
+        });
+        engine.apply_action(Action::SetDataWindowX {
+            axis: x_top,
+            window: Some(DataWindow {
+                min: -200.0,
+                max: 200.0,
+            }),
+        });
+
+        engine.apply_action(Action::SetDataWindowY {
+            axis: y_left,
+            window: Some(DataWindow {
+                min: -15.0,
+                max: 15.0,
+            }),
+        });
+        engine.apply_action(Action::SetDataWindowY {
+            axis: y_right,
+            window: Some(DataWindow {
+                min: 0.0,
+                max: 1600.0,
+            }),
+        });
+
+        (engine, spec, router)
+    }
+
+    fn chart_panel(
+        cx: &mut ElementContext<'_, App>,
+        spec: ChartSpec,
+        engine: Model<ChartEngine>,
+        output: Model<ChartCanvasOutput>,
+        shared_brush: Model<Option<BrushSelectionLink2D>>,
+        shared_axis_pointer: Model<Option<AxisPointerLinkAnchor>>,
+        shared_domain_windows: Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>,
+        test_id: &'static str,
+    ) -> AnyElement {
+        let mut props = ChartCanvasPanelProps::new(spec)
+            .output_model(output)
             .linked_brush(shared_brush)
             .linked_axis_pointer(shared_axis_pointer)
             .linked_domain_windows(shared_domain_windows)
-            .output_model(output)
             .test_id(test_id);
-
-        (canvas, router, engine)
+        props.engine = Some(engine);
+        chart_canvas_panel(cx, props)
     }
 
     fn tick_linking(app: &mut App, window: AppWindowId, state: &mut ChartMultiAxisDemoWindowState) {
-        let Some(linked) = state.linked.as_mut() else {
-            return;
-        };
-
-        if linked.tick(app) {
+        if state.linked.tick(app) {
             if let Some(root) = state.root {
                 state.ui.invalidate(root, Invalidation::Paint);
-            }
-            if let Some(node) = state.top_node {
-                state.ui.invalidate(node, Invalidation::Paint);
-            }
-            if let Some(node) = state.bottom_node {
-                state.ui.invalidate(node, Invalidation::Paint);
             }
             app.request_redraw(window);
             app.push_effect(Effect::RequestAnimationFrame(window));
@@ -703,43 +717,46 @@ impl ChartMultiAxisDemoDriver {
             return;
         }
 
-        let Some(engine) = state.top_engine.as_ref() else {
-            return;
-        };
-
         // Apply a deterministic X-domain window change on the primary X axis. This acts as a
         // stable producer signal for `LinkedChartGroup` and avoids relying on pointer input
         // dispatch in the diag harness.
-        let before_zoom = engine
-            .borrow()
-            .state()
-            .data_zoom_x
-            .get(&AxisId::new(1))
-            .and_then(|s| s.window);
+        let before_zoom = state
+            .top_engine
+            .read(app, |_app, engine| {
+                engine
+                    .state()
+                    .data_zoom_x
+                    .get(&AxisId::new(1))
+                    .and_then(|s| s.window)
+            })
+            .ok()
+            .flatten();
         println!(
             "[chart_multi_axis_demo][diag] applying deterministic top auto-zoom window at frame_id={frame_id} next_step={next_step:?} before_zoom={before_zoom:?}"
         );
-        engine.borrow_mut().apply_action(Action::SetDataWindowX {
-            axis: AxisId::new(1),
-            window: Some(DataWindow {
-                min: -75.0,
-                max: 75.0,
-            }),
-        });
-        let after_zoom = engine
-            .borrow()
-            .state()
-            .data_zoom_x
-            .get(&AxisId::new(1))
-            .and_then(|s| s.window);
+        let after_zoom = state
+            .top_engine
+            .update(app, |engine, _cx| {
+                engine.apply_action(Action::SetDataWindowX {
+                    axis: AxisId::new(1),
+                    window: Some(DataWindow {
+                        min: -75.0,
+                        max: 75.0,
+                    }),
+                });
+                engine
+                    .state()
+                    .data_zoom_x
+                    .get(&AxisId::new(1))
+                    .and_then(|s| s.window)
+            })
+            .ok()
+            .flatten();
         println!("[chart_multi_axis_demo][diag] top auto-zoom applied: after_zoom={after_zoom:?}");
         state.diag_auto_zoom_done = true;
 
-        if let Some(node) = state.top_node {
-            state.ui.invalidate(node, Invalidation::Paint);
-        }
-        if let Some(node) = state.bottom_node {
-            state.ui.invalidate(node, Invalidation::Paint);
+        if let Some(root) = state.root {
+            state.ui.invalidate(root, Invalidation::Paint);
         }
         app.request_redraw(window);
         app.push_effect(Effect::RequestAnimationFrame(window));
@@ -821,10 +838,9 @@ fn handle_event(
         }
     }
 
-    if let Some(linked) = state.linked.as_mut() {
-        if linked.tick(app) {
-            app.request_redraw(window);
-        }
+    if state.linked.tick(app) {
+        app.request_redraw(window);
+        app.push_effect(Effect::RequestAnimationFrame(window));
     }
 }
 
@@ -849,70 +865,6 @@ fn render(
         state.ui.set_paint_cache_enabled(false);
     }
 
-    if state.root.is_none() {
-        let shared_brush = state.shared_brush.clone();
-        let shared_axis_pointer = state.shared_axis_pointer.clone();
-        let shared_domain_windows = state.shared_domain_windows.clone();
-
-        let (top_canvas, top_router, top_engine) = ChartMultiAxisDemoDriver::build_canvas(
-            delinea::ids::ChartId::new(1),
-            shared_brush.clone(),
-            shared_axis_pointer.clone(),
-            shared_domain_windows.clone(),
-            state.top_output.clone(),
-        );
-        let (bottom_canvas, bottom_router, bottom_engine) = ChartMultiAxisDemoDriver::build_canvas(
-            delinea::ids::ChartId::new(2),
-            shared_brush,
-            shared_axis_pointer,
-            shared_domain_windows,
-            state.bottom_output.clone(),
-        );
-
-        state.top_engine = Some(top_engine);
-        state.bottom_engine = Some(bottom_engine);
-
-        if state.linked.is_none() {
-            let policy = ChartLinkPolicy {
-                brush: true,
-                axis_pointer: true,
-                domain_windows: true,
-            };
-            let mut linked = LinkedChartGroup::new(
-                policy,
-                state.shared_brush.clone(),
-                state.shared_axis_pointer.clone(),
-                state.shared_domain_windows.clone(),
-            );
-            linked
-                .push(LinkedChartMember {
-                    router: top_router,
-                    output: state.top_output.clone(),
-                })
-                .push(LinkedChartMember {
-                    router: bottom_router,
-                    output: state.bottom_output.clone(),
-                });
-            state.linked = Some(linked);
-        }
-
-        let top_node = ChartCanvas::create_node(&mut state.ui, top_canvas);
-        let bottom_node = ChartCanvas::create_node(&mut state.ui, bottom_canvas);
-        let root = FixedSplit::create_node_with_children(
-            &mut state.ui,
-            FixedSplit::vertical(0.5),
-            top_node,
-            bottom_node,
-        );
-
-        state.ui.set_root(root);
-        state.ui.set_focus(Some(top_node));
-        state.ui.publish_window_runtime_snapshots(app);
-        state.root = Some(root);
-        state.top_node = Some(top_node);
-        state.bottom_node = Some(bottom_node);
-    }
-
     ChartMultiAxisDemoDriver::tick_linking(app, window, state);
     ChartMultiAxisDemoDriver::maybe_apply_diag_auto_zoom_top(app, window, state);
 
@@ -926,6 +878,99 @@ fn render(
     state.ui.set_inspection_active(inspection_active);
 
     scene.clear();
+
+    let top_spec = state.top_spec.clone();
+    let bottom_spec = state.bottom_spec.clone();
+    let top_engine = state.top_engine.clone();
+    let bottom_engine = state.bottom_engine.clone();
+    let top_output = state.top_output.clone();
+    let bottom_output = state.bottom_output.clone();
+    let shared_brush = state.shared_brush.clone();
+    let shared_axis_pointer = state.shared_axis_pointer.clone();
+    let shared_domain_windows = state.shared_domain_windows.clone();
+    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+        .render_root("chart-multi-axis-demo", move |cx| {
+            let mut root_layout = LayoutStyle::default();
+            root_layout.size.width = Length::Fill;
+            root_layout.size.height = Length::Fill;
+
+            let mut panel_layout = LayoutStyle::default();
+            panel_layout.size.width = Length::Fill;
+            panel_layout.size.height = Length::Fill;
+            panel_layout.flex.grow = 1.0;
+            panel_layout.flex.shrink = 1.0;
+            panel_layout.flex.basis = Length::Px(fret_core::Px(0.0));
+            panel_layout.overflow = Overflow::Clip;
+
+            let top_panel_layout = panel_layout;
+            let bottom_panel_layout = panel_layout;
+            let top_spec = top_spec.clone();
+            let bottom_spec = bottom_spec.clone();
+            let top_engine = top_engine.clone();
+            let bottom_engine = bottom_engine.clone();
+            let top_output = top_output.clone();
+            let bottom_output = bottom_output.clone();
+            let top_shared_brush = shared_brush.clone();
+            let top_shared_axis_pointer = shared_axis_pointer.clone();
+            let top_shared_domain_windows = shared_domain_windows.clone();
+            let bottom_shared_brush = shared_brush.clone();
+            let bottom_shared_axis_pointer = shared_axis_pointer.clone();
+            let bottom_shared_domain_windows = shared_domain_windows.clone();
+
+            vec![cx.flex(
+                FlexProps {
+                    layout: root_layout,
+                    direction: fret_core::Axis::Vertical,
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Stretch,
+                    wrap: false,
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        cx.container(
+                            ContainerProps {
+                                layout: top_panel_layout,
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                vec![ChartMultiAxisDemoDriver::chart_panel(
+                                    cx,
+                                    top_spec.clone(),
+                                    top_engine.clone(),
+                                    top_output.clone(),
+                                    top_shared_brush.clone(),
+                                    top_shared_axis_pointer.clone(),
+                                    top_shared_domain_windows.clone(),
+                                    "chart-multi-axis-top",
+                                )]
+                            },
+                        ),
+                        cx.container(
+                            ContainerProps {
+                                layout: bottom_panel_layout,
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                vec![ChartMultiAxisDemoDriver::chart_panel(
+                                    cx,
+                                    bottom_spec.clone(),
+                                    bottom_engine.clone(),
+                                    bottom_output.clone(),
+                                    bottom_shared_brush.clone(),
+                                    bottom_shared_axis_pointer.clone(),
+                                    bottom_shared_domain_windows.clone(),
+                                    "chart-multi-axis-bottom",
+                                )]
+                            },
+                        ),
+                    ]
+                },
+            )]
+        });
+    state.ui.set_root(root);
+    state.ui.publish_window_runtime_snapshots(app);
+    state.root = Some(root);
 
     {
         let mut frame =

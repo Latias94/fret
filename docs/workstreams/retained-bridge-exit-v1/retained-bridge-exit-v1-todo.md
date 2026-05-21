@@ -4837,6 +4837,45 @@ Related plan:
       render report read from the same live engine model.
     - A source-policy test rejects the deleted retained stress wrapper, retained chart node
       creation, and old `avg_canvas_paint` metric.
+- [x] RBX-M3-100 Migrate `chart_multi_axis_demo` off retained `ChartCanvas`.
+  - Scope:
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+    - `apps/fret-examples/src/chart_multi_axis_demo.rs`
+    - `apps/fret-examples/tests/basic_chart_demos_surface.rs`
+  - Goal:
+    - Move the multi-axis linked chart demo from retained `ChartCanvas::new_shared(...)`,
+      retained chart node creation, and retained `FixedSplit` node composition to declarative
+      `ChartCanvasPanelProps` + `chart_canvas_panel(...)`.
+    - Preserve linked brush, linked axis pointer, linked domain windows, output model publication,
+      diagnostics snapshots, and deterministic diag auto-zoom behavior before deleting retained
+      chart code.
+  - Validation:
+    - `cargo check -p fret-chart`
+    - `cargo check -p fret-demo --bin chart_multi_axis_demo`
+    - `cargo nextest run -p fret-chart explicit_y_domain_window_propagates_to_second_declarative_chart_output_model`
+    - `cargo nextest run -p fret-examples --test basic_chart_demos_surface`
+    - `cargo nextest run -p fret-chart`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+    - `apps/fret-examples/src/chart_multi_axis_demo.rs`
+    - `apps/fret-examples/tests/basic_chart_demos_surface.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-100-chart-multi-axis-demo-uses-declarative-panel`
+  - Result:
+    - `ChartCanvasPanelProps` now accepts linked brush, linked axis pointer, and linked domain
+      window models, and the declarative panel consumes those shared inputs before stepping and
+      publishing chart output.
+    - A new declarative parity test proves an explicit linked Y domain window can propagate from a
+      source output model through `LinkedChartGroup` into a second declarative chart panel output
+      model.
+    - `chart_multi_axis_demo` now builds `(ChartEngine, ChartSpec, ChartLinkRouter)` pairs, stores
+      each engine as a `Model<ChartEngine>`, constructs `LinkedChartGroup` once in window state,
+      and renders both charts through a declarative vertical flex root.
+    - The demo source-policy gate now rejects retained chart widget authoring, retained split node
+      composition, and `Rc<RefCell<ChartEngine>>` in the multi-axis demo.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.
