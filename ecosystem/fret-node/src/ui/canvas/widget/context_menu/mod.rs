@@ -85,7 +85,7 @@ pub(super) fn handle_context_menu_pointer_down<H, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_context_menu_pointer_move<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl ContextMenuCx<H, M>,
+    cx: &mut impl crate::ui::canvas::widget::widget_tail::WidgetPaintInvalidationCx<H>,
     position: Point,
     zoom: f32,
 ) -> bool {

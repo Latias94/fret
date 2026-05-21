@@ -6,6 +6,7 @@ use super::{
     searcher_activation_state::SearcherReleaseCx,
     searcher_input::{self, SearcherInputCx},
     searcher_pointer, searcher_ui,
+    widget_tail::WidgetPaintInvalidationCx,
 };
 
 pub(in super::super) trait SearcherCx<H, M: NodeGraphCanvasMiddleware>:
@@ -58,7 +59,7 @@ pub(super) fn handle_searcher_pointer_up<H, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_searcher_pointer_move<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl SearcherCx<H, M>,
+    cx: &mut impl WidgetPaintInvalidationCx<H>,
     position: Point,
     zoom: f32,
 ) -> bool {

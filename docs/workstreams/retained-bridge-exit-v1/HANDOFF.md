@@ -959,6 +959,11 @@ already-isolated node, connection, and insert branch seams. This adds no new sid
 retained `EventCx` satisfies the wrapper only through existing branch adapters. Focused tests prove
 the wrapper source policy plus representative node drag, edge reconnect, and insert-node drag
 behavior remain green.
+`RBX-M2-840` then moved the overlay pointer-move route in `pointer_move_dispatch/overlay.rs` behind
+the existing `WidgetPaintInvalidationCx` seam. Searcher and context-menu pointer-move facades now
+require only paint invalidation, matching the hover-update leaf helpers they call, and no longer pull
+the broader key/down/up route traits into overlay dispatch. Focused tests prove overlay source
+policy plus searcher/context-menu hover invalidation behavior remain green.
 
 ## Next Task
 
@@ -1125,7 +1130,29 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-830`:
+Last run on 2026-05-21 for `RBX-M2-840`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_overlay_route_stays_off_retained_bridge) | test(searcher_top_level_route_stays_off_retained_bridge) | test(context_menu_top_level_route_stays_off_retained_bridge) | test(context_menu_pointer_move_route_stays_off_retained_bridge) | test(searcher_pointer_move_updates_hover_and_invalidates_paint) | test(context_menu_top_level_pointer_move_updates_hover_and_invalidates_paint) | test(pointer_move_updates_hover_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 8 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/overlay.rs ecosystem/fret-node/src/ui/canvas/widget/searcher.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/mod.rs` -
+  no matches.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-840` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+Previous run on 2026-05-21 for `RBX-M2-830`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.

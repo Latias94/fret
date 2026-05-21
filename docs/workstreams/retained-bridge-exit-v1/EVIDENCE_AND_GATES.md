@@ -10520,3 +10520,66 @@ Broader gates not run:
   - Reason: `RBX-M2-830` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-840 pointer-move overlay route retained Cx isolation
+
+Claim verified:
+
+- `pointer_move_dispatch/overlay.rs` no longer imports or names retained bridge Cx types.
+- Searcher and context-menu pointer-move facades now require only
+  `WidgetPaintInvalidationCx`, matching the already-retained-agnostic hover-update leaf helpers.
+- Overlay pointer-move dispatch no longer pulls searcher key/down/up route traits or context-menu
+  key/down activation traits into its Cx bound.
+- Representative searcher and context-menu hover move behavior remains green through the retained
+  compatibility island.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/overlay.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving the overlay
+    pointer-move route behind `WidgetPaintInvalidationCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_overlay_route_stays_off_retained_bridge) | test(searcher_top_level_route_stays_off_retained_bridge) | test(context_menu_top_level_route_stays_off_retained_bridge) | test(context_menu_pointer_move_route_stays_off_retained_bridge) | test(searcher_pointer_move_updates_hover_and_invalidates_paint) | test(context_menu_top_level_pointer_move_updates_hover_and_invalidates_paint) | test(pointer_move_updates_hover_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 8 tests.
+  - Scope proven: source-policy locks the overlay pointer-move route and existing
+    searcher/context-menu top-level routes off retained bridge Cx names; representative
+    searcher/context-menu hover updates still invalidate paint.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/overlay.rs ecosystem/fret-node/src/ui/canvas/widget/searcher.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/mod.rs`
+  - Result: no matches.
+  - Scope proven: the migrated overlay route and narrowed searcher/context-menu pointer-move
+    facades no longer depend on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after the overlay pointer-move route
+    seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after isolating
+    the overlay pointer-move route.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-840` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.

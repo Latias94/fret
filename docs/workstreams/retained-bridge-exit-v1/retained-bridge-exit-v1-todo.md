@@ -4237,6 +4237,34 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-840 Isolate pointer-move overlay route retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/overlay.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the overlay pointer-move route off direct retained bridge Cx names.
+    - Narrow searcher and context-menu pointer-move facades to the paint invalidation capability
+      they already need, instead of requiring the broader key/down/up route traits.
+    - Prove source policy and representative searcher/context-menu hover behavior remain green.
+  - Result:
+    - `pointer_move_dispatch/overlay.rs` now accepts `WidgetPaintInvalidationCx` instead of naming
+      retained `EventCx`.
+    - `searcher::handle_searcher_pointer_move(...)` now requires only
+      `WidgetPaintInvalidationCx`.
+    - `context_menu::handle_context_menu_pointer_move(...)` now requires only
+      `WidgetPaintInvalidationCx`.
+    - Added `pointer_move_overlay_route_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_overlay_route_stays_off_retained_bridge) | test(searcher_top_level_route_stays_off_retained_bridge) | test(context_menu_top_level_route_stays_off_retained_bridge) | test(context_menu_pointer_move_route_stays_off_retained_bridge) | test(searcher_pointer_move_updates_hover_and_invalidates_paint) | test(context_menu_top_level_pointer_move_updates_hover_and_invalidates_paint) | test(pointer_move_updates_hover_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/overlay.rs ecosystem/fret-node/src/ui/canvas/widget/searcher.rs ecosystem/fret-node/src/ui/canvas/widget/context_menu/mod.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
