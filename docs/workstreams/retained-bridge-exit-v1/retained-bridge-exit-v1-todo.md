@@ -4607,6 +4607,38 @@ Related plan:
       - the declarative canvas paints scatter points as non-background, non-zero quads.
     - This gives `category_line_demo`-style consumer migration a stronger regression gate, while
       retained axes/visual-map/data-zoom/output gaps remain tracked before broad deletion.
+- [x] RBX-M3-040 Move `ChartCanvasOutput` publication onto the declarative chart path.
+  - Scope:
+    - `ecosystem/fret-chart/src/output.rs`
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+    - `ecosystem/fret-chart/src/retained/output.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+  - Goal:
+    - Make `ChartCanvasOutput` a shared, non-retained chart contract and let
+      `chart_canvas_panel(...)` publish output snapshots without constructing `retained::ChartCanvas`.
+    - Preserve retained output behavior by routing the retained widget through the same shared
+      snapshot/update helper.
+  - Validation:
+    - `cargo nextest run -p fret-chart chart_canvas_panel_publishes_output_model_on_declarative_path`
+    - `cargo nextest run -p fret-chart`
+  - Evidence:
+    - `ecosystem/fret-chart/src/output.rs`
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-040-chart-declarative-output-model-publication`
+  - Result:
+    - Added top-level `ChartCanvasOutput` / `ChartCanvasOutputSnapshot` plus shared helpers for
+      link-event batch retention, engine snapshot derivation, and revision updates.
+    - Kept `retained::ChartCanvasOutput` as a compatibility re-export while moving the actual type
+      out of `retained`.
+    - Added `ChartCanvasPanelProps::output_model(...)` and `link_axis_map(...)` so declarative chart
+      panels can publish domain windows, brush state, link events, tooltip lines, and output
+      revisions.
+    - Added a default-feature declarative test that seeds a controlled engine with domain windows,
+      brush selection, and link events, renders the real `UiTree`, and asserts output model
+      publication without constructing `retained::ChartCanvas`.
+    - Existing retained output/linking/tooltip tests still pass through the shared helper, so this
+      narrows retained-only policy without dropping current chart capabilities.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

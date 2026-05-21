@@ -24,6 +24,11 @@ use fret_ui::element::{AnyElement, CanvasProps, FocusScopeProps, Length, Pointer
 use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 
 use crate::input_map::{ChartInputMap, ModifierKey};
+use crate::linking::{ChartLinkRouter, LinkAxisKey};
+use crate::output::{
+    ChartCanvasOutput, chart_canvas_output_link_events_batch,
+    chart_canvas_output_snapshot_for_engine, update_chart_canvas_output,
+};
 use crate::retained::ChartStyle;
 use crate::{DefaultTooltipFormatter, TooltipFormatter, TooltipTextLine};
 
@@ -145,6 +150,11 @@ struct AxisPointerPaintData {
     draw_y: bool,
 }
 
+#[derive(Debug, Default, Clone)]
+struct ChartCanvasPanelOutputState {
+    output: ChartCanvasOutput,
+}
+
 #[derive(Clone)]
 pub struct ChartCanvasPanelProps {
     pub pointer_region: PointerRegionProps,
@@ -153,6 +163,7 @@ pub struct ChartCanvasPanelProps {
     /// When `None`, an internal engine model is created once from `spec`.
     pub engine: Option<Model<ChartEngine>>,
     pub spec: delinea::ChartSpec,
+    pub output_model: Option<Model<ChartCanvasOutput>>,
 
     /// Optional formatter hook for axis-trigger tooltips (ADR 0209).
     ///
@@ -162,6 +173,7 @@ pub struct ChartCanvasPanelProps {
     /// Chart interaction mapping (ImPlot-aligned). Defaults to a "safe" wheel mapping
     /// (zoom requires Ctrl), because charts are often embedded inside scroll containers.
     pub input_map: ChartInputMap,
+    pub link_axis_map: BTreeMap<delinea::AxisId, LinkAxisKey>,
 
     pub style: ChartStyle,
 }
@@ -173,10 +185,22 @@ impl ChartCanvasPanelProps {
             canvas: CanvasProps::default(),
             engine: None,
             spec,
+            output_model: None,
             tooltip_formatter: None,
             input_map: default_chart_input_map_safe(),
+            link_axis_map: BTreeMap::new(),
             style: ChartStyle::default(),
         }
+    }
+
+    pub fn output_model(mut self, output: Model<ChartCanvasOutput>) -> Self {
+        self.output_model = Some(output);
+        self
+    }
+
+    pub fn link_axis_map(mut self, map: BTreeMap<delinea::AxisId, LinkAxisKey>) -> Self {
+        self.link_axis_map = map;
+        self
     }
 }
 
@@ -222,6 +246,7 @@ pub fn chart_canvas_panel<H: UiHost>(
         cx.state_for(marks_cache_slot, MarksCache::default, |cache| {
             (cache.marks_rev, cache.output_rev)
         });
+    let output_state_slot = cx.slot_id();
 
     let mut marks_rev = prev_marks_rev;
     let mut output_rev = prev_output_rev;
@@ -236,7 +261,21 @@ pub fn chart_canvas_panel<H: UiHost>(
     let mut axis_pointer: Option<AxisPointerPaintData> = None;
     let mut hover_point_px: Option<Point> = None;
 
+    let output_model = props.output_model.clone();
+    if let Some(output_model) = output_model.as_ref() {
+        cx.observe_model(output_model, fret_ui::Invalidation::Paint);
+    }
+    let output_state_before = output_model.as_ref().map(|_| {
+        cx.state_for(
+            output_state_slot,
+            ChartCanvasPanelOutputState::default,
+            |state| state.output.clone(),
+        )
+    });
+    let mut next_published_output: Option<ChartCanvasOutput> = None;
+
     let tooltip_formatter_c = tooltip_formatter.clone();
+    let explicit_link_axis_map = props.link_axis_map.clone();
     let _ = engine.update(cx.app, |engine, _cx| {
         if engine.model().viewport != Some(bounds) {
             let _ = engine.apply_patch(
@@ -379,7 +418,55 @@ pub fn chart_canvas_panel<H: UiHost>(
                 axis_pointer = None;
             }
         }
+
+        if let Some(output_model) = output_model.as_ref() {
+            let _ = output_model;
+            let mut router = ChartLinkRouter::from_model(engine.model());
+            if !explicit_link_axis_map.is_empty() {
+                let explicit = explicit_link_axis_map
+                    .iter()
+                    .filter_map(|(axis, key)| {
+                        engine
+                            .model()
+                            .axes
+                            .contains_key(axis)
+                            .then_some((*axis, *key))
+                    })
+                    .collect();
+                router = router.with_explicit_axis_map(explicit);
+            }
+
+            let drained_link_events = engine.drain_link_events();
+            let mut next_output = output_state_before.clone().unwrap_or_default();
+            let (link_events_revision, link_events) =
+                chart_canvas_output_link_events_batch(&next_output, drained_link_events);
+            let snapshot = chart_canvas_output_snapshot_for_engine(
+                engine,
+                &router,
+                link_events,
+                &*tooltip_formatter_c,
+            );
+
+            if update_chart_canvas_output(&mut next_output, snapshot, link_events_revision) {
+                next_published_output = Some(next_output);
+            }
+        }
     });
+
+    if let Some(next_output) = next_published_output {
+        cx.state_for(
+            output_state_slot,
+            ChartCanvasPanelOutputState::default,
+            |state| {
+                state.output = next_output.clone();
+            },
+        );
+        if let Some(output_model) = output_model.as_ref() {
+            let _ = output_model.update(cx.app, |output, _cx| {
+                *output = next_output;
+            });
+        }
+    }
 
     if let Ok(mut st) = legend_state.lock() {
         st.sync_series(legend_series);
@@ -1430,6 +1517,152 @@ mod tests {
         assert_eq!(viewport, Some(bounds));
 
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+
+    #[test]
+    fn chart_canvas_panel_publishes_output_model_on_declarative_path() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+        let (spec, dataset_id, x, y) = chart_spec();
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let x_key = LinkAxisKey {
+            kind: AxisKind::X,
+            dataset: DatasetId::new(1),
+            field: FieldId::new(1),
+        };
+        let y_key = LinkAxisKey {
+            kind: AxisKind::Y,
+            dataset: DatasetId::new(1),
+            field: FieldId::new(2),
+        };
+        let x_window = delinea::engine::window::DataWindow { min: 0.0, max: 2.0 };
+        let y_window = delinea::engine::window::DataWindow {
+            min: 40.0,
+            max: 320.0,
+        };
+        let brush_y = delinea::engine::window::DataWindow {
+            min: 50.0,
+            max: 260.0,
+        };
+
+        let engine: Model<ChartEngine> = app
+            .models_mut()
+            .insert(ChartEngine::new(spec.clone()).expect("chart spec should be valid"));
+        app.models_mut()
+            .update(&engine, |engine| {
+                seed_dataset(engine, dataset_id, x, y);
+                engine.apply_action(Action::SetLinkGroup {
+                    group: Some(delinea::LinkGroupId::new(1)),
+                });
+                engine.apply_action(Action::SetDataWindowX {
+                    axis: x_axis,
+                    window: Some(x_window),
+                });
+                engine.apply_action(Action::SetDataWindowY {
+                    axis: y_axis,
+                    window: Some(y_window),
+                });
+                engine.apply_action(Action::SetBrushSelection2D {
+                    x_axis,
+                    y_axis,
+                    x: x_window,
+                    y: brush_y,
+                });
+            })
+            .expect("chart engine model should exist");
+        let output: Model<ChartCanvasOutput> =
+            app.models_mut().insert(ChartCanvasOutput::default());
+
+        let mut render_frame = |ui: &mut UiTree<App>, app: &mut App| {
+            let output = output.clone();
+            let engine = engine.clone();
+            let spec = spec.clone();
+            let root = render_root(
+                ui,
+                app,
+                &mut services,
+                window,
+                bounds,
+                "chart-declarative-output-panel",
+                |cx| {
+                    let mut props = ChartCanvasPanelProps::new(spec.clone())
+                        .output_model(output)
+                        .link_axis_map(BTreeMap::from([(x_axis, x_key), (y_axis, y_key)]));
+                    props.engine = Some(engine);
+                    vec![chart_canvas_panel(cx, props)]
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(app, &mut services, bounds, 1.0);
+            let mut scene = Scene::default();
+            ui.paint_all(app, &mut services, bounds, &mut scene, 1.0);
+        };
+
+        render_frame(&mut ui, &mut app);
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+        render_frame(&mut ui, &mut app);
+
+        let published = output
+            .read(&mut app, |_app, output| output.clone())
+            .expect("output model should be readable");
+        assert!(
+            published.revision > 0,
+            "declarative chart output publication should advance the output revision"
+        );
+        assert_eq!(
+            published
+                .snapshot
+                .domain_windows_by_key
+                .get(&x_key)
+                .copied(),
+            Some(Some(x_window)),
+            "declarative chart should publish X domain windows in LinkAxisKey space"
+        );
+        assert_eq!(
+            published
+                .snapshot
+                .domain_windows_by_key
+                .get(&y_key)
+                .copied(),
+            Some(Some(y_window)),
+            "declarative chart should publish Y domain windows in LinkAxisKey space"
+        );
+        assert_eq!(
+            published.snapshot.brush_selection_2d.map(|brush| brush.x),
+            Some(x_window),
+            "declarative chart should publish brush selections"
+        );
+        assert!(
+            published.snapshot.link_events.iter().any(|event| matches!(
+                event,
+                delinea::LinkEvent::DomainWindowChanged {
+                    axis,
+                    window: Some(window)
+                } if *axis == x_axis && *window == x_window
+            )),
+            "declarative chart should preserve drained domain-window link events"
+        );
+        assert!(
+            published.snapshot.link_events.iter().any(|event| matches!(
+                event,
+                delinea::LinkEvent::BrushSelectionChanged { selection: Some(_) }
+            )),
+            "declarative chart should preserve drained brush link events"
+        );
+        assert!(
+            published.link_events_revision > 0,
+            "declarative chart should advance the link events revision when publishing link events"
+        );
     }
 
     #[test]

@@ -11399,3 +11399,66 @@ Broader gates not run:
 - `cargo nextest run --workspace`
   - Reason: `RBX-M3-030` is a targeted `fret-chart` behavior-baseline slice. The package test gate,
     formatting, layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-040 Chart declarative output model publication
+
+Claim verified:
+
+- `ChartCanvasOutput` is now a top-level `fret-chart` output contract with a retained compatibility
+  re-export, rather than a type owned only by `retained`.
+- `chart_canvas_panel(...)` can publish a caller-provided `Model<ChartCanvasOutput>` without
+  constructing `retained::ChartCanvas`.
+- The new declarative output test proves output revision advancement, `LinkAxisKey` domain-window
+  publication, brush publication, link-event preservation, and link-events revision advancement.
+- Retained chart output behavior still passes because retained `ChartCanvas::publish_output(...)`
+  now uses the same shared snapshot/update helper.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/output.rs`
+- `ecosystem/fret-chart/src/declarative/panel.rs`
+- `ecosystem/fret-chart/src/retained/output.rs`
+- `ecosystem/fret-chart/src/retained/canvas.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-chart`
+  - Result: passed.
+  - Scope proven: `fret-chart` type-checks after moving `ChartCanvasOutput` to the shared output
+    module and wiring declarative publication.
+- `cargo nextest run -p fret-chart chart_canvas_panel_publishes_output_model_on_declarative_path`
+  - Result: passed, 1 test.
+  - Scope proven: the new declarative output-model publication test passes in the default
+    `fret-chart` feature set.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 42 tests.
+  - Scope proven: the new declarative output baseline, previous declarative paint baselines, and
+    retained output/linking/tooltip oracle tests remain green together.
+
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after the shared output helper and declarative output
+    test.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid; `fret-chart`
+    intentionally remains on the retained bridge allowlist while remaining chart retained
+    consumers are migrated.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-040` is a targeted `fret-chart` output publication slice. The package check,
+    targeted declarative output test, full `fret-chart` package test gate, formatting, layering,
+    catalog, whitespace, and merge-marker checks cover the changed surface.

@@ -227,6 +227,16 @@ and `Points` marks, and proves `chart_canvas_panel(...)` paints them as `SceneOp
 non-background, non-zero point quads. This makes `category_line_demo`-style consumer migration safer,
 but retained axes, visual-map, data-zoom, output, and multi-grid surfaces still need explicit
 coverage or migration before deleting retained chart APIs.
+`RBX-M3-040` then moved `ChartCanvasOutput` publication onto the shared/declarative chart path.
+`ChartCanvasOutput` / `ChartCanvasOutputSnapshot` now live in top-level `fret-chart::output`, with
+`retained::ChartCanvasOutput` preserved as a compatibility re-export. The declarative
+`chart_canvas_panel(...)` accepts an output model plus explicit link-axis map and publishes output
+snapshots for domain windows, brush selection, link events, tooltip lines, output revision, and
+link-events revision without constructing `retained::ChartCanvas`. Retained `ChartCanvas` now routes
+its output publication through the same shared helper, and the full `fret-chart` nextest gate keeps
+the retained output/linking/tooltip oracle tests green. This narrows retained-only chart policy but
+does not yet permit removing retained chart: axes, visual-map, data-zoom UI, multi-grid surfaces,
+and first-party/gallery consumers still need migration or explicit declarative coverage.
 
 ## Completed Implementation
 

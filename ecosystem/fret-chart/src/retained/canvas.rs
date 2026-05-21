@@ -28,10 +28,14 @@ use std::rc::Rc;
 
 use crate::input_map::{ChartInputMap, ModifierKey, ModifiersMask};
 use crate::linking::{AxisPointerLinkAnchor, BrushSelectionLink2D, ChartLinkRouter, LinkAxisKey};
+use crate::output::{
+    chart_canvas_output_link_events_batch, chart_canvas_output_snapshot_for_engine,
+    update_chart_canvas_output,
+};
+use crate::retained::ChartCanvasOutput;
 use crate::retained::style::ChartStyle;
 use crate::retained::text_cache::{KeyBuilder, TextCacheGroup};
 use crate::retained::tooltip::{DefaultTooltipFormatter, TooltipFormatter};
-use crate::retained::{ChartCanvasOutput, ChartCanvasOutputSnapshot};
 
 fn mark_path_cache_key(mark_id: delinea::ids::MarkId, variant: u8) -> u64 {
     use std::collections::hash_map::DefaultHasher;
@@ -926,76 +930,22 @@ impl ChartCanvas {
 
     fn publish_output<H: UiHost>(&mut self, app: &mut H) -> bool {
         let drained_link_events = self.with_engine_mut(|engine| engine.drain_link_events());
-        let (link_events_revision, link_events) = if drained_link_events.is_empty() {
-            (
-                self.output.link_events_revision,
-                self.output.snapshot.link_events.clone(),
-            )
-        } else {
-            (
-                self.output.link_events_revision.wrapping_add(1),
-                drained_link_events,
-            )
-        };
+        let (link_events_revision, link_events) =
+            chart_canvas_output_link_events_batch(&self.output, drained_link_events);
 
         let router = self.link_router().clone();
-        let domain_windows_by_key = self.with_engine(|engine| {
-            let mut out = BTreeMap::new();
-
-            for (axis, st) in &engine.state().data_zoom_x {
-                let Some(window) = st.window else {
-                    continue;
-                };
-                let Some(key) = router.axis_key(*axis) else {
-                    continue;
-                };
-                if router.axis_for_key(key) != Some(*axis) {
-                    continue;
-                }
-                out.insert(key, Some(window));
-            }
-
-            for (axis, window) in &engine.state().data_window_y {
-                let Some(key) = router.axis_key(*axis) else {
-                    continue;
-                };
-                if router.axis_for_key(key) != Some(*axis) {
-                    continue;
-                }
-                out.insert(key, Some(*window));
-            }
-
-            out
-        });
-        let tooltip_lines = self.with_engine(|engine| {
-            let Some(axis_pointer) = engine.output().axis_pointer.as_ref() else {
-                return Vec::new();
-            };
-
-            self.tooltip_formatter.format_axis_pointer(
+        let snapshot = self.with_engine(|engine| {
+            chart_canvas_output_snapshot_for_engine(
                 engine,
-                &engine.output().axis_windows,
-                axis_pointer,
+                &router,
+                link_events,
+                &*self.tooltip_formatter,
             )
         });
-        let snapshot = ChartCanvasOutputSnapshot {
-            brush_selection_2d: self.with_engine(|engine| engine.state().brush_selection_2d),
-            brush_x_row_ranges_by_series: self
-                .with_engine(|engine| engine.output().brush_x_row_ranges_by_series.clone()),
-            link_events,
-            tooltip_lines,
-            domain_windows_by_key,
-        };
 
-        if self.output.snapshot == snapshot
-            && self.output.link_events_revision == link_events_revision
-        {
+        if !update_chart_canvas_output(&mut self.output, snapshot, link_events_revision) {
             return false;
         }
-
-        self.output.revision = self.output.revision.wrapping_add(1);
-        self.output.link_events_revision = link_events_revision;
-        self.output.snapshot = snapshot;
 
         if let Some(model) = &self.output_model {
             let next = self.output.clone();

@@ -9,6 +9,7 @@ pub mod declarative;
 pub mod echarts;
 pub mod input_map;
 pub mod linking;
+pub mod output;
 pub mod retained;
 
 mod legend_logic;
@@ -17,4 +18,5 @@ mod tooltip_layout;
 pub use declarative::*;
 pub use input_map::*;
 pub use linking::*;
+pub use output::*;
 pub use retained::*;
