@@ -190,6 +190,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/event_router_pointer_button/up.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_SURFACE_RS: &str =
         include_str!("ui/canvas/widget/pointer_move_dispatch/primary/surface.rs");
+    const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_GROUP_RS: &str =
+        include_str!("ui/canvas/widget/pointer_move_dispatch/primary/group.rs");
     const UI_CANVAS_WIDGET_CANCEL_CLEANUP_RS: &str =
         include_str!("ui/canvas/widget/cancel_cleanup.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_PICKER_RS: &str =
@@ -1284,6 +1286,22 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_SURFACE_RS.contains(forbidden),
                 "pointer-move primary surface route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_move_primary_group_route_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_GROUP_RS.contains(forbidden),
+                "pointer-move primary group route must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

@@ -907,6 +907,11 @@ inertia end behavior remain green.
 capabilities instead of adding another surface seam. The surrounding primary router plus
 group/node/connection branches remain retained-bound for later route isolation slices. Focused
 tests prove panning and marquee movement still work through the retained compatibility island.
+`RBX-M2-760` then moved the primary group pointer-move route in
+`pointer_move_dispatch/primary/group.rs` behind `PendingGroupActivationCx + GroupPreviewMoveCx`,
+reusing existing group seams from earlier slices. The surrounding primary router plus
+node/connection branches remain retained-bound for later route isolation slices. Focused tests prove
+pending group drag activation and group resize preview/commit behavior remain green.
 
 ## Next Task
 
@@ -967,8 +972,9 @@ Recommended next implementation shape:
   pending dispatch now uses `PendingNodeDragReleaseCx`; pointer-up active dispatch now uses
   `WireCommitCx + PointerUpReleaseCx`; pointer-up route wrappers now use `PointerUpCx`; marquee
   move/selection/pending helpers now use `MarqueeCx`; pan begin now uses `PanZoomBeginCx`; pan
-  move now uses `PanZoomCx`; the primary surface pointer-move route now uses `MarqueeCx`; and the
-  pointer-up event entry and pointer-up button router now use `PointerUpRouteCx`.
+  move now uses `PanZoomCx`; the primary surface pointer-move route now uses `MarqueeCx`; the
+  primary group pointer-move route now uses `PendingGroupActivationCx + GroupPreviewMoveCx`; and
+  the pointer-up event entry and pointer-up button router now use `PointerUpRouteCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -993,6 +999,7 @@ Recommended next implementation shape:
   `marquee_pending.rs`, `marquee_selection.rs`,
   `pan_zoom_begin.rs`, `pan_zoom_begin_cx.rs`, `pan_zoom.rs`, `pan_zoom_move.rs`,
   `pointer_move_dispatch/primary/surface.rs`,
+  `pointer_move_dispatch/primary/group.rs`,
   `keyboard_pan_activation.rs`,
   `event_clipboard_feedback.rs`, `event_clipboard_feedback_cx.rs`, `event_timer_toast.rs`,
   `timer_motion_shared.rs`,
@@ -1047,13 +1054,13 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-750`:
+Last run on 2026-05-21 for `RBX-M2-760`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_primary_surface_route_stays_off_retained_bridge) | test(pan_zoom_move_helpers_stay_off_retained_bridge) | test(marquee_move_handlers_stay_off_retained_bridge) | test(middle_mouse_panning_tracks_screen_delta_under_render_transform) | test(space_to_pan_starts_left_mouse_panning_and_updates_viewport) | test(background_click_starts_pending_marquee_and_clears_selection_on_up) | test(marquee_replace_mode_replaces_selection_even_with_ctrl_pressed) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
-  passed, 8 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/surface.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_move.rs ecosystem/fret-node/src/ui/canvas/widget/marquee.rs ecosystem/fret-node/src/ui/canvas/widget/marquee_pending.rs ecosystem/fret-node/src/ui/canvas/widget/marquee_selection.rs` -
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_primary_group_route_stays_off_retained_bridge) | test(group_preview_move_handlers_stay_off_retained_bridge) | test(pending_group_activation_handlers_stay_off_retained_bridge) | test(group_header_click_selects_group_and_arms_pending_group_drag) | test(group_resize_is_previewed_and_committed_on_pointer_up) | test(group_resize_clamps_to_children) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 7 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/group.rs ecosystem/fret-node/src/ui/canvas/widget/pending_group_drag.rs ecosystem/fret-node/src/ui/canvas/widget/pending_group_resize.rs ecosystem/fret-node/src/ui/canvas/widget/pending_group_activation_cx.rs ecosystem/fret-node/src/ui/canvas/widget/group_drag.rs ecosystem/fret-node/src/ui/canvas/widget/group_resize.rs ecosystem/fret-node/src/ui/canvas/widget/group_preview_move_cx.rs` -
   no matches.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
@@ -1065,7 +1072,7 @@ Last run on 2026-05-21 for `RBX-M2-750`:
 Broader gates not run:
 
 - `cargo nextest run --workspace`
-  - Reason: `RBX-M2-750` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+  - Reason: `RBX-M2-760` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
 

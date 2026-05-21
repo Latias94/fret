@@ -9973,3 +9973,64 @@ Broader gates not run:
   - Reason: `RBX-M2-750` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-760 pointer-move primary group retained Cx isolation
+
+Claim verified:
+
+- `pointer_move_dispatch/primary/group.rs` no longer imports or names retained bridge Cx types.
+- The primary group pointer-move route now composes the retained-agnostic
+  `PendingGroupActivationCx` and `GroupPreviewMoveCx` capabilities.
+- The surrounding primary pointer-move router plus node/connection branches remain retained-bound
+  for later route isolation slices.
+- Pending group drag activation and group resize preview/commit behavior remain green through the
+  retained compatibility island.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/group.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving the primary group
+    pointer-move route behind retained-agnostic capabilities.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_primary_group_route_stays_off_retained_bridge) | test(group_preview_move_handlers_stay_off_retained_bridge) | test(pending_group_activation_handlers_stay_off_retained_bridge) | test(group_header_click_selects_group_and_arms_pending_group_drag) | test(group_resize_is_previewed_and_committed_on_pointer_up) | test(group_resize_clamps_to_children) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 7 tests.
+  - Scope proven: source-policy locks the primary group pointer-move route, pending group activation
+    helpers, and group preview move helpers off retained bridge Cx names; real pending group drag
+    activation and group resize preview/commit behavior remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/group.rs ecosystem/fret-node/src/ui/canvas/widget/pending_group_drag.rs ecosystem/fret-node/src/ui/canvas/widget/pending_group_resize.rs ecosystem/fret-node/src/ui/canvas/widget/pending_group_activation_cx.rs ecosystem/fret-node/src/ui/canvas/widget/group_drag.rs ecosystem/fret-node/src/ui/canvas/widget/group_resize.rs ecosystem/fret-node/src/ui/canvas/widget/group_preview_move_cx.rs`
+  - Result: no matches.
+  - Scope proven: the migrated group pointer-move route and called group helpers no longer depend on
+    retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after the pointer-move group route seam
+    changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after isolating
+    the primary group pointer-move route.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-760` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.

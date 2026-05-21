@@ -3964,6 +3964,31 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-760 Isolate pointer-move primary group retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/group.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the primary group pointer-move route off direct retained bridge Cx names by composing the
+      existing pending-group activation and group-preview move capabilities.
+    - Keep the surrounding primary pointer-move router plus node/connection branches as later route
+      isolation slices.
+    - Prove pending group drag activation and group resize preview/commit behavior remain green.
+  - Result:
+    - `pointer_move_dispatch/primary/group.rs` now accepts
+      `PendingGroupActivationCx + GroupPreviewMoveCx` instead of naming retained `EventCx`.
+    - The route reuses existing seams from `RBX-M2-280` and `RBX-M2-290`; no duplicate group route
+      seam was added.
+    - Added `pointer_move_primary_group_route_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_primary_group_route_stays_off_retained_bridge) | test(group_preview_move_handlers_stay_off_retained_bridge) | test(pending_group_activation_handlers_stay_off_retained_bridge) | test(group_header_click_selects_group_and_arms_pending_group_drag) | test(group_resize_is_previewed_and_committed_on_pointer_up) | test(group_resize_clamps_to_children) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/group.rs ecosystem/fret-node/src/ui/canvas/widget/pending_group_drag.rs ecosystem/fret-node/src/ui/canvas/widget/pending_group_resize.rs ecosystem/fret-node/src/ui/canvas/widget/pending_group_activation_cx.rs ecosystem/fret-node/src/ui/canvas/widget/group_drag.rs ecosystem/fret-node/src/ui/canvas/widget/group_resize.rs ecosystem/fret-node/src/ui/canvas/widget/group_preview_move_cx.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
