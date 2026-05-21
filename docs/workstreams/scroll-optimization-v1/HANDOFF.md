@@ -1,6 +1,6 @@
 # Scroll Optimization v1 Handoff
 
-Date: 2026-05-18
+Date: 2026-05-21
 Status: Active umbrella workstream; local clean-geometry resize-jitter phase closed.
 
 ## Current Verdict
@@ -44,10 +44,12 @@ Post-push result:
 
 ## Remaining Follow-Ons
 
-Open a new narrow lane for any of these:
+Use the existing narrow lane for text, and open new narrow lanes for the remaining items:
 
-- Text proof: line-break / computed-box stability, likely starting from `TextWrap::None` or a
-  dedicated cached line-break contract, not from shadcn `CardDescription`.
+- Text proof: `docs/workstreams/text-clean-geometry-stability-v1/` is now the closed boundary
+  record for cached `TextWrap::None` eligibility and text rejection diagnostics. Start a new
+  behavior-changing line-break / computed-box lane only after fresh evidence shows wrapped text is a
+  material perf owner, and do not start from shadcn `CardDescription` authoring.
 - Canvas proof: only if fresh evidence makes the `PointerRegion -> Canvas` solve worth the risk;
   current local evidence is about `3-4us`.
 - Root `Scroll` redesign: only as a side-effect-boundary architecture lane; do not skip `Scroll`

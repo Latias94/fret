@@ -13,6 +13,7 @@ enum CleanGeometrySolveSkipDecision {
 #[derive(Debug, Clone, Copy)]
 struct CleanGeometrySolveSkipRejection {
     reason: CleanGeometrySolveSkipRejectionReason,
+    detail: Option<CleanGeometrySolveSkipRejectionDetail>,
     node: Option<NodeId>,
     element_kind: Option<&'static str>,
 }
@@ -21,6 +22,7 @@ impl CleanGeometrySolveSkipRejection {
     fn new(reason: CleanGeometrySolveSkipRejectionReason) -> Self {
         Self {
             reason,
+            detail: None,
             node: None,
             element_kind: None,
         }
@@ -29,9 +31,15 @@ impl CleanGeometrySolveSkipRejection {
     fn for_kind(reason: CleanGeometrySolveSkipRejectionReason, element_kind: &'static str) -> Self {
         Self {
             reason,
+            detail: None,
             node: None,
             element_kind: Some(element_kind),
         }
+    }
+
+    fn with_detail(mut self, detail: CleanGeometrySolveSkipRejectionDetail) -> Self {
+        self.detail = Some(detail);
+        self
     }
 
     fn at_node(mut self, node: NodeId) -> Self {
@@ -76,6 +84,18 @@ enum CleanGeometrySolveSkipRejectionReason {
     TextReflow,
     ContainerHeightDelta,
     FractionalChildSize,
+}
+
+#[derive(Debug, Clone, Copy)]
+enum CleanGeometrySolveSkipRejectionDetail {
+    TextHeightDelta,
+    TextWrapNotNone,
+    TextOverflowNotClip,
+    TextAlignNotStart,
+    TextMissingWrapNoneMeasureCache,
+    TextCachedSizeMismatch,
+    TextFingerprintMismatch,
+    TextUnsupportedInstance,
 }
 
 #[derive(Clone)]
@@ -174,6 +194,21 @@ impl CleanGeometrySolveSkipRejectionReason {
             Self::TextReflow => "text_reflow",
             Self::ContainerHeightDelta => "container_height_delta",
             Self::FractionalChildSize => "fractional_child_size",
+        }
+    }
+}
+
+impl CleanGeometrySolveSkipRejectionDetail {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::TextHeightDelta => "text_height_delta",
+            Self::TextWrapNotNone => "text_wrap_not_none",
+            Self::TextOverflowNotClip => "text_overflow_not_clip",
+            Self::TextAlignNotStart => "text_align_not_start",
+            Self::TextMissingWrapNoneMeasureCache => "text_missing_wrap_none_measure_cache",
+            Self::TextCachedSizeMismatch => "text_cached_size_mismatch",
+            Self::TextFingerprintMismatch => "text_fingerprint_mismatch",
+            Self::TextUnsupportedInstance => "text_unsupported_instance",
         }
     }
 }
@@ -451,6 +486,7 @@ impl<H: UiHost> UiTree<H> {
             root,
             UiDebugCleanGeometrySolveSkipRejection {
                 reason: rejection.reason.as_str(),
+                detail: rejection.detail.map(|detail| detail.as_str()),
                 node: Some(rejected_node),
                 element: rejected_element,
                 element_kind: rejected_element_kind,
@@ -853,24 +889,9 @@ impl<H: UiHost> UiTree<H> {
                 CleanGeometrySolveSkipRejectionReason::TextReflow,
                 element_kind,
             )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextHeightDelta)
             .at_node(node));
         }
-        let Some((cached_fingerprint, cached_size)) = self.node_text_wrap_none_measure_cache(node)
-        else {
-            return Err(CleanGeometrySolveSkipRejection::for_kind(
-                CleanGeometrySolveSkipRejectionReason::TextReflow,
-                element_kind,
-            )
-            .at_node(node));
-        };
-        if !Self::clean_size_matches(cached_size, bounds.size) {
-            return Err(CleanGeometrySolveSkipRejection::for_kind(
-                CleanGeometrySolveSkipRejectionReason::TextReflow,
-                element_kind,
-            )
-            .at_node(node));
-        }
-
         let theme = crate::Theme::global(&*app).snapshot();
         let inherited_text_style =
             crate::declarative::frame::inherited_text_style_for_node(app, window, node);
@@ -880,14 +901,28 @@ impl<H: UiHost> UiTree<H> {
             .unwrap_or(0);
         let fingerprint = match instance {
             crate::declarative::frame::ElementInstance::Text(props) => {
-                if props.wrap != TextWrap::None
-                    || props.overflow != TextOverflow::Clip
-                    || props.align != TextAlign::Start
-                {
+                if props.wrap != TextWrap::None {
                     return Err(CleanGeometrySolveSkipRejection::for_kind(
                         CleanGeometrySolveSkipRejectionReason::TextReflow,
                         element_kind,
                     )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+                    .at_node(node));
+                }
+                if props.overflow != TextOverflow::Clip {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextOverflowNotClip)
+                    .at_node(node));
+                }
+                if props.align != TextAlign::Start {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextAlignNotStart)
                     .at_node(node));
                 }
                 let resolved_style =
@@ -902,14 +937,28 @@ impl<H: UiHost> UiTree<H> {
                 )
             }
             crate::declarative::frame::ElementInstance::StyledText(props) => {
-                if props.wrap != TextWrap::None
-                    || props.overflow != TextOverflow::Clip
-                    || props.align != TextAlign::Start
-                {
+                if props.wrap != TextWrap::None {
                     return Err(CleanGeometrySolveSkipRejection::for_kind(
                         CleanGeometrySolveSkipRejectionReason::TextReflow,
                         element_kind,
                     )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+                    .at_node(node));
+                }
+                if props.overflow != TextOverflow::Clip {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextOverflowNotClip)
+                    .at_node(node));
+                }
+                if props.align != TextAlign::Start {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextAlignNotStart)
                     .at_node(node));
                 }
                 let resolved_style =
@@ -924,14 +973,28 @@ impl<H: UiHost> UiTree<H> {
                 )
             }
             crate::declarative::frame::ElementInstance::SelectableText(props) => {
-                if props.wrap != TextWrap::None
-                    || props.overflow != TextOverflow::Clip
-                    || props.align != TextAlign::Start
-                {
+                if props.wrap != TextWrap::None {
                     return Err(CleanGeometrySolveSkipRejection::for_kind(
                         CleanGeometrySolveSkipRejectionReason::TextReflow,
                         element_kind,
                     )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+                    .at_node(node));
+                }
+                if props.overflow != TextOverflow::Clip {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextOverflowNotClip)
+                    .at_node(node));
+                }
+                if props.align != TextAlign::Start {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextAlignNotStart)
                     .at_node(node));
                 }
                 let resolved_style =
@@ -950,14 +1013,33 @@ impl<H: UiHost> UiTree<H> {
                     CleanGeometrySolveSkipRejectionReason::TextReflow,
                     element_kind,
                 )
+                .with_detail(CleanGeometrySolveSkipRejectionDetail::TextUnsupportedInstance)
                 .at_node(node));
             }
         };
+        let Some((cached_fingerprint, cached_size)) = self.node_text_wrap_none_measure_cache(node)
+        else {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextMissingWrapNoneMeasureCache)
+            .at_node(node));
+        };
+        if !Self::clean_size_matches(cached_size, bounds.size) {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextCachedSizeMismatch)
+            .at_node(node));
+        }
         if fingerprint != cached_fingerprint {
             return Err(CleanGeometrySolveSkipRejection::for_kind(
                 CleanGeometrySolveSkipRejectionReason::TextReflow,
                 element_kind,
             )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextFingerprintMismatch)
             .at_node(node));
         }
 

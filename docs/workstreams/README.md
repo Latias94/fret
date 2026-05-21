@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-05-20
+Catalog updated: 2026-05-21
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 428
+- Dedicated directories: 429
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2270,6 +2270,7 @@ Rule:
 - `docs/workstreams/text-atlas-debug-facade-owner-v1/` — first 2026-05-18, latest 2026-05-18, 6 markdown docs (closed narrow follow-on for moving native atlas debug dump facade methods out of general text diagnostics)
 - `docs/workstreams/text-atlas-debug-internals-owner-v1/` — first 2026-05-18, latest 2026-05-18, 7 markdown docs (closed narrow follow-on for moving native atlas debug lookup internals into sibling debug modules)
 - `docs/workstreams/text-bootstrap-platform-owner-v1/` — first 2026-05-18, latest 2026-05-18, 7 markdown docs (closed narrow follow-on for moving text bootstrap platform startup policy into a dedicated owner)
+- `docs/workstreams/text-clean-geometry-stability-v1/` — first n/a, latest n/a, 6 markdown docs (closed boundary record for text clean-geometry eligibility and additive rejection detail diagnostics; includes `WORKSTREAM.json`)
 - `docs/workstreams/text-infrastructure-v1/` — first 2026-02-19, latest 2026-02-22, 2 markdown docs
 - `docs/workstreams/text-interactive-spans-v1/` — first 2026-02-19, latest 2026-02-28, 2 markdown docs
 - `docs/workstreams/text-intrinsic-sizing-and-wrap-v1/` — first 2026-02-19, latest 2026-02-20, 3 markdown docs

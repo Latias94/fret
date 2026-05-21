@@ -3,7 +3,7 @@
   "slug": "scroll-optimization-v1",
   "title": "Scroll Optimization Workstream v1",
   "status": "active",
-  "updated": "2026-05-18",
+  "updated": "2026-05-21",
   "scope_kind": "execution",
   "problem": "Keep scroll extent probing, deferred unbounded probes, and post-layout overflow observation coherent so scroll surfaces stay correct and smooth under resize, invalidation, view-cache reuse, and edge growth/shrink.",
   "authoritative_docs": [
@@ -261,11 +261,12 @@
     "crates/fret-ui/src/declarative/host_widget/measure.rs",
     "crates/fret-ui/src/declarative/host_widget/paint.rs",
     "crates/fret-ui/src/tree/layout/state.rs",
-    "docs/workstreams/scroll-optimization-v1/HANDOFF.md"
+    "docs/workstreams/scroll-optimization-v1/HANDOFF.md",
+    "docs/workstreams/text-clean-geometry-stability-v1/WORKSTREAM.json"
   ],
   "adr_refs": [],
   "continue_policy": {
     "default_action": "split_follow_on",
-    "notes": "The local no-4090 clean-geometry resize-jitter phase is closed, but the broader scroll-optimization-v1 umbrella remains active for historical scroll correctness, wheel coalescing, scrollbar baseline, and extent-probing contracts. Do not continue widening clean geometry in this folder by default. The remaining content Semantics text_reflow / Text path at apps/fret-ui-gallery/src/ui/content.rs:744 is an explicit stop condition because shadcn CardDescription uses w_full TextWrap::Word and width-derived layout/measure/paint constraints. Remaining non-text pressure should split into separate lanes: text computed-box/line-break stability proof, low-priority Canvas proof, root Scroll side-effect-boundary redesign, RTX4090/other-machine evidence collection, or measured_size Option<Size> only if sentinel ambiguity recurs outside explicit driver leaves."
+    "notes": "The local no-4090 clean-geometry resize-jitter phase is closed, but the broader scroll-optimization-v1 umbrella remains active for historical scroll correctness, wheel coalescing, scrollbar baseline, and extent-probing contracts. Do not continue widening clean geometry in this folder by default. The remaining content Semantics text_reflow / Text path at apps/fret-ui-gallery/src/ui/content.rs:744 is an explicit stop condition because shadcn CardDescription uses w_full TextWrap::Word and width-derived layout/measure/paint constraints. docs/workstreams/text-clean-geometry-stability-v1/ is now the closed boundary record for current text eligibility and diagnostics detail. Future wrapped-text line-break / computed-box behavior changes should start as a new lane only after fresh material-perf evidence. Remaining non-text pressure should split into separate lanes: low-priority Canvas proof, root Scroll side-effect-boundary redesign, RTX4090/other-machine evidence collection, or measured_size Option<Size> only if sentinel ambiguity recurs outside explicit driver leaves."
   }
 }

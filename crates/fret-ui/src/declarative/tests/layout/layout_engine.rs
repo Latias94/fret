@@ -5218,6 +5218,19 @@ fn clean_geometry_small_resize_rejects_auto_height_text_reflow() {
             .layout_clean_geometry_solve_skip_first_element_kind,
         Some("Text")
     );
+    let rejected_solve = ui
+        .debug_layout_engine_solves()
+        .iter()
+        .find(|solve| solve.root == child)
+        .expect("child root solve should be recorded");
+    let rejection = rejected_solve
+        .clean_geometry_solve_skip_rejection
+        .as_ref()
+        .expect("child root solve should expose text rejection details");
+
+    assert_eq!(rejection.reason, "text_reflow");
+    assert_eq!(rejection.detail, Some("text_wrap_not_none"));
+    assert_eq!(rejection.element_kind, Some("Text"));
 }
 
 #[test]

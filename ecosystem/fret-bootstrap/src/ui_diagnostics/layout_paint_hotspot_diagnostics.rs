@@ -123,6 +123,8 @@ pub struct UiLayoutEngineSolveV1 {
 pub struct UiCleanGeometrySolveSkipRejectionV1 {
     pub reason: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub node: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub element: Option<u64>,
@@ -223,6 +225,7 @@ impl UiLayoutEngineSolveV1 {
                 .as_ref()
                 .map(|r| UiCleanGeometrySolveSkipRejectionV1 {
                     reason: r.reason.to_string(),
+                    detail: r.detail.map(str::to_string),
                     node: r.node.map(|id| id.data().as_ffi()),
                     element: r.element.map(|id| id.0),
                     element_kind: r.element_kind.map(str::to_string),
@@ -485,4 +488,37 @@ pub struct UiLayoutEngineMeasureChildHotspotV1 {
     pub element: Option<u64>,
     #[serde(default)]
     pub element_kind: Option<String>,
+}
+
+#[cfg(test)]
+mod layout_paint_hotspot_diagnostics_tests {
+    use super::UiCleanGeometrySolveSkipRejectionV1;
+
+    #[test]
+    fn clean_geometry_rejection_detail_is_additive() {
+        let rejection = UiCleanGeometrySolveSkipRejectionV1 {
+            reason: "text_reflow".to_string(),
+            detail: Some("text_wrap_not_none".to_string()),
+            node: Some(42),
+            element: None,
+            element_kind: Some("Text".to_string()),
+            element_path: None,
+        };
+
+        let json = serde_json::to_value(&rejection).expect("serialize rejection");
+        assert_eq!(json.get("detail").and_then(|v| v.as_str()), Some("text_wrap_not_none"));
+
+        let legacy: UiCleanGeometrySolveSkipRejectionV1 = serde_json::from_value(
+            serde_json::json!({
+                "reason": "text_reflow",
+                "node": 42,
+                "element_kind": "Text"
+            }),
+        )
+        .expect("legacy rejection without detail should still deserialize");
+        assert_eq!(legacy.reason, "text_reflow");
+        assert_eq!(legacy.detail, None);
+        assert_eq!(legacy.node, Some(42));
+        assert_eq!(legacy.element_kind.as_deref(), Some("Text"));
+    }
 }
