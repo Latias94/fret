@@ -3989,6 +3989,42 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-770 Isolate pointer-move primary node retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pending_drag.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pending_drag_session/node.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pending_node_drag_activation_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pending_node_drag_activation_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/node.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the primary node pointer-move route off direct retained bridge Cx names by introducing a
+      narrow `PendingNodeDragActivationCx` capability for host access plus pointer-capture release.
+    - Keep retained `EventCx` adaptation isolated in `pending_node_drag_activation_retained_cx.rs`.
+    - Keep pending node resize move on its existing retained-free path and leave the connection
+      branch as a later route isolation slice.
+    - Prove pending node drag activation/cancel, node drag threshold, and pending node resize move
+      behavior remain green.
+  - Result:
+    - `pending_drag.rs` now accepts `PendingNodeDragActivationCx` instead of naming retained
+      `EventCx`.
+    - `pending_drag_session::abort_pending_node_drag(...)` now only needs the existing
+      `PointerCaptureReleaseCx` tail seam.
+    - `pointer_move_dispatch/primary/node.rs` now accepts `PendingNodeDragActivationCx` and routes
+      pending node drag activation plus retained-free pending node resize move without retained Cx
+      names.
+    - Added `pending_node_drag_activation_handlers_stay_off_retained_bridge` and
+      `pointer_move_primary_node_route_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_primary_node_route_stays_off_retained_bridge) | test(pending_node_drag_activation_handlers_stay_off_retained_bridge) | test(pending_node_resize_move_stays_off_retained_bridge) | test(node_drag_does_not_start_when_nodes_draggable_is_false) | test(node_drag_start_and_escape_cancel_emits_node_drag_end_canceled) | test(node_drag_threshold_is_zoom_invariant_in_screen_space) | test(pending_node_resize_move_past_threshold_activates_resize) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/node.rs ecosystem/fret-node/src/ui/canvas/widget/pending_drag.rs ecosystem/fret-node/src/ui/canvas/widget/pending_node_drag_activation_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pending_resize.rs ecosystem/fret-node/src/ui/canvas/widget/pending_drag_session/node.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.

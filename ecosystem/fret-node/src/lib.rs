@@ -192,6 +192,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_move_dispatch/primary/surface.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_GROUP_RS: &str =
         include_str!("ui/canvas/widget/pointer_move_dispatch/primary/group.rs");
+    const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_NODE_RS: &str =
+        include_str!("ui/canvas/widget/pointer_move_dispatch/primary/node.rs");
     const UI_CANVAS_WIDGET_CANCEL_CLEANUP_RS: &str =
         include_str!("ui/canvas/widget/cancel_cleanup.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_PICKER_RS: &str =
@@ -230,6 +232,9 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pending_group_resize.rs");
     const UI_CANVAS_WIDGET_PENDING_GROUP_ACTIVATION_CX_RS: &str =
         include_str!("ui/canvas/widget/pending_group_activation_cx.rs");
+    const UI_CANVAS_WIDGET_PENDING_DRAG_RS: &str = include_str!("ui/canvas/widget/pending_drag.rs");
+    const UI_CANVAS_WIDGET_PENDING_NODE_DRAG_ACTIVATION_CX_RS: &str =
+        include_str!("ui/canvas/widget/pending_node_drag_activation_cx.rs");
     const UI_CANVAS_WIDGET_PENDING_RESIZE_RS: &str =
         include_str!("ui/canvas/widget/pending_resize.rs");
     const UI_CANVAS_WIDGET_PENDING_NODE_DRAG_RELEASE_CX_RS: &str =
@@ -524,6 +529,28 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_PENDING_RESIZE_RS.contains(forbidden),
                 "pending node resize move helper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pending_node_drag_activation_handlers_stay_off_retained_bridge() {
+        let pending_node_drag_activation_sources = [
+            UI_CANVAS_WIDGET_PENDING_DRAG_RS,
+            UI_CANVAS_WIDGET_PENDING_NODE_DRAG_ACTIVATION_CX_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !pending_node_drag_activation_sources.contains(forbidden),
+                "pending node drag activation handlers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }
@@ -1302,6 +1329,22 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_GROUP_RS.contains(forbidden),
                 "pointer-move primary group route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_move_primary_node_route_stays_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_PRIMARY_NODE_RS.contains(forbidden),
+                "pointer-move primary node route must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

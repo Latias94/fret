@@ -10034,3 +10034,73 @@ Broader gates not run:
   - Reason: `RBX-M2-760` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-770 pointer-move primary node retained Cx isolation
+
+Claim verified:
+
+- `pointer_move_dispatch/primary/node.rs` no longer imports or names retained bridge Cx types.
+- Pending node drag activation now uses the retained-agnostic `PendingNodeDragActivationCx`
+  capability for host access plus pointer-capture release.
+- `pending_drag_session::abort_pending_node_drag(...)` now only needs the existing
+  `PointerCaptureReleaseCx` tail seam.
+- Pending node resize move remains retained-free without an event Cx parameter.
+- The surrounding primary pointer-move router plus connection branch remain retained-bound for
+  later route isolation slices.
+- Node drag activation/cancel, node drag threshold, and pending node resize activation behavior
+  remain green through the retained compatibility island.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_drag_session/node.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_node_drag_activation_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_node_drag_activation_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/node.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving the primary node
+    pointer-move route behind `PendingNodeDragActivationCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_primary_node_route_stays_off_retained_bridge) | test(pending_node_drag_activation_handlers_stay_off_retained_bridge) | test(pending_node_resize_move_stays_off_retained_bridge) | test(node_drag_does_not_start_when_nodes_draggable_is_false) | test(node_drag_start_and_escape_cancel_emits_node_drag_end_canceled) | test(node_drag_threshold_is_zoom_invariant_in_screen_space) | test(pending_node_resize_move_past_threshold_activates_resize) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 8 tests.
+  - Scope proven: source-policy locks the primary node pointer-move route, pending node drag
+    activation helper, and pending node resize move helper off retained bridge Cx names; real node
+    drag activation/cancel, threshold, and pending resize behavior remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/node.rs ecosystem/fret-node/src/ui/canvas/widget/pending_drag.rs ecosystem/fret-node/src/ui/canvas/widget/pending_node_drag_activation_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pending_resize.rs ecosystem/fret-node/src/ui/canvas/widget/pending_drag_session/node.rs`
+  - Result: no matches.
+  - Scope proven: the migrated node pointer-move route and called pending-node helpers no longer
+    depend on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after the pointer-move node route seam
+    changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after isolating
+    the primary node pointer-move route.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after the user's pull and this
+    slice's updates.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-770` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.

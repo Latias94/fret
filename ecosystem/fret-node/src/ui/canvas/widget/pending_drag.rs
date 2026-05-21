@@ -4,16 +4,23 @@ mod checks;
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
+use super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+    pending_node_drag_activation_cx::PendingNodeDragActivationCx,
+};
 use crate::ui::canvas::state::ViewSnapshot;
 
-pub(super) fn handle_pending_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_pending_node_drag_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: PendingNodeDragActivationCx<H>,
+{
     if canvas.interaction.node_drag.is_some() {
         return false;
     }
@@ -29,17 +36,17 @@ pub(super) fn handle_pending_node_drag_move<H: UiHost, M: NodeGraphCanvasMiddlew
         return super::pending_drag_session::abort_pending_node_drag(&mut canvas.interaction, cx);
     }
 
-    if !checks::primary_node_is_draggable(canvas, cx.app, snapshot, pending.primary) {
+    if !checks::primary_node_is_draggable(canvas, cx.host(), snapshot, pending.primary) {
         return super::pending_drag_session::abort_pending_node_drag(&mut canvas.interaction, cx);
     }
 
     let Some((drag_nodes, start_nodes)) =
-        activate::drag_start_nodes(canvas, cx.app, snapshot, &pending)
+        activate::drag_start_nodes(canvas, cx.host(), snapshot, &pending)
     else {
         return super::pending_drag_session::abort_pending_node_drag(&mut canvas.interaction, cx);
     };
 
-    activate::apply_pending_selection(canvas, cx.app, &pending);
+    activate::apply_pending_selection(canvas, cx.host(), &pending);
     let primary = pending.primary;
     super::pending_drag_session::activate_pending_node_drag(
         &mut canvas.interaction,

@@ -912,6 +912,13 @@ tests prove panning and marquee movement still work through the retained compati
 reusing existing group seams from earlier slices. The surrounding primary router plus
 node/connection branches remain retained-bound for later route isolation slices. Focused tests prove
 pending group drag activation and group resize preview/commit behavior remain green.
+`RBX-M2-770` then moved the primary node pointer-move route in
+`pointer_move_dispatch/primary/node.rs` behind `PendingNodeDragActivationCx`, a narrow
+host-access plus pointer-capture-release capability for pending node drag activation. Retained
+`EventCx` adaptation is isolated in `pending_node_drag_activation_retained_cx.rs`, and pending node
+resize move continues to run without retained Cx input. The surrounding primary router plus
+connection branch remain retained-bound for later route isolation slices. Focused tests prove node
+drag activation/cancel, drag threshold, and pending node resize activation behavior remain green.
 
 ## Next Task
 
@@ -973,8 +980,9 @@ Recommended next implementation shape:
   `WireCommitCx + PointerUpReleaseCx`; pointer-up route wrappers now use `PointerUpCx`; marquee
   move/selection/pending helpers now use `MarqueeCx`; pan begin now uses `PanZoomBeginCx`; pan
   move now uses `PanZoomCx`; the primary surface pointer-move route now uses `MarqueeCx`; the
-  primary group pointer-move route now uses `PendingGroupActivationCx + GroupPreviewMoveCx`; and
-  the pointer-up event entry and pointer-up button router now use `PointerUpRouteCx`.
+  primary group pointer-move route now uses `PendingGroupActivationCx + GroupPreviewMoveCx`; the
+  primary node pointer-move route now uses `PendingNodeDragActivationCx`; and the pointer-up event
+  entry and pointer-up button router now use `PointerUpRouteCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -1000,6 +1008,8 @@ Recommended next implementation shape:
   `pan_zoom_begin.rs`, `pan_zoom_begin_cx.rs`, `pan_zoom.rs`, `pan_zoom_move.rs`,
   `pointer_move_dispatch/primary/surface.rs`,
   `pointer_move_dispatch/primary/group.rs`,
+  `pending_drag.rs`, `pending_drag_session/node.rs`, `pending_node_drag_activation_cx.rs`,
+  `pointer_move_dispatch/primary/node.rs`,
   `keyboard_pan_activation.rs`,
   `event_clipboard_feedback.rs`, `event_clipboard_feedback_cx.rs`, `event_timer_toast.rs`,
   `timer_motion_shared.rs`,
@@ -1041,7 +1051,8 @@ Recommended next implementation shape:
   `sticky_wire_connect/finish.rs`, `edge_insert_drag/drag/tail.rs`, `cancel_cleanup.rs`,
   `sticky_wire_targets/picker.rs`, `group_drag/tail.rs`, `group_resize/tail.rs`,
   `group_preview_move_cx.rs`, `group_drag.rs`, `group_resize.rs`,
-  `pending_group_activation_cx.rs`, `pending_node_drag_release_cx.rs`, `pending_group_drag.rs`, and
+  `pending_group_activation_cx.rs`, `pending_node_drag_activation_cx.rs`,
+  `pending_node_drag_release_cx.rs`, `pending_group_drag.rs`, `pending_drag.rs`, and
   `pending_group_resize.rs` are compat-gated retained-bridge-free support. The remaining
   canvas interaction families still need default-path tests before their retained widget/event code
   can be deleted. Each slice should first add default declarative tests or retained-agnostic seams,
@@ -1054,7 +1065,29 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-760`:
+Last run on 2026-05-21 for `RBX-M2-770`:
+
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_primary_node_route_stays_off_retained_bridge) | test(pending_node_drag_activation_handlers_stay_off_retained_bridge) | test(pending_node_resize_move_stays_off_retained_bridge) | test(node_drag_does_not_start_when_nodes_draggable_is_false) | test(node_drag_start_and_escape_cancel_emits_node_drag_end_canceled) | test(node_drag_threshold_is_zoom_invariant_in_screen_space) | test(pending_node_resize_move_past_threshold_activates_resize) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 8 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/node.rs ecosystem/fret-node/src/ui/canvas/widget/pending_drag.rs ecosystem/fret-node/src/ui/canvas/widget/pending_node_drag_activation_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pending_resize.rs ecosystem/fret-node/src/ui/canvas/widget/pending_drag_session/node.rs` -
+  no matches.
+- `cargo fmt --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-770` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+Previous run on 2026-05-21 for `RBX-M2-760`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
@@ -1068,13 +1101,6 @@ Last run on 2026-05-21 for `RBX-M2-760`:
   standalone markdown files.
 - `git diff --check` - passed.
 - `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
-
-Broader gates not run:
-
-- `cargo nextest run --workspace`
-  - Reason: `RBX-M2-760` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
-    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
-    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
 
 Previous run on 2026-05-20 for `RBX-M2-370`:
 
