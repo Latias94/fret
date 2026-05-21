@@ -144,8 +144,75 @@ pub fn plot3d_panel_with_model<H: UiHost>(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::scene::SceneOp;
+    use fret_core::{
+        AppWindowId, FrameId, PathConstraints, PathId, PathMetrics, PathService, Point, Px, Rect,
+        Scene, Size, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
+    };
+    use fret_ui::UiTree;
+
     const LIB_RS: &str = include_str!("lib.rs");
     const CARGO_TOML: &str = include_str!("../Cargo.toml");
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
 
     #[test]
     fn plot3d_public_surface_stays_declarative_only() {
@@ -153,5 +220,70 @@ mod tests {
         assert!(!LIB_RS.contains("pub mod retained;"));
         assert!(!LIB_RS.contains("Plot3dCanvas"));
         assert!(!CARGO_TOML.contains("unstable-retained-bridge"));
+    }
+
+    #[test]
+    fn plot3d_declarative_panel_paints_viewport_surface() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let target = fret_core::RenderTargetId::default();
+        let mut app = App::new();
+        app.set_frame_id(FrameId(1));
+        let model = app.models_mut().insert(Plot3dModel {
+            viewport: Plot3dViewport {
+                target,
+                target_px_size: (640, 360),
+                fit: fret_core::ViewportFit::Contain,
+                opacity: 0.5,
+            },
+        });
+        let mut ui = UiTree::<App>::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "plot3d-test",
+            |cx| vec![plot3d_panel_with_model(cx, model.clone())],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let viewport = scene.ops().iter().find_map(|op| match op {
+            SceneOp::ViewportSurface {
+                rect,
+                target: op_target,
+                opacity,
+                ..
+            } => Some((*rect, *op_target, *opacity)),
+            _ => None,
+        });
+
+        let (rect, op_target, opacity) =
+            viewport.expect("plot3d panel should emit a viewport surface scene op");
+        assert_eq!(op_target, target);
+        assert_eq!(opacity, 0.5);
+        assert!(rect.size.width.0 > 0.0, "viewport width should be non-zero");
+        assert!(
+            rect.size.height.0 > 0.0,
+            "viewport height should be non-zero"
+        );
+        assert!(
+            scene
+                .ops()
+                .iter()
+                .any(|op| matches!(op, SceneOp::Quad { .. })),
+            "plot3d panel should preserve retained background chrome"
+        );
     }
 }

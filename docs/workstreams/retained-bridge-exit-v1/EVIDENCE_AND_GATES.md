@@ -11206,12 +11206,16 @@ Claim verified:
   `plot3d_panel(...)` / `Plot3dPanelProps` surface.
 - First-party Plot3D demos now mount the Plot3D UI through `declarative::RenderRootContext` instead
   of `UiTreeRetainedExt::create_node_retained(...)`.
+- Follow-up behavior coverage now proves the declarative viewport helper and Plot3D panel paint a
+  non-zero `SceneOp::ViewportSurface` and keep Plot3D panel chrome, preventing a retained-to-
+  declarative migration from silently compiling while rendering a zero-sized viewport.
 
 Evidence:
 
 - `ecosystem/fret-plot3d/src/declarative.rs`
 - `ecosystem/fret-plot3d/src/lib.rs`
 - `ecosystem/fret-plot3d/Cargo.toml`
+- `ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs`
 - `apps/fret-examples/src/plot3d_demo.rs`
 - `apps/fret-examples/src/gizmo3d_demo.rs`
 - `tools/check_layering.py`
@@ -11237,9 +11241,23 @@ Commands:
     creation to declarative root mounting.
 
 - `cargo nextest run -p fret-plot3d`
+  - Result: passed, 2 tests.
+  - Scope proven: source-policy coverage locks `fret-plot3d` to its declarative public surface,
+    prevents reintroducing `Plot3dCanvas` or the retained bridge feature, and behavior coverage
+    proves `plot3d_panel_with_model(...)` emits a non-zero `SceneOp::ViewportSurface` while
+    preserving panel background chrome.
+- `cargo nextest run -p fret-ui-kit viewport_surface_panel_fills_pointer_region_and_paints_surface`
   - Result: passed, 1 test.
-  - Scope proven: source-policy coverage locks `fret-plot3d` to its declarative public surface and
-    prevents reintroducing `Plot3dCanvas` or the retained bridge feature.
+  - Scope proven: the shared declarative `viewport_surface_panel(...)` helper sizes its inner
+    `ViewportSurface` to the pointer region bounds and emits a non-zero viewport surface scene op.
+- `cargo check -p fret-demo --bin plot3d_demo`
+  - Result: passed.
+  - Scope proven: the standalone Plot3D demo still compiles after adding behavior coverage for the
+    declarative viewport-surface path.
+- `cargo check -p fret-demo --bin gizmo3d_demo`
+  - Result: passed.
+  - Scope proven: the gizmo/Plot3D demo still compiles after adding behavior coverage for the
+    declarative viewport-surface path.
 - `cargo fmt --check`
   - Result: passed after running `cargo fmt`.
   - Scope proven: workspace Rust formatting is clean after the Plot3D declarative migration.

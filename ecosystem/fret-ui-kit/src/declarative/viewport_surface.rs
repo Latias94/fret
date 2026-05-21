@@ -311,9 +311,158 @@ pub fn viewport_surface_panel<H: UiHost>(
         cx.pointer_region_on_wheel(on_wheel);
 
         let mut props2 = fret_ui::element::ViewportSurfaceProps::new(props.target);
+        props2.layout.size.width = Length::Fill;
+        props2.layout.size.height = Length::Fill;
         props2.target_px_size = props.target_px_size;
         props2.fit = props.fit;
         props2.opacity = props.opacity;
         vec![cx.viewport_surface_props(props2)]
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::scene::SceneOp;
+    use fret_core::{
+        AppWindowId, FrameId, PathConstraints, PathId, PathMetrics, PathService, Point, Px, Rect,
+        Scene, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics,
+        TextService,
+    };
+    use fret_ui::UiTree;
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::default(),
+                    baseline: Px(0.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Err(fret_core::MaterialRegistrationError::Unsupported)
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    #[test]
+    fn viewport_surface_panel_fills_pointer_region_and_paints_surface() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let target = fret_core::RenderTargetId::default();
+        let mut app = App::new();
+        app.set_frame_id(FrameId(1));
+        let mut ui = UiTree::<App>::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "viewport-surface-panel-test",
+            |cx| {
+                vec![viewport_surface_panel(
+                    cx,
+                    ViewportSurfacePanelProps {
+                        target,
+                        target_px_size: (640, 360),
+                        fit: ViewportFit::Contain,
+                        opacity: 0.5,
+                        forward_input: true,
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let viewport = scene.ops().iter().find_map(|op| match op {
+            SceneOp::ViewportSurface {
+                rect,
+                target: op_target,
+                opacity,
+                ..
+            } => Some((*rect, *op_target, *opacity)),
+            _ => None,
+        });
+        let (rect, op_target, opacity) =
+            viewport.expect("viewport surface panel should emit a surface scene op");
+        assert_eq!(op_target, target);
+        assert_eq!(opacity, 0.5);
+        assert!(
+            rect.size.width.0 > 0.0,
+            "viewport surface width should be non-zero"
+        );
+        assert!(
+            rect.size.height.0 > 0.0,
+            "viewport surface height should be non-zero"
+        );
+
+        let pointer_region = ui.children(root)[0];
+        let viewport_surface = ui.children(pointer_region)[0];
+        assert_eq!(
+            ui.debug_declarative_instance_kind(&mut app, window, pointer_region),
+            Some("PointerRegion")
+        );
+        assert_eq!(
+            ui.debug_declarative_instance_kind(&mut app, window, viewport_surface),
+            Some("ViewportSurface")
+        );
+        assert_eq!(ui.debug_node_bounds(pointer_region), Some(bounds));
+        assert_eq!(ui.debug_node_bounds(viewport_surface), Some(bounds));
+    }
 }

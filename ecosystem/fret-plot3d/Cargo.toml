@@ -14,3 +14,6 @@ fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../fret-ui-kit" }
+
+[dev-dependencies]
+fret-app = { path = "../../crates/fret-app" }
