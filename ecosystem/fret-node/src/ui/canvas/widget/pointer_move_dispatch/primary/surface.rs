@@ -1,13 +1,17 @@
 use crate::ui::canvas::widget::*;
 
-pub(super) fn dispatch_surface_move_handlers<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn dispatch_surface_move_handlers<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: fret_core::Modifiers,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: marquee_cx::MarqueeCx<H>,
+{
     pan_zoom::handle_panning_move(canvas, cx, snapshot, position)
         || marquee::handle_marquee_move(canvas, cx, snapshot, position, modifiers, zoom)
 }

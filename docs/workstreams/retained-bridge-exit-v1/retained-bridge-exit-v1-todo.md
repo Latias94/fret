@@ -3939,6 +3939,31 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-750 Isolate pointer-move primary surface retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/surface.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the primary surface pointer-move route off direct retained bridge Cx names by reusing the
+      existing `MarqueeCx` capability.
+    - Keep the surrounding primary pointer-move router plus group/node/connection branches as later
+      route isolation slices.
+    - Prove panning move and marquee move behavior remain green through the surface route.
+  - Result:
+    - `pointer_move_dispatch/primary/surface.rs` now accepts `MarqueeCx` instead of naming retained
+      `EventCx`.
+    - Because `MarqueeCx` includes `PanZoomBeginCx` and `PanZoomBeginCx` extends `PanZoomCx`, the
+      surface route covers both pan move and marquee move without adding a duplicate seam.
+    - Added `pointer_move_primary_surface_route_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_primary_surface_route_stays_off_retained_bridge) | test(pan_zoom_move_helpers_stay_off_retained_bridge) | test(marquee_move_handlers_stay_off_retained_bridge) | test(middle_mouse_panning_tracks_screen_delta_under_render_transform) | test(space_to_pan_starts_left_mouse_panning_and_updates_viewport) | test(background_click_starts_pending_marquee_and_clears_selection_on_up) | test(marquee_replace_mode_replaces_selection_even_with_ctrl_pressed) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/surface.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_move.rs ecosystem/fret-node/src/ui/canvas/widget/marquee.rs ecosystem/fret-node/src/ui/canvas/widget/marquee_pending.rs ecosystem/fret-node/src/ui/canvas/widget/marquee_selection.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
