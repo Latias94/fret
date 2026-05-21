@@ -1,18 +1,14 @@
-use std::cell::RefCell;
-use std::rc::Rc;
-
 use delinea::data::{Column, DataTable};
 use delinea::engine::window::DataWindow;
-use delinea::{Action, AxisKind, AxisPointerSpec, AxisPointerTrigger, AxisPointerType, AxisScale};
+use delinea::{
+    Action, AxisKind, AxisPointerSpec, AxisPointerTrigger, AxisPointerType, AxisScale, ChartEngine,
+};
 use fret::component::prelude::*;
 use fret::{advanced::prelude::*, shadcn};
 use fret_app::{CommandMeta, CommandScope};
-use fret_chart::ChartCanvas;
 use fret_core::{AppWindowId, Px, SemanticsRole};
 use fret_runtime::CommandId;
-use fret_ui::element::{LayoutStyle, Length, SemanticsDecoration, SemanticsProps};
-use fret_ui::retained_bridge::RetainedSubtreeProps;
-use fret_ui_kit::declarative::{CachedSubtreeExt, CachedSubtreeProps};
+use fret_ui::element::{SemanticsDecoration, SemanticsProps, ViewCacheProps};
 
 const ROOT_NAME: &str = "cookbook-chart-interactions-basics";
 
@@ -30,8 +26,6 @@ const CMD_ZOOM_OUT: &str = "cookbook.chart.zoom_out";
 const CMD_RESET_VIEW: &str = "cookbook.chart.reset_view";
 const CMD_SELECT_HOVER: &str = "cookbook.chart.select_hover";
 const CMD_CLEAR_SELECTION: &str = "cookbook.chart.clear_selection";
-
-type SharedChartEngine = Rc<RefCell<delinea::engine::ChartEngine>>;
 
 #[derive(Debug, Clone, Copy)]
 struct ChartIds {
@@ -158,7 +152,9 @@ fn install_commands(app: &mut KernelApp) {
 
 struct ChartInteractionsWindowState {
     ids: ChartIds,
-    engine: SharedChartEngine,
+    spec: delinea::ChartSpec,
+    engine: Model<ChartEngine>,
+    output: Model<fret_chart::ChartCanvasOutput>,
     base_x: DataWindow,
     base_y: DataWindow,
     x_window: DataWindow,
@@ -166,7 +162,7 @@ struct ChartInteractionsWindowState {
     selected: Option<u32>,
 }
 
-fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> ChartInteractionsWindowState {
+fn init_window(app: &mut KernelApp, _window: AppWindowId) -> ChartInteractionsWindowState {
     let ids = chart_ids();
 
     let x: Vec<f64> = (0..12).map(|i| i as f64).collect();
@@ -245,7 +241,7 @@ fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> ChartInteractionsW
         }],
     };
 
-    let mut engine = delinea::engine::ChartEngine::new(spec).expect("chart spec should be valid");
+    let mut engine = ChartEngine::new(spec.clone()).expect("chart spec should be valid");
     let mut table = DataTable::default();
     table.push_column(Column::F64(x));
     table.push_column(Column::F64(y.clone()));
@@ -263,7 +259,11 @@ fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> ChartInteractionsW
 
     ChartInteractionsWindowState {
         ids,
-        engine: Rc::new(RefCell::new(engine)),
+        spec,
+        engine: app.models_mut().insert(engine),
+        output: app
+            .models_mut()
+            .insert(fret_chart::ChartCanvasOutput::default()),
         base_x,
         base_y,
         x_window: base_x,
@@ -272,31 +272,24 @@ fn init_window(_app: &mut KernelApp, _window: AppWindowId) -> ChartInteractionsW
     }
 }
 
-// This stays on `AnyElement` intentionally: it owns the retained-subtree bridge boundary and the
-// cached-subtree landing seam for `ChartCanvas`.
 fn chart_canvas(cx: &mut AppComponentCx<'_>, st: &ChartInteractionsWindowState) -> AnyElement {
+    use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel_in};
+
+    let spec = st.spec.clone();
     let engine = st.engine.clone();
+    let output = st.output.clone();
 
-    let mut layout = LayoutStyle::default();
-    layout.size.width = Length::Fill;
-    layout.size.height = Length::Fill;
-
-    let props = RetainedSubtreeProps::new::<KernelApp>(move |ui| {
-        use fret_ui::retained_bridge::UiTreeRetainedExt as _;
-
-        let mut canvas = ChartCanvas::new_shared(engine.clone());
-        canvas.set_input_map(fret_chart::input_map::ChartInputMap::default());
-        canvas.set_accessibility_layer(true);
-
-        let node = ui.create_node_retained(canvas.test_id(TEST_ID_CANVAS));
-        ui.set_node_view_cache_flags(node, true, true, false);
-        node
-    })
-    .with_layout(layout);
-
-    cx.cached_subtree_with(
-        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
-        |cx: &mut AppComponentCx<'_>| vec![cx.retained_subtree(props)],
+    cx.view_cache(
+        ViewCacheProps::default().contain_layout_when_bounds_known(true),
+        move |cx: &mut AppComponentCx<'_>| {
+            let mut props = ChartCanvasPanelProps::new(spec)
+                .output_model(output)
+                .input_map(fret_chart::input_map::ChartInputMap::default())
+                .accessibility_layer(true)
+                .test_id(TEST_ID_CANVAS);
+            props.engine = Some(engine);
+            vec![chart_canvas_panel_in(cx, props)]
+        },
     )
 }
 
@@ -309,13 +302,18 @@ fn view(
     let (x_span, hover_index) = {
         let x_span = (st.x_window.max - st.x_window.min).max(0.0);
 
-        let engine = st.engine.borrow();
-        let out = engine.output();
-        let hover_index = out
-            .axis_pointer
-            .as_ref()
-            .and_then(|o| o.hit.map(|h| h.data_index))
-            .map(|v| v as f64)
+        let hover_index = st
+            .engine
+            .paint(cx)
+            .read_ref(|engine| {
+                engine
+                    .output()
+                    .axis_pointer
+                    .as_ref()
+                    .and_then(|o| o.hit.map(|h| h.data_index))
+                    .map(|v| v as f64)
+                    .unwrap_or(-1.0)
+            })
             .unwrap_or(-1.0);
 
         (x_span, hover_index)
@@ -400,7 +398,7 @@ fn view(
                     cx;
                     shadcn::card_title("Chart interactions basics"),
                     shadcn::card_description(
-                        "Minimal shared delinea engine + retained ChartCanvas. App-owned zoom + selection; axis pointer hover for exploration.",
+                        "Minimal shared delinea engine + declarative chart canvas panel. App-owned zoom + selection; axis pointer hover for exploration.",
                     ),
                 ]
             }),
@@ -450,43 +448,53 @@ fn on_command(
     }
 
     if cmd == CMD_SELECT_HOVER {
-        let engine = st.engine.borrow();
-        let hit = engine.output().axis_pointer.as_ref().and_then(|o| o.hit);
+        let hit = st
+            .engine
+            .read_ref(_app, |engine| {
+                engine.output().axis_pointer.as_ref().and_then(|o| o.hit)
+            })
+            .ok()
+            .flatten();
         if let Some(hit) = hit {
             st.selected = Some(hit.data_index);
         }
         return;
     }
 
-    let mut engine = st.engine.borrow_mut();
     let current_x = st.x_window;
 
     match cmd {
         CMD_ZOOM_IN => {
             let window = zoom_window(st.base_x, current_x, 0.5);
             st.x_window = window;
-            engine.apply_action(Action::SetDataWindowX {
-                axis: st.ids.x_axis,
-                window: Some(window),
+            let _ = st.engine.update(_app, |engine, _cx| {
+                engine.apply_action(Action::SetDataWindowX {
+                    axis: st.ids.x_axis,
+                    window: Some(window),
+                });
             });
         }
         CMD_ZOOM_OUT => {
             let window = zoom_window(st.base_x, current_x, 2.0);
             st.x_window = window;
-            engine.apply_action(Action::SetDataWindowX {
-                axis: st.ids.x_axis,
-                window: Some(window),
+            let _ = st.engine.update(_app, |engine, _cx| {
+                engine.apply_action(Action::SetDataWindowX {
+                    axis: st.ids.x_axis,
+                    window: Some(window),
+                });
             });
         }
         CMD_RESET_VIEW => {
             st.selected = None;
             st.x_window = st.base_x;
             st.y_window = st.base_y;
-            engine.apply_action(Action::SetViewWindow2D {
-                x_axis: st.ids.x_axis,
-                y_axis: st.ids.y_axis,
-                x: Some(st.base_x),
-                y: Some(st.base_y),
+            let _ = st.engine.update(_app, |engine, _cx| {
+                engine.apply_action(Action::SetViewWindow2D {
+                    x_axis: st.ids.x_axis,
+                    y_axis: st.ids.y_axis,
+                    x: Some(st.base_x),
+                    y: Some(st.base_y),
+                });
             });
         }
         _ => {}

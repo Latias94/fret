@@ -4747,6 +4747,37 @@ Related plan:
       declarative output path.
     - A new internal preview source-policy test rejects reintroducing retained chart torture
       authoring markers.
+- [x] RBX-M3-070 Migrate cookbook chart interactions off retained `ChartCanvas`.
+  - Scope:
+    - `apps/fret-cookbook/examples/chart_interactions_basics.rs`
+    - `apps/fret-cookbook/src/lib.rs`
+  - Goal:
+    - Stop the cookbook interactions example from teaching `ChartCanvas::new_shared(...)` through
+      `RetainedSubtreeProps` / `cx.retained_subtree(...)`.
+    - Preserve the same app-owned zoom/reset/selection workflow, chart test id, accessibility
+      layer, default chart input map, and single live chart engine while mounting the chart through
+      `ChartCanvasPanelProps` + `chart_canvas_panel_in(...)`.
+  - Validation:
+    - `cargo check -p fret-cookbook --example chart_interactions_basics --features cookbook-chart`
+    - `cargo nextest run -p fret-cookbook --features cookbook-chart chart_interactions_example_prefers_declarative_chart_panel`
+    - `cargo nextest run -p fret-chart`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+  - Evidence:
+    - `apps/fret-cookbook/examples/chart_interactions_basics.rs`
+    - `apps/fret-cookbook/src/lib.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-070-cookbook-chart-interactions-use-declarative-panel`
+  - Result:
+    - Cookbook chart interactions now store the seeded `ChartEngine` as a `Model<ChartEngine>` and
+      pass it to `ChartCanvasPanelProps`.
+    - The example keeps a shared `ChartCanvasOutput` model, focusable accessibility layer,
+      default input map, and stable `cookbook.chart_interactions_basics.canvas` test id on the
+      declarative chart panel.
+    - App-owned zoom/reset commands update the same engine model that the panel renders, and
+      "Select hovered" still reads hover state from the live chart engine.
+    - A cookbook source-policy test now requires declarative chart panel markers and rejects
+      retained chart authoring markers.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

@@ -259,6 +259,13 @@ with `ChartCanvasPanelProps` + `chart_canvas_panel_in(...)`, preserves the 520px
 and keeps `UiGalleryChartTortureOutputHandle` wired to the same live engine/output models used by
 diagnostics snapshots. The explicit Y link-map fixture remains on the declarative output path, and a
 new internal preview source-policy test rejects retained chart torture markers.
+`RBX-M3-070` then migrated the cookbook chart interactions example off the retained chart widget
+host. The example now stores its seeded `ChartEngine` as a `Model<ChartEngine>`, keeps a shared
+`ChartCanvasOutput` model, renders through `ChartCanvasPanelProps` + `chart_canvas_panel_in(...)`,
+and preserves the app-owned zoom/reset/selection commands, accessibility layer, stable chart test
+id, default input map, and live hover selection against the same engine that the panel renders. A
+cookbook source-policy test now requires declarative chart panel authoring and rejects retained
+chart markers in the example.
 
 ## Completed Implementation
 
@@ -1063,6 +1070,10 @@ Pick the next task from:
 
 Recommended next implementation shape:
 
+- Current M3 priority: keep draining first-party chart consumers before deleting retained chart
+  source. Good next candidates are chart demos/examples that still instantiate retained
+  `ChartCanvas` directly, or retained-only chart capability families that still need declarative
+  coverage before `fret-chart` can leave the retained bridge allowlist.
 - Continue M2 by shrinking the RBX-M2-080 ledger. The retained controls widget is now gone; the
   retained toolbar widgets are gone; retained minimap is gone; retained blackboard is gone; retained
   rename host is gone; retained diagnostics anchors are gone; retained a11y active-descendant

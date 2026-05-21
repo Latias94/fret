@@ -241,21 +241,6 @@ mod authoring_surface_policy_tests {
         }
     }
 
-    fn assert_intentional_raw_retained_seam(src: &str, markers: &[&str], forbidden: &[&str]) {
-        let normalized = src.split_whitespace().collect::<String>();
-        for marker in markers {
-            let marker = marker.split_whitespace().collect::<String>();
-            assert!(normalized.contains(&marker), "missing marker: {marker}");
-        }
-        for marker in forbidden {
-            let marker = marker.split_whitespace().collect::<String>();
-            assert!(
-                !normalized.contains(&marker),
-                "unexpected non-raw marker present: {marker}"
-            );
-        }
-    }
-
     fn assert_selected_examples_prefer_handle_first_tracked_reads(
         src: &str,
         required_markers: &[&str],
@@ -1076,8 +1061,12 @@ mod authoring_surface_policy_tests {
         assert!(CANVAS_PAN_ZOOM_EXAMPLE.contains("cx.actions().models::<act::ResetView>"));
 
         assert!(CHART_INTERACTIONS_EXAMPLE.contains("use fret::{advanced::prelude::*, shadcn};"));
-        assert!(CHART_INTERACTIONS_EXAMPLE.contains("ChartCanvas"));
-        assert!(CHART_INTERACTIONS_EXAMPLE.contains("RetainedSubtreeProps::new::<KernelApp>"));
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains("ChartCanvasPanelProps"));
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains("chart_canvas_panel_in(cx, props)"));
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains("Model<ChartEngine>"));
+        assert!(CHART_INTERACTIONS_EXAMPLE.contains(".output_model(output)"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("RetainedSubtreeProps::new::<KernelApp>"));
+        assert!(!CHART_INTERACTIONS_EXAMPLE.contains("ChartCanvas::new_shared"));
         assert!(
             CHART_INTERACTIONS_EXAMPLE
                 .contains(".setup((shadcn::app::install, fret_icons_lucide::app::install))")
@@ -1296,19 +1285,39 @@ mod authoring_surface_policy_tests {
     }
 
     #[test]
-    fn retained_canvas_helpers_keep_raw_landing_seams() {
-        assert_intentional_raw_retained_seam(
-            CHART_INTERACTIONS_EXAMPLE,
-            &[
-                "fn chart_canvas(cx: &mut AppComponentCx<'_>, st: &ChartInteractionsWindowState) -> AnyElement",
-                "RetainedSubtreeProps::new::<KernelApp>",
-                "cx.cached_subtree_with(CachedSubtreeProps::default().contain_layout_when_bounds_known(true),",
-                "vec![cx.retained_subtree(props)]",
-            ],
-            &[
-                "fn chart_canvas(cx: &mut AppComponentCx<'_>, st: &ChartInteractionsWindowState) -> impl IntoUiElement<KernelApp>",
-            ],
-        );
+    fn chart_interactions_example_prefers_declarative_chart_panel() {
+        let normalized = CHART_INTERACTIONS_EXAMPLE
+            .split_whitespace()
+            .collect::<String>();
+        for marker in [
+            "fn chart_canvas(cx: &mut AppComponentCx<'_>, st: &ChartInteractionsWindowState) -> AnyElement",
+            "use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel_in};",
+            "cx.view_cache(ViewCacheProps::default().contain_layout_when_bounds_known(true),",
+            "ChartCanvasPanelProps::new(spec)",
+            ".output_model(output)",
+            ".input_map(fret_chart::input_map::ChartInputMap::default())",
+            ".accessibility_layer(true)",
+            ".test_id(TEST_ID_CANVAS)",
+            "props.engine = Some(engine);",
+            "vec![chart_canvas_panel_in(cx, props)]",
+        ] {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(normalized.contains(&marker), "missing marker: {marker}");
+        }
+        for legacy in [
+            "use fret_chart::ChartCanvas;",
+            "use fret_ui::retained_bridge::RetainedSubtreeProps;",
+            "RetainedSubtreeProps::new::<KernelApp>",
+            "UiTreeRetainedExt",
+            "ChartCanvas::new_shared",
+            "cx.retained_subtree(props)",
+        ] {
+            let legacy = legacy.split_whitespace().collect::<String>();
+            assert!(
+                !normalized.contains(&legacy),
+                "legacy retained chart marker still present: {legacy}"
+            );
+        }
     }
 
     #[test]
@@ -1657,7 +1666,7 @@ mod authoring_surface_policy_tests {
         cookbook_examples_limit_raw_shadcn_escape_hatches();
         cookbook_examples_use_unified_centered_page_helpers();
         utility_window_example_uses_ui_single_for_single_surface_shells();
-        retained_canvas_helpers_keep_raw_landing_seams();
+        chart_interactions_example_prefers_declarative_chart_panel();
     }
 
     #[test]

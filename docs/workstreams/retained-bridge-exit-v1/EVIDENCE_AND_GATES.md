@@ -11697,3 +11697,64 @@ Broader gates not run:
     check, internal source-policy test, full `fret-chart` package gate, focused Gallery chart
     integration/source gates, formatting, layering, catalog, whitespace, and merge-marker checks
     cover the changed surface.
+
+## 2026-05-22 - RBX-M3-070 Cookbook chart interactions use declarative panel
+
+Claim verified:
+
+- The cookbook chart interactions example no longer constructs retained `ChartCanvas` widgets
+  through `RetainedSubtreeProps` / `cx.retained_subtree(...)`.
+- The example now keeps its seeded `ChartEngine` in a `Model<ChartEngine>` and renders through
+  `ChartCanvasPanelProps` + `chart_canvas_panel_in(...)`.
+- App-owned zoom/reset/selection, the stable chart test id, default chart input map, accessibility
+  layer, and live hover selection still share the same chart engine that the panel renders.
+
+Evidence:
+
+- `apps/fret-cookbook/examples/chart_interactions_basics.rs`
+- `apps/fret-cookbook/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-cookbook --example chart_interactions_basics --features cookbook-chart`
+  - Result: passed.
+  - Scope proven: the cookbook chart interactions example compiles after moving from the retained
+    widget bridge to declarative `ChartCanvasPanelProps` with a shared engine/output model.
+- `cargo nextest run -p fret-cookbook --features cookbook-chart chart_interactions_example_prefers_declarative_chart_panel`
+  - Result: passed, 1 test.
+  - Scope proven: the cookbook source-policy gate requires `ChartCanvasPanelProps`,
+    `chart_canvas_panel_in(...)`, model-backed engine/output state, and rejects retained chart
+    authoring markers.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 43 tests, with the pre-existing `fret-ui`
+    `current_effective_opacity` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility baselines and retained chart
+    output/linking/tooltip/accessibility oracle tests remain green after migrating the cookbook
+    consumer.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after the cookbook chart migration.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid; `fret-chart`
+    intentionally remains on the retained bridge allowlist while deeper retained chart surfaces are
+    migrated.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "ChartCanvas::new_shared|RetainedSubtreeProps|UiTreeRetainedExt|cx\\.retained_subtree|retained_bridge|use fret_chart::ChartCanvas;|fret_chart::\\{ChartCanvas," apps/fret-cookbook/examples/chart_interactions_basics.rs`
+  - Result: no matches.
+  - Scope proven: the cookbook chart interactions example no longer contains retained chart widget
+    authoring markers.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-070` is a targeted cookbook chart consumer migration. The cookbook example
+    check, cookbook source-policy test, full `fret-chart` package gate, formatting, layering,
+    catalog, whitespace, and retained-marker scan cover the changed surface.
