@@ -3,10 +3,11 @@ mod primary;
 mod secondary;
 
 use super::*;
+use pointer_move_cx::PointerMoveCx;
 
 pub(super) fn dispatch_pointer_move_handlers<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl PointerMoveCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     buttons: fret_core::MouseButtons,

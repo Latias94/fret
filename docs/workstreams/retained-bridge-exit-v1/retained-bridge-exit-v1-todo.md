@@ -4295,6 +4295,32 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-860 Isolate top-level pointer-move route wrapper retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the top-level pointer-move dispatch wrapper off direct retained bridge Cx names now
+      that primary, secondary, overlay, and hover fallback branches are retained-agnostic.
+    - Introduce only a composed `PointerMoveCx` capability over existing branch seams, with no new
+      side-effect methods.
+    - Prove branch source-policy gates and representative pointer-move behavior stay green.
+  - Result:
+    - Added `PointerMoveCx` as a composition of `PrimaryPointerMoveCx`,
+      `SecondaryPointerMoveCx`, and `HoverMoveCx`.
+    - `pointer_move_dispatch.rs` now accepts `PointerMoveCx` instead of naming retained `EventCx`.
+    - Added `pointer_move_route_wrapper_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_route_wrapper_stays_off_retained_bridge) | test(pointer_move_primary_route_wrapper_stays_off_retained_bridge) | test(pointer_move_secondary_route_wrapper_stays_off_retained_bridge) | test(pointer_move_overlay_route_stays_off_retained_bridge) | test(pointer_move_hover_fallback_stays_off_retained_bridge) | test(node_drag_move_emits_on_node_drag) | test(edge_reconnect_requires_drag_threshold_before_starting_wire_drag) | test(searcher_pointer_move_updates_hover_and_invalidates_paint) | test(context_menu_top_level_pointer_move_updates_hover_and_invalidates_paint) | test(hover_fallback_updates_hover_edge_and_invalidates_paint_once) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_cx.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
