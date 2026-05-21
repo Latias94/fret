@@ -5,26 +5,30 @@ mod prelude;
 
 use prelude::*;
 
-pub(in super::super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(in super::super) fn handle_wire_drag_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: Modifiers,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: WireDragMoveCx<H>,
+{
     let Some(mut w) = canvas.interaction.wire_drag.take() else {
         return false;
     };
 
-    let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
+    let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
     auto_pan::update_wire_pos_and_auto_pan(canvas, cx, snapshot, position, &mut w);
 
     let pos = w.pos;
 
     bundle::maybe_extend_bundle_on_shift(
         canvas,
-        cx.app,
+        cx.host(),
         snapshot,
         modifiers,
         zoom,
@@ -38,7 +42,7 @@ pub(in super::super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddl
         hover::from_port_and_require_from_connectable_start(&w.kind);
     let new_hover = hover::pick_hover_port(
         canvas,
-        cx.app,
+        cx.host(),
         snapshot,
         geom.as_ref(),
         index.as_ref(),
@@ -49,7 +53,7 @@ pub(in super::super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddl
     );
     let new_hover_edge = hover::pick_hover_edge_if_no_hover_port(
         canvas,
-        cx.app,
+        cx.host(),
         snapshot,
         geom.as_ref(),
         index.as_ref(),
@@ -58,10 +62,10 @@ pub(in super::super) fn handle_wire_drag_move<H: UiHost, M: NodeGraphCanvasMiddl
         new_hover,
     );
     let (new_hover_valid, new_hover_diag) =
-        hover::compute_hover_validity_and_diag(canvas, cx.app, snapshot, &w.kind, new_hover);
+        hover::compute_hover_validity_and_diag(canvas, cx.host(), snapshot, &w.kind, new_hover);
     let new_hover_convertible = hover::compute_hover_convertible(
         canvas,
-        cx.app,
+        cx.host(),
         snapshot,
         &w.kind,
         new_hover,

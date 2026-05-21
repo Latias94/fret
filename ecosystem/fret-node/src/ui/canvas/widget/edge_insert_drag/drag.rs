@@ -3,11 +3,15 @@ mod tail;
 
 use super::prelude::*;
 
-pub(in super::super) fn handle_edge_insert_drag_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(in super::super) fn handle_edge_insert_drag_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     position: Point,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: WidgetPaintInvalidationCx<H>,
+{
     if !state::update_edge_insert_drag_position(&mut canvas.interaction, position) {
         return false;
     }

@@ -372,6 +372,8 @@ mod widget_surface;
 mod widget_tail;
 mod wire_drag;
 mod wire_drag_helpers;
+mod wire_drag_move_cx;
+mod wire_drag_move_retained_cx;
 mod wire_math;
 
 use edge_path_ctx::EdgePathContext;

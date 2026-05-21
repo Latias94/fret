@@ -10104,3 +10104,79 @@ Broader gates not run:
   - Reason: `RBX-M2-770` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-780 pointer-move primary connection retained Cx isolation
+
+Claim verified:
+
+- `pointer_move_dispatch/primary/connection.rs` no longer imports or names retained bridge Cx
+  types.
+- Pending and active wire-drag move handling now use the retained-agnostic `WireDragMoveCx`
+  capability for host access, bounds, and paint invalidation.
+- Retained `EventCx` adaptation is isolated in `wire_drag_move_retained_cx.rs`.
+- Pending and active edge-insert move helpers now use the existing `WidgetPaintInvalidationCx`
+  seam instead of retained `EventCx`.
+- The primary pointer-move wrapper remains retained-bound for a later route isolation slice, but
+  the surface, group, node, and connection branches now all have retained-agnostic seams.
+- Wire drag hover/threshold and pending edge-insert threshold behavior remain green through the
+  retained compatibility island.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pending_wire_drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag_move_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag_move_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/auto_pan.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/prelude.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pending.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pending/activate.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/prelude.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/connection.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving the primary
+    connection pointer-move route behind `WireDragMoveCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_primary_connection_route_stays_off_retained_bridge) | test(wire_drag_move_handlers_stay_off_retained_bridge) | test(edge_insert_move_handlers_stay_off_retained_bridge) | test(wire_drag_hover_marks_valid_target_port_as_valid) | test(wire_drag_hover_tracks_invalid_port_in_strict_mode) | test(connection_drag_threshold_is_zoom_invariant_in_screen_space) | test(edge_insert_drag_threshold_is_zoom_invariant_in_screen_space) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 8 tests.
+  - Scope proven: source-policy locks the primary connection pointer-move route, wire-drag move
+    helpers, and edge-insert move helpers off retained bridge Cx names; real wire-drag hover,
+    connection drag threshold, and edge-insert drag threshold behavior remain green.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/connection.rs ecosystem/fret-node/src/ui/canvas/widget/pending_wire_drag.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag_move_cx.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/mod.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/auto_pan.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/prelude.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pending.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pending/activate.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/prelude.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag/tail.rs`
+  - Result: no matches.
+  - Scope proven: the migrated connection pointer-move route and called wire/edge-insert move
+    helpers no longer depend on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after the pointer-move connection route
+    seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after isolating
+    the primary connection pointer-move route.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-780` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.

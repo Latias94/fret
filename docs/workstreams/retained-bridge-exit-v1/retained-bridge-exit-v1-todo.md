@@ -4025,6 +4025,46 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-780 Isolate pointer-move primary connection retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pending_wire_drag.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/wire_drag_move_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/wire_drag_move_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/auto_pan.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/prelude.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pending.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pending/activate.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/prelude.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/connection.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the primary connection pointer-move route off direct retained bridge Cx names by
+      introducing a narrow `WireDragMoveCx` capability for host, bounds, and paint invalidation.
+    - Keep retained `EventCx` adaptation isolated in `wire_drag_move_retained_cx.rs`.
+    - Move pending/active edge-insert move helpers onto the existing `WidgetPaintInvalidationCx`
+      seam because they only need paint invalidation.
+    - Prove wire drag hover/threshold and pending edge-insert threshold behavior remain green.
+  - Result:
+    - `pending_wire_drag.rs` and `wire_drag/move_update/**` now accept `WireDragMoveCx` instead of
+      naming retained `EventCx`.
+    - `edge_insert_drag/{drag,pending,pending/activate}.rs` now accept
+      `WidgetPaintInvalidationCx` instead of naming retained `EventCx`.
+    - `pointer_move_dispatch/primary/connection.rs` now accepts `WireDragMoveCx` and routes
+      pending wire drag plus pending edge-insert drag without retained Cx names.
+    - Added source-policy coverage for the primary connection route, wire-drag move helpers, and
+      edge-insert move helpers.
+  - Validation:
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_primary_connection_route_stays_off_retained_bridge) | test(wire_drag_move_handlers_stay_off_retained_bridge) | test(edge_insert_move_handlers_stay_off_retained_bridge) | test(wire_drag_hover_marks_valid_target_port_as_valid) | test(wire_drag_hover_tracks_invalid_port_in_strict_mode) | test(connection_drag_threshold_is_zoom_invariant_in_screen_space) | test(edge_insert_drag_threshold_is_zoom_invariant_in_screen_space) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch/primary/connection.rs ecosystem/fret-node/src/ui/canvas/widget/pending_wire_drag.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag_move_cx.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/mod.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/auto_pan.rs ecosystem/fret-node/src/ui/canvas/widget/wire_drag/move_update/prelude.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pending.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/pending/activate.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/prelude.rs ecosystem/fret-node/src/ui/canvas/widget/edge_insert_drag/drag/tail.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
