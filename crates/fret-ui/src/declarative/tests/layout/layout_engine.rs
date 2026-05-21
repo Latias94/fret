@@ -3134,6 +3134,136 @@ fn clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child() {
 }
 
 #[test]
+fn clean_geometry_small_resize_skips_items_start_vertical_flex_child() {
+    struct PrecomputeThenResize {
+        child: NodeId,
+        rect_a: Rect,
+        rect_b: Rect,
+        calls: u32,
+    }
+
+    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let rect = if self.calls == 0 {
+                cx.solve_barrier_child_root(self.child, self.rect_a);
+                self.rect_a
+            } else {
+                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
+                self.rect_b
+            };
+            self.calls = self.calls.saturating_add(1);
+
+            let _ = cx.layout_in(self.child, rect);
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let child = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-items-start-vertical-flex-child",
+        |cx| {
+            let flex = crate::element::FlexProps {
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                direction: fret_core::Axis::Vertical,
+                align: crate::element::CrossAlign::Start,
+                ..Default::default()
+            };
+
+            vec![cx.flex(flex, |cx| {
+                vec![cx.spacer(crate::element::SpacerProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Px(Px(24.0)),
+                            height: Length::Px(Px(18.0)),
+                            ..Default::default()
+                        },
+                        flex: crate::element::FlexItemStyle {
+                            shrink: 0.0,
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    min: Px(24.0),
+                })]
+            })]
+        },
+    );
+
+    let rect_a = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(180.0), Px(140.0)),
+    );
+    let rect_b = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(184.0), Px(140.0)),
+    );
+
+    let parent = ui.create_node(PrecomputeThenResize {
+        child,
+        rect_a,
+        rect_b,
+        calls: 0,
+    });
+    ui.set_children(parent, vec![child]);
+    ui.set_root(parent);
+
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+    let flex_node = ui.children(child)[0];
+    let spacer_node = ui.children(flex_node)[0];
+    let spacer_before = ui
+        .debug_node_bounds(spacer_node)
+        .expect("spacer bounds before");
+
+    app.advance_frame();
+    ui.invalidate(parent, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "items-start vertical flex should preserve fixed-width children across small parent width deltas"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_clean_geometry_solve_skip_rejections,
+        0,
+        "accepted items-start vertical flex geometry should not report rejection noise"
+    );
+    assert_eq!(
+        ui.debug_node_bounds(spacer_node)
+            .expect("spacer bounds after"),
+        spacer_before,
+        "items-start children should keep their previous cross-axis origin and width"
+    );
+}
+
+#[test]
 fn clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child() {
     struct PrecomputeThenResize {
         child: NodeId,

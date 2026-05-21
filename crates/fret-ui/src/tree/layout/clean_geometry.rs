@@ -1647,7 +1647,11 @@ impl<H: UiHost> UiTree<H> {
                 element_kind,
             ));
         }
-        if props.align != crate::element::CrossAlign::Stretch {
+        let align = props.align;
+        if !matches!(
+            align,
+            crate::element::CrossAlign::Stretch | crate::element::CrossAlign::Start
+        ) {
             return Err(CleanGeometrySolveSkipRejection::for_kind(
                 CleanGeometrySolveSkipRejectionReason::FlexCrossAlign,
                 element_kind,
@@ -1721,12 +1725,18 @@ impl<H: UiHost> UiTree<H> {
                 .bounds;
             let local_x = prev_child.origin.x.0 - prev_bounds.origin.x.0;
             let local_y = prev_child.origin.y.0 - prev_bounds.origin.y.0;
-            let width = if (prev_child.size.width.0 - prev_inner_width).abs() <= 0.01
-                || matches!(child_style.size.width, crate::element::Length::Fill)
-            {
-                Px(next_inner_width)
-            } else {
-                prev_child.size.width
+            let width = match align {
+                crate::element::CrossAlign::Stretch => {
+                    if (prev_child.size.width.0 - prev_inner_width).abs() <= 0.01
+                        || matches!(child_style.size.width, crate::element::Length::Fill)
+                    {
+                        Px(next_inner_width)
+                    } else {
+                        prev_child.size.width
+                    }
+                }
+                crate::element::CrossAlign::Start => prev_child.size.width,
+                _ => unreachable!("unsupported vertical flex cross-axis alignment rejected above"),
             };
             out.push((
                 child,

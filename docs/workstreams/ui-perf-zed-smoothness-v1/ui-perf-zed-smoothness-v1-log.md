@@ -15968,3 +15968,43 @@ Post-fix evidence:
 - r5 top frames: `text_wrap_not_none` no longer appears; the next rejection is `flex_cross_align` on the preview
   card/content path. Layout sum dropped to `7892us`, p95 layout to `1115us`, and p95 engine solve to `403us`.
 - Next slice should investigate the `flex_cross_align` owner before widening any more text layout contracts.
+
+## 2026-05-21 17:30:59 +08:00 (items-start vertical flex resize propagation)
+
+Question:
+- Can clean geometry accept the r5 `flex_cross_align` owner without changing shadcn `CardContent` from
+  `items-start` to stretch?
+
+Finding:
+- `CardContent` intentionally maps to `VStackProps::default().items_start()` so inline-sized children are not stretched
+  by recipe policy.
+- The existing clean-geometry vertical flex width-delta path only accepted `CrossAlign::Stretch`, so an otherwise stable
+  width-only resize still fell back to a layout-engine solve when the flex container used `CrossAlign::Start`.
+- `CrossAlign::Start` has a narrow stable case: vertical, no-wrap flex with unchanged height can keep each child at its
+  previous cross-axis origin and width while reusing the existing main-axis propagation rules.
+
+Change:
+- Clean geometry now accepts `CrossAlign::Start` for the existing vertical flex width-delta propagation path, preserving
+  child widths instead of stretching them to the new inner width.
+- Center/end and other unsupported cross-axis alignments still reject with `flex_cross_align`.
+- Added a focused test proving an `items-start` vertical flex child skips the solve and preserves child bounds, while
+  the existing center-aligned rejection test still covers the unsafe alignment case.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui clean_geometry_small_resize_skips_items_start_vertical_flex_child clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child --no-fail-fast
+cargo nextest run -p fret-ui clean_geometry_small_resize_skips_items_start_vertical_flex_child clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r6 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+git diff --check
+```
+
+Post-fix evidence:
+- Rerun bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r6/sessions/1779355767908-199780/1779355792904-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r6 top frames no longer report `flex_cross_align`; the first remaining clean-geometry rejection is `non_px_margin`
+  on a `Flex` node.
+- r6 summary from `diag stats --sort time --top 20 --json`: layout sum `6659us`, p95 layout `1054us`, and p95 engine
+  solve `358us`.
+- Next slice should investigate `non_px_margin` before broadening margin handling or contained-root propagation.

@@ -296,10 +296,13 @@ not update checked-in baselines.
     - Follow-up fix: `TextWrap::Word + Clip + Start` now has a narrow clean-geometry proof for width shrink steps when
       the previous measured line width still fits inside the new max width. The text-measure rerun no longer reports
       `text_wrap_not_none`; the next owner is `flex_cross_align` on the preview card/content path.
+    - Follow-up fix: vertical, no-wrap `CrossAlign::Start` flex containers now reuse clean geometry for width-only
+      deltas by preserving child cross-axis origin and width. The r6 text-measure rerun no longer reports
+      `flex_cross_align`; the next owner is `non_px_margin` on a `Flex` node.
   - [ ] Reduce the remaining resize-jitter changing-bounds layout/root solve cost without weakening scroll extent
     correctness.
     - Candidate: a contained-root apply/solve path that handles bounds-only changes after the cache-root remains reused,
-      informed by the current `flex_cross_align` clean-geometry solve-skip rejection.
+      informed by the current `non_px_margin` clean-geometry solve-skip rejection.
     - Required proof: one focused Rust gate plus a repeat=3 resize-jitter bundle preserving the row replay/store and
       view-cache reuse invariants above.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
