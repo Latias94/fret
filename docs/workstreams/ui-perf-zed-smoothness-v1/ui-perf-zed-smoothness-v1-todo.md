@@ -290,6 +290,9 @@ not update checked-in baselines.
       `cargo fmt -p fret-ui --check`.
     - Decision: this closes the safe single-line ellipsis subcase only. `TextWrap::Word` remains intentionally rejected
       until a line-break-stability proof exists for the exact width delta and text content.
+    - Follow-up evidence: the current `gallery-dev` text-measure resize rerun showed the single-line header copy no
+      longer rejected clean geometry with `text_fingerprint_mismatch`; remaining top-frame rejections are
+      `text_reflow/text_wrap_not_none` on the preview card header path.
   - [ ] Reduce the remaining resize-jitter changing-bounds layout/root solve cost without weakening scroll extent
     correctness.
     - Candidate: a contained-root apply/solve path that handles bounds-only changes after the cache-root remains reused,

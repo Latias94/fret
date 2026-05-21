@@ -15886,3 +15886,45 @@ git diff --check
 Decision:
 - Keep this slice attribution-only. `TextWrap::Word` remains rejected from clean-geometry solve skipping until the text
   layer exposes a line-break or measured-height-stability proof.
+
+## 2026-05-21 16:07:37 +08:00 (content-stable nowrap text measure fingerprints)
+
+Question:
+- Why did the current text-measure resize rerun still report a clean-geometry `text_reflow/text_fingerprint_mismatch`
+  rejection on `ui-gallery-content-header-copy` after the single-line ellipsis case was allowed?
+
+Finding:
+- The wrap-none text measure cache fingerprint mixed the `Arc<str>` allocation address and length, not the text bytes.
+  Gallery header copy rebuilds can produce a distinct `Arc<str>` allocation for the same content, so clean geometry
+  conservatively rejected the cached single-line metrics even when the measured text content and style were stable.
+- The same pointer-based fingerprint also left a theoretical same-length false-positive risk for rebuilt text if an
+  allocator reused an address for different content.
+- Rerun before the fix:
+  `target/fret-diag/text-clean-geometry-current-20260521-r3/sessions/1779349055563-188588/1779349083805-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+  Top frames each reported two clean-geometry rejections: `ui-gallery-content-header-copy` with
+  `text_reflow/text_fingerprint_mismatch`, and the preview card header with `text_reflow/text_wrap_not_none`.
+
+Change:
+- `text_wrap_none_measure_fingerprint_plain` and `text_wrap_none_measure_fingerprint_rich` now mix the text bytes
+  instead of the `Arc<str>` pointer address.
+- Added tests proving rebuilt same-content plain/rich text has the same wrap-none fingerprint, while same-length
+  different content still changes the fingerprint.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui nowrap_measure_fingerprint --no-fail-fast
+cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast
+cargo nextest run -p fret-ui clean_geometry_skip nowrap_measure_fingerprint --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r4 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+git diff --check
+```
+
+Post-fix evidence:
+- Rerun bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r4/sessions/1779350759019-115264/1779350782758-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- Top clean-geometry rejections dropped from two per slow frame to one per slow frame. The remaining first detail is
+  `text_wrap_not_none`; `text_fingerprint_mismatch` no longer appears in the top-frame rejecting solves.
+- The remaining rejection is still the intentionally blocked wrapped-text owner and should not be bypassed until text
+  layout exposes a line-break or measured-height-stability proof.

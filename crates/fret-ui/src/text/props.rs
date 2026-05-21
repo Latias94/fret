@@ -60,8 +60,7 @@ pub(crate) fn text_wrap_none_measure_fingerprint_plain(
 ) -> u64 {
     let mut state = 0u64;
     state = mix_u64(state, 1);
-    state = mix_u64(state, text.as_ref().as_ptr() as usize as u64);
-    state = mix_u64(state, text.len() as u64);
+    state = mix_bytes(state, text.as_bytes());
     state = mix_u64(state, font_stack_key);
     state = mix_f32(state, scale_factor);
     state = mix_text_wrap(state, TextWrap::None);
@@ -81,8 +80,7 @@ pub(crate) fn text_wrap_none_measure_fingerprint_rich(
 ) -> u64 {
     let mut state = 0u64;
     state = mix_u64(state, 2);
-    state = mix_u64(state, rich.text.as_ref().as_ptr() as usize as u64);
-    state = mix_u64(state, rich.text.len() as u64);
+    state = mix_bytes(state, rich.text.as_bytes());
     state = mix_u64(state, spans_shaping_fingerprint(rich.spans.as_ref()));
     state = mix_u64(state, font_stack_key);
     state = mix_f32(state, scale_factor);
@@ -517,6 +515,126 @@ mod tests {
             text_style_refinement_fingerprint(&first),
             text_style_refinement_fingerprint(&second),
             "inherited shaping axes must participate in text measurement/cache fingerprints"
+        );
+    }
+
+    #[test]
+    fn nowrap_measure_fingerprint_is_content_stable_for_rebuilt_plain_text() {
+        let theme = dummy_theme_snapshot();
+        let style = default_text_style(theme);
+        let first = std::sync::Arc::<str>::from(String::from("status"));
+        let second = std::sync::Arc::<str>::from(String::from("status"));
+        let different_same_len = std::sync::Arc::<str>::from(String::from("state!"));
+
+        assert_ne!(
+            first.as_ptr(),
+            second.as_ptr(),
+            "test must use distinct Arc allocations to prove pointer identity is not part of the fingerprint"
+        );
+        assert_eq!(
+            text_wrap_none_measure_fingerprint_plain(
+                &first,
+                &style,
+                TextOverflow::Ellipsis,
+                TextAlign::Start,
+                1.0,
+                0,
+            ),
+            text_wrap_none_measure_fingerprint_plain(
+                &second,
+                &style,
+                TextOverflow::Ellipsis,
+                TextAlign::Start,
+                1.0,
+                0,
+            )
+        );
+        assert_ne!(
+            text_wrap_none_measure_fingerprint_plain(
+                &first,
+                &style,
+                TextOverflow::Ellipsis,
+                TextAlign::Start,
+                1.0,
+                0,
+            ),
+            text_wrap_none_measure_fingerprint_plain(
+                &different_same_len,
+                &style,
+                TextOverflow::Ellipsis,
+                TextAlign::Start,
+                1.0,
+                0,
+            )
+        );
+    }
+
+    #[test]
+    fn nowrap_measure_fingerprint_is_content_stable_for_rebuilt_rich_text() {
+        let theme = dummy_theme_snapshot();
+        let style = default_text_style(theme);
+        let first = AttributedText::new(
+            std::sync::Arc::<str>::from(String::from("status")),
+            [TextSpan {
+                len: "status".len(),
+                ..Default::default()
+            }],
+        );
+        let second = AttributedText::new(
+            std::sync::Arc::<str>::from(String::from("status")),
+            [TextSpan {
+                len: "status".len(),
+                ..Default::default()
+            }],
+        );
+        let different_same_len = AttributedText::new(
+            std::sync::Arc::<str>::from(String::from("state!")),
+            [TextSpan {
+                len: "state!".len(),
+                ..Default::default()
+            }],
+        );
+
+        assert_ne!(
+            first.text.as_ptr(),
+            second.text.as_ptr(),
+            "test must use distinct Arc allocations to prove pointer identity is not part of the fingerprint"
+        );
+        assert_eq!(
+            text_wrap_none_measure_fingerprint_rich(
+                &first,
+                &style,
+                TextOverflow::Ellipsis,
+                TextAlign::Start,
+                1.0,
+                0,
+            ),
+            text_wrap_none_measure_fingerprint_rich(
+                &second,
+                &style,
+                TextOverflow::Ellipsis,
+                TextAlign::Start,
+                1.0,
+                0,
+            )
+        );
+        assert_ne!(
+            text_wrap_none_measure_fingerprint_rich(
+                &first,
+                &style,
+                TextOverflow::Ellipsis,
+                TextAlign::Start,
+                1.0,
+                0,
+            ),
+            text_wrap_none_measure_fingerprint_rich(
+                &different_same_len,
+                &style,
+                TextOverflow::Ellipsis,
+                TextAlign::Start,
+                1.0,
+                0,
+            )
         );
     }
 }
