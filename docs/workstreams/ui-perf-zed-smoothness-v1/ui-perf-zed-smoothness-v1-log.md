@@ -16137,3 +16137,60 @@ Post-fix evidence:
 - r10 `diag stats --sort cpu_cycles --top 30` reports sampled top frames with `inv.calls=0` and `inv.nodes=0`.
 - This should be treated as a correctness and repair-invalidation fix. Do not claim a broad p95 win from this single
   run; the next local owner remains request-build/layout-roots/paint timing with repeat confirmation.
+
+## 2026-05-21 23:58:00 +08:00 (fixed flex resize and origin-only clean geometry)
+
+Question:
+- After the chrome title repair removed the repeated layout invalidation walk, why did the text-measure resize repro
+  still show a clean-geometry solve on the theme preset Select trigger?
+
+Finding:
+- r11 proved the outer presets row was safe after allowing fixed-px, default-shrink horizontal flex children while
+  positive free space remained. The remaining owner moved down to `ui-gallery-theme-preset-trigger.chrome` with
+  `flex_item_sizing`.
+- r12 changed the trigger's inner flex from `SpaceBetween` to `Start`; r13 also made the chevron opacity wrapper a
+  fixed `16x16` non-shrinking flex item. Both were useful recipe corrections, but neither alone removed the same
+  `ui-gallery-theme-preset-trigger.chrome` rejection.
+- The missing mechanism was origin-only propagation: an outer grow item can absorb the width delta and move a fixed-size
+  trigger left/right without changing the trigger or its descendants' sizes. Re-proving the nested trigger's internal
+  grow/fixed split under a width delta was unnecessary and too strict.
+
+Change:
+- Clean geometry now accepts fixed-px horizontal flex children with default `flex-shrink` only while the next line
+  extent still fits the next inner width; once free space goes negative it still rejects and solves.
+- Clean geometry now propagates child bounds by translating previous child rects when a pure subtree's own size is
+  unchanged and only its origin changes.
+- The shadcn Select trigger now uses `justify: Start` and gives the chevron opacity wrapper an explicit fixed-size,
+  non-shrinking layout.
+- Added focused tests for the accepted positive-free-space fixed flex case, the rejected negative-free-space case, and
+  the nested fixed-size trigger origin-only move.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo nextest run -p fret-ui clean_geometry_skips_default_shrink_fixed_px_horizontal_flex_with_free_space clean_geometry_rejects_default_shrink_fixed_px_horizontal_flex_without_free_space clean_geometry_skips_nested_fixed_size_horizontal_flex_origin_only_move --no-fail-fast
+cargo check -p fret-ui-shadcn
+cargo fmt -p fret-ui --check
+cargo fmt -p fret-ui-shadcn --check
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r14 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r14\sessions\1779381598567-198224\1779381628889-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+git diff --check
+```
+
+Notes:
+- Focused `fret-ui-shadcn` test-binary builds timed out on this Windows session, so the shadcn-side gate for this slice
+  is `cargo check -p fret-ui-shadcn` plus the runtime gallery diag repro.
+- `cargo check` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Post-fix evidence:
+- r14 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r14/sessions/1779381598567-198224/1779381628889-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r14 `diag stats --sort time --top 12` reports p50/p95 total `91/1223us`, layout `26/672us`, and
+  `hot p50/p95 layout.engine_solve=0/0`.
+- Top resize ticks `325/328/331` have `layout.solve_us=0`, `layout.nodes=3`, `clean_rejections=0`, and
+  `inv.calls=0` / `inv.nodes=0`, with no `solve_rejection` and no rejecting `test_id`.
+- Treat this as closing the current clean-geometry rejection owner on the local text-measure resize repro. The next
+  measured owner is the remaining `layout.nodes=3` and paint-cache/text width-change work; do not broaden this into a
+  perf-baseline claim until repeat=3 resize evidence confirms the shape.

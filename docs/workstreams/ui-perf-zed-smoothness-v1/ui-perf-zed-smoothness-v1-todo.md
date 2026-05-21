@@ -327,8 +327,36 @@ not update checked-in baselines.
     - Candidate: a contained-root apply/solve path that handles bounds-only changes after the cache-root remains reused,
       informed by r8's lack of top-frame clean-geometry solve-skip rejections and by the remaining
       `layout_request_build_roots_time_us`, `layout_roots_time_us`, and paint timing.
+    - [x] Remove the Select trigger / presets clean-geometry solve owner from the text-measure resize repro.
+      - r11 finding: after the chrome title height repair, the outer presets row could be proven as a horizontal
+        fixed/default-shrink flex row while positive free space remained, moving the remaining `flex_item_sizing`
+        owner down to `ui-gallery-theme-preset-trigger.chrome`.
+      - r12/r13 negative evidence: changing the trigger flex from `SpaceBetween` to `Start`, then giving the chevron
+        opacity wrapper an explicit `16x16` non-shrinking layout, still left the same Select trigger
+        `flex_item_sizing` owner.
+      - Mechanism fix: clean geometry now accepts fixed-px, default-shrink horizontal flex items only while line extent
+        still fits the next inner width, and propagates origin-only child geometry through pure fixed-size subtrees.
+      - Recipe fix: the shadcn Select trigger now uses `justify: Start` plus a fixed-layout chevron opacity wrapper, so
+        the recipe exposes the geometry shape the core proof can validate.
+      - Focused gates:
+        `cargo check -p fret-ui --lib`;
+        `cargo nextest run -p fret-ui clean_geometry_skips_default_shrink_fixed_px_horizontal_flex_with_free_space clean_geometry_rejects_default_shrink_fixed_px_horizontal_flex_without_free_space clean_geometry_skips_nested_fixed_size_horizontal_flex_origin_only_move --no-fail-fast`;
+        `cargo check -p fret-ui-shadcn`;
+        `cargo fmt -p fret-ui --check`;
+        `cargo fmt -p fret-ui-shadcn --check`;
+        `cargo build -p fret-ui-gallery --features gallery-dev`;
+        `git diff --check`.
+      - Evidence: r14 bundle
+        `target/fret-diag/text-clean-geometry-current-20260521-r14/sessions/1779381598567-198224/1779381628889-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+        reports p50/p95 `layout.engine_solve=0/0`; top resize ticks `325/328/331` have `layout.solve_us=0`,
+        `clean_rejections=0`, and `inv.calls=0` / `inv.nodes=0`.
+      - Note: focused `fret-ui-shadcn` test-binary builds timed out on this Windows session, so this slice uses
+        `cargo check -p fret-ui-shadcn` plus the runtime r14 gallery repro as the shadcn-side gate.
     - Required proof: one focused Rust gate plus a repeat=3 resize-jitter bundle preserving the row replay/store and
       view-cache reuse invariants above.
+    - Next confirmation: run a repeat=3 resize-jitter confirmation before promoting this from a local smoke to a
+      broader resize-smoothness claim, then attribute the remaining r14 `layout.nodes=3` and paint cache misses rather
+      than chasing another clean-geometry rejection owner.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
     Windows RTX4090 evidence.
 

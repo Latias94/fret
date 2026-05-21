@@ -391,7 +391,7 @@ impl<H: UiHost> UiTree<H> {
                 CleanGeometrySolveSkipRejectionReason::NotInteractiveResizeSmallStep,
             ));
         }
-        if prev_bounds == bounds || prev_bounds.size == bounds.size {
+        if prev_bounds == bounds {
             return CleanGeometrySolveSkipDecision::Rejected(CleanGeometrySolveSkipRejection::new(
                 CleanGeometrySolveSkipRejectionReason::NoSizeDelta,
             ));
@@ -408,6 +408,9 @@ impl<H: UiHost> UiTree<H> {
         };
         if let Err(rejection) = self.clean_geometry_node_clean_result(root) {
             return CleanGeometrySolveSkipDecision::Rejected(rejection.at_node_if_missing(root));
+        }
+        if Self::clean_size_matches(prev_bounds.size, bounds.size) {
+            return CleanGeometrySolveSkipDecision::Supported;
         }
         match self.clean_manual_geometry_subtree_supported_checked(
             app,
@@ -719,6 +722,9 @@ impl<H: UiHost> UiTree<H> {
                 )
                 .at_node(node));
             }
+        }
+        if Self::clean_size_matches(prev_bounds.size, bounds.size) {
+            return self.clean_origin_only_child_bounds_checked(children, bounds, prev_bounds);
         }
         match contract.size_stability {
             CleanGeometryWidthDeltaSizeStability::Propagated => {}
@@ -1344,6 +1350,40 @@ impl<H: UiHost> UiTree<H> {
         Ok(out)
     }
 
+    fn clean_origin_only_child_bounds_checked(
+        &self,
+        children: &[NodeId],
+        bounds: Rect,
+        prev_bounds: Rect,
+    ) -> Result<Vec<(NodeId, Rect)>, CleanGeometrySolveSkipRejection> {
+        let dx = bounds.origin.x.0 - prev_bounds.origin.x.0;
+        let dy = bounds.origin.y.0 - prev_bounds.origin.y.0;
+        let mut out = Vec::with_capacity(children.len());
+        for &child in children {
+            let prev_child = self
+                .nodes
+                .get(child)
+                .ok_or_else(|| {
+                    CleanGeometrySolveSkipRejection::new(
+                        CleanGeometrySolveSkipRejectionReason::MissingNode,
+                    )
+                    .at_node(child)
+                })?
+                .bounds;
+            out.push((
+                child,
+                Rect::new(
+                    Point::new(
+                        Px(prev_child.origin.x.0 + dx),
+                        Px(prev_child.origin.y.0 + dy),
+                    ),
+                    prev_child.size,
+                ),
+            ));
+        }
+        Ok(out)
+    }
+
     fn clean_absolute_px_inset_child_bounds(
         child_style: crate::element::LayoutStyle,
         containing_bounds: Rect,
@@ -1902,6 +1942,9 @@ impl<H: UiHost> UiTree<H> {
         let mut out = Vec::with_capacity(children.len());
         let mut width_offset_after_flexible = 0.0;
         let mut flexible_children = 0usize;
+        let mut preserved_shrink_children = 0usize;
+        let mut next_line_extent = 0.0f32;
+        let mut all_margins_non_negative = true;
         for &child in children {
             let child_style = crate::declarative::frame::layout_style_for_node(app, window, child);
             if child_style.position != crate::element::PositionStyle::Static {
@@ -1916,6 +1959,8 @@ impl<H: UiHost> UiTree<H> {
                     element_kind,
                 ));
             }
+            all_margins_non_negative &=
+                Self::clean_margin_edges_are_non_negative_px(child_style.margin);
             Self::clean_child_height_style_supported_for_width_delta(child_style, element_kind)?;
 
             let prev_child = self
@@ -1953,17 +1998,30 @@ impl<H: UiHost> UiTree<H> {
                 width_offset_after_flexible += next_width.0 - prev_child.size.width.0;
                 next_width
             } else {
-                Self::clean_horizontal_fixed_flex_item_supported(
+                let fixed_item_supported = Self::clean_horizontal_fixed_flex_item_supported(
                     child_style,
                     prev_child.size.width,
                     element_kind,
-                )?;
+                )
+                .is_ok();
+                if !fixed_item_supported {
+                    Self::clean_horizontal_preserved_px_flex_item_supported(
+                        child_style,
+                        prev_child.size.width,
+                        element_kind,
+                    )?;
+                    preserved_shrink_children = preserved_shrink_children.saturating_add(1);
+                }
                 prev_child.size.width
             };
             let local_x = prev_child.origin.x.0 - prev_bounds.origin.x.0;
             let local_y = prev_child.origin.y.0 - prev_bounds.origin.y.0;
             let x = bounds.origin.x.0 + local_x + width_offset_after_flexible
                 - (next_width.0 - prev_child.size.width.0);
+            if let crate::element::MarginEdge::Px(margin_right) = child_style.margin.right {
+                next_line_extent = next_line_extent
+                    .max(x - bounds.origin.x.0 - pad_left + next_width.0 + margin_right.0);
+            }
             let height = if (prev_child.size.height.0
                 - (prev_bounds.size.height.0 - pad_top - pad_bottom).max(0.0))
             .abs()
@@ -1980,6 +2038,15 @@ impl<H: UiHost> UiTree<H> {
                     Point::new(Px(x), Px(bounds.origin.y.0 + local_y)),
                     Size::new(next_width, height),
                 ),
+            ));
+        }
+
+        if preserved_shrink_children > 0
+            && (!all_margins_non_negative || next_line_extent > next_inner_width + 0.01)
+        {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FlexItemSizing,
+                element_kind,
             ));
         }
 
@@ -2302,6 +2369,65 @@ impl<H: UiHost> UiTree<H> {
         Self::clean_child_width_style_supported_for_width_delta(child_style, element_kind)
     }
 
+    fn clean_horizontal_preserved_px_flex_item_supported(
+        child_style: crate::element::LayoutStyle,
+        prev_width: Px,
+        element_kind: &'static str,
+    ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        if child_style.flex.order != 0
+            || child_style.flex.grow.abs() > 0.01
+            || !child_style.flex.shrink.is_finite()
+            || child_style.flex.shrink < -0.01
+            || !matches!(child_style.flex.basis, crate::element::Length::Auto)
+            || child_style.flex.align_self.is_some()
+        {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FlexItemSizing,
+                element_kind,
+            ));
+        }
+
+        let crate::element::Length::Px(mut resolved_width) = child_style.size.width else {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FlexItemSizing,
+                element_kind,
+            ));
+        };
+        resolved_width = Px(resolved_width.0.max(0.0));
+        match child_style.size.min_width {
+            Some(crate::element::Length::Px(px)) => {
+                resolved_width = Px(resolved_width.0.max(px.0.max(0.0)));
+            }
+            Some(crate::element::Length::Auto) | None => {}
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                    element_kind,
+                ));
+            }
+        }
+        match child_style.size.max_width {
+            Some(crate::element::Length::Px(px)) => {
+                resolved_width = Px(resolved_width.0.min(px.0.max(0.0)));
+            }
+            Some(crate::element::Length::Auto) | None => {}
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                    element_kind,
+                ));
+            }
+        }
+        if (prev_width.0 - resolved_width.0).abs() > 0.01 {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FlexItemSizing,
+                element_kind,
+            ));
+        }
+
+        Ok(())
+    }
+
     fn clean_child_width_constraints_allow_preserved_width(
         child_style: crate::element::LayoutStyle,
         prev_width: Px,
@@ -2425,6 +2551,14 @@ impl<H: UiHost> UiTree<H> {
             && matches!(margin.right, crate::element::MarginEdge::Px(_))
             && matches!(margin.top, crate::element::MarginEdge::Px(_))
             && matches!(margin.bottom, crate::element::MarginEdge::Px(_))
+    }
+
+    fn clean_margin_edges_are_non_negative_px(margin: crate::element::MarginEdges) -> bool {
+        let is_non_negative = |edge: crate::element::MarginEdge| matches!(edge, crate::element::MarginEdge::Px(px) if px.0 >= -0.01);
+        is_non_negative(margin.left)
+            && is_non_negative(margin.right)
+            && is_non_negative(margin.top)
+            && is_non_negative(margin.bottom)
     }
 
     fn clean_margin_edges_are_zero_px(margin: crate::element::MarginEdges) -> bool {

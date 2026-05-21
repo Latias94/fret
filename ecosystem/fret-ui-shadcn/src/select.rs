@@ -11,8 +11,8 @@ use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
-    Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps, ScrollAxis,
-    ScrollProps, SemanticsDecoration, SemanticsProps, WheelRegionProps,
+    OpacityProps, Overflow, PointerRegionProps, PositionStyle, PressableA11y, PressableProps,
+    ScrollAxis, ScrollProps, SemanticsDecoration, SemanticsProps, WheelRegionProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::overlay_placement::{Align, Side};
@@ -4710,7 +4710,7 @@ fn select_impl<H: UiHost>(
                         direction: fret_core::Axis::Horizontal,
                         gap: MetricRef::space(trigger_gap).resolve(&theme).into(),
                         padding: Edges::all(Px(0.0)).into(),
-                        justify: MainAlign::SpaceBetween,
+                        justify: MainAlign::Start,
                         align: CrossAlign::Center,
                         wrap: false,
                     },
@@ -4825,7 +4825,16 @@ fn select_impl<H: UiHost>(
 
                                 value_node
                             };
-                        let chevron = cx.opacity(trigger_chevron_opacity, |cx| {
+                        let mut chevron_layout = LayoutStyle::default();
+                        chevron_layout.size.width = Length::Px(trigger_chevron_size);
+                        chevron_layout.size.height = Length::Px(trigger_chevron_size);
+                        chevron_layout.flex.shrink = 0.0;
+                        let chevron = cx.opacity_props(
+                            OpacityProps {
+                                layout: chevron_layout,
+                                opacity: trigger_chevron_opacity,
+                            },
+                            |cx| {
                                 vec![attach_test_id_suffix(
                                     decl_icon::icon_with(
                                         cx,
@@ -4836,13 +4845,14 @@ fn select_impl<H: UiHost>(
                                     test_id_prefix_for_trigger.as_ref(),
                                     "icon",
                                 )]
-                            });
+                            },
+                        );
 
-	                        let (a, b) = crate::rtl::inline_start_end_pair(dir, value_node, chevron);
-	                        vec![a, b]
-	                    },
-	                )]
-	            };
+                        let (a, b) = crate::rtl::inline_start_end_pair(dir, value_node, chevron);
+                        vec![a, b]
+                    },
+                )]
+            };
 
             (props, chrome, content)
         })
@@ -4961,9 +4971,23 @@ mod tests {
             }
         }
 
+        fn find_first_opacity(el: &AnyElement) -> Option<&fret_ui::element::OpacityProps> {
+            match &el.kind {
+                ElementKind::Opacity(props) => Some(props),
+                _ => el.children.iter().find_map(|c| find_first_opacity(c)),
+            }
+        }
+
         let flex = find_first_flex(chrome_el).expect("select trigger chrome flex");
         let expected_gap = MetricRef::space(Space::N2).resolve(&theme);
         assert_eq!(flex.gap, SpacingLength::Px(expected_gap));
+        assert_eq!(flex.justify, MainAlign::Start);
+
+        let chevron_opacity =
+            find_first_opacity(chrome_el).expect("select trigger chevron opacity wrapper");
+        assert_eq!(chevron_opacity.layout.size.width, Length::Px(Px(16.0)));
+        assert_eq!(chevron_opacity.layout.size.height, Length::Px(Px(16.0)));
+        assert_eq!(chevron_opacity.layout.flex.shrink, 0.0);
     }
 
     #[test]
