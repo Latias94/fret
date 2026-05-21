@@ -25,15 +25,11 @@ fn source_item(
     filename: &'static str,
     test_id: &'static str,
 ) -> ui_ai::PromptInputCommandItem {
+    let muted_foreground = cx.theme().color_token("muted-foreground");
     let text = ui::v_flex(move |cx| {
         vec![
             decl_text::text_list_row_label(cx, title),
-            decl_text::text_code_label(cx, filename).inherit_foreground(
-                fret_ui_kit::ColorRef::Token {
-                    key: "muted-foreground",
-                    fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                },
-            ),
+            decl_text::text_code_label(cx, filename).inherit_foreground(muted_foreground),
         ]
     })
     .gap(Space::N0p5)
@@ -53,13 +49,16 @@ fn path_item(
 ) -> ui_ai::PromptInputTabItem {
     ui_ai::PromptInputTabItem::new([
         decl_icon::icon(cx, IconId::new("lucide.globe")),
-        decl_text::text_code_label(cx, path).layout(LayoutRefinement::default().min_w_0().flex_1()),
+        ui::h_flex(move |cx| vec![decl_text::text_code_label(cx, path)])
+            .layout(LayoutRefinement::default().min_w_0().flex_1())
+            .into_element(cx),
     ])
     .test_id(test_id)
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let on_submit: ui_ai::OnPromptInputSubmit = Arc::new(|_host, _action_cx, _message, _reason| {});
+    let muted_foreground = cx.theme().color_token("muted-foreground");
 
     let files_menu = ui_ai::PromptInputCommand::new()
         .input(
@@ -78,12 +77,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             .children([
                                 decl_icon::icon(cx, IconId::new("lucide.globe")),
                                 decl_text::text_list_row_label(cx, "Active Tabs"),
-                                decl_text::text_control_readout(cx, "✓")
-                                    .layout(LayoutRefinement::default().ml_auto())
-                                    .inherit_foreground(fret_ui_kit::ColorRef::Token {
-                                        key: "muted-foreground",
-                                        fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                                    }),
+                                ui::h_flex(move |cx| {
+                                    vec![
+                                        decl_text::text_control_readout(cx, "✓")
+                                            .inherit_foreground(muted_foreground),
+                                    ]
+                                })
+                                .layout(LayoutRefinement::default().ml_auto())
+                                .into_element(cx),
                             ]),
                     ),
                 )
@@ -114,18 +115,18 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             ui::v_flex(move |cx| {
                 vec![
                     decl_text::text_section_chrome_label(cx, "Attached Project Rules")
-                        .inherit_foreground(fret_ui_kit::ColorRef::Token {
-                            key: "muted-foreground",
-                            fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                        }),
-                    decl_text::text_control_readout(cx, "Always Apply:")
-                        .inherit_foreground(fret_ui_kit::ColorRef::Token {
-                            key: "muted-foreground",
-                            fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                        })
-                        .layout(LayoutRefinement::default().ml(Space::N4)),
-                    decl_text::text_code_label(cx, "ultracite.mdc")
-                        .layout(LayoutRefinement::default().ml(Space::N8)),
+                        .inherit_foreground(muted_foreground),
+                    ui::h_flex(move |cx| {
+                        vec![
+                            decl_text::text_control_readout(cx, "Always Apply:")
+                                .inherit_foreground(muted_foreground),
+                        ]
+                    })
+                    .layout(LayoutRefinement::default().ml(Space::N4))
+                    .into_element(cx),
+                    ui::h_flex(move |cx| vec![decl_text::text_code_label(cx, "ultracite.mdc")])
+                        .layout(LayoutRefinement::default().ml(Space::N8))
+                        .into_element(cx),
                 ]
             })
             .gap(Space::N2)
@@ -134,12 +135,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::Separator::new().into_element(cx),
             ui::h_flex(move |cx| {
                 vec![
-                    decl_text::text_control_readout(cx, "Click to manage").inherit_foreground(
-                        fret_ui_kit::ColorRef::Token {
-                            key: "muted-foreground",
-                            fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                        },
-                    ),
+                    decl_text::text_control_readout(cx, "Click to manage")
+                        .inherit_foreground(muted_foreground),
                 ]
             })
             .px(Space::N4)
@@ -268,12 +265,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                         cx,
                                         "Only file paths are included",
                                     )
-                                    .inherit_foreground(
-                                        fret_ui_kit::ColorRef::Token {
-                                            key: "muted-foreground",
-                                            fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                                        },
-                                    ),
+                                    .inherit_foreground(muted_foreground),
                                 ]
                             })
                             .px(Space::N3)

@@ -4711,6 +4711,42 @@ Related plan:
       `ChartCanvasOutput`.
     - Gallery's first-chart snippet now opts into declarative chart accessibility, and Gallery
       accessibility docs/source-policy no longer teach retained `ChartCanvas` authoring.
+- [x] RBX-M3-060 Migrate UI Gallery chart torture off retained `ChartCanvas`.
+  - Scope:
+    - `apps/fret-ui-gallery/src/ui/previews/pages/torture/chart_torture.rs`
+    - `apps/fret-ui-gallery/src/harness.rs`
+    - `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`
+    - `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`
+  - Goal:
+    - Stop the first-party chart torture surface from mounting `ChartCanvas::new_shared(...)`
+      through `RetainedSubtreeProps` / `cx.retained_subtree(...)`.
+    - Preserve the torture page's shared engine/output diagnostics, explicit Y link-map fixture,
+      520px chart viewport, and chart-output snapshot collection through declarative
+      `ChartCanvasPanelProps` + `chart_canvas_panel_in(...)`.
+  - Validation:
+    - `cargo check -p fret-ui-gallery --features gallery-dev`
+    - `cargo nextest run -p fret-ui-gallery --features gallery-dev chart_torture_preview_uses_declarative_chart_panel`
+    - `cargo nextest run -p fret-chart`
+    - `cargo nextest run -p fret-ui-gallery --features gallery-chart -E 'test(chart_snippets_prefer_declarative_canvas_panel) | test(chart_first_chart_keyboard_navigation_shows_auto_wired_tooltip_under_default_cache_policy)'`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+  - Evidence:
+    - `apps/fret-ui-gallery/src/ui/previews/pages/torture/chart_torture.rs`
+    - `apps/fret-ui-gallery/src/harness.rs`
+    - `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`
+    - `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-060-gallery-chart-torture-uses-declarative-panel`
+  - Result:
+    - Chart torture now stores the stress `ChartEngine` as a `Model<ChartEngine>` and passes that
+      model directly to `ChartCanvasPanelProps`.
+    - `UiGalleryChartTortureOutputHandle` keeps `Model<ChartCanvasOutput>` plus the shared engine
+      model, so diagnostics still read data zoom, axis output, domain-window, and tooltip state
+      from the same live chart instance.
+    - The explicit Y link-map fixture still publishes the ambiguous Y domain window through the
+      declarative output path.
+    - A new internal preview source-policy test rejects reintroducing retained chart torture
+      authoring markers.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

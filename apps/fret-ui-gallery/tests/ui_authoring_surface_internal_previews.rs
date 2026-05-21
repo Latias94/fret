@@ -1083,6 +1083,41 @@ fn page_torture_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface() {
 }
 
 #[test]
+fn chart_torture_preview_uses_declarative_chart_panel() {
+    let path = manifest_path("src/ui/previews/pages/torture/chart_torture.rs");
+    let source = read_path(&path);
+    let canonical = canonicalize_rust_fragment(&source);
+
+    for marker in [
+        "ChartEngine::new",
+        "ChartCanvasPanelProps::new",
+        "chart_canvas_panel_in(cx,props)",
+        "UiGalleryChartTortureOutputHandle{output:output.clone(),engine:engine.clone(),}",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            canonical.contains(&marker),
+            "chart_torture.rs should keep declarative chart torture marker `{marker}`"
+        );
+    }
+
+    for marker in [
+        "RetainedSubtreeProps",
+        "UiTreeRetainedExt",
+        "cx.retained_subtree",
+        "ChartCanvas::new_shared",
+        "use fret_chart::ChartCanvas;",
+        "shared_engine:Rc<RefCell<delinea::engine::ChartEngine>>",
+    ] {
+        let marker = canonicalize_rust_fragment(marker);
+        assert!(
+            !canonical.contains(&marker),
+            "chart_torture.rs reintroduced retained chart torture marker `{marker}`"
+        );
+    }
+}
+
+#[test]
 fn gallery_torture_preview_modules_prefer_ui_cx_on_the_internal_gallery_surface() {
     assert_internal_preview_dir(
         "src/ui/previews/gallery/torture",

@@ -257,28 +257,30 @@ fn chart_torture_snapshot_json(app: &App, window: AppWindowId) -> Option<serde_j
         .flatten()
         .filter(|window| window.is_valid())
         .map(|window| (window.min, window.max));
-    let (engine_state_revision, x_data_zoom_pair, x_axis_output_pair) = {
-        let engine = handle.shared_engine.borrow();
-        let x_data_zoom_pair = engine
-            .state()
-            .data_zoom_x
-            .get(&x_axis)
-            .and_then(|state| state.window)
-            .filter(|window| window.is_valid())
-            .map(|window| (window.min, window.max));
-        let x_axis_output_pair = engine
-            .output()
-            .axis_windows
-            .get(&x_axis)
-            .copied()
-            .filter(|window| window.is_valid())
-            .map(|window| (window.min, window.max));
-        (
-            engine.state().revision.0,
-            x_data_zoom_pair,
-            x_axis_output_pair,
-        )
-    };
+    let (engine_state_revision, x_data_zoom_pair, x_axis_output_pair) = app
+        .models()
+        .read(&handle.engine, |engine| {
+            let x_data_zoom_pair = engine
+                .state()
+                .data_zoom_x
+                .get(&x_axis)
+                .and_then(|state| state.window)
+                .filter(|window| window.is_valid())
+                .map(|window| (window.min, window.max));
+            let x_axis_output_pair = engine
+                .output()
+                .axis_windows
+                .get(&x_axis)
+                .copied()
+                .filter(|window| window.is_valid())
+                .map(|window| (window.min, window.max));
+            (
+                engine.state().revision.0,
+                x_data_zoom_pair,
+                x_axis_output_pair,
+            )
+        })
+        .unwrap_or_else(|_| (0, None, None));
     let x_axis_output_matches_data_zoom =
         chart_windows_approx_eq(x_axis_output_pair, x_data_zoom_pair);
     let x_output_model_domain_matches_data_zoom =

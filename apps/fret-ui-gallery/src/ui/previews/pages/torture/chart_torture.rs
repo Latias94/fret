@@ -7,9 +7,7 @@ pub(in crate::ui) fn preview_chart_torture(
     cx: &mut AppComponentCx<'_>,
     _theme: &Theme,
 ) -> Vec<AnyElement> {
-    use std::cell::RefCell;
     use std::collections::BTreeMap;
-    use std::rc::Rc;
 
     use delinea::data::{Column, DataTable};
     use delinea::engine::ChartEngine;
@@ -18,9 +16,7 @@ pub(in crate::ui) fn preview_chart_torture(
         ChartSpec, DataZoomXSpec, DataZoomYSpec, DatasetSpec, FieldSpec, FilterMode, GridSpec,
         SeriesEncode, SeriesKind, SeriesSpec, TimeAxisScale,
     };
-    use fret_chart::ChartCanvas;
-    use fret_ui::element::{LayoutStyle, Length, SemanticsProps};
-    use fret_ui::retained_bridge::RetainedSubtreeProps;
+    use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel_in};
 
     let dataset_id = delinea::ids::DatasetId::new(1);
     let grid_id = delinea::ids::GridId::new(1);
@@ -144,8 +140,9 @@ pub(in crate::ui) fn preview_chart_torture(
     let explicit_y_link_map = std::env::var_os("FRET_UI_GALLERY_CHART_TORTURE_EXPLICIT_Y_LINK_MAP")
         .is_some_and(|value| !value.is_empty() && value.to_string_lossy() != "0");
 
-    let shared_engine = cx.local_model_keyed("chart_torture_engine", move || {
-        let mut engine = ChartEngine::new(spec).expect("chart spec should be valid");
+    let spec_for_engine = spec.clone();
+    let engine = cx.local_model_keyed("chart_torture_engine", move || {
+        let mut engine = ChartEngine::new(spec_for_engine).expect("chart spec should be valid");
         let base_ms = 1_735_689_600_000.0;
         let interval_ms = 60_000.0;
 
@@ -179,11 +176,8 @@ pub(in crate::ui) fn preview_chart_torture(
             });
         }
 
-        Rc::new(RefCell::new(engine))
+        engine
     });
-    let shared_engine = shared_engine
-        .read(cx.app, |_, engine| engine.clone())
-        .expect("chart torture engine model should be readable");
     let output = cx.local_model_keyed(
         "chart_torture_output",
         fret_chart::ChartCanvasOutput::default,
@@ -194,7 +188,7 @@ pub(in crate::ui) fn preview_chart_torture(
                 cx.window,
                 UiGalleryChartTortureOutputHandle {
                     output: output.clone(),
-                    shared_engine: shared_engine.clone(),
+                    engine: engine.clone(),
                 },
             );
         });
@@ -202,46 +196,33 @@ pub(in crate::ui) fn preview_chart_torture(
     let chart = cx.cached_subtree_with(
         CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
         move |cx| {
-            let mut layout = LayoutStyle::default();
-            layout.size.width = Length::Fill;
-            layout.size.height = Length::Px(Px(520.0));
-
-            let shared_engine = shared_engine.clone();
+            let engine = engine.clone();
             let output = output.clone();
-            let props = RetainedSubtreeProps::new::<App>(move |ui| {
-                use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+            let mut link_axis_map = BTreeMap::new();
+            if explicit_y_link_map {
+                link_axis_map.insert(
+                    y_axis,
+                    fret_chart::LinkAxisKey {
+                        kind: AxisKind::Y,
+                        dataset: dataset_id,
+                        field: y_a_field,
+                    },
+                );
+            }
 
-                let mut canvas = ChartCanvas::new_shared(shared_engine.clone());
-                canvas.set_input_map(fret_chart::input_map::ChartInputMap::default());
-                if explicit_y_link_map {
-                    let mut map = BTreeMap::new();
-                    map.insert(
-                        y_axis,
-                        fret_chart::LinkAxisKey {
-                            kind: AxisKind::Y,
-                            dataset: dataset_id,
-                            field: y_a_field,
-                        },
-                    );
-                    canvas = canvas.link_axis_map(map);
-                }
-                canvas = canvas.output_model(output.clone());
+            let mut props = ChartCanvasPanelProps::new(spec.clone())
+                .output_model(output)
+                .input_map(fret_chart::input_map::ChartInputMap::default())
+                .link_axis_map(link_axis_map)
+                .test_id("ui-gallery-chart-torture-root");
+            props.engine = Some(engine);
+            props.canvas.cache_policy = fret_ui::element::CanvasCachePolicy::smooth_default();
 
-                let node = ui.create_node_retained(canvas);
-                ui.set_node_view_cache_flags(node, true, true, false);
-                node
-            })
-            .with_layout(layout);
-
-            let subtree = cx.retained_subtree(props);
-            vec![cx.semantics(
-                SemanticsProps {
-                    role: fret_core::SemanticsRole::Group,
-                    test_id: Some(Arc::<str>::from("ui-gallery-chart-torture-root")),
-                    ..Default::default()
-                },
-                |_cx| vec![subtree],
-            )]
+            vec![
+                ui::v_flex(move |cx| vec![chart_canvas_panel_in(cx, props)])
+                    .layout(LayoutRefinement::default().w_full().h_px(Px(520.0)))
+                    .into_element(cx),
+            ]
         },
     );
 

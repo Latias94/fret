@@ -2,7 +2,7 @@
 pub(crate) const UI_GALLERY_CODE_EDITOR_TORTURE_SOFT_WRAP_MARKER: &str = "hello_soft_wrap_marker";
 
 #[cfg(feature = "gallery-dev")]
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 #[cfg(feature = "gallery-dev")]
 use fret_core::AppWindowId;
@@ -25,7 +25,7 @@ pub(crate) struct UiGalleryMarkdownEditorHandlesStore {
 #[derive(Clone)]
 pub(crate) struct UiGalleryChartTortureOutputHandle {
     pub output: Model<fret_chart::ChartCanvasOutput>,
-    pub shared_engine: Rc<RefCell<delinea::engine::ChartEngine>>,
+    pub engine: Model<delinea::engine::ChartEngine>,
 }
 
 #[cfg(feature = "gallery-dev")]

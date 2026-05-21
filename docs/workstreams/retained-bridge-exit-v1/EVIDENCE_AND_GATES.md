@@ -11610,3 +11610,90 @@ Broader gates not run:
     migration slice. The package gate, Gallery feature check, focused Gallery integration/source
     gates, formatting, layering, catalog, whitespace, and merge-marker checks cover the changed
     surface.
+
+## 2026-05-22 - RBX-M3-060 Gallery chart torture uses declarative panel
+
+Claim verified:
+
+- UI Gallery's chart torture page no longer constructs retained `ChartCanvas` widgets through
+  `RetainedSubtreeProps` / `cx.retained_subtree(...)`.
+- The torture page now keeps the stress `ChartEngine` in a `Model<ChartEngine>` and renders through
+  `ChartCanvasPanelProps` + `chart_canvas_panel_in(...)`.
+- The diagnostics handle still exposes the shared chart engine and `ChartCanvasOutput` model for
+  data-zoom, axis-output, domain-window, and tooltip snapshot collection.
+- The explicit Y link-map fixture remains wired on the declarative chart panel path.
+
+Evidence:
+
+- `apps/fret-ui-gallery/src/ui/previews/pages/torture/chart_torture.rs`
+- `apps/fret-ui-gallery/src/harness.rs`
+- `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_internal_previews.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-ui-gallery --features gallery-dev`
+  - Result: passed.
+  - Scope proven: the Gallery dev surface compiles after chart torture moved from an
+    `Rc<RefCell<ChartEngine>>` retained-widget handle to a shared `Model<ChartEngine>` declarative
+    panel handle.
+- `cargo nextest run -p fret-ui-gallery --features gallery-dev chart_torture_preview_uses_declarative_chart_panel`
+  - Result: failed once because the new test used a helper that is not imported in
+    `ui_authoring_surface_internal_previews.rs`; fixed to use the file's existing
+    `manifest_path(...)` + `read_path(...)` pattern.
+- `cargo nextest run -p fret-ui-gallery --features gallery-dev chart_torture_preview_uses_declarative_chart_panel`
+  - Result: passed, 1 test.
+  - Scope proven: the internal chart torture preview source-policy test requires
+    `ChartEngine::new`, `ChartCanvasPanelProps::new`, `chart_canvas_panel_in(...)`, and the
+    model-backed diagnostics handle, while rejecting retained chart torture authoring markers.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 43 tests, with the pre-existing `fret-ui`
+    `current_effective_opacity` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility baselines and retained chart
+    output/linking/tooltip/accessibility oracle tests remain green after migrating the Gallery
+    torture consumer.
+- `cargo nextest run -p fret-ui-gallery --features gallery-chart -E 'test(chart_snippets_prefer_declarative_canvas_panel) | test(chart_first_chart_keyboard_navigation_shows_auto_wired_tooltip_under_default_cache_policy)'`
+  - Result: passed, 2 tests.
+  - Scope proven: Gallery chart source-policy and first-chart accessibility/tooltip integration
+    remain green after the chart torture migration.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the chart torture migration and validation
+    helper fix.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid; `fret-chart`
+    still intentionally remains on the allowlist while deeper retained chart capabilities are
+    migrated.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+- `rg -n "ChartCanvas::new_shared|RetainedSubtreeProps|UiTreeRetainedExt|cx\\.retained_subtree|retained_bridge|shared_engine" apps/fret-ui-gallery/src/ui/previews/pages/torture/chart_torture.rs apps/fret-ui-gallery/src/harness.rs apps/fret-ui-gallery/src/driver/diag_snapshot.rs`
+  - Result: no matches.
+  - Scope proven: the migrated chart torture source and diagnostics handle no longer depend on
+    retained chart widget authoring or the old `shared_engine` retained handle.
+
+Notes:
+
+- `apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_cursor_demo.rs` was minimally adjusted
+  during this slice because the broad `gallery-dev` compile gate exposed an unrelated stale
+  authoring pattern: it passed `ColorRef` to `AnyElement::inherit_foreground(...)` and applied
+  `.layout(...)` directly to raw `AnyElement` text. The fix resolves token color to
+  `theme.color_token("muted-foreground")` and wraps the affected text in layout-capable flex
+  containers so the `gallery-dev` gate can prove the chart torture path.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-060` is a targeted UI Gallery chart torture consumer migration. The Gallery dev
+    check, internal source-policy test, full `fret-chart` package gate, focused Gallery chart
+    integration/source gates, formatting, layering, catalog, whitespace, and merge-marker checks
+    cover the changed surface.

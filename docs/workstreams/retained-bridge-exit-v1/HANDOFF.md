@@ -253,6 +253,12 @@ navigation that updates hover/axis-pointer output. The new declarative oracle mi
 keyboard-navigation test (`ArrowRight` moves `pos_in_set` from 1 to 2 and publishes tooltip lines),
 and UI Gallery's first-chart/accessibility snippets no longer teach retained `ChartCanvas`
 authoring.
+`RBX-M3-060` then migrated UI Gallery's chart torture page off the retained chart widget host. The
+torture page now stores its 200k-point stress `ChartEngine` as a `Model<ChartEngine>`, renders it
+with `ChartCanvasPanelProps` + `chart_canvas_panel_in(...)`, preserves the 520px torture viewport,
+and keeps `UiGalleryChartTortureOutputHandle` wired to the same live engine/output models used by
+diagnostics snapshots. The explicit Y link-map fixture remains on the declarative output path, and a
+new internal preview source-policy test rejects retained chart torture markers.
 
 ## Completed Implementation
 
@@ -1222,9 +1228,9 @@ Recommended next implementation shape:
   slice touches that layout path directly.
 - For M3 chart, retained `ChartCanvas` still cannot be deleted yet. Remaining retained-only chart
   areas include axes/chrome UI, visual map, data zoom, multi-grid surfaces, and first-party demos or
-  torture paths still mounted through retained chart widgets. Continue by migrating or explicitly
-  covering one of those capability families before removing `fret-chart` from the retained bridge
-  allowlist.
+  cookbook/example paths still mounted through retained chart widgets. Continue by migrating or
+  explicitly covering one of those capability families before removing `fret-chart` from the
+  retained bridge allowlist.
 
 ## Gates
 
