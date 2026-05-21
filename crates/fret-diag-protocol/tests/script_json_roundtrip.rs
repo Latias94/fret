@@ -1010,6 +1010,13 @@ fn script_v2_roundtrip_ui_gallery_form_submit_validation_semantics() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_form_disabled_field_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/form/ui-gallery-form-disabled-field-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_select_demo_open_layout() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json"

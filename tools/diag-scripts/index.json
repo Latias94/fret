@@ -8538,6 +8538,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-form-disabled-field-action-state",
+      "path": "tools/diag-scripts/ui-gallery/form/ui-gallery-form-disabled-field-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-form-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "disabled",
+        "field",
+        "form",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Form page and scopes rendering to the Disabled Field section.",
+        "Verifies that disabled Field shell state is visual/grouping policy while disabled semantics and action suppression live on the concrete Input control."
+      ]
+    },
+    {
       "id": "ui-gallery-form-submit-validation-semantics",
       "path": "tools/diag-scripts/ui-gallery/form/ui-gallery-form-submit-validation-semantics.json",
       "required_capabilities": [

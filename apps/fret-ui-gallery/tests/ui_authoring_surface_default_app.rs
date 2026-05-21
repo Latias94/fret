@@ -3419,6 +3419,7 @@ fn form_snippets_prefer_ui_cx_on_the_default_app_surface() {
         &[
             "src/ui/snippets/form/controls.rs",
             "src/ui/snippets/form/demo.rs",
+            "src/ui/snippets/form/disabled_field.rs",
             "src/ui/snippets/form/fieldset.rs",
             "src/ui/snippets/form/input.rs",
             "src/ui/snippets/form/rtl.rs",
@@ -3448,6 +3449,7 @@ fn form_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Form Demo\", upstream_demo)",
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Submit Validation\", submit_validation)",
+            "DocSection::build(cx, \"Disabled Field\", disabled_field)",
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Input\", input)",
             "DocSection::build(cx, \"Textarea\", textarea)",
@@ -3460,6 +3462,7 @@ fn form_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Form Demo\", upstream_demo)",
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Submit Validation\", submit_validation)",
+            "DocSection::new(\"Disabled Field\", disabled_field)",
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Input\", input)",
             "DocSection::new(\"Textarea\", textarea)",
@@ -3503,6 +3506,35 @@ fn form_submit_validation_snippet_keeps_submit_driven_form_state_runtime_surface
         &[
             "Submit-driven FormState validation mutates FormField-decorated controls",
             "copyable Usage and submit-validation sections",
+        ],
+        &[],
+    );
+}
+
+#[test]
+fn form_disabled_field_snippet_keeps_field_shell_and_control_semantics_separate() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/form/disabled_field.rs",
+        &[
+            "shadcn::Field::new(ui::children![",
+            ".disabled(true)",
+            ".test_id(\"ui-gallery-form-disabled-field\")",
+            ".test_id(\"ui-gallery-form-disabled-field-control\")",
+            ".test_id(\"ui-gallery-form-disabled-field-enabled-control\")",
+            "\"The field shell is disabled because its concrete control is disabled.\"",
+        ],
+        &[
+            "field_state_prim::with_field_state_provider",
+            "cx.interactivity_gate(true, false",
+            "shadcn::FieldSet::new(",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/form.rs",
+        &[
+            "DocSection::build(cx, \"Disabled Field\", disabled_field)",
+            "concrete disabled Input owns disabled semantics",
         ],
         &[],
     );

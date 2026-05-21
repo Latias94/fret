@@ -7371,3 +7371,68 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-form-submit-validation-v2 --session-auto --timeout-ms 2400000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed 24/24; `stage_counts={"passed":24}`; `reason_code_counts={}`;
     Form row run id `1779345780709`.
+
+## Form Disabled Field Action-State Runtime Gate
+
+- invariant:
+  shadcn Field disabled styling is field-shell/group state. The concrete disabled control must own
+  the accessibility and action semantics: `disabled=true`, `focus=false`, and `set_value=false`.
+  Sibling controls must not become disabled merely because a nearby Field shell is disabled.
+- finding:
+  no Form/Field recipe or runtime defect was reproduced. The gate corrected two diagnostics hazards
+  during authoring: an over-specific visual opacity probe was removed because it did not prove the
+  action-state invariant, and the companion value assertion now waits for the asynchronous model
+  update after `set_text_value`.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/form/disabled_field.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/form/mod.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/form.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/form/ui-gallery-form-disabled-field-action-state.json`,
+  `tools/diag-scripts/ui-gallery-form-disabled-field-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-form-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  upstream `repo-ref/ui/apps/v4/registry/new-york-v4/ui/field.tsx` has `Field` as a `div` group with
+  `data-disabled` styling; concrete controls own real disabled semantics.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-form-disabled-field-action-state-v3/sessions/1779351791667-101584/1779351805821/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-form-disabled-field-action-state-v3/sessions/1779351791667-101584/share/1779351805821.zip`;
+  dedicated suite summary:
+  `target/fret-diag-form-semantics-suite-disabled-field-rebuilt-v1/sessions/1779352801343-181708/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-form-disabled-field-v1/sessions/1779352876487-190332/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\form\ui-gallery-form-disabled-field-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-form-disabled-field-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-form-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\form\disabled_field.rs apps\fret-ui-gallery\src\ui\snippets\form\mod.rs apps\fret-ui-gallery\src\ui\pages\form.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app form_ -- --nocapture`
+  - result: passed; 9 tests.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_form_disabled_field_action_state -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+  - note: rebuilding with `gallery-dev` was required after an earlier targeted Gallery test rebuilt
+    `target\dev-fast\fret-ui-gallery.exe` without the gallery feature and hid the Form page from
+    runtime diagnostics.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\form\ui-gallery-form-disabled-field-action-state.json --dir target\fret-diag-form-disabled-field-action-state-v3 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779351805821`.
+- dedicated Form runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite tools\diag-scripts\suites\ui-gallery-form-semantics\suite.json --dir target\fret-diag-form-semantics-suite-disabled-field-rebuilt-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 2/2; `stage_counts={"passed":2}`; disabled Field row run id `1779352815799`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-form-disabled-field-v1 --session-auto --timeout-ms 2400000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 25/25; `stage_counts={"passed":25}`; `reason_code_counts={}`;
+    disabled Field row run id `1779354050679`.

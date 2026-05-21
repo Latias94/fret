@@ -4081,3 +4081,47 @@ Status: complete for the submit-driven `FormState` validation semantics companio
 - The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 24/24 with summary
   `target/fret-diag-shadcn-runtime-evidence-form-submit-validation-v2/sessions/1779344474432-184028/suite.summary.json`
   and Form row run id `1779345780709`.
+
+## M172: Form Disabled Field Action-State Runtime Gate
+
+Status: complete for the disabled Field action-state semantics companion.
+
+- Added a Form page `Disabled Field` section that intentionally separates the disabled field shell
+  from concrete control semantics: the disabled shadcn `Input` owns `disabled`, focus suppression,
+  and set-value suppression, while the companion field remains editable.
+- Added `ui-gallery-form-disabled-field-action-state.json`, which starts directly on the Form page
+  and scopes rendering to `Disabled Field`. The gate proves the disabled concrete control exports
+  `role=text_field`, `disabled=true`, `focus=false`, `set_value=false`, and unchanged value text;
+  then proves the companion control exports `disabled=false`, `focus=true`, `set_value=true`, and
+  accepts a value update.
+- Added a root redirect, promoted the script into the existing `ui-gallery-form-semantics` suite,
+  promoted it into `ui-gallery-shadcn-runtime-evidence`, refreshed the registry, and added protocol
+  roundtrip coverage.
+- No Form/Field recipe or runtime defect was reproduced. The source-alignment finding is that the
+  shadcn Field shell carries disabled visual/group state only; concrete controls still own disabled
+  action semantics.
+- JSON, registry, formatting, and diff hygiene gates pass:
+  `python -m json.tool tools/diag-scripts/ui-gallery/form/ui-gallery-form-disabled-field-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery-form-disabled-field-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-form-semantics/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/form/disabled_field.rs apps/fret-ui-gallery/src/ui/snippets/form/mod.rs apps/fret-ui-gallery/src/ui/pages/form.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  and `git diff --check`.
+- Focused Rust gates pass:
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app form_ -- --nocapture`;
+  and
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_form_disabled_field_action_state -- --nocapture`.
+- Build passes:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\form\ui-gallery-form-disabled-field-action-state.json --dir target\fret-diag-form-disabled-field-action-state-v3 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779351805821`, AI packet
+  `target/fret-diag-form-disabled-field-action-state-v3/sessions/1779351791667-101584/1779351805821/ai.packet`,
+  and pack
+  `target/fret-diag-form-disabled-field-action-state-v3/sessions/1779351791667-101584/share/1779351805821.zip`.
+- Dedicated runtime suite passes with `stage_counts={"passed":2}` and summary
+  `target/fret-diag-form-semantics-suite-disabled-field-rebuilt-v1/sessions/1779352801343-181708/suite.summary.json`.
+- The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 25/25 with summary
+  `target/fret-diag-shadcn-runtime-evidence-form-disabled-field-v1/sessions/1779352876487-190332/suite.summary.json`
+  and disabled Field row run id `1779354050679`.

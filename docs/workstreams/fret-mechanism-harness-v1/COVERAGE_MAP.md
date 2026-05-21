@@ -535,3 +535,16 @@ mechanism can visibly fail.
   `target/fret-diag-form-semantics-suite-v1/sessions/1779342834313-22100/suite.summary.json`,
   and the broad runtime suite now passes 24/24 with summary
   `target/fret-diag-shadcn-runtime-evidence-form-submit-validation-v2/sessions/1779344474432-184028/suite.summary.json`.
+
+- Form disabled Field action-state update:
+  `ui-gallery-form-disabled-field-action-state.json` now covers the source-aligned split between a
+  disabled Field shell and concrete disabled control semantics. The gate starts on the Form page's
+  `Disabled Field` section, proves the disabled shadcn Input exports `role=text_field`,
+  `disabled=true`, `focus=false`, `set_value=false`, and unchanged value text, then proves the
+  companion control remains enabled and editable so accidental section-wide disabling is caught.
+  Focused runtime evidence is anchored at
+  `target/fret-diag-form-disabled-field-action-state-v3/sessions/1779351791667-101584/1779351805821/ai.packet`,
+  the dedicated suite evidence is anchored at
+  `target/fret-diag-form-semantics-suite-disabled-field-rebuilt-v1/sessions/1779352801343-181708/suite.summary.json`,
+  and the broad runtime suite now passes 25/25 with summary
+  `target/fret-diag-shadcn-runtime-evidence-form-disabled-field-v1/sessions/1779352876487-190332/suite.summary.json`.

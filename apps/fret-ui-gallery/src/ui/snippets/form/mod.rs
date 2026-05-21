@@ -1,5 +1,6 @@
 pub mod controls;
 pub mod demo;
+pub mod disabled_field;
 pub mod fieldset;
 pub mod input;
 pub mod notes;

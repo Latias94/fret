@@ -1620,3 +1620,16 @@ date: 2026-05-12
     and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 24/24 with the Form row run
     id `1779345780709` and summary
     `target/fret-diag-shadcn-runtime-evidence-form-submit-validation-v2/sessions/1779344474432-184028/suite.summary.json`.
+
+- [x] Add a Form disabled Field action-state semantics runtime gate.
+  - Result:
+    `ui-gallery-form-disabled-field-action-state.json` now starts on the Form page's `Disabled Field`
+    section, proves the concrete disabled `Input` exports `role=text_field`, `disabled=true`,
+    `focus=false`, `set_value=false`, and preserves its value, then proves the companion field
+    remains enabled/editable so the gate catches accidental section-wide disabling. No
+    recipe/runtime defect was reproduced. Focused runtime passed with run id `1779351805821`; the
+    rebuilt `ui-gallery-form-semantics` suite passed 2/2 with summary
+    `target/fret-diag-form-semantics-suite-disabled-field-rebuilt-v1/sessions/1779352801343-181708/suite.summary.json`;
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 25/25 with the disabled
+    Field row run id `1779354050679` and summary
+    `target/fret-diag-shadcn-runtime-evidence-form-disabled-field-v1/sessions/1779352876487-190332/suite.summary.json`.
