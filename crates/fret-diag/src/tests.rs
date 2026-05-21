@@ -3358,7 +3358,10 @@ fn bundle_stats_preserves_clean_geometry_solve_skip_rejection() {
                                 "total_time_us": 50,
                                 "layout_time_us": 40,
                                 "layout_engine_solves": 1,
-                                "layout_engine_solve_time_us": 30
+                                "layout_engine_solve_time_us": 30,
+                                "layout_clean_geometry_solve_skip_rejections": 1,
+                                "layout_clean_geometry_solve_skip_first_rejection": "unsupported_subtree",
+                                "layout_clean_geometry_solve_skip_first_element_kind": "Scroll"
                             },
                             "layout_engine_solves": [
                                 {
@@ -3428,8 +3431,36 @@ fn bundle_stats_preserves_clean_geometry_solve_skip_rejection() {
     assert_eq!(rejection.element_kind.as_deref(), Some("Scroll"));
     assert_eq!(rejection.role.as_deref(), Some("region"));
     assert_eq!(rejection.test_id.as_deref(), Some("editor.scroll"));
+    assert_eq!(report.top[0].layout_clean_geometry_solve_skip_rejections, 1);
+    assert_eq!(
+        report.top[0]
+            .layout_clean_geometry_solve_skip_first_rejection
+            .as_deref(),
+        Some("unsupported_subtree")
+    );
+    assert_eq!(
+        report.top[0]
+            .layout_clean_geometry_solve_skip_first_element_kind
+            .as_deref(),
+        Some("Scroll")
+    );
 
     let json = report.to_json();
+    assert_eq!(
+        json.pointer("/top/0/layout_clean_geometry_solve_skip_rejections")
+            .and_then(|v| v.as_u64()),
+        Some(1)
+    );
+    assert_eq!(
+        json.pointer("/top/0/layout_clean_geometry_solve_skip_first_rejection")
+            .and_then(|v| v.as_str()),
+        Some("unsupported_subtree")
+    );
+    assert_eq!(
+        json.pointer("/top/0/layout_clean_geometry_solve_skip_first_element_kind")
+            .and_then(|v| v.as_str()),
+        Some("Scroll")
+    );
     assert_eq!(
         json.pointer(
             "/top/0/top_layout_engine_solves/0/clean_geometry_solve_skip_rejection/reason"
@@ -3447,6 +3478,18 @@ fn bundle_stats_preserves_clean_geometry_solve_skip_rejection() {
 
     let triage =
         triage_json_from_stats(Path::new("bundle.json"), &report, BundleStatsSort::Time, 0);
+    assert_eq!(
+        triage
+            .pointer("/worst/layout_clean_geometry_solve_skip_rejections")
+            .and_then(|v| v.as_u64()),
+        Some(1)
+    );
+    assert_eq!(
+        triage
+            .pointer("/worst/layout_clean_geometry_solve_skip_first_rejection")
+            .and_then(|v| v.as_str()),
+        Some("unsupported_subtree")
+    );
     assert_eq!(
         triage
             .pointer("/worst/top_layout_engine_solves/0/clean_geometry_solve_skip_rejection/reason")

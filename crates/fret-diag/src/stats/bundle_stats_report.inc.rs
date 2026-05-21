@@ -520,6 +520,9 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable: u64,
     pub(super) layout_engine_solves: u64,
     pub(super) layout_engine_solve_time_us: u64,
+    pub(super) layout_clean_geometry_solve_skip_rejections: u32,
+    pub(super) layout_clean_geometry_solve_skip_first_rejection: Option<String>,
+    pub(super) layout_clean_geometry_solve_skip_first_element_kind: Option<String>,
     pub(super) layout_engine_child_rect_queries: u64,
     pub(super) layout_engine_child_rect_time_us: u64,
     pub(super) layout_engine_widget_fallback_solves: u64,
@@ -3655,6 +3658,18 @@ impl BundleStatsReport {
                     .collect();
                 println!("    paint_text_prepare_hotspots: {}", items.join(" | "));
             }
+            if row.layout_clean_geometry_solve_skip_rejections > 0 {
+                println!(
+                    "    clean_geometry_solve_skip_rejections={} first={} kind={}",
+                    row.layout_clean_geometry_solve_skip_rejections,
+                    row.layout_clean_geometry_solve_skip_first_rejection
+                        .as_deref()
+                        .unwrap_or("?"),
+                    row.layout_clean_geometry_solve_skip_first_element_kind
+                        .as_deref()
+                        .unwrap_or("?"),
+                );
+            }
             if !row.paint_widget_hotspots.is_empty() {
                 let items: Vec<String> = row
                     .paint_widget_hotspots
@@ -5984,6 +5999,24 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_engine_solve_time_us".to_string(),
                     Value::from(row.layout_engine_solve_time_us),
+                );
+                obj.insert(
+                    "layout_clean_geometry_solve_skip_rejections".to_string(),
+                    Value::from(row.layout_clean_geometry_solve_skip_rejections),
+                );
+                obj.insert(
+                    "layout_clean_geometry_solve_skip_first_rejection".to_string(),
+                    row.layout_clean_geometry_solve_skip_first_rejection
+                        .clone()
+                        .map(Value::from)
+                        .unwrap_or(Value::Null),
+                );
+                obj.insert(
+                    "layout_clean_geometry_solve_skip_first_element_kind".to_string(),
+                    row.layout_clean_geometry_solve_skip_first_element_kind
+                        .clone()
+                        .map(Value::from)
+                        .unwrap_or(Value::Null),
                 );
                 obj.insert(
                     "layout_engine_child_rect_queries".to_string(),

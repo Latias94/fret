@@ -1418,6 +1418,20 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_engine_solve_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_clean_geometry_solve_skip_rejections = stats
+                .and_then(|m| m.get("layout_clean_geometry_solve_skip_rejections"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let layout_clean_geometry_solve_skip_first_rejection = stats
+                .and_then(|m| m.get("layout_clean_geometry_solve_skip_first_rejection"))
+                .and_then(|v| v.as_str())
+                .map(str::to_string);
+            let layout_clean_geometry_solve_skip_first_element_kind = stats
+                .and_then(|m| m.get("layout_clean_geometry_solve_skip_first_element_kind"))
+                .and_then(|v| v.as_str())
+                .map(str::to_string);
             let layout_engine_child_rect_queries = stats
                 .and_then(|m| m.get("layout_engine_child_rect_queries"))
                 .and_then(|v| v.as_u64())
@@ -2356,6 +2370,9 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable,
                 layout_engine_solves,
                 layout_engine_solve_time_us,
+                layout_clean_geometry_solve_skip_rejections,
+                layout_clean_geometry_solve_skip_first_rejection,
+                layout_clean_geometry_solve_skip_first_element_kind,
                 layout_engine_child_rect_queries,
                 layout_engine_child_rect_time_us,
                 layout_engine_widget_fallback_solves,

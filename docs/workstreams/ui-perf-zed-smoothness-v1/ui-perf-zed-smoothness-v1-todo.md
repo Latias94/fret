@@ -273,6 +273,13 @@ not update checked-in baselines.
     - Decision: this is attribution-only and does not change layout behavior. The next resize-jitter bundle should use
       `top_layout_engine_solves[].clean_geometry_solve_skip_rejection` to decide whether the remaining owner is a
       side-effect-boundary rule, missing interactive-resize small-step state, or another clean-subtree precondition.
+    - Follow-up surface: `diag stats` also consumes the frame-level
+      `layout_clean_geometry_solve_skip_rejections`,
+      `layout_clean_geometry_solve_skip_first_rejection`, and
+      `layout_clean_geometry_solve_skip_first_element_kind` counters/labels, so resize-jitter summaries can distinguish
+      a sampled top-solve rejection from broader per-frame clean-geometry skip churn.
+    - Gate: `cargo nextest run -p fret-diag bundle_stats_preserves_clean_geometry_solve_skip_rejection full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_contract_keeps_stats_and_gate_keys_additive --no-fail-fast`;
+      `cargo check -p fret-diag`; `cargo fmt -p fret-diag --check`.
   - [x] Allow clean-geometry resize propagation through cached single-line ellipsis text.
     - Discovery: the retained text-measure resize bundle already carried runtime rejection objects. The window root was
       blocked by `text_reflow/text_overflow_not_clip` on `TextWrap::None + Ellipsis`, while the nested preview root was

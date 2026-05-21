@@ -13,6 +13,7 @@ pub(crate) enum PerfKeyUnit {
     Pixels,
     Boolean,
     Id,
+    Label,
 }
 
 impl PerfKeyUnit {
@@ -25,6 +26,7 @@ impl PerfKeyUnit {
             Self::Pixels => "px",
             Self::Boolean => "bool",
             Self::Id => "id",
+            Self::Label => "label",
         }
     }
 }
@@ -35,6 +37,7 @@ pub(crate) enum PerfKeyKind {
     Counter,
     Flag,
     Identifier,
+    Label,
 }
 
 impl PerfKeyKind {
@@ -44,6 +47,7 @@ impl PerfKeyKind {
             Self::Counter => "counter",
             Self::Flag => "flag",
             Self::Identifier => "identifier",
+            Self::Label => "label",
         }
     }
 }
@@ -303,6 +307,14 @@ pub(crate) const LAYOUT_NODES_PERFORMED: PerfKey =
     count_key("layout_nodes_performed", PerfKeyAggregate::Max);
 pub(crate) const LAYOUT_ENGINE_SOLVES: PerfKey =
     count_key("layout_engine_solves", PerfKeyAggregate::Max);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_REJECTIONS: PerfKey = count_key(
+    "layout_clean_geometry_solve_skip_rejections",
+    PerfKeyAggregate::Max,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_REJECTION: PerfKey =
+    label_key("layout_clean_geometry_solve_skip_first_rejection");
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_ELEMENT_KIND: PerfKey =
+    label_key("layout_clean_geometry_solve_skip_first_element_kind");
 pub(crate) const LAYOUT_ENGINE_CHILD_RECT_QUERIES: PerfKey =
     count_key("layout_engine_child_rect_queries", PerfKeyAggregate::Max);
 pub(crate) const LAYOUT_ENGINE_WIDGET_FALLBACK_SOLVES: PerfKey = count_key(
@@ -901,6 +913,9 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     LAYOUT_DEFERRED_CLEANUP_TIME_US,
     LAYOUT_NODES_PERFORMED,
     LAYOUT_ENGINE_SOLVES,
+    LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_REJECTIONS,
+    LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_REJECTION,
+    LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_ELEMENT_KIND,
     LAYOUT_ENGINE_SOLVE_TIME_US,
     LAYOUT_ENGINE_CHILD_RECT_QUERIES,
     LAYOUT_ENGINE_CHILD_RECT_TIME_US,
@@ -1704,6 +1719,17 @@ const fn id_key(key: &'static str) -> PerfKey {
     }
 }
 
+const fn label_key(key: &'static str) -> PerfKey {
+    PerfKey {
+        key,
+        unit: PerfKeyUnit::Label,
+        kind: PerfKeyKind::Label,
+        scope: PerfKeyScope::Frame,
+        suggested_aggregate: PerfKeyAggregate::None,
+        trace: None,
+    }
+}
+
 const fn pointer_move_timing_key(
     key: &'static str,
     suggested_aggregate: PerfKeyAggregate,
@@ -1847,6 +1873,15 @@ mod tests {
                 );
             }
             if matches!(key.kind, PerfKeyKind::Identifier) {
+                assert_eq!(
+                    key.suggested_aggregate,
+                    PerfKeyAggregate::None,
+                    "{}",
+                    key.key
+                );
+            }
+            if matches!(key.kind, PerfKeyKind::Label) {
+                assert_eq!(key.unit, PerfKeyUnit::Label, "{}", key.key);
                 assert_eq!(
                     key.suggested_aggregate,
                     PerfKeyAggregate::None,

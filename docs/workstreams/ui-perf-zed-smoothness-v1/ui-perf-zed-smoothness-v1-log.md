@@ -15825,3 +15825,33 @@ cargo fmt -p fret-ui --check
 Decision:
 - Keep `TextWrap::Word` rejected for now. That remaining owner requires a separate line-break-stability proof before
   clean propagation can bypass the authoritative solve.
+
+## 2026-05-21 14:19:13 +08:00 (frame-level clean-geometry rejection fields in diag stats)
+
+Question:
+- Can `diag stats` distinguish a sampled top-solve clean-geometry rejection from frame-wide clean-geometry skip churn?
+
+Finding:
+- Runtime debug stats already exported `layout_clean_geometry_solve_skip_rejections`,
+  `layout_clean_geometry_solve_skip_first_rejection`, and
+  `layout_clean_geometry_solve_skip_first_element_kind`, but `fret-diag` did not consume these frame-level fields.
+- The nested `top_layout_engine_solves[].clean_geometry_solve_skip_rejection` remains useful for node/path attribution,
+  but it is bounded by top-solve sampling and cannot by itself prove how broad the rejection pattern was in a frame.
+
+Change:
+- `BundleStatsSnapshotRow`, stats JSON, human stats output, triage JSON, and the registered frame-stats inventory now
+  include the frame-level clean-geometry rejection count and first rejection labels.
+- The perf-key registry gained a string `label` kind/unit so non-numeric diagnostic labels are registered explicitly
+  instead of being treated as thresholdable counters.
+
+Validation:
+```powershell
+cargo nextest run -p fret-diag bundle_stats_preserves_clean_geometry_solve_skip_rejection full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_contract_keeps_stats_and_gate_keys_additive --no-fail-fast
+cargo check -p fret-diag
+cargo fmt -p fret-diag --check
+```
+
+Decision:
+- This is still attribution-only. The remaining resize-jitter owner should use both the frame-level rejection fields
+  and `top_layout_engine_solves[].clean_geometry_solve_skip_rejection` before widening any contained-root
+  clean-geometry fast path.
