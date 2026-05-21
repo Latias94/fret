@@ -5,12 +5,13 @@ mod target;
 use fret_core::Point;
 use fret_ui::UiHost;
 
+use super::hover_move_cx::HoverMoveCx;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::ViewSnapshot;
 
 pub(super) fn update_hover_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl HoverMoveCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
@@ -19,15 +20,21 @@ pub(super) fn update_hover_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
     if super::interaction_gate::allow_edge_hover_anchor(&canvas.interaction) {
         let target_edge = self::target::hover_anchor_target_edge(&canvas.interaction, snapshot);
         if let Some(edge_id) = target_edge {
-            new_hover_anchor =
-                self::hit::hit_hover_edge_anchor(canvas, cx.app, snapshot, position, zoom, edge_id);
+            new_hover_anchor = self::hit::hit_hover_edge_anchor(
+                canvas,
+                cx.host(),
+                snapshot,
+                position,
+                zoom,
+                edge_id,
+            );
         }
     }
 
     let new_hover = if new_hover_anchor.is_some() {
         None
     } else {
-        self::hit::hit_hover_edge(canvas, cx.app, snapshot, position, zoom)
+        self::hit::hit_hover_edge(canvas, cx.host(), snapshot, position, zoom)
     };
 
     let (anchor_changed, edge_changed) =

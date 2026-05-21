@@ -202,6 +202,8 @@ mod press_session;
 mod redraw_request;
 use hit_test::{HitTestCtx, HitTestScratch};
 mod hover;
+mod hover_move_cx;
+mod hover_move_retained_cx;
 mod insert_candidates;
 mod insert_execution;
 mod insert_execution_feedback;

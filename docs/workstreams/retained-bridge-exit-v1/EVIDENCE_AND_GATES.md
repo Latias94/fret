@@ -10583,3 +10583,66 @@ Broader gates not run:
   - Reason: `RBX-M2-840` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-850 pointer-move hover fallback retained Cx isolation
+
+Claim verified:
+
+- `hover.rs` no longer imports or names retained bridge Cx types.
+- Fallback edge/anchor hover pointer-move handling now uses `HoverMoveCx` for host access plus
+  paint invalidation.
+- Retained `EventCx` adaptation is isolated in `hover_move_retained_cx.rs`.
+- Real retained compatibility behavior still updates `hover_edge`, requests paint invalidation, and
+  does not repeat invalidation when the hover state is unchanged.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/hover.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/hover_move_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/hover_move_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/tests/pointer_move_hover_conformance.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving fallback hover
+    pointer-move handling behind `HoverMoveCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_hover_fallback_stays_off_retained_bridge) | test(hover_fallback_updates_hover_edge_and_invalidates_paint_once) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 3 tests.
+  - Scope proven: source-policy locks fallback hover off retained bridge Cx names; real retained
+    compatibility behavior still updates edge hover and invalidates paint only on state change.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/hover.rs ecosystem/fret-node/src/ui/canvas/widget/hover_move_cx.rs`
+  - Result: no matches.
+  - Scope proven: the migrated fallback hover path and pure capability seam no longer depend on
+    retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after the hover fallback seam changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after isolating
+    the hover fallback.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-850` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.

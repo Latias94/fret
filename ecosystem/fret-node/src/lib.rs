@@ -245,6 +245,9 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_move_dispatch/secondary/insert.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_OVERLAY_RS: &str =
         include_str!("ui/canvas/widget/pointer_move_dispatch/overlay.rs");
+    const UI_CANVAS_WIDGET_HOVER_RS: &str = include_str!("ui/canvas/widget/hover.rs");
+    const UI_CANVAS_WIDGET_HOVER_MOVE_CX_RS: &str =
+        include_str!("ui/canvas/widget/hover_move_cx.rs");
     const UI_CANVAS_WIDGET_CANCEL_CLEANUP_RS: &str =
         include_str!("ui/canvas/widget/cancel_cleanup.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_PICKER_RS: &str =
@@ -1681,6 +1684,25 @@ mod surface_policy_tests {
             assert!(
                 !UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_OVERLAY_RS.contains(forbidden),
                 "pointer-move overlay route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_move_hover_fallback_stays_off_retained_bridge() {
+        let hover_sources =
+            [UI_CANVAS_WIDGET_HOVER_RS, UI_CANVAS_WIDGET_HOVER_MOVE_CX_RS].join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !hover_sources.contains(forbidden),
+                "pointer-move hover fallback must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }
