@@ -9850,3 +9850,66 @@ Broader gates not run:
   - Reason: `RBX-M2-730` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-21 - RBX-M2-740 pan-zoom move retained Cx isolation
+
+Claim verified:
+
+- `pan_zoom_move.rs` no longer imports or names retained bridge Cx types.
+- `pan_zoom.rs` now routes panning move through the retained-agnostic `PanZoomCx` seam.
+- `PanZoomBeginCx` remains the begin-only extension over `PanZoomCx` for pointer capture.
+- Middle-mouse panning, space-to-pan panning, panning move start/end callbacks, and pan inertia end
+  behavior remain green.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_move.rs`
+- `docs/workstreams/retained-bridge-exit-v1/RBX_M2_080_NODE_RETAINED_CAPABILITY_LEDGER_2026-05-19.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-node --features compat-retained-canvas`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the retained canvas compatibility island compiles after moving panning move
+    behind `PanZoomCx`.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pan_zoom_move_helpers_stay_off_retained_bridge) | test(pan_zoom_begin_helpers_stay_off_retained_bridge) | test(middle_mouse_panning_tracks_screen_delta_under_render_transform) | test(space_to_pan_starts_left_mouse_panning_and_updates_viewport) | test(panning_emits_move_start_and_move_end) | test(pan_inertia_emits_move_end_after_inertia_stops) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+  - Result: passed, 7 tests.
+  - Scope proven: source-policy locks pan-zoom begin/move helpers off retained bridge Cx names;
+    real middle-mouse panning, space-to-pan panning, panning callback, and pan inertia end behavior
+    remain green through the retained compatibility island.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_move.rs`
+  - Result: no matches.
+  - Scope proven: the pan-zoom wrapper, begin helper, shared capability seam, and move helper no
+    longer depend on retained bridge Cx names.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: workspace Rust formatting remains clean after formatting the pan-zoom move seam
+    changes.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge feature allowlist remain valid after isolating
+    the pan-zoom move route.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after the user's pull and this
+    slice's updates.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M2-740` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+    widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.

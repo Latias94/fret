@@ -897,6 +897,11 @@ pointer-down and pointer-move branches remain retained-bound for later route iso
 the pointer-up leaf route no longer names retained bridge Cx types. Focused tests again prove guard
 dispatch, marquee release, pending node click-select release, edge reconnect release, and edge-drag
 left-up cleanup remain green.
+`RBX-M2-740` then moved pan-zoom panning move behind the retained-agnostic `PanZoomCx` seam.
+`PanZoomBeginCx` is now only the begin/capture extension over shared host/bounds/paint
+capabilities, and retained `EventCx` adaptation remains isolated in `pan_zoom_begin_retained_cx.rs`.
+Focused tests prove middle-mouse panning, space-to-pan panning, move start/end callbacks, and pan
+inertia end behavior remain green.
 
 ## Next Task
 
@@ -956,8 +961,9 @@ Recommended next implementation shape:
   pointer-up commit dispatch and node-drag commit release now use `PointerUpCommitCx`; pointer-up
   pending dispatch now uses `PendingNodeDragReleaseCx`; pointer-up active dispatch now uses
   `WireCommitCx + PointerUpReleaseCx`; pointer-up route wrappers now use `PointerUpCx`; marquee
-  move/selection/pending helpers now use `MarqueeCx`; pan begin now uses `PanZoomBeginCx`; and the
-  pointer-up event entry and pointer-up button router now use `PointerUpRouteCx`.
+  move/selection/pending helpers now use `MarqueeCx`; pan begin now uses `PanZoomBeginCx`; pan
+  move now uses `PanZoomCx`; and the pointer-up event entry and pointer-up button router now use
+  `PointerUpRouteCx`.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -980,7 +986,7 @@ Recommended next implementation shape:
   `node_drag_preview.rs`, `node_drag_preview/compute.rs`, `node_drag_preview_cx.rs`,
   `marquee.rs`, `marquee_begin.rs`, `marquee_cx.rs`, `marquee_finish.rs`,
   `marquee_pending.rs`, `marquee_selection.rs`,
-  `pan_zoom_begin.rs`, `pan_zoom_begin_cx.rs`,
+  `pan_zoom_begin.rs`, `pan_zoom_begin_cx.rs`, `pan_zoom.rs`, `pan_zoom_move.rs`,
   `keyboard_pan_activation.rs`,
   `event_clipboard_feedback.rs`, `event_clipboard_feedback_cx.rs`, `event_timer_toast.rs`,
   `timer_motion_shared.rs`,
@@ -1035,26 +1041,27 @@ Recommended next implementation shape:
 
 ## Gates
 
-Last run on 2026-05-21 for `RBX-M2-730`:
+Last run on 2026-05-21 for `RBX-M2-740`:
 
 - `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_up_button_router_stays_off_retained_bridge) | test(pointer_up_event_entry_stays_off_retained_bridge) | test(pointer_up_guard_dispatch_stays_off_retained_bridge) | test(pointer_up_route_wrappers_stay_off_retained_bridge) | test(background_click_starts_pending_marquee_and_clears_selection_on_up) | test(pending_node_drag_click_select_release_toggles_selection_and_finishes) | test(edge_reconnect_drop_on_empty_can_disconnect_edge) | test(edge_drag_left_up_clears_edge_drag_and_invalidates_paint) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
-  passed, 9 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_button/up.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_up/dispatch.rs` -
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pan_zoom_move_helpers_stay_off_retained_bridge) | test(pan_zoom_begin_helpers_stay_off_retained_bridge) | test(middle_mouse_panning_tracks_screen_delta_under_render_transform) | test(space_to_pan_starts_left_mouse_panning_and_updates_viewport) | test(panning_emits_move_start_and_move_end) | test(pan_inertia_emits_move_end_after_inertia_stops) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
+  passed, 7 tests.
+- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_move.rs` -
   no matches.
 - `cargo fmt --check` - passed.
 - `python3 tools/check_layering.py` - passed.
 - `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
   standalone markdown files.
 - `git diff --check` - passed.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
 
 Broader gates not run:
 
 - `cargo nextest run --workspace`
-  - Reason: `RBX-M2-730` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
+  - Reason: `RBX-M2-740` is a narrow adapter-boundary slice in `fret-node`'s retained canvas
     widget. The compat compile gate, targeted compat nextest gate, source-policy scan, formatting,
-    layering, catalog, and whitespace checks cover the changed surface.
+    layering, catalog, whitespace, and merge-marker checks cover the changed surface.
 
 Previous run on 2026-05-20 for `RBX-M2-370`:
 

@@ -2,7 +2,8 @@ use fret_core::{MouseButton, Point};
 use fret_ui::UiHost;
 
 use super::{
-    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot, pan_zoom_begin_cx::PanZoomBeginCx,
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot,
+    pan_zoom_begin_cx::{PanZoomBeginCx, PanZoomCx},
 };
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
@@ -29,11 +30,15 @@ where
     super::pan_zoom_begin::begin_panning(canvas, cx, snapshot, start_pos, button)
 }
 
-pub(super) fn handle_panning_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_panning_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: PanZoomCx<H>,
+{
     super::pan_zoom_move::handle_panning_move(canvas, cx, snapshot, position)
 }

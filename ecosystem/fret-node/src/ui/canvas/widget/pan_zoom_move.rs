@@ -3,26 +3,33 @@ use fret_core::time::Instant;
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot};
+use super::{
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot, pan_zoom_begin_cx::PanZoomCx,
+};
 
-pub(super) fn handle_panning_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_panning_move<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     position: Point,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: PanZoomCx<H>,
+{
     if !canvas.interaction.panning {
         return false;
     }
 
-    canvas.stop_pan_inertia_timer(cx.app);
+    canvas.stop_pan_inertia_timer(cx.host());
 
     let zoom = snapshot.zoom;
     if !zoom.is_finite() || zoom <= 0.0 {
         return false;
     }
 
-    let viewport = NodeGraphCanvasWith::<M>::viewport_from_pan_zoom(cx.bounds, snapshot.pan, zoom);
+    let viewport =
+        NodeGraphCanvasWith::<M>::viewport_from_pan_zoom(cx.bounds(), snapshot.pan, zoom);
     let screen_pos = viewport.canvas_to_screen(position);
 
     let last = canvas
@@ -38,7 +45,7 @@ pub(super) fn handle_panning_move<H: UiHost, M: NodeGraphCanvasMiddleware>(
     };
 
     update_pan_velocity(canvas, delta_canvas);
-    canvas.update_view_state(cx.app, |state| {
+    canvas.update_view_state(cx.host(), |state| {
         state.pan.x += delta_canvas.x;
         state.pan.y += delta_canvas.y;
     });

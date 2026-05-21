@@ -106,6 +106,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pan_zoom_begin.rs");
     const UI_CANVAS_WIDGET_PAN_ZOOM_BEGIN_CX_RS: &str =
         include_str!("ui/canvas/widget/pan_zoom_begin_cx.rs");
+    const UI_CANVAS_WIDGET_PAN_ZOOM_MOVE_RS: &str =
+        include_str!("ui/canvas/widget/pan_zoom_move.rs");
     const UI_CANVAS_WIDGET_PAINT_INVALIDATION_RS: &str =
         include_str!("ui/canvas/widget/paint_invalidation.rs");
     const UI_CANVAS_WIDGET_REDRAW_REQUEST_RS: &str =
@@ -1232,7 +1234,7 @@ mod surface_policy_tests {
 
     #[test]
     fn pan_zoom_begin_helpers_stay_off_retained_bridge() {
-        let pan_zoom_begin_sources = [
+        let pan_zoom_sources = [
             UI_CANVAS_WIDGET_PAN_ZOOM_BEGIN_RS,
             UI_CANVAS_WIDGET_PAN_ZOOM_BEGIN_CX_RS,
         ]
@@ -1246,8 +1248,24 @@ mod surface_policy_tests {
             "PaintCx",
         ] {
             assert!(
-                !pan_zoom_begin_sources.contains(forbidden),
+                !pan_zoom_sources.contains(forbidden),
                 "pan-zoom begin helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pan_zoom_move_helpers_stay_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAN_ZOOM_MOVE_RS.contains(forbidden),
+                "pan-zoom move helpers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

@@ -3912,6 +3912,33 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-740 Isolate pan-zoom move retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_move.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Split the pan-begin-only capture capability from the shared pan host/bounds/paint capability
+      so the panning move path no longer names retained bridge Cx types.
+    - Keep retained `EventCx` adaptation isolated in `pan_zoom_begin_retained_cx.rs`.
+    - Prove middle-mouse panning, space-to-pan, move start/end callbacks, pan inertia end, and
+      source-policy gates stay green.
+  - Result:
+    - Added `PanZoomCx` for host, bounds, and paint invalidation.
+    - Kept `PanZoomBeginCx` as the begin-only extension for pointer capture.
+    - `pan_zoom.rs` and `pan_zoom_move.rs` now accept retained-agnostic pan capabilities instead of
+      naming retained `EventCx`.
+    - Added `pan_zoom_move_helpers_stay_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pan_zoom_move_helpers_stay_off_retained_bridge) | test(pan_zoom_begin_helpers_stay_off_retained_bridge) | test(middle_mouse_panning_tracks_screen_delta_under_render_transform) | test(space_to_pan_starts_left_mouse_panning_and_updates_viewport) | test(panning_emits_move_start_and_move_end) | test(pan_inertia_emits_move_end_after_inertia_stops) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_begin_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pan_zoom_move.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
