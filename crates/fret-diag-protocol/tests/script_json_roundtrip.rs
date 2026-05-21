@@ -332,6 +332,34 @@ fn script_v2_roundtrip_ui_gallery_context_menu_disabled_item_action_state() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_context_menu_basic_keyboard_nav() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_context_menu_basic_right_click_last_action() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_context_menu_basic_touch_long_press_open() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_context_menu_basic_overlay_placement_trace() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-basic-overlay-placement-trace.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_canvas_cull_torture_pan_zoom() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-canvas-cull-torture-pan-zoom.json"

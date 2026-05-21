@@ -1714,10 +1714,30 @@ date: 2026-05-12
     `ui-gallery-context-menu-basic-content`; this is tracked as follow-up evidence rather than an
     action-state defect.
 
+- [x] Resolve the ContextMenu Basic duplicate panel test-id lint and promote pointer-open keyboard
+  entry coverage.
+  - Result:
+    the Basic snippet now uses a dedicated overlay panel test id
+    `ui-gallery-context-menu-basic-panel`, so diagnostics no longer confuse the DocSection content
+    wrapper with the open menu panel. The follow-up proved the previous duplicate lint was not a
+    generic transition-capture defect for this row; the default-lint `ui-gallery-context-menu-semantics`
+    suite now passes with summary
+    `target/fret-diag-context-menu-semantics-suite-panel-id-v1/sessions/1779403614963-229576/suite.summary.json`.
+    The new `ui-gallery-context-menu-basic-keyboard-nav.json` runtime gate is promoted into the
+    ContextMenu suite and proves the pointer-open path focuses menu content first, ArrowDown enters
+    `Back`, the next ArrowDown skips disabled `Forward` and lands on `Reload`, Enter dispatches the
+    reload action, and the menu closes. Focused runtime passed with run id `1779402658765`; the
+    four-row `ui-gallery-context-menu` suite passed with `stage_counts={"passed":4}` and summary
+    `target/fret-diag-context-menu-suite-keyboard-entry-v2/sessions/1779404255883-237716/suite.summary.json`.
+    The root cause was recipe-owned focus target lifetime: the panel key handler existed and
+    key dispatch reached it, but top-level content rendering did not populate the persistent
+    first/last focus target models used by the handler. `ContextMenuContentRenderEnv` now owns
+    panel entry rendering and records enabled item targets, including checkbox/radio items, while a
+    focused `fret-ui` key-routing test proves non-modal hit-test-inert overlays still receive
+    keyboard events when focused.
+
 Next slice recommendation:
 
-- Investigate the separate ContextMenu diagnostics lifecycle/keyboard-entry gaps surfaced while
-  building this gate: default suite lint can see duplicate content test ids during menu transition
-  captures, and pointer-open content ArrowDown does not yet have a promoted runtime gate. If that
-  stabilizes quickly, convert the finding into a small diagnostics/recipe fix; otherwise continue
-  the action-state axis into Command disabled active-descendant rows.
+- Continue the action-state axis into Command disabled active-descendant rows, where command
+  filtering, active-descendant mutation, disabled semantics, and invoke suppression can drift
+  independently from roving-focus menu widgets.

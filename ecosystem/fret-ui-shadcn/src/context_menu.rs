@@ -1360,6 +1360,29 @@ fn context_menu_label_element<H: UiHost>(
     )
 }
 
+fn record_context_menu_item_focus_target<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    item_id: GlobalElementId,
+    first_item_focus_id: &Rc<Cell<Option<GlobalElementId>>>,
+    last_item_focus_id: &Rc<Cell<Option<GlobalElementId>>>,
+    first_item_focus_id_model: &Model<Option<GlobalElementId>>,
+    last_item_focus_id_model: &Model<Option<GlobalElementId>>,
+) {
+    if first_item_focus_id.get().is_none() {
+        first_item_focus_id.set(Some(item_id));
+    }
+    last_item_focus_id.set(Some(item_id));
+    let _ = cx.app.models_mut().update(first_item_focus_id_model, |v| {
+        if v.is_none() {
+            *v = Some(item_id);
+        }
+    });
+    let _ = cx
+        .app
+        .models_mut()
+        .update(last_item_focus_id_model, |v| *v = Some(item_id));
+}
+
 #[derive(Clone)]
 struct ContextMenuRenderEnv {
     open: Model<bool>,
@@ -1907,6 +1930,10 @@ struct ContextMenuContentRenderEnv {
     open: Model<bool>,
     cancel_open: ContextMenuCancelOpenShared,
     gating: WindowCommandGatingSnapshot,
+    first_item_focus_id: Rc<Cell<Option<GlobalElementId>>>,
+    last_item_focus_id: Rc<Cell<Option<GlobalElementId>>>,
+    first_item_focus_id_model: Model<Option<GlobalElementId>>,
+    last_item_focus_id_model: Model<Option<GlobalElementId>>,
     reserve_leading_slot: bool,
     item_count: usize,
     ring: RingStyle,
@@ -1933,6 +1960,36 @@ struct ContextMenuContentRenderEnv {
 }
 
 impl ContextMenuContentRenderEnv {
+    fn render_entry<H: UiHost>(
+        &self,
+        cx: &mut ElementContext<'_, H>,
+        entry: ContextMenuEntry,
+        item_ix: &mut usize,
+    ) -> AnyElement {
+        match entry {
+            ContextMenuEntry::Group(group) => {
+                let children = self.render_entries(cx, group.entries, item_ix);
+                menu_structural_group(cx, fret_core::SemanticsRole::Group, children.into_vec())
+            }
+            ContextMenuEntry::RadioGroup(group) => {
+                let mut children: Vec<AnyElement> = Vec::with_capacity(group.items.len());
+                for spec in group.items {
+                    children.push(self.render_radio_item(
+                        cx,
+                        spec.into_item(group.value.clone(), group.on_value_change.clone()),
+                        item_ix,
+                    ));
+                }
+                menu_structural_group(cx, fret_core::SemanticsRole::Group, children)
+            }
+            ContextMenuEntry::Label(label) => self.render_label(cx, label),
+            ContextMenuEntry::Separator => self.render_separator(cx),
+            ContextMenuEntry::Item(item) => self.render_item(cx, item, item_ix),
+            ContextMenuEntry::CheckboxItem(item) => self.render_checkbox_item(cx, item, item_ix),
+            ContextMenuEntry::RadioItem(item) => self.render_radio_item(cx, item, item_ix),
+        }
+    }
+
     fn render_entries<H: UiHost>(
         &self,
         cx: &mut ElementContext<'_, H>,
@@ -1942,40 +1999,7 @@ impl ContextMenuContentRenderEnv {
         let mut out: Vec<AnyElement> = Vec::with_capacity(entries.len());
 
         for entry in entries {
-            match entry {
-                ContextMenuEntry::Group(group) => {
-                    let children = self.render_entries(cx, group.entries, item_ix);
-                    out.push(menu_structural_group(
-                        cx,
-                        fret_core::SemanticsRole::Group,
-                        children.into_vec(),
-                    ));
-                }
-                ContextMenuEntry::RadioGroup(group) => {
-                    let mut children: Vec<AnyElement> = Vec::with_capacity(group.items.len());
-                    for spec in group.items {
-                        children.push(self.render_radio_item(
-                            cx,
-                            spec.into_item(group.value.clone(), group.on_value_change.clone()),
-                            item_ix,
-                        ));
-                    }
-                    out.push(menu_structural_group(
-                        cx,
-                        fret_core::SemanticsRole::Group,
-                        children,
-                    ));
-                }
-                ContextMenuEntry::Label(label) => out.push(self.render_label(cx, label)),
-                ContextMenuEntry::Separator => out.push(self.render_separator(cx)),
-                ContextMenuEntry::Item(item) => out.push(self.render_item(cx, item, item_ix)),
-                ContextMenuEntry::CheckboxItem(item) => {
-                    out.push(self.render_checkbox_item(cx, item, item_ix));
-                }
-                ContextMenuEntry::RadioItem(item) => {
-                    out.push(self.render_radio_item(cx, item, item_ix))
-                }
-            }
+            out.push(self.render_entry(cx, entry, item_ix));
         }
 
         out.into()
@@ -2096,6 +2120,10 @@ impl ContextMenuContentRenderEnv {
         let overlay_root_name_for_controls = self.overlay_root_name_for_controls.clone();
         let submenu_cfg = self.submenu_cfg;
         let submenu_for_item = self.submenu_models.clone();
+        let first_item_focus_id_for_items = self.first_item_focus_id.clone();
+        let last_item_focus_id_for_items = self.last_item_focus_id.clone();
+        let first_item_focus_id_model_for_items = self.first_item_focus_id_model.clone();
+        let last_item_focus_id_model_for_items = self.last_item_focus_id_model.clone();
 
         cx.keyed(value.clone(), move |cx| {
             cx.pressable_with_id_props(move |cx, st, item_id| {
@@ -2134,6 +2162,17 @@ impl ContextMenuContentRenderEnv {
                     cancel_open.clone(),
                     open.clone(),
                 ));
+
+                if !disabled {
+                    record_context_menu_item_focus_target(
+                        cx,
+                        item_id,
+                        &first_item_focus_id_for_items,
+                        &last_item_focus_id_for_items,
+                        &first_item_focus_id_model_for_items,
+                        &last_item_focus_id_model_for_items,
+                    );
+                }
 
                 if !has_submenu && !disabled {
                     if let Some(payload) = action_payload.clone() {
@@ -2267,6 +2306,10 @@ impl ContextMenuContentRenderEnv {
         let trailing = item.trailing;
         let open = self.open.clone();
         let cancel_open = self.cancel_open.clone();
+        let first_item_focus_id_for_items = self.first_item_focus_id.clone();
+        let last_item_focus_id_for_items = self.last_item_focus_id.clone();
+        let first_item_focus_id_model_for_items = self.first_item_focus_id_model.clone();
+        let last_item_focus_id_model_for_items = self.last_item_focus_id_model.clone();
 
         let ring = self.ring;
         let item_count = self.item_count;
@@ -2283,7 +2326,7 @@ impl ContextMenuContentRenderEnv {
         let accent_fg = self.accent_fg;
 
         cx.keyed(value.clone(), move |cx| {
-            cx.pressable_with_id_props(move |cx, st, _item_id| {
+            cx.pressable_with_id_props(move |cx, st, item_id| {
                 let checked_now = checked.snapshot(cx);
 
                 let props = PressableProps {
@@ -2311,6 +2354,15 @@ impl ContextMenuContentRenderEnv {
                 ));
 
                 if !disabled {
+                    record_context_menu_item_focus_target(
+                        cx,
+                        item_id,
+                        &first_item_focus_id_for_items,
+                        &last_item_focus_id_for_items,
+                        &first_item_focus_id_model_for_items,
+                        &last_item_focus_id_model_for_items,
+                    );
+
                     let checked_for_activate = checked.clone();
                     let on_checked_change_for_activate = on_checked_change.clone();
                     cx.pressable_on_activate(Arc::new(move |host, action_cx, _reason| {
@@ -2398,6 +2450,10 @@ impl ContextMenuContentRenderEnv {
         let trailing = item.trailing;
         let open = self.open.clone();
         let cancel_open = self.cancel_open.clone();
+        let first_item_focus_id_for_items = self.first_item_focus_id.clone();
+        let last_item_focus_id_for_items = self.last_item_focus_id.clone();
+        let first_item_focus_id_model_for_items = self.first_item_focus_id_model.clone();
+        let last_item_focus_id_model_for_items = self.last_item_focus_id_model.clone();
 
         let ring = self.ring;
         let item_count = self.item_count;
@@ -2417,7 +2473,7 @@ impl ContextMenuContentRenderEnv {
             let selected = group_value.snapshot(cx);
             let is_selected = menu::radio_group::is_selected(selected.as_ref(), &value);
 
-            cx.pressable_with_id_props(move |cx, st, _item_id| {
+            cx.pressable_with_id_props(move |cx, st, item_id| {
                 let props = PressableProps {
                     layout: {
                         let mut layout = LayoutStyle::default();
@@ -2446,6 +2502,15 @@ impl ContextMenuContentRenderEnv {
                 let is_selected = menu::radio_group::is_selected(selected.as_ref(), &value);
 
                 if !disabled {
+                    record_context_menu_item_focus_target(
+                        cx,
+                        item_id,
+                        &first_item_focus_id_for_items,
+                        &last_item_focus_id_for_items,
+                        &first_item_focus_id_model_for_items,
+                        &last_item_focus_id_model_for_items,
+                    );
+
                     let group_value_for_activate = group_value.clone();
                     let value_for_activate = value.clone();
                     let on_value_change_for_activate = on_value_change.clone();
@@ -3587,6 +3652,8 @@ impl ContextMenu {
                 let first_item_focus_id_for_children = first_item_focus_id.clone();
                 let last_item_focus_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
                 let last_item_focus_id_for_children = last_item_focus_id.clone();
+                let first_item_focus_id_for_handler_fallback = first_item_focus_id.clone();
+                let last_item_focus_id_for_handler_fallback = last_item_focus_id.clone();
                 let first_item_focus_id_model = cx.local_model_keyed(
                     ("context-menu-first-item-focus-id", open.id()),
                     || None::<GlobalElementId>,
@@ -3995,6 +4062,16 @@ impl ContextMenu {
                                                         open: open_for_overlay.clone(),
                                                         cancel_open: cancel_open.clone(),
                                                         gating: gating.clone(),
+                                                        first_item_focus_id:
+                                                            first_item_focus_id_for_children.clone(),
+                                                        last_item_focus_id:
+                                                            last_item_focus_id_for_children.clone(),
+                                                        first_item_focus_id_model:
+                                                            first_item_focus_id_model_for_content
+                                                                .clone(),
+                                                        last_item_focus_id_model:
+                                                            last_item_focus_id_model_for_content
+                                                                .clone(),
                                                         reserve_leading_slot,
                                                         item_count,
                                                         ring,
@@ -4022,681 +4099,14 @@ impl ContextMenu {
                                                         submenu_models: submenu_for_content.clone(),
                                                     };
 
-                                                    let mut out: Vec<AnyElement> =
-                                                        Vec::with_capacity(entries_for_panel.len());
-
-                                            let mut item_ix: usize = 0;
-                                            for entry in entries_for_panel {
-                                                match entry {
-                                                    ContextMenuEntry::Label(label) => {
-                                                        out.push(context_menu_label_element(
+                                                    let mut item_ix: usize = 0;
+                                                    render_env
+                                                        .render_entries(
                                                             cx,
-                                                            label.text,
-                                                            label.inset,
-                                                            pad_x,
-                                                            pad_x_inset,
-                                                            pad_y,
-                                                        ));
-                                                    }
-                                                    ContextMenuEntry::Group(group) => {
-                                                        let children = render_env.render_entries(
-                                                            cx,
-                                                            group.entries,
+                                                            entries_for_panel,
                                                             &mut item_ix,
-                                                        );
-                                                        out.push(menu_structural_group(
-                                                            cx,
-                                                            fret_core::SemanticsRole::Group,
-                                                            children.into_vec(),
-                                                        ));
-                                                    }
-                                                    ContextMenuEntry::RadioGroup(group) => {
-                                                        let group_value = group.value.clone();
-                                                        let on_value_change =
-                                                            group.on_value_change.clone();
-                                                        let mut children: Vec<AnyElement> =
-                                                            Vec::with_capacity(group.items.len());
-                                                        for spec in group.items {
-                                                            children.push(render_env.render_radio_item(
-                                                                cx,
-                                                                spec.into_item(
-                                                                    group_value.clone(),
-                                                                    on_value_change.clone(),
-                                                                ),
-                                                                &mut item_ix,
-                                                            ));
-                                                        }
-                                                        out.push(menu_structural_group(
-                                                            cx,
-                                                            fret_core::SemanticsRole::Group,
-                                                            children,
-                                                        ));
-                                                    }
-                                                    ContextMenuEntry::Separator => {
-                                                        out.push(cx.container(
-                                                            ContainerProps {
-                                                                layout: {
-                                                                    let mut layout =
-                                                                        LayoutStyle::default();
-                                                                    layout.size.width = Length::Fill;
-                                                                    layout.size.height =
-                                                                        Length::Px(Px(1.0));
-                                                                    // new-york-v4: `Separator` uses `-mx-1 my-1`.
-                                                                    layout.margin.left =
-                                                                        fret_ui::element::MarginEdge::Px(Px(-4.0));
-                                                                    layout.margin.right =
-                                                                        fret_ui::element::MarginEdge::Px(Px(-4.0));
-                                                                    layout.margin.top =
-                                                                        fret_ui::element::MarginEdge::Px(Px(4.0));
-                                                                    layout.margin.bottom =
-                                                                        fret_ui::element::MarginEdge::Px(Px(4.0));
-                                                                    layout
-                                                                },
-                                                                padding: Edges::all(Px(0.0)).into(),
-                                                                background: Some(border),
-                                                                ..Default::default()
-                                                            },
-                                                            |_cx| Vec::new(),
-                                                        ));
-                                                    }
-                                                    ContextMenuEntry::Item(item) => {
-                                                        let collection_index = item_ix;
-                                                        item_ix = item_ix.saturating_add(1);
-
-                                                        let label = item.label.clone();
-                                                        let value = item.value.clone();
-                                                        let a11y_label = item
-                                                            .a11y_label
-                                                            .clone()
-                                                            .or_else(|| Some(label.clone()));
-                                                        let test_id = item.test_id.clone();
-                                                        let chrome_test_id = test_id
-                                                            .clone()
-                                                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
-                                                        let close_on_select = item.close_on_select;
-                                                        let command = item.command;
-                                                        let action_payload = item.action_payload;
-                                                        let disabled = item.disabled
-                                                            || crate::command_gating::command_is_disabled_by_gating(
-                                                                &*cx.app,
-                                                                &gating,
-                                                                command.as_ref(),
-                                                            );
-                                                        let leading = item.leading;
-                                                        let leading_icon = item.leading_icon;
-                                                        let trailing = item.trailing;
-                                                        let has_submenu = item.submenu.is_some();
-                                                        let submenu_estimated_height_unclamped: Option<Px> = None;
-                                                        let variant = item.variant;
-                                                        let pad_left =
-                                                            if item.inset { pad_x_inset } else { pad_x };
-                                                        let open = open_for_overlay.clone();
-                                                        let text_style = text_style.clone();
-                                                        let submenu_for_item = submenu_for_content.clone();
-                                                        let overlay_root_name_for_controls =
-                                                            overlay_root_name_for_controls.clone();
-                                                        let first_item_focus_id_for_items =
-                                                            first_item_focus_id_for_children.clone();
-                                                        let last_item_focus_id_for_items =
-                                                            last_item_focus_id_for_children.clone();
-                                                        let first_item_focus_id_model_for_items =
-                                                            first_item_focus_id_model_for_content
-                                                                .clone();
-                                                        let last_item_focus_id_model_for_items =
-                                                            last_item_focus_id_model_for_content
-                                                                .clone();
-
-                                                        out.push(cx.keyed(value.clone(), move |cx| {
-                                                            cx.pressable_with_id_props(
-                                                                move |cx, st, item_id| {
-                                                                    let geometry_hint =
-                                                                        has_submenu.then(|| {
-                                                                            let outer = overlay::outer_bounds_with_window_margin_for_element_root(
-                                                                                cx,
-                                                                                item_id,
-                                                                                fret_ui::Invalidation::Layout,
-                                                                                window_margin,
-                                                                            );
-                                                                            let submenu_max_h =
-                                                                                submenu_max_height_metric
-                                                                                    .map(|h| {
-                                                                                        Px(h.0.min(
-                                                                                            outer.size.height.0,
-                                                                                        ))
-                                                                                    })
-                                                                                    .unwrap_or(outer.size.height);
-                                                                            let desired_h = submenu_estimated_height_unclamped
-                                                                                .map(|estimated| Px(estimated.0.min(submenu_max_h.0)))
-                                                                                .unwrap_or(submenu_max_h);
-                                                                            let desired = Size::new(
-                                                                                submenu_min_width,
-                                                                                desired_h,
-                                                                            );
-                                                                            menu::sub_trigger::MenuSubTriggerGeometryHint {
-                                                                                outer,
-                                                                                desired,
-                                                                            }
-                                                                        });
-                                                                    let is_open_submenu = menu::sub_trigger::wire(
-                                                                        cx,
-                                                                        st,
-                                                                        item_id,
-                                                                        disabled,
-                                                                        has_submenu,
-                                                                        value.clone(),
-                                                                        &submenu_for_item,
-                                                                        submenu_cfg,
-                                                                        geometry_hint,
-                                                                    )
-                                                                    .unwrap_or(false);
-
-                                                                    if !disabled {
-                                                                        if first_item_focus_id_for_items.get().is_none() {
-                                                                            first_item_focus_id_for_items
-                                                                                .set(Some(item_id));
-                                                                        }
-                                                                        let _ = cx.app.models_mut().update(
-                                                                            &first_item_focus_id_model_for_items,
-                                                                            |v| {
-                                                                                if v.is_none() {
-                                                                                    *v = Some(item_id);
-                                                                                }
-                                                                            },
-                                                                        );
-                                                                        last_item_focus_id_for_items
-                                                                            .set(Some(item_id));
-                                                                        let _ = cx.app.models_mut().update(
-                                                                            &last_item_focus_id_model_for_items,
-                                                                            |v| *v = Some(item_id),
-                                                                        );
-                                                                    }
-
-                                                                    if !has_submenu && !disabled {
-                                                                        if let Some(payload) =
-                                                                            action_payload.clone()
-                                                                        {
-                                                                            cx.pressable_dispatch_command_with_payload_factory_if_enabled_opt(
-                                                                                command.clone(),
-                                                                                payload,
-                                                                            );
-                                                                        } else {
-                                                                            cx.pressable_dispatch_command_if_enabled_opt(command.clone());
-                                                                        }
-                                                                        if close_on_select {
-                                                                            cx.pressable_set_bool(
-                                                                                &open, false,
-                                                                            );
-                                                                        }
-                                                                    }
-
-                                                                    let controls = has_submenu.then(|| {
-                                                                        menu::sub_content::submenu_content_semantics_id(
-                                                                            cx,
-                                                                            overlay_root_name_for_controls
-                                                                                .as_ref(),
-                                                                            &value,
-                                                                        )
-                                                                    });
-                                                                    let mut a11y =
-                                                                        menu::item::menu_item_a11y_with_controls(
-                                                                            a11y_label,
-                                                                            has_submenu.then_some(
-                                                                                is_open_submenu,
-                                                                            ),
-                                                                            controls,
-                                                                        );
-                                                                    a11y.test_id = test_id.clone();
-                                                                    let props = PressableProps {
-                                                                        layout: {
-                                                                            let mut layout =
-                                                                                LayoutStyle::default();
-                                                                            layout.size.width =
-                                                                                Length::Fill;
-                                                                            layout.size.min_height =
-                                                                                Some(Length::Px(Px(28.0)));
-                                                                            layout
-                                                                        },
-                                                                        enabled: !disabled,
-                                                                        focusable: !disabled,
-                                                                        focus_ring: Some(ring),
-                                                                        a11y: a11y.with_collection_position(
-                                                                            collection_index,
-                                                                            item_count,
-                                                                        ),
-                                                                        ..Default::default()
-                                                                    };
-
-                                                                    let mut row_bg =
-                                                                        fret_core::Color::TRANSPARENT;
-                                                                    let mut row_fg = if variant == ContextMenuItemVariant::Destructive {
-                                                                        destructive_fg
-                                                                    } else {
-                                                                        fg
-                                                                    };
-                                                                    if st.hovered
-                                                                        || st.pressed
-                                                                        || st.focused
-                                                                        || is_open_submenu
-                                                                    {
-                                                                        if variant == ContextMenuItemVariant::Destructive {
-                                                                            row_bg = destructive_bg;
-                                                                            row_fg = destructive_fg;
-                                                                        } else {
-                                                                            row_bg = accent;
-                                                                            row_fg = accent_fg;
-                                                                        }
-                                                                    }
-
-                                                                    let icon_fg = if variant
-                                                                        == ContextMenuItemVariant::Destructive
-                                                                    {
-                                                                        destructive_fg
-                                                                    } else {
-                                                                        label_fg
-                                                                    };
-
-                                                                    let mut trailing = trailing;
-                                                                    if !has_submenu && trailing.is_none() {
-                                                                        trailing = command.as_ref().and_then(|cmd| {
-                                                                            command_shortcut_label(
-                                                                                cx,
-                                                                                cmd,
-                                                                                fret_runtime::Platform::current(),
-                                                                            )
-                                                                            .map(|text| {
-                                                                                ContextMenuShortcut::new(text)
-                                                                                    .into_element(cx)
-                                                                            })
-                                                                        });
-                                                                    }
-
-                                                                    let children = menu_row_children(
-                                                                        cx,
-                                                                        label.clone(),
-                                                                        leading,
-                                                                        leading_icon,
-                                                                        reserve_leading_slot,
-                                                                        trailing,
-                                                                        has_submenu,
-                                                                        None,
-                                                                        disabled,
-                                                                        row_bg,
-                                                                        row_fg,
-                                                                        icon_fg,
-                                                                        text_style.clone(),
-                                                                        font_size,
-                                                                        font_line_height,
-                                                                        pad_left,
-                                                                        pad_x,
-                                                                        pad_y,
-                                                                        radius_sm,
-                                                                        text_disabled,
-                                                                        chrome_test_id.clone(),
-                                                                    );
-
-                                                                    (props, children)
-                                                                },
-                                                            )
-                                                          }));
-                                                      }
-                                                    ContextMenuEntry::CheckboxItem(item) => {
-                                                        let collection_index = item_ix;
-                                                        item_ix = item_ix.saturating_add(1);
-
-                                                        let label = item.label.clone();
-                                                        let value = item.value.clone();
-                                                        let checked = item.checked.clone();
-                                                        let on_checked_change =
-                                                            item.on_checked_change.clone();
-                                                        let a11y_label = item
-                                                            .a11y_label
-                                                            .clone()
-                                                            .or_else(|| Some(label.clone()));
-                                                        let close_on_select = item.close_on_select;
-                                                        let command = item.command;
-                                                        let disabled = item.disabled
-                                                            || crate::command_gating::command_is_disabled_by_gating(
-                                                                &*cx.app,
-                                                                &gating,
-                                                                command.as_ref(),
-                                                            );
-                                                        let leading = item.leading;
-                                                        let trailing = item.trailing;
-                                                        let open = open_for_overlay.clone();
-                                                        let text_style = text_style.clone();
-                                                        let first_item_focus_id_for_items =
-                                                            first_item_focus_id_for_children.clone();
-                                                        let last_item_focus_id_for_items =
-                                                            last_item_focus_id_for_children.clone();
-                                                        let first_item_focus_id_model_for_items =
-                                                            first_item_focus_id_model_for_content
-                                                                .clone();
-                                                        let last_item_focus_id_model_for_items =
-                                                            last_item_focus_id_model_for_content
-                                                                .clone();
-
-                                                        out.push(cx.keyed(value.clone(), |cx| {
-                                                            cx.pressable_with_id_props(
-                                                                move |cx, st, item_id| {
-                                                                    let checked_now =
-                                                                        checked.snapshot(cx);
-
-                                                                    if !disabled {
-                                                                        if first_item_focus_id_for_items
-                                                                            .get()
-                                                                            .is_none()
-                                                                        {
-                                                                            first_item_focus_id_for_items
-                                                                                .set(Some(item_id));
-                                                                        }
-                                                                        let _ = cx.app.models_mut().update(
-                                                                            &first_item_focus_id_model_for_items,
-                                                                            |v| {
-                                                                                if v.is_none() {
-                                                                                    *v = Some(item_id);
-                                                                                }
-                                                                            },
-                                                                        );
-                                                                        last_item_focus_id_for_items
-                                                                            .set(Some(item_id));
-                                                                        let _ = cx.app.models_mut().update(
-                                                                            &last_item_focus_id_model_for_items,
-                                                                            |v| *v = Some(item_id),
-                                                                        );
-                                                                        let checked_for_activate =
-                                                                            checked.clone();
-                                                                        let on_checked_change_for_activate =
-                                                                            on_checked_change.clone();
-                                                                        cx.pressable_on_activate(
-                                                                            Arc::new(
-                                                                                move |host, action_cx, _reason| {
-                                                                                    let next =
-                                                                                        checked_for_activate
-                                                                                            .toggle(host);
-                                                                                    if let Some(handler) =
-                                                                                        on_checked_change_for_activate
-                                                                                            .as_ref()
-                                                                                    {
-                                                                                        handler(
-                                                                                            host,
-                                                                                            action_cx,
-                                                                                            next,
-                                                                                        );
-                                                                                    }
-                                                                                },
-                                                                            ),
-                                                                        );
-                                                                    }
-
-                                                                    cx.pressable_dispatch_command_if_enabled_opt(
-                                                                        command.clone(),
-                                                                    );
-                                                                    if !disabled && close_on_select {
-                                                                        cx.pressable_set_bool(&open, false);
-                                                                    }
-
-                                                                    let mut trailing = trailing;
-                                                                    if trailing.is_none() {
-                                                                        trailing = command.as_ref().and_then(|cmd| {
-                                                                            command_shortcut_label(
-                                                                                cx,
-                                                                                cmd,
-                                                                                fret_runtime::Platform::current(),
-                                                                            )
-                                                                            .map(|text| {
-                                                                                ContextMenuShortcut::new(text)
-                                                                                    .into_element(cx)
-                                                                            })
-                                                                        });
-                                                                    }
-
-                                                                    let mut row_bg =
-                                                                        fret_core::Color::TRANSPARENT;
-                                                                    let mut row_fg = fg;
-                                                                    if st.hovered || st.pressed || st.focused {
-                                                                        row_bg = accent;
-                                                                        row_fg = accent_fg;
-                                                                    }
-
-                                                                    let children = menu_row_children(
-                                                                        cx,
-                                                                        label.clone(),
-                                                                        leading,
-                                                                        None,
-                                                                        reserve_leading_slot,
-                                                                        trailing,
-                                                                        false,
-                                                                        Some(checked_now),
-                                                                        disabled,
-                                                                        row_bg,
-                                                                        row_fg,
-                                                                        row_fg,
-                                                                        text_style.clone(),
-                                                                        font_size,
-                                                                        font_line_height,
-                                                                        pad_x,
-                                                                        pad_x,
-                                                                        pad_y,
-                                                                        radius_sm,
-                                                                        text_disabled,
-                                                                        None,
-                                                                    );
-
-                                                                    let props = PressableProps {
-                                                                        layout: {
-                                                                            let mut layout =
-                                                                                LayoutStyle::default();
-                                                                            layout.size.width =
-                                                                                Length::Fill;
-                                                                            layout.size.min_height =
-                                                                                Some(Length::Px(Px(28.0)));
-                                                                            layout
-                                                                        },
-                                                                        enabled: !disabled,
-                                                                        focusable: !disabled,
-                                                                        focus_ring: Some(ring),
-                                                                        a11y: menu::item::menu_item_checkbox_a11y(
-                                                                            a11y_label.clone(),
-                                                                            checked_now,
-                                                                        )
-                                                                        .with_collection_position(
-                                                                            collection_index,
-                                                                            item_count,
-                                                                        ),
-                                                                        ..Default::default()
-                                                                    };
-
-                                                                    (props, children)
-                                                                },
-                                                            )
-                                                        }));
-                                                    }
-                                                    ContextMenuEntry::RadioItem(item) => {
-                                                        let collection_index = item_ix;
-                                                        item_ix = item_ix.saturating_add(1);
-
-                                                        let label = item.label.clone();
-                                                        let value = item.value.clone();
-                                                        let group_value = item.group_value.clone();
-                                                        let on_value_change =
-                                                            item.on_value_change.clone();
-                                                        let a11y_label = item
-                                                            .a11y_label
-                                                            .clone()
-                                                            .or_else(|| Some(label.clone()));
-                                                        let close_on_select = item.close_on_select;
-                                                        let command = item.command;
-                                                        let disabled = item.disabled
-                                                            || crate::command_gating::command_is_disabled_by_gating(
-                                                                &*cx.app,
-                                                                &gating,
-                                                                command.as_ref(),
-                                                            );
-                                                        let leading = item.leading;
-                                                        let trailing = item.trailing;
-                                                        let open = open_for_overlay.clone();
-                                                        let text_style = text_style.clone();
-                                                        let first_item_focus_id_for_items =
-                                                            first_item_focus_id_for_children.clone();
-                                                        let last_item_focus_id_for_items =
-                                                            last_item_focus_id_for_children.clone();
-                                                        let first_item_focus_id_model_for_items =
-                                                            first_item_focus_id_model_for_content
-                                                                .clone();
-                                                        let last_item_focus_id_model_for_items =
-                                                            last_item_focus_id_model_for_content
-                                                                .clone();
-
-                                                        out.push(cx.keyed(value.clone(), |cx| {
-                                                            let selected = group_value.snapshot(cx);
-                                                            let is_selected = menu::radio_group::is_selected(
-                                                                selected.as_ref(),
-                                                                &value,
-                                                            );
-                                                            cx.pressable_with_id_props(
-                                                                move |cx, st, item_id| {
-                                                                    if !disabled {
-                                                                        if first_item_focus_id_for_items
-                                                                            .get()
-                                                                            .is_none()
-                                                                        {
-                                                                            first_item_focus_id_for_items
-                                                                                .set(Some(item_id));
-                                                                        }
-                                                                        let _ = cx.app.models_mut().update(
-                                                                            &first_item_focus_id_model_for_items,
-                                                                            |v| {
-                                                                                if v.is_none() {
-                                                                                    *v = Some(item_id);
-                                                                                }
-                                                                            },
-                                                                        );
-                                                                        last_item_focus_id_for_items
-                                                                            .set(Some(item_id));
-                                                                        let _ = cx.app.models_mut().update(
-                                                                            &last_item_focus_id_model_for_items,
-                                                                            |v| *v = Some(item_id),
-                                                                        );
-                                                                        let group_value_for_activate =
-                                                                            group_value.clone();
-                                                                        let value_for_activate =
-                                                                            value.clone();
-                                                                        let on_value_change_for_activate =
-                                                                            on_value_change.clone();
-                                                                        cx.pressable_on_activate(
-                                                                            Arc::new(
-                                                                                move |host, action_cx, _reason| {
-                                                                                    let Some(next) =
-                                                                                        group_value_for_activate
-                                                                                            .select(
-                                                                                                host,
-                                                                                                &value_for_activate,
-                                                                                            )
-                                                                                    else {
-                                                                                        return;
-                                                                                    };
-                                                                                    if let Some(handler) =
-                                                                                        on_value_change_for_activate
-                                                                                            .as_ref()
-                                                                                    {
-                                                                                        handler(
-                                                                                            host,
-                                                                                            action_cx,
-                                                                                            next,
-                                                                                        );
-                                                                                    }
-                                                                                },
-                                                                            ),
-                                                                        );
-                                                                    }
-
-                                                                    cx.pressable_dispatch_command_if_enabled_opt(
-                                                                        command.clone(),
-                                                                    );
-                                                                    if !disabled && close_on_select {
-                                                                        cx.pressable_set_bool(&open, false);
-                                                                    }
-
-                                                                    let mut trailing = trailing;
-                                                                    if trailing.is_none() {
-                                                                        trailing = command.as_ref().and_then(|cmd| {
-                                                                            command_shortcut_label(
-                                                                                cx,
-                                                                                cmd,
-                                                                                fret_runtime::Platform::current(),
-                                                                            )
-                                                                            .map(|text| {
-                                                                                ContextMenuShortcut::new(text)
-                                                                                    .into_element(cx)
-                                                                            })
-                                                                        });
-                                                                    }
-
-                                                                    let mut row_bg =
-                                                                        fret_core::Color::TRANSPARENT;
-                                                                    let mut row_fg = fg;
-                                                                    if st.hovered || st.pressed || st.focused {
-                                                                        row_bg = accent;
-                                                                        row_fg = accent_fg;
-                                                                    }
-
-                                                                    let children = menu_row_children(
-                                                                        cx,
-                                                                        label.clone(),
-                                                                        leading,
-                                                                        None,
-                                                                        reserve_leading_slot,
-                                                                        trailing,
-                                                                        false,
-                                                                        Some(is_selected),
-                                                                        disabled,
-                                                                        row_bg,
-                                                                        row_fg,
-                                                                        row_fg,
-                                                                        text_style.clone(),
-                                                                        font_size,
-                                                                        font_line_height,
-                                                                        pad_x,
-                                                                        pad_x,
-                                                                        pad_y,
-                                                                        radius_sm,
-                                                                        text_disabled,
-                                                                        None,
-                                                                    );
-
-                                                                    let props = PressableProps {
-                                                                        layout: {
-                                                                            let mut layout =
-                                                                                LayoutStyle::default();
-                                                                            layout.size.width =
-                                                                                Length::Fill;
-                                                                            layout.size.min_height =
-                                                                                Some(Length::Px(Px(28.0)));
-                                                                            layout
-                                                                        },
-                                                                        enabled: !disabled,
-                                                                        focusable: !disabled,
-                                                                        focus_ring: Some(ring),
-                                                                        a11y: menu::item::menu_item_radio_a11y(
-                                                                            a11y_label.clone(),
-                                                                            is_selected,
-                                                                        )
-                                                                        .with_collection_position(
-                                                                            collection_index,
-                                                                            item_count,
-                                                                        ),
-                                                                        ..Default::default()
-                                                                    };
-
-                                                                    (props, children)
-                                                                },
-                                                            )
-                                                        }));
-                                                    }
-                                                  }
-                                              }
-
-                                                    out
+                                                        )
+                                                        .into_vec()
                                                 },
                                             );
                                             if content_focus_id_for_panel.get().is_none() {
@@ -4747,6 +4157,10 @@ impl ContextMenu {
                         Arc::new({
                             let first_item_focus_id_model = first_item_focus_id_model_for_handler;
                             let last_item_focus_id_model = last_item_focus_id_model_for_handler;
+                            let first_item_focus_id_for_fallback =
+                                first_item_focus_id_for_handler_fallback.clone();
+                            let last_item_focus_id_for_fallback =
+                                last_item_focus_id_for_handler_fallback.clone();
                             move |host, _cx, it| {
                                 if it.repeat {
                                     return false;
@@ -4758,6 +4172,7 @@ impl ContextMenu {
                                             .read(&first_item_focus_id_model, |v| *v)
                                             .ok()
                                             .flatten()
+                                            .or(first_item_focus_id_for_fallback.get())
                                         else {
                                             return false;
                                         };
@@ -4770,6 +4185,7 @@ impl ContextMenu {
                                             .read(&last_item_focus_id_model, |v| *v)
                                             .ok()
                                             .flatten()
+                                            .or(last_item_focus_id_for_fallback.get())
                                         else {
                                             return false;
                                         };
@@ -8572,6 +7988,296 @@ mod tests {
         assert_ne!(
             focus, trigger,
             "pointer-open should focus menu content/roving container rather than keeping trigger focus"
+        );
+    }
+
+    #[test]
+    fn context_menu_pointer_open_arrow_down_enters_first_enabled_item() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let disabled_cmd = CommandId::new("context_menu.tests.disabled_forward.v1");
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let build_entries = || {
+            vec![
+                ContextMenuEntry::Item(
+                    ContextMenuItem::new("Back")
+                        .action(CommandId::new("context_menu.tests.back.v1")),
+                ),
+                ContextMenuEntry::Item(
+                    ContextMenuItem::new("Forward")
+                        .action(disabled_cmd.clone())
+                        .disabled(true),
+                ),
+                ContextMenuEntry::Item(
+                    ContextMenuItem::new("Reload")
+                        .action(CommandId::new("context_menu.tests.reload.v1")),
+                ),
+            ]
+        };
+
+        let root = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
+        let position = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let content = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Menu)
+            .expect("menu content");
+        let back = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Back"))
+            .expect("Back item");
+        assert_eq!(
+            ui.focus(),
+            Some(content.id),
+            "pointer-open should initially focus the menu content"
+        );
+        assert_ne!(
+            ui.focus(),
+            Some(back.id),
+            "pointer-open must not skip directly to the first item"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let back_after_nav = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Back"))
+            .expect("Back item after ArrowDown");
+        assert_eq!(
+            ui.focus(),
+            Some(back_after_nav.id),
+            "ArrowDown from pointer-focused content should enter the first enabled item"
+        );
+    }
+
+    #[test]
+    fn context_menu_pointer_open_arrow_down_enters_first_enabled_checkbox_or_radio_item() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(false);
+        let checked = app.models_mut().insert(false);
+        let selected = app.models_mut().insert(Some(Arc::<str>::from("top")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let build_entries = || {
+            vec![
+                ContextMenuEntry::CheckboxItem(
+                    ContextMenuCheckboxItem::new(checked.clone(), "Status Bar")
+                        .close_on_select(false),
+                ),
+                ContextMenuEntry::RadioItem(
+                    ContextMenuRadioItem::new(selected.clone(), "bottom", "Bottom")
+                        .close_on_select(false),
+                ),
+            ]
+        };
+
+        let root = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+        let trigger = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable trigger");
+        ui.set_focus(Some(trigger));
+
+        let trigger_bounds = ui.debug_node_bounds(trigger).expect("trigger bounds");
+        let position = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 / 2.0),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 / 2.0),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Right,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open.clone(),
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let content = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Menu)
+            .expect("menu content");
+        let checkbox = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::MenuItemCheckbox
+                    && n.label.as_deref() == Some("Status Bar")
+            })
+            .expect("Status Bar item");
+        assert_eq!(
+            ui.focus(),
+            Some(content.id),
+            "pointer-open should initially focus the menu content"
+        );
+        assert_ne!(
+            ui.focus(),
+            Some(checkbox.id),
+            "pointer-open must not skip directly to the first checkbox item"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::KeyDown {
+                key: KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        let _ = render_frame_focusable_trigger_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            open,
+            build_entries(),
+        );
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let checkbox_after_nav = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::MenuItemCheckbox
+                    && n.label.as_deref() == Some("Status Bar")
+            })
+            .expect("Status Bar item after ArrowDown");
+        assert_eq!(
+            ui.focus(),
+            Some(checkbox_after_nav.id),
+            "ArrowDown from pointer-focused content should enter the first enabled checkbox/radio item"
         );
     }
 

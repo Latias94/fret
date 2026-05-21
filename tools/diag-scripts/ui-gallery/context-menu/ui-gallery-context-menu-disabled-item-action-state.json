@@ -23,7 +23,7 @@
       "Starts directly on the Context Menu Basic section with the global status bar visible.",
       "Verifies that the disabled Forward item carrying a command exports disabled=true while suppressing focus/invoke.",
       "Verifies vertical roving focus skips the disabled item and that pointer activation cannot dispatch the disabled command.",
-      "Focused run uses default bundle lint; suite runs currently use --no-suite-lint because ContextMenu transition captures can keep the previous role=menu snapshot long enough to duplicate the content test id."
+      "Focused and suite runs use default bundle lint; the Basic overlay panel has a dedicated test id so it cannot collide with the DocSection content wrapper."
     ]
   },
   "steps": [
@@ -90,7 +90,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-content" }
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-panel" }
       },
       "timeout_frames": 600
     },

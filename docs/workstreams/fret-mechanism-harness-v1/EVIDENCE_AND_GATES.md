@@ -7824,3 +7824,85 @@ Next slice recommendation:
   the script is promoted into `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`.
   This slice uses the focused runtime plus row-only ContextMenu suite as passing evidence and keeps
   the duplicate-id transition lint as a narrow diagnostics follow-up.
+
+## ContextMenu Basic Pointer-Open Keyboard Entry Runtime Gate
+
+- invariant:
+  shadcn/Radix ContextMenu pointer-open should initially focus the menu content panel; vertical
+  keyboard navigation from that panel should enter the first enabled item, skip disabled items, keep
+  command dispatch on enabled rows, and close on activation.
+- finding:
+  this follow-up found two real issues. The Basic example reused
+  `ui-gallery-context-menu-basic-content` for both the DocSection wrapper and the overlay panel,
+  causing default diagnostics lint to report duplicate ids. Separately, pointer-open ArrowDown
+  reached the focused panel key handler but the handler saw empty first/last item targets because
+  top-level panel entries bypassed the shared `ContextMenuContentRenderEnv` rendering path that
+  records persistent focus targets. A focused `fret-ui` mechanism test confirmed key routing itself
+  was correct for focused non-modal hit-test-inert overlays.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/context_menu.rs`,
+  `crates/fret-ui/src/tree/tests/key_dispatch_barrier_root.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/basic.rs`,
+  `apps/fret-ui-gallery/tests/popup_menu_narrow_surface.rs`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json`,
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-basic-overlay-placement-trace.json`,
+  `tools/diag-scripts/suites/ui-gallery-context-menu/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  Radix ContextMenu keeps content focus as the opened menu entry point and lets roving keyboard
+  movement enter enabled items while skipping disabled rows. Fret maps that to a content-panel key
+  handler backed by persistent first/last enabled item targets across overlay render reuse.
+- evidence anchors:
+  focused keyboard-nav AI packet:
+  `target/fret-diag-context-menu-basic-keyboard-nav-focus-model-v3/sessions/1779402638361-240732/1779402658765/ai.packet`;
+  focused keyboard-nav pack:
+  `target/fret-diag-context-menu-basic-keyboard-nav-focus-model-v3/sessions/1779402638361-240732/share/1779402658765.zip`;
+  default-lint ContextMenu semantics suite summary:
+  `target/fret-diag-context-menu-semantics-suite-panel-id-v1/sessions/1779403614963-229576/suite.summary.json`;
+  promoted ContextMenu suite summary:
+  `target/fret-diag-context-menu-suite-keyboard-entry-v2/sessions/1779404255883-237716/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-basic-overlay-placement-trace.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-context-menu/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/index.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem/fret-ui-shadcn/src/context_menu.rs crates/fret-ui/src/tree/tests/key_dispatch_barrier_root.rs apps/fret-ui-gallery/src/ui/snippets/context_menu/basic.rs apps/fret-ui-gallery/tests/popup_menu_narrow_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib context_menu_pointer_open_arrow_down_enters_first_enabled_item context_menu_pointer_open_arrow_down_enters_first_enabled_checkbox_or_radio_item context_menu_disabled_item_skips_roving_focus_and_suppresses_action_state`
+  - result: passed; 3 tests; run id `5960047a-484b-4c5d-8a9e-1f7c86ed1dce`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui --lib key_events_route_to_focused_non_modal_occluding_overlay_layer`
+  - result: passed; 1 test; run id `1f37ca4f-b615-44f7-a238-c4431a6cca3d`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test popup_menu_narrow_surface context_menu_basic_snippet_uses_a_unique_overlay_panel_test_id context_menu_demo_snippet_uses_a_unique_overlay_panel_test_id`
+  - result: passed; 2 tests; run id `45c8dc6b-13b8-4b9f-b3d9-f6516e4411e7`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_context_menu_basic_keyboard_nav script_v2_roundtrip_ui_gallery_context_menu_disabled_item_action_state script_v2_roundtrip_ui_gallery_context_menu_basic_right_click_last_action script_v2_roundtrip_ui_gallery_context_menu_basic_touch_long_press_open script_v2_roundtrip_ui_gallery_context_menu_basic_overlay_placement_trace`
+  - result: passed; 5 tests; run id `c771179b-7984-479c-968a-7b836d24985f`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json --dir target/fret-diag-context-menu-basic-keyboard-nav-focus-model-v3 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779402658765`.
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json --dir target/fret-diag-context-menu-disabled-item-action-state-panel-id-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779402722466`.
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json --dir target/fret-diag-context-menu-basic-right-click-last-action-panel-id-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779402810724`.
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json --dir target/fret-diag-context-menu-basic-touch-long-press-open-panel-id-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779403249948`.
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-basic-overlay-placement-trace.json --dir target/fret-diag-context-menu-basic-overlay-placement-trace-panel-id-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779403333605`.
+- runtime suites:
+  `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-context-menu-semantics/suite.json --dir target/fret-diag-context-menu-semantics-suite-panel-id-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`.
+  `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-context-menu/suite.json --dir target/fret-diag-context-menu-suite-keyboard-entry-v2 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed 4/4; `stage_counts={"passed":4}`; keyboard-nav row run id `1779404347719`.

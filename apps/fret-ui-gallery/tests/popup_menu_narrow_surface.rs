@@ -13,6 +13,20 @@ fn context_menu_demo_snippet_uses_a_unique_overlay_panel_test_id() {
 }
 
 #[test]
+fn context_menu_basic_snippet_uses_a_unique_overlay_panel_test_id() {
+    let basic = include_str!("../src/ui/snippets/context_menu/basic.rs");
+
+    assert!(
+        basic.contains("\"ui-gallery-context-menu-basic-panel\""),
+        "context-menu basic snippet should expose a unique overlay panel test id for diag scripts",
+    );
+    assert!(
+        !basic.contains("\"ui-gallery-context-menu-basic-content\""),
+        "context-menu basic snippet should not reuse the DocSection content test id for the open menu panel",
+    );
+}
+
+#[test]
 fn popup_menu_narrow_sweep_covers_select_combobox_context_menu_and_dropdown_menu() {
     let script = include_str!(
         "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-popup-menu-narrow-sweep.json"

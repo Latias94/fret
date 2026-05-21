@@ -622,3 +622,16 @@ mechanism can visibly fail.
   The default-lint suite probe also records follow-up diagnostics debt for duplicate
   `ui-gallery-context-menu-basic-content` during transition captures at
   `target/fret-diag-context-menu-semantics-suite-disabled-item-v2/sessions/1779387897940-40144/1779387958229-ui-gallery-context-menu-disabled-item-action-state/check.lint.json`.
+
+- ContextMenu Basic pointer-open keyboard-entry update:
+  `ui-gallery-context-menu-basic-keyboard-nav.json` now covers the pointer-open content-focus entry
+  path for the Basic ContextMenu. It verifies content panel focus, ArrowDown entry into `Back`,
+  disabled `Forward` skip, `Reload` keyboard activation, app-snapshot last-action mutation, and
+  menu close. The Basic overlay panel now uses the unique test id
+  `ui-gallery-context-menu-basic-panel`, so default diagnostics lint no longer confuses the
+  DocSection content wrapper with the open menu panel. Focused runtime evidence is anchored at
+  `target/fret-diag-context-menu-basic-keyboard-nav-focus-model-v3/sessions/1779402638361-240732/1779402658765/ai.packet`,
+  the fixed default-lint semantics suite is anchored at
+  `target/fret-diag-context-menu-semantics-suite-panel-id-v1/sessions/1779403614963-229576/suite.summary.json`,
+  and the promoted ContextMenu suite is anchored at
+  `target/fret-diag-context-menu-suite-keyboard-entry-v2/sessions/1779404255883-237716/suite.summary.json`.
