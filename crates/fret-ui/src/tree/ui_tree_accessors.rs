@@ -58,6 +58,16 @@ impl<H: UiHost> UiTree<H> {
         self.sync_view_boundary_state_for_node(node);
     }
 
+    pub(crate) fn set_node_inherited_text_style_fingerprint(
+        &mut self,
+        node: NodeId,
+        fingerprint: Option<u64>,
+    ) {
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.inherited_text_style_fingerprint = fingerprint;
+        }
+    }
+
     pub(crate) fn node_element(&self, node: NodeId) -> Option<GlobalElementId> {
         self.nodes.get(node).and_then(|n| n.element)
     }

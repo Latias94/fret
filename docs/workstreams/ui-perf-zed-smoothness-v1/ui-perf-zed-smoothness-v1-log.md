@@ -16235,3 +16235,57 @@ Post-fix evidence:
 - Treat this as a small request-build mechanism cleanup with single-run smoke evidence. The next owner is still the
   remaining paint cache/text-width change path and residual root traversal timing; a repeat=3 resize confirmation is
   required before making a broader smoothness claim.
+
+## 2026-05-22 02:31:00 +08:00 (paint-cache key inherited text-style fingerprint)
+
+Question:
+- Can the remaining paint-cache key construction cost be reduced without weakening inherited text-style correctness
+  for cached text subtrees?
+
+Finding:
+- r17 top resize frames still painted `133` nodes and spent `paint_cache_key_time_us=53us` p95/max.
+- The hot cache-key path queried `ElementFrame` and cloned `inherited_text_style` for every painted node, then hashed
+  it into the key. This preserved correctness, but duplicated data already known during declarative mount.
+- Skipping inherited text-style from non-text nodes would be riskier because ancestor cache entries replay descendant
+  ops. Keeping the same fingerprint in the key is the conservative mechanism.
+
+Change:
+- Added `Node::inherited_text_style_fingerprint`.
+- Declarative mount computes the fingerprint alongside `ElementRecord.inherited_text_style` and syncs it into the
+  retained node.
+- `paint_node` now reads the node-local fingerprint when building `PaintCacheKey`, avoiding the per-node
+  `ElementFrame` lookup and style clone.
+- Added a regression test where inherited text style changes its font features/axes while text size stays stable; the
+  cache still misses instead of replaying stale cached text ops.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+cargo test -p fret-ui --lib paint_cache_key_tracks_node_inherited_text_style_fingerprint -- --nocapture
+cargo nextest run -p fret-ui -E 'test(paint_cache_key_tracks_node_inherited_text_style_fingerprint) | test(wrap_none_measure_cache_tracks_inherited_text_style_changes) | test(previous_frame_paint_recording_replay_preserves_text_blob_side_index) | test(paint_cache_key_tracks_child_geometry_changes_when_parent_size_is_stable)' --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r19-node-text-style-fingerprint-built --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r19-node-text-style-fingerprint-built\sessions\1779388233302-146908\1779388254822-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+git diff --check
+```
+
+Notes:
+- An earlier r18 smoke used an old `fret-ui-gallery.exe`; it only proved script health. r19 is the rebuilt-gallery
+  evidence for this change.
+- `cargo test -- --exact` compiled and linked the test binary but ran `0` tests because the filter did not include the
+  full module path; the non-exact rerun executed the intended test.
+- `cargo check` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Post-fix evidence:
+- r19 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r19-node-text-style-fingerprint-built/sessions/1779388233302-146908/1779388254822-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r19 `diag stats --sort time --top 12` reports p50/p95 total `87/742us`, layout `24/420us`, paint `30/307us`, and
+  `hot p50/p95 layout.engine_solve=0/0`.
+- r17 -> r19 single-run JSON comparison: `paint_cache_key_time_us` p95/max moved `53/53us -> 7/7us`.
+- Top resize ticks `292/295/289` keep `layout.engine_solve_time_us=0`, `paint_cache_misses=133`, and
+  `invalidation_walk_calls=0`.
+- Treat this as a narrow paint-cache key construction cleanup with single-run smoke evidence. The remaining local
+  paint owner is host-widget instance lookup / widget paint / observation bookkeeping, not inherited text-style
+  fingerprint lookup.

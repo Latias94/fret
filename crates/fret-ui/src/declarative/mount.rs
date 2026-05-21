@@ -1462,6 +1462,9 @@ fn mount_element<H: UiHost + 'static>(
         (None, None) => None,
     }
     .filter(|style| !style.is_empty());
+    let inherited_text_style_fingerprint = inherited_text_style
+        .as_ref()
+        .map(crate::text_props::text_style_refinement_fingerprint);
     let semantics_decoration = element.semantics_decoration.clone();
     let key_context = element.key_context.clone();
     let mut children = std::mem::take(&mut element.children);
@@ -1541,6 +1544,7 @@ fn mount_element<H: UiHost + 'static>(
         matches!(&element.kind, ElementKind::Canvas(props) if props.prepaint)
             || matches!(&element.kind, ElementKind::ManagedSurface(props) if props.prepaint),
     );
+    ui.set_node_inherited_text_style_fingerprint(node, inherited_text_style_fingerprint);
 
     window_state.set_node_entry(
         id,

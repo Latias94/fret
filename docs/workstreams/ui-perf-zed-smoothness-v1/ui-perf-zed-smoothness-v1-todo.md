@@ -152,6 +152,17 @@ not update checked-in baselines.
     per-node text-style fingerprint lookups when the node kind cannot carry inherited text style.
   - Avoid replacing `WindowFrame.instances` or cloning semantics in this slice unless the instance lookup p95 grows
     materially above the current `~42us` aggregate.
+  - [x] Move inherited text-style fingerprint lookup out of the paint-cache key hot path.
+    - Change: declarative mount now stores the already-computed inherited text-style refinement fingerprint on the
+      retained `Node`; `paint_node` reads that value directly instead of querying `ElementFrame` and cloning the style
+      for every painted node.
+    - Gate:
+      `cargo nextest run -p fret-ui -E 'test(paint_cache_key_tracks_node_inherited_text_style_fingerprint) | test(wrap_none_measure_cache_tracks_inherited_text_style_changes) | test(previous_frame_paint_recording_replay_preserves_text_blob_side_index) | test(paint_cache_key_tracks_child_geometry_changes_when_parent_size_is_stable)' --no-fail-fast`.
+    - r19 rebuilt-gallery smoke:
+      `target/fret-diag/text-clean-geometry-current-20260521-r19-node-text-style-fingerprint-built/sessions/1779388233302-146908/1779388254822-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+    - Result versus r17 single-run smoke: `paint_cache_key_time_us` p95/max moved `53/53us -> 7/7us`, while top
+      resize frames still keep `layout.engine_solve=0`, `inv.calls=0`, and `paint.cache_misses=133`.
+    - Treat this as a narrow paint-cache key construction cleanup, not a broader perf-baseline claim.
   - [x] Make the residual measurable from root-level `diag stats --json` summaries before changing behavior.
     - Surface: p50/p95/max now include `paint_cache_key_time_us`, `paint_cache_hit_check_time_us`,
       `paint_record_visual_bounds_time_us`, `paint_record_visual_bounds_calls`, and

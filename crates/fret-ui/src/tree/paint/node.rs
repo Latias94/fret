@@ -91,11 +91,10 @@ impl<H: UiHost> UiTree<H> {
                 let theme_revision = Theme::global(&*app).revision();
                 let children_render_transform = self.node_children_render_transform(node);
                 let child_transform = children_render_transform.unwrap_or(Transform2D::IDENTITY);
-                let inherited_text_style_fingerprint = self.window.and_then(|window| {
-                    crate::declarative::frame::inherited_text_style_for_node(app, window, node)
-                        .as_ref()
-                        .map(crate::text_props::text_style_refinement_fingerprint)
-                });
+                let inherited_text_style_fingerprint = self
+                    .nodes
+                    .get(node)
+                    .and_then(|n| n.inherited_text_style_fingerprint);
                 PaintCacheKey::new(
                     bounds,
                     self.nodes

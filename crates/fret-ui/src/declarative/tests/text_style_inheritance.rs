@@ -435,6 +435,78 @@ fn wrap_none_measure_cache_tracks_inherited_text_style_changes() {
     assert_eq!(second, Size::new(Px(28.0), Px(36.0)));
 }
 
+#[test]
+fn paint_cache_key_tracks_node_inherited_text_style_fingerprint() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    ui.set_paint_cache_enabled(true);
+    let mut services = StyleRecordingTextService::default();
+    let bounds = bounds();
+
+    let render = |ui: &mut UiTree<TestHost>,
+                  app: &mut TestHost,
+                  services: &mut StyleRecordingTextService,
+                  style: TextStyleRefinement| {
+        render_root_for_frame_local(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "text-style-paint-cache",
+            |cx| {
+                vec![
+                    cx.keyed(1u64, |cx| cx.text("cache"))
+                        .inherit_text_style(style),
+                ]
+            },
+        )
+    };
+
+    let root = render(
+        &mut ui,
+        &mut app,
+        &mut services,
+        inherited_numeric_refinement(14.0, 20.0),
+    );
+    let text = only_child(&ui, root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert!(
+        ui.debug_stats().paint_cache_hits == 0,
+        "first paint should populate the cache"
+    );
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    let root = render(
+        &mut ui,
+        &mut app,
+        &mut services,
+        inherited_axis_refinement(14.0, 20.0),
+    );
+    let text_after = only_child(&ui, root);
+    assert_eq!(text_after, text, "expected keyed text node reuse");
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.test_clear_node_invalidations(text_after);
+    ui.invalidate(root, Invalidation::Paint);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().paint_cache_hits,
+        0,
+        "inherited text-style changes must not replay stale cached text ops"
+    );
+    assert!(
+        ui.debug_stats().paint_cache_misses > 0,
+        "expected the inherited text-style fingerprint to force a cache miss"
+    );
+}
+
 fn measure_text_input_size(with_inherited: bool) -> Size {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
