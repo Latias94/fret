@@ -125,6 +125,161 @@ fn opacity_element_emits_opacity_stack_ops() {
 }
 
 #[test]
+fn transparent_wrappers_use_paint_passthrough_without_instance_lookup() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "paint-passthrough-transparent-wrappers",
+        |cx| vec![cx.stack(|cx| vec![cx.stack(|cx| vec![cx.text("child")])])],
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert!(
+        scene
+            .ops()
+            .iter()
+            .any(|op| matches!(op, SceneOp::Text { .. })),
+        "expected child text to paint through transparent wrappers"
+    );
+    assert_eq!(
+        ui.debug_stats().paint_host_widget_instance_lookup_calls,
+        1,
+        "only the text leaf should need an ElementFrame instance lookup during paint"
+    );
+}
+
+#[test]
+fn paint_passthrough_replays_observed_deps_for_transparent_wrapper() {
+    let mut app = TestHost::new();
+    let observed = app.models_mut().insert(0u32);
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let observed_for_render = observed.clone();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "paint-passthrough-observed-deps",
+        |cx| {
+            vec![cx.stack(|cx| {
+                cx.observe_model(&observed_for_render, Invalidation::Paint);
+                vec![cx.text("child")]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    let stats = ui.debug_stats();
+    assert_eq!(
+        stats.paint_host_widget_instance_lookup_calls, 1,
+        "the observing transparent stack should replay deps without an instance lookup"
+    );
+    assert_eq!(
+        stats.paint_host_widget_observed_models_non_empty_calls, 1,
+        "expected passthrough paint to preserve the stack's model observation"
+    );
+
+    ui.test_clear_node_invalidations(root);
+    let _ = observed.update(&mut app, |value, _cx| *value += 1);
+    let changed = app.take_changed_models();
+    assert!(ui.propagate_model_changes(&mut app, &changed));
+}
+
+#[test]
+fn paint_passthrough_preserves_clip_and_inherited_foreground() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(60.0)),
+    );
+    let inherited = Color {
+        r: 0.2,
+        g: 0.4,
+        b: 0.6,
+        a: 1.0,
+    };
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "paint-passthrough-clip-foreground",
+        |cx| {
+            let mut props = crate::element::StackProps::default();
+            props.layout.overflow = crate::element::Overflow::Clip;
+            vec![
+                cx.stack_props(props, |cx| vec![cx.text("child")])
+                    .inherit_foreground(inherited),
+            ]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert!(
+        scene
+            .ops()
+            .iter()
+            .any(|op| matches!(op, SceneOp::PushClipRect { .. })),
+        "expected passthrough wrapper to preserve overflow clipping"
+    );
+    assert!(
+        scene.ops().iter().any(|op| matches!(
+            op,
+            SceneOp::Text {
+                paint,
+                ..
+            } if paint.paint == fret_core::scene::Paint::Solid(inherited)
+        )),
+        "expected passthrough wrapper to preserve inherited foreground"
+    );
+}
+
+#[test]
 fn effect_layer_element_emits_effect_stack_ops() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

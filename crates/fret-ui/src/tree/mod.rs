@@ -8,9 +8,9 @@ use crate::{
 };
 use fret_core::time::{Duration, Instant};
 use fret_core::{
-    AppWindowId, Corners, Event, KeyCode, NodeId, Point, PointerEvent, PointerId, Px, Rect, Scene,
-    SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size, TextConstraints,
-    Transform2D, UiServices, ViewId,
+    AppWindowId, Color, Corners, Event, KeyCode, NodeId, Point, PointerEvent, PointerId, Px, Rect,
+    Scene, SceneOp, SemanticsNode, SemanticsRole, SemanticsRoot, SemanticsSnapshot, Size,
+    TextConstraints, Transform2D, UiServices, ViewId,
 };
 use fret_runtime::{
     CommandId, Effect, FrameId, InputContext, InputDispatchPhase, KeyChord, KeymapService, ModelId,
@@ -133,6 +133,14 @@ pub use view_boundary::BoundarySceneFragmentDebug;
 use view_boundary::{PaintCacheEntryState, ViewBoundaryState};
 
 pub(crate) use dispatch_snapshot::{UiDispatchSnapshot, UiDispatchSnapshotCacheEntry};
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct NodePaintPassthrough {
+    pub(crate) paint_children: bool,
+    pub(crate) clip: bool,
+    pub(crate) clip_corner_radii: Option<Corners>,
+    pub(crate) foreground: Option<Color>,
+}
 
 fn type_id_sort_key(id: TypeId) -> u64 {
     use std::hash::{Hash, Hasher};

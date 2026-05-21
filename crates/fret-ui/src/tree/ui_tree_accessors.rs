@@ -68,6 +68,16 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(crate) fn set_node_paint_passthrough(
+        &mut self,
+        node: NodeId,
+        passthrough: Option<NodePaintPassthrough>,
+    ) {
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.paint_passthrough = passthrough;
+        }
+    }
+
     pub(crate) fn node_element(&self, node: NodeId) -> Option<GlobalElementId> {
         self.nodes.get(node).and_then(|n| n.element)
     }

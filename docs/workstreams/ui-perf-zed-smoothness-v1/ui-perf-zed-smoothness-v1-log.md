@@ -16289,3 +16289,63 @@ Post-fix evidence:
 - Treat this as a narrow paint-cache key construction cleanup with single-run smoke evidence. The remaining local
   paint owner is host-widget instance lookup / widget paint / observation bookkeeping, not inherited text-style
   fingerprint lookup.
+
+## 2026-05-22 05:10:31 +08:00 (transparent paint wrapper passthrough)
+
+Question:
+- After moving inherited text-style fingerprinting out of the paint-cache key, can the remaining host-widget instance
+  lookup cost be reduced without changing paint observations or wrapper semantics?
+
+Finding:
+- r19 still painted `133` nodes on resize ticks and spent `paint_host_widget_instance_lookup_time_us=43us` p95 across
+  `133` calls.
+- The first passthrough attempt reduced lookup calls to `58` in r20, but did not move lookup p95 (`44us`) because
+  wrappers with observed-deps presence still entered `ElementHostWidget::paint_impl`.
+- The safe boundary is the observed-deps presence snapshot: when the snapshot is active, transparent wrappers can skip
+  instance lookup; wrappers with observations must replay those model/global dependencies before painting children.
+
+Change:
+- Added node-local `NodePaintPassthrough` metadata and synced it from declarative mount for paint-transparent wrappers
+  such as layout containers, gates, semantic wrappers, foreground scopes, scroll containers, and spacers.
+- `paint_node` now uses that metadata to paint children directly, preserving overflow clips, inherited foreground, and
+  children render transforms.
+- When the presence snapshot says a passthrough element has observed dependencies, `paint_node` replays those
+  dependencies through the same model/global observation path and debug counters used by host-widget paint.
+- Added regression tests for pure transparent wrapper lookup avoidance, observed-deps replay through passthrough, and
+  clip/foreground preservation.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+git diff --check
+cargo nextest run -p fret-ui -E 'test(transparent_wrappers_use_paint_passthrough_without_instance_lookup) | test(paint_passthrough_replays_observed_deps_for_transparent_wrapper) | test(paint_passthrough_preserves_clip_and_inherited_foreground) | test(paint_cache_key_tracks_node_inherited_text_style_fingerprint) | test(paint_cache_key_tracks_child_geometry_changes_when_parent_size_is_stable) | test(paint_cache_replay_translates_descendant_bounds_for_descendants)' --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r21-paint-passthrough-observed-deps-built --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r22-paint-passthrough-observed-deps-repeat --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+```
+
+Notes:
+- The first `cargo nextest` run after adding the observed-deps regression test timed out while compiling/linking the
+  large `fret-ui` test binary. The process continued and finished naturally; the immediate rerun executed the intended
+  six tests and passed.
+- `cargo check` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Post-fix evidence:
+- r21 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r21-paint-passthrough-observed-deps-built/sessions/1779396246186-26724/1779396274160-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r22 repeat bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r22-paint-passthrough-observed-deps-repeat/sessions/1779397662647-239112/1779397692672-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r19/r20/r21/r22 comparison from `diag stats --sort time --top 12 --json`:
+  - r19: p50/p95 total `87/742us`, layout `24/420us`, paint `30/307us`,
+    `paint.widget=134us`, lookup p95/calls `43us/133`, observed-deps calls `133`.
+  - r20: p50/p95 total `118/1019us`, layout `32/578us`, paint `41/406us`,
+    `paint.widget=150us`, lookup p95/calls `44us/58`, observed-deps calls `58`.
+  - r21: p50/p95 total `92/913us`, layout `28/527us`, paint `31/356us`,
+    `paint.widget=125us`, lookup p95/calls `25us/55`, observed-deps calls `58`.
+  - r22: p50/p95 total `90/997us`, layout `27/624us`, paint `31/339us`,
+    `paint.widget=120us`, lookup p95/calls `29us/55`, observed-deps calls `58`.
+- Interpretation: the targeted host-widget lookup owner improved repeatably, and observed-deps calls stayed stable,
+  so passthrough did not drop paint observations. Whole-frame p95 remains dominated by resize layout and renderer
+  finish/upload variance in this script, so this is not a checked-in baseline improvement claim.

@@ -455,72 +455,210 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_stats.paint_nodes_performed.saturating_add(1);
         }
 
+        let passthrough = self.nodes.get(node).and_then(|n| n.paint_passthrough);
+        let passthrough_element = self.nodes.get(node).and_then(|n| n.element);
+        let passthrough_observed_deps_presence = passthrough_element
+            .and_then(|element| self.paint_observed_deps_presence_contains(element));
+        let can_use_passthrough =
+            passthrough.is_some() && passthrough_observed_deps_presence.is_some();
+        let record_widget_hotspot = !can_use_passthrough;
+
         let mut widget_type: &'static str = "<unknown>";
-        let ((start, text_blob_start), widget_elapsed) = fret_perf::measure_span(
-            self.debug_enabled,
-            tracing::enabled!(tracing::Level::TRACE),
-            || tracing::trace_span!("fret.ui.paint_node.widget_paint", node = ?node),
-            || {
-                if self.debug_enabled {
-                    self.debug_paint_stack.push(DebugPaintStackFrame {
-                        child_inclusive_time: Duration::default(),
-                        child_inclusive_scene_ops_delta: 0,
-                    });
-                }
-                let start = scene.ops_len();
-                let text_blob_start = scene.text_blob_ids().len();
-                self.with_widget_mut(node, |widget, tree| {
-                    if tree.debug_enabled {
-                        widget_type = widget.debug_type_name();
+        let ((start, text_blob_start), widget_elapsed) = if can_use_passthrough {
+            let passthrough = passthrough.expect("checked above");
+            let ((start, text_blob_start), passthrough_elapsed) = fret_perf::measure_span(
+                self.debug_enabled,
+                tracing::enabled!(tracing::Level::TRACE),
+                || tracing::trace_span!("fret.ui.paint_node.passthrough", node = ?node),
+                || {
+                    if self.debug_enabled {
+                        self.debug_paint_stack.push(DebugPaintStackFrame {
+                            child_inclusive_time: Duration::default(),
+                            child_inclusive_scene_ops_delta: 0,
+                        });
                     }
-                    let children_render_transform = widget
-                        .children_render_transform(bounds)
-                        .filter(|t| t.inverse().is_some());
+                    let start = scene.ops_len();
+                    let text_blob_start = scene.text_blob_ids().len();
+                    if let Some(element) = passthrough_element
+                        && let Some(window) = self.window
+                        && passthrough_observed_deps_presence == Some(true)
+                    {
+                        let debug_enabled = self.debug_enabled;
+                        let total_started = debug_enabled.then(Instant::now);
+                        let (models_len, models_loop, globals_len, globals_loop) =
+                            crate::elements::with_observed_deps_for_element(
+                                app,
+                                window,
+                                element,
+                                |models, globals| {
+                                    let models_started = debug_enabled.then(Instant::now);
+                                    for &(model, invalidation) in models {
+                                        observe_model(model, invalidation);
+                                    }
+                                    let models_loop =
+                                        models_started.map(|started| started.elapsed());
+
+                                    let globals_started = debug_enabled.then(Instant::now);
+                                    for &(global, invalidation) in globals {
+                                        observe_global(global, invalidation);
+                                    }
+                                    let globals_loop =
+                                        globals_started.map(|started| started.elapsed());
+
+                                    (models.len(), models_loop, globals.len(), globals_loop)
+                                },
+                            );
+
+                        if debug_enabled {
+                            let total_elapsed = total_started.map(|started| started.elapsed());
+                            let models_loop = models_loop.unwrap_or_default();
+                            let globals_loop = globals_loop.unwrap_or_default();
+                            let overhead = total_elapsed
+                                .unwrap_or_default()
+                                .saturating_sub(models_loop.saturating_add(globals_loop));
+                            let overhead_models = overhead / 2;
+                            let overhead_globals = overhead.saturating_sub(overhead_models);
+
+                            self.debug_record_paint_host_widget_observed_models(
+                                models_loop.saturating_add(overhead_models),
+                                models_len,
+                            );
+                            self.debug_record_paint_host_widget_observed_globals(
+                                globals_loop.saturating_add(overhead_globals),
+                                globals_len,
+                            );
+                            self.debug_record_paint_host_widget_observed_deps_call(
+                                models_len,
+                                globals_len,
+                            );
+                        }
+                    }
+                    let children_render_transform = self.node_children_render_transform(node);
                     let mut children_buf = SmallNodeList::<32>::default();
-                    if let Some(children) = tree.nodes.get(node).map(|n| n.children.as_slice()) {
+                    if passthrough.paint_children
+                        && let Some(children) = self.nodes.get(node).map(|n| n.children.as_slice())
+                    {
                         children_buf.set(children);
                     }
-                    let window = tree.window;
-                    let focus = tree.focus;
-                    let mut cx = PaintCx {
-                        app,
-                        node,
-                        window,
-                        focus,
-                        children: children_buf.as_slice(),
-                        bounds,
-                        scale_factor: sf,
-                        paint_style,
-                        accumulated_transform: current_transform,
-                        children_render_transform,
-                        services: &mut *services,
-                        observe_model: &mut observe_model,
-                        observe_global: &mut observe_global,
-                        scene,
-                        deferred_text_blob_releases: Vec::new(),
-                        tree,
-                    };
-                    let transform = widget.render_transform(bounds);
-                    let pushed_transform = if let Some(transform) = transform
-                        && transform.inverse().is_some()
-                    {
-                        cx.scene.push(SceneOp::PushTransform { transform });
-                        true
-                    } else {
-                        false
-                    };
-
-                    cx.tree.debug_paint_widget_exclusive_resume();
-                    widget.paint(&mut cx);
-                    let _ = cx.tree.debug_paint_widget_exclusive_pause();
-
-                    if pushed_transform {
-                        cx.scene.push(SceneOp::PopTransform);
+                    let mut child_paint_style = paint_style;
+                    if let Some(foreground) = passthrough.foreground {
+                        child_paint_style.foreground = Some(foreground);
                     }
-                });
-                (start, text_blob_start)
-            },
-        );
+
+                    if passthrough.clip {
+                        if let Some(radii) = passthrough.clip_corner_radii
+                            && (radii.top_left.0 > 0.0
+                                || radii.top_right.0 > 0.0
+                                || radii.bottom_right.0 > 0.0
+                                || radii.bottom_left.0 > 0.0)
+                        {
+                            scene.push(SceneOp::PushClipRRect {
+                                rect: bounds,
+                                corner_radii: radii,
+                            });
+                        } else {
+                            scene.push(SceneOp::PushClipRect { rect: bounds });
+                        }
+                    }
+
+                    for &child in children_buf.as_slice() {
+                        let child_bounds = self.node_bounds(child).unwrap_or(bounds);
+                        if let Some(transform) = children_render_transform {
+                            scene.push(SceneOp::PushTransform { transform });
+                        }
+                        let accumulated = children_render_transform
+                            .map(|t| current_transform.compose(t))
+                            .unwrap_or(current_transform);
+                        self.paint_node(
+                            app,
+                            services,
+                            child,
+                            child_bounds,
+                            scene,
+                            sf,
+                            child_paint_style,
+                            accumulated,
+                        );
+                        if children_render_transform.is_some() {
+                            scene.push(SceneOp::PopTransform);
+                        }
+                    }
+
+                    if passthrough.clip {
+                        scene.push(SceneOp::PopClip);
+                    }
+                    (start, text_blob_start)
+                },
+            );
+            ((start, text_blob_start), passthrough_elapsed)
+        } else {
+            fret_perf::measure_span(
+                self.debug_enabled,
+                tracing::enabled!(tracing::Level::TRACE),
+                || tracing::trace_span!("fret.ui.paint_node.widget_paint", node = ?node),
+                || {
+                    if self.debug_enabled {
+                        self.debug_paint_stack.push(DebugPaintStackFrame {
+                            child_inclusive_time: Duration::default(),
+                            child_inclusive_scene_ops_delta: 0,
+                        });
+                    }
+                    let start = scene.ops_len();
+                    let text_blob_start = scene.text_blob_ids().len();
+                    self.with_widget_mut(node, |widget, tree| {
+                        if tree.debug_enabled {
+                            widget_type = widget.debug_type_name();
+                        }
+                        let children_render_transform = widget
+                            .children_render_transform(bounds)
+                            .filter(|t| t.inverse().is_some());
+                        let mut children_buf = SmallNodeList::<32>::default();
+                        if let Some(children) = tree.nodes.get(node).map(|n| n.children.as_slice())
+                        {
+                            children_buf.set(children);
+                        }
+                        let window = tree.window;
+                        let focus = tree.focus;
+                        let mut cx = PaintCx {
+                            app,
+                            node,
+                            window,
+                            focus,
+                            children: children_buf.as_slice(),
+                            bounds,
+                            scale_factor: sf,
+                            paint_style,
+                            accumulated_transform: current_transform,
+                            children_render_transform,
+                            services: &mut *services,
+                            observe_model: &mut observe_model,
+                            observe_global: &mut observe_global,
+                            scene,
+                            deferred_text_blob_releases: Vec::new(),
+                            tree,
+                        };
+                        let transform = widget.render_transform(bounds);
+                        let pushed_transform = if let Some(transform) = transform
+                            && transform.inverse().is_some()
+                        {
+                            cx.scene.push(SceneOp::PushTransform { transform });
+                            true
+                        } else {
+                            false
+                        };
+
+                        cx.tree.debug_paint_widget_exclusive_resume();
+                        widget.paint(&mut cx);
+                        let _ = cx.tree.debug_paint_widget_exclusive_pause();
+
+                        if pushed_transform {
+                            cx.scene.push(SceneOp::PopTransform);
+                        }
+                    });
+                    (start, text_blob_start)
+                },
+            )
+        };
         let end = scene.ops_len();
 
         if let Some(inclusive_time) = widget_elapsed {
@@ -553,7 +691,7 @@ impl<H: UiHost> UiTree<H> {
                         .is_some_and(|h| h.exclusive_time < exclusive_time)
                 };
 
-            if should_record_hotspot {
+            if record_widget_hotspot && should_record_hotspot {
                 let element = self.nodes.get(node).and_then(|n| n.element);
                 let element_kind = self.window.and_then(|window| {
                     crate::declarative::frame::element_record_for_node(app, window, node)

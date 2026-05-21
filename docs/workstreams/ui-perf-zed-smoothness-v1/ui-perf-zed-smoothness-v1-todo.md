@@ -170,6 +170,22 @@ not update checked-in baselines.
     - Local read: the latest no-4090 editor probes keep paint-cache key construction around `25..29us` in the top
       frames and visual-bounds recording around `8..15us`; this is useful attribution, but not yet evidence for a
       broad paint-cache or visual-bounds rewrite.
+  - [x] Fast-path transparent paint wrappers without losing paint observations.
+    - Change: declarative mount marks paint-transparent wrappers with node-local passthrough metadata. `paint_node`
+      can now replay children directly for those nodes while preserving clips, inherited foreground, scroll child
+      transforms, and observed model/global dependencies.
+    - Gate:
+      `cargo nextest run -p fret-ui -E 'test(transparent_wrappers_use_paint_passthrough_without_instance_lookup) | test(paint_passthrough_replays_observed_deps_for_transparent_wrapper) | test(paint_passthrough_preserves_clip_and_inherited_foreground) | test(paint_cache_key_tracks_node_inherited_text_style_fingerprint) | test(paint_cache_key_tracks_child_geometry_changes_when_parent_size_is_stable) | test(paint_cache_replay_translates_descendant_bounds_for_descendants)' --no-fail-fast`.
+    - Rebuilt-gallery repeat evidence:
+      - r21:
+        `target/fret-diag/text-clean-geometry-current-20260521-r21-paint-passthrough-observed-deps-built/sessions/1779396246186-26724/1779396274160-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+      - r22:
+        `target/fret-diag/text-clean-geometry-current-20260521-r22-paint-passthrough-observed-deps-repeat/sessions/1779397662647-239112/1779397692672-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+    - Result versus r20: `paint_host_widget_instance_lookup_time_us` p95 moved `44us -> 25/29us`, while
+      `paint_host_widget_instance_lookup_calls` stayed `58 -> 55/55` and
+      `paint_host_widget_observed_deps_calls` stayed `58`, proving observations were replayed rather than dropped.
+    - Treat this as a host-widget lookup hot-path cleanup. r21/r22 still show whole-frame p95 dominated by resize
+      layout and renderer finish/upload variance, so do not promote this to a perf-baseline win.
 - [ ] Keep structural refactors as separate follow-ons rather than reopening P1.5.
   - Split a new narrow workstream only for hard structural changes such as true FrameArena/bump allocation,
     `WindowFrame.children` arena/slab storage, explicit view-cache paint-skip semantics, or an editor row-fragment

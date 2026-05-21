@@ -567,6 +567,15 @@ where
                         },
                     )
                     .is_none();
+                ui.set_node_paint_passthrough(
+                    root_node,
+                    Some(crate::tree::NodePaintPassthrough {
+                        paint_children: true,
+                        clip: false,
+                        clip_corner_radii: None,
+                        foreground: None,
+                    }),
+                );
 
                 let mut mounted_children: Vec<NodeId> = Vec::with_capacity(children.len());
                 let mut children = children;
@@ -1100,6 +1109,15 @@ where
                         },
                     )
                     .is_none();
+                ui.set_node_paint_passthrough(
+                    root_node,
+                    Some(crate::tree::NodePaintPassthrough {
+                        paint_children: true,
+                        clip: false,
+                        clip_corner_radii: None,
+                        foreground: None,
+                    }),
+                );
                 if inserted {
                     window_frame.revision = window_frame.revision.saturating_add(1);
                 }
@@ -1716,10 +1734,14 @@ fn mount_element<H: UiHost + 'static>(
 
     let previous_record = window_frame.instances.get(node);
     let previous_instance = previous_record.map(|r| &r.instance);
+    let previous_inherited_foreground = previous_record.and_then(|r| r.inherited_foreground);
     let previous_inherited_text_style =
         previous_record.and_then(|r| r.inherited_text_style.as_ref());
     if !reuse_view_cache {
         let mut mask = declarative_instance_change_mask(previous_instance, &instance);
+        if previous_inherited_foreground != inherited_foreground {
+            mask |= INVALIDATION_PAINT;
+        }
         if previous_inherited_text_style != inherited_text_style.as_ref() {
             mask |= INVALIDATION_LAYOUT | INVALIDATION_PAINT;
         }
@@ -1749,6 +1771,10 @@ fn mount_element<H: UiHost + 'static>(
     if let Some(traverse) = focus_traversal_gate_state {
         ui.sync_focus_traversal_gate_widget(node, traverse);
     }
+    ui.set_node_paint_passthrough(
+        node,
+        paint_passthrough_for_instance(&instance, inherited_foreground),
+    );
     let inserted = window_frame
         .instances
         .insert(
@@ -2395,6 +2421,155 @@ const INVALIDATION_HIT_TEST: u8 = 1 << 0;
 const INVALIDATION_LAYOUT: u8 = 1 << 1;
 const INVALIDATION_PAINT: u8 = 1 << 2;
 
+fn paint_passthrough_for_layout(
+    layout: LayoutStyle,
+    inherited_foreground: Option<Color>,
+) -> crate::tree::NodePaintPassthrough {
+    crate::tree::NodePaintPassthrough {
+        paint_children: true,
+        clip: matches!(layout.overflow, Overflow::Clip),
+        clip_corner_radii: None,
+        foreground: inherited_foreground,
+    }
+}
+
+fn pure_container_paint_passthrough(
+    props: crate::element::ContainerProps,
+    inherited_foreground: Option<Color>,
+) -> Option<crate::tree::NodePaintPassthrough> {
+    let paints_chrome = props.shadow.is_some()
+        || props.background.is_some()
+        || props.background_paint.is_some()
+        || props.border_color.is_some()
+        || props.border_paint.is_some()
+        || props.border != Edges::all(Px(0.0))
+        || props.border_dash.is_some()
+        || props.focus_ring.is_some()
+        || props.focus_ring_always_paint
+        || props.focus_border_color.is_some();
+    if paints_chrome {
+        return None;
+    }
+
+    Some(crate::tree::NodePaintPassthrough {
+        paint_children: true,
+        clip: matches!(props.layout.overflow, Overflow::Clip),
+        clip_corner_radii: Some(props.corner_radii),
+        foreground: inherited_foreground,
+    })
+}
+
+fn paint_passthrough_for_instance(
+    instance: &ElementInstance,
+    inherited_foreground: Option<Color>,
+) -> Option<crate::tree::NodePaintPassthrough> {
+    match instance {
+        ElementInstance::Container(props) => {
+            pure_container_paint_passthrough(*props, inherited_foreground)
+        }
+        ElementInstance::Semantics(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::SemanticFlex(props) => Some(paint_passthrough_for_layout(
+            props.flex.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::ViewCache(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        #[cfg(feature = "unstable-retained-bridge")]
+        ElementInstance::RetainedSubtree(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::FocusScope(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::LayoutQueryRegion(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::InteractivityGate(props) => Some(crate::tree::NodePaintPassthrough {
+            paint_children: props.present,
+            clip: matches!(props.layout.overflow, Overflow::Clip),
+            clip_corner_radii: None,
+            foreground: inherited_foreground,
+        }),
+        ElementInstance::HitTestGate(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::FocusTraversalGate(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::DismissibleLayer(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::Stack(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::Flex(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::RovingFlex(props) => Some(paint_passthrough_for_layout(
+            props.flex.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::Grid(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::ForegroundScope(props) => Some(crate::tree::NodePaintPassthrough {
+            paint_children: true,
+            clip: matches!(props.layout.overflow, Overflow::Clip),
+            clip_corner_radii: None,
+            foreground: props.foreground.or(inherited_foreground),
+        }),
+        ElementInstance::HoverRegion(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::PointerRegion(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::TextInputRegion(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::InternalDragRegion(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::ExternalDragRegion(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::WheelRegion(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::Scroll(props) => Some(paint_passthrough_for_layout(
+            props.layout,
+            inherited_foreground,
+        )),
+        ElementInstance::Spacer(_) => Some(crate::tree::NodePaintPassthrough {
+            paint_children: false,
+            clip: false,
+            clip_corner_radii: None,
+            foreground: inherited_foreground,
+        }),
+        _ => None,
+    }
+}
+
 fn declarative_instance_change_mask(
     previous: Option<&ElementInstance>,
     next: &ElementInstance,
@@ -2458,6 +2633,11 @@ fn declarative_instance_change_mask(
         }
         (ElementInstance::Opacity(a), ElementInstance::Opacity(b)) => {
             if a.opacity != b.opacity {
+                paint_changed = true;
+            }
+        }
+        (ElementInstance::ForegroundScope(a), ElementInstance::ForegroundScope(b)) => {
+            if a.foreground != b.foreground {
                 paint_changed = true;
             }
         }
