@@ -16057,3 +16057,43 @@ Post-fix evidence:
   confirmation before claiming a monotonic perf win.
 - Next slice should investigate whether Canvas can expose a stable clean-geometry contract for this resize page, or
   whether the remaining solve is required by canvas text-measure side effects.
+
+## 2026-05-21 19:17:03 +08:00 (canvas leaf clean-geometry propagation)
+
+Question:
+- Can the r7 `Canvas` / `unsupported_kind` owner be accepted after proving it has no layout-time side effects?
+
+Finding:
+- `Canvas` measure/layout are pure constraint clamps around `CanvasProps::layout`; the paint and prepaint hooks run
+  later with final bounds and are not consulted during layout propagation.
+- `ManagedSurface` is different: it has a layout callback and can publish layout-time output, so it remains outside
+  the clean-geometry propagated-leaf contract.
+- The existing descendant rejection test used `Canvas` only because it was an unsupported leaf, not because it modeled
+  side-effectful layout.
+
+Change:
+- Childless `Canvas` is now accepted as a propagated clean-geometry leaf in both the node contract and the
+  supported-element prefilter.
+- The descendant rejection attribution test now uses `ManagedSurface` so the test still proves unsupported descendant
+  attribution on a real layout-side-effect boundary.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui clean_geometry_rejection_reports_descendant_node_attribution clean_geometry_small_resize_skips_horizontal_auto_margin_vertical_flex_child clean_geometry_small_resize_skips_items_start_vertical_flex_child --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r8 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+git diff --check
+```
+
+Post-fix evidence:
+- Rerun bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r8/sessions/1779362032346-211792/1779362056912-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r8 top frames no longer report `Canvas` / `unsupported_kind`; top-frame
+  `layout_clean_geometry_solve_skip_rejections` is `0`.
+- r7 -> r8 from `diag stats --sort time --top 20 --json`: p95 engine solve improved `393us -> 200us`, layout sum
+  improved `7742us -> 6512us`, and p95 layout improved `1175us -> 896us`.
+- Next slice should stop chasing clean-geometry rejection owners for this page unless repeated evidence reintroduces
+  one. Remaining top-frame work should be attributed through request-build/layout-roots/paint timing with repeat
+  confirmation before claiming the broader perf win.

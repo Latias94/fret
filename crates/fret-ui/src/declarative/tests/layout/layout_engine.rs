@@ -2616,6 +2616,9 @@ fn clean_geometry_small_resize_keeps_view_cache_root_solve_as_boundary() {
 
 #[test]
 fn clean_geometry_rejection_reports_descendant_node_attribution() {
+    #[derive(Default)]
+    struct Marker;
+
     struct PrecomputeThenResize {
         child: NodeId,
         rect_a: Rect,
@@ -2663,9 +2666,9 @@ fn clean_geometry_rejection_reports_descendant_node_attribution() {
         bounds_a,
         "clean-geometry-descendant-rejection-child",
         |cx| {
-            let mut canvas = crate::element::CanvasProps::default();
-            canvas.layout.size.width = Length::Fill;
-            canvas.layout.size.height = Length::Fill;
+            let mut surface = crate::element::ManagedSurfaceProps::default();
+            surface.layout.size.width = Length::Fill;
+            surface.layout.size.height = Length::Fill;
             vec![cx.stack_props(
                 crate::element::StackProps {
                     layout: crate::element::LayoutStyle {
@@ -2679,8 +2682,15 @@ fn clean_geometry_rejection_reports_descendant_node_attribution() {
                 },
                 |cx| {
                     vec![
-                        cx.canvas(canvas, |_paint| {})
-                            .test_id("clean-geometry-rejected-canvas"),
+                        cx.managed_surface(
+                            surface,
+                            |layout_cx| {
+                                layout_cx.set_output(Marker);
+                            },
+                            |_paint_cx| {},
+                            |_cx| Vec::<AnyElement>::new(),
+                        )
+                        .test_id("clean-geometry-rejected-managed-surface"),
                     ]
                 },
             )]
@@ -2707,12 +2717,12 @@ fn clean_geometry_rejection_reports_descendant_node_attribution() {
 
     ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
 
-    let rejected_canvas = ui
+    let rejected_surface = ui
         .debug_node_children(child)
         .into_iter()
         .next()
         .and_then(|stack| ui.debug_node_children(stack).into_iter().next())
-        .expect("canvas descendant should be mounted");
+        .expect("managed surface descendant should be mounted");
 
     app.advance_frame();
     ui.invalidate(parent, Invalidation::Layout);
@@ -2729,10 +2739,10 @@ fn clean_geometry_rejection_reports_descendant_node_attribution() {
         .expect("child root solve should expose rejection details");
 
     assert_eq!(rejection.reason, "unsupported_kind");
-    assert_eq!(rejection.element_kind, Some("Canvas"));
+    assert_eq!(rejection.element_kind, Some("ManagedSurface"));
     assert_eq!(
         rejection.node,
-        Some(rejected_canvas),
+        Some(rejected_surface),
         "descendant rejections should report the actual rejected node, not just the solve root"
     );
     assert!(
@@ -2741,7 +2751,7 @@ fn clean_geometry_rejection_reports_descendant_node_attribution() {
     );
     assert_eq!(
         rejection.element,
-        ui.debug_node_element(rejected_canvas),
+        ui.debug_node_element(rejected_surface),
         "rejection element should match the rejected descendant node"
     );
 }

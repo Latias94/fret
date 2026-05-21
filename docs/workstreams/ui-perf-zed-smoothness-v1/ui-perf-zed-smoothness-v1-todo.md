@@ -302,10 +302,15 @@ not update checked-in baselines.
     - Follow-up fix: vertical, no-wrap flex now accepts the narrow horizontal `mx-auto` centering case and recomputes
       the child x origin from the next inner width. The r7 text-measure rerun no longer reports `non_px_margin`; the
       next owner is `unsupported_kind` on `Canvas`.
+    - Follow-up fix: childless `Canvas` now acts as a clean-geometry propagated leaf. The r8 text-measure rerun no
+      longer reports `Canvas` / `unsupported_kind`; top frames have zero clean-geometry solve-skip rejections. The
+      next owner should be attributed from request-build/layout-roots/paint timing and repeated-bundle stability, not
+      from another known clean-geometry precondition.
   - [ ] Reduce the remaining resize-jitter changing-bounds layout/root solve cost without weakening scroll extent
     correctness.
     - Candidate: a contained-root apply/solve path that handles bounds-only changes after the cache-root remains reused,
-      informed by the current `Canvas` / `unsupported_kind` clean-geometry solve-skip rejection.
+      informed by r8's lack of top-frame clean-geometry solve-skip rejections and by the remaining
+      `layout_request_build_roots_time_us`, `layout_roots_time_us`, and paint timing.
     - Required proof: one focused Rust gate plus a repeat=3 resize-jitter bundle preserving the row replay/store and
       view-cache reuse invariants above.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and

@@ -856,7 +856,8 @@ impl<H: UiHost> UiTree<H> {
                     size_stability: CleanGeometryWidthDeltaSizeStability::TextCachedMetrics,
                 })
             }
-            crate::declarative::frame::ElementInstance::Spacer(_)
+            crate::declarative::frame::ElementInstance::Canvas(_)
+            | crate::declarative::frame::ElementInstance::Spacer(_)
             | crate::declarative::frame::ElementInstance::Image(_)
             | crate::declarative::frame::ElementInstance::SvgIcon(_)
             | crate::declarative::frame::ElementInstance::SvgImage(_)
@@ -2485,7 +2486,8 @@ impl<H: UiHost> UiTree<H> {
                     .clean_engine_geometry_flex_margin_supported(app, window, children, props.flex),
                 crate::declarative::frame::ElementInstance::RovingFlex(props) => self
                     .clean_engine_geometry_flex_margin_supported(app, window, children, props.flex),
-                crate::declarative::frame::ElementInstance::Spacer(_) => children.is_empty(),
+                crate::declarative::frame::ElementInstance::Canvas(_)
+                | crate::declarative::frame::ElementInstance::Spacer(_) => children.is_empty(),
                 crate::declarative::frame::ElementInstance::Text(_)
                 | crate::declarative::frame::ElementInstance::StyledText(_)
                 | crate::declarative::frame::ElementInstance::SelectableText(_) => {
