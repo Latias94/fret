@@ -221,6 +221,12 @@ constructing `retained::ChartCanvas`. This intentionally does not delete retaine
 first-party chart demos, cookbook/gallery chart paths, `ChartCanvasOutput`, multi-grid helpers, and
 linking output types still consume retained chart APIs and need migration before `fret-chart` can
 leave the retained bridge allowlist.
+`RBX-M3-030` then extended that declarative chart baseline to line/scatter output. The new default-
+feature test seeds a controlled line + scatter `ChartEngine`, proves delinea produces `Polyline`
+and `Points` marks, and proves `chart_canvas_panel(...)` paints them as `SceneOp::Path` plus
+non-background, non-zero point quads. This makes `category_line_demo`-style consumer migration safer,
+but retained axes, visual-map, data-zoom, output, and multi-grid surfaces still need explicit
+coverage or migration before deleting retained chart APIs.
 
 ## Completed Implementation
 

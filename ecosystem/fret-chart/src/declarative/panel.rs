@@ -1143,6 +1143,127 @@ mod tests {
         engine.datasets_mut().insert(dataset_id, table);
     }
 
+    fn line_scatter_chart_spec() -> (ChartSpec, DatasetId, Vec<f64>, Vec<f64>, Vec<f64>) {
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let x_field = FieldId::new(1);
+        let y_line_field = FieldId::new(2);
+        let y_scatter_field = FieldId::new(3);
+        let line_series = SeriesId::new(1);
+        let scatter_series = SeriesId::new(2);
+
+        let spec = ChartSpec {
+            id: ChartId::new(1),
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_line_field,
+                        column: 1,
+                    },
+                    FieldSpec {
+                        id: y_scatter_field,
+                        column: 2,
+                    },
+                ],
+                ..Default::default()
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                delinea::AxisSpec {
+                    id: x_axis,
+                    name: Some("X".to_string()),
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+                delinea::AxisSpec {
+                    id: y_axis,
+                    name: Some("Y".to_string()),
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            data_zoom_y: vec![],
+            tooltip: None,
+            axis_pointer: None,
+            visual_maps: vec![],
+            series: vec![
+                SeriesSpec {
+                    id: line_series,
+                    name: Some("Line".to_string()),
+                    kind: SeriesKind::Line,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_line_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                    lod: None,
+                },
+                SeriesSpec {
+                    id: scatter_series,
+                    name: Some("Scatter".to_string()),
+                    kind: SeriesKind::Scatter,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_scatter_field,
+                        y2: None,
+                    },
+                    x_axis,
+                    y_axis,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                    lod: None,
+                },
+            ],
+        };
+
+        (
+            spec,
+            dataset_id,
+            vec![0.0, 1.0, 2.0, 3.0, 4.0],
+            vec![0.0, 2.0, 1.0, 3.0, 2.0],
+            vec![1.0, 1.5, 0.5, 2.5, 1.25],
+        )
+    }
+
+    fn seed_line_scatter_dataset(
+        engine: &mut ChartEngine,
+        dataset_id: DatasetId,
+        x: Vec<f64>,
+        y_line: Vec<f64>,
+        y_scatter: Vec<f64>,
+    ) {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(x));
+        table.push_column(Column::F64(y_line));
+        table.push_column(Column::F64(y_scatter));
+        engine.datasets_mut().insert(dataset_id, table);
+    }
+
     #[derive(Default)]
     struct FakeServices;
 
@@ -1307,6 +1428,107 @@ mod tests {
             .read(&engine, |engine| engine.model().viewport)
             .expect("chart engine model should exist");
         assert_eq!(viewport, Some(bounds));
+
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+
+    #[test]
+    fn chart_canvas_panel_paints_line_and_scatter_marks_on_declarative_path() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+        let (spec, dataset_id, x, y_line, y_scatter) = line_scatter_chart_spec();
+
+        let engine: Model<ChartEngine> = app
+            .models_mut()
+            .insert(ChartEngine::new(spec.clone()).expect("chart spec should be valid"));
+        app.models_mut()
+            .update(&engine, |engine| {
+                seed_line_scatter_dataset(engine, dataset_id, x, y_line, y_scatter)
+            })
+            .expect("chart engine model should exist");
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "chart-declarative-line-scatter-panel",
+            |cx| {
+                vec![chart_canvas_panel(
+                    cx,
+                    ChartCanvasPanelProps {
+                        engine: Some(engine.clone()),
+                        spec: spec.clone(),
+                        ..ChartCanvasPanelProps::new(spec.clone())
+                    },
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let (has_polyline_marks, has_point_marks) = app
+            .models()
+            .read(&engine, |engine| {
+                let has_polyline = engine.output().marks.nodes.iter().any(|node| {
+                    matches!(
+                        (node.kind, &node.payload),
+                        (MarkKind::Polyline, MarkPayloadRef::Polyline(poly))
+                            if poly.points.end > poly.points.start
+                    )
+                });
+                let has_points = engine.output().marks.nodes.iter().any(|node| {
+                    matches!(
+                        (node.kind, &node.payload),
+                        (MarkKind::Points, MarkPayloadRef::Points(points))
+                            if points.points.end > points.points.start
+                    )
+                });
+                (has_polyline, has_points)
+            })
+            .expect("chart engine model should exist");
+        assert!(
+            has_polyline_marks,
+            "seeded line series should produce polyline marks before declarative paint"
+        );
+        assert!(
+            has_point_marks,
+            "seeded scatter series should produce point marks before declarative paint"
+        );
+
+        assert!(
+            scene
+                .ops()
+                .iter()
+                .any(|op| matches!(op, SceneOp::Path { .. })),
+            "declarative chart canvas should paint line marks as scene paths"
+        );
+        assert!(
+            scene.ops().iter().any(|op| {
+                matches!(
+                    op,
+                    SceneOp::Quad { rect, order, .. }
+                        if order.0 >= ChartStyle::default().draw_order.0
+                            && rect.size.width.0 > 0.0
+                            && rect.size.height.0 > 0.0
+                            && *rect != bounds
+                )
+            }),
+            "declarative chart canvas should paint scatter marks as non-zero quads"
+        );
 
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
     }

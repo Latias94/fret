@@ -11349,3 +11349,53 @@ Broader gates not run:
   - Reason: `RBX-M3-020` adds a targeted `fret-chart` declarative capability baseline without
     changing shared runtime contracts. The package test gate, formatting, layering, catalog,
     whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-030 Chart declarative line/scatter capability baseline
+
+Claim verified:
+
+- `chart_canvas_panel(...)` now has default-feature behavior coverage for line and scatter chart
+  families, not only bar charts.
+- The test proves the controlled `ChartEngine` produces `Polyline` marks for the line series and
+  `Points` marks for the scatter series, then proves the declarative canvas paints those as a
+  `SceneOp::Path` plus non-background, non-zero point quads.
+- This is still a pre-consumer-migration baseline. Retained axes, visual-map, data-zoom, output, and
+  multi-grid surfaces remain known migration work before retained chart deletion.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/declarative/panel.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-chart chart_canvas_panel_paints_line_and_scatter_marks_on_declarative_path`
+  - Result: passed, 1 test.
+  - Scope proven: the new declarative line/scatter capability test passes in the default
+    `fret-chart` feature set.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 41 tests.
+  - Scope proven: the bar and line/scatter declarative baselines remain green alongside the existing
+    retained chart oracle tests.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after adding the line/scatter declarative baseline.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task and evidence updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-030` is a targeted `fret-chart` behavior-baseline slice. The package test gate,
+    formatting, layering, catalog, whitespace, and merge-marker checks cover the changed surface.

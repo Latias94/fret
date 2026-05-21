@@ -4586,6 +4586,27 @@ Related plan:
       - the declarative canvas emits non-background, non-zero chart mark quads.
     - This is a pre-delete baseline only; retained chart public/demo/gallery entry points still
       need consumer migration before `fret-chart` can leave the retained bridge allowlist.
+- [x] RBX-M3-030 Extend the declarative `fret-chart` baseline to line and scatter marks.
+  - Scope:
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+  - Goal:
+    - Prove the declarative `chart_canvas_panel(...)` path paints non-bar chart families before
+      migrating line/scatter demos from retained `ChartCanvas`.
+  - Validation:
+    - `cargo nextest run -p fret-chart chart_canvas_panel_paints_line_and_scatter_marks_on_declarative_path`
+    - `cargo nextest run -p fret-chart`
+  - Evidence:
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-030-chart-declarative-linescatter-capability-baseline`
+  - Result:
+    - The new behavior test seeds a controlled line + scatter chart engine, renders it through
+      `chart_canvas_panel(...)`, and asserts:
+      - delinea produces `Polyline` marks for the line series,
+      - delinea produces `Points` marks for the scatter series,
+      - the declarative canvas paints the line as a `SceneOp::Path`,
+      - the declarative canvas paints scatter points as non-background, non-zero quads.
+    - This gives `category_line_demo`-style consumer migration a stronger regression gate, while
+      retained axes/visual-map/data-zoom/output gaps remain tracked before broad deletion.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.
