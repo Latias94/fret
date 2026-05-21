@@ -1,6 +1,6 @@
 # Retained Bridge Exit v1 Handoff
 
-Updated: 2026-05-21
+Updated: 2026-05-22
 
 ## Current State
 
@@ -207,6 +207,12 @@ retained-source deletion slice.
 blackboard widget, retained blackboard paint adapter, and retained blackboard conformance module.
 The retained bridge source ledger no longer allows `blackboard.rs` / `blackboard_paint.rs`; default
 declarative blackboard tests now carry the behavior contract.
+`RBX-M3-010` then migrated the thin `fret-plot3d` surface from retained widget authoring to a
+declarative viewport-surface panel. `fret-plot3d` no longer enables
+`fret-ui/unstable-retained-bridge`, `Plot3dCanvas` / `src/retained.rs` were deleted, and the
+first-party Plot3D demos now mount `plot3d_panel(...)` through
+`declarative::RenderRootContext::render_root(...)`. The remaining retained bridge allowlist entries
+are now `fret-chart`, `fret-node`, and `fret-plot`.
 
 ## Completed Implementation
 

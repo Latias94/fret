@@ -308,7 +308,6 @@ def main(argv: list[str]) -> int:
         "fret-chart",
         "fret-node",
         "fret-plot",
-        "fret-plot3d",
     }
     _check_unstable_retained_bridge_allowlist(
         metadata,

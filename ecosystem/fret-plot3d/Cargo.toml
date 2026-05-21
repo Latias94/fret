@@ -12,4 +12,5 @@ documentation.workspace = true
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
-fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-kit = { path = "../fret-ui-kit" }

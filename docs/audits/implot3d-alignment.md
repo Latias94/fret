@@ -25,9 +25,10 @@ architecture constraints:
 ## Current State (What We Already Have)
 
 - Embedded viewport surface (ADR 0097):
-  - `Plot3dCanvas` emits `SceneOp::ViewportSurface` targeting an engine-owned `RenderTargetId`.
+  - `plot3d_panel(...)` hosts `fret-ui-kit`'s declarative viewport-surface panel for an
+    engine-owned `RenderTargetId`.
   - Input is forwarded as `Effect::ViewportInput(ViewportInputEvent)` using `ViewportMapping`.
-  - Evidence: `ecosystem/fret-plot3d/src/retained.rs`
+  - Evidence: `ecosystem/fret-plot3d/src/declarative.rs`
 - End-to-end runner hook:
   - The demo allocates a `ViewportRenderTarget` and records a wgpu render pass every frame.
   - Evidence: `apps/fret-examples/src/plot3d_demo.rs` (`record_engine_frame`)
@@ -64,8 +65,8 @@ Important constraint called out by ImPlot3D:
 
 | Capability | ImPlot3D | Fret today | Status | Notes / pointers |
 | --- | --- | --- | --- | --- |
-| Engine-owned render target | N/A (ImGui drawlist) | `RenderTargetId` + `SceneOp::ViewportSurface` | ✅ | `ecosystem/fret-plot3d/src/retained.rs` |
-| Input forwarding | ImGui IO | `ViewportInputEvent` via `ViewportMapping` | ✅ | `crates/fret-core/src/input.rs`, `crates/fret-ui/src/retained_bridge.rs` |
+| Engine-owned render target | N/A (ImGui drawlist) | `RenderTargetId` + declarative `ViewportSurface` | ✅ | `ecosystem/fret-plot3d/src/declarative.rs` |
+| Input forwarding | ImGui IO | `ViewportInputEvent` via `ViewportMapping` | ✅ | `crates/fret-core/src/input.rs`, `ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs` |
 | 3D camera (orbit/pan/zoom) | ✅ | ❌ | ❌ | Needs a Plot3D engine model + input mapping policy |
 | Axes/grid/ticks/labels | ✅ | ❌ | ❌ | Needs a 3D axis layout + text overlays in the engine render target |
 | Line plots | ✅ | ❌ | ❌ | Needs a Plot3D renderer path (lines) + LOD policies |
@@ -107,4 +108,3 @@ This keeps Plot3D portable and makes “real 3D” depth-correct rendering possi
   - Demo: replace the animated clear in `apps/fret-examples/src/plot3d_demo.rs` with a plotted dataset.
 - P1: Legend + multiple item types + colormaps.
 - P2: Surface/mesh rendering + 32-bit index stress harness (ImPlot3D's known pitfall).
-

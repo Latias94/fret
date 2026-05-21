@@ -24,7 +24,7 @@ use fret_launch::{
     install_viewport_overlay_3d_immediate, record_viewport_overlay_3d,
     upload_viewport_overlay_3d_immediate,
 };
-use fret_plot3d::retained::{Plot3dCanvas, Plot3dModel, Plot3dStyle, Plot3dViewport};
+use fret_plot3d::{Plot3dModel, Plot3dPanelProps, Plot3dStyle, Plot3dViewport, plot3d_panel};
 use fret_render::viewport_overlay::{
     Overlay3dCpuBuilder, Overlay3dUniforms, Overlay3dVertex, ViewportOverlay3dContext,
     push_thick_line_quad, push_triangle,
@@ -33,8 +33,7 @@ use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{
     PlatformCapabilities, WindowCommandAvailability, WindowCommandAvailabilityService,
 };
-use fret_ui::UiTree;
-use fret_ui::{Theme, ThemeConfig};
+use fret_ui::{Theme, ThemeConfig, UiTree, declarative};
 use fret_ui_kit::viewport_tooling::{
     ViewportToolArbitratorConfig, ViewportToolCoordinateSpace, ViewportToolEntry,
     ViewportToolRouterState, cancel_active_viewport_tools as cancel_active_viewport_tools_router,
@@ -4192,15 +4191,17 @@ fn render(
         scene,
     } = context;
 
-    let root = state.root.get_or_insert_with(|| {
-        let style = Plot3dStyle::default();
-        let canvas = Plot3dCanvas::new(state.plot.clone()).style(style);
-        let node = Plot3dCanvas::create_node(&mut state.ui, canvas);
-        state.ui.set_root(node);
-        node
-    });
+    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+        .render_root("gizmo3d-demo", |cx| {
+            let style = Plot3dStyle::default();
+            vec![plot3d_panel(
+                cx,
+                Plot3dPanelProps::new(state.plot.clone()).style(style),
+            )]
+        });
 
-    state.ui.set_root(*root);
+    state.ui.set_root(root);
+    state.root = Some(root);
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
 

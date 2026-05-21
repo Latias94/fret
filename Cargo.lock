@@ -2670,6 +2670,7 @@ dependencies = [
  "fret-core",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-kit",
 ]
 
 [[package]]

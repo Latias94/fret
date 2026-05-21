@@ -28,17 +28,16 @@ Related plan:
       - Evidence: `ecosystem/fret-chart/Cargo.toml` enables `fret-ui/unstable-retained-bridge`; retained canvas in `ecosystem/fret-chart/src/retained/canvas.rs`.
       - Exit target: M3.
     - `fret-plot`
-      - Why: retained plotting surfaces still use `RetainedSubtreeProps` and retained canvas widgets for performance/interaction while declarative authoring migrates.
-      - Evidence: `ecosystem/fret-plot/Cargo.toml` enables `fret-ui/unstable-retained-bridge`; retained subtree hosting in `ecosystem/fret-plot/src/imui.rs` and retained canvas in `ecosystem/fret-plot/src/retained/canvas/mod.rs`.
-      - Exit target: M3.
-    - `fret-plot3d`
-      - Why: retained 3D plot surface uses retained viewport-surface helpers and widget lifecycle plumbing.
-      - Evidence: `ecosystem/fret-plot3d/Cargo.toml` enables `fret-ui/unstable-retained-bridge`; retained widget in `ecosystem/fret-plot3d/src/retained.rs`.
+      - Why: retained plotting surfaces still use retained canvas widgets for performance/interaction while declarative authoring migrates.
+      - Evidence: `ecosystem/fret-plot/Cargo.toml` enables `fret-ui/unstable-retained-bridge`; retained canvas in `ecosystem/fret-plot/src/retained/canvas/mod.rs`.
       - Exit target: M3.
   - Removed from allowlist:
     - `fret-docking`
       - Result: removed in `RBX-M1-080`; docking now uses public declarative dock-space entry
         points and no longer depends on `fret-ui/unstable-retained-bridge`.
+    - `fret-plot3d`
+      - Result: removed in `RBX-M3-010`; Plot3D now exposes a declarative viewport-surface panel
+        and the first-party Plot3D demos mount it through `declarative::render_root(...)`.
 
 ### M1 — Docking declarative closure (primary target)
 
@@ -4532,8 +4531,39 @@ Related plan:
 
 ### M3 — Charts/plots migration
 
-- [ ] Convert chart/plot surfaces to `Canvas`-first declarative authoring.
-- [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart`, `ecosystem/fret-plot`, `ecosystem/fret-plot3d`.
+- [x] RBX-M3-010 Migrate `fret-plot3d` to a declarative viewport-surface panel.
+  - Scope:
+    - `ecosystem/fret-plot3d/`
+    - `apps/fret-examples/src/plot3d_demo.rs`
+    - `apps/fret-examples/src/gizmo3d_demo.rs`
+    - `tools/check_layering.py`
+  - Goal:
+    - Delete the retained `Plot3dCanvas` widget surface.
+    - Keep the portable Plot3D model/style/viewport contract.
+    - Replace first-party retained demo mounting with public declarative `plot3d_panel(...)`.
+    - Remove `fret-plot3d` from the `fret-ui/unstable-retained-bridge` allowlist.
+  - Validation:
+    - `cargo check -p fret-plot3d`
+    - `cargo check -p fret-demo --bin plot3d_demo`
+    - `cargo check -p fret-demo --bin gizmo3d_demo`
+    - `cargo nextest run -p fret-plot3d`
+    - `python3 tools/check_layering.py`
+  - Evidence:
+    - `ecosystem/fret-plot3d/src/declarative.rs`
+    - `ecosystem/fret-plot3d/src/lib.rs`
+    - `ecosystem/fret-plot3d/Cargo.toml`
+    - `apps/fret-examples/src/plot3d_demo.rs`
+    - `apps/fret-examples/src/gizmo3d_demo.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-010-plot3d-declarative-viewport-panel`
+  - Result:
+    - `fret-plot3d` no longer enables `fret-ui/unstable-retained-bridge`.
+    - `Plot3dCanvas` and `src/retained.rs` were deleted.
+    - Public Plot3D authoring is now `plot3d_panel(...)` / `Plot3dPanelProps`, backed by
+      `fret-ui-kit`'s declarative `viewport_surface_panel(...)`.
+    - First-party Plot3D demos now mount through `declarative::RenderRootContext::render_root(...)`.
+- [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
+- [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
+- [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.
 
 ### M4 — Bridge shrink and delete (or quarantine)
 

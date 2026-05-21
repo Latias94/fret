@@ -11196,3 +11196,77 @@ Broader gates not run:
   - Reason: `RBX-M2-930` is another narrow adapter-boundary slice in `fret-node`'s retained
     canvas widget. The compat compile gate, targeted compat nextest gate, source-policy scan,
     formatting, layering, catalog, whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-010 Plot3D declarative viewport panel
+
+Claim verified:
+
+- `fret-plot3d` no longer depends on `fret-ui/unstable-retained-bridge`.
+- The retained `Plot3dCanvas` widget surface was deleted and replaced by the public declarative
+  `plot3d_panel(...)` / `Plot3dPanelProps` surface.
+- First-party Plot3D demos now mount the Plot3D UI through `declarative::RenderRootContext` instead
+  of `UiTreeRetainedExt::create_node_retained(...)`.
+
+Evidence:
+
+- `ecosystem/fret-plot3d/src/declarative.rs`
+- `ecosystem/fret-plot3d/src/lib.rs`
+- `ecosystem/fret-plot3d/Cargo.toml`
+- `apps/fret-examples/src/plot3d_demo.rs`
+- `apps/fret-examples/src/gizmo3d_demo.rs`
+- `tools/check_layering.py`
+- `docs/adr/IMPLEMENTATION_ALIGNMENT.md`
+- `docs/audits/implot3d-alignment.md`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-plot3d`
+  - Result: passed with the pre-existing `fret-ui` warning for
+    `current_effective_opacity` dead code.
+  - Scope proven: the new declarative Plot3D package surface compiles without enabling the retained
+    bridge.
+- `cargo check -p fret-demo --bin plot3d_demo`
+  - Result: passed.
+  - Scope proven: the standalone Plot3D demo compiles after migrating from retained
+    `Plot3dCanvas` creation to declarative root mounting.
+- `cargo check -p fret-demo --bin gizmo3d_demo`
+  - Result: passed.
+  - Scope proven: the gizmo/Plot3D demo compiles after migrating from retained `Plot3dCanvas`
+    creation to declarative root mounting.
+
+- `cargo nextest run -p fret-plot3d`
+  - Result: passed, 1 test.
+  - Scope proven: source-policy coverage locks `fret-plot3d` to its declarative public surface and
+    prevents reintroducing `Plot3dCanvas` or the retained bridge feature.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: workspace Rust formatting is clean after the Plot3D declarative migration.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering remains valid and `fret-plot3d` has been removed from the
+    retained bridge allowlist.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after documentation updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "fret_plot3d::retained|Plot3dCanvas::|use fret_plot3d::\\{[^\\n]*Plot3dCanvas|use fret_plot3d::retained" ecosystem/fret-plot3d apps/fret-examples/src/plot3d_demo.rs apps/fret-examples/src/gizmo3d_demo.rs -g '*.rs' -g 'Cargo.toml'`
+  - Result: no matches.
+  - Scope proven: no Plot3D source/demo call site still imports or constructs the deleted retained
+    `Plot3dCanvas` surface.
+- `cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="fret-plot3d") | .dependencies[]? | select(.name=="fret-ui") | (.features|join(","))'`
+  - Result: empty feature list.
+  - Scope proven: `fret-plot3d` depends on `fret-ui` without `unstable-retained-bridge`.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-010` is a targeted Plot3D bridge-exit slice. The package compile/test gate,
+    first-party demo compile gates, retained-bridge no-user proof, formatting, layering, catalog,
+    whitespace, and merge-marker checks cover the changed surface.
