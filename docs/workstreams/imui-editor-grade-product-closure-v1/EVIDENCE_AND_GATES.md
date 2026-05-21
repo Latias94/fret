@@ -599,6 +599,14 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
   `fret_diag::diag_cmd` on a background job and records in-flight/error status back into the GUI.
   The baseline-required compare commands are rejected by the focused unit gate instead of being
   treated as runnable.
+- 2026-05-21 maintenance: baseline-required visual and footprint compare templates now carry
+  `target_bundle_dir` from the shared `fret-diag` projection. Regression Workspace exposes
+  `Baseline Compare Actions` that accept a baseline bundle/directory or footprint session,
+  materialize the existing `diag compare ... --json` / `diag compare ... --footprint --json`
+  command, and launch it through the same follow-up runner.
+- Compare follow-up result records are keyed to the candidate bundle rather than the baseline, so
+  selected-bundle history, summary, copy, and open actions remain attached to the failing evidence
+  the maintainer selected.
 - Each launched follow-up writes a lightweight `.fret/diag/followups/*.json` result record with
   schema/kind, command metadata, `diag_args`, pass/fail status, optional error, and timing fields.
   The GUI exposes the latest result path so the evidence can be copied without hunting through logs.
@@ -611,6 +619,8 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
 - A bounded `Follow-up Result History` section filters recent GUI-launched follow-up results to the
   selected bundle, preventing a previous bundle's global-last result from being read as current
   selected-summary evidence.
+- DevTools startup now restores recent valid `.fret/diag/followups/*.json` records into that same
+  bounded history while preserving the selected-bundle filter before any result is shown or copied.
 - The history section now renders selectable result entries; selecting an older matching entry
   changes the summary/raw JSON/copy target while preserving newest-first fallback.
 - A `Follow-up Result Details` block surfaces the selected result's status, path, command, bundle,
@@ -636,11 +646,119 @@ DevTools GUI first-class gate command follow-up (2026-05-15):
 cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir --no-fail-fast
 cargo nextest run -p fret-diag regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast
 cargo nextest run -p fret-diag regression_bundle_followup_commands_cover_each_selected_bundle --no-fail-fast
-cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_status_and_duration regression_followup_result_summary_lines_project_output_artifacts regression_followup_result_history_summary_filters_to_selected_bundle regression_followup_result_history_latest_path_prefers_selected_bundle regression_followup_result_history_selected_entry_overrides_latest_when_matching regression_followup_result_history_entry_detail_lines_surface_repro_fields file_url_from_path_projects_native_artifact_paths runnable_followup_command_action_lines_surface_indexed_bundle_commands --no-fail-fast
+cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_status_and_duration regression_followup_result_summary_lines_project_output_artifacts regression_followup_result_history_summary_filters_to_selected_bundle load_recent_followup_result_history_reads_latest_valid_records regression_followup_result_history_latest_path_prefers_selected_bundle regression_followup_result_history_selected_entry_overrides_latest_when_matching regression_followup_result_history_entry_detail_lines_surface_repro_fields file_url_from_path_projects_native_artifact_paths runnable_followup_command_action_lines_surface_indexed_bundle_commands --no-fail-fast
+cargo nextest run -p fret-devtools regression_followup_compare_result_uses_candidate_bundle_dir materialize_baseline_compare_followup_command_fills_diag_args selected_followup_readiness_lines_summarize_next_runnable_command runnable_followup_command_action_lines_surface_indexed_bundle_commands --no-fail-fast
 cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast
 cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
 python tools/diag_gate_imui_product_chain.py --only discovery
+python tools/gate_imui_workstream_source.py
+```
+
+DevTools GUI workflow-run productization follow-up (2026-05-21):
+
+- `apps/fret-devtools/src/native.rs` now surfaces a `Workflow Runs` panel in the Guide, separate
+  from the gate-command builder and regression follow-up inspector.
+- `apps/fret-devtools/src/workflow_run.rs` owns the thin GUI job/result wrapper over
+  `fret_diag::diag_cmd`; it does not introduce a GUI-only campaign or suite runtime model.
+- The result contract kind is `fret_devtools_workflow_run_result`.
+- The initial presets cover `diag campaign validate tools/diag-campaigns/devtools-first-open-smoke.json --json`,
+  `diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json`, and a
+  selected-session `diag suite perf-docking-arbitration-steady ... --devtools-session-id <selected-session> --json`.
+- Each GUI-launched workflow writes `.fret/diag/workflow-runs/*.json` with status, timing, command,
+  redacted `diag_args`, and selectable/copyable/openable history in the panel. The stored JSON and
+  preview command redact `--devtools-token`.
+- DevTools startup now restores the latest valid workflow-run result records from
+  `.fret/diag/workflow-runs/*.json`, skipping malformed JSON and non-workflow records. Reopening
+  the GUI preserves the selected workflow evidence handoff instead of requiring maintainers to
+  rerun a suite before loading summary/index artifacts.
+- Suite workflow records also include structured `output_artifacts[]` for shared diagnostics
+  handoff paths. The selected-session `perf-docking-arbitration-steady --dir ...` workflow records
+  `suite.summary.json` and `regression.summary.json`, and the Workflow Result Summary / Details
+  panels render those artifact lines before raw JSON. The selected workflow's `suite.summary.json`
+  path is copyable/openable directly, and its `regression.summary.json` path is also
+  copyable/openable directly from the Workflow Result Details actions, with relative artifact paths
+  resolved against the repo root before platform URL opening. The same action cluster can load that
+  summary into the existing Regression Workspace selection model, so GUI-launched suite evidence
+  immediately feeds the existing bundle follow-up, perf evidence, capability provenance, and
+  share-artifact drill-down surfaces.
+- The first-open next-action summary distinguishes an aggregate regression index from a loaded
+  selected summary, so GUI-launched suite handoff can truthfully report that follow-up actions are
+  ready without pretending that `regression.index.json` is present.
+- Regression Workspace now includes a compact `Follow-up Readiness` projection over the selected
+  summary: selected bundle count, runnable follow-up count, manual compare count, and the first
+  runnable command. This makes a workflow-loaded suite summary immediately actionable before the
+  maintainer reads the full command list.
+- After a selected-bundle follow-up result exists, the first-open next-action summary reports the
+  selected follow-up result state and points maintainers at Follow-up Result Summary/History,
+  keeping the workflow-suite handoff visible after the next diagnostics command has produced an
+  artifact.
+- 2026-05-21 maintenance: the Guide now starts with `Recent Evidence`, a compact restored-history
+  projection over generated gate, workflow, and selected-bundle follow-up result artifacts. It
+  shows the latest artifact in each lane, counts recent failing evidence, includes the full failed
+  evidence artifact path and failed follow-up `bundle_dir` in the compact report, and points
+  maintainers at the next evidence action without adding a GUI-private artifact store. The block also
+  exposes select/copy/open actions for the compact report, first failed evidence artifact, failed
+  follow-up bundle directory when present, and its producing command, plus direct copy of the
+  restored failed result JSON payload. The block can also rerun failed evidence when the result JSON
+  carries runnable structured `diag_args`; workflow reruns always re-materialize the same workflow
+  id from the current selected session and current DevTools token instead of reusing stored workflow
+  args, while missing args, unknown workflow ids, or missing session keep rerun disabled and now
+  surface the concrete unavailable reason in the compact report and first-open header. Display
+  command strings do not become an executable protocol. The compact report uses the same
+  state-aware rerun decision as the button, and its `recent_evidence_next_action` now projects the
+  concrete repair step (rerun, select a session, refresh workflow commands, run a current workflow,
+  or inspect the result JSON) instead of a generic history-inspection hint. This keeps copied
+  evidence aligned with first-open action availability and keeps first-open failure triage
+  artifact-first while reusing the existing
+  Gate/Workflow/Follow-up history state. Follow-up selection carries its `bundle_dir` into
+  Regression Workspace so selected follow-up history stays aligned with the failed artifact. The
+  `First-open Next Actions` header now also reports restored failed evidence plus its rerun command,
+  current rerun availability, and the same `recent evidence next` repair step as the Guide report.
+  The header also mirrors the Guide's copy/select/rerun actions as first-open shortcut buttons,
+  reusing the same command ids and disabled-state rules instead of creating a header-only execution
+  path. This keeps the current failure and next action visible and directly reachable before the
+  maintainer opens the Guide.
+- 2026-05-21 maintenance: `First-open Next Actions` now also reports the selected diagnostics
+  session scope. The header distinguishes no session, connected-but-unselected sessions, one
+  selected session, and multiple connected sessions where the Session selector retargets inspect,
+  bundle, screenshot, and selected-session suite workflow actions. This is a DevTools GUI
+  discoverability improvement over the existing selection model, not a transport or `fret-imui`
+  contract change. The underlying v1 session rule is now source-tested in `apps/fret-devtools/src/ws.rs`:
+  keep a valid selected session, otherwise fall back to the first advertised session, and filter
+  session-scoped payloads to that selection while no-selection remains the initial compatibility
+  state.
+- Workflow Runs also renders `Workflow Handoff Readiness`, a compact next-action projection over
+  the selected workflow result, the `regression.summary.json` handoff artifact, and whether that
+  summary is already loaded into Regression Workspace. This keeps the GUI thin over
+  `fret_diag::diag_cmd` while making the result-to-follow-up transition explicit.
+- 2026-05-21 maintenance: the same readiness block now reports `aggregate_index_loaded` and a
+  separate `aggregate_next_action`. A ready `regression.index.json` therefore points maintainers at
+  `Load workflow regression index` until the aggregate workspace has actually loaded the workflow
+  artifact root, instead of treating index existence as equivalent to loaded aggregate state.
+- 2026-05-21 maintenance: Workflow Runs now also renders `Workflow Summarize Handoff`. For a
+  selected suite result, it derives the shared
+  `diag summarize <regression.summary.json> --dir <same-dir> --json` command, exposes copy/run
+  actions, and reports `aggregate_index_ready` separately from selected-summary readiness. This
+  avoids treating `regression.index.json` as a direct suite artifact while still letting the GUI
+  complete the aggregate handoff through the shared diagnostics engine.
+- Workflow summarize result records now project both `regression.summary.json` and
+  `regression.index.json` through `output_artifacts[]`. The result summary/details panels therefore
+  expose the generated aggregate index as a first-class handoff artifact instead of relying on path
+  inference from the command string.
+- If the workflow `regression.index.json` artifact exists, Workflow Runs can copy/open that
+  aggregate index directly or load it into the existing Regression Workspace by setting the
+  aggregate artifacts root to the index parent directory and calling the shared refresh path. This
+  keeps aggregate browsing on the existing `regression.index.json` consumer instead of adding a
+  workflow-private parser.
+- Focused gates:
+
+```text
+cargo nextest run -p fret-devtools workflow_run_result_record_has_stable_shape_and_redacts_token workflow_run_result_summary_lines_project_status_and_duration workflow_run_result_summary_lines_project_output_artifacts workflow_run_regression_summary_artifact_path_extracts_output_artifact workflow_run_result_history_selects_explicit_path_or_latest workflow_run_result_history_entry_detail_lines_surface_output_artifacts load_recent_workflow_run_result_history_reads_latest_valid_records workflow_run_command_reports_runnable_from_missing_inputs_and_args devtools_workflow_run_lines_surface_campaign_and_suite_entrypoints devtools_workflow_commands_mark_suite_ws_missing_without_session devtools_workflow_commands_include_selected_session_for_suite_ws devtools_first_open_next_action_lines_prioritize_stateful_workflow first_open_recent_evidence_action_specs_gate_disabled_states devtools_recent_evidence_lines_surface_restored_histories recent_evidence_next_action_projects_rerun_and_repair_steps devtools_recent_evidence_lines_use_current_workflow_state_for_rerunnable_status devtools_recent_evidence_lines_surface_failed_followup_bundle_dir recent_failed_evidence_bundle_dir_filters_empty_bundle_dir recent_failed_evidence_rerun_command_uses_structured_diag_args recent_failed_evidence_rerun_command_rejects_redacted_workflow_args recent_failed_evidence_rerun_reason_reports_diag_args_issues recent_failed_evidence_rerun_command_recovers_redacted_workflow_from_current_state recent_failed_evidence_rerun_command_uses_current_workflow_state_over_stored_args recent_failed_evidence_rerun_reason_reports_unregistered_workflow recent_failed_evidence_rerun_command_projects_followup_bundle devtools_recent_failed_evidence_target_prefers_visible_latest_then_history devtools_recent_failed_evidence_target_carries_result_json_payload devtools_recent_evidence_selection_effect_routes_to_existing_history_state file_url_from_path_projects_workflow_artifact_paths --no-fail-fast
+cargo nextest run -p fret-devtools workflow_run_result_summary_lines_project_summarize_output_artifacts workflow_run_regression_summary_artifact_path_extracts_output_artifact workflow_summarize_command_from_summary_path_targets_same_dir workflow_regression_index_parent_dir_targets_artifact_root workflow_aggregate_index_loaded_matches_loaded_artifact_root workflow_regression_index_action_ids_cover_copy_open_load workflow_handoff_readiness_lines_project_next_action --no-fail-fast
+cargo nextest run -p fret-devtools workflow_summarize_command_from_summary_path_targets_same_dir workflow_handoff_readiness_lines_project_next_action workflow_aggregate_index_loaded_matches_loaded_artifact_root devtools_workflow_run_lines_surface_campaign_and_suite_entrypoints --no-fail-fast
+cargo nextest run -p fret-devtools devtools_workflow_run_lines_surface_campaign_and_suite_entrypoints devtools_workflow_commands_mark_suite_ws_missing_without_session devtools_workflow_commands_include_selected_session_for_suite_ws workflow_run_regression_summary_artifact_path_extracts_output_artifact --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
 python tools/gate_imui_workstream_source.py
 ```
 
@@ -898,7 +1016,7 @@ DevTools GUI perf-threshold preset closure (2026-05-16):
 cargo nextest run -p fret-diag devtools_gate_perf_threshold_command_preserves_placeholders_until_filled devtools_gate_perf_threshold_command_includes_runnable_diag_args devtools_gate_perf_threshold_command_quotes_target_and_rejects_invalid_numbers devtools_gate_perf_threshold_product_chain_defaults_are_runnable --no-fail-fast
 cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast
 cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
-cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_output_artifacts regression_followup_trace_artifact_path_prefers_trace_report regression_followup_trace_artifact_path_falls_back_to_output_artifacts file_url_from_path_projects_trace_artifact_paths regression_followup_result_history_entry_detail_lines_surface_repro_fields load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast
+cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_output_artifacts regression_followup_trace_artifact_path_prefers_trace_report regression_followup_trace_artifact_path_falls_back_to_output_artifacts file_url_from_path_projects_trace_artifact_paths regression_followup_result_history_entry_detail_lines_surface_repro_fields load_recent_followup_result_history_reads_latest_valid_records load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast
 cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast
 python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built
 ```
@@ -1338,7 +1456,9 @@ Scope: finish the stale paint/scene and pixels-changed generated-gate loop by ma
 artifacts selectable and reusable from the GUI.
 
 - `apps/fret-devtools/src/gate_run.rs` now projects gate result artifacts into bounded in-memory
-  history entries plus summary/detail helper lines.
+  history entries plus summary/detail helper lines. DevTools startup now restores recent valid
+  `.fret/diag/gate-runs/*.json` records into that same history, skipping malformed and non-gate
+  JSON so generated-gate evidence survives a GUI restart.
 - `apps/fret-devtools/src/native.rs` now renders generated gate result details, summary, history,
   raw JSON, selected-result copy actions, and a platform URL open action.
 - The result history remains GUI state over `.fret/diag/gate-runs/*.json`; diagnostics gate policy
@@ -1350,14 +1470,14 @@ artifacts selectable and reusable from the GUI.
 Focused gates:
 
 ```text
-cargo nextest run -p fret-devtools gate_run_result_record_has_stable_shape gate_run_result_summary_lines_project_status_and_duration gate_run_result_history_selects_explicit_path_or_latest devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
+cargo nextest run -p fret-devtools gate_run_result_record_has_stable_shape gate_run_result_summary_lines_project_status_and_duration load_recent_gate_run_result_history_reads_latest_valid_records load_recent_gate_run_result_history_prefers_record_time_over_file_mtime gate_run_result_history_selects_explicit_path_or_latest devtools_gate_command_lines_surface_first_class_gates --no-fail-fast
 cargo nextest run -p fret-diag devtools_gate_profiles_include_first_class_gate_taxonomy devtools_gate_profile_lines_surface_artifacts_and_threshold_commands devtools_gate_script_target_profiles_are_parameterized devtools_gate_script_target_commands_include_runnable_diag_args devtools_gate_script_target_command_preserves_placeholders_until_filled regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required --no-fail-fast
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
 python tools/diag_gate_imui_product_chain.py --only discovery
 cargo clippy -p fret-diag -p fret-devtools --all-targets -- -D warnings
 ```
 
-Result: passed. The `fret-devtools` nextest gate reported `4 tests run: 4 passed`; the
+Result: passed. The `fret-devtools` nextest gate reported `5 tests run: 5 passed`; the
 `fret-diag` nextest gate reported `7 tests run: 7 passed`; both source/discovery gates completed
 successfully; `cargo clippy -p fret-diag -p fret-devtools --all-targets -- -D warnings`,
 `python tools/check_layering.py`, and `git diff --check` passed. `git diff --check` reported only
@@ -1683,3 +1803,98 @@ python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-b
 Result: passed locally. This is a DevTools GUI productization slice only; it keeps the editor-grade
 goal open for broader always-available tooling maturity, real-host Wayland hand-feel, and full
 perf/smoothness attribution.
+
+## Perf text clean-geometry owner split - 2026-05-21 follow-up
+
+Scope: keep the editor-grade perf/smoothness evidence chain pointed at the correct runtime owner
+without moving layout policy into `fret-imui`.
+
+- `docs/workstreams/text-clean-geometry-stability-v1/` is now the closed text clean-geometry
+  boundary record split out of `scroll-optimization-v1`.
+- `docs/workstreams/scroll-optimization-v1/HANDOFF.md` and `WORKSTREAM.json` now point the text
+  follow-on at that lane instead of inviting more clean-geometry widening inside the scroll
+  umbrella.
+- The current runtime boundary remains conservative: `TextWrap::None` text with stable cached
+  metrics can skip authoritative layout, while wrapped or height-changing text rejects as
+  `text_reflow`.
+- Clean-geometry rejection diagnostics now carry additive `detail`; the first text detail proof
+  distinguishes wrapped text as `text_wrap_not_none` instead of collapsing every text sub-cause into
+  the same generic `text_reflow` bucket.
+- The UI Gallery text-measure-overlay resize script passed with real bundle evidence at
+  `target/fret-diag/text-clean-geometry-detail-20260521-r1/sessions/1779305958600-170448/1779306373288/bundle.schema2.json`;
+  that bundle contains `clean_geometry_solve_skip_rejection.detail` values
+  `text_wrap_not_none` and `text_overflow_not_clip`.
+- shadcn `CardDescription` remains full-width `TextWrap::Word`; recipe authoring is not used as the
+  perf lever.
+
+Focused gates:
+
+```text
+cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow clean_geometry_small_resize_skips_nowrap_text_width_delta_when_height_stable clean_geometry_small_resize_rejects_nowrap_text_height_delta --no-fail-fast
+cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics clean_geometry_rejection_detail_is_additive --no-fail-fast
+cargo fmt -p fret-ui -p fret-bootstrap --check
+python -m json.tool docs/workstreams/text-clean-geometry-stability-v1/WORKSTREAM.json
+python -m json.tool docs/workstreams/scroll-optimization-v1/WORKSTREAM.json
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. This is an owner-split, boundary-lock, and diagnostics closeout slice only;
+full editor perf/smoothness attribution remains open in the dedicated perf lanes.
+
+## DevTools MCP recent-evidence bridge - 2026-05-21 follow-up
+
+Scope: keep AI/MCP first-open diagnostics aligned with the GUI `Recent Evidence` product surface
+without adding a MCP-private rerun model.
+
+- `apps/fret-devtools-mcp/src/native.rs` now exposes `fret_diag_recent_evidence`, a read-only MCP
+  tool that scans the same `.fret/diag/gate-runs`, `.fret/diag/workflow-runs`, and
+  `.fret/diag/followups` result records restored by the GUI.
+- The report returns latest gate/workflow/follow-up evidence, the first failed result, failing
+  counts, bundle dir when present, a compact human summary, and a next-action hint.
+- `fret-diag://first-open.md` now points AI clients at that bridge, while workflow rerun decisions
+  remain GUI-owned because safe workflow reruns require the current selected session and current
+  token rather than stored historical `diag_args`.
+- `fret-diag://recent-evidence.json` now exposes the same report as a sessionless MCP resource, so
+  clients that start from the resource list can discover restored GUI-launched evidence without a
+  tool-first detour.
+- GUI and MCP first-open evidence now select the newest failed result across gate/workflow/follow-up
+  lanes from result JSON `finished_unix_ms` / `started_unix_ms` first, with timestamped result
+  paths as a compatibility fallback and old untimestamped records retaining the legacy fallback
+  order. This keeps reopened DevTools and AI clients pointed at the most recent failure instead of
+  a category-priority failure.
+- Restored Gate, Workflow, and Follow-up histories, plus the MCP recent-evidence lane scan, now
+  parse valid result JSON before sorting and use `finished_unix_ms` / `started_unix_ms` before file
+  mtime and path fallback. Copied or synced `.fret/diag` artifacts therefore keep their recorded
+  recency when DevTools or MCP reopen them.
+- The same status normalization is now explicit in both GUI and MCP paths: empty status, `-`, and
+  `passed` regardless of case are not failures. This prevents placeholder or externally cased
+  restored records from lighting up the first-open failed-evidence controls.
+- The sessionless resource list now comes from `sessionless_resource_specs()`, with
+  `sessionless_resource_specs_include_first_open_and_recent_evidence` locking both
+  `fret-diag://first-open.md` and `fret-diag://recent-evidence.json` into the list/template source of
+  truth.
+- `docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md` and
+  `diag-devtools-gui-v1.md` document the same owner split.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-devtools -p fret-devtools-mcp --check
+cargo nextest run -p fret-devtools load_recent_gate_run_result_history_prefers_record_time_over_file_mtime load_recent_workflow_run_result_history_prefers_record_time_over_file_mtime load_recent_followup_result_history_prefers_record_time_over_file_mtime recent_evidence_status_failed_ignores_empty_placeholder_and_passed_case devtools_recent_failed_evidence_target_prefers_visible_latest_then_history devtools_recent_failed_evidence_target_falls_back_to_lane_order_without_timestamps devtools_recent_failed_evidence_target_prefers_result_json_time_over_path_time --no-fail-fast
+cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain build_recent_evidence_report_reads_gui_result_records load_recent_evidence_entries_prefers_record_time_over_file_mtime recent_evidence_status_is_failing_ignores_empty_placeholder_and_passed_case recent_evidence_resource_text_matches_report_shape build_recent_evidence_report_prefers_latest_failed_result_across_lanes sessionless_resource_specs_include_first_open_and_recent_evidence mcp_server_instructions_point_to_first_open_resource parse_resource_uri_accepts_recent_evidence_resource --no-fail-fast
+python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+python -m json.tool docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json > $null
+python -m py_compile tools/diag_gate_imui_p2_devtools_first_open.py tools/gate_imui_workstream_source.py
+git diff --check
+```
+
+Result: passed locally. The focused `fret-devtools` recent-evidence/history gate reported 7 passed tests.
+The `fret-devtools-mcp` focused nextest gate reported 9 passed tests, both
+DevTools first-open/source gates passed, the workstream catalog and JSON checks passed, and
+`git diff --check` passed with only the existing CRLF normalization warning for
+`tools/diag_gate_imui_p2_devtools_first_open.py`. This is a DevTools/MCP first-open
+productization slice only; broader GUI product maturity, real-host Wayland hand-feel, and full
+perf/smoothness attribution remain open.

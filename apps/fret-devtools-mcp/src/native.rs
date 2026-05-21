@@ -43,7 +43,9 @@ static NEXT_REQUEST_ID: AtomicU64 = AtomicU64::new(1000);
 
 const RESOURCE_SCHEME: &str = "fret-diag://";
 const RESOURCE_URI_FIRST_OPEN_MD: &str = "fret-diag://first-open.md";
+const RESOURCE_URI_RECENT_EVIDENCE_JSON: &str = "fret-diag://recent-evidence.json";
 const RESOURCE_KIND_FIRST_OPEN_MD: &str = "first-open.md";
+const RESOURCE_KIND_RECENT_EVIDENCE_JSON: &str = "recent-evidence.json";
 const RESOURCE_KIND_BUNDLE_JSON: &str = "bundle.json";
 const RESOURCE_KIND_BUNDLE_ZIP: &str = "bundle.zip";
 const RESOURCE_KIND_REPRO_SUMMARY_JSON: &str = "repro.summary.json";
@@ -90,6 +92,37 @@ const DEBUG_TRIAGE_COMMAND: &str =
 const DEBUG_HOTSPOTS_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
 const DEBUG_TRACE_COMMAND: &str = "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
+const RECENT_EVIDENCE_GATE_RUNS_DIR: &str = ".fret/diag/gate-runs";
+const RECENT_EVIDENCE_WORKFLOW_RUNS_DIR: &str = ".fret/diag/workflow-runs";
+const RECENT_EVIDENCE_FOLLOWUPS_DIR: &str = ".fret/diag/followups";
+const RECENT_EVIDENCE_GATE_RUN_KIND: &str = "fret_devtools_gate_run_result";
+const RECENT_EVIDENCE_WORKFLOW_RUN_KIND: &str = "fret_devtools_workflow_run_result";
+const RECENT_EVIDENCE_FOLLOWUP_KIND: &str = "fret_devtools_regression_followup_result";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct SessionlessResourceSpec {
+    uri: &'static str,
+    name: &'static str,
+    mime_type: &'static str,
+    description: &'static str,
+}
+
+fn sessionless_resource_specs() -> &'static [SessionlessResourceSpec] {
+    &[
+        SessionlessResourceSpec {
+            uri: RESOURCE_URI_FIRST_OPEN_MD,
+            name: "first-open.md",
+            mime_type: "text/markdown",
+            description: "Canonical DevTools MCP first-open diagnostics path, including the shared IMUI product-chain evidence workflow.",
+        },
+        SessionlessResourceSpec {
+            uri: RESOURCE_URI_RECENT_EVIDENCE_JSON,
+            name: "recent-evidence.json",
+            mime_type: "application/json",
+            description: "Recent GUI-launched gate/workflow/follow-up evidence restored from .fret/diag result records.",
+        },
+    ]
+}
 
 #[derive(Clone)]
 struct WsState {
@@ -597,6 +630,21 @@ impl FretDevtoolsMcp {
             params.0.include_json.unwrap_or(false),
             Some(index_json),
         )))
+    }
+
+    #[tool(
+        description = "Read recent GUI-launched gate/workflow/follow-up result records from .fret/diag and return a compact first-open evidence report."
+    )]
+    async fn fret_diag_recent_evidence(
+        &self,
+        params: rmcp::handler::server::wrapper::Parameters<RecentEvidenceRequestV1>,
+    ) -> Result<Json<RecentEvidenceReportV1>, String> {
+        let repo_root = repo_root_from_manifest_dir()
+            .or_else(|| std::env::current_dir().ok())
+            .ok_or_else(|| "failed to resolve repo root".to_string())?;
+        let limit = params.0.limit.unwrap_or(8).clamp(1, 64);
+
+        Ok(Json(build_recent_evidence_report(&repo_root, limit)))
     }
 
     #[tool(description = "Return the most recent bundle.dumped payload currently in the inbox.")]
@@ -1232,13 +1280,12 @@ impl ServerHandler for FretDevtoolsMcp {
             let inbox = self.inbox.lock().await;
 
             let mut resources: Vec<Resource> = Vec::new();
-            let mut first_open = RawResource::new(RESOURCE_URI_FIRST_OPEN_MD, "first-open.md");
-            first_open.mime_type = Some("text/markdown".to_string());
-            first_open.description = Some(
-                "Canonical DevTools MCP first-open diagnostics path, including the shared IMUI product-chain evidence workflow."
-                    .to_string(),
-            );
-            resources.push(first_open.no_annotation());
+            for spec in sessionless_resource_specs() {
+                let mut resource = RawResource::new(spec.uri, spec.name);
+                resource.mime_type = Some(spec.mime_type.to_string());
+                resource.description = Some(spec.description.to_string());
+                resources.push(resource.no_annotation());
+            }
 
             for s in sessions {
                 let Some(_payload) = inbox.iter().rev().find(|m| {
@@ -1345,13 +1392,11 @@ impl ServerHandler for FretDevtoolsMcp {
                 t.no_annotation()
             };
 
-            Ok(ListResourceTemplatesResult::with_all_items(vec![
-                mk(
-                    "fret-diag://first-open.md",
-                    "first-open.md",
-                    "text/markdown",
-                    "Canonical DevTools MCP first-open diagnostics path and shared IMUI product workflow.",
-                ),
+            let mut templates = Vec::new();
+            for spec in sessionless_resource_specs() {
+                templates.push(mk(spec.uri, spec.name, spec.mime_type, spec.description));
+            }
+            templates.extend([
                 mk(
                     "fret-diag://sessions/{session_id}/bundle.json",
                     "bundle.json",
@@ -1382,7 +1427,9 @@ impl ServerHandler for FretDevtoolsMcp {
                     "application/json",
                     "Consumer-oriented regression index for a session artifacts root (only if present on disk).",
                 ),
-            ]))
+            ]);
+
+            Ok(ListResourceTemplatesResult::with_all_items(templates))
         }
     }
 
@@ -1402,6 +1449,22 @@ impl ServerHandler for FretDevtoolsMcp {
                         uri: uri.to_string(),
                         mime_type: Some("text/markdown".to_string()),
                         text: mcp_first_open_resource_text(),
+                        meta: None,
+                    }],
+                });
+            }
+
+            if parsed.kind == RESOURCE_KIND_RECENT_EVIDENCE_JSON {
+                let repo_root = repo_root_from_manifest_dir()
+                    .or_else(|| std::env::current_dir().ok())
+                    .ok_or_else(|| McpError::internal_error("failed to resolve repo root", None))?;
+                let text = recent_evidence_resource_text(&repo_root)
+                    .map_err(|err| McpError::internal_error(err.to_string(), None))?;
+                return Ok(ReadResourceResult {
+                    contents: vec![ResourceContents::TextResourceContents {
+                        uri: uri.to_string(),
+                        mime_type: Some("application/json".to_string()),
+                        text,
                         meta: None,
                     }],
                 });
@@ -1713,6 +1776,8 @@ struct RegressionDashboardFollowupCommandV1 {
     diag_args: Vec<String>,
     #[serde(default)]
     requires_baseline: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    target_bundle_dir: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, JsonSchema)]
@@ -1760,6 +1825,50 @@ struct RegressionDashboardResultV1 {
     index_json: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct RecentEvidenceRequestV1 {
+    /// Maximum records per evidence lane (default 8, max 64).
+    #[serde(default)]
+    limit: Option<usize>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+struct RecentEvidenceEntryV1 {
+    kind: String,
+    id: String,
+    label: String,
+    status: String,
+    result_path: String,
+    command_line: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    started_unix_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    finished_unix_ms: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    bundle_dir: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+struct RecentEvidenceReportV1 {
+    schema_version: u32,
+    artifacts_root: String,
+    gate_runs_dir: String,
+    workflow_runs_dir: String,
+    followups_dir: String,
+    gate_runs_count: usize,
+    workflow_runs_count: usize,
+    followups_count: usize,
+    failing_count: usize,
+    latest_gate_run: Option<RecentEvidenceEntryV1>,
+    latest_workflow_run: Option<RecentEvidenceEntryV1>,
+    latest_followup: Option<RecentEvidenceEntryV1>,
+    first_failed: Option<RecentEvidenceEntryV1>,
+    next_action: String,
+    human_summary: String,
+}
+
 impl From<RegressionBundleFollowupCommandV1> for RegressionDashboardFollowupCommandV1 {
     fn from(value: RegressionBundleFollowupCommandV1) -> Self {
         Self {
@@ -1768,6 +1877,7 @@ impl From<RegressionBundleFollowupCommandV1> for RegressionDashboardFollowupComm
             command_line: value.command_line,
             diag_args: value.diag_args,
             requires_baseline: value.requires_baseline,
+            target_bundle_dir: value.target_bundle_dir,
         }
     }
 }
@@ -2378,6 +2488,330 @@ fn collect_regression_dashboard_evidence(summary_path: &Path) -> RegressionDashb
     }
 }
 
+fn build_recent_evidence_report(repo_root: &Path, limit: usize) -> RecentEvidenceReportV1 {
+    let limit = limit.max(1);
+    let gate_runs_dir = repo_root.join(RECENT_EVIDENCE_GATE_RUNS_DIR);
+    let workflow_runs_dir = repo_root.join(RECENT_EVIDENCE_WORKFLOW_RUNS_DIR);
+    let followups_dir = repo_root.join(RECENT_EVIDENCE_FOLLOWUPS_DIR);
+
+    let gate_runs =
+        load_recent_evidence_entries(&gate_runs_dir, RECENT_EVIDENCE_GATE_RUN_KIND, "gate", limit);
+    let workflow_runs = load_recent_evidence_entries(
+        &workflow_runs_dir,
+        RECENT_EVIDENCE_WORKFLOW_RUN_KIND,
+        "workflow",
+        limit,
+    );
+    let followups = load_recent_evidence_entries(
+        &followups_dir,
+        RECENT_EVIDENCE_FOLLOWUP_KIND,
+        "follow-up",
+        limit,
+    );
+
+    let latest_gate_run = gate_runs.first().cloned();
+    let latest_workflow_run = workflow_runs.first().cloned();
+    let latest_followup = followups.first().cloned();
+    let first_failed = recent_evidence_latest_failed_entry(&gate_runs, &workflow_runs, &followups);
+    let failing_count = gate_runs
+        .iter()
+        .chain(workflow_runs.iter())
+        .chain(followups.iter())
+        .filter(|entry| recent_evidence_status_is_failing(&entry.status))
+        .count();
+    let evidence_empty = gate_runs.is_empty() && workflow_runs.is_empty() && followups.is_empty();
+    let next_action = recent_evidence_report_next_action(evidence_empty, first_failed.as_ref());
+
+    let artifacts_root = repo_root
+        .join(".fret")
+        .join("diag")
+        .to_string_lossy()
+        .to_string();
+    let gate_runs_dir_text = gate_runs_dir.to_string_lossy().to_string();
+    let workflow_runs_dir_text = workflow_runs_dir.to_string_lossy().to_string();
+    let followups_dir_text = followups_dir.to_string_lossy().to_string();
+    let human_summary = recent_evidence_human_summary(RecentEvidenceHumanSummaryInput {
+        gate_runs_count: gate_runs.len(),
+        workflow_runs_count: workflow_runs.len(),
+        followups_count: followups.len(),
+        failing_count,
+        latest_gate_run: latest_gate_run.as_ref(),
+        latest_workflow_run: latest_workflow_run.as_ref(),
+        latest_followup: latest_followup.as_ref(),
+        first_failed: first_failed.as_ref(),
+        next_action: &next_action,
+    });
+
+    RecentEvidenceReportV1 {
+        schema_version: 1,
+        artifacts_root,
+        gate_runs_dir: gate_runs_dir_text,
+        workflow_runs_dir: workflow_runs_dir_text,
+        followups_dir: followups_dir_text,
+        gate_runs_count: gate_runs.len(),
+        workflow_runs_count: workflow_runs.len(),
+        followups_count: followups.len(),
+        failing_count,
+        latest_gate_run,
+        latest_workflow_run,
+        latest_followup,
+        first_failed,
+        next_action,
+        human_summary,
+    }
+}
+
+fn recent_evidence_resource_text(repo_root: &Path) -> Result<String, serde_json::Error> {
+    serde_json::to_string_pretty(&build_recent_evidence_report(repo_root, 8))
+}
+
+fn recent_evidence_latest_failed_entry(
+    gate_runs: &[RecentEvidenceEntryV1],
+    workflow_runs: &[RecentEvidenceEntryV1],
+    followups: &[RecentEvidenceEntryV1],
+) -> Option<RecentEvidenceEntryV1> {
+    let entries = gate_runs
+        .iter()
+        .chain(workflow_runs.iter())
+        .chain(followups.iter())
+        .filter(|entry| recent_evidence_status_is_failing(&entry.status))
+        .cloned()
+        .collect::<Vec<_>>();
+    entries
+        .iter()
+        .filter_map(|entry| {
+            recent_evidence_entry_sort_timestamp(entry).map(|timestamp| {
+                (
+                    timestamp,
+                    RecentEvidenceKindOrder::from_kind(&entry.kind),
+                    entry,
+                )
+            })
+        })
+        .max_by_key(|(timestamp, kind_order, _entry)| (*timestamp, *kind_order))
+        .map(|(_, _, entry)| entry.clone())
+        .or_else(|| entries.first().cloned())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum RecentEvidenceKindOrder {
+    Followup = 0,
+    Workflow = 1,
+    Gate = 2,
+}
+
+impl RecentEvidenceKindOrder {
+    fn from_kind(kind: &str) -> Self {
+        match kind {
+            "workflow" => Self::Workflow,
+            "follow-up" => Self::Followup,
+            _ => Self::Gate,
+        }
+    }
+}
+
+fn recent_evidence_result_path_timestamp(path: &str) -> Option<u64> {
+    Path::new(path)
+        .file_name()
+        .and_then(|value| value.to_str())
+        .and_then(|file_name| file_name.split_once('-'))
+        .and_then(|(prefix, _)| prefix.parse::<u64>().ok())
+}
+
+fn recent_evidence_entry_sort_timestamp(entry: &RecentEvidenceEntryV1) -> Option<u64> {
+    entry
+        .finished_unix_ms
+        .or(entry.started_unix_ms)
+        .or_else(|| recent_evidence_result_path_timestamp(&entry.result_path))
+}
+
+fn load_recent_evidence_entries(
+    result_dir: &Path,
+    record_kind: &str,
+    evidence_kind: &str,
+    limit: usize,
+) -> Vec<RecentEvidenceEntryV1> {
+    let Ok(read_dir) = std::fs::read_dir(result_dir) else {
+        return Vec::new();
+    };
+    let mut candidates = read_dir
+        .filter_map(Result::ok)
+        .filter_map(|entry| {
+            let path = entry.path();
+            if path.extension().and_then(|value| value.to_str()) != Some("json") {
+                return None;
+            }
+            let modified_unix_ms = entry
+                .metadata()
+                .and_then(|metadata| metadata.modified())
+                .ok()
+                .and_then(system_time_unix_ms);
+            let result_json = std::fs::read_to_string(&path).ok()?;
+            let evidence_entry = recent_evidence_entry_from_result_json(
+                &path,
+                &result_json,
+                record_kind,
+                evidence_kind,
+            )?;
+            let record_unix_ms = recent_evidence_entry_sort_timestamp(&evidence_entry);
+            Some((evidence_entry, record_unix_ms, modified_unix_ms, path))
+        })
+        .collect::<Vec<_>>();
+    candidates.sort_by(
+        |(left_entry, left_record, left_modified, left_path),
+         (right_entry, right_record, right_modified, right_path)| {
+            (
+                right_record,
+                right_modified,
+                right_path,
+                &right_entry.result_path,
+            )
+                .cmp(&(
+                    left_record,
+                    left_modified,
+                    left_path,
+                    &left_entry.result_path,
+                ))
+        },
+    );
+    candidates
+        .into_iter()
+        .map(|(entry, _record_unix_ms, _modified_unix_ms, _path)| entry)
+        .take(limit)
+        .collect()
+}
+
+fn system_time_unix_ms(value: std::time::SystemTime) -> Option<u128> {
+    value
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|duration| duration.as_millis())
+}
+
+fn recent_evidence_entry_from_result_json(
+    result_path: &Path,
+    result_json: &str,
+    record_kind: &str,
+    evidence_kind: &str,
+) -> Option<RecentEvidenceEntryV1> {
+    let value = serde_json::from_str::<serde_json::Value>(result_json).ok()?;
+    if value.get("kind").and_then(|value| value.as_str()) != Some(record_kind) {
+        return None;
+    }
+
+    Some(RecentEvidenceEntryV1 {
+        kind: evidence_kind.to_string(),
+        id: json_string_field_or_dash(&value, "id"),
+        label: json_string_field_or_dash(&value, "label"),
+        status: json_string_field_or_dash(&value, "status"),
+        result_path: result_path.to_string_lossy().to_string(),
+        command_line: json_string_field_or_dash(&value, "command_line"),
+        started_unix_ms: value
+            .get("started_unix_ms")
+            .and_then(|value| value.as_u64()),
+        finished_unix_ms: value
+            .get("finished_unix_ms")
+            .and_then(|value| value.as_u64()),
+        bundle_dir: value
+            .get("bundle_dir")
+            .and_then(|value| value.as_str())
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(ToOwned::to_owned),
+        error: value
+            .get("error")
+            .and_then(|value| value.as_str())
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(ToOwned::to_owned),
+    })
+}
+
+fn json_string_field_or_dash(value: &serde_json::Value, key: &str) -> String {
+    value
+        .get(key)
+        .and_then(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("-")
+        .to_string()
+}
+
+fn recent_evidence_status_is_failing(status: &str) -> bool {
+    let status = status.trim();
+    !status.is_empty() && status != "-" && !status.eq_ignore_ascii_case("passed")
+}
+
+fn recent_evidence_report_next_action(
+    evidence_empty: bool,
+    first_failed: Option<&RecentEvidenceEntryV1>,
+) -> String {
+    if evidence_empty {
+        return "run a workflow or generated gate".to_string();
+    }
+    let Some(first_failed) = first_failed else {
+        return "continue from latest passing evidence".to_string();
+    };
+    format!(
+        "inspect failed {} evidence result JSON, then use the GUI Recent Evidence rerun controls when a current session is selected",
+        first_failed.kind
+    )
+}
+
+struct RecentEvidenceHumanSummaryInput<'a> {
+    gate_runs_count: usize,
+    workflow_runs_count: usize,
+    followups_count: usize,
+    failing_count: usize,
+    latest_gate_run: Option<&'a RecentEvidenceEntryV1>,
+    latest_workflow_run: Option<&'a RecentEvidenceEntryV1>,
+    latest_followup: Option<&'a RecentEvidenceEntryV1>,
+    first_failed: Option<&'a RecentEvidenceEntryV1>,
+    next_action: &'a str,
+}
+
+fn recent_evidence_human_summary(input: RecentEvidenceHumanSummaryInput<'_>) -> String {
+    let mut lines = vec![
+        format!(
+            "recent evidence counts: gate_runs={} workflow_runs={} followups={} failing={}",
+            input.gate_runs_count,
+            input.workflow_runs_count,
+            input.followups_count,
+            input.failing_count,
+        ),
+        recent_evidence_summary_line("latest gate", input.latest_gate_run),
+        recent_evidence_summary_line("latest workflow", input.latest_workflow_run),
+        recent_evidence_summary_line("latest follow-up", input.latest_followup),
+    ];
+    if let Some(first_failed) = input.first_failed {
+        lines.push(format!(
+            "first failed evidence: {} {} {}",
+            first_failed.kind, first_failed.status, first_failed.result_path
+        ));
+        if let Some(bundle_dir) = first_failed.bundle_dir.as_deref() {
+            lines.push(format!("first failed bundle_dir: {bundle_dir}"));
+        }
+        lines.push(format!(
+            "first failed command: {}",
+            first_failed.command_line
+        ));
+    } else {
+        lines.push("first failed evidence: <none>".to_string());
+    }
+    lines.push(format!("next action: {}", input.next_action));
+    lines.join("\n")
+}
+
+fn recent_evidence_summary_line(label: &str, entry: Option<&RecentEvidenceEntryV1>) -> String {
+    let Some(entry) = entry else {
+        return format!("{label}: <none>");
+    };
+    format!(
+        "{label}: {} {} {}",
+        entry.status, entry.id, entry.result_path
+    )
+}
+
 fn build_regression_dashboard_result(
     dir: String,
     index_path: &Path,
@@ -2520,7 +2954,7 @@ fn build_regression_dashboard_result(
 
 fn mcp_server_instructions() -> String {
     format!(
-        "Fret diagnostics DevTools MCP adapter. Starts a local WS hub and exposes tools to drive inspect/pick/scripts/bundles. Read {RESOURCE_URI_FIRST_OPEN_MD} for the first-open evidence path. Product workflow: {IMUI_PRODUCT_WORKFLOW_ID}; default: {IMUI_PRODUCT_WORKFLOW_COMMAND}; focused: {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}; launched: {IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND}."
+        "Fret diagnostics DevTools MCP adapter. Starts a local WS hub and exposes tools to drive inspect/pick/scripts/bundles. Read {RESOURCE_URI_FIRST_OPEN_MD} for the first-open evidence path. Recent evidence: fret_diag_recent_evidence. Product workflow: {IMUI_PRODUCT_WORKFLOW_ID}; default: {IMUI_PRODUCT_WORKFLOW_COMMAND}; focused: {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}; launched: {IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND}."
     )
 }
 
@@ -2534,6 +2968,7 @@ fn mcp_first_open_lines() -> Vec<String> {
         format!("tool-app index: {DEVTOOLS_TOOL_APP_INDEX_COMMAND}"),
         format!("tool-app index json: {DEVTOOLS_TOOL_APP_INDEX_JSON_COMMAND}"),
         format!("resource: {RESOURCE_URI_FIRST_OPEN_MD}"),
+        format!("recent evidence resource: {RESOURCE_URI_RECENT_EVIDENCE_JSON}"),
         format!("product workflow: {IMUI_PRODUCT_WORKFLOW_ID}"),
         format!("product workflow command: {IMUI_PRODUCT_WORKFLOW_COMMAND}"),
         format!("product workflow focused: {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}"),
@@ -2554,6 +2989,12 @@ fn mcp_first_open_lines() -> Vec<String> {
         format!("debug triage: {DEBUG_TRIAGE_COMMAND}"),
         format!("debug hotspots: {DEBUG_HOTSPOTS_COMMAND}"),
         format!("debug trace: {DEBUG_TRACE_COMMAND}"),
+        "recent evidence tool: fret_diag_recent_evidence".to_string(),
+        format!("recent evidence gate runs: {RECENT_EVIDENCE_GATE_RUNS_DIR}"),
+        format!("recent evidence workflow runs: {RECENT_EVIDENCE_WORKFLOW_RUNS_DIR}"),
+        format!("recent evidence followups: {RECENT_EVIDENCE_FOLLOWUPS_DIR}"),
+        "recent evidence next action: inspect failed result JSON or run a workflow/generated gate"
+            .to_string(),
     ]
 }
 
@@ -2860,6 +3301,12 @@ fn parse_resource_uri(uri: &str) -> Option<ParsedResourceUri> {
             kind: RESOURCE_KIND_FIRST_OPEN_MD.to_string(),
         });
     }
+    if rest == RESOURCE_KIND_RECENT_EVIDENCE_JSON {
+        return Some(ParsedResourceUri {
+            session_id: None,
+            kind: RESOURCE_KIND_RECENT_EVIDENCE_JSON.to_string(),
+        });
+    }
     let mut parts = rest.split('/').filter(|p| !p.trim().is_empty());
     let head = parts.next()?;
     match head {
@@ -3048,6 +3495,36 @@ mod tests {
     }
 
     #[test]
+    fn parse_resource_uri_accepts_recent_evidence_resource() {
+        let parsed = parse_resource_uri("fret-diag://recent-evidence.json")
+            .expect("recent-evidence resource uri should parse");
+        assert_eq!(parsed.session_id, None);
+        assert_eq!(parsed.kind, RESOURCE_KIND_RECENT_EVIDENCE_JSON);
+    }
+
+    #[test]
+    fn sessionless_resource_specs_include_first_open_and_recent_evidence() {
+        let specs = sessionless_resource_specs();
+        assert_eq!(specs.len(), 2);
+
+        let first_open = specs
+            .iter()
+            .find(|spec| spec.uri == RESOURCE_URI_FIRST_OPEN_MD)
+            .expect("first-open sessionless resource spec");
+        assert_eq!(first_open.name, "first-open.md");
+        assert_eq!(first_open.mime_type, "text/markdown");
+        assert!(first_open.description.contains("IMUI product-chain"));
+
+        let recent_evidence = specs
+            .iter()
+            .find(|spec| spec.uri == RESOURCE_URI_RECENT_EVIDENCE_JSON)
+            .expect("recent-evidence sessionless resource spec");
+        assert_eq!(recent_evidence.name, "recent-evidence.json");
+        assert_eq!(recent_evidence.mime_type, "application/json");
+        assert!(recent_evidence.description.contains(".fret/diag"));
+    }
+
+    #[test]
     fn mcp_first_open_resource_text_surfaces_imui_product_chain() {
         let text = mcp_first_open_resource_text();
         assert!(text.contains("mcp first-open: docs/diagnostics-first-open.md"));
@@ -3070,6 +3547,7 @@ mod tests {
             )
         );
         assert!(text.contains("resource: fret-diag://first-open.md"));
+        assert!(text.contains("recent evidence resource: fret-diag://recent-evidence.json"));
         assert!(text.contains("product workflow: imui-product-chain"));
         assert!(
             text.contains("product workflow command: python tools/diag_gate_imui_product_chain.py")
@@ -3099,12 +3577,337 @@ mod tests {
         assert!(text.contains(
             "debug trace: cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json"
         ));
+        assert!(text.contains("recent evidence tool: fret_diag_recent_evidence"));
+        assert!(text.contains("recent evidence gate runs: .fret/diag/gate-runs"));
+        assert!(text.contains("recent evidence workflow runs: .fret/diag/workflow-runs"));
+        assert!(text.contains("recent evidence followups: .fret/diag/followups"));
+        assert!(text.contains(
+            "recent evidence next action: inspect failed result JSON or run a workflow/generated gate"
+        ));
+    }
+
+    #[test]
+    fn build_recent_evidence_report_reads_gui_result_records() {
+        let repo_root = std::env::temp_dir().join(format!(
+            "fret-devtools-mcp-recent-evidence-{}-{}",
+            std::process::id(),
+            unix_ms_now()
+        ));
+        let _ = std::fs::remove_dir_all(&repo_root);
+        std::fs::create_dir_all(repo_root.join(RECENT_EVIDENCE_GATE_RUNS_DIR)).unwrap();
+        std::fs::create_dir_all(repo_root.join(RECENT_EVIDENCE_WORKFLOW_RUNS_DIR)).unwrap();
+        std::fs::create_dir_all(repo_root.join(RECENT_EVIDENCE_FOLLOWUPS_DIR)).unwrap();
+
+        let gate_path = repo_root
+            .join(RECENT_EVIDENCE_GATE_RUNS_DIR)
+            .join("100-gate.json");
+        let workflow_path = repo_root
+            .join(RECENT_EVIDENCE_WORKFLOW_RUNS_DIR)
+            .join("200-workflow.json");
+        let followup_path = repo_root
+            .join(RECENT_EVIDENCE_FOLLOWUPS_DIR)
+            .join("300-followup.json");
+        std::fs::write(
+            &gate_path,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "kind": RECENT_EVIDENCE_GATE_RUN_KIND,
+                "id": "pixels-changed",
+                "label": "pixels changed",
+                "status": "passed",
+                "command_line": "cargo run -p fretboard-dev -- diag run gate.json",
+                "diag_args": ["run", "gate.json"]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            &workflow_path,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "kind": RECENT_EVIDENCE_WORKFLOW_RUN_KIND,
+                "id": "perf-docking-suite",
+                "label": "perf docking suite",
+                "status": "failed",
+                "command_line": "cargo run -p fretboard-dev -- diag suite perf-docking",
+                "diag_args": ["suite", "perf-docking"]
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            &followup_path,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "kind": RECENT_EVIDENCE_FOLLOWUP_KIND,
+                "id": "trace",
+                "label": "trace",
+                "status": "passed",
+                "command_line": "cargo run -p fretboard-dev -- diag trace bundle --json",
+                "bundle_dir": "target/fret-diag/run-a"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let report = build_recent_evidence_report(&repo_root, 8);
+
+        assert_eq!(report.gate_runs_count, 1);
+        assert_eq!(report.workflow_runs_count, 1);
+        assert_eq!(report.followups_count, 1);
+        assert_eq!(report.failing_count, 1);
+        assert_eq!(
+            report
+                .latest_gate_run
+                .as_ref()
+                .map(|entry| entry.kind.as_str()),
+            Some("gate")
+        );
+        assert_eq!(
+            report
+                .first_failed
+                .as_ref()
+                .map(|entry| entry.kind.as_str()),
+            Some("workflow")
+        );
+        assert!(report.human_summary.contains("recent evidence counts:"));
+        assert!(
+            report
+                .human_summary
+                .contains("latest workflow: failed perf-docking-suite")
+        );
+        assert!(
+            report
+                .human_summary
+                .contains("first failed evidence: workflow failed")
+        );
+        assert!(
+            report
+                .next_action
+                .contains("inspect failed workflow evidence result JSON")
+        );
+
+        let _ = std::fs::remove_dir_all(&repo_root);
+    }
+
+    #[test]
+    fn recent_evidence_status_is_failing_ignores_empty_placeholder_and_passed_case() {
+        assert!(!recent_evidence_status_is_failing(""));
+        assert!(!recent_evidence_status_is_failing("   "));
+        assert!(!recent_evidence_status_is_failing("-"));
+        assert!(!recent_evidence_status_is_failing("passed"));
+        assert!(!recent_evidence_status_is_failing("Passed"));
+        assert!(!recent_evidence_status_is_failing("PASSED"));
+        assert!(recent_evidence_status_is_failing("failed"));
+        assert!(recent_evidence_status_is_failing("error"));
+    }
+
+    #[test]
+    fn recent_evidence_resource_text_matches_report_shape() {
+        let repo_root = std::env::temp_dir().join(format!(
+            "fret-devtools-mcp-recent-evidence-resource-{}-{}",
+            std::process::id(),
+            unix_ms_now()
+        ));
+        let _ = std::fs::remove_dir_all(&repo_root);
+        std::fs::create_dir_all(repo_root.join(RECENT_EVIDENCE_WORKFLOW_RUNS_DIR)).unwrap();
+        let workflow_path = repo_root
+            .join(RECENT_EVIDENCE_WORKFLOW_RUNS_DIR)
+            .join("100-workflow.json");
+        std::fs::write(
+            &workflow_path,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "kind": RECENT_EVIDENCE_WORKFLOW_RUN_KIND,
+                "id": "devtools-first-open-smoke-validate",
+                "label": "devtools first-open smoke validate",
+                "status": "failed",
+                "command_line": "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/devtools-first-open-smoke.json --json"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let text =
+            recent_evidence_resource_text(&repo_root).expect("recent evidence resource text");
+        let report: RecentEvidenceReportV1 =
+            serde_json::from_str(&text).expect("recent evidence resource json");
+
+        assert_eq!(report.schema_version, 1);
+        assert_eq!(report.workflow_runs_count, 1);
+        assert_eq!(report.failing_count, 1);
+        assert_eq!(
+            report.first_failed.as_ref().map(|entry| entry.id.as_str()),
+            Some("devtools-first-open-smoke-validate")
+        );
+        assert!(report.human_summary.contains("recent evidence counts:"));
+
+        let _ = std::fs::remove_dir_all(&repo_root);
+    }
+
+    #[test]
+    fn build_recent_evidence_report_prefers_latest_failed_result_across_lanes() {
+        let repo_root = std::env::temp_dir().join(format!(
+            "fret-devtools-mcp-recent-evidence-latest-failed-{}-{}",
+            std::process::id(),
+            unix_ms_now()
+        ));
+        let _ = std::fs::remove_dir_all(&repo_root);
+        std::fs::create_dir_all(repo_root.join(RECENT_EVIDENCE_GATE_RUNS_DIR)).unwrap();
+        std::fs::create_dir_all(repo_root.join(RECENT_EVIDENCE_WORKFLOW_RUNS_DIR)).unwrap();
+        std::fs::create_dir_all(repo_root.join(RECENT_EVIDENCE_FOLLOWUPS_DIR)).unwrap();
+
+        std::fs::write(
+            repo_root
+                .join(RECENT_EVIDENCE_GATE_RUNS_DIR)
+                .join("100-old-gate.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "kind": RECENT_EVIDENCE_GATE_RUN_KIND,
+                "id": "old-gate",
+                "label": "old gate",
+                "status": "failed",
+                "command_line": "gate old"
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            repo_root
+                .join(RECENT_EVIDENCE_WORKFLOW_RUNS_DIR)
+                .join("300-workflow.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "kind": RECENT_EVIDENCE_WORKFLOW_RUN_KIND,
+                "id": "workflow",
+                "label": "workflow",
+                "status": "failed",
+                "command_line": "workflow failed",
+                "started_unix_ms": 300,
+                "finished_unix_ms": 900
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::fs::write(
+            repo_root
+                .join(RECENT_EVIDENCE_FOLLOWUPS_DIR)
+                .join("500-trace.json"),
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "kind": RECENT_EVIDENCE_FOLLOWUP_KIND,
+                "id": "trace",
+                "label": "trace",
+                "status": "failed",
+                "command_line": "trace failed",
+                "bundle_dir": "target/fret-diag/latest",
+                "started_unix_ms": 500,
+                "finished_unix_ms": 600
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let report = build_recent_evidence_report(&repo_root, 8);
+
+        assert_eq!(report.failing_count, 3);
+        assert_eq!(
+            report
+                .first_failed
+                .as_ref()
+                .map(|entry| entry.kind.as_str()),
+            Some("workflow")
+        );
+        assert_eq!(
+            report.first_failed.as_ref().map(|entry| entry.id.as_str()),
+            Some("workflow")
+        );
+        assert_eq!(
+            report
+                .first_failed
+                .as_ref()
+                .and_then(|entry| entry.finished_unix_ms),
+            Some(900)
+        );
+        assert!(
+            report
+                .human_summary
+                .contains("first failed evidence: workflow failed")
+        );
+        assert!(
+            report
+                .next_action
+                .contains("inspect failed workflow evidence result JSON")
+        );
+
+        let _ = std::fs::remove_dir_all(&repo_root);
+    }
+
+    #[test]
+    fn load_recent_evidence_entries_prefers_record_time_over_file_mtime() {
+        let repo_root = std::env::temp_dir().join(format!(
+            "fret-devtools-mcp-recent-evidence-record-time-{}-{}",
+            std::process::id(),
+            unix_ms_now()
+        ));
+        let _ = std::fs::remove_dir_all(&repo_root);
+        let result_dir = repo_root.join(RECENT_EVIDENCE_WORKFLOW_RUNS_DIR);
+        std::fs::create_dir_all(&result_dir).unwrap();
+        let older_mtime = result_dir.join("100-record-newer.json");
+        let newer_mtime = result_dir.join("200-record-older.json");
+
+        std::fs::write(
+            &older_mtime,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "kind": RECENT_EVIDENCE_WORKFLOW_RUN_KIND,
+                "id": "record-newer",
+                "label": "record newer",
+                "status": "failed",
+                "command_line": "workflow record newer",
+                "started_unix_ms": 100,
+                "finished_unix_ms": 900
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        std::fs::write(
+            &newer_mtime,
+            serde_json::to_vec_pretty(&serde_json::json!({
+                "schema_version": 1,
+                "kind": RECENT_EVIDENCE_WORKFLOW_RUN_KIND,
+                "id": "record-older",
+                "label": "record older",
+                "status": "failed",
+                "command_line": "workflow record older",
+                "started_unix_ms": 500,
+                "finished_unix_ms": 600
+            }))
+            .unwrap(),
+        )
+        .unwrap();
+
+        let entries = load_recent_evidence_entries(
+            &result_dir,
+            RECENT_EVIDENCE_WORKFLOW_RUN_KIND,
+            "workflow",
+            8,
+        );
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].id, "record-newer");
+        assert_eq!(entries[0].result_path, older_mtime.to_string_lossy());
+        assert_eq!(entries[1].id, "record-older");
+
+        let _ = std::fs::remove_dir_all(&repo_root);
     }
 
     #[test]
     fn mcp_server_instructions_point_to_first_open_resource() {
         let text = mcp_server_instructions();
         assert!(text.contains("fret-diag://first-open.md"));
+        assert!(text.contains("Recent evidence: fret_diag_recent_evidence"));
         assert!(text.contains("Product workflow: imui-product-chain"));
         assert!(text.contains("python tools/diag_gate_imui_product_chain.py --only discovery"));
         assert!(text.contains("--only perf-docking"));

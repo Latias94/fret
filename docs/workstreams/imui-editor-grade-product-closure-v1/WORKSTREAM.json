@@ -3,7 +3,7 @@
   "slug": "imui-editor-grade-product-closure-v1",
   "title": "ImUi Editor-Grade Product Closure v1",
   "status": "maintenance",
-  "updated": "2026-05-16",
+  "updated": "2026-05-21",
   "scope_kind": "execution",
   "follow_on_of": "imui-stack-fearless-refactor-v2",
   "problem": "The in-tree imui stack closeout solved ownership and helper closure, but Fret still lacks the low-friction editor-grade product closure that makes Dear ImGui feel mature: one default authoring lane, one coherent workbench shell, one discoverable diagnostics/devtools loop, one runner-grade multi-window hand-feel story, and a closed second-proof verdict that keeps shared collection helpers closed until both real collection proof surfaces need the same helper.",
@@ -434,6 +434,10 @@
       "command": "cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes --no-fail-fast"
     },
     {
+      "name": "imui-p2-devtools-workflow-runs-source",
+      "command": "cargo nextest run -p fret-devtools selected_session_refresh_keeps_valid_selection_or_falls_back_to_first_session message_session_matching_uses_selected_session_when_present workflow_run_result_summary_lines_project_output_artifacts workflow_run_regression_summary_artifact_path_extracts_output_artifact workflow_run_result_history_entry_detail_lines_surface_output_artifacts load_recent_workflow_run_result_history_reads_latest_valid_records load_recent_workflow_run_result_history_prefers_record_time_over_file_mtime workflow_regression_index_parent_dir_targets_artifact_root workflow_aggregate_index_loaded_matches_loaded_artifact_root workflow_regression_index_action_ids_cover_copy_open_load devtools_first_open_next_action_lines_prioritize_stateful_workflow first_open_recent_evidence_action_specs_gate_disabled_states recent_evidence_status_failed_ignores_empty_placeholder_and_passed_case devtools_recent_evidence_lines_surface_restored_histories recent_evidence_next_action_projects_rerun_and_repair_steps devtools_recent_evidence_lines_use_current_workflow_state_for_rerunnable_status devtools_recent_evidence_lines_surface_failed_followup_bundle_dir recent_failed_evidence_bundle_dir_filters_empty_bundle_dir recent_failed_evidence_rerun_command_uses_structured_diag_args recent_failed_evidence_rerun_command_rejects_redacted_workflow_args recent_failed_evidence_rerun_reason_reports_diag_args_issues recent_failed_evidence_rerun_command_recovers_redacted_workflow_from_current_state recent_failed_evidence_rerun_command_uses_current_workflow_state_over_stored_args recent_failed_evidence_rerun_reason_reports_unregistered_workflow recent_failed_evidence_rerun_command_projects_followup_bundle devtools_recent_failed_evidence_target_prefers_visible_latest_then_history devtools_recent_failed_evidence_target_falls_back_to_lane_order_without_timestamps devtools_recent_failed_evidence_target_prefers_result_json_time_over_path_time devtools_recent_failed_evidence_target_carries_result_json_payload devtools_recent_evidence_selection_effect_routes_to_existing_history_state devtools_workflow_run_lines_surface_campaign_and_suite_entrypoints devtools_workflow_commands_mark_suite_ws_missing_without_session devtools_workflow_commands_include_selected_session_for_suite_ws file_url_from_path_projects_workflow_artifact_paths --no-fail-fast"
+    },
+    {
       "name": "imui-p2-shared-regression-followup-commands",
       "command": "cargo nextest run -p fret-diag regression_bundle_followup_command_lines_use_selected_bundle_dir --no-fail-fast"
     },
@@ -443,7 +447,7 @@
     },
     {
       "name": "imui-p2-devtools-runnable-followup-actions",
-      "command": "cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_output_artifacts runnable_followup_command_action_lines_surface_indexed_bundle_commands --no-fail-fast"
+      "command": "cargo nextest run -p fret-devtools regression_followup_command_rejects_baseline_required_commands regression_followup_command_returns_direct_diag_args regression_followup_result_record_has_stable_shape regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_output_artifacts load_recent_followup_result_history_reads_latest_valid_records load_recent_followup_result_history_prefers_record_time_over_file_mtime runnable_followup_command_action_lines_surface_indexed_bundle_commands --no-fail-fast"
     },
     {
       "name": "imui-p2-devtools-mcp-followup-actions",
@@ -451,7 +455,7 @@
     },
     {
       "name": "imui-p2-devtools-gate-command-source",
-      "command": "cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates --no-fail-fast"
+      "command": "cargo nextest run -p fret-devtools devtools_gate_command_lines_surface_first_class_gates load_recent_gate_run_result_history_reads_latest_valid_records load_recent_gate_run_result_history_prefers_record_time_over_file_mtime --no-fail-fast"
     },
     {
       "name": "imui-p2-devtools-perf-evidence-drilldown",
@@ -463,7 +467,7 @@
     },
     {
       "name": "imui-p2-devtools-mcp-product-workflow-source",
-      "command": "cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast"
+      "command": "cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain build_recent_evidence_report_reads_gui_result_records load_recent_evidence_entries_prefers_record_time_over_file_mtime recent_evidence_status_is_failing_ignores_empty_placeholder_and_passed_case recent_evidence_resource_text_matches_report_shape build_recent_evidence_report_prefers_latest_failed_result_across_lanes sessionless_resource_specs_include_first_open_and_recent_evidence mcp_server_instructions_point_to_first_open_resource parse_resource_uri_accepts_recent_evidence_resource --no-fail-fast"
     },
     {
       "name": "imui-p2-devtools-mcp-regression-dashboard-drilldown",
@@ -717,6 +721,7 @@
     "apps/fret-devtools/src/main.rs",
     "apps/fret-devtools/src/native.rs",
     "apps/fret-devtools/src/followup.rs",
+    "apps/fret-devtools/src/workflow_run.rs",
     "apps/fret-devtools-mcp/src/main.rs",
     "apps/fret-devtools-mcp/src/native.rs",
     "tools/diag_gate_imui_p2_devtools_first_open.py",
@@ -727,7 +732,11 @@
     "docs/workstreams/imui-editor-proof-collection-modularization-v1/CLOSEOUT_AUDIT_2026-04-23.md",
     "docs/workstreams/imui-editor-proof-collection-modularization-v1/WORKSTREAM.json",
     "apps/fret-examples/src/imui_editor_proof_demo/collection.rs",
-    "apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs"
+    "apps/fret-examples/tests/imui_editor_collection_modularization_surface.rs",
+    "docs/workstreams/text-clean-geometry-stability-v1/WORKSTREAM.json",
+    "docs/workstreams/text-clean-geometry-stability-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/text-clean-geometry-stability-v1/CLOSEOUT_AUDIT_2026-05-21.md",
+    "docs/workstreams/scroll-optimization-v1/HANDOFF.md"
   ],
   "adr_refs": [
     "docs/adr/0028-declarative-elements-and-element-state.md",
@@ -737,6 +746,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, treat `imui-child-region-depth-v1` as the closed child-region closeout record for the landed chrome slice, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, treat `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` as the current launched bounded-campaign proof, and treat `M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`, `M16_SOURCE_DRIFT_GUARD_2026-05-14.md`, `M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`, `M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`, and `M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md` as local source/admission/policy-skip/acceptance-boundary evidence only. M17 is the first local policy-skip gate; M18 broadens it into the Windows plus Linux/X11 sidecar matrix; M19 freezes that local policy-skip evidence is not Wayland compositor acceptance. The 2026-05-15 goal audit remains not complete until real-host Wayland hand-feel, DevTools GUI productization, and broader perf attribution/smoothness close in their owner lanes; start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
+    "notes": "Keep this lane in maintenance only as the phase-ordering and cross-phase status umbrella. Do not resume implementation-heavy work here by default: reuse the closed narrow P0/P1 closeout records as evidence, treat `imui-child-region-depth-v1` as the closed child-region closeout record for the landed chrome slice, keep the remaining active P3 execution in `docking-multiwindow-imgui-parity`, treat `M14_LAUNCHED_BOUNDED_CAMPAIGN_REPAIR_2026-05-13.md` as the current launched bounded-campaign proof, and treat `M15_LOCAL_WAYLAND_BOUNDARY_REFRESH_2026-05-14.md`, `M16_SOURCE_DRIFT_GUARD_2026-05-14.md`, `M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md`, `M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md`, and `M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md` as local source/admission/policy-skip/acceptance-boundary evidence only. M17 is the first local policy-skip gate; M18 broadens it into the Windows plus Linux/X11 sidecar matrix; M19 freezes that local policy-skip evidence is not Wayland compositor acceptance. Treat `text-clean-geometry-stability-v1` as the closed boundary record for current text clean-geometry eligibility and diagnostics detail; future wrapped-text clean geometry needs a new behavior-changing proof lane after fresh material-perf evidence. The 2026-05-15 goal audit remains not complete until real-host Wayland hand-feel, DevTools GUI productization, and broader perf attribution/smoothness close in their owner lanes; start a new narrow follow-on if fresh P0/P1/P2 pressure becomes implementation-heavy again."
   }
 }

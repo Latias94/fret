@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::mpsc;
 
@@ -211,6 +211,14 @@ pub(crate) fn new_gate_run_channel() -> (
     mpsc::channel()
 }
 
+pub(crate) fn load_recent_gate_run_result_history(
+    repo_root: &Path,
+    limit: usize,
+) -> Vec<GateRunResultHistoryEntry> {
+    let result_dir = repo_root.join(".fret").join("diag").join("gate-runs");
+    load_recent_gate_run_result_history_from_dir(&result_dir, limit)
+}
+
 pub(crate) fn gate_run_result_summary_lines(result_json: &str) -> Vec<String> {
     if result_json.trim().is_empty() {
         return vec!["gate run result: <none>".to_string()];
@@ -350,11 +358,108 @@ impl GateRunResultHistoryEntry {
             error: result.result.as_ref().err().cloned(),
         }
     }
+
+    fn from_result_record(result_path: &Path, result_json: String) -> Option<Self> {
+        let value = serde_json::from_str::<serde_json::Value>(&result_json).ok()?;
+        if value.get("kind").and_then(|value| value.as_str())
+            != Some("fret_devtools_gate_run_result")
+        {
+            return None;
+        }
+        let field = |key: &str| -> String {
+            value
+                .get(key)
+                .and_then(|value| value.as_str())
+                .filter(|value| !value.trim().is_empty())
+                .unwrap_or("-")
+                .to_string()
+        };
+        let status = field("status");
+        let error = value
+            .get("error")
+            .and_then(|value| value.as_str())
+            .filter(|value| !value.trim().is_empty())
+            .map(ToOwned::to_owned);
+        Some(Self {
+            id: field("id"),
+            label: field("label"),
+            command_line: field("command_line"),
+            result_path: result_path.to_string_lossy().to_string(),
+            result_json,
+            status,
+            error,
+        })
+    }
 }
 
 fn gate_run_result_record_json(record: &GateRunResultRecordV1) -> Result<String, String> {
     serde_json::to_string_pretty(record)
         .map_err(|err| format!("failed to serialize gate run result: {err}"))
+}
+
+fn load_recent_gate_run_result_history_from_dir(
+    result_dir: &Path,
+    limit: usize,
+) -> Vec<GateRunResultHistoryEntry> {
+    if limit == 0 {
+        return Vec::new();
+    }
+    let Ok(read_dir) = std::fs::read_dir(result_dir) else {
+        return Vec::new();
+    };
+    let mut candidates = read_dir
+        .filter_map(Result::ok)
+        .filter_map(|entry| {
+            let path = entry.path();
+            if path.extension().and_then(|value| value.to_str()) != Some("json") {
+                return None;
+            }
+            let modified_unix_ms = entry
+                .metadata()
+                .and_then(|metadata| metadata.modified())
+                .ok()
+                .and_then(system_time_unix_ms);
+            let result_json = std::fs::read_to_string(&path).ok()?;
+            let record_unix_ms = result_record_sort_unix_ms(&result_json);
+            let history_entry = GateRunResultHistoryEntry::from_result_record(&path, result_json)?;
+            Some((history_entry, record_unix_ms, modified_unix_ms, path))
+        })
+        .collect::<Vec<_>>();
+    candidates.sort_by(
+        |(left_entry, left_record, left_modified, left_path),
+         (right_entry, right_record, right_modified, right_path)| {
+            (right_record, right_modified, right_path, &right_entry.result_path).cmp(&(
+                left_record,
+                left_modified,
+                left_path,
+                &left_entry.result_path,
+            ))
+        },
+    );
+    candidates
+        .into_iter()
+        .map(|(entry, _record_unix_ms, _modified_unix_ms, _path)| entry)
+        .take(limit)
+        .collect()
+}
+
+fn result_record_sort_unix_ms(result_json: &str) -> Option<u64> {
+    let value = serde_json::from_str::<serde_json::Value>(result_json).ok()?;
+    value
+        .get("finished_unix_ms")
+        .and_then(|value| value.as_u64())
+        .or_else(|| {
+            value
+                .get("started_unix_ms")
+                .and_then(|value| value.as_u64())
+        })
+}
+
+fn system_time_unix_ms(value: std::time::SystemTime) -> Option<u128> {
+    value
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|duration| duration.as_millis())
 }
 
 fn fallback_gate_run_result_json(error: &str) -> String {
@@ -380,6 +485,14 @@ fn write_gate_run_result_record(out_path: &PathBuf, result_json: &str) -> Result
 mod tests {
     use super::*;
     use fret_diag::{DevtoolsGateScriptTargetCommandInputV1, devtools_gate_script_target_command};
+
+    fn gate_run_test_dir(label: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("fret-devtools-gate-run-{label}-{}", now_unix_ms()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create gate run test dir");
+        dir
+    }
 
     #[test]
     fn gate_run_result_record_has_stable_shape() {
@@ -445,6 +558,114 @@ mod tests {
         assert!(text.contains("diag_args_count: 7"));
         assert!(text.contains("error: boom"));
         assert!(text.contains("command: cargo run -p fretboard-dev -- diag run"));
+    }
+
+    #[test]
+    fn load_recent_gate_run_result_history_reads_latest_valid_records() {
+        let dir = gate_run_test_dir("history");
+        let older = dir.join("10-stale-paint-scene.json");
+        let newer = dir.join("20-pixels-changed.json");
+        let ignored_kind = dir.join("30-other.json");
+        let bad_json = dir.join("40-bad.json");
+
+        let older_json = serde_json::json!({
+            "schema_version": 1,
+            "kind": "fret_devtools_gate_run_result",
+            "id": "stale-paint-scene",
+            "label": "stale paint/scene",
+            "command_line": "cargo run -p fretboard-dev -- diag run a.json --check-stale-paint button.ok --json",
+            "status": "passed",
+            "started_unix_ms": 10,
+            "finished_unix_ms": 20
+        })
+        .to_string();
+        let newer_json = serde_json::json!({
+            "schema_version": 1,
+            "kind": "fret_devtools_gate_run_result",
+            "id": "pixels-changed",
+            "label": "pixels changed",
+            "command_line": "cargo run -p fretboard-dev -- diag run b.json --check-pixels-changed button.ok --json",
+            "status": "failed",
+            "error": "boom",
+            "started_unix_ms": 30,
+            "finished_unix_ms": 35
+        })
+        .to_string();
+
+        std::fs::write(&older, older_json).expect("write older");
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        std::fs::write(&newer, newer_json).expect("write newer");
+        std::fs::write(
+            &ignored_kind,
+            serde_json::json!({"kind": "not_gate_run", "status": "passed"}).to_string(),
+        )
+        .expect("write ignored");
+        std::fs::write(&bad_json, "{").expect("write bad");
+
+        let entries = load_recent_gate_run_result_history_from_dir(&dir, 8);
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].id, "pixels-changed");
+        assert_eq!(entries[0].status, "failed");
+        assert_eq!(entries[0].error.as_deref(), Some("boom"));
+        assert_eq!(entries[0].result_path, newer.to_string_lossy());
+        assert_eq!(entries[1].id, "stale-paint-scene");
+        assert_eq!(entries[1].status, "passed");
+
+        let limited = load_recent_gate_run_result_history_from_dir(&dir, 1);
+        assert_eq!(limited.len(), 1);
+        assert_eq!(limited[0].id, "pixels-changed");
+        assert!(load_recent_gate_run_result_history_from_dir(&dir, 0).is_empty());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_recent_gate_run_result_history_prefers_record_time_over_file_mtime() {
+        let dir = gate_run_test_dir("history-record-time");
+        let older_mtime = dir.join("10-record-newer.json");
+        let newer_mtime = dir.join("20-record-older.json");
+
+        std::fs::write(
+            &older_mtime,
+            serde_json::json!({
+                "schema_version": 1,
+                "kind": "fret_devtools_gate_run_result",
+                "id": "record-newer",
+                "label": "record newer",
+                "command_line": "gate record newer",
+                "status": "failed",
+                "started_unix_ms": 100,
+                "finished_unix_ms": 900
+            })
+            .to_string(),
+        )
+        .expect("write record-newer");
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        std::fs::write(
+            &newer_mtime,
+            serde_json::json!({
+                "schema_version": 1,
+                "kind": "fret_devtools_gate_run_result",
+                "id": "record-older",
+                "label": "record older",
+                "command_line": "gate record older",
+                "status": "failed",
+                "started_unix_ms": 500,
+                "finished_unix_ms": 600
+            })
+            .to_string(),
+        )
+        .expect("write record-older");
+
+        let entries = load_recent_gate_run_result_history_from_dir(&dir, 8);
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].id, "record-newer");
+        assert_eq!(entries[0].result_path, older_mtime.to_string_lossy());
+        assert_eq!(entries[1].id, "record-older");
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

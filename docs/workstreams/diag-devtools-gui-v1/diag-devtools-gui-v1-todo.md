@@ -130,12 +130,63 @@ Conventions:
         `.fret/diag/gate-runs/*.json` result artifact.
   - [x] GUI generated gate results now keep a bounded selectable history with details, summary,
         raw JSON preview, copy actions, and platform URL open support for the selected artifact.
+  - [x] Generated gate result startup restores recent valid `.fret/diag/gate-runs/*.json`
+        records, skipping malformed and non-gate JSON so the history survives a DevTools restart.
+  - [x] GUI Workflow Runs panel for first-class campaign/suite execution:
+        `devtools-first-open-smoke` campaign validation, `imui-p3-multiwindow-parity` campaign
+        validation, and selected-session `perf-docking-arbitration-steady` suite execution now run
+        through shared `fret_diag::diag_cmd` and write `.fret/diag/workflow-runs/*.json` records.
+        Stored command previews and result JSON redact `--devtools-token`.
+  - [x] Workflow Runs startup restores recent valid `.fret/diag/workflow-runs/*.json` records,
+        skipping malformed and non-workflow JSON, so result history survives a DevTools restart.
+  - [x] Workflow suite result records now surface shared evidence outputs:
+        selected-session `diag suite ... --dir <out>` runs project `suite.summary.json` and
+        `regression.summary.json` through `output_artifacts[]`, and the Workflow Result Summary /
+        Details blocks render those artifact paths for handoff.
+  - [x] Workflow suite `suite.summary.json` artifacts can be copied or opened directly from
+        Workflow Result Details, matching the regression-summary and trace-artifact handoff pattern.
+  - [x] Workflow suite `regression.summary.json` artifacts can be copied or opened directly from
+        Workflow Result Details, with relative artifact paths resolved against the repo root before
+        platform URL opening.
+  - [x] Workflow suite `regression.summary.json` artifacts can be loaded into the existing
+        Regression Workspace selection, reusing shared drill-down, follow-up, perf evidence, and
+        capability provenance surfaces instead of a workflow-private inspector.
+  - [x] Workflow Runs exposes `Workflow Handoff Readiness`, a compact next-action projection that
+        tells maintainers when to run the workflow, load the workflow `regression.summary.json`, or
+        move into Regression Workspace follow-up actions.
+  - [x] Workflow Runs exposes `Workflow Summarize Handoff`, deriving a shared
+        `diag summarize <regression.summary.json> --dir <same-dir> --json` command from the
+        selected suite result so `regression.index.json` generation is explicit when the suite run
+        itself only produced `regression.summary.json`.
+  - [x] Workflow summarize result records now include `regression.summary.json` and
+        `regression.index.json` in `output_artifacts[]`, so result details and summaries can expose
+        the aggregate handoff artifacts directly.
+  - [x] Workflow `regression.index.json` artifacts can be loaded into Regression Workspace by
+        pointing the shared aggregate refresh at the index parent directory, keeping the Workflow
+        Runs panel as a thin artifact handoff instead of a private aggregate parser.
+  - [x] Workflow `regression.index.json` artifacts can also be copied or opened directly from the
+        same Workflow Result Details action row once the aggregate index exists.
+  - [x] Workflow Handoff Readiness now reports `aggregate_index_loaded` and an
+        `aggregate_next_action`, so a ready `regression.index.json` is distinguishable from an
+        aggregate workspace that has actually been loaded from the workflow artifact root.
+  - [x] First-open next actions distinguish aggregate regression index readiness from a loaded
+        selected summary, so workflow-suite handoff does not misreport single-summary evidence as a
+        full aggregate load.
+  - [x] Regression Workspace exposes a compact `Follow-up Readiness` block for the selected
+        summary, including selected bundle count, runnable/manual follow-up counts, and the first
+        runnable command.
+  - [x] First-open next actions report when the selected summary already has a selected-bundle
+        follow-up result loaded, pointing maintainers to Follow-up Result Summary/History.
   - [x] Selected-summary follow-up commands generated from the selected `bundle_dir`, covering
         stats, layout perf, memory, triage, hotspots, trace, visual compare, and footprint compare.
   - [x] Structured follow-up command projection separates bundle-local runnable commands from
         baseline-required manual compare commands for GUI and MCP consumers.
   - [x] GUI selected-summary inspector can launch bundle-local runnable follow-ups and records
         in-flight/error status without treating baseline-required compare commands as runnable.
+  - [x] GUI selected-summary inspector can materialize baseline-required visual and footprint
+        compare templates once the user provides a baseline bundle/directory or footprint session,
+        then launches them through the same follow-up runner and records the candidate bundle in the
+        selected-bundle result history.
   - [x] GUI selected-summary inspector can launch the selected-bundle `trace` follow-up through the
         same shared diagnostics runner as stats, layout, memory, triage, and hotspots.
   - [x] GUI-launched follow-ups write `.fret/diag/followups/*.json` result records and expose the
@@ -148,6 +199,8 @@ Conventions:
         above raw JSON for status, command, duration, and error preview.
   - [x] GUI selected-summary inspector keeps a bounded follow-up result history filtered to the
         selected bundle, preventing stale global-last results from masquerading as current evidence.
+  - [x] Follow-up result startup restores recent valid `.fret/diag/followups/*.json` records into
+        the bounded history while preserving selected-bundle filtering in the Regression Workspace.
   - [x] GUI selected-summary inspector renders selected-bundle follow-up history as selectable
         result entries that switch the summary/raw JSON/copy target.
   - [x] GUI selected-summary inspector shows selected follow-up result details and can copy the
@@ -254,4 +307,90 @@ Conventions:
       first-open, dogfood, demo/metrics/debug, and gate-command references inside that Guide tab.
       Source and discovery gates now cover that posture through
       `devtools_first_open_next_action_lines_prioritize_stateful_workflow` and
+      `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`.
+- [x] Make first-open multi-session targeting explicit.
+      Maintenance: `First-open Next Actions` now includes a session-scope line. It distinguishes
+      no connected session, connected-but-unselected session choices, one selected session, and
+      multiple connected sessions where the Session selector retargets inspect, bundle,
+      screenshot, and selected-session suite actions. This documents the current DevTools
+      selection model in the GUI without changing the WebSocket transport or adding a new
+      multi-session policy layer. The underlying v1 selection rule is now unit-tested in `ws.rs`:
+      keep a valid selected session, otherwise fall back to the first advertised session, and filter
+      session-scoped payloads to that selection. Source and discovery gates cover this through
+      `selected_session_refresh_keeps_valid_selection_or_falls_back_to_first_session`,
+      `message_session_matching_uses_selected_session_when_present`,
+      `devtools_first_open_next_action_lines_prioritize_stateful_workflow`, and
+      `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`.
+- [x] Keep recent GUI-launched evidence visible on first open.
+      Maintenance: the Guide tab now starts with `Recent Evidence`, a compact restored-history
+      projection over generated gate, workflow, and selected-bundle follow-up result artifacts. It
+      surfaces the latest artifact in each lane, counts recent failing evidence, selects the newest
+      failed result across lanes from result JSON timestamps first and timestamped path prefixes as
+      a compatibility fallback, includes the full failed artifact path plus failed follow-up
+      `bundle_dir` in the copied report, and gives a next-action hint without introducing a new
+      artifact schema. The block now also exposes
+      select/copy/open actions for the compact report, first failed evidence artifact, and its
+      producing command, plus direct copy of the failed follow-up bundle directory when present, so
+      a first-open maintainer can jump to the existing Gate/Workflow/Follow-up history state, copy
+      the rerun command, rerun failed evidence when the result JSON has runnable structured
+      `diag_args`, copy the restored result JSON payload, or open the failure JSON without manually
+      matching artifact paths across panels. Workflow reruns always re-materialize the same
+      workflow id from the current selected session and current token instead of trusting stored
+      workflow `diag_args`; missing args, unknown workflow ids, or missing session keep rerun
+      disabled while surfacing the concrete unavailable reason, so the GUI never executes
+      display-only shell strings. The compact report and the
+      button use the same state-aware rerun decision, and the compact next-action line now points
+      at the concrete repair step: rerun, select a session, refresh workflow commands, run a current
+      workflow, or inspect result JSON. Copied first-open evidence therefore stays aligned with what
+      the GUI can actually run.
+      `First-open Next Actions` also reports restored failed evidence, its rerun command, current
+      rerun availability or unavailable reason, and the same concrete `recent evidence next` repair
+      step in the shell header, before the maintainer opens the Guide. The header now also mirrors
+      the Guide's copy/select/rerun recent-evidence actions as first-open shortcut buttons, using
+      the same command ids and disabled-state rules.
+      Source and discovery gates cover this through
+      `devtools_recent_evidence_lines_surface_restored_histories`,
+      `recent_evidence_status_failed_ignores_empty_placeholder_and_passed_case`,
+      `first_open_recent_evidence_action_specs_gate_disabled_states`,
+      `recent_evidence_next_action_projects_rerun_and_repair_steps`,
+      `devtools_recent_evidence_lines_use_current_workflow_state_for_rerunnable_status`,
+      `devtools_recent_evidence_lines_surface_failed_followup_bundle_dir`,
+      `recent_failed_evidence_bundle_dir_filters_empty_bundle_dir`,
+      `recent_failed_evidence_rerun_command_uses_structured_diag_args`,
+      `recent_failed_evidence_rerun_command_rejects_redacted_workflow_args`,
+      `recent_failed_evidence_rerun_reason_reports_diag_args_issues`,
+      `recent_failed_evidence_rerun_command_recovers_redacted_workflow_from_current_state`,
+      `recent_failed_evidence_rerun_command_uses_current_workflow_state_over_stored_args`,
+      `recent_failed_evidence_rerun_reason_reports_unregistered_workflow`,
+      `recent_failed_evidence_rerun_command_projects_followup_bundle`,
+      `devtools_recent_failed_evidence_target_prefers_visible_latest_then_history`,
+      `devtools_recent_failed_evidence_target_falls_back_to_lane_order_without_timestamps`,
+      `devtools_recent_failed_evidence_target_prefers_result_json_time_over_path_time`,
+      `devtools_recent_failed_evidence_target_carries_result_json_payload`,
+      `load_recent_gate_run_result_history_prefers_record_time_over_file_mtime`,
+      `load_recent_workflow_run_result_history_prefers_record_time_over_file_mtime`,
+      `load_recent_followup_result_history_prefers_record_time_over_file_mtime`,
+      `devtools_recent_evidence_selection_effect_routes_to_existing_history_state`, and
+      `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`.
+      MCP parity: `fret_diag_recent_evidence` now provides a read-only MCP projection over the same
+      `.fret/diag/gate-runs`, `.fret/diag/workflow-runs`, and `.fret/diag/followups` records, and
+      `fret-diag://first-open.md` points AI clients at that bridge. The same projection is also
+      exposed as the sessionless `fret-diag://recent-evidence.json` resource, so MCP clients can
+      discover restored GUI-launched evidence from the resource list without adding a MCP-private
+      rerun model. It also selects the newest failed result across lanes from result JSON
+      `finished_unix_ms` / `started_unix_ms`, falling back to timestamped result paths for older
+      records, and uses the same status normalization as the GUI so empty status, `-`, and
+      case-varied `passed` values are not treated as failures. The list/template source is locked
+      through `sessionless_resource_specs()` so `first-open.md` and `recent-evidence.json` stay
+      discoverable together. Workflow reruns still require the GUI's current selected session/token
+      state.
+      Source and discovery gates cover this through
+      `build_recent_evidence_report_reads_gui_result_records`,
+      `recent_evidence_status_is_failing_ignores_empty_placeholder_and_passed_case`,
+      `recent_evidence_resource_text_matches_report_shape`,
+      `build_recent_evidence_report_prefers_latest_failed_result_across_lanes`,
+      `load_recent_evidence_entries_prefers_record_time_over_file_mtime`,
+      `sessionless_resource_specs_include_first_open_and_recent_evidence`,
+      `parse_resource_uri_accepts_recent_evidence_resource`,
+      `mcp_first_open_resource_text_surfaces_imui_product_chain`, and
       `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`.

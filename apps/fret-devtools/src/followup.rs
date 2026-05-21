@@ -143,6 +143,14 @@ pub(crate) fn followup_trace_artifact_path_from_result_json(result_json: &str) -
     followup_trace_artifact_path_from_result_value(&value)
 }
 
+pub(crate) fn load_recent_followup_result_history(
+    repo_root: &Path,
+    limit: usize,
+) -> Vec<FollowupResultHistoryEntry> {
+    let result_dir = repo_root.join(".fret").join("diag").join("followups");
+    load_recent_followup_result_history_from_dir(&result_dir, limit)
+}
+
 pub(crate) fn followup_result_history_summary_lines<'a>(
     entries: &[FollowupResultHistoryEntry],
     selected_bundle_dirs: impl IntoIterator<Item = &'a str>,
@@ -353,6 +361,71 @@ fn fallback_followup_result_json(error: &str) -> String {
         "error": error,
     })
     .to_string()
+}
+
+fn load_recent_followup_result_history_from_dir(
+    result_dir: &Path,
+    limit: usize,
+) -> Vec<FollowupResultHistoryEntry> {
+    if limit == 0 {
+        return Vec::new();
+    }
+    let Ok(read_dir) = std::fs::read_dir(result_dir) else {
+        return Vec::new();
+    };
+    let mut candidates = read_dir
+        .filter_map(Result::ok)
+        .filter_map(|entry| {
+            let path = entry.path();
+            if path.extension().and_then(|value| value.to_str()) != Some("json") {
+                return None;
+            }
+            let modified_unix_ms = entry
+                .metadata()
+                .and_then(|metadata| metadata.modified())
+                .ok()
+                .and_then(system_time_unix_ms);
+            let result_json = std::fs::read_to_string(&path).ok()?;
+            let record_unix_ms = result_record_sort_unix_ms(&result_json);
+            let history_entry = FollowupResultHistoryEntry::from_result_record(&path, result_json)?;
+            Some((history_entry, record_unix_ms, modified_unix_ms, path))
+        })
+        .collect::<Vec<_>>();
+    candidates.sort_by(
+        |(left_entry, left_record, left_modified, left_path),
+         (right_entry, right_record, right_modified, right_path)| {
+            (right_record, right_modified, right_path, &right_entry.result_path).cmp(&(
+                left_record,
+                left_modified,
+                left_path,
+                &left_entry.result_path,
+            ))
+        },
+    );
+    candidates
+        .into_iter()
+        .map(|(entry, _record_unix_ms, _modified_unix_ms, _path)| entry)
+        .take(limit)
+        .collect()
+}
+
+fn result_record_sort_unix_ms(result_json: &str) -> Option<u64> {
+    let value = serde_json::from_str::<serde_json::Value>(result_json).ok()?;
+    value
+        .get("finished_unix_ms")
+        .and_then(|value| value.as_u64())
+        .or_else(|| {
+            value
+                .get("started_unix_ms")
+                .and_then(|value| value.as_u64())
+        })
+}
+
+fn system_time_unix_ms(value: std::time::SystemTime) -> Option<u128> {
+    value
+        .duration_since(std::time::UNIX_EPOCH)
+        .ok()
+        .map(|duration| duration.as_millis())
 }
 
 fn followup_output_artifacts_for_command(
@@ -598,10 +671,48 @@ impl FollowupResultHistoryEntry {
             error: result.result.as_ref().err().cloned(),
         }
     }
+
+    fn from_result_record(result_path: &Path, result_json: String) -> Option<Self> {
+        let value = serde_json::from_str::<serde_json::Value>(&result_json).ok()?;
+        if value.get("kind").and_then(|value| value.as_str())
+            != Some("fret_devtools_regression_followup_result")
+        {
+            return None;
+        }
+        let field = |key: &str| -> String {
+            value
+                .get(key)
+                .and_then(|value| value.as_str())
+                .filter(|value| !value.trim().is_empty())
+                .unwrap_or("-")
+                .to_string()
+        };
+        let status = field("status");
+        let error = value
+            .get("error")
+            .and_then(|value| value.as_str())
+            .filter(|value| !value.trim().is_empty())
+            .map(ToOwned::to_owned);
+        Some(Self {
+            id: field("id"),
+            label: field("label"),
+            command_line: field("command_line"),
+            result_path: result_path.to_string_lossy().to_string(),
+            result_json,
+            bundle_dir: followup_bundle_dir_from_result_json(&value),
+            status,
+            error,
+        })
+    }
 }
 
 fn followup_bundle_dir_from_diag_args(args: &[String]) -> Option<String> {
-    args.get(1)
+    let bundle_index = if args.first().is_some_and(|value| value == "compare") {
+        2
+    } else {
+        1
+    };
+    args.get(bundle_index)
         .map(|value| value.trim())
         .filter(|value| !value.is_empty())
         .map(ToOwned::to_owned)
@@ -615,7 +726,11 @@ fn followup_bundle_dir_from_result_json(value: &serde_json::Value) -> Option<Str
             value
                 .get("diag_args")
                 .and_then(|value| value.as_array())
-                .and_then(|args| args.get(1))
+                .and_then(|args| {
+                    let command = args.first().and_then(|value| value.as_str());
+                    let bundle_index = if command == Some("compare") { 2 } else { 1 };
+                    args.get(bundle_index)
+                })
                 .and_then(|value| value.as_str())
         })
         .map(str::trim)
@@ -786,6 +901,14 @@ mod tests {
         }
     }
 
+    fn followup_test_dir(label: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("fret-devtools-followup-{label}-{}", now_unix_ms()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create followup test dir");
+        dir
+    }
+
     #[test]
     fn regression_followup_command_rejects_baseline_required_commands() {
         let commands = regression_bundle_followup_commands(["target/fret-diag/run-a"]);
@@ -828,6 +951,41 @@ mod tests {
                 "target/fret-diag/run-a".to_string(),
                 "--json".to_string()
             ]
+        );
+    }
+
+    #[test]
+    fn regression_followup_compare_result_uses_candidate_bundle_dir() {
+        let commands = regression_bundle_followup_commands(["target/fret-diag/run-candidate"]);
+        let mut compare = commands
+            .into_iter()
+            .find(|command| command.id == "visual-compare")
+            .expect("visual compare command");
+        compare.requires_baseline = false;
+        compare.diag_args = vec![
+            "compare".to_string(),
+            "target/fret-diag/run-baseline".to_string(),
+            "target/fret-diag/run-candidate".to_string(),
+            "--json".to_string(),
+        ];
+
+        let record = build_followup_result_record(
+            &compare,
+            compare.diag_args.clone(),
+            10,
+            30,
+            &Ok(()),
+            Path::new("F:/repo"),
+        );
+        assert_eq!(
+            record.bundle_dir.as_deref(),
+            Some("target/fret-diag/run-candidate")
+        );
+
+        let json = serde_json::to_value(record).expect("record json");
+        assert_eq!(
+            followup_bundle_dir_from_result_json(&json).as_deref(),
+            Some("target/fret-diag/run-candidate")
         );
     }
 
@@ -1048,6 +1206,137 @@ mod tests {
         );
         assert_eq!(followup_trace_artifact_path_from_result_json("{}"), None);
         assert_eq!(followup_trace_artifact_path_from_result_json("not json"), None);
+    }
+
+    #[test]
+    fn load_recent_followup_result_history_reads_latest_valid_records() {
+        let dir = followup_test_dir("history");
+        let older = dir.join("10-stats.json");
+        let newer = dir.join("20-trace.json");
+        let ignored_kind = dir.join("30-other.json");
+        let bad_json = dir.join("40-bad.json");
+
+        let older_json = serde_json::json!({
+            "schema_version": 1,
+            "kind": "fret_devtools_regression_followup_result",
+            "id": "stats",
+            "label": "diag stats",
+            "command_line": "cargo run -p fretboard-dev -- diag stats target/fret-diag/run-a --json",
+            "diag_args": ["stats", "target/fret-diag/run-a", "--json"],
+            "status": "passed",
+            "started_unix_ms": 10,
+            "finished_unix_ms": 20
+        })
+        .to_string();
+        let newer_json = serde_json::json!({
+            "schema_version": 1,
+            "kind": "fret_devtools_regression_followup_result",
+            "id": "trace",
+            "label": "trace",
+            "command_line": "cargo run -p fretboard-dev -- diag trace target/fret-diag/run-b --json",
+            "diag_args": ["trace", "target/fret-diag/run-b", "--json"],
+            "bundle_dir": "target\\fret-diag\\run-b",
+            "status": "failed",
+            "error": "boom",
+            "started_unix_ms": 30,
+            "finished_unix_ms": 35,
+            "output_artifacts": [
+                {
+                    "kind": "trace.chrome.json",
+                    "path": "target/fret-diag/run-b/trace.chrome.json"
+                }
+            ]
+        })
+        .to_string();
+
+        std::fs::write(&older, older_json).expect("write older");
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        std::fs::write(&newer, newer_json).expect("write newer");
+        std::fs::write(
+            &ignored_kind,
+            serde_json::json!({"kind": "not_followup", "status": "passed"}).to_string(),
+        )
+        .expect("write ignored");
+        std::fs::write(&bad_json, "{").expect("write bad");
+
+        let entries = load_recent_followup_result_history_from_dir(&dir, 8);
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].id, "trace");
+        assert_eq!(entries[0].status, "failed");
+        assert_eq!(entries[0].error.as_deref(), Some("boom"));
+        assert_eq!(entries[0].bundle_dir.as_deref(), Some("target\\fret-diag\\run-b"));
+        assert_eq!(entries[0].result_path, newer.to_string_lossy());
+        assert_eq!(entries[1].id, "stats");
+        assert_eq!(entries[1].bundle_dir.as_deref(), Some("target/fret-diag/run-a"));
+        assert_eq!(
+            followup_trace_artifact_path_from_result_json(&entries[0].result_json),
+            Some("target/fret-diag/run-b/trace.chrome.json".to_string())
+        );
+
+        let matching =
+            followup_result_history_entries_for_selected_bundle(&entries, ["target/fret-diag/run-b"]);
+        assert_eq!(matching.len(), 1);
+        assert_eq!(matching[0].id, "trace");
+
+        let limited = load_recent_followup_result_history_from_dir(&dir, 1);
+        assert_eq!(limited.len(), 1);
+        assert_eq!(limited[0].id, "trace");
+        assert!(load_recent_followup_result_history_from_dir(&dir, 0).is_empty());
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn load_recent_followup_result_history_prefers_record_time_over_file_mtime() {
+        let dir = followup_test_dir("history-record-time");
+        let older_mtime = dir.join("10-record-newer.json");
+        let newer_mtime = dir.join("20-record-older.json");
+
+        std::fs::write(
+            &older_mtime,
+            serde_json::json!({
+                "schema_version": 1,
+                "kind": "fret_devtools_regression_followup_result",
+                "id": "record-newer",
+                "label": "record newer",
+                "command_line": "follow-up record newer",
+                "diag_args": ["trace", "target/fret-diag/run-a", "--json"],
+                "bundle_dir": "target/fret-diag/run-a",
+                "status": "failed",
+                "started_unix_ms": 100,
+                "finished_unix_ms": 900
+            })
+            .to_string(),
+        )
+        .expect("write record-newer");
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        std::fs::write(
+            &newer_mtime,
+            serde_json::json!({
+                "schema_version": 1,
+                "kind": "fret_devtools_regression_followup_result",
+                "id": "record-older",
+                "label": "record older",
+                "command_line": "follow-up record older",
+                "diag_args": ["trace", "target/fret-diag/run-b", "--json"],
+                "bundle_dir": "target/fret-diag/run-b",
+                "status": "failed",
+                "started_unix_ms": 500,
+                "finished_unix_ms": 600
+            })
+            .to_string(),
+        )
+        .expect("write record-older");
+
+        let entries = load_recent_followup_result_history_from_dir(&dir, 8);
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].id, "record-newer");
+        assert_eq!(entries[0].result_path, older_mtime.to_string_lossy());
+        assert_eq!(entries[1].id, "record-older");
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
