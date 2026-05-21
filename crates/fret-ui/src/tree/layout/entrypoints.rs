@@ -1506,10 +1506,9 @@ impl<H: UiHost> UiTree<H> {
         self.scratch_node_stack.clear();
         self.scratch_node_stack.push(root);
         while let Some(node) = self.scratch_node_stack.pop() {
-            if engine.layout_id_for_node(node).is_some() {
+            if engine.mark_seen_if_present(node) {
                 marked = marked.saturating_add(1);
             }
-            engine.mark_seen_if_present(node);
             if let Some(entry) = self.nodes.get(node) {
                 if entry.layout_dirty_children_suppressed {
                     continue;

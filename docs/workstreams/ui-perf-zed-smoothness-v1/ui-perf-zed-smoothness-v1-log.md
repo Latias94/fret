@@ -16194,3 +16194,44 @@ Post-fix evidence:
 - Treat this as closing the current clean-geometry rejection owner on the local text-measure resize repro. The next
   measured owner is the remaining `layout.nodes=3` and paint-cache/text width-change work; do not broaden this into a
   perf-baseline claim until repeat=3 resize evidence confirms the shape.
+
+## 2026-05-22 01:20:00 +08:00 (cached-flow seen marking single lookup)
+
+Question:
+- After the clean-geometry solve owner closed, can the remaining cached-flow request-build cost be reduced without
+  changing layout-engine stale-node pruning semantics?
+
+Finding:
+- r14 resize top frames were already `mode=cached_flow_reuse`, `subtree_dirty=false`, `layout.engine_solve=0`, and
+  `nodes_marked_seen=134`.
+- The hot request-build helper checked `layout_id_for_node(node).is_some()` and then called
+  `mark_seen_if_present(node)`, which checked the same `node_to_layout` map again.
+- A broad "mark all retained nodes seen" shortcut remains too risky because `TaffyLayoutEngine::end_frame()` depends
+  on the seen set to prune stale layout nodes.
+
+Change:
+- `TaffyLayoutEngine::mark_seen_if_present(...)` now returns `true` when a node was engine-backed and marked seen.
+- `mark_layout_engine_seen_subtree_from_ui_children(...)` uses that return value for `nodes_marked_seen`, avoiding the
+  extra map lookup per cached-flow node while preserving the same DFS and prune behavior.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui -E 'test(end_frame_prunes_stale_children_from_live_parent_edges) | test(interactive_resize_cached_flow_reuse_defers_full_rebuild_until_quiet_window) | test(layout_request_build_roots_sample_dirty_descendant_sources) | test(probe_layout_does_not_prune_layout_engine_nodes)' --no-fail-fast
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r17-mark-seen-single-lookup --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r17-mark-seen-single-lookup\sessions\1779383600205-214800\1779383619147-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+git diff --check
+```
+
+Post-fix evidence:
+- r17 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r17-mark-seen-single-lookup/sessions/1779383600205-214800/1779383619147-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r17 `diag stats --sort time --top 12` reports p50/p95 total `76/931us`, layout `20/465us`, paint `27/441us`, and
+  `hot p50/p95 layout.engine_solve=0/0`.
+- Top resize ticks `234/237/240` keep `layout.nodes=3`, `paint.cache_misses=133`, and cached-flow
+  `nodes_marked_seen=134`; representative `layout_request_build_roots_time_us` is `199/176/158us` versus r14's
+  `291/208/208us` on top resize ticks.
+- Treat this as a small request-build mechanism cleanup with single-run smoke evidence. The next owner is still the
+  remaining paint cache/text-width change path and residual root traversal timing; a repeat=3 resize confirmation is
+  required before making a broader smoothness claim.

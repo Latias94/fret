@@ -357,6 +357,22 @@ not update checked-in baselines.
     - Next confirmation: run a repeat=3 resize-jitter confirmation before promoting this from a local smoke to a
       broader resize-smoothness claim, then attribute the remaining r14 `layout.nodes=3` and paint cache misses rather
       than chasing another clean-geometry rejection owner.
+    - [x] Reduce cached-flow request-build marking overhead without changing stale-node pruning semantics.
+      - Mechanism fix: `TaffyLayoutEngine::mark_seen_if_present` now returns whether the node was engine-backed, so
+        `mark_layout_engine_seen_subtree_from_ui_children(...)` avoids a second `node_to_layout` lookup for every
+        visited cached-flow node.
+      - Focused gates:
+        `cargo check -p fret-ui --lib`;
+        `cargo fmt -p fret-ui --check`;
+        `cargo nextest run -p fret-ui -E 'test(end_frame_prunes_stale_children_from_live_parent_edges) | test(interactive_resize_cached_flow_reuse_defers_full_rebuild_until_quiet_window) | test(layout_request_build_roots_sample_dirty_descendant_sources) | test(probe_layout_does_not_prune_layout_engine_nodes)' --no-fail-fast`;
+        `git diff --check`.
+      - Evidence: r17 bundle
+        `target/fret-diag/text-clean-geometry-current-20260521-r17-mark-seen-single-lookup/sessions/1779383600205-214800/1779383619147-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+        reports p50/p95 total `76/931us` and layout `20/465us`, with `layout.engine_solve=0/0`,
+        `layout.nodes=3`, and the same cached-flow root marking `nodes_marked_seen=134`.
+      - Treat this as a small mechanism cleanup with single-run smoke evidence. It does not close the broader
+        resize-smoothness claim; the remaining measured owner is still paint/cache text-width change work plus the
+        residual `layout_roots_time_us` / `layout_request_build_roots_time_us` cost.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
     Windows RTX4090 evidence.
 
