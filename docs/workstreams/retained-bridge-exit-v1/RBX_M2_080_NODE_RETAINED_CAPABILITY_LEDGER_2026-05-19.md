@@ -393,6 +393,11 @@ Compat-gated but retained-bridge-free support:
   - `RBX-M2-870` moved pointer-move cursor updates behind `CanvasCursorCx`, a retained-agnostic
     capability for host access plus cursor icon side effects. Retained `EventCx` adaptation remains
     isolated in `cursor_retained_cx.rs`.
+- `ecosystem/fret-node/src/ui/canvas/widget/auto_pan_timer_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail/timer.rs`
+  - `RBX-M2-880` moved pointer-move auto-pan timer sync behind `AutoPanTimerCx`, a
+    retained-agnostic capability for host, window, and bounds access. Retained `EventCx` adaptation
+    remains isolated in `auto_pan_timer_retained_cx.rs`.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/event.rs`
   - `RBX-M2-520` moved context menu open/restore/dismiss/finish/invalidate tail helpers behind the

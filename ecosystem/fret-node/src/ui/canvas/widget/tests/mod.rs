@@ -91,6 +91,7 @@ mod perf_cache;
 mod perf_cache_prune_conformance;
 mod pointer_move_cursor_conformance;
 mod pointer_move_hover_conformance;
+mod pointer_move_timer_conformance;
 mod portal_conformance;
 mod portal_keyboard_conformance;
 mod portal_pointer_passthrough_conformance;

@@ -4351,6 +4351,37 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-880 Isolate pointer-move auto-pan timer retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/auto_pan_timer_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/auto_pan_timer_retained_cx.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail/timer.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/mod.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/tests/pointer_move_timer_conformance.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move pointer-move auto-pan timer sync off direct retained bridge Cx names.
+    - Introduce a narrow `AutoPanTimerCx` capability for host, window, and bounds access.
+    - Keep retained `EventCx` adaptation isolated in `auto_pan_timer_retained_cx.rs`.
+    - Prove real pointer-move node-drag auto-pan timer behavior remains green.
+  - Result:
+    - Added `AutoPanTimerCx`.
+    - `event_pointer_move_tail/timer.rs` now accepts `AutoPanTimerCx` instead of naming retained
+      `EventCx`.
+    - Added `pointer_move_auto_pan_timer_stays_off_retained_bridge` source-policy coverage.
+    - Added retained compatibility behavior coverage for starting a repeating auto-pan timer during
+      a node drag near the viewport edge.
+  - Validation:
+    - `cargo check -p fret-node`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_auto_pan_timer_stays_off_retained_bridge) | test(pointer_move_auto_pan_timer_starts_for_node_drag_near_viewport_edge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/auto_pan_timer_cx.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move_tail/timer.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
