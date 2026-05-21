@@ -69,7 +69,7 @@
     }
   ],
   "repro": {
-    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, prepaint virtual-list window-update fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, pointer-capture owner/cancel, multi-pointer pointer-session, docking viewport-capture, and ContextMenu branch/corridor runtime gates, focus barrier routing fixtures, semantics relation fixtures, Pressable key-activation fixtures, combobox active-descendant interaction fixtures, roving focus/typeahead interaction fixtures, flat, nested, and retained-tree stale-parent focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/drawer/combobox/select/dropdown-menu/context-menu Escape, outside-press, focus-outside, and submenu restore policy outcomes, shadcn recipe typeahead fixtures for select/dropdown-menu/menubar printable-key outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, virtual-list boundary owner/reason gates, DataTable retained filter-shrink input-change runtime diagnostics, the UI Gallery checkbox underflow diagnostics gate, the UI Gallery overlay/focus diagnostics suite including Drawer underlay blocking and Combobox outside-press focus restore, the Separator hidden-semantics runtime gate, the Accordion expanded-semantics mutation gate, the Accordion focusable-disabled keyboard/action suppression runtime gate, Combobox/Command active-descendant mutation runtime gates, the Sonner live-region mutation runtime gate, Select/Tabs selected-state mutation runtime gates, the Switch choice-card checked-state semantics runtime gate, the Checkbox disabled action-state runtime gate, the Slider numeric action-state runtime gate plus duplicate thumb test-id repair, the Checkbox table mixed checked-state runtime gate and checked_state_is diagnostics predicate, the Toggle pressed-state runtime gate and pressed_state_is diagnostics predicate, the Input required/invalid form-state runtime gate and required_is/invalid_is diagnostics predicates, and the Select invalid form-state runtime gate, Command/DataTable/retained Virtual List collection-metadata mutation runtime gates, the retained Tree hierarchy level/expanded mutation runtime gate, the DataTable pagination disabled/invoke action-state mutation runtime gate, the retained Tree selected/invoke action-state mutation runtime gate, and the retained Tree dynamic disabled/focus/invoke suppression runtime gate, the Select cross-root relation-edge runtime gate, the HitTestOnly paint-cache replay runtime gate, and the desktop repeating-timer redraw-starvation repair that unblocks the broad shadcn runtime-evidence suite, and the runner repeating-timer overlap stress gate.",
+    "summary": "Run the mechanism harness slices: scalar metrics, layout primitives, layout dirty/view-cache invalidation fixtures, scroll-handle invalidation fixtures, prepaint virtual-list window-update fixtures, environment view-cache invalidation fixtures, hit-test routing fixtures, pointer occlusion routing fixtures, pointer-capture owner/cancel, multi-pointer pointer-session, docking viewport-capture, and ContextMenu branch/corridor runtime gates, focus barrier routing fixtures, semantics relation fixtures, Pressable key-activation fixtures, combobox active-descendant interaction fixtures, roving focus/typeahead interaction fixtures, flat, nested, and retained-tree stale-parent focus scope interaction fixtures, shadcn focus-restore recipe fixtures for dialog/popover/drawer/combobox/select/dropdown-menu/context-menu Escape, outside-press, focus-outside, and submenu restore policy outcomes, shadcn recipe typeahead fixtures for select/dropdown-menu/menubar printable-key outcomes, focused view-cache/environment/pointer/focus/semantics/recipe gates, virtual-list boundary owner/reason gates, DataTable retained filter-shrink input-change runtime diagnostics, the UI Gallery checkbox underflow diagnostics gate, the UI Gallery overlay/focus diagnostics suite including Drawer underlay blocking and Combobox outside-press focus restore, the Separator hidden-semantics runtime gate, the Accordion expanded-semantics mutation gate, the Accordion focusable-disabled keyboard/action suppression runtime gate, Combobox/Command active-descendant mutation runtime gates, the Sonner live-region mutation runtime gate, Select/Tabs selected-state mutation runtime gates, the Switch choice-card checked-state semantics runtime gate, the Checkbox disabled action-state runtime gate, the Slider numeric action-state runtime gate plus duplicate thumb test-id repair, the Checkbox table mixed checked-state runtime gate and checked_state_is diagnostics predicate, the Toggle pressed-state runtime gate and pressed_state_is diagnostics predicate, the Input required/invalid form-state runtime gate and required_is/invalid_is diagnostics predicates, the Select invalid form-state runtime gate, and the Textarea required/invalid form-state runtime gate, Command/DataTable/retained Virtual List collection-metadata mutation runtime gates, the retained Tree hierarchy level/expanded mutation runtime gate, the DataTable pagination disabled/invoke action-state mutation runtime gate, the retained Tree selected/invoke action-state mutation runtime gate, and the retained Tree dynamic disabled/focus/invoke suppression runtime gate, the Select cross-root relation-edge runtime gate, the HitTestOnly paint-cache replay runtime gate, and the desktop repeating-timer redraw-starvation repair that unblocks the broad shadcn runtime-evidence suite, and the runner repeating-timer overlap stress gate.",
     "commands": [
       "cargo test --profile dev-fast -p fret-mechanism-harness --lib mechanism_metrics_can_assert_non_geometry_facts -- --nocapture",
       "cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_layout_dirty_invalidation_matches_oracles -- --nocapture",
@@ -254,7 +254,24 @@
       "cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_select_invalid_form_state -- --nocapture",
       "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json --dir target/fret-diag-select-invalid-form-state-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe",
       "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-select-semantics --dir target/fret-diag-select-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe",
-      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-select-invalid-v1 --session-auto --timeout-ms 1200000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-select-invalid-v1 --session-auto --timeout-ms 1200000 --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "python -m json.tool tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json > $null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-docs-screenshot.json > $null",
+      "python -m json.tool tools/diag-scripts/suites/ui-gallery-textarea-semantics/suite.json > $null",
+      "rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/textarea/invalid.rs apps/fret-ui-gallery/src/ui/snippets/textarea/required.rs apps/fret-ui-gallery/src/ui/snippets/textarea/mod.rs apps/fret-ui-gallery/src/ui/pages/textarea.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs ecosystem/fret-ui-shadcn/src/textarea.rs apps/fret-ui-gallery/tests/textarea_docs_surface.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+      "cargo test --profile dev-fast -p fret-ui-shadcn textarea_required_builder_sets_textarea_required_semantics --lib -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui-shadcn textarea_aria_invalid_builder_sets_textarea_invalid_semantics --lib -- --nocapture",
+      "cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_textarea_required_invalid_semantics -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_page_documents_source_axes_and_leaf_children_api_decision -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_snippets_keep_the_docs_path_examples_and_leaf_surface -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_diag_scripts_cover_docs_path_and_label_follow_up -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app textarea_snippets_prefer_ui_cx_on_the_default_app_surface -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app textarea_page_uses_typed_doc_sections_for_app_facing_snippets -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_radio_input_and_textarea_docs_keep_required_ownership_on_the_control_surface -- --nocapture",
+      "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_radio_input_and_textarea_docs_keep_invalid_ownership_on_the_control_surface -- --nocapture",
+      "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json --dir target/fret-diag-textarea-required-invalid-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-textarea-semantics --dir target/fret-diag-textarea-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe",
+      "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-textarea-required-invalid-v2 --session-auto --timeout-ms 1800000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     ]
   },
   "gates": [
@@ -1185,6 +1202,69 @@
     {
       "name": "ui-gallery-shadcn-runtime-evidence-select-invalid-suite",
       "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-select-invalid-v1 --session-auto --timeout-ms 1200000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json > $null"
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-docs-screenshot.json > $null"
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/suites/ui-gallery-textarea-semantics/suite.json > $null"
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json > $null"
+    },
+    {
+      "command": "python tools/check_diag_scripts_registry.py --write"
+    },
+    {
+      "command": "python tools/check_diag_scripts_registry.py"
+    },
+    {
+      "command": "rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/textarea/invalid.rs apps/fret-ui-gallery/src/ui/snippets/textarea/required.rs apps/fret-ui-gallery/src/ui/snippets/textarea/mod.rs apps/fret-ui-gallery/src/ui/pages/textarea.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs ecosystem/fret-ui-shadcn/src/textarea.rs apps/fret-ui-gallery/tests/textarea_docs_surface.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+    },
+    {
+      "command": "cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn textarea_required_builder_sets_textarea_required_semantics --lib -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-ui-shadcn textarea_aria_invalid_builder_sets_textarea_invalid_semantics --lib -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_textarea_required_invalid_semantics -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_page_documents_source_axes_and_leaf_children_api_decision -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_snippets_keep_the_docs_path_examples_and_leaf_surface -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_diag_scripts_cover_docs_path_and_label_follow_up -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app textarea_snippets_prefer_ui_cx_on_the_default_app_surface -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app textarea_page_uses_typed_doc_sections_for_app_facing_snippets -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_radio_input_and_textarea_docs_keep_required_ownership_on_the_control_surface -- --nocapture"
+    },
+    {
+      "command": "cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_radio_input_and_textarea_docs_keep_invalid_ownership_on_the_control_surface -- --nocapture"
+    },
+    {
+      "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json --dir target/fret-diag-textarea-required-invalid-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-textarea-semantics --dir target/fret-diag-textarea-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-textarea-required-invalid-v2 --session-auto --timeout-ms 1800000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     }
   ],
   "evidence": [
@@ -1525,7 +1605,17 @@
     "target/fret-diag-select-invalid-form-state-v1/sessions/1779321642042-159492/1779321650994/ai.packet",
     "target/fret-diag-select-invalid-form-state-v1/sessions/1779321642042-159492/share/1779321650994.zip",
     "target/fret-diag-select-semantics-suite-v1/sessions/1779321672604-100084/suite.summary.json",
-    "target/fret-diag-shadcn-runtime-evidence-select-invalid-v1/sessions/1779321710285-137352/suite.summary.json"
+    "target/fret-diag-shadcn-runtime-evidence-select-invalid-v1/sessions/1779321710285-137352/suite.summary.json",
+    "apps/fret-ui-gallery/src/ui/snippets/textarea/invalid.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/textarea/required.rs",
+    "apps/fret-ui-gallery/src/ui/pages/textarea.rs",
+    "ecosystem/fret-ui-shadcn/src/textarea.rs",
+    "tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json",
+    "tools/diag-scripts/suites/ui-gallery-textarea-semantics/suite.json",
+    "target/fret-diag-textarea-required-invalid-semantics-v1/sessions/1779324589606-162572/1779324602377/ai.packet",
+    "target/fret-diag-textarea-required-invalid-semantics-v1/sessions/1779324589606-162572/share/1779324602377.zip",
+    "target/fret-diag-textarea-semantics-suite-v1/sessions/1779324642363-184708/suite.summary.json",
+    "target/fret-diag-shadcn-runtime-evidence-textarea-required-invalid-v2/sessions/1779326355415-96352/suite.summary.json"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",

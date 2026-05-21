@@ -1557,3 +1557,17 @@ date: 2026-05-12
     `target/fret-diag-select-semantics-suite-v1/sessions/1779321672604-100084/suite.summary.json`,
     and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 20/20 with the new Select
     invalid row run id `1779322696285`.
+
+- [x] Add a Textarea required/invalid form-state semantics runtime gate.
+  - Result:
+    `ui-gallery-textarea-required-invalid-semantics.json` now starts directly on the Textarea page,
+    targets concrete TextArea nodes via stable control-level test ids, proves the Invalid control
+    exports `role=text_field`, `invalid=true`, `required=false`, and enabled `focus`/`set_value`,
+    then proves the new Required example exports `required=true`, `invalid=null`, and the same
+    enabled editing actions. The Textarea Invalid snippet now stamps `ui-gallery-textarea-invalid-control`,
+    and the new Required snippet keeps the visible required marker caller-owned while applying
+    `Textarea::required(true)` on the control. Focused runtime passed with run id `1779324602377`,
+    the new `ui-gallery-textarea-semantics` suite passed 1/1 with summary
+    `target/fret-diag-textarea-semantics-suite-v1/sessions/1779324642363-184708/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 21/21 with the Textarea row
+    run id `1779327669604`.

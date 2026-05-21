@@ -11,7 +11,7 @@ fn textarea_page_documents_source_axes_and_leaf_children_api_decision() {
         "Neither Radix Primitives nor Base UI defines a dedicated Textarea primitive or compound children contract",
         "did not identify a missing `fret-ui` mechanism bug",
         "No extra generic `compose()` / `asChild` / children API is needed here",
-        "Preview mirrors the upstream Textarea docs path first after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Field`, `Disabled`, `Invalid`, `Button`, `RTL`, and `API Reference`.",
+        "Preview mirrors the upstream Textarea docs path first after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Field`, `Disabled`, `Invalid`, `Required`, `Button`, `RTL`, and `API Reference`.",
     ] {
         assert!(
             source.contains(needle),
@@ -28,6 +28,7 @@ fn textarea_page_documents_source_axes_and_leaf_children_api_decision() {
             field,
             disabled,
             invalid,
+            required,
             button,
             rtl,
             api_reference,
@@ -51,6 +52,7 @@ fn textarea_snippets_keep_the_docs_path_examples_and_leaf_surface() {
     let follow_ups = [
         include_str!("../src/ui/snippets/textarea/button.rs"),
         include_str!("../src/ui/snippets/textarea/label.rs"),
+        include_str!("../src/ui/snippets/textarea/required.rs"),
         include_str!("../src/ui/snippets/textarea/with_text.rs"),
     ]
     .join("\n");
@@ -101,7 +103,7 @@ fn textarea_snippets_keep_the_docs_path_examples_and_leaf_surface() {
     }
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "shadcn::Textarea::new(value)",
         ".a11y_label(\"Message\")",
         ".placeholder(\"Type your message here.\")",
@@ -141,6 +143,7 @@ fn textarea_diag_scripts_cover_docs_path_and_label_follow_up() {
         "\"ui-gallery-textarea-field\"",
         "\"ui-gallery-textarea-disabled\"",
         "\"ui-gallery-textarea-invalid\"",
+        "\"ui-gallery-textarea-required\"",
         "\"ui-gallery-textarea-button\"",
         "\"ui-gallery-textarea-rtl\"",
         "\"ui-gallery-textarea-api-reference-content\"",

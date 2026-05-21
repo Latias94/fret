@@ -3878,3 +3878,54 @@ Status: complete for the Select invalid-state runtime semantics companion.
 - The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 20/20 with summary
   `target/fret-diag-shadcn-runtime-evidence-select-invalid-v1/sessions/1779321710285-137352/suite.summary.json`
   and new row run id `1779322696285`.
+
+## M168: Textarea Required/Invalid Form-State Runtime Gate
+
+Status: complete for the Textarea form-state semantics companion.
+
+- Added a docs-path `Required` Textarea example and promoted the visible required marker as
+  caller-owned label composition while keeping `Textarea::required(true)` on the concrete control.
+- Added stable concrete TextArea test ids to the Invalid and Required examples:
+  `ui-gallery-textarea-invalid-control` and `ui-gallery-textarea-required-control`.
+- Added `ui-gallery-textarea-required-invalid-semantics.json`, which starts directly on the Textarea
+  page, proves the invalid control exports `role=text_field`, `invalid=true`, `required=false`, and
+  enabled `focus`/`set_value`, then proves the required control exports `required=true`,
+  `invalid=null`, and enabled `focus`/`set_value`.
+- Added the focused `ui-gallery-textarea-semantics` suite, promoted the new script into
+  `ui-gallery-shadcn-runtime-evidence`, refreshed the registry, and added protocol roundtrip
+  coverage.
+- No Textarea recipe/runtime defect was reproduced. The real gap was the missing docs-path Required
+  example and missing stable control-level selector on the Invalid example.
+- JSON, registry, formatting, and diff hygiene gates pass:
+  `python -m json.tool tools\diag-scripts\ui-gallery\textarea\ui-gallery-textarea-required-invalid-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\textarea\ui-gallery-textarea-docs-screenshot.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-textarea-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\textarea\invalid.rs apps\fret-ui-gallery\src\ui\snippets\textarea\required.rs apps\fret-ui-gallery\src\ui\snippets\textarea\mod.rs apps\fret-ui-gallery\src\ui\pages\textarea.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs ecosystem\fret-ui-shadcn\src\textarea.rs apps\fret-ui-gallery\tests\textarea_docs_surface.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs`;
+  and `git diff --check`.
+- Focused Rust gates pass:
+  `cargo test --profile dev-fast -p fret-ui-shadcn textarea_required_builder_sets_textarea_required_semantics --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-shadcn textarea_aria_invalid_builder_sets_textarea_invalid_semantics --lib -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_textarea_required_invalid_semantics -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_page_documents_source_axes_and_leaf_children_api_decision -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_snippets_keep_the_docs_path_examples_and_leaf_surface -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_diag_scripts_cover_docs_path_and_label_follow_up -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app textarea_snippets_prefer_ui_cx_on_the_default_app_surface -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app textarea_page_uses_typed_doc_sections_for_app_facing_snippets -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_radio_input_and_textarea_docs_keep_required_ownership_on_the_control_surface -- --nocapture`;
+  and `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_radio_input_and_textarea_docs_keep_invalid_ownership_on_the_control_surface -- --nocapture`.
+- Build passes:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\textarea\ui-gallery-textarea-required-invalid-semantics.json --dir target\fret-diag-textarea-required-invalid-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779324602377`, AI packet
+  `target/fret-diag-textarea-required-invalid-semantics-v1/sessions/1779324589606-162572/1779324602377/ai.packet`,
+  and pack
+  `target/fret-diag-textarea-required-invalid-semantics-v1/sessions/1779324589606-162572/share/1779324602377.zip`.
+- Dedicated runtime suite passes with `stage_counts={"passed":1}` and summary
+  `target/fret-diag-textarea-semantics-suite-v1/sessions/1779324642363-184708/suite.summary.json`.
+- The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 21/21 with summary
+  `target/fret-diag-shadcn-runtime-evidence-textarea-required-invalid-v2/sessions/1779326355415-96352/suite.summary.json`
+  and Textarea row run id `1779327669604`.

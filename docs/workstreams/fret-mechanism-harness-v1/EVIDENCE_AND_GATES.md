@@ -7075,3 +7075,80 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-select-invalid-v1 --session-auto --timeout-ms 1200000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed 20/20; `stage_counts={"passed":20}`; `reason_code_counts={}`;
     Select invalid row run id `1779322696285`.
+
+## Textarea Required/Invalid Form-State Runtime Gate
+
+- invariant:
+  a shadcn Textarea must expose required and invalid semantics on the concrete TextArea control,
+  not only through surrounding Field chrome. Invalid examples should export `invalid=true` and
+  `required=false`; required examples should export `required=true` and no invalid state. Both
+  controls remain enabled and must keep `focus=true` and `set_value=true`.
+- finding:
+  no Textarea recipe/runtime defect was reproduced. The slice closed a UI Gallery automation surface
+  gap: the Invalid snippet now stamps a stable concrete TextArea test id, and the docs page now has
+  a Required example with caller-owned marker composition and control-owned `required` semantics.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/textarea/invalid.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/textarea/required.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/textarea.rs`,
+  `ecosystem/fret-ui-shadcn/src/textarea.rs`,
+  `tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json`,
+  `tools/diag-scripts/suites/ui-gallery-textarea-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-textarea-required-invalid-semantics-v1/sessions/1779324589606-162572/1779324602377/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-textarea-required-invalid-semantics-v1/sessions/1779324589606-162572/share/1779324602377.zip`;
+  dedicated suite summary:
+  `target/fret-diag-textarea-semantics-suite-v1/sessions/1779324642363-184708/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-textarea-required-invalid-v2/sessions/1779326355415-96352/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\textarea\ui-gallery-textarea-required-invalid-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\textarea\ui-gallery-textarea-docs-screenshot.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-textarea-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\textarea\invalid.rs apps\fret-ui-gallery\src\ui\snippets\textarea\required.rs apps\fret-ui-gallery\src\ui\snippets\textarea\mod.rs apps\fret-ui-gallery\src\ui\pages\textarea.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs ecosystem\fret-ui-shadcn\src\textarea.rs apps\fret-ui-gallery\tests\textarea_docs_surface.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn textarea_required_builder_sets_textarea_required_semantics --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-shadcn textarea_aria_invalid_builder_sets_textarea_invalid_semantics --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_textarea_required_invalid_semantics -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_page_documents_source_axes_and_leaf_children_api_decision -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_snippets_keep_the_docs_path_examples_and_leaf_surface -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_diag_scripts_cover_docs_path_and_label_follow_up -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app textarea_snippets_prefer_ui_cx_on_the_default_app_surface -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app textarea_page_uses_typed_doc_sections_for_app_facing_snippets -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_radio_input_and_textarea_docs_keep_required_ownership_on_the_control_surface -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_radio_input_and_textarea_docs_keep_invalid_ownership_on_the_control_surface -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\textarea\ui-gallery-textarea-required-invalid-semantics.json --dir target\fret-diag-textarea-required-invalid-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779324602377`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-textarea-semantics --dir target\fret-diag-textarea-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; script run id `1779324654768`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-textarea-required-invalid-v2 --session-auto --timeout-ms 1800000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 21/21; `stage_counts={"passed":21}`; `reason_code_counts={}`;
+    Textarea row run id `1779327669604`.

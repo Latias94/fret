@@ -479,3 +479,14 @@ mechanism can visibly fail.
   `target/fret-diag-select-invalid-form-state-v1/sessions/1779321642042-159492/1779321650994/ai.packet`,
   and the dedicated suite evidence is anchored at
   `target/fret-diag-select-semantics-suite-v1/sessions/1779321672604-100084/suite.summary.json`.
+
+- Textarea required/invalid form-state update:
+  `ui-gallery-textarea-required-invalid-semantics.json` now covers form-control semantics on concrete
+  shadcn Textarea controls. The gate starts on the Textarea page, proves the Invalid control exports
+  `role=text_field`, `invalid=true`, `required=false`, `focus=true`, and `set_value=true`, then proves
+  the Required control exports `required=true`, `invalid=null`, `focus=true`, and `set_value=true`.
+  The docs page now includes a Required example with caller-owned marker composition, and the Invalid
+  example has a stable concrete control selector. Focused runtime evidence is anchored at
+  `target/fret-diag-textarea-required-invalid-semantics-v1/sessions/1779324589606-162572/1779324602377/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-textarea-semantics-suite-v1/sessions/1779324642363-184708/suite.summary.json`.

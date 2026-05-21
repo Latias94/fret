@@ -732,6 +732,7 @@ mod tests {
     use super::*;
 
     use fret_app::App;
+    use fret_core::SemanticsInvalid;
     use fret_core::{AppWindowId, Point, Px, Rect, Size as CoreSize};
     use fret_core::{
         PathCommand, Size as UiSize, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics,
@@ -1209,5 +1210,33 @@ mod tests {
 
         let props = find_text_area_props(&el).expect("expected TextArea props");
         assert!(props.a11y_required);
+    }
+
+    #[test]
+    fn textarea_aria_invalid_builder_sets_textarea_invalid_semantics() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(180.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+        let el = elements::with_element_cx(&mut app, window, bounds, "textarea-invalid", |cx| {
+            Textarea::new(model.clone())
+                .a11y_label("Notes")
+                .aria_invalid(true)
+                .resizable(false)
+                .into_element(cx)
+        });
+
+        let props = find_text_area_props(&el).expect("expected TextArea props");
+        assert_eq!(props.a11y_invalid, Some(SemanticsInvalid::True));
     }
 }

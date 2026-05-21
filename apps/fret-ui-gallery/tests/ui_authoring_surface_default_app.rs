@@ -2432,6 +2432,7 @@ fn textarea_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/textarea/field.rs",
             "src/ui/snippets/textarea/invalid.rs",
             "src/ui/snippets/textarea/label.rs",
+            "src/ui/snippets/textarea/required.rs",
             "src/ui/snippets/textarea/rtl.rs",
             "src/ui/snippets/textarea/usage.rs",
             "src/ui/snippets/textarea/with_text.rs",
@@ -2459,6 +2460,7 @@ fn textarea_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Field\", field)",
             "DocSection::build(cx, \"Disabled\", disabled)",
             "DocSection::build(cx, \"Invalid\", invalid)",
+            "DocSection::build(cx, \"Required\", required)",
             "DocSection::build(cx, \"Button\", button)",
             "DocSection::build(cx, \"RTL\", rtl)",
             "DocSection::build(cx, \"With Text\", with_text)",
@@ -2470,6 +2472,7 @@ fn textarea_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Field\", field)",
             "DocSection::new(\"Disabled\", disabled)",
             "DocSection::new(\"Invalid\", invalid)",
+            "DocSection::new(\"Required\", required)",
             "DocSection::new(\"Button\", button)",
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"With Text\", with_text)",
@@ -3763,9 +3766,19 @@ fn checkbox_radio_input_and_textarea_docs_keep_required_ownership_on_the_control
             ],
         ),
         (
+            "src/ui/snippets/textarea/required.rs",
+            vec![
+                "shadcn::Textarea::new(value)",
+                ".control_id(required_id)",
+                ".required(true)",
+                "shadcn::raw::typography::muted(\"*\")",
+            ],
+        ),
+        (
             "src/ui/pages/textarea.rs",
             vec![
                 "`Textarea::required(true)` keeps required semantics on the textarea control itself; any visible required marker stays caller-owned label composition.",
+                "Use root `Textarea::required(true)` on the textarea and keep the visible required marker caller-owned in the label.",
             ],
         ),
     ] {
