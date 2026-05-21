@@ -233,6 +233,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_move_tail_cx.rs");
     const UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_TAIL_TIMER_RS: &str =
         include_str!("ui/canvas/widget/event_pointer_move_tail/timer.rs");
+    const UI_CANVAS_WIDGET_POINTER_MOVE_RELEASE_LEFT_RS: &str =
+        include_str!("ui/canvas/widget/pointer_move_release_left.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_RS: &str =
         include_str!("ui/canvas/widget/pointer_move_dispatch.rs");
     const UI_CANVAS_WIDGET_POINTER_MOVE_CX_RS: &str =
@@ -1808,6 +1810,24 @@ mod surface_policy_tests {
             assert!(
                 !tail_sources.contains(forbidden),
                 "pointer-move tail wrapper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn pointer_move_missing_left_release_stays_off_retained_bridge() {
+        let release_sources = [UI_CANVAS_WIDGET_POINTER_MOVE_RELEASE_LEFT_RS].join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !release_sources.contains(forbidden),
+                "pointer-move missing-left-release helper must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
     }

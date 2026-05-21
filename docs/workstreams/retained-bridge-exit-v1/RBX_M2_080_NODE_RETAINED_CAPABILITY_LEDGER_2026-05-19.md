@@ -404,6 +404,10 @@ Compat-gated but retained-bridge-free support:
     capability over `CanvasCursorCx`, `PointerMoveCx`, and `AutoPanTimerCx`. This adds no new
     side-effect methods; retained `EventCx` only satisfies the wrapper through the existing branch
     adapters.
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_left.rs`
+  - `RBX-M2-900` moved missing-left-release inference behind the existing retained-agnostic
+    `PointerUpCx` / `PointerUpReleaseCx` seams. This adds no new retained adapter; retained
+    `EventCx` already satisfies those pointer-up capabilities through prior slices.
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/event.rs`
   - `RBX-M2-520` moved context menu open/restore/dismiss/finish/invalidate tail helpers behind the

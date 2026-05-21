@@ -1,12 +1,16 @@
 use super::*;
 
-pub(super) fn handle_missing_left_release<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_missing_left_release<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     position: Point,
     buttons: fret_core::MouseButtons,
     modifiers: fret_core::Modifiers,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: pointer_up_cx::PointerUpCx<H, M>,
+{
     let has_left_interaction = canvas.interaction.pending_marquee.is_some()
         || canvas.interaction.marquee.is_some()
         || canvas.interaction.pending_node_drag.is_some()
@@ -27,7 +31,7 @@ pub(super) fn handle_missing_left_release<H: UiHost, M: NodeGraphCanvasMiddlewar
         return false;
     }
 
-    let snapshot = canvas.sync_view_state(cx.app);
+    let snapshot = canvas.sync_view_state(pointer_up_release_cx::PointerUpReleaseCx::host(cx));
     let _ = pointer_up::handle_pointer_up(
         canvas,
         cx,

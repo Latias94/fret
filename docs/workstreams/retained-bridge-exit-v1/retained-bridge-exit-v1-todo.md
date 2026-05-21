@@ -4408,6 +4408,29 @@ Related plan:
     - `python3 tools/check_layering.py`
     - `python3 tools/check_workstream_catalog.py`
     - `git diff --check`
+- [x] RBX-M2-900 Isolate pointer-move missing-left-release retained Cx names.
+  - Scope:
+    - `ecosystem/fret-node/src/lib.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_left.rs`
+    - workstream evidence/handoff/ledger docs
+  - Goal:
+    - Move the missing-left-release pointer-move helper off direct retained bridge Cx names.
+    - Reuse the existing `PointerUpCx` / `PointerUpReleaseCx` seams instead of adding another
+      retained adapter.
+    - Prove missed left pointer-up inference still commits/cancels active drag families correctly.
+  - Result:
+    - `pointer_move_release_left.rs` now accepts `PointerUpCx` instead of naming retained `EventCx`.
+    - Host access for snapshot sync now uses `PointerUpReleaseCx::host(...)`.
+    - Added `pointer_move_missing_left_release_stays_off_retained_bridge` source-policy coverage.
+  - Validation:
+    - `cargo check -p fret-node`
+    - `cargo check -p fret-node --features compat-retained-canvas`
+    - `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_missing_left_release_stays_off_retained_bridge) | test(missing_pointer_up_can_be_inferred_from_mouse_buttons_state) | test(missing_pointer_up_can_be_inferred_from_mouse_buttons_state_for_wire_reconnect_drag) | test(missing_pointer_up_can_be_inferred_from_mouse_buttons_state_for_new_wire_drag) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'`
+    - `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/pointer_move_release_left.rs`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
 - [ ] Split node graph into:
   - declarative composition for chrome/overlays/panels,
   - `Canvas`/`ViewportSurface`-style leaf for heavy rendering where needed.
