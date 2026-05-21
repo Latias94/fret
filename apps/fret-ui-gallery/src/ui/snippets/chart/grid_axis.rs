@@ -54,11 +54,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     ui::v_flex(|cx| {
         vec![
             shadcn::raw::typography::muted(
-                "In Fret today, chart grid and axis setup lives in the retained `delinea::ChartSpec` instead of separate child widgets.",
+                "In Fret today, chart grid and axis setup lives in `delinea::ChartSpec` instead of separate child widgets.",
             )
             .into_element(cx),
             shadcn::raw::typography::muted(
-                "Define `GridSpec` and `AxisSpec` before you construct `fret_chart::ChartCanvas`, then keep tooltip and legend composition on the `ChartContainer` recipe surface.",
+                "Define `GridSpec` and `AxisSpec` before you render `chart_canvas_panel_in(...)`, then keep tooltip and legend composition on the `ChartContainer` recipe surface.",
             )
             .into_element(cx),
         ]

@@ -24,7 +24,7 @@ pub(super) fn preview_chart(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         "`ChartTooltipContent::new()` can now auto-derive label, items, colors, and icons from a shared `ChartCanvasOutput` model plus `ChartConfig`.",
         "`ChartTooltipContent` now exposes recipe-level `label_formatter(...)`, `formatter(...)`, `label_key(...)`, and `name_key(...)` hooks, with Fret-native item key/metadata remapping.",
         "For fully custom tooltip header/rows, `ChartTooltipContent::into_element_label_parts(cx, ...)`, `ChartTooltipContent::into_element_parts(cx, ...)`, and `ChartTooltipContent::into_element_parts_with_label(cx, ...)` cover header-only, row-only, or fully combined children composition.",
-        "Unlike the Recharts docs path, `Add Grid` and `Add Axis` stay inside the retained chart spec today instead of surfacing as separate child widgets on the gallery page.",
+        "Unlike the Recharts docs path, `Add Grid` and `Add Axis` stay inside `delinea::ChartSpec` today instead of surfacing as separate child widgets on the gallery page.",
         "The remaining parity gaps are full Recharts `payload.payload[...]` field lookup on engine-derived payloads and DOM-native overlay composition details.",
         "Keep color mapping stable through `chart-*` tokens to avoid dark-theme drift.",
         "`fret-chart::ChartCanvas` exposes an accessibility layer via keyboard focus + arrow navigation, mirroring Recharts `accessibilityLayer` outcomes at a high level.",
@@ -40,7 +40,7 @@ pub(super) fn preview_chart(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::demo::SOURCE, "example");
     let first_chart = DocSection::build(cx, "First Chart", first_chart)
         .description(
-            "Fret-native equivalent of shadcn's first-chart walkthrough: build the chart, then add legend and tooltip on the same assembled example, with tooltip payloads auto-derived from a shared chart output model. Grid and axis stay in the retained chart spec instead of separate child widgets.",
+            "Fret-native equivalent of shadcn's first-chart walkthrough: build the declarative chart panel, then add legend and tooltip on the same assembled example, with tooltip payloads auto-derived from a shared chart output model. Grid and axis stay in `delinea::ChartSpec` instead of separate child widgets.",
         )
         .test_id_prefix("ui-gallery-chart-first-chart")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
@@ -54,7 +54,7 @@ pub(super) fn preview_chart(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .code_rust_from_file_region(snippets::theming::SOURCE, "example");
     let grid_axis = DocSection::build(cx, "Grid / Axis (Fret)", grid_axis)
         .description(
-            "Focused Fret follow-up: grid and axis remain spec-owned on `delinea::ChartSpec` today, so the copyable setup lives beside the retained chart engine instead of the `ChartContainer` child lane.",
+            "Focused Fret follow-up: grid and axis remain spec-owned on `delinea::ChartSpec` today, so the copyable setup feeds the declarative chart panel instead of the `ChartContainer` child lane.",
         )
         .test_id_prefix("ui-gallery-chart-grid-axis")
         .code_rust_from_file_region(snippets::grid_axis::SOURCE, "example");

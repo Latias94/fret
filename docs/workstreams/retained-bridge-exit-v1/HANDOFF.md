@@ -237,6 +237,13 @@ its output publication through the same shared helper, and the full `fret-chart`
 the retained output/linking/tooltip oracle tests green. This narrows retained-only chart policy but
 does not yet permit removing retained chart: axes, visual-map, data-zoom UI, multi-grid surfaces,
 and first-party/gallery consumers still need migration or explicit declarative coverage.
+`RBX-M3-045` then migrated UI Gallery's copyable shadcn-style chart `usage.rs` and `demo.rs`
+snippets from cached retained `ChartCanvas` subtrees to controlled `ChartEngine` models rendered by
+`ChartCanvasPanelProps` + `chart_canvas_panel_in(...)`. The first-chart snippet still shares
+`ChartCanvasOutput` with `ChartContainer`, so tooltip/legend output wiring remains covered through
+the shared output contract. A Gallery source-policy test prevents those ordinary chart snippets
+from teaching retained chart authoring again. Accessibility-specific docs still mention retained
+`ChartCanvas` because arrow-key point navigation remains a separate declarative parity slice.
 
 ## Completed Implementation
 

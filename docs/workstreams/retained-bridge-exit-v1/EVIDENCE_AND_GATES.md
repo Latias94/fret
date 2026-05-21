@@ -11462,3 +11462,67 @@ Broader gates not run:
   - Reason: `RBX-M3-040` is a targeted `fret-chart` output publication slice. The package check,
     targeted declarative output test, full `fret-chart` package test gate, formatting, layering,
     catalog, whitespace, and merge-marker checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-045 Gallery chart snippets use declarative panel
+
+Claim verified:
+
+- UI Gallery's copyable shadcn-style chart `usage.rs` and `demo.rs` snippets no longer construct
+  retained `ChartCanvas` widgets through `RetainedSubtreeProps` / `cx.retained_subtree(...)`.
+- Those snippets now seed controlled `Model<ChartEngine>` instances and render chart bodies through
+  `ChartCanvasPanelProps` + `chart_canvas_panel_in(...)`.
+- The "First Chart" snippet still shares a `ChartCanvasOutput` model with `ChartContainer`, so
+  tooltip/legend output wiring remains on the shared declarative output contract introduced in
+  `RBX-M3-040`.
+- The chart page and grid/axis follow-up text no longer describes ordinary chart body authoring as
+  retained. The accessibility snippet remains an explicit known gap because declarative keyboard
+  point navigation has not been migrated yet.
+
+Evidence:
+
+- `apps/fret-ui-gallery/src/ui/snippets/chart/usage.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/chart/demo.rs`
+- `apps/fret-ui-gallery/src/ui/snippets/chart/grid_axis.rs`
+- `apps/fret-ui-gallery/src/ui/pages/chart.rs`
+- `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-ui-gallery --features gallery-chart chart_snippets_prefer_declarative_canvas_panel`
+  - Result: passed, 1 test.
+  - Scope proven: the new source-policy gate requires `usage.rs` and `demo.rs` to teach
+    `ChartEngine` + `ChartCanvasPanelProps` + `chart_canvas_panel_in(...)`, and rejects retained
+    chart authoring markers.
+- `cargo check -p fret-ui-gallery --features gallery-chart`
+  - Result: passed.
+  - Scope proven: the Gallery chart snippets compile with the optional `gallery-chart` feature
+    after migrating from cached retained subtrees to declarative chart panels.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the Gallery chart snippet migration.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid after the
+    Gallery chart consumer migration.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .`
+  - Result: no matches.
+  - Scope proven: the worktree has no textual merge-conflict markers after this slice.
+- `rg -n "RetainedSubtreeProps|UiTreeRetainedExt|cx\\.retained_subtree|ChartCanvas::new\\(|use fret_chart::ChartCanvas;|use fret_chart::\\{ChartCanvas," apps/fret-ui-gallery/src/ui/snippets/chart/usage.rs apps/fret-ui-gallery/src/ui/snippets/chart/demo.rs`
+  - Result: no matches.
+  - Scope proven: the migrated Gallery chart usage/demo snippets do not contain the retained chart
+    authoring markers guarded by the policy test.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-045` is a targeted UI Gallery chart docs/consumer migration slice. The planned
+    package feature check, targeted source-policy test, formatting, layering, catalog, whitespace,
+    and merge-marker checks cover the changed surface.

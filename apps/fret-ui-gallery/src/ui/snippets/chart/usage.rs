@@ -5,7 +5,6 @@ use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::IconId;
 use fret_runtime::Model;
-use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
@@ -17,156 +16,139 @@ fn sample_chart_canvas(
 ) -> AnyElement {
     use delinea::data::{Column, DataTable};
     use delinea::{
-        AxisKind, AxisScale, CategoryAxisScale, ChartSpec, DatasetSpec, FieldSpec, GridSpec,
-        SeriesEncode, SeriesKind, SeriesSpec,
+        AxisKind, AxisScale, CategoryAxisScale, ChartEngine, ChartSpec, DatasetSpec, FieldSpec,
+        GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
     };
-    use fret_chart::ChartCanvas;
-    use fret_ui::element::{LayoutStyle, Length};
-    use fret_ui::retained_bridge::RetainedSubtreeProps;
+    use fret_chart::{ChartCanvasPanelProps, chart_canvas_panel_in};
 
     let test_id: Arc<str> = test_id.into();
 
-    cx.cached_subtree_with(
-        CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
-        |cx| {
-            use fret_ui::retained_bridge::UiTreeRetainedExt as _;
+    let dataset_id = delinea::ids::DatasetId::new(1);
+    let grid_id = delinea::ids::GridId::new(1);
+    let x_axis = delinea::AxisId::new(1);
+    let y_axis = delinea::AxisId::new(2);
+    let x_field = delinea::FieldId::new(1);
+    let desktop_field = delinea::FieldId::new(2);
+    let mobile_field = delinea::FieldId::new(3);
 
-            let dataset_id = delinea::ids::DatasetId::new(1);
-            let grid_id = delinea::ids::GridId::new(1);
-            let x_axis = delinea::AxisId::new(1);
-            let y_axis = delinea::AxisId::new(2);
-            let x_field = delinea::FieldId::new(1);
-            let desktop_field = delinea::FieldId::new(2);
-            let mobile_field = delinea::FieldId::new(3);
+    let categories = vec![
+        "January".to_string(),
+        "February".to_string(),
+        "March".to_string(),
+        "April".to_string(),
+        "May".to_string(),
+        "June".to_string(),
+    ];
+    let x = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
+    let desktop = vec![186.0, 305.0, 237.0, 73.0, 209.0, 214.0];
+    let mobile = vec![80.0, 200.0, 120.0, 190.0, 130.0, 140.0];
 
-            let categories = vec![
-                "January".to_string(),
-                "February".to_string(),
-                "March".to_string(),
-                "April".to_string(),
-                "May".to_string(),
-                "June".to_string(),
-            ];
-            let x = vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0];
-            let desktop = vec![186.0, 305.0, 237.0, 73.0, 209.0, 214.0];
-            let mobile = vec![80.0, 200.0, 120.0, 190.0, 130.0, 140.0];
+    let spec = ChartSpec {
+        id: delinea::ids::ChartId::new(1),
+        viewport: None,
+        datasets: vec![DatasetSpec {
+            id: dataset_id,
+            fields: vec![
+                FieldSpec {
+                    id: x_field,
+                    column: 0,
+                },
+                FieldSpec {
+                    id: desktop_field,
+                    column: 1,
+                },
+                FieldSpec {
+                    id: mobile_field,
+                    column: 2,
+                },
+            ],
+            ..Default::default()
+        }],
+        grids: vec![GridSpec { id: grid_id }],
+        axes: vec![
+            delinea::AxisSpec {
+                id: x_axis,
+                name: Some("Month".to_string()),
+                kind: AxisKind::X,
+                grid: grid_id,
+                position: None,
+                scale: AxisScale::Category(CategoryAxisScale { categories }),
+                range: Default::default(),
+            },
+            delinea::AxisSpec {
+                id: y_axis,
+                name: Some("Visitors".to_string()),
+                kind: AxisKind::Y,
+                grid: grid_id,
+                position: None,
+                scale: Default::default(),
+                range: Default::default(),
+            },
+        ],
+        data_zoom_x: vec![],
+        data_zoom_y: vec![],
+        tooltip: None,
+        axis_pointer: Some(delinea::AxisPointerSpec::default()),
+        visual_maps: vec![],
+        series: vec![
+            SeriesSpec {
+                id: delinea::ids::SeriesId::new(1),
+                name: Some("Desktop".to_string()),
+                kind: SeriesKind::Bar,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: desktop_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+            SeriesSpec {
+                id: delinea::ids::SeriesId::new(2),
+                name: Some("Mobile".to_string()),
+                kind: SeriesKind::Bar,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: mobile_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            },
+        ],
+    };
 
-            let spec = ChartSpec {
-                id: delinea::ids::ChartId::new(1),
-                viewport: None,
-                datasets: vec![DatasetSpec {
-                    id: dataset_id,
-                    fields: vec![
-                        FieldSpec {
-                            id: x_field,
-                            column: 0,
-                        },
-                        FieldSpec {
-                            id: desktop_field,
-                            column: 1,
-                        },
-                        FieldSpec {
-                            id: mobile_field,
-                            column: 2,
-                        },
-                    ],
-                    ..Default::default()
-                }],
-                grids: vec![GridSpec { id: grid_id }],
-                axes: vec![
-                    delinea::AxisSpec {
-                        id: x_axis,
-                        name: Some("Month".to_string()),
-                        kind: AxisKind::X,
-                        grid: grid_id,
-                        position: None,
-                        scale: AxisScale::Category(CategoryAxisScale { categories }),
-                        range: Default::default(),
-                    },
-                    delinea::AxisSpec {
-                        id: y_axis,
-                        name: Some("Visitors".to_string()),
-                        kind: AxisKind::Y,
-                        grid: grid_id,
-                        position: None,
-                        scale: Default::default(),
-                        range: Default::default(),
-                    },
-                ],
-                data_zoom_x: vec![],
-                data_zoom_y: vec![],
-                tooltip: None,
-                axis_pointer: Some(delinea::AxisPointerSpec::default()),
-                visual_maps: vec![],
-                series: vec![
-                    SeriesSpec {
-                        id: delinea::ids::SeriesId::new(1),
-                        name: Some("Desktop".to_string()),
-                        kind: SeriesKind::Bar,
-                        dataset: dataset_id,
-                        encode: SeriesEncode {
-                            x: x_field,
-                            y: desktop_field,
-                            y2: None,
-                        },
-                        x_axis,
-                        y_axis,
-                        stack: None,
-                        stack_strategy: Default::default(),
-                        bar_layout: Default::default(),
-                        area_baseline: None,
-                        lod: None,
-                    },
-                    SeriesSpec {
-                        id: delinea::ids::SeriesId::new(2),
-                        name: Some("Mobile".to_string()),
-                        kind: SeriesKind::Bar,
-                        dataset: dataset_id,
-                        encode: SeriesEncode {
-                            x: x_field,
-                            y: mobile_field,
-                            y2: None,
-                        },
-                        x_axis,
-                        y_axis,
-                        stack: None,
-                        stack_strategy: Default::default(),
-                        bar_layout: Default::default(),
-                        area_baseline: None,
-                        lod: None,
-                    },
-                ],
-            };
+    let spec_for_engine = spec.clone();
+    let engine_key = format!("chart_usage_engine:{}", test_id.as_ref());
+    let engine = cx.local_model_keyed(engine_key, move || {
+        let mut engine = ChartEngine::new(spec_for_engine).expect("chart spec should be valid");
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(x));
+        table.push_column(Column::F64(desktop));
+        table.push_column(Column::F64(mobile));
+        engine.datasets_mut().insert(dataset_id, table);
+        engine
+    });
 
-            let mut layout = LayoutStyle::default();
-            layout.size.width = Length::Fill;
-            layout.size.height = Length::Px(Px(208.0));
+    let mut props = ChartCanvasPanelProps::new(spec).output_model(output);
+    props.engine = Some(engine);
+    props.input_map = fret_chart::input_map::ChartInputMap::default();
 
-            let canvas_test_id = test_id.to_string();
-            let output = output.clone();
-            let props = RetainedSubtreeProps::new::<fret::app::App>(move |ui| {
-                let mut canvas =
-                    ChartCanvas::new(spec.clone()).expect("chart spec should be valid");
-                canvas.set_accessibility_layer(true);
-                canvas.set_input_map(fret_chart::input_map::ChartInputMap::default());
-                canvas = canvas.test_id(canvas_test_id.clone());
-                canvas = canvas.output_model(output.clone());
-
-                let mut table = DataTable::default();
-                table.push_column(Column::F64(x.clone()));
-                table.push_column(Column::F64(desktop.clone()));
-                table.push_column(Column::F64(mobile.clone()));
-                canvas.engine_mut().datasets_mut().insert(dataset_id, table);
-
-                let node = ui.create_node_retained(canvas);
-                ui.set_node_view_cache_flags(node, true, true, false);
-                node
-            })
-            .with_layout(layout);
-
-            vec![cx.retained_subtree(props)]
-        },
-    )
+    ui::v_flex(move |cx| vec![chart_canvas_panel_in(cx, props).test_id(test_id.clone())])
+        .layout(LayoutRefinement::default().w_full().h_px(Px(208.0)))
+        .into_element(cx)
 }
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
@@ -222,7 +204,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 section_intro(
                     cx,
                     "Build",
-                    "Start with `chart_container(config, |cx| ...)`, render the retained chart canvas, and keep the example on the same assembled path as shadcn's first chart walkthrough.",
+                    "Start with `chart_container(config, |cx| ...)`, render the declarative chart canvas, and keep the example on the same assembled path as shadcn's first chart walkthrough.",
                 ),
                 canvas,
                 section_intro(

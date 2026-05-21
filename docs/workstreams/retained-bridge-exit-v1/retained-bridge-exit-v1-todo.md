@@ -4639,6 +4639,38 @@ Related plan:
       publication without constructing `retained::ChartCanvas`.
     - Existing retained output/linking/tooltip tests still pass through the shared helper, so this
       narrows retained-only policy without dropping current chart capabilities.
+- [x] RBX-M3-045 Migrate Gallery chart usage/demo snippets off retained `ChartCanvas` authoring.
+  - Scope:
+    - `apps/fret-ui-gallery/src/ui/snippets/chart/usage.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/chart/demo.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/chart/grid_axis.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/chart.rs`
+    - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+  - Goal:
+    - Stop first-party shadcn-style chart docs from teaching `RetainedSubtreeProps` /
+      `ChartCanvas::new(...)` for ordinary chart body authoring.
+    - Use `ChartCanvasPanelProps` + `chart_canvas_panel_in(...)` with a controlled
+      `Model<ChartEngine>` and shared `ChartCanvasOutput` instead.
+  - Validation:
+    - `cargo check -p fret-ui-gallery --features gallery-chart`
+    - `cargo nextest run -p fret-ui-gallery --features gallery-chart chart_snippets_prefer_declarative_canvas_panel`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+  - Evidence:
+    - `apps/fret-ui-gallery/src/ui/snippets/chart/usage.rs`
+    - `apps/fret-ui-gallery/src/ui/snippets/chart/demo.rs`
+    - `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-045-gallery-chart-snippets-use-declarative-panel`
+  - Result:
+    - The Gallery "First Chart" and demo-card snippets now seed `ChartEngine` models directly and
+      render through `chart_canvas_panel_in(...)`.
+    - The shared output-model path remains intact for tooltip/legend recipes through
+      `ChartCanvasOutput`.
+    - A source-policy test prevents `usage.rs` and `demo.rs` from reintroducing retained chart
+      authoring markers.
+    - Accessibility-specific docs still mention retained `ChartCanvas` because keyboard point
+      navigation remains a separate declarative parity slice before that helper can be migrated.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

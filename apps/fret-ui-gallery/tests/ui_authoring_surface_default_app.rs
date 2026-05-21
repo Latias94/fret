@@ -6218,15 +6218,15 @@ fn chart_page_keeps_shadcn_docs_path_before_fret_follow_ups() {
     );
     assert!(
         page.contains(
-            "Focused Fret follow-up: grid and axis remain spec-owned on `delinea::ChartSpec` today, so the copyable setup lives beside the retained chart engine instead of the `ChartContainer` child lane."
+            "Focused Fret follow-up: grid and axis remain spec-owned on `delinea::ChartSpec` today, so the copyable setup feeds the declarative chart panel instead of the `ChartContainer` child lane."
         ),
         "src/ui/pages/chart.rs should keep the spec-owned grid/axis follow-up explicit on the page surface"
     );
     assert!(
         page.contains(
-            "Grid and axis stay in the retained chart spec instead of separate child widgets."
+            "Grid and axis stay in `delinea::ChartSpec` instead of separate child widgets."
         ),
-        "src/ui/pages/chart.rs should explain why the shadcn `Add Grid` and `Add Axis` steps stay inside the retained chart spec on Fret"
+        "src/ui/pages/chart.rs should explain why the shadcn `Add Grid` and `Add Axis` steps stay inside the chart spec on Fret"
     );
     assert!(
         normalized.contains(
@@ -6250,6 +6250,44 @@ fn chart_page_keeps_shadcn_docs_path_before_fret_follow_ups() {
         !page.contains("DocSection::build(cx, \"Demo\", demo_cards)"),
         "src/ui/pages/chart.rs should keep the top section aligned to shadcn's `Component` naming instead of `Demo`"
     );
+}
+
+#[test]
+fn chart_snippets_prefer_declarative_canvas_panel() {
+    for relative_path in [
+        "src/ui/snippets/chart/usage.rs",
+        "src/ui/snippets/chart/demo.rs",
+    ] {
+        let source = read(relative_path);
+        let canonical = canonicalize_rust_fragment(&source);
+        for marker in [
+            "ChartEngine::new",
+            "ChartCanvasPanelProps::new",
+            "cx.local_model_keyed",
+            "chart_canvas_panel_in(cx, props)",
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                canonical.contains(&marker),
+                "{relative_path} should teach declarative chart canvas authoring marker `{marker}`"
+            );
+        }
+
+        for marker in [
+            "RetainedSubtreeProps",
+            "UiTreeRetainedExt",
+            "cx.retained_subtree",
+            "ChartCanvas::new(",
+            "use fret_chart::ChartCanvas;",
+            "use fret_chart::{ChartCanvas,",
+        ] {
+            let marker = canonicalize_rust_fragment(marker);
+            assert!(
+                !canonical.contains(&marker),
+                "{relative_path} reintroduced retained chart authoring marker `{marker}`"
+            );
+        }
+    }
 }
 
 #[test]
