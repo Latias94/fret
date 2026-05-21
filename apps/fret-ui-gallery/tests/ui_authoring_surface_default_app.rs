@@ -10097,6 +10097,7 @@ fn toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/toggle_group/custom.rs",
             "src/ui/snippets/toggle_group/demo.rs",
             "src/ui/snippets/toggle_group/disabled.rs",
+            "src/ui/snippets/toggle_group/disabled_item_action_state.rs",
             "src/ui/snippets/toggle_group/flex_1_items.rs",
             "src/ui/snippets/toggle_group/full_width_items.rs",
             "src/ui/snippets/toggle_group/label.rs",
@@ -10127,6 +10128,7 @@ fn toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
 fn toggle_group_snippet_item_text_uses_button_label_role() {
     for relative_path in [
         "src/ui/snippets/toggle_group/children.rs",
+        "src/ui/snippets/toggle_group/disabled_item_action_state.rs",
         "src/ui/snippets/toggle_group/flex_1_items.rs",
         "src/ui/snippets/toggle_group/full_width_items.rs",
         "src/ui/snippets/toggle_group/label.rs",
@@ -10163,6 +10165,7 @@ fn toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Spacing\", spacing)",
             "DocSection::build(cx, \"Vertical\", vertical)",
             "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Disabled Item Action-State (Fret)\", disabled_item_action_state)",
             "DocSection::build(cx, \"Custom\", custom)",
             "DocSection::build(cx, \"RTL\", rtl)",
             "DocSection::build(cx, \"Children (Fret)\", children)",
@@ -10181,6 +10184,7 @@ fn toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Spacing\", spacing)",
             "DocSection::new(\"Vertical\", vertical)",
             "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Disabled Item Action-State (Fret)\", disabled_item_action_state)",
             "DocSection::new(\"Custom\", custom)",
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Children (Fret)\", children)",
@@ -10191,6 +10195,33 @@ fn toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Full Width Items (Fret)\", full_width_items)",
             "DocSection::new(\"Flex-1 Items (Fret)\", stretch)",
         ],
+    );
+}
+
+#[test]
+fn toggle_group_disabled_item_action_state_snippet_keeps_roving_and_item_action_state_separate() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/toggle_group/disabled_item_action_state.rs",
+        &[
+            "ToggleGroup::single(selected)",
+            ".deselectable(false)",
+            ".control_id(control_id.clone())",
+            ".test_id_prefix(\"ui-gallery-toggle-group-disabled-item-action-state\")",
+            ".disabled(true)",
+            "FieldLabel::new(\"Formatting mode\")",
+            ".for_control(control_id.clone())",
+            ".test_id(\"ui-gallery-toggle-group-disabled-item-action-state-label\")",
+            "ui-gallery-toggle-group-disabled-item-action-state",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("cx.interactivity_gate(true,false"),
+        "src/ui/snippets/toggle_group/disabled_item_action_state.rs should use item disabled state instead of a local interactivity gate"
+    );
+    assert!(
+        !normalized.contains("field_state_prim::with_field_state_provider"),
+        "src/ui/snippets/toggle_group/disabled_item_action_state.rs should stay on public Field/ToggleGroup surfaces"
     );
 }
 

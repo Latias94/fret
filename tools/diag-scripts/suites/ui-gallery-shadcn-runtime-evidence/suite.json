@@ -28,6 +28,7 @@
     "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json",
     "tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json",
     "tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-interaction-screenshots.json",
+    "tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-disabled-item-action-state.json",
     "tools/diag-scripts/ui-gallery-sonner-live-region-mutation.json"
   ]
 }

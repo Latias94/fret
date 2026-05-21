@@ -12020,6 +12020,33 @@
       ]
     },
     {
+      "id": "ui-gallery-toggle-group-disabled-item-action-state",
+      "path": "tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-disabled-item-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence",
+        "ui-gallery-toggle-semantics"
+      ],
+      "tags": [
+        "action-state",
+        "checked-state",
+        "disabled",
+        "roving_focus",
+        "semantics",
+        "shadcn",
+        "toggle_group",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Toggle Group page and scopes rendering to the Disabled Item Action-State section.",
+        "Verifies that disabled single-mode items suppress focus/invoke, roving focus skips them, and checked_state stays observable on concrete radio-button items."
+      ]
+    },
+    {
       "id": "ui-gallery-toggle-interaction-screenshots",
       "path": "tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-interaction-screenshots.json",
       "required_capabilities": [

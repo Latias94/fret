@@ -779,6 +779,13 @@ fn script_v2_roundtrip_ui_gallery_toggle_interaction_screenshots() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_toggle_group_disabled_item_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-disabled-item-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_card_description_no_early_wrap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-card-description-no-early-wrap.json"

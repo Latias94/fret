@@ -1667,8 +1667,24 @@ date: 2026-05-12
     required/disabled group row run id `1779364468762` and summary
     `target/fret-diag-shadcn-runtime-evidence-checkbox-required-disabled-group-v1/sessions/1779363773383-195668/suite.summary.json`.
 
+- [x] Add a ToggleGroup disabled-item action-state and roving-focus runtime gate.
+  - Result:
+    `ui-gallery-toggle-group-disabled-item-action-state.json` now starts on the Toggle Group page's
+    `Disabled Item Action-State (Fret)` section, proves single-mode concrete items export
+    `role=radio_button` plus explicit `checked_state`, proves the disabled Beta item exports
+    `disabled=true`, `focus=false`, and `invoke=false`, verifies direct disabled-item click does not
+    change selection, then proves label focus plus ArrowRight roving focus skips the disabled item
+    and lands on Gamma without changing the selected Alpha value. The slice found and fixed a
+    semantics completeness gap: single-mode ToggleGroup items previously exported the legacy binary
+    `checked` flag only; they now also export explicit `checked_state=true|false`. Focused runtime
+    passed with run id `1779371026922`; the rebuilt `ui-gallery-toggle-semantics` suite passed 2/2
+    with summary
+    `target/fret-diag-toggle-semantics-suite-disabled-item-v2/sessions/1779371056407-225584/suite.summary.json`;
+    and a row-only diagnostics suite run passed with summary
+    `target/fret-diag-toggle-group-disabled-item-suite-glob-v1/sessions/1779376207964-79492/suite.summary.json`.
+
 Next slice recommendation:
 
-- Continue the concrete action-state axis into a different owner split, preferably ToggleGroup or
-  Menu/Command disabled items where collection metadata, roving focus, disabled semantics, and
-  invoke suppression can drift independently under dynamic state.
+- Continue the action-state axis into Menu/Command disabled items where collection metadata,
+  active-descendant or roving-focus policy, disabled semantics, and invoke suppression can drift
+  independently under dynamic state.

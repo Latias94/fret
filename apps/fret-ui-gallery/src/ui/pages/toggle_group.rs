@@ -12,6 +12,7 @@ pub(super) fn preview_toggle_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElemen
     let spacing = snippets::spacing::render(cx);
     let vertical = snippets::vertical::render(cx);
     let disabled = snippets::disabled::render(cx);
+    let disabled_item_action_state = snippets::disabled_item_action_state::render(cx);
     let custom = snippets::custom::render(cx);
     let rtl = snippets::rtl::render(cx);
     let children = snippets::children::render(cx);
@@ -32,13 +33,14 @@ pub(super) fn preview_toggle_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElemen
         "`ToggleGroupItem::new(..., children)`, `child(...)`, and `children(...)` remain the source-aligned item-content surface for text, icon, and mixed content.",
         "`ToggleGroupItem::refine_layout(...)` and `refine_style(...)` now cover upstream custom item-root sizing and rounding without moving caller-owned recipe tweaks into the default component chrome.",
         "Selection semantics, roving focus, segmented borders, and pressed-state chrome remain recipe-owned; item-root custom layout and surrounding width/flex negotiation remain caller-owned.",
+        "`Disabled Item Action-State (Fret)` keeps disabled item semantics, invoke suppression, roving focus skip, and single-mode `checked_state` observable on concrete ToggleGroup items.",
         "No extra root `children([...])` or generic `compose()` API is warranted on the default lane because the helper family already covers composable item assembly without widening the recipe contract.",
-        "`Children (Fret)`, `Single (Fret)`, `Small (Fret)`, `Large (Fret)`, `Label Association (Fret)`, `Full Width Items (Fret)`, and `Flex-1 Items (Fret)` stay after the upstream docs path as focused Fret follow-ups and regression slices.",
+        "`Children (Fret)`, `Single (Fret)`, `Small (Fret)`, `Large (Fret)`, `Label Association (Fret)`, `Disabled Item Action-State (Fret)`, `Full Width Items (Fret)`, and `Flex-1 Items (Fret)` stay after the upstream docs path as focused Fret follow-ups and regression slices.",
     ]);
     let notes = doc_layout::notes_block([
         "This page now keeps the upstream shadcn/Base Toggle Group docs path source-aligned on content, default values, and section order before adding focused Fret follow-ups.",
         "Preview now mirrors the upstream Toggle Group docs path first: `Demo`, `Usage`, `Outline`, `Size`, `Spacing`, `Vertical`, `Disabled`, `Custom`, `RTL`, and `API Reference`.",
-        "Focused Fret follow-ups stay afterward: `Children (Fret)`, `Single (Fret)`, `Small (Fret)`, `Large (Fret)`, `Label Association (Fret)`, `Full Width Items (Fret)`, `Flex-1 Items (Fret)`, and `Notes`.",
+        "Focused Fret follow-ups stay afterward: `Children (Fret)`, `Single (Fret)`, `Small (Fret)`, `Large (Fret)`, `Label Association (Fret)`, `Disabled Item Action-State (Fret)`, `Full Width Items (Fret)`, `Flex-1 Items (Fret)`, and `Notes`.",
         "The `Size` lane now follows the upstream `toggle-group-sm` + `toggle-group-lg` examples, and `Spacing` keeps the upstream icon-plus-label composition instead of a text-only substitute.",
         "Prefer the documented root constructors plus `.items([...])` for copyable docs-path snippets; reach for the `toggle_group_*` helper family when you want builder-preserving item composition inside a closure.",
         "Item-root refinements belong on the item call site instead of the default group chrome.",
@@ -83,6 +85,16 @@ pub(super) fn preview_toggle_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElemen
         .description("Disabled group matching the upstream docs example.")
         .test_id_prefix("ui-gallery-toggle-group-disabled")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
+    let disabled_item_action_state = DocSection::build(
+        cx,
+        "Disabled Item Action-State (Fret)",
+        disabled_item_action_state,
+    )
+    .description(
+        "Single ToggleGroup item-level disabled action-state and roving-focus skip regression gate.",
+    )
+    .test_id_prefix("ui-gallery-toggle-group-disabled-item-action-state")
+    .code_rust_from_file_region(snippets::disabled_item_action_state::SOURCE, "example");
     let custom = DocSection::build(cx, "Custom", custom)
         .description("Custom item-root sizing and rounding for a font-weight selector.")
         .test_id_prefix("ui-gallery-toggle-group-custom")
@@ -135,6 +147,7 @@ pub(super) fn preview_toggle_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElemen
             spacing,
             vertical,
             disabled,
+            disabled_item_action_state,
             custom,
             rtl,
             api_reference,

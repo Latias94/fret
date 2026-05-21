@@ -581,3 +581,20 @@ mechanism can visibly fail.
   `target/fret-diag-checkbox-semantics-suite-required-disabled-group-v1/sessions/1779363128715-208764/suite.summary.json`,
   and the broad runtime suite now passes 27/27 with summary
   `target/fret-diag-shadcn-runtime-evidence-checkbox-required-disabled-group-v1/sessions/1779363773383-195668/suite.summary.json`.
+
+- ToggleGroup disabled item action-state update:
+  `ui-gallery-toggle-group-disabled-item-action-state.json` now covers the single-mode ToggleGroup
+  owner split where caller-owned FieldLabel/description chrome focuses the group while each
+  concrete ToggleGroup item owns radio-button checked-state, disabled state, focus, and invoke
+  semantics. The gate starts on the Toggle Group page's `Disabled Item Action-State (Fret)`
+  section, proves Alpha exports `checked_state=true`, proves the disabled Beta item exports
+  `checked_state=false`, `disabled=true`, `focus=false`, and `invoke=false`, verifies direct
+  disabled-item click does not mutate selection, then proves label focus plus ArrowRight roving
+  focus skips Beta and lands on Gamma while Alpha stays selected. This slice also closes the
+  ToggleGroup checked-state semantics gap by stamping explicit `checked_state=true|false` on
+  single-mode items while preserving legacy `checked`. Focused runtime evidence is anchored at
+  `target/fret-diag-toggle-group-disabled-item-action-state-v2/sessions/1779371004637-185624/1779371026922/ai.packet`,
+  the dedicated suite evidence is anchored at
+  `target/fret-diag-toggle-semantics-suite-disabled-item-v2/sessions/1779371056407-225584/suite.summary.json`,
+  and a row-only suite evidence pass is anchored at
+  `target/fret-diag-toggle-group-disabled-item-suite-glob-v1/sessions/1779376207964-79492/suite.summary.json`.

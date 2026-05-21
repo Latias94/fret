@@ -4233,3 +4233,57 @@ Status: complete for the grouped Checkbox required/disabled action-state compani
 - The broad `ui-gallery-shadcn-runtime-evidence` suite now passes 27/27 with summary
   `target/fret-diag-shadcn-runtime-evidence-checkbox-required-disabled-group-v1/sessions/1779363773383-195668/suite.summary.json`,
   `reason_code_counts={}`, and required/disabled group row run id `1779364468762`.
+
+## M175: ToggleGroup Disabled Item Action-State Runtime Gate
+
+Status: complete for single-mode ToggleGroup disabled-item action-state and roving-focus coverage.
+
+- Added a Toggle Group page `Disabled Item Action-State (Fret)` section that intentionally separates
+  the caller-owned field label/description shell from concrete item semantics. The ToggleGroup label
+  focuses the current tab stop, while each item owns radio checked-state, disabled state, focus, and
+  invoke semantics.
+- Fixed a semantics completeness gap in `fret-ui-kit` ToggleGroup primitives: single-mode items now
+  export explicit `checked_state=true|false` in addition to the legacy binary `checked` flag, so the
+  same structured checked-state predicate used by Checkbox and RadioGroup gates can observe
+  ToggleGroup radio-button items.
+- Added `ui-gallery-toggle-group-disabled-item-action-state.json`, which starts directly on the
+  Toggle Group page and scopes rendering to `Disabled Item Action-State (Fret)`. The gate proves
+  Alpha starts `checked_state=true`, Beta exports `checked_state=false`, `disabled=true`,
+  `focus=false`, and `invoke=false`, Gamma exports `checked_state=false` and `invoke=true`, direct
+  disabled-item click cannot change selection, and ArrowRight roving focus skips the disabled Beta
+  item without changing the selected Alpha value.
+- Added a root redirect, promoted the script into `ui-gallery-toggle-semantics`, promoted it into
+  `ui-gallery-shadcn-runtime-evidence`, refreshed the registry, and added protocol roundtrip
+  coverage.
+- A first dedicated-suite draft exposed a diagnostics authoring hazard rather than a ToggleGroup
+  policy defect: a trailing enabled-Gamma click mutation was not part of the disabled-item/roving
+  invariant and could time out under suite scheduling. The final gate keeps the deterministic
+  invariant tight: disabled action suppression plus roving skip plus explicit checked-state export.
+- JSON, registry, formatting, and diff hygiene gates pass:
+  `python -m json.tool tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery-toggle-group-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-toggle-semantics/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem/fret-ui-kit/src/primitives/toggle_group.rs ecosystem/fret-ui-shadcn/src/toggle_group.rs apps/fret-ui-gallery/src/ui/snippets/toggle_group/disabled_item_action_state.rs apps/fret-ui-gallery/src/ui/snippets/toggle_group/mod.rs apps/fret-ui-gallery/src/ui/pages/toggle_group.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  and `git diff --check`.
+- Focused Rust gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit --lib toggle_group_item_a11y_single_uses_radio_role_and_checked`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib toggle_group_single_arrow_skips_disabled_and_exports_checked_state`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app toggle_group_disabled_item_action_state_snippet_keeps_roving_and_item_action_state_separate`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_toggle_group_disabled_item_action_state`;
+  and the matching `cargo test --profile dev-fast` focused protocol roundtrip.
+- Build passes:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\toggle\ui-gallery-toggle-group-disabled-item-action-state.json --dir target\fret-diag-toggle-group-disabled-item-action-state-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779371026922`, AI packet
+  `target/fret-diag-toggle-group-disabled-item-action-state-v2/sessions/1779371004637-185624/1779371026922/ai.packet`,
+  and pack
+  `target/fret-diag-toggle-group-disabled-item-action-state-v2/sessions/1779371004637-185624/share/1779371026922.zip`.
+- Dedicated runtime suite passes with `stage_counts={"passed":2}` and summary
+  `target/fret-diag-toggle-semantics-suite-disabled-item-v2/sessions/1779371056407-225584/suite.summary.json`;
+  the disabled-item row run id is `1779371158503`.
+- Row-only diagnostics suite pass:
+  `target/fret-diag-toggle-group-disabled-item-suite-glob-v1/sessions/1779376207964-79492/suite.summary.json`
+  with `stage_counts={"passed":1}` and disabled-item row run id `1779376227686`.

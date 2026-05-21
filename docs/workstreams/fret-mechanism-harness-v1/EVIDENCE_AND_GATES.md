@@ -7587,3 +7587,86 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-checkbox-required-disabled-group-v1 --session-auto --timeout-ms 2400000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed 27/27; `stage_counts={"passed":27}`; `reason_code_counts={}`;
     required/disabled group row run id `1779364468762`.
+
+## ToggleGroup Disabled Item Action-State Runtime Gate
+
+- invariant:
+  single-mode shadcn/Radix ToggleGroup items behave as radio-button choices. Disabled item policy
+  belongs to each concrete item: disabled items must expose `disabled=true`, suppress `focus` and
+  `invoke`, and be skipped by roving focus without changing the selected value. The caller-owned
+  field label/description shell must not become the action-state owner.
+- finding:
+  disabled item action suppression and roving focus behavior were correct, but the slice found a
+  semantics completeness gap: single-mode ToggleGroup items exposed legacy `checked` only.
+  `toggle_group_item_a11y_single(...)` now stamps explicit `checked_state=true|false` while
+  preserving `checked`, so diagnostics and accessibility consumers can observe ToggleGroup radio
+  checked state through the same structured channel as Checkbox and RadioGroup.
+- implementation anchors:
+  `ecosystem/fret-ui-kit/src/primitives/toggle_group.rs`,
+  `ecosystem/fret-ui-shadcn/src/toggle_group.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/toggle_group/disabled_item_action_state.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/toggle_group/mod.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-disabled-item-action-state.json`,
+  `tools/diag-scripts/ui-gallery-toggle-group-disabled-item-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-toggle-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  upstream Radix ToggleGroup uses `role="radio"`/`aria-checked` for single mode and skips disabled
+  items in roving focus. Fret maps that to concrete `radio_button` semantics with explicit
+  `checked_state`, item-local disabled action suppression, and caller-owned label/field chrome.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-toggle-group-disabled-item-action-state-v2/sessions/1779371004637-185624/1779371026922/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-toggle-group-disabled-item-action-state-v2/sessions/1779371004637-185624/share/1779371026922.zip`;
+  dedicated suite summary:
+  `target/fret-diag-toggle-semantics-suite-disabled-item-v2/sessions/1779371056407-225584/suite.summary.json`;
+  row-only suite summary:
+  `target/fret-diag-toggle-group-disabled-item-suite-glob-v1/sessions/1779376207964-79492/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\toggle\ui-gallery-toggle-group-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-toggle-group-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-toggle-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem\fret-ui-kit\src\primitives\toggle_group.rs ecosystem\fret-ui-shadcn\src\toggle_group.rs apps\fret-ui-gallery\src\ui\snippets\toggle_group\disabled_item_action_state.rs apps\fret-ui-gallery\src\ui\snippets\toggle_group\mod.rs apps\fret-ui-gallery\src\ui\pages\toggle_group.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-kit toggle_group_item_a11y_single_uses_radio_role_and_checked --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit --lib toggle_group_item_a11y_single_uses_radio_role_and_checked`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-shadcn toggle_group_single_arrow_skips_disabled_and_exports_checked_state --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib toggle_group_single_arrow_skips_disabled_and_exports_checked_state`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app toggle_group_ -- --nocapture`
+  - result: passed; 5 tests.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app toggle_group_disabled_item_action_state_snippet_keeps_roving_and_item_action_state_separate`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_toggle_group_disabled_item_action_state -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_toggle_group_disabled_item_action_state`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\toggle\ui-gallery-toggle-group-disabled-item-action-state.json --dir target\fret-diag-toggle-group-disabled-item-action-state-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779371026922`.
+- dedicated Toggle runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite tools\diag-scripts\suites\ui-gallery-toggle-semantics\suite.json --dir target\fret-diag-toggle-semantics-suite-disabled-item-v2 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 2/2; `stage_counts={"passed":2}`; disabled-item row run id `1779371158503`.
+- row-only diagnostics suite:
+  `target\dev-fast\fretboard-dev.exe diag suite --glob 'tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-disabled-item-action-state.json' --dir target\fret-diag-toggle-group-disabled-item-suite-glob-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; disabled-item row run id `1779376227686`.
+- broad-suite note:
+  the script is promoted into `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`.
+  A local full-suite attempt using `target\fret-diag-shadcn-runtime-evidence-toggle-group-disabled-item-v1`
+  exceeded the outer shell timeout before reaching the new ToggleGroup row, so this slice uses the
+  focused runtime, dedicated Toggle suite, and row-only suite as passing evidence.
