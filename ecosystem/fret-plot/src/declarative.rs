@@ -1,9 +1,9 @@
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Event, FontWeight, Paint, PathStyle, Point, Px, Rect, Size,
-    StrokeStyle, TextOverflow, TextStyle, TextWrap,
+    Color, Corners, DrawOrder, Edges, Event, FontWeight, MouseButton, Paint, PathStyle, Point, Px,
+    Rect, Size, StrokeStyle, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
@@ -94,11 +94,12 @@ pub fn line_plot_panel<H: UiHost + 'static>(
     });
     let output_snapshot = Rc::new(Cell::new(output_snapshot));
     let linked_cursor_x = Rc::new(Cell::new(None::<f64>));
-    let hidden_series = Rc::new(Vec::<SeriesId>::new());
+    let hidden_series = Rc::new(RefCell::new(Vec::<SeriesId>::new()));
     let style = props.style;
     let x_scale = props.x_scale;
     let y_scale = props.y_scale;
     let state = props.state.clone();
+    let event_state = props.state.clone();
     let output = props.output.clone();
     let event_model = model.clone();
     let event_output = output.clone();
@@ -118,14 +119,24 @@ pub fn line_plot_panel<H: UiHost + 'static>(
         },
         {
             let linked_cursor_x = linked_cursor_x.clone();
+            let hidden_series = hidden_series.clone();
             let state = state.clone();
             move |cx| {
-                let linked_x = state
-                    .as_ref()
-                    .and_then(|state| state.read_ref(cx.app(), |state| state.linked_cursor_x).ok())
-                    .flatten()
-                    .filter(|x| x.is_finite());
-                linked_cursor_x.set(linked_x);
+                if let Some(state) = state.as_ref() {
+                    let (linked_x, hidden) = state
+                        .read_ref(cx.app(), |state| {
+                            (
+                                state.linked_cursor_x.filter(|x| x.is_finite()),
+                                state.hidden_series.iter().copied().collect::<Vec<_>>(),
+                            )
+                        })
+                        .unwrap_or((None, Vec::new()));
+                    linked_cursor_x.set(linked_x);
+                    hidden_series.replace(hidden);
+                } else {
+                    linked_cursor_x.set(None);
+                    hidden_series.replace(Vec::new());
+                }
 
                 let bounds = cx.bounds();
                 for child in cx.children().to_vec() {
@@ -139,6 +150,7 @@ pub fn line_plot_panel<H: UiHost + 'static>(
             let linked_cursor_x = linked_cursor_x.clone();
             let hidden_series = hidden_series.clone();
             vec![cx.canvas(canvas, move |painter| {
+                let hidden_series = hidden_series.borrow();
                 paint_line_plot_panel(
                     painter,
                     &model,
@@ -155,6 +167,23 @@ pub fn line_plot_panel<H: UiHost + 'static>(
     let surface_id = element.id;
     cx.managed_surface_on_event_for(surface_id, move |cx, event| {
         let bounds = cx.bounds();
+        if let Some(state) = event_state.as_ref()
+            && handle_line_plot_legend_pointer_event(
+                cx.app(),
+                state,
+                event,
+                bounds,
+                &event_model,
+                event_style,
+            )
+        {
+            cx.invalidate_self(fret_ui::Invalidation::Paint);
+            cx.request_redraw();
+            cx.notify();
+            cx.stop_propagation();
+            return;
+        }
+
         let Some(snapshot) = line_plot_panel_event_snapshot(
             event,
             bounds,
@@ -234,6 +263,9 @@ fn paint_line_plot_panel(
     let series_count = model.series.len();
     let raster_scale_factor = painter.scale_factor();
     for (index, series) in model.series.iter().enumerate() {
+        if hidden_series.contains(&series.id) {
+            continue;
+        }
         let Some(points) = series.data.as_slice() else {
             continue;
         };
@@ -282,6 +314,56 @@ fn paint_line_plot_panel(
         x_scale,
         y_scale,
     );
+}
+
+fn handle_line_plot_legend_pointer_event<H: UiHost>(
+    app: &mut H,
+    state: &Model<PlotState>,
+    event: &Event,
+    bounds: Rect,
+    model: &LinePlotModel,
+    style: LinePlotStyle,
+) -> bool {
+    let Event::Pointer(fret_core::PointerEvent::Down {
+        position,
+        button: MouseButton::Left,
+        ..
+    }) = event
+    else {
+        return false;
+    };
+
+    let plot = line_plot_inner_rect(bounds, style);
+    let Some((series_id, hit)) = line_plot_legend_hit(model, plot, *position) else {
+        return false;
+    };
+    if hit != LinePlotLegendHit::Swatch {
+        return false;
+    }
+
+    state
+        .update(app, |state, _cx| {
+            let total = model.series.len();
+            let hidden_count = model
+                .series
+                .iter()
+                .filter(|series| state.hidden_series.contains(&series.id))
+                .count();
+            let visible_count = total.saturating_sub(hidden_count);
+            if state.hidden_series.contains(&series_id) {
+                state.hidden_series.remove(&series_id);
+                state.pinned_series = state.pinned_series.filter(|id| *id != series_id);
+                true
+            } else if visible_count <= 1 {
+                false
+            } else {
+                state.hidden_series.insert(series_id);
+                state.pinned_series = state.pinned_series.filter(|id| *id != series_id);
+                true
+            }
+        })
+        .ok()
+        .unwrap_or(false)
 }
 
 fn line_plot_panel_event_snapshot(
@@ -527,29 +609,22 @@ fn paint_line_plot_legend(
     };
 
     let series_count = model.series.len();
-    let row_height = Px(18.0);
-    let swatch = Size::new(Px(12.0), Px(3.0));
-    let gap = Px(6.0);
-    let inset = Px(8.0);
-    let text_baseline_offset = Px(12.0);
-    let x = Px(plot.origin.x.0 + inset.0);
-    let mut y = Px(plot.origin.y.0 + inset.0);
-    let max_y = plot.origin.y.0 + plot.size.height.0 - inset.0;
+    let metrics = line_plot_legend_metrics();
     let scope = painter.key_scope(&"fret-plot.declarative.legend");
     let raster_scale_factor = painter.scale_factor();
 
     for (index, series) in model.series.iter().enumerate() {
-        if y.0 + row_height.0 > max_y {
+        let Some(row) = line_plot_legend_row_rect(plot, index) else {
             break;
-        }
+        };
+        let swatch_rect = line_plot_legend_swatch_rect(row);
 
         let color = series
             .stroke_color
             .unwrap_or_else(|| series_color(style, index, series_count));
-        let row_mid = y.0 + row_height.0 * 0.5;
         painter.scene().push(fret_core::SceneOp::Quad {
             order: DrawOrder(30),
-            rect: Rect::new(Point::new(x, Px(row_mid - swatch.height.0 * 0.5)), swatch),
+            rect: swatch_rect,
             background: Paint::Solid(color).into(),
             border: Edges::default(),
             border_paint: Paint::Solid(Color::TRANSPARENT).into(),
@@ -563,8 +638,8 @@ fn paint_line_plot_legend(
             key,
             DrawOrder(31),
             Point::new(
-                Px(x.0 + swatch.width.0 + gap.0),
-                Px(y.0 + text_baseline_offset.0),
+                Px(swatch_rect.origin.x.0 + swatch_rect.size.width.0 + metrics.gap.0),
+                Px(row.origin.y.0 + metrics.text_baseline_offset.0),
             ),
             series.label.clone(),
             text_style.clone(),
@@ -572,8 +647,88 @@ fn paint_line_plot_legend(
             text_constraints,
             raster_scale_factor,
         );
-        y = Px(y.0 + row_height.0);
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum LinePlotLegendHit {
+    Swatch,
+    Label,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LinePlotLegendMetrics {
+    row_height: Px,
+    swatch: Size,
+    gap: Px,
+    inset: Px,
+    text_baseline_offset: Px,
+}
+
+fn line_plot_legend_metrics() -> LinePlotLegendMetrics {
+    LinePlotLegendMetrics {
+        row_height: Px(18.0),
+        swatch: Size::new(Px(12.0), Px(3.0)),
+        gap: Px(6.0),
+        inset: Px(8.0),
+        text_baseline_offset: Px(12.0),
+    }
+}
+
+fn line_plot_legend_row_rect(plot: Rect, index: usize) -> Option<Rect> {
+    let metrics = line_plot_legend_metrics();
+    if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
+        return None;
+    }
+    let y = Px(plot.origin.y.0 + metrics.inset.0 + index as f32 * metrics.row_height.0);
+    let max_y = plot.origin.y.0 + plot.size.height.0 - metrics.inset.0;
+    if y.0 + metrics.row_height.0 > max_y {
+        return None;
+    }
+    Some(Rect::new(
+        Point::new(Px(plot.origin.x.0 + metrics.inset.0), y),
+        Size::new(
+            Px((plot.size.width.0 - metrics.inset.0 * 2.0).max(0.0)),
+            metrics.row_height,
+        ),
+    ))
+}
+
+fn line_plot_legend_swatch_rect(row: Rect) -> Rect {
+    let metrics = line_plot_legend_metrics();
+    let row_mid = row.origin.y.0 + row.size.height.0 * 0.5;
+    Rect::new(
+        Point::new(row.origin.x, Px(row_mid - metrics.swatch.height.0 * 0.5)),
+        metrics.swatch,
+    )
+}
+
+fn line_plot_legend_swatch_hit_rect(row: Rect) -> Rect {
+    let metrics = line_plot_legend_metrics();
+    Rect::new(row.origin, Size::new(metrics.swatch.width, row.size.height))
+}
+
+fn line_plot_legend_hit(
+    model: &LinePlotModel,
+    plot: Rect,
+    position: Point,
+) -> Option<(SeriesId, LinePlotLegendHit)> {
+    if model.series.is_empty() {
+        return None;
+    }
+    for (index, series) in model.series.iter().enumerate() {
+        let row = line_plot_legend_row_rect(plot, index)?;
+        if !row.contains(position) {
+            continue;
+        }
+        let hit = if line_plot_legend_swatch_hit_rect(row).contains(position) {
+            LinePlotLegendHit::Swatch
+        } else {
+            LinePlotLegendHit::Label
+        };
+        return Some((series.id, hit));
+    }
+    None
 }
 
 fn paint_line_plot_axis_tick_labels(
@@ -1059,12 +1214,12 @@ mod tests {
     use crate::cartesian::DataPoint;
     use crate::models::{LinePlotModel, LineSeries};
     use crate::series::Series;
-    use crate::state::PlotOutput;
+    use crate::state::{PlotOutput, PlotState};
     use fret_core::{
         AppWindowId, Event, FrameId, MaterialDescriptor, MaterialId, MaterialRegistrationError,
-        MaterialService, Modifiers, MouseButtons, PathCommand, PathConstraints, PathId,
-        PathMetrics, PathService, PointerEvent, PointerId, PointerType, Scene, SvgId, SvgService,
-        TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
+        MaterialService, Modifiers, MouseButton, MouseButtons, PathCommand, PathConstraints,
+        PathId, PathMetrics, PathService, PointerEvent, PointerId, PointerType, Scene, SvgId,
+        SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
     };
     use fret_runtime::{
         ClipboardToken, CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession,
@@ -1674,6 +1829,123 @@ mod tests {
         );
 
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+
+    #[test]
+    fn line_plot_panel_legend_swatch_click_toggles_series_visibility_on_declarative_path() {
+        let mut app = TestHost::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+        let mut services = FakeServices::default();
+        let series = vec![
+            LineSeries::new(
+                "Alpha",
+                Series::from_points_sorted(
+                    vec![
+                        DataPoint { x: 0.0, y: 1.0 },
+                        DataPoint { x: 1.0, y: 2.0 },
+                        DataPoint { x: 2.0, y: 1.5 },
+                    ],
+                    true,
+                ),
+            ),
+            LineSeries::new(
+                "Beta",
+                Series::from_points_sorted(
+                    vec![
+                        DataPoint { x: 0.0, y: 0.5 },
+                        DataPoint { x: 1.0, y: 1.0 },
+                        DataPoint { x: 2.0, y: 2.5 },
+                    ],
+                    true,
+                ),
+            ),
+        ];
+        let alpha_id = series[0].id;
+        let model = app.models_mut().insert(LinePlotModel::from_series(series));
+        let state = app.models_mut().insert(PlotState::default());
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "plot-declarative-legend-toggle",
+            |cx| {
+                vec![line_plot_panel(
+                    cx,
+                    LinePlotPanelProps::new(model.clone()).state(state.clone()),
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let series_paths = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Path {
+                        order: DrawOrder(20),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert_eq!(series_paths, 2);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: Point::new(Px(42.0), Px(32.0)),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let hidden = state
+            .read_ref(&app, |state| state.hidden_series.clone())
+            .expect("plot state should be readable");
+        assert!(
+            hidden.contains(&alpha_id),
+            "clicking a declarative legend swatch should hide that series"
+        );
+
+        scene.clear();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let series_paths = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Path {
+                        order: DrawOrder(20),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert_eq!(
+            series_paths, 1,
+            "hidden declarative legend series should be omitted from line painting"
+        );
     }
 
     #[test]

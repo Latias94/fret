@@ -5538,6 +5538,36 @@ Related plan:
       parity slices are implemented.
     - The focused rich-readout test, full `fret-plot` gate, compat retained check, formatting,
       layering, catalog, conflict-marker scan, and whitespace checks all passed.
+- [x] RBX-M3-254 Move line plot legend swatch visibility toggles onto the declarative path.
+  - Scope:
+    - `ecosystem/fret-plot/src/declarative.rs`
+  - Goal:
+    - Let the default declarative `line_plot_panel(...)` read `PlotState.hidden_series`, skip
+      hidden line series during painting/readout, and update that state when the user clicks a
+      legend swatch column.
+    - Preserve retained-compatible "do not hide the last visible series" behavior.
+    - Keep label-area pin/unpin, shift-click solo/restore, hover emphasis, pan/zoom/query,
+      overlays, non-line layers, and retained source deletion as later parity slices.
+  - Validation:
+    - `cargo nextest run -p fret-plot line_plot_panel_legend_swatch_click_toggles_series_visibility_on_declarative_path`
+    - `cargo nextest run -p fret-plot`
+    - `cargo check -p fret-plot --features compat-retained-canvas`
+    - `cargo fmt --all -- --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+    - `rg -n "^(<<<<<<<|=======|>>>>>>>)" . -g '!target' -g '!repo-ref'`
+  - Evidence:
+    - `ecosystem/fret-plot/src/declarative.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-254-declarative-line-plot-legend-swatch-visibility-toggle`
+  - Result:
+    - The declarative managed-surface prepaint path now mirrors `PlotState.hidden_series` for
+      paint/readout.
+    - Declarative legend swatch-column clicks toggle `PlotState.hidden_series`, clear a matching
+      pinned series, and stop propagation after requesting a repaint.
+    - Hidden series are omitted from declarative line painting and per-series readout rows.
+    - The focused legend-toggle test, full `fret-plot` gate, compat retained check, formatting,
+      layering, catalog, conflict-marker scan, and whitespace checks all passed.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

@@ -400,13 +400,19 @@ declarative local and linked cursor overlays now append per-series rows through 
 `plot::readout` value lookup, and the retained line layer delegates to that same default helper.
 Legend interactions, pan/zoom/query, overlays, non-line layer readouts, first-party retained plot
 consumers, and retained source deletion remain future parity slices.
+`RBX-M3-254` then moved line plot legend swatch visibility toggles onto the default declarative
+path. The declarative panel now mirrors caller-owned `PlotState.hidden_series`, skips hidden line
+series in paint/readout, and toggles visibility on swatch-column clicks while preserving the
+retained "do not hide the last visible series" guard. Label-area pin/unpin, shift-click
+solo/restore, hover emphasis, pan/zoom/query, overlays, non-line layers, first-party retained plot
+consumers, and retained source deletion remain future parity slices.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining
 public/demo/gallery/cookbook consumers that still rely on retained `ChartCanvas` behavior.
-Remaining M3 plot work still needs declarative parity for legend interactions, pan/zoom/box/query,
-overlays, non-line readouts and heatmap/histogram/bar/scatter/area/stairs/shaded/candlestick
-layers, and first-party examples before deleting retained plot source or the
+Remaining M3 plot work still needs declarative parity for legend pin/solo/hover interactions,
+pan/zoom/box/query, overlays, non-line readouts and heatmap/histogram/bar/scatter/area/stairs/
+shaded/candlestick layers, and first-party examples before deleting retained plot source or the
 `compat-retained-canvas` feature.
 
 ## Completed Implementation

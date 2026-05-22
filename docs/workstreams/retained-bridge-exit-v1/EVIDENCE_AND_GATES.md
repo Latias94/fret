@@ -13260,3 +13260,64 @@ Broader gates not run:
     The focused rich-readout test, full default `fret-plot` package gate, explicit compat retained
     check, formatting, layering, catalog, conflict-marker scan, and whitespace checks cover the
     changed surface.
+
+## 2026-05-22 - RBX-M3-254 Declarative line plot legend swatch visibility toggle
+
+Claim verified:
+
+- The default declarative line plot now reads `PlotState.hidden_series`, omits hidden line series
+  from painting/readout, and updates that state when a user clicks a legend swatch column.
+- Declarative swatch-click policy preserves the retained guard that prevents hiding the last
+  visible series and clears a matching pinned series when a series becomes hidden.
+- This does not yet migrate label-area pin/unpin, shift-click solo/restore, hover emphasis,
+  pan/zoom/query, overlays, non-line layers, or retained source deletion.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-plot line_plot_panel_legend_swatch_click_toggles_series_visibility_on_declarative_path`
+  - Result: failed before implementation because the declarative legend swatch click did not
+    update `PlotState.hidden_series`.
+  - Scope proven: the new test started red and locked the missing declarative legend visibility
+    toggle behavior.
+- `cargo nextest run -p fret-plot line_plot_panel_legend_swatch_click_toggles_series_visibility_on_declarative_path`
+  - Result: passed, 1 test, 32 skipped, with the pre-existing `fret-ui`
+    `current_effective_opacity` dead-code warning.
+  - Scope proven: clicking a declarative legend swatch hides that series in caller-owned
+    `PlotState.hidden_series`, and the next paint omits the hidden line series.
+- `cargo nextest run -p fret-plot`
+  - Result: passed, 33 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: the default `fret-plot` package gate remains green after wiring declarative
+    legend visibility state.
+- `cargo check -p fret-plot --features compat-retained-canvas`
+  - Result: passed, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: retained plot compatibility still compiles after the declarative legend
+    visibility migration.
+- `cargo fmt --all -- --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the legend-toggle update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 429 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" . -g '!target' -g '!repo-ref'`
+  - Result: no matches.
+  - Scope proven: the current worktree has no unresolved conflict markers.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-254` is a targeted default declarative `fret-plot` legend visibility slice.
+    The focused legend-toggle test, full default `fret-plot` package gate, explicit compat retained
+    check, formatting, layering, catalog, conflict-marker scan, and whitespace checks cover the
+    changed surface.
