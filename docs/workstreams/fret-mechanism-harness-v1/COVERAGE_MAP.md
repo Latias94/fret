@@ -123,9 +123,12 @@ date: 2026-05-12
   cached Combobox relation companion: it closes the popup, moves the cached source between panels,
   proves stale `controls`/`labelled_by` endpoints are absent while closed, then reopens and proves
   the moved relation edges plus top-side panel-root placement. The latest `ui-gallery-resizable`
-  suite now has 4/4 passing scripts with evidence, and the refresh found/fixed the
+  suite now has 5/5 passing scripts with evidence, and the refresh found/fixed the
   element-root-bounds cache ownership bug where an ancestor/overlay frame could drop a still-valid
-  Resizable panel root boundary.
+  Resizable panel root boundary. `ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore.json`
+  closes the adjacent cached-source focus-restore gap: it moves the cached Combobox across panels,
+  opens the popup, presses Escape, and proves focus restores to the live moved trigger rather than a
+  stale pre-move node.
 - Read-only non-list action-state update:
   `read_only_is` now lets diagnostics assert the semantics read-only flag directly. The UI Gallery
   Switch gate `ui-gallery-switch-read-only-action-state.json` proves a read-only Switch remains

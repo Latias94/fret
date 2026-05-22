@@ -1804,3 +1804,18 @@ Next slice recommendation:
 - Continue cached/root-boundary stale-state discovery outside relation edges: prefer cached overlay
   dismissal/focus-restore, moving cached action-state/disabled metadata, or another surface where
   visual placement can pass while stale state survives.
+
+- [x] Add a cached Resizable Combobox Escape focus-restore companion.
+  - Result:
+    `ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore.json` moves the same
+    cached Combobox source from the left Resizable root to the right root, opens the popup, proves
+    focus is in the popup input, presses Escape, and verifies the popup unmounts with focus restored
+    to the live moved trigger. No new defect reproduced. Focused runtime passed with run id
+    `1779466372607`; the five-row `ui-gallery-resizable` suite passed with summary
+    `target/fret-diag-resizable-suite-focus-restore-v1/sessions/1779466397357-72132/suite.summary.json`.
+
+Next slice recommendation:
+
+- Continue cached/root-boundary stale-state discovery on moving cached action-state/disabled
+  metadata or another dismissal-policy surface; relation edges and Escape focus restore are now
+  covered for the moving cached Combobox fixture.

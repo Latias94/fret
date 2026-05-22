@@ -10601,6 +10601,34 @@
       ]
     },
     {
+      "id": "ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-resizable"
+      ],
+      "tags": [
+        "combobox",
+        "focus_restore",
+        "overlay",
+        "resizable",
+        "root_boundary",
+        "shadcn",
+        "ui_gallery",
+        "view_cache"
+      ],
+      "target_hints": [
+        "Starts directly on the diagnostics-only Resizable Moving Cached Combobox fixture.",
+        "Moves the cached Combobox source across Resizable viewport roots before opening the popup.",
+        "Presses Escape after the move and proves focus restores to the live moved trigger rather than a stale pre-move trigger node."
+      ]
+    },
+    {
       "id": "ui-gallery-resizable-view-cache-moving-combobox-relation-bounce",
       "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-relation-bounce.json",
       "required_capabilities": [

@@ -198,6 +198,26 @@ Current synthetic evidence anchors:
   - suite result:
     passed 4/4; relation-bounce row run id `1779465331803`; summary:
     `target/fret-diag-resizable-suite-owner-fix-v1/sessions/1779465226892-77780/suite.summary.json`.
+- Resizable cached Combobox Escape focus-restore runtime gate:
+  `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore.json`
+  - proof:
+    moves the cached Combobox source across Resizable viewport roots before opening the popup,
+    asserts focus enters the popup input, then presses Escape and proves the popup unmounts with
+    focus restored to the live moved trigger.
+  - focused protocol gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_escape_focus_restore --no-fail-fast`
+  - protocol result:
+    passed with Nextest run id `90fead2d-9ef6-4f9f-be6c-682569713906`.
+  - focused runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore.json --dir target/fret-diag-resizable-moving-combobox-escape-focus-restore-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1779466372607`; AI packet:
+    `target/fret-diag-resizable-moving-combobox-escape-focus-restore-v1/sessions/1779466364091-64312/1779466372607/ai.packet`.
+  - suite command:
+    `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-resizable/suite.json --dir target/fret-diag-resizable-suite-focus-restore-v1 --session-auto --timeout-ms 1000000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    passed 5/5; focus-restore row run id `1779466506265`; summary:
+    `target/fret-diag-resizable-suite-focus-restore-v1/sessions/1779466397357-72132/suite.summary.json`.
 
 ## Timer Dispatch Lifecycle Gates
 
