@@ -7306,6 +7306,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-context-menu-basic-typeahead-reload",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-typeahead-reload.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-context-menu"
+      ],
+      "tags": [
+        "context_menu",
+        "keyboard",
+        "regression_pack",
+        "roving_focus",
+        "shadcn",
+        "typeahead",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Context Menu Basic section with the global status bar visible.",
+        "Opens the ContextMenu by right click, enters the menu with ArrowDown, then uses printable-key typeahead to focus Reload.",
+        "Activates Reload with Enter and proves the command dispatches while the menu closes."
+      ]
+    },
+    {
       "id": "ui-gallery-context-menu-disabled-item-action-state",
       "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json",
       "required_capabilities": [

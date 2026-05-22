@@ -346,6 +346,13 @@ fn script_v2_roundtrip_ui_gallery_context_menu_basic_keyboard_nav() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_context_menu_basic_typeahead_reload() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-typeahead-reload.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_context_menu_basic_right_click_last_action() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json"

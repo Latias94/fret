@@ -1853,3 +1853,20 @@ Next slice recommendation:
 - Resizable now covers multi-viewport placement, moving cached Combobox relation/focus/action-state,
   and moving cached Popover outside-press click-through. Prefer leaving this cluster unless a fresh
   bundle shows family-specific root-boundary drift.
+
+- [x] Add ContextMenu Basic typeahead plus no-match/buffer-timeout recipe fixture coverage.
+  - Result:
+    the recipe typeahead fixture now includes ContextMenu open-menu printable-key matching,
+    no-match focus preservation, and buffer-timeout stale-prefix reset cases. The UI Gallery
+    `ui-gallery-context-menu-basic-typeahead-reload.json` gate opens Basic by right click, proves
+    ArrowDown enters `Back`, printable `r` focuses `Reload`, Enter dispatches
+    `ui_gallery.context_menu.basic.reload`, and the menu closes. No ContextMenu recipe/runtime
+    defect was reproduced. Focused runtime passed with run id `1779472143821`; the refreshed
+    `ui-gallery-context-menu` suite passed 5/5 with summary
+    `target/fret-diag-context-menu-suite-typeahead-reload-v1/sessions/1779472199452-77576/suite.summary.json`.
+
+Next slice recommendation:
+
+- Leave the ContextMenu Basic cluster unless submenu-specific typeahead parity evidence appears.
+  If continuing recipe typeahead, the remaining narrow companion is nested submenu typeahead;
+  otherwise prefer a fresh retained/cached relation or action-state mutation surface.
