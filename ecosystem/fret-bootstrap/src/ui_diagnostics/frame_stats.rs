@@ -39,6 +39,18 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub layout_request_build_roots_time_us: u64,
     #[serde(default)]
+    pub layout_request_build_roots_take_engine_time_us: u64,
+    #[serde(default)]
+    pub layout_request_build_roots_phase1_time_us: u64,
+    #[serde(default)]
+    pub layout_request_build_roots_phase2_time_us: u64,
+    #[serde(default)]
+    pub layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    #[serde(default)]
+    pub layout_request_build_roots_phase2_compute_time_us: u64,
+    #[serde(default)]
+    pub layout_request_build_roots_put_engine_time_us: u64,
+    #[serde(default)]
     pub layout_pending_barrier_relayouts_time_us: u64,
     #[serde(default)]
     pub layout_repair_view_cache_bounds_time_us: u64,
@@ -58,6 +70,10 @@ pub struct UiFrameStatsV1 {
     pub layout_skipped_engine_frame: bool,
     #[serde(default)]
     pub layout_roots_time_us: u64,
+    #[serde(default)]
+    pub layout_roots_apply_time_us: u64,
+    #[serde(default)]
+    pub layout_roots_flush_viewport_time_us: u64,
     #[serde(default)]
     pub layout_barrier_relayouts_time_us: u64,
     #[serde(default)]
@@ -843,6 +859,24 @@ impl UiFrameStatsV1 {
                 .as_micros() as u64,
             layout_request_build_roots_time_us: stats.layout_request_build_roots_time.as_micros()
                 as u64,
+            layout_request_build_roots_take_engine_time_us: stats
+                .layout_request_build_roots_take_engine_time
+                .as_micros() as u64,
+            layout_request_build_roots_phase1_time_us: stats
+                .layout_request_build_roots_phase1_time
+                .as_micros() as u64,
+            layout_request_build_roots_phase2_time_us: stats
+                .layout_request_build_roots_phase2_time
+                .as_micros() as u64,
+            layout_request_build_roots_phase2_clean_geometry_proof_time_us: stats
+                .layout_request_build_roots_phase2_clean_geometry_proof_time
+                .as_micros() as u64,
+            layout_request_build_roots_phase2_compute_time_us: stats
+                .layout_request_build_roots_phase2_compute_time
+                .as_micros() as u64,
+            layout_request_build_roots_put_engine_time_us: stats
+                .layout_request_build_roots_put_engine_time
+                .as_micros() as u64,
             layout_pending_barrier_relayouts_time_us: stats
                 .layout_pending_barrier_relayouts_time
                 .as_micros() as u64,
@@ -864,6 +898,9 @@ impl UiFrameStatsV1 {
                 .as_micros() as u64,
             layout_skipped_engine_frame: stats.layout_skipped_engine_frame,
             layout_roots_time_us: stats.layout_roots_time.as_micros() as u64,
+            layout_roots_apply_time_us: stats.layout_roots_apply_time.as_micros() as u64,
+            layout_roots_flush_viewport_time_us: stats.layout_roots_flush_viewport_time.as_micros()
+                as u64,
             layout_barrier_relayouts_time_us: stats.layout_barrier_relayouts_time.as_micros()
                 as u64,
             layout_view_cache_time_us: stats.layout_view_cache_time.as_micros() as u64,

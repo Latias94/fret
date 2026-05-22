@@ -420,7 +420,7 @@ not update checked-in baselines.
         layout hotspot and keep `layout.engine_solve=0`.
       - Treat this as a geometry-propagation surface reduction, not a whole-frame p95 claim. r24/r25 still show noisy
         total/layout p95 dominated by request-build/proof/root traversal, Scroll layout, and renderer variance.
-    - [ ] Split request-build/root traversal attribution before widening another clean-geometry fast path.
+    - [x] Split request-build/root traversal attribution before widening another clean-geometry fast path.
       - r26 evidence:
         `target/fret-diag/text-clean-geometry-current-20260521-r26-scroll-phase-profile/sessions/1779402798867-239144/1779402829741-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
       - Finding: after wrapper propagation, top resize ticks still have `layout.nodes=1` and `layout.engine_solve=0`,
@@ -428,8 +428,21 @@ not update checked-in baselines.
       - Scroll self profile is only `68..75us` on those ticks (`solve_barrier=29..33us`,
         `layout_children_first_pass=23..26us`), so the next owner is root request/build and root traversal/proof
         attribution, not a broad Scroll semantics shortcut.
-      - Next gate shape: add subphase counters around cached-flow request-build and clean-geometry root traversal, then
-        re-run the same text-measure resize-jitter repro before proposing an optimization.
+      - Implementation: `debug.stats` and `fretboard-dev diag stats` now split request-build roots into
+        `take_engine`, `phase1`, `phase2`, `phase2_clean_geometry_proof`, `phase2_compute`, and `put_engine`, and
+        split layout roots into `apply` and `flush_viewport`.
+      - r27 evidence:
+        `target/fret-diag/text-clean-geometry-current-20260521-r27-root-phase-split/sessions/1779407664059-191108/1779407703518-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+      - r27 result: p50/p95 total `154/1572us`, layout `46/916us`, paint `51/602us`. Root phase p95/max reports
+        request-build total/take/phase1/phase2/proof/compute/put `365/10/49/303/303/0/6us`, and layout roots
+        total/apply/flush `499/498/0us`.
+      - Top r27 resize ticks show the same shape:
+        - tick `208`: request-build `365us` with clean-geometry proof `303us`; layout roots `499us`, apply `498us`.
+        - tick `211`: request-build `318us` with proof `253us`; layout roots `459us`, apply `458us`.
+        - tick `214`: request-build `310us` with proof `245us`; layout roots `396us`, apply `395us`.
+      - Next owner: optimize or short-circuit clean-geometry proof traversal only if a focused gate preserves scroll
+        extent, hit-test, element bounds, semantics bounds, and layout-query correctness. Do not widen Scroll itself
+        from the current evidence.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
     Windows RTX4090 evidence.
 

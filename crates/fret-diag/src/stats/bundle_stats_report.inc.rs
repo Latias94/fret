@@ -42,7 +42,15 @@ pub(super) struct BundleStatsReport {
     sum_layout_invalidate_scroll_handle_bindings_time_us: u64,
     sum_layout_expand_view_cache_invalidations_time_us: u64,
     sum_layout_request_build_roots_time_us: u64,
+    sum_layout_request_build_roots_take_engine_time_us: u64,
+    sum_layout_request_build_roots_phase1_time_us: u64,
+    sum_layout_request_build_roots_phase2_time_us: u64,
+    sum_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    sum_layout_request_build_roots_phase2_compute_time_us: u64,
+    sum_layout_request_build_roots_put_engine_time_us: u64,
     sum_layout_roots_time_us: u64,
+    sum_layout_roots_apply_time_us: u64,
+    sum_layout_roots_flush_viewport_time_us: u64,
     sum_layout_collapse_layout_observations_time_us: u64,
     sum_layout_time_us: u64,
     sum_layout_view_cache_time_us: u64,
@@ -68,7 +76,15 @@ pub(super) struct BundleStatsReport {
     max_layout_invalidate_scroll_handle_bindings_time_us: u64,
     max_layout_expand_view_cache_invalidations_time_us: u64,
     max_layout_request_build_roots_time_us: u64,
+    max_layout_request_build_roots_take_engine_time_us: u64,
+    max_layout_request_build_roots_phase1_time_us: u64,
+    max_layout_request_build_roots_phase2_time_us: u64,
+    max_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    max_layout_request_build_roots_phase2_compute_time_us: u64,
+    max_layout_request_build_roots_put_engine_time_us: u64,
     max_layout_roots_time_us: u64,
+    max_layout_roots_apply_time_us: u64,
+    max_layout_roots_flush_viewport_time_us: u64,
     max_layout_collapse_layout_observations_time_us: u64,
     max_layout_time_us: u64,
     max_layout_view_cache_time_us: u64,
@@ -131,8 +147,24 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_layout_collect_roots_time_us: u64,
     pub(super) p50_layout_request_build_roots_time_us: u64,
     pub(super) p95_layout_request_build_roots_time_us: u64,
+    pub(super) p50_layout_request_build_roots_take_engine_time_us: u64,
+    pub(super) p95_layout_request_build_roots_take_engine_time_us: u64,
+    pub(super) p50_layout_request_build_roots_phase1_time_us: u64,
+    pub(super) p95_layout_request_build_roots_phase1_time_us: u64,
+    pub(super) p50_layout_request_build_roots_phase2_time_us: u64,
+    pub(super) p95_layout_request_build_roots_phase2_time_us: u64,
+    pub(super) p50_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    pub(super) p95_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    pub(super) p50_layout_request_build_roots_phase2_compute_time_us: u64,
+    pub(super) p95_layout_request_build_roots_phase2_compute_time_us: u64,
+    pub(super) p50_layout_request_build_roots_put_engine_time_us: u64,
+    pub(super) p95_layout_request_build_roots_put_engine_time_us: u64,
     pub(super) p50_layout_roots_time_us: u64,
     pub(super) p95_layout_roots_time_us: u64,
+    pub(super) p50_layout_roots_apply_time_us: u64,
+    pub(super) p95_layout_roots_apply_time_us: u64,
+    pub(super) p50_layout_roots_flush_viewport_time_us: u64,
+    pub(super) p95_layout_roots_flush_viewport_time_us: u64,
     pub(super) p50_layout_view_cache_time_us: u64,
     pub(super) p95_layout_view_cache_time_us: u64,
     pub(super) p50_layout_collapse_layout_observations_time_us: u64,
@@ -255,7 +287,15 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_invalidate_scroll_handle_bindings_time_us: u64,
     pub(super) layout_expand_view_cache_invalidations_time_us: u64,
     pub(super) layout_request_build_roots_time_us: u64,
+    pub(super) layout_request_build_roots_take_engine_time_us: u64,
+    pub(super) layout_request_build_roots_phase1_time_us: u64,
+    pub(super) layout_request_build_roots_phase2_time_us: u64,
+    pub(super) layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    pub(super) layout_request_build_roots_phase2_compute_time_us: u64,
+    pub(super) layout_request_build_roots_put_engine_time_us: u64,
     pub(super) layout_roots_time_us: u64,
+    pub(super) layout_roots_apply_time_us: u64,
+    pub(super) layout_roots_flush_viewport_time_us: u64,
     pub(super) layout_pending_barrier_relayouts_time_us: u64,
     pub(super) layout_barrier_relayouts_time_us: u64,
     pub(super) layout_repair_view_cache_bounds_time_us: u64,
@@ -2703,6 +2743,35 @@ impl BundleStatsReport {
                 );
             }
         }
+        if self.p95_layout_request_build_roots_time_us > 0
+            || self.max_layout_request_build_roots_time_us > 0
+            || self.p95_layout_roots_time_us > 0
+            || self.max_layout_roots_time_us > 0
+        {
+            println!(
+                "layout root phases p95/max (us): request_build(total/take/phase1/phase2/proof/compute/put)={}/{}/{}/{}/{}/{}/{} / {}/{}/{}/{}/{}/{}/{} roots(total/apply/flush_viewport)={}/{}/{} / {}/{}/{}",
+                self.p95_layout_request_build_roots_time_us,
+                self.p95_layout_request_build_roots_take_engine_time_us,
+                self.p95_layout_request_build_roots_phase1_time_us,
+                self.p95_layout_request_build_roots_phase2_time_us,
+                self.p95_layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                self.p95_layout_request_build_roots_phase2_compute_time_us,
+                self.p95_layout_request_build_roots_put_engine_time_us,
+                self.max_layout_request_build_roots_time_us,
+                self.max_layout_request_build_roots_take_engine_time_us,
+                self.max_layout_request_build_roots_phase1_time_us,
+                self.max_layout_request_build_roots_phase2_time_us,
+                self.max_layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                self.max_layout_request_build_roots_phase2_compute_time_us,
+                self.max_layout_request_build_roots_put_engine_time_us,
+                self.p95_layout_roots_time_us,
+                self.p95_layout_roots_apply_time_us,
+                self.p95_layout_roots_flush_viewport_time_us,
+                self.max_layout_roots_time_us,
+                self.max_layout_roots_apply_time_us,
+                self.max_layout_roots_flush_viewport_time_us,
+            );
+        }
         self.print_code_editor_paint_perf_summary();
         self.print_paint_widget_hotspot_summary();
         if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
@@ -2789,6 +2858,21 @@ impl BundleStatsReport {
                 row.propagated_global_change_observation_edges,
                 row.propagated_global_change_unobserved_globals
             );
+            if row.layout_roots_time_us > 0 || row.layout_request_build_roots_time_us > 0 {
+                line.push_str(&format!(
+                    " layout.root_phases.us(request_build total/take/phase1/phase2/proof/compute/put roots total/apply/flush_viewport)={}/{}/{}/{}/{}/{}/{} {}/{}/{}",
+                    row.layout_request_build_roots_time_us,
+                    row.layout_request_build_roots_take_engine_time_us,
+                    row.layout_request_build_roots_phase1_time_us,
+                    row.layout_request_build_roots_phase2_time_us,
+                    row.layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                    row.layout_request_build_roots_phase2_compute_time_us,
+                    row.layout_request_build_roots_put_engine_time_us,
+                    row.layout_roots_time_us,
+                    row.layout_roots_apply_time_us,
+                    row.layout_roots_flush_viewport_time_us,
+                ));
+            }
             if row.renderer_encode_scene_us > 0
                 || row.renderer_prepare_text_us > 0
                 || row.renderer_prepare_svg_us > 0
@@ -3164,6 +3248,31 @@ impl BundleStatsReport {
             self.p50_layout_prepaint_after_layout_time_us,
             self.p95_layout_prepaint_after_layout_time_us
         );
+        if self.p95_layout_request_build_roots_phase1_time_us > 0
+            || self.p95_layout_request_build_roots_phase2_time_us > 0
+            || self.p95_layout_roots_apply_time_us > 0
+            || self.p95_layout_roots_flush_viewport_time_us > 0
+        {
+            println!(
+                "layout root phases p50/p95 (us): request_build(take/phase1/phase2/proof/compute/put)={}/{}/{}/{}/{}/{} / {}/{}/{}/{}/{}/{} roots(apply/flush_viewport)={}/{} / {}/{}",
+                self.p50_layout_request_build_roots_take_engine_time_us,
+                self.p50_layout_request_build_roots_phase1_time_us,
+                self.p50_layout_request_build_roots_phase2_time_us,
+                self.p50_layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                self.p50_layout_request_build_roots_phase2_compute_time_us,
+                self.p50_layout_request_build_roots_put_engine_time_us,
+                self.p95_layout_request_build_roots_take_engine_time_us,
+                self.p95_layout_request_build_roots_phase1_time_us,
+                self.p95_layout_request_build_roots_phase2_time_us,
+                self.p95_layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                self.p95_layout_request_build_roots_phase2_compute_time_us,
+                self.p95_layout_request_build_roots_put_engine_time_us,
+                self.p50_layout_roots_apply_time_us,
+                self.p50_layout_roots_flush_viewport_time_us,
+                self.p95_layout_roots_apply_time_us,
+                self.p95_layout_roots_flush_viewport_time_us,
+            );
+        }
         println!(
             "paint breakdown p50/p95 (us): input_ctx={}/{} scroll_inv={}/{} collect_roots={}/{} text_snapshot={}/{} collapse={}/{}",
             self.p50_paint_input_context_time_us,
@@ -3516,6 +3625,23 @@ impl BundleStatsReport {
                     row.layout_collapse_layout_observations_time_us,
                     row.layout_prepaint_after_layout_time_us,
                     row.layout_expand_view_cache_invalidations_time_us,
+                );
+            }
+            if row.layout_request_build_roots_phase1_time_us > 0
+                || row.layout_request_build_roots_phase2_time_us > 0
+                || row.layout_roots_apply_time_us > 0
+                || row.layout_roots_flush_viewport_time_us > 0
+            {
+                println!(
+                    "    layout_root_phases.us(request_build take/phase1/phase2/proof/compute/put roots apply/flush_viewport)={}/{}/{}/{}/{}/{} {}/{}",
+                    row.layout_request_build_roots_take_engine_time_us,
+                    row.layout_request_build_roots_phase1_time_us,
+                    row.layout_request_build_roots_phase2_time_us,
+                    row.layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                    row.layout_request_build_roots_phase2_compute_time_us,
+                    row.layout_request_build_roots_put_engine_time_us,
+                    row.layout_roots_apply_time_us,
+                    row.layout_roots_flush_viewport_time_us,
                 );
             }
             if row.paint_input_context_time_us > 0
@@ -4557,8 +4683,40 @@ impl BundleStatsReport {
             Value::from(self.sum_layout_request_build_roots_time_us),
         );
         sum.insert(
+            "layout_request_build_roots_take_engine_time_us".to_string(),
+            Value::from(self.sum_layout_request_build_roots_take_engine_time_us),
+        );
+        sum.insert(
+            "layout_request_build_roots_phase1_time_us".to_string(),
+            Value::from(self.sum_layout_request_build_roots_phase1_time_us),
+        );
+        sum.insert(
+            "layout_request_build_roots_phase2_time_us".to_string(),
+            Value::from(self.sum_layout_request_build_roots_phase2_time_us),
+        );
+        sum.insert(
+            "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
+            Value::from(self.sum_layout_request_build_roots_phase2_clean_geometry_proof_time_us),
+        );
+        sum.insert(
+            "layout_request_build_roots_phase2_compute_time_us".to_string(),
+            Value::from(self.sum_layout_request_build_roots_phase2_compute_time_us),
+        );
+        sum.insert(
+            "layout_request_build_roots_put_engine_time_us".to_string(),
+            Value::from(self.sum_layout_request_build_roots_put_engine_time_us),
+        );
+        sum.insert(
             "layout_roots_time_us".to_string(),
             Value::from(self.sum_layout_roots_time_us),
+        );
+        sum.insert(
+            "layout_roots_apply_time_us".to_string(),
+            Value::from(self.sum_layout_roots_apply_time_us),
+        );
+        sum.insert(
+            "layout_roots_flush_viewport_time_us".to_string(),
+            Value::from(self.sum_layout_roots_flush_viewport_time_us),
         );
         sum.insert(
             "layout_collapse_layout_observations_time_us".to_string(),
@@ -4661,8 +4819,40 @@ impl BundleStatsReport {
             Value::from(self.max_layout_request_build_roots_time_us),
         );
         max.insert(
+            "layout_request_build_roots_take_engine_time_us".to_string(),
+            Value::from(self.max_layout_request_build_roots_take_engine_time_us),
+        );
+        max.insert(
+            "layout_request_build_roots_phase1_time_us".to_string(),
+            Value::from(self.max_layout_request_build_roots_phase1_time_us),
+        );
+        max.insert(
+            "layout_request_build_roots_phase2_time_us".to_string(),
+            Value::from(self.max_layout_request_build_roots_phase2_time_us),
+        );
+        max.insert(
+            "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
+            Value::from(self.max_layout_request_build_roots_phase2_clean_geometry_proof_time_us),
+        );
+        max.insert(
+            "layout_request_build_roots_phase2_compute_time_us".to_string(),
+            Value::from(self.max_layout_request_build_roots_phase2_compute_time_us),
+        );
+        max.insert(
+            "layout_request_build_roots_put_engine_time_us".to_string(),
+            Value::from(self.max_layout_request_build_roots_put_engine_time_us),
+        );
+        max.insert(
             "layout_roots_time_us".to_string(),
             Value::from(self.max_layout_roots_time_us),
+        );
+        max.insert(
+            "layout_roots_apply_time_us".to_string(),
+            Value::from(self.max_layout_roots_apply_time_us),
+        );
+        max.insert(
+            "layout_roots_flush_viewport_time_us".to_string(),
+            Value::from(self.max_layout_roots_flush_viewport_time_us),
         );
         max.insert(
             "layout_collapse_layout_observations_time_us".to_string(),
@@ -4896,9 +5086,65 @@ impl BundleStatsReport {
             )),
         );
         avg.insert(
+            "layout_request_build_roots_take_engine_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_request_build_roots_take_engine_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_request_build_roots_phase1_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_request_build_roots_phase1_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_request_build_roots_phase2_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_request_build_roots_phase2_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_request_build_roots_phase2_compute_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_request_build_roots_phase2_compute_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_request_build_roots_put_engine_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_request_build_roots_put_engine_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
             "layout_roots_time_us".to_string(),
             Value::from(avg_us(
                 self.sum_layout_roots_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_roots_apply_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_roots_apply_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_roots_flush_viewport_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_roots_flush_viewport_time_us,
                 self.snapshots_considered,
             )),
         );
@@ -5041,8 +5287,40 @@ impl BundleStatsReport {
             Value::from(self.p50_layout_request_build_roots_time_us),
         );
         p50.insert(
+            "layout_request_build_roots_take_engine_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_take_engine_time_us),
+        );
+        p50.insert(
+            "layout_request_build_roots_phase1_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_phase1_time_us),
+        );
+        p50.insert(
+            "layout_request_build_roots_phase2_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_phase2_time_us),
+        );
+        p50.insert(
+            "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_phase2_clean_geometry_proof_time_us),
+        );
+        p50.insert(
+            "layout_request_build_roots_phase2_compute_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_phase2_compute_time_us),
+        );
+        p50.insert(
+            "layout_request_build_roots_put_engine_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_put_engine_time_us),
+        );
+        p50.insert(
             "layout_roots_time_us".to_string(),
             Value::from(self.p50_layout_roots_time_us),
+        );
+        p50.insert(
+            "layout_roots_apply_time_us".to_string(),
+            Value::from(self.p50_layout_roots_apply_time_us),
+        );
+        p50.insert(
+            "layout_roots_flush_viewport_time_us".to_string(),
+            Value::from(self.p50_layout_roots_flush_viewport_time_us),
         );
         p50.insert(
             "layout_view_cache_time_us".to_string(),
@@ -5260,8 +5538,40 @@ impl BundleStatsReport {
             Value::from(self.p95_layout_request_build_roots_time_us),
         );
         p95.insert(
+            "layout_request_build_roots_take_engine_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_take_engine_time_us),
+        );
+        p95.insert(
+            "layout_request_build_roots_phase1_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_phase1_time_us),
+        );
+        p95.insert(
+            "layout_request_build_roots_phase2_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_phase2_time_us),
+        );
+        p95.insert(
+            "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_phase2_clean_geometry_proof_time_us),
+        );
+        p95.insert(
+            "layout_request_build_roots_phase2_compute_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_phase2_compute_time_us),
+        );
+        p95.insert(
+            "layout_request_build_roots_put_engine_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_put_engine_time_us),
+        );
+        p95.insert(
             "layout_roots_time_us".to_string(),
             Value::from(self.p95_layout_roots_time_us),
+        );
+        p95.insert(
+            "layout_roots_apply_time_us".to_string(),
+            Value::from(self.p95_layout_roots_apply_time_us),
+        );
+        p95.insert(
+            "layout_roots_flush_viewport_time_us".to_string(),
+            Value::from(self.p95_layout_roots_flush_viewport_time_us),
         );
         p95.insert(
             "layout_view_cache_time_us".to_string(),
@@ -6058,8 +6368,42 @@ impl BundleStatsReport {
                     Value::from(row.layout_request_build_roots_time_us),
                 );
                 obj.insert(
+                    "layout_request_build_roots_take_engine_time_us".to_string(),
+                    Value::from(row.layout_request_build_roots_take_engine_time_us),
+                );
+                obj.insert(
+                    "layout_request_build_roots_phase1_time_us".to_string(),
+                    Value::from(row.layout_request_build_roots_phase1_time_us),
+                );
+                obj.insert(
+                    "layout_request_build_roots_phase2_time_us".to_string(),
+                    Value::from(row.layout_request_build_roots_phase2_time_us),
+                );
+                obj.insert(
+                    "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
+                    Value::from(
+                        row.layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                    ),
+                );
+                obj.insert(
+                    "layout_request_build_roots_phase2_compute_time_us".to_string(),
+                    Value::from(row.layout_request_build_roots_phase2_compute_time_us),
+                );
+                obj.insert(
+                    "layout_request_build_roots_put_engine_time_us".to_string(),
+                    Value::from(row.layout_request_build_roots_put_engine_time_us),
+                );
+                obj.insert(
                     "layout_roots_time_us".to_string(),
                     Value::from(row.layout_roots_time_us),
+                );
+                obj.insert(
+                    "layout_roots_apply_time_us".to_string(),
+                    Value::from(row.layout_roots_apply_time_us),
+                );
+                obj.insert(
+                    "layout_roots_flush_viewport_time_us".to_string(),
+                    Value::from(row.layout_roots_flush_viewport_time_us),
                 );
                 obj.insert(
                     "layout_pending_barrier_relayouts_time_us".to_string(),

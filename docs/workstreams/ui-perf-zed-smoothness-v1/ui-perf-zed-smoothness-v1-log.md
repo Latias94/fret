@@ -16434,3 +16434,60 @@ Interpretation:
   `request_build_roots + layout_roots` around clean-geometry proof/application, not a clear Scroll-internal hotspot.
 - A speculative proof recursion shortcut was left unlanded because the gallery rebuild/runtime evidence was not
   available; keep this lane evidence-led.
+
+## 2026-05-22 08:08:00 +08:00 (layout root phase timing diagnostics)
+
+Question:
+- Can the r26 `layout_request_build_roots_time_us + layout_roots_time_us` aggregate be split enough to choose the next
+  owner before changing layout behavior?
+
+Change:
+- Added additive debug stats for request-build root subphases:
+  `layout_request_build_roots_take_engine_time_us`, `phase1`, `phase2`, `phase2_clean_geometry_proof`,
+  `phase2_compute`, and `put_engine`.
+- Added additive debug stats for layout roots:
+  `layout_roots_apply_time_us` and `layout_roots_flush_viewport_time_us`.
+- Wired the fields through `fret-bootstrap` diagnostics snapshots, `fret-diag` perf keys, JSON summaries/top rows, and
+  the default `diag stats --top` human output.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui
+cargo fmt -p fret-bootstrap --check
+cargo fmt -p fret-diag --check
+cargo check -p fret-ui --lib
+cargo check -p fret-bootstrap
+cargo check -p fret-diag
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields trace_exported_perf_key_registry_contains_core_timeline_keys registered_perf_key_units_match_names --no-fail-fast
+cargo build -p fretboard-dev
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r27-root-phase-split --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r27-root-phase-split\sessions\1779407664059-191108\1779407703518-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+git diff --check
+```
+
+Notes:
+- The first `fret-ui-gallery` build command timed out at the outer Codex command timeout while `rustc` kept compiling.
+  The process finished naturally; the immediate rerun reported `Finished`.
+- The first `fretboard-dev` rebuild after adding human-output wiring was required because the existing binary was older
+  than the `fret-diag` report change.
+- `cargo check` / build still report the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Evidence:
+- r27 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r27-root-phase-split/sessions/1779407664059-191108/1779407703518-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r27 reports p50/p95 total `154/1572us`, layout `46/916us`, paint `51/602us`, and `layout.engine_solve=0/0`.
+- Root phase p95/max now reports request-build total/take/phase1/phase2/proof/compute/put
+  `365/10/49/303/303/0/6us` and layout roots total/apply/flush `499/498/0us`.
+- Top resize ticks:
+  - tick `208`: total/layout/paint `1572/916/602us`; request-build `365us`, proof `303us`; layout roots/apply
+    `499/498us`.
+  - tick `211`: `1451/829/572us`; request-build/proof `318/253us`; layout roots/apply `459/458us`.
+  - tick `214`: `1346/757/541us`; request-build/proof `310/245us`; layout roots/apply `396/395us`.
+
+Interpretation:
+- This slice is attribution-only. It confirms the remaining root-side layout cost is clean-geometry proof traversal
+  plus root apply traversal, not engine solve or viewport-root flush.
+- The next optimization candidate is a focused clean-geometry proof/apply traversal shortcut with explicit correctness
+  gates. Do not broaden the Scroll layout fast path from this evidence.

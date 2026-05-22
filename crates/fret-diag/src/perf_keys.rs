@@ -227,9 +227,58 @@ pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_TIME_US: PerfKey = trace_timing_key(
     "layout",
     PerfKeyAggregate::P95,
 );
+pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_TAKE_ENGINE_TIME_US: PerfKey = trace_timing_key(
+    "layout_request_build_roots_take_engine_time_us",
+    "layout.request_build_roots.take_engine",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_PHASE1_TIME_US: PerfKey = trace_timing_key(
+    "layout_request_build_roots_phase1_time_us",
+    "layout.request_build_roots.phase1",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_TIME_US: PerfKey = trace_timing_key(
+    "layout_request_build_roots_phase2_time_us",
+    "layout.request_build_roots.phase2",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_CLEAN_GEOMETRY_PROOF_TIME_US: PerfKey =
+    trace_timing_key(
+        "layout_request_build_roots_phase2_clean_geometry_proof_time_us",
+        "layout.request_build_roots.phase2.clean_geometry_proof",
+        "layout",
+        PerfKeyAggregate::P95,
+    );
+pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_COMPUTE_TIME_US: PerfKey = trace_timing_key(
+    "layout_request_build_roots_phase2_compute_time_us",
+    "layout.request_build_roots.phase2.compute",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_PUT_ENGINE_TIME_US: PerfKey = trace_timing_key(
+    "layout_request_build_roots_put_engine_time_us",
+    "layout.request_build_roots.put_engine",
+    "layout",
+    PerfKeyAggregate::P95,
+);
 pub(crate) const LAYOUT_ROOTS_TIME_US: PerfKey = trace_timing_key(
     "layout_roots_time_us",
     "layout.roots",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_ROOTS_APPLY_TIME_US: PerfKey = trace_timing_key(
+    "layout_roots_apply_time_us",
+    "layout.roots.apply",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_ROOTS_FLUSH_VIEWPORT_TIME_US: PerfKey = trace_timing_key(
+    "layout_roots_flush_viewport_time_us",
+    "layout.roots.flush_viewport",
     "layout",
     PerfKeyAggregate::P95,
 );
@@ -859,7 +908,15 @@ pub(crate) const TRACE_EXPORTED_FRAME_KEYS: &[PerfKey] = &[
     LAYOUT_INVALIDATE_SCROLL_HANDLE_BINDINGS_TIME_US,
     LAYOUT_EXPAND_VIEW_CACHE_INVALIDATIONS_TIME_US,
     LAYOUT_REQUEST_BUILD_ROOTS_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_TAKE_ENGINE_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE1_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_CLEAN_GEOMETRY_PROOF_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_COMPUTE_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PUT_ENGINE_TIME_US,
     LAYOUT_ROOTS_TIME_US,
+    LAYOUT_ROOTS_APPLY_TIME_US,
+    LAYOUT_ROOTS_FLUSH_VIEWPORT_TIME_US,
     LAYOUT_VIEW_CACHE_TIME_US,
     LAYOUT_ENGINE_SOLVE_TIME_US,
     LAYOUT_PENDING_BARRIER_RELAYOUTS_TIME_US,
@@ -899,6 +956,12 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     LAYOUT_INVALIDATE_SCROLL_HANDLE_BINDINGS_TIME_US,
     LAYOUT_EXPAND_VIEW_CACHE_INVALIDATIONS_TIME_US,
     LAYOUT_REQUEST_BUILD_ROOTS_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_TAKE_ENGINE_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE1_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_CLEAN_GEOMETRY_PROOF_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_COMPUTE_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PUT_ENGINE_TIME_US,
     LAYOUT_PENDING_BARRIER_RELAYOUTS_TIME_US,
     LAYOUT_REPAIR_VIEW_CACHE_BOUNDS_TIME_US,
     LAYOUT_CONTAINED_VIEW_CACHE_ROOTS_TIME_US,
@@ -908,6 +971,8 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     LAYOUT_OBSERVATION_RECORD_GLOBALS_ITEMS,
     LAYOUT_PREPAINT_AFTER_LAYOUT_TIME_US,
     LAYOUT_ROOTS_TIME_US,
+    LAYOUT_ROOTS_APPLY_TIME_US,
+    LAYOUT_ROOTS_FLUSH_VIEWPORT_TIME_US,
     LAYOUT_BARRIER_RELAYOUTS_TIME_US,
     LAYOUT_VIEW_CACHE_TIME_US,
     LAYOUT_SEMANTICS_REFRESH_TIME_US,
