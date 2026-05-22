@@ -329,6 +329,11 @@ scroll clamping through the same shared functions. Shared policy tests cover cla
 and content-fits reset behavior; a source-policy test prevents retained/declarative paths from
 duplicating the legend wheel speed policy again. The full `fret-chart` package gate now passes with
 55 tests.
+`RBX-M3-160` then moved pure data-zoom / visual-map slider math into shared `slider_logic`. Retained
+`ChartCanvas` still owns retained event routing and engine action orchestration, but it now consumes
+shared `SliderDragKind`, norm/value mapping, and window-after-delta policy. Shared slider tests and
+a source-policy test prevent those pure math helpers from moving back into retained canvas. The full
+`fret-chart` package gate now passes with 58 tests.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining

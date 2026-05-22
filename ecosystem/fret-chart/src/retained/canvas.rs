@@ -32,6 +32,9 @@ use crate::output::{
     chart_canvas_output_snapshot_for_engine, update_chart_canvas_output,
 };
 use crate::retained::text_cache::{KeyBuilder, TextCacheGroup};
+use crate::slider_logic::{
+    SliderDragKind, slider_norm, slider_value_at_x, slider_value_at_y, slider_window_after_delta,
+};
 use crate::style::ChartStyle;
 use crate::tooltip::{DefaultTooltipFormatter, TooltipFormatter};
 
@@ -107,13 +110,6 @@ struct BoxZoomDrag {
     current_pos: Point,
     start_x: DataWindow,
     start_y: DataWindow,
-}
-
-#[derive(Debug, Clone, Copy)]
-enum SliderDragKind {
-    Pan,
-    HandleMin,
-    HandleMax,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1776,130 +1772,6 @@ impl ChartCanvas {
         extent
     }
 
-    fn slider_norm(extent: DataWindow, v: f64) -> f32 {
-        let span = extent.span();
-        if !span.is_finite() || span <= 0.0 {
-            return 0.0;
-        }
-        (((v - extent.min) / span) as f32).clamp(0.0, 1.0)
-    }
-
-    fn slider_value_at(track: Rect, extent: DataWindow, px_x: f32) -> f64 {
-        delinea::engine::axis::data_at_px(extent, px_x, track.origin.x.0, track.size.width.0)
-    }
-
-    fn slider_window_after_delta(
-        extent: DataWindow,
-        start_window: DataWindow,
-        delta_value: f64,
-        kind: SliderDragKind,
-    ) -> DataWindow {
-        let extent_span = extent.span();
-        if !extent_span.is_finite() || extent_span <= 0.0 {
-            return start_window;
-        }
-
-        let mut min = start_window.min;
-        let mut max = start_window.max;
-
-        if !delta_value.is_finite() || !min.is_finite() || !max.is_finite() {
-            return start_window;
-        }
-
-        match kind {
-            SliderDragKind::Pan => {
-                min += delta_value;
-                max += delta_value;
-            }
-            SliderDragKind::HandleMin => {
-                min += delta_value;
-            }
-            SliderDragKind::HandleMax => {
-                max += delta_value;
-            }
-        }
-
-        let eps = (extent_span.abs() * 1e-12).max(1e-9).max(f64::MIN_POSITIVE);
-
-        match kind {
-            SliderDragKind::Pan => {
-                let mut span = (max - min).abs();
-                if !span.is_finite() || span <= eps {
-                    span = start_window.span().abs();
-                }
-                if !span.is_finite() || span <= eps {
-                    span = eps;
-                }
-
-                if span >= extent_span {
-                    return extent;
-                }
-
-                if max <= min {
-                    max = min + span;
-                } else {
-                    span = max - min;
-                }
-
-                if min < extent.min {
-                    let d = extent.min - min;
-                    min += d;
-                    max += d;
-                }
-                if max > extent.max {
-                    let d = max - extent.max;
-                    min -= d;
-                    max -= d;
-                }
-
-                min = min.max(extent.min);
-                max = max.min(extent.max);
-
-                if max - min < eps {
-                    min = extent.min;
-                    max = (extent.min + span).min(extent.max);
-                    if max - min < eps {
-                        max = (min + eps).min(extent.max);
-                    }
-                }
-
-                if !(max > min) {
-                    return extent;
-                }
-
-                DataWindow { min, max }
-            }
-            SliderDragKind::HandleMin => {
-                let mut out_max = max.clamp(extent.min + eps, extent.max);
-                let mut out_min = min.clamp(extent.min, out_max - eps);
-                if !(out_max > out_min) {
-                    out_min = (out_max - eps).max(extent.min);
-                    if !(out_max > out_min) {
-                        out_max = (out_min + eps).min(extent.max);
-                    }
-                }
-                DataWindow {
-                    min: out_min,
-                    max: out_max,
-                }
-            }
-            SliderDragKind::HandleMax => {
-                let mut out_min = min.clamp(extent.min, extent.max - eps);
-                let mut out_max = max.clamp(out_min + eps, extent.max);
-                if !(out_max > out_min) {
-                    out_max = (out_min + eps).min(extent.max);
-                    if !(out_max > out_min) {
-                        out_min = (out_max - eps).max(extent.min);
-                    }
-                }
-                DataWindow {
-                    min: out_min,
-                    max: out_max,
-                }
-            }
-        }
-    }
-
     fn y_slider_track_for_axis(&self, axis: delinea::AxisId) -> Option<Rect> {
         let plot = self.last_layout.plot;
         if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
@@ -1936,14 +1808,6 @@ impl ChartCanvas {
         }
 
         extent
-    }
-
-    fn slider_value_at_y(track: Rect, extent: DataWindow, px_y: f32) -> f64 {
-        let height = track.size.height.0.max(1.0);
-        let bottom = track.origin.y.0 + height;
-        let y = px_y.clamp(track.origin.y.0, bottom);
-        let y_from_bottom = bottom - y;
-        delinea::engine::axis::data_at_px(extent, y_from_bottom, 0.0, height)
     }
 
     fn visual_map_tracks(
@@ -3607,7 +3471,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             drag.track,
                         );
                         let delta_value = current_value - drag.start_value;
-                        let window = Self::slider_window_after_delta(
+                        let window = slider_window_after_delta(
                             drag.domain,
                             drag.start_window,
                             delta_value,
@@ -3645,7 +3509,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                     let delta_px = x - start_x;
                                     let delta_value = (delta_px / track.size.width.0) as f64 * span;
 
-                                    let window = Self::slider_window_after_delta(
+                                    let window = slider_window_after_delta(
                                         extent,
                                         drag.start_window,
                                         delta_value,
@@ -3690,7 +3554,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                     let delta_px = y_from_bottom - start_from_bottom;
                                     let delta_value = (delta_px / height) as f64 * span;
 
-                                    let window = Self::slider_window_after_delta(
+                                    let window = slider_window_after_delta(
                                         extent,
                                         drag.start_window,
                                         delta_value,
@@ -4005,7 +3869,7 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         let delta = click_value - center;
                         (
                             SliderDragKind::Pan,
-                            Self::slider_window_after_delta(
+                            slider_window_after_delta(
                                 domain,
                                 current_window,
                                 delta,
@@ -4170,8 +4034,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 let extent = self.compute_axis_extent_from_data(axis, true);
                                 let window = self.current_window_x_for_slider(axis, extent);
 
-                                let t0 = Self::slider_norm(extent, window.min);
-                                let t1 = Self::slider_norm(extent, window.max);
+                                let t0 = slider_norm(extent, window.min);
+                                let t1 = slider_norm(extent, window.max);
                                 let left = track.origin.x.0 + t0 * track.size.width.0;
                                 let right = track.origin.x.0 + t1 * track.size.width.0;
 
@@ -4201,13 +4065,13 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 let start_window = if matches!(kind, SliderDragKind::Pan)
                                     && !(x >= left && x <= right)
                                 {
-                                    let click_value = Self::slider_value_at(track, extent, x);
+                                    let click_value = slider_value_at_x(track, extent, x);
                                     let half = 0.5 * window.span();
                                     let start_window = DataWindow {
                                         min: click_value - half,
                                         max: click_value + half,
                                     };
-                                    Self::slider_window_after_delta(
+                                    slider_window_after_delta(
                                         extent,
                                         start_window,
                                         0.0,
@@ -4260,8 +4124,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 let extent = self.compute_axis_extent_from_data(axis, false);
                                 let window = self.current_window_y_for_slider(axis, extent);
 
-                                let t0 = Self::slider_norm(extent, window.min);
-                                let t1 = Self::slider_norm(extent, window.max);
+                                let t0 = slider_norm(extent, window.min);
+                                let t1 = slider_norm(extent, window.max);
 
                                 let handle_hit_px = 7.0f32;
                                 let height = track.size.height.0;
@@ -4298,13 +4162,13 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                     && !(y_from_bottom >= min_handle && y_from_bottom <= max_handle)
                                 {
                                     let click_value =
-                                        Self::slider_value_at_y(track, extent, position.y.0);
+                                        slider_value_at_y(track, extent, position.y.0);
                                     let half = 0.5 * window.span();
                                     let start_window = DataWindow {
                                         min: click_value - half,
                                         max: click_value + half,
                                     };
-                                    Self::slider_window_after_delta(
+                                    slider_window_after_delta(
                                         extent,
                                         start_window,
                                         0.0,
@@ -5753,8 +5617,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             let extent = self.compute_axis_extent_from_data(x_axis, true);
             let window = self.current_window_x_for_slider(x_axis, extent);
 
-            let t0 = Self::slider_norm(extent, window.min);
-            let t1 = Self::slider_norm(extent, window.max);
+            let t0 = slider_norm(extent, window.min);
+            let t1 = slider_norm(extent, window.max);
             let left = track.origin.x.0 + t0 * track.size.width.0;
             let right = track.origin.x.0 + t1 * track.size.width.0;
 
@@ -5826,8 +5690,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             let extent = self.compute_axis_extent_from_data(y_axis, false);
             let window = self.current_window_y_for_slider(y_axis, extent);
 
-            let t0 = Self::slider_norm(extent, window.min);
-            let t1 = Self::slider_norm(extent, window.max);
+            let t0 = slider_norm(extent, window.min);
+            let t1 = slider_norm(extent, window.max);
 
             let height = track.size.height.0;
             let bottom = track.origin.y.0 + height;
@@ -7419,8 +7283,7 @@ mod tests {
             max: 30.0,
         };
 
-        let left =
-            ChartCanvas::slider_window_after_delta(extent, start, -999.0, SliderDragKind::Pan);
+        let left = slider_window_after_delta(extent, start, -999.0, SliderDragKind::Pan);
         assert_eq!(
             left,
             DataWindow {
@@ -7429,8 +7292,7 @@ mod tests {
             }
         );
 
-        let right =
-            ChartCanvas::slider_window_after_delta(extent, start, 999.0, SliderDragKind::Pan);
+        let right = slider_window_after_delta(extent, start, 999.0, SliderDragKind::Pan);
         assert_eq!(
             right,
             DataWindow {
@@ -7440,17 +7302,13 @@ mod tests {
         );
 
         let inverted_min =
-            ChartCanvas::slider_window_after_delta(extent, start, 999.0, SliderDragKind::HandleMin);
+            slider_window_after_delta(extent, start, 999.0, SliderDragKind::HandleMin);
         assert!(inverted_min.max > inverted_min.min);
         assert_eq!(inverted_min.max, start.max);
         assert!(inverted_min.min >= extent.min && inverted_min.max <= extent.max);
 
-        let inverted_max = ChartCanvas::slider_window_after_delta(
-            extent,
-            start,
-            -999.0,
-            SliderDragKind::HandleMax,
-        );
+        let inverted_max =
+            slider_window_after_delta(extent, start, -999.0, SliderDragKind::HandleMax);
         assert!(inverted_max.max > inverted_max.min);
         assert_eq!(inverted_max.min, start.min);
         assert!(inverted_max.min >= extent.min && inverted_max.max <= extent.max);

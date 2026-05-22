@@ -16,6 +16,7 @@ pub mod tooltip;
 
 mod a11y;
 mod legend_logic;
+mod slider_logic;
 mod tooltip_layout;
 
 pub use declarative::*;
@@ -146,6 +147,34 @@ mod public_surface_policy {
             assert!(
                 !source.contains("0.75f32"),
                 "{name} should not duplicate the legend wheel speed policy"
+            );
+        }
+    }
+
+    #[test]
+    fn slider_math_policy_lives_in_shared_logic() {
+        let retained_canvas = include_str!("retained/canvas.rs");
+
+        for marker in [
+            "fn slider_norm(",
+            "fn slider_value_at(",
+            "fn slider_value_at_y(",
+            "fn slider_window_after_delta(",
+        ] {
+            assert!(
+                !retained_canvas.contains(marker),
+                "retained ChartCanvas should route slider math through shared slider_logic; unexpected `{marker}`"
+            );
+        }
+
+        for marker in [
+            "use crate::slider_logic::{",
+            "slider_window_after_delta(",
+            "slider_norm(",
+        ] {
+            assert!(
+                retained_canvas.contains(marker),
+                "retained ChartCanvas should consume shared slider policy marker `{marker}`"
             );
         }
     }

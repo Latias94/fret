@@ -12452,3 +12452,64 @@ Broader gates not run:
   - Reason: `RBX-M3-150` is a targeted `fret-chart` shared-policy extraction. The direct shared
     policy tests, retained oracle test, source-policy test, full `fret-chart` package gate,
     formatting, layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-160 Chart slider math policy moved to shared logic
+
+Claim verified:
+
+- Pure chart slider math for data-zoom and visual-map interactions now lives in shared
+  `slider_logic` instead of retained `ChartCanvas`.
+- Retained `ChartCanvas` consumes shared slider norm/value/window policy while still owning retained
+  event routing and engine action orchestration as the current oracle.
+- Shared slider tests and a public-surface policy test prevent the pure slider math helpers from
+  returning to retained canvas.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/slider_logic.rs`
+- `ecosystem/fret-chart/src/retained/canvas.rs`
+- `ecosystem/fret-chart/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-chart slider_`
+  - Result: failed first because the new source-policy test expected fully qualified
+    `crate::slider_logic::*` markers while retained canvas imported the helpers and used short
+    names; passed after checking the shared import plus short-name usage.
+  - Scope proven: shared slider math tests, the retained slider window oracle, and the source-policy
+    guard pass together.
+- `cargo nextest run -p fret-chart slider_math_policy_lives_in_shared_logic`
+  - Result: passed, 1 test, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: retained `ChartCanvas` no longer defines the pure slider math functions and
+    routes through shared `slider_logic`.
+- `cargo check -p fret-chart`
+  - Result: passed, with the pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+  - Scope proven: retained data-zoom and visual-map slider paths compile after the shared-policy
+    extraction, with no new `fret-chart` warnings.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after adding `slider_logic` and simplifying retained
+    canvas.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 58 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility/linking/multi-grid baselines,
+    shared legend/slider/tooltip/style tests, public-surface policy tests, and ordinary retained
+    chart oracle tests remain green after moving slider math policy.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-160` is a targeted `fret-chart` shared-policy extraction. The direct shared
+    slider tests, retained slider oracle test, source-policy test, full `fret-chart` package gate,
+    formatting, layering, catalog, and whitespace checks cover the changed surface.

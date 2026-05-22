@@ -5119,6 +5119,39 @@ Related plan:
       source-policy test preventing duplicated legend wheel speed policy in retained/declarative
       paths.
     - The full `fret-chart` package gate now passes with 55 tests.
+- [x] RBX-M3-160 Move chart slider math onto shared/default chart logic.
+  - Scope:
+    - `ecosystem/fret-chart/src/slider_logic.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+  - Goal:
+    - Remove retained-only ownership of pure data-zoom / visual-map slider math.
+    - Keep retained `ChartCanvas` event routing and engine actions as the current oracle, but make
+      it consume shared slider policy for norm/value/window calculations.
+    - Add shared slider tests and a source-policy guard preventing slider math from moving back
+      into retained `ChartCanvas`.
+  - Validation:
+    - `cargo nextest run -p fret-chart slider_`
+    - `cargo nextest run -p fret-chart slider_math_policy_lives_in_shared_logic`
+    - `cargo check -p fret-chart`
+    - `cargo fmt --check`
+    - `cargo nextest run -p fret-chart`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-chart/src/slider_logic.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-160-chart-slider-math-policy-moved-to-shared-logic`
+  - Result:
+    - Added shared `SliderDragKind`, `slider_norm`, `slider_value_at_x`,
+      `slider_value_at_y`, and `slider_window_after_delta` in `slider_logic`.
+    - Retained `ChartCanvas` now consumes shared slider math for data-zoom sliders and visual-map
+      range dragging while retaining event/state/action orchestration as the oracle.
+    - Added shared slider tests and a public-surface policy test that prevents the pure slider math
+      functions from returning to retained `ChartCanvas`.
+    - The full `fret-chart` package gate now passes with 58 tests.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.
