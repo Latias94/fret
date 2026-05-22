@@ -2598,6 +2598,33 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-resizable-suite-after-moving-cached-combobox-v1/sessions/1779029073205-16452/suite.summary.json`
     reports `status=passed`, 2/2 rows, `scripts_with_evidence=2`,
     `overlay_chosen_side_counts.top=2`, and zero lint errors/warnings.
+- Moving cached Popover outside-press root-boundary gate:
+  `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-popover-outside-press.json`
+  - invariant:
+    a cached Popover source that moves between Resizable panel viewport roots must keep panel-root
+    overlay placement and non-modal outside-press dismissal/click-through policy after the move.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/ui/snippets/resizable/moving_cached_popover.rs`,
+    `apps/fret-ui-gallery/src/ui/pages/resizable.rs`,
+    `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-popover-outside-press.json`,
+    `tools/diag-scripts/suites/ui-gallery-resizable/suite.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - focused protocol gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_popover_outside_press --no-fail-fast`
+  - protocol result:
+    passed with Nextest run id `0f8d9478-ca11-405d-842a-ffa81738151c`.
+  - focused runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-popover-outside-press.json --dir target/fret-diag-resizable-moving-popover-outside-press-v3 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1779469463236`; AI packet:
+    `target/fret-diag-resizable-moving-popover-outside-press-v3/sessions/1779469453540-79064/1779469463236/ai.packet`.
+  - focused runtime pack:
+    `target/fret-diag-resizable-moving-popover-outside-press-v3/sessions/1779469453540-79064/share/1779469463236.zip`.
+  - suite command:
+    `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-resizable/suite.json --dir target/fret-diag-resizable-suite-popover-outside-press-v1 --session-auto --timeout-ms 1200000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    passed 7/7; Popover row run id `1779469704952`; summary:
+    `target/fret-diag-resizable-suite-popover-outside-press-v1/sessions/1779469537437-26788/suite.summary.json`.
 - Non-modal overlay underlay activation-status gates:
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json`
   and

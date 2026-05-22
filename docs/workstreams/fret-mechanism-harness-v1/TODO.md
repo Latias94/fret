@@ -1837,3 +1837,19 @@ Next slice recommendation:
   and disabled action-state are covered; next prefer a different overlay family with root-boundary
   dismissal policy after source/root movement, or an authoring/contract guard for state-sensitive
   cached subtrees that must carry explicit cache keys.
+
+- [x] Add a moving cached Popover outside-press root-boundary companion.
+  - Result:
+    `ui-gallery-resizable-view-cache-moving-popover-outside-press.json` opens and closes a cached
+    Popover in the left Resizable root, moves the cached source to the right root, reopens it, then
+    clicks the opposite-panel underlay. The gate proves both Popover opens use top-side placement
+    against the panel viewport root and the outside press both dismisses the moved Popover and
+    activates the underlay. No new defect reproduced. Focused runtime passed with run id
+    `1779469463236`; the seven-row `ui-gallery-resizable` suite passed with summary
+    `target/fret-diag-resizable-suite-popover-outside-press-v1/sessions/1779469537437-26788/suite.summary.json`.
+
+Next slice recommendation:
+
+- Resizable now covers multi-viewport placement, moving cached Combobox relation/focus/action-state,
+  and moving cached Popover outside-press click-through. Prefer leaving this cluster unless a fresh
+  bundle shows family-specific root-boundary drift.

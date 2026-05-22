@@ -10716,6 +10716,36 @@
       ]
     },
     {
+      "id": "ui-gallery-resizable-view-cache-moving-popover-outside-press",
+      "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-popover-outside-press.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-resizable"
+      ],
+      "tags": [
+        "click_through",
+        "dismissal",
+        "outside_press",
+        "overlay",
+        "popover",
+        "resizable",
+        "root_boundary",
+        "shadcn",
+        "ui_gallery",
+        "view_cache"
+      ],
+      "target_hints": [
+        "Starts directly on the diagnostics-only Resizable Moving Cached Popover fixture.",
+        "Opens and closes the cached Popover in the left root, moves the same cached source to the right root, then reopens.",
+        "Clicks the opposite-panel underlay and proves the outside press both dismisses the moved Popover and activates the underlay button."
+      ]
+    },
+    {
       "id": "ui-gallery-scroll-area-expand-at-bottom",
       "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json",
       "required_capabilities": [

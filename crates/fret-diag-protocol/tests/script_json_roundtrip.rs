@@ -1178,6 +1178,13 @@ fn script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_disabled_
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_popover_outside_press() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-popover-outside-press.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_dialog_nested_combobox_modal_boundary() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-nested-combobox-modal-boundary.json"

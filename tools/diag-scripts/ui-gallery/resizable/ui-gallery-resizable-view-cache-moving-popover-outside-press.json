@@ -1,0 +1,288 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-resizable-view-cache-moving-popover-outside-press",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png",
+      "diag.overlay_placement_trace"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "resizable",
+      "FRET_UI_GALLERY_START_SECTION": "ui-gallery-resizable-view-cache-moving-popover-docsec",
+      "FRET_UI_GALLERY_RESIZABLE_MOVING_CACHED_POPOVER": "1",
+      "FRET_UI_GALLERY_VIEW_CACHE": "1"
+    },
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "resizable",
+      "popover",
+      "view_cache",
+      "overlay",
+      "root_boundary",
+      "outside_press",
+      "click_through",
+      "dismissal"
+    ],
+    "target_hints": [
+      "Starts directly on the diagnostics-only Resizable Moving Cached Popover fixture.",
+      "Opens and closes the cached Popover in the left root, moves the same cached source to the right root, then reopens.",
+      "Clicks the opposite-panel underlay and proves the outside press both dismisses the moved Popover and activates the underlay button."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 980.0, "height_px": 980.0 },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-resizable" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-docsec-content"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-source-root-state"
+        },
+        "text": "left"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-underlay-state"
+        },
+        "text": "idle"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-resizable-view-cache-moving-popover-trigger"
+      },
+      "delta_y": -160.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_overlapping",
+        "a": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-trigger"
+        },
+        "b": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-left-panel"
+        },
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-resizable-view-cache-moving-popover-trigger"
+      },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-content"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "anchored_panel",
+        "anchor_test_id": "ui-gallery-resizable-view-cache-moving-popover-popover",
+        "content_test_id": "ui-gallery-resizable-view-cache-moving-popover-content",
+        "preferred_side": "bottom",
+        "chosen_side": "top",
+        "flipped": true,
+        "side_offset_px": 6.0,
+        "side_offset_eps_px": 0.25
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-content"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-resizable-view-cache-moving-popover-move-source"
+      },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-source-root-state"
+        },
+        "text": "right"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_overlapping",
+        "a": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-trigger"
+        },
+        "b": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-right-panel"
+        },
+        "eps_px": 0.5
+      },
+      "timeout_frames": 240
+    },
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-resizable-view-cache-moving-popover-trigger"
+      },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-content"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "anchored_panel",
+        "anchor_test_id": "ui-gallery-resizable-view-cache-moving-popover-popover",
+        "content_test_id": "ui-gallery-resizable-view-cache-moving-popover-content",
+        "preferred_side": "bottom",
+        "chosen_side": "top",
+        "flipped": true,
+        "side_offset_px": 6.0,
+        "side_offset_eps_px": 0.25
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-resizable-view-cache-moving-popover-underlay"
+      },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_equals",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-underlay-state"
+        },
+        "text": "activated"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-content"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-resizable-view-cache-moving-popover-underlay"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-resizable-view-cache-moving-popover-outside-press"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-resizable-view-cache-moving-popover-outside-press"
+    }
+  ]
+}
