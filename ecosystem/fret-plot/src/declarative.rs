@@ -15,7 +15,9 @@ use crate::models::LinePlotModel;
 use crate::plot::axis::{
     AxisLabelFormatter, AxisTicks, axis_ticks_scaled, log10_tick_label_or_empty,
 };
+use crate::plot::readout::{PlotCursorReadoutArgs, PlotCursorReadoutRow, line_plot_cursor_readout};
 use crate::plot::view::sanitize_data_rect_scaled;
+use crate::series::SeriesId;
 use crate::state::{PlotOutput, PlotOutputSnapshot, PlotState};
 use crate::style::{LinePlotStyle, MouseReadoutMode, OverlayAnchor};
 
@@ -92,6 +94,7 @@ pub fn line_plot_panel<H: UiHost + 'static>(
     });
     let output_snapshot = Rc::new(Cell::new(output_snapshot));
     let linked_cursor_x = Rc::new(Cell::new(None::<f64>));
+    let hidden_series = Rc::new(Vec::<SeriesId>::new());
     let style = props.style;
     let x_scale = props.x_scale;
     let y_scale = props.y_scale;
@@ -134,12 +137,14 @@ pub fn line_plot_panel<H: UiHost + 'static>(
             let model = model.clone();
             let output_snapshot = output_snapshot.clone();
             let linked_cursor_x = linked_cursor_x.clone();
+            let hidden_series = hidden_series.clone();
             vec![cx.canvas(canvas, move |painter| {
                 paint_line_plot_panel(
                     painter,
                     &model,
                     output_snapshot.get(),
                     linked_cursor_x.get(),
+                    &hidden_series,
                     style,
                     x_scale,
                     y_scale,
@@ -191,6 +196,7 @@ fn paint_line_plot_panel(
     model: &LinePlotModel,
     output: Option<PlotOutputSnapshot>,
     linked_cursor_x: Option<f64>,
+    hidden_series: &[SeriesId],
     style: LinePlotStyle,
     x_scale: AxisScale,
     y_scale: AxisScale,
@@ -254,13 +260,24 @@ fn paint_line_plot_panel(
     }
 
     paint_line_plot_legend(painter, model, plot, style);
-    paint_line_plot_cursor_readout(painter, plot, output, style, x_scale, y_scale);
+    paint_line_plot_cursor_readout(
+        painter,
+        model,
+        plot,
+        output,
+        hidden_series,
+        style,
+        x_scale,
+        y_scale,
+    );
     paint_line_plot_linked_cursor_readout(
         painter,
+        model,
         plot,
         transform.data,
         output.and_then(|snapshot| snapshot.cursor),
         linked_cursor_x,
+        hidden_series,
         style,
         x_scale,
         y_scale,
@@ -642,8 +659,10 @@ fn paint_line_plot_axis_tick_labels(
 
 fn paint_line_plot_cursor_readout(
     painter: &mut CanvasPainter<'_>,
+    model: &LinePlotModel,
     plot: Rect,
     output: Option<PlotOutputSnapshot>,
+    hidden_series: &[SeriesId],
     style: LinePlotStyle,
     x_scale: AxisScale,
     y_scale: AxisScale,
@@ -711,7 +730,17 @@ fn paint_line_plot_cursor_readout(
     let formatter = AxisLabelFormatter::default();
     let x_text = axis_tick_label_text(x_scale, &formatter, cursor.x, x_span);
     let y_text = axis_tick_label_text(y_scale, &formatter, cursor.y, y_span);
-    let text = format!("x={x_text}  y={y_text}");
+    let rows = line_plot_readout_rows(
+        model,
+        cursor.x,
+        plot.size,
+        snapshot.view_bounds,
+        x_scale,
+        y_scale,
+        painter.scale_factor(),
+        hidden_series,
+    );
+    let text = format_line_plot_readout_text(format!("x={x_text}  y={y_text}"), rows, y_scale);
 
     let text_style = TextStyle {
         size: Px(12.0),
@@ -771,10 +800,12 @@ fn paint_line_plot_cursor_readout(
 
 fn paint_line_plot_linked_cursor_readout(
     painter: &mut CanvasPainter<'_>,
+    model: &LinePlotModel,
     plot: Rect,
     view_bounds: crate::cartesian::DataRect,
     local_cursor: Option<DataPoint>,
     linked_cursor_x: Option<f64>,
+    hidden_series: &[SeriesId],
     style: LinePlotStyle,
     x_scale: AxisScale,
     y_scale: AxisScale,
@@ -831,7 +862,17 @@ fn paint_line_plot_linked_cursor_readout(
     let x_span = (view_bounds.x_max - view_bounds.x_min).abs();
     let formatter = AxisLabelFormatter::default();
     let x_text = axis_tick_label_text(x_scale, &formatter, linked_x, x_span);
-    let text = format!("x={x_text}");
+    let rows = line_plot_readout_rows(
+        model,
+        linked_x,
+        plot.size,
+        view_bounds,
+        x_scale,
+        y_scale,
+        painter.scale_factor(),
+        hidden_series,
+    );
+    let text = format_line_plot_readout_text(format!("x={x_text}"), rows, y_scale);
 
     let text_style = TextStyle {
         size: Px(12.0),
@@ -890,6 +931,48 @@ fn paint_line_plot_linked_cursor_readout(
         constraints,
         raster_scale_factor,
     );
+}
+
+fn line_plot_readout_rows<'a>(
+    model: &LinePlotModel,
+    x: f64,
+    plot_size: Size,
+    view_bounds: crate::cartesian::DataRect,
+    x_scale: AxisScale,
+    y_scale: AxisScale,
+    scale_factor: f32,
+    hidden_series: &'a [SeriesId],
+) -> Vec<PlotCursorReadoutRow> {
+    let hidden: std::collections::HashSet<SeriesId> = hidden_series.iter().copied().collect();
+    line_plot_cursor_readout(
+        model,
+        PlotCursorReadoutArgs {
+            x,
+            plot_size,
+            view_bounds,
+            x_scale,
+            y_scale,
+            scale_factor,
+            hidden: &hidden,
+        },
+    )
+}
+
+fn format_line_plot_readout_text(
+    mut text: String,
+    rows: Vec<PlotCursorReadoutRow>,
+    y_scale: AxisScale,
+) -> String {
+    let formatter = AxisLabelFormatter::default();
+    for row in rows {
+        let y_text = row
+            .y
+            .filter(|y| y.is_finite())
+            .map(|y| axis_tick_label_text(y_scale, &formatter, y, 1.0))
+            .unwrap_or_else(|| "NA".to_string());
+        text.push_str(&format!("\n{}: y={y_text}", row.label));
+    }
+    text
 }
 
 fn axis_tick_label_text(
@@ -1188,14 +1271,17 @@ mod tests {
     }
 
     #[derive(Default)]
-    struct FakeServices;
+    struct FakeServices {
+        prepared_text: Vec<String>,
+    }
 
     impl TextService for FakeServices {
         fn prepare(
             &mut self,
-            _input: &TextInput,
+            input: &TextInput,
             _constraints: TextConstraints,
         ) -> (TextBlobId, TextMetrics) {
+            self.prepared_text.push(input.text().to_string());
             (
                 TextBlobId::default(),
                 TextMetrics {
@@ -1256,7 +1342,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(180.0)),
         );
-        let mut services = FakeServices;
+        let mut services = FakeServices::default();
         let model = app
             .models_mut()
             .insert(LinePlotModel::from_series(vec![LineSeries::new(
@@ -1311,7 +1397,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(180.0)),
         );
-        let mut services = FakeServices;
+        let mut services = FakeServices::default();
         let model = app
             .models_mut()
             .insert(LinePlotModel::from_series(vec![LineSeries::new(
@@ -1410,7 +1496,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(360.0), Px(220.0)),
         );
-        let mut services = FakeServices;
+        let mut services = FakeServices::default();
         let model = app
             .models_mut()
             .insert(LinePlotModel::from_series(vec![LineSeries::new(
@@ -1491,7 +1577,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(360.0), Px(220.0)),
         );
-        let mut services = FakeServices;
+        let mut services = FakeServices::default();
         let series = vec![
             LineSeries::new(
                 "Alpha",
@@ -1602,7 +1688,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(180.0)),
         );
-        let mut services = FakeServices;
+        let mut services = FakeServices::default();
         let model = app
             .models_mut()
             .insert(LinePlotModel::from_series(vec![LineSeries::new(
@@ -1709,7 +1795,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(180.0)),
         );
-        let mut services = FakeServices;
+        let mut services = FakeServices::default();
         let model = app
             .models_mut()
             .insert(LinePlotModel::from_series(vec![LineSeries::new(
@@ -1817,6 +1903,67 @@ mod tests {
     }
 
     #[test]
+    fn line_plot_panel_paints_series_readout_rows_on_declarative_cursor_overlay() {
+        let mut app = TestHost::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+        let mut services = FakeServices::default();
+        let model = app
+            .models_mut()
+            .insert(LinePlotModel::from_series(vec![LineSeries::new(
+                "Alpha",
+                Series::from_points_sorted(
+                    vec![
+                        DataPoint { x: 0.0, y: 0.0 },
+                        DataPoint { x: 1.0, y: 1.0 },
+                        DataPoint { x: 2.0, y: 0.0 },
+                    ],
+                    true,
+                ),
+            )]));
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "plot-declarative-series-readout",
+            |cx| vec![line_plot_panel(cx, LinePlotPanelProps::new(model.clone()))],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                position: Point::new(Px(169.0), Px(81.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let mut prepared_text = services.prepared_text.join("\n");
+        prepared_text.make_ascii_lowercase();
+        assert!(
+            prepared_text.contains("alpha: y="),
+            "declarative cursor readout should include per-series readout rows, got {prepared_text:?}"
+        );
+    }
+
+    #[test]
     fn line_plot_panel_paints_linked_cursor_readout_from_state_on_declarative_path() {
         let mut app = TestHost::default();
         let mut ui: UiTree<TestHost> = UiTree::new();
@@ -1828,7 +1975,7 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(320.0), Px(180.0)),
         );
-        let mut services = FakeServices;
+        let mut services = FakeServices::default();
         let model = app
             .models_mut()
             .insert(LinePlotModel::from_series(vec![LineSeries::new(

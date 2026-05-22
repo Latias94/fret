@@ -395,14 +395,19 @@ slices before retained plot source can be deleted.
 guide/readout overlay when no local pointer cursor is active, while local hover still takes
 precedence. Rich tooltip/readout rows, legend interactions, pan/zoom/query, overlays, and
 non-line layers remain future parity slices before retained plot source can be deleted.
+`RBX-M3-253` then moved line plot rich cursor readout rows onto the default declarative path. The
+declarative local and linked cursor overlays now append per-series rows through shared
+`plot::readout` value lookup, and the retained line layer delegates to that same default helper.
+Legend interactions, pan/zoom/query, overlays, non-line layer readouts, first-party retained plot
+consumers, and retained source deletion remain future parity slices.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining
 public/demo/gallery/cookbook consumers that still rely on retained `ChartCanvas` behavior.
-Remaining M3 plot work still needs declarative parity for legend interactions, rich tooltip/readout
-rows and linked cursor readout, pan/zoom/box/query, overlays, heatmap/histogram/bar/scatter/area/
-stairs/shaded/candlestick layers, and first-party examples before deleting retained plot source or
-the `compat-retained-canvas` feature.
+Remaining M3 plot work still needs declarative parity for legend interactions, pan/zoom/box/query,
+overlays, non-line readouts and heatmap/histogram/bar/scatter/area/stairs/shaded/candlestick
+layers, and first-party examples before deleting retained plot source or the
+`compat-retained-canvas` feature.
 
 ## Completed Implementation
 

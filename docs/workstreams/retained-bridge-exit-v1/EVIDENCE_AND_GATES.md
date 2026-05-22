@@ -13201,3 +13201,62 @@ Broader gates not run:
     focused linked-cursor test, full default `fret-plot` package gate, explicit compat retained
     check, formatting, layering, catalog, conflict-marker scan, and whitespace checks cover the
     changed surface.
+
+## 2026-05-22 - RBX-M3-253 Declarative line plot rich cursor readout rows
+
+Claim verified:
+
+- The default declarative line plot now appends per-series cursor readout rows to both local cursor
+  and linked-cursor overlays without constructing retained `PlotCanvas`.
+- Pure line plot readout value lookup now lives in default `plot::readout`; retained line plot
+  readout delegates to the same helper, and the retained compatibility feature still compiles.
+- This does not yet migrate legend hide/pin policy, pan/zoom/query, overlays, non-line layer
+  readouts, or retained source deletion.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative.rs`
+- `ecosystem/fret-plot/src/plot/readout.rs`
+- `ecosystem/fret-plot/src/retained/layers.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-plot line_plot_panel_paints_series_readout_rows_on_declarative_cursor_overlay`
+  - Result: passed, 1 test, 31 skipped, with the pre-existing `fret-ui`
+    `current_effective_opacity` dead-code warning.
+  - Scope proven: the declarative cursor overlay paints per-series readout text such as
+    `alpha: y=` on the default path.
+- `cargo nextest run -p fret-plot`
+  - Result: passed, 32 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: the default `fret-plot` package gate remains green after moving line readout
+    rows and value lookup into shared/default code.
+- `cargo check -p fret-plot --features compat-retained-canvas`
+  - Result: passed, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: retained plot compatibility still compiles after retained line readout delegates
+    through the shared default readout helper and other retained readouts use the shared Y lookup
+    helper.
+- `cargo fmt --all -- --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the rich-readout extraction.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 429 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" . -g '!target' -g '!repo-ref'`
+  - Result: no matches.
+  - Scope proven: the current worktree has no unresolved conflict markers after the user's pull.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-253` is a targeted default declarative `fret-plot` rich cursor-readout slice.
+    The focused rich-readout test, full default `fret-plot` package gate, explicit compat retained
+    check, formatting, layering, catalog, conflict-marker scan, and whitespace checks cover the
+    changed surface.

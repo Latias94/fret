@@ -5501,6 +5501,43 @@ Related plan:
     - Local pointer hover still takes precedence over linked cursor rendering.
     - The focused linked-cursor test, full `fret-plot` gate, compat retained check, formatting,
       layering, catalog, conflict-marker scan, and whitespace checks all passed.
+- [x] RBX-M3-253 Move line plot rich cursor readout rows onto the declarative path.
+  - Scope:
+    - `ecosystem/fret-plot/src/declarative.rs`
+    - `ecosystem/fret-plot/src/plot/readout.rs`
+    - `ecosystem/fret-plot/src/plot/mod.rs`
+    - `ecosystem/fret-plot/src/retained/layers.rs`
+  - Goal:
+    - Paint per-series cursor readout rows on the default declarative line plot cursor overlays
+      without constructing retained `PlotCanvas`.
+    - Extract the pure line plot cursor readout interpolation/nearest-point policy out of the
+      retained namespace so retained and declarative paths share the same value selection logic.
+    - Keep legend hide/pin policy, pan/zoom/query, overlays, non-line layer readouts, and retained
+      source deletion as later parity slices.
+  - Validation:
+    - `cargo nextest run -p fret-plot line_plot_panel_paints_series_readout_rows_on_declarative_cursor_overlay`
+    - `cargo nextest run -p fret-plot`
+    - `cargo check -p fret-plot --features compat-retained-canvas`
+    - `cargo fmt --all -- --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+    - `rg -n "^(<<<<<<<|=======|>>>>>>>)" . -g '!target' -g '!repo-ref'`
+  - Evidence:
+    - `ecosystem/fret-plot/src/declarative.rs`
+    - `ecosystem/fret-plot/src/plot/readout.rs`
+    - `ecosystem/fret-plot/src/retained/layers.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-253-declarative-line-plot-rich-cursor-readout-rows`
+  - Result:
+    - Added a shared default `plot::readout` module for line plot cursor readout rows and Y-value
+      lookup policy.
+    - The declarative cursor and linked-cursor overlays now append per-series rows such as
+      `Alpha: y=...` using the same value lookup policy as the retained line layer.
+    - The retained line layer now delegates to the shared default readout helper, while other
+      retained layer readouts continue to use the shared Y lookup helper until their declarative
+      parity slices are implemented.
+    - The focused rich-readout test, full `fret-plot` gate, compat retained check, formatting,
+      layering, catalog, conflict-marker scan, and whitespace checks all passed.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.
