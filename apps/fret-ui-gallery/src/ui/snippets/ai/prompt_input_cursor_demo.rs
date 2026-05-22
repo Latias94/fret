@@ -4,8 +4,8 @@ pub const SOURCE: &str = include_str!("prompt_input_cursor_demo.rs");
 use fret::{AppComponentCx, UiChild};
 use fret_core::Px;
 use fret_icons::IconId;
-use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui::Theme;
+use fret_ui::element::{AnyElement, ElementKind};
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
@@ -159,8 +159,10 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .into_element(cx),
             shadcn::Separator::new().into_element(cx),
             ui::h_flex(move |cx| {
-                vec![decl_text::text_control_readout(cx, "Click to manage")
-                    .inherit_foreground(muted)]
+                vec![
+                    decl_text::text_control_readout(cx, "Click to manage")
+                        .inherit_foreground(muted),
+                ]
             })
             .px(Space::N4)
             .py(Space::N3)
@@ -283,11 +285,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             tabs_list.into_element(cx),
                             shadcn::Separator::new().into_element(cx),
                             ui::h_flex(move |cx| {
-                                vec![decl_text::text_control_readout(
-                                    cx,
-                                    "Only file paths are included",
-                                )
-                                .inherit_foreground(muted)]
+                                vec![
+                                    decl_text::text_control_readout(
+                                        cx,
+                                        "Only file paths are included",
+                                    )
+                                    .inherit_foreground(muted),
+                                ]
                             })
                             .px(Space::N3)
                             .pt(Space::N2)
