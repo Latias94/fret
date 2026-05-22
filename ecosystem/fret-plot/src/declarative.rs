@@ -8,6 +8,7 @@ use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 
 use crate::cartesian::{AxisScale, PlotTransform, polyline_commands};
 use crate::models::LinePlotModel;
+use crate::plot::axis::{AxisTicks, axis_ticks_scaled};
 use crate::plot::view::sanitize_data_rect_scaled;
 use crate::style::LinePlotStyle;
 
@@ -116,6 +117,7 @@ fn paint_line_plot_panel(
         x_scale,
         y_scale,
     };
+    paint_line_plot_grid_and_axes(painter, transform, style);
 
     let series_count = model.series.len();
     let raster_scale_factor = painter.scale_factor();
@@ -134,7 +136,7 @@ fn paint_line_plot_panel(
         let stroke_width = series.stroke_width.unwrap_or(style.stroke_width);
         painter.path(
             line_plot_series_path_key(series.id.0),
-            DrawOrder(1),
+            DrawOrder(20),
             Point::new(Px(0.0), Px(0.0)),
             &commands,
             PathStyle::Stroke(StrokeStyle {
@@ -144,6 +146,135 @@ fn paint_line_plot_panel(
             raster_scale_factor,
         );
     }
+}
+
+fn paint_line_plot_grid_and_axes(
+    painter: &mut CanvasPainter<'_>,
+    transform: PlotTransform,
+    style: LinePlotStyle,
+) {
+    let plot = transform.viewport;
+    if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
+        return;
+    }
+
+    let theme = painter.theme().snapshot();
+    let mut grid_color = style
+        .grid_color
+        .unwrap_or_else(|| theme.color_required("border"));
+    grid_color.a *= 0.45;
+    let axis_color = style
+        .axis_color
+        .unwrap_or_else(|| theme.color_required("border"));
+    let tick_count = style.tick_count.max(2);
+
+    for x in axis_ticks_scaled(
+        transform.data.x_min,
+        transform.data.x_max,
+        tick_count,
+        AxisTicks::Nice,
+        transform.x_scale,
+    ) {
+        let Some(px) = transform.data_x_to_px(x) else {
+            continue;
+        };
+        push_vertical_line(
+            painter,
+            px,
+            plot.origin.y,
+            plot.size.height,
+            DrawOrder(2),
+            grid_color,
+        );
+    }
+
+    for y in axis_ticks_scaled(
+        transform.data.y_min,
+        transform.data.y_max,
+        tick_count,
+        AxisTicks::Nice,
+        transform.y_scale,
+    ) {
+        let Some(py) = transform.data_y_to_px(y) else {
+            continue;
+        };
+        push_horizontal_line(
+            painter,
+            plot.origin.x,
+            py,
+            plot.size.width,
+            DrawOrder(2),
+            grid_color,
+        );
+    }
+
+    let baseline_y = transform
+        .data_y_to_px(0.0)
+        .filter(|y| y.0 >= plot.origin.y.0 && y.0 <= plot.origin.y.0 + plot.size.height.0)
+        .unwrap_or_else(|| Px(plot.origin.y.0 + plot.size.height.0 - 1.0));
+    let baseline_x = transform
+        .data_x_to_px(0.0)
+        .filter(|x| x.0 >= plot.origin.x.0 && x.0 <= plot.origin.x.0 + plot.size.width.0)
+        .unwrap_or(plot.origin.x);
+
+    push_horizontal_line(
+        painter,
+        plot.origin.x,
+        baseline_y,
+        plot.size.width,
+        DrawOrder(10),
+        axis_color,
+    );
+    push_vertical_line(
+        painter,
+        baseline_x,
+        plot.origin.y,
+        plot.size.height,
+        DrawOrder(10),
+        axis_color,
+    );
+}
+
+fn push_vertical_line(
+    painter: &mut CanvasPainter<'_>,
+    x: Px,
+    y: Px,
+    height: Px,
+    order: DrawOrder,
+    color: Color,
+) {
+    if !x.0.is_finite() || !y.0.is_finite() || !height.0.is_finite() || height.0 <= 0.0 {
+        return;
+    }
+    painter.scene().push(fret_core::SceneOp::Quad {
+        order,
+        rect: Rect::new(Point::new(x, y), Size::new(Px(1.0), height)),
+        background: Paint::Solid(color).into(),
+        border: Edges::default(),
+        border_paint: Paint::Solid(Color::TRANSPARENT).into(),
+        corner_radii: Corners::default(),
+    });
+}
+
+fn push_horizontal_line(
+    painter: &mut CanvasPainter<'_>,
+    x: Px,
+    y: Px,
+    width: Px,
+    order: DrawOrder,
+    color: Color,
+) {
+    if !x.0.is_finite() || !y.0.is_finite() || !width.0.is_finite() || width.0 <= 0.0 {
+        return;
+    }
+    painter.scene().push(fret_core::SceneOp::Quad {
+        order,
+        rect: Rect::new(Point::new(x, y), Size::new(width, Px(1.0))),
+        background: Paint::Solid(color).into(),
+        border: Edges::default(),
+        border_paint: Paint::Solid(Color::TRANSPARENT).into(),
+        corner_radii: Corners::default(),
+    });
 }
 
 fn line_plot_inner_rect(bounds: Rect, padding: Px) -> Rect {
@@ -490,6 +621,105 @@ mod tests {
         assert!(
             line_paths > 0,
             "declarative line plot panel should emit at least one path"
+        );
+
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+
+    #[test]
+    fn line_plot_panel_paints_axes_and_grid_on_declarative_path() {
+        let mut app = TestHost::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+        let model = app
+            .models_mut()
+            .insert(LinePlotModel::from_series(vec![LineSeries::new(
+                "Series",
+                Series::from_points_sorted(
+                    vec![
+                        DataPoint { x: 0.0, y: 0.0 },
+                        DataPoint { x: 1.0, y: 1.0 },
+                        DataPoint { x: 2.0, y: 0.25 },
+                    ],
+                    true,
+                ),
+            )]));
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "plot-declarative-axes-grid",
+            |cx| vec![line_plot_panel(cx, LinePlotPanelProps::new(model.clone()))],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let axis_quads = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Quad {
+                        order: DrawOrder(10),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert!(
+            axis_quads >= 2,
+            "declarative line plot should paint x/y axis lines"
+        );
+
+        let grid_quads = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Quad {
+                        order: DrawOrder(2),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert!(
+            grid_quads >= 2,
+            "declarative line plot should paint tick-derived grid lines"
+        );
+
+        let line_paths = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Path {
+                        order: DrawOrder(20),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert!(
+            line_paths > 0,
+            "declarative line plot should keep series paths above grid/axes"
         );
 
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));

@@ -5339,6 +5339,30 @@ Related plan:
       `LinePlotPanelProps`, plus demo launcher and standalone bin entries.
     - Added a source-policy test that requires the new declarative plot demo to use
       `fret_plot::declarative` APIs and rejects retained plot widget authoring in that demo.
+- [x] RBX-M3-220 Add declarative line plot axes/grid paint baseline.
+  - Scope:
+    - `ecosystem/fret-plot/src/declarative.rs`
+  - Goal:
+    - Move the default declarative line plot beyond series-only painting by adding tick-derived
+      grid lines and x/y axis line painting without constructing retained `PlotCanvas`.
+    - Keep labels, legend, readout, pan/zoom/query, and non-line layers for later parity slices.
+  - Validation:
+    - `cargo nextest run -p fret-plot line_plot_panel_paints_axes_and_grid_on_declarative_path`
+    - `cargo nextest run -p fret-plot line_plot_panel_paints_seeded_line_on_declarative_path`
+    - `cargo nextest run -p fret-plot`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-plot/src/declarative.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-220-declarative-line-plot-axesgrid-paint-baseline`
+  - Result:
+    - Added default declarative axis/grid painting using shared `axis_ticks_scaled(...)` and
+      `PlotTransform` data-to-pixel mapping.
+    - Added a render/layout/paint test that proves the declarative path emits x/y axis quads,
+      tick-derived grid quads, and keeps series paths above those guide layers.
+    - Full default `fret-plot` package tests now pass with 24 tests.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

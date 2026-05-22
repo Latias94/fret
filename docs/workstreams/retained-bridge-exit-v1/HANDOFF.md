@@ -365,6 +365,10 @@ tests.
 plot demos remain intact as explicit compatibility oracles until axes, legend, tooltip/readout,
 pan/zoom/box/query, overlays, and non-line layers have declarative parity. A source-policy test now
 prevents the new declarative demo from teaching retained plot widget authoring.
+`RBX-M3-220` then added a default declarative axes/grid paint baseline for `line_plot_panel(...)`.
+The panel now paints tick-derived grid lines and x/y axis lines through shared
+`axis_ticks_scaled(...)` and `PlotTransform` mapping before drawing series paths above them. Labels,
+legend, readout, pan/zoom/query, overlays, and non-line layers remain separate parity slices.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining
