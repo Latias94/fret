@@ -12087,3 +12087,77 @@ Broader gates not run:
     multi-grid behavior tests, full `fret-chart` package gate, managed-surface regression gate,
     source-policy target, formatting, layering, catalog, whitespace, conflict-marker, and
     retained-marker scans cover the changed surface.
+
+## 2026-05-22 - RBX-M3-120 Retained chart multi-grid helper deletion
+
+Claim verified:
+
+- The retained `UniformGrid` / `create_multi_grid_chart_canvas_nodes(...)` helper island is deleted.
+- `retained::ChartCanvas` no longer exposes no-user multi-surface constructors
+  `new_grid_view(...)` / `new_overlay(...)`.
+- Ordinary retained `ChartCanvas` remains green as the remaining chart oracle while multi-grid
+  first-party authoring is carried by declarative `ChartCanvasPanelMode`.
+- The first-party ECharts multi-grid demo still compiles and its source-policy gate still requires
+  declarative grid panels plus an overlay-only panel.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/lib.rs`
+- `ecosystem/fret-chart/src/retained/mod.rs`
+- `ecosystem/fret-chart/src/retained/canvas.rs`
+- deleted `ecosystem/fret-chart/src/retained/multi_grid.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-chart retained_multi_grid_helpers_are_removed_from_public_surface`
+  - Result: failed first after adding the source-policy test because retained `mod multi_grid` /
+    `pub use multi_grid::*` still existed; passed after deleting the helper module and no-user
+    retained multi-surface constructors.
+  - Scope proven: the policy test acted as the red/green gate for deleting the retained multi-grid
+    public surface.
+- `cargo check -p fret-chart`
+  - Result: passed, with the pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+  - Scope proven: `fret-chart` compiles after removing retained multi-grid helper exports and
+    retained `ChartCanvas` shared-engine/mode branches.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 48 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility/linking/multi-grid baselines and
+    ordinary retained chart output/linking/tooltip/legend/visual-map/slider/keyboard oracle tests
+    remain green after the retained multi-grid helper deletion.
+- `cargo check -p fret-demo --bin echarts_multi_grid_demo`
+  - Result: passed.
+  - Scope proven: the native ECharts multi-grid demo still compiles through the declarative
+    multi-grid panel path after deleting retained multi-grid helpers.
+- `cargo nextest run -p fret-examples --test basic_chart_demos_surface echarts_multi_grid_demo_uses_declarative_grid_panels_and_overlay`
+  - Result: passed, 1 test.
+  - Scope proven: the first-party demo source-policy gate still requires declarative multi-grid
+    panel and overlay markers while rejecting retained multi-grid markers.
+- `rg -n "multi_grid|UniformGrid|create_multi_grid_chart_canvas_nodes|new_grid_view|new_overlay|ChartCanvasMode|grid_override|paint_overlay_only|new_shared|SharedChartEngine|ChartCanvasEngine" ecosystem/fret-chart/src apps ecosystem crates -g '*.rs' -g 'Cargo.toml'`
+  - Result: no retained chart helper implementation matches; remaining matches are declarative
+    multi-grid tests, ECharts/delinea headless multi-grid tests, and source-policy marker strings.
+  - Scope proven: the retained multi-grid helper implementation and no-user retained constructors
+    are gone from Rust source.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after deleting the helper and simplifying retained
+    `ChartCanvas`.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid; `fret-chart`
+    intentionally remains on the retained bridge allowlist for remaining retained chart surfaces.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-120` is a targeted retained chart multi-grid helper deletion. The red/green
+    public-surface policy test, full `fret-chart` package gate, ECharts multi-grid demo compile
+    gate, demo source-policy gate, formatting, layering, catalog, whitespace, and retained-marker
+    scan cover the changed surface.

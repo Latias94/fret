@@ -294,11 +294,17 @@ overlay-only panel keeps legend/tooltip tools without mark rendering, and the `M
 hit-test mask now clips full-size descendants so the overlay falls through outside the visible
 legend panel. The demo stores one shared `Model<ChartEngine>` and renders one declarative panel per
 grid plus one overlay-only panel through `declarative::RenderRootContext::render_root(...)`.
+`RBX-M3-120` then deleted the retained chart multi-grid helper island after that declarative proof:
+`retained/multi_grid.rs` is gone, `retained/mod.rs` no longer re-exports it, and retained
+`ChartCanvas::new_grid_view(...)` / `ChartCanvas::new_overlay(...)` plus their shared-engine/mode
+branches were removed. A `fret-chart` public-surface policy test now prevents those retained
+multi-grid helpers from returning. The full `fret-chart` package gate still passes, including
+ordinary retained chart tooltip, legend, visual-map, slider, output/linking, keyboard, and
+accessibility oracle tests.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
-source: retained chart interactive controls such as axes, visual-map, data-zoom, lower-level
-retained multi-grid helper APIs, and any remaining public/demo/gallery/cookbook consumers that
-still rely on retained `ChartCanvas` behavior.
+source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining
+public/demo/gallery/cookbook consumers that still rely on retained `ChartCanvas` behavior.
 
 ## Completed Implementation
 

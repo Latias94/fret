@@ -4918,6 +4918,43 @@ Related plan:
     - `echarts_multi_grid_demo` now stores one shared `Model<ChartEngine>`, renders one
       declarative panel per grid plus a top-level overlay-only panel, and no longer teaches retained
       multi-grid chart helper authoring.
+- [x] RBX-M3-120 Delete retained chart multi-grid helper surface.
+  - Scope:
+    - `ecosystem/fret-chart/src/lib.rs`
+    - `ecosystem/fret-chart/src/retained/mod.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/retained/multi_grid.rs`
+  - Goal:
+    - Delete the retained `UniformGrid` / `create_multi_grid_chart_canvas_nodes(...)` helper island
+      after `RBX-M3-110` proved the declarative multi-grid replacement.
+    - Remove no-user retained multi-surface constructors (`ChartCanvas::new_grid_view(...)` and
+      `ChartCanvas::new_overlay(...)`) plus their shared-engine/mode branches from retained
+      `ChartCanvas`.
+    - Keep ordinary retained `ChartCanvas` behavior green as the remaining oracle while other chart
+      interactions migrate.
+  - Validation:
+    - `cargo check -p fret-chart`
+    - `cargo nextest run -p fret-chart`
+    - `cargo check -p fret-demo --bin echarts_multi_grid_demo`
+    - `cargo nextest run -p fret-examples --test basic_chart_demos_surface echarts_multi_grid_demo_uses_declarative_grid_panels_and_overlay`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-chart/src/lib.rs`
+    - `ecosystem/fret-chart/src/retained/mod.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - deleted `ecosystem/fret-chart/src/retained/multi_grid.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-120-retained-chart-multi-grid-helper-deletion`
+  - Result:
+    - Deleted `retained/multi_grid.rs` and removed its retained public re-export.
+    - Removed retained `ChartCanvas::new_grid_view(...)` / `ChartCanvas::new_overlay(...)` and the
+      now-unneeded shared-engine/mode/grid-filter branches from retained `ChartCanvas`.
+    - Added a `fret-chart` public-surface policy test preventing retained multi-grid helper
+      reintroduction.
+    - The full `fret-chart` package gate still passes, including retained chart tooltip, legend,
+      visual-map, slider, output/linking, keyboard, and accessibility oracle tests.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.
