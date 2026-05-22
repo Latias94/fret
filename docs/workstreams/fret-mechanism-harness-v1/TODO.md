@@ -1870,3 +1870,23 @@ Next slice recommendation:
 - Leave the ContextMenu Basic cluster unless submenu-specific typeahead parity evidence appears.
   If continuing recipe typeahead, the remaining narrow companion is nested submenu typeahead;
   otherwise prefer a fresh retained/cached relation or action-state mutation surface.
+
+- [x] Add a ContextMenu nested submenu typeahead companion.
+  - Result:
+    the recipe typeahead fixture now includes ContextMenu submenu-open printable-key matching after
+    keyboard submenu focus transfer. The UI Gallery
+    `ui-gallery-context-menu-submenu-typeahead-name-window.json` gate opens the Submenu example by
+    right click, enters root roving focus, moves to `More Tools`, opens the submenu with
+    `ArrowRight`, proves focus lands on `Save Page...`, uses printable `n` to focus
+    `Name Window...`, dispatches `ui_gallery.context_menu.submenu.name_window` with Enter, and
+    observes menu closure. No ContextMenu recipe/runtime defect was reproduced. Focused runtime
+    passed with run id `1779473864097`; the refreshed `ui-gallery-context-menu` suite passed 6/6
+    with summary
+    `target/fret-diag-context-menu-suite-submenu-typeahead-v1/sessions/1779473909388-74436/suite.summary.json`.
+
+Next slice recommendation:
+
+- Leave recipe typeahead for now. Select trigger, DropdownMenu, Menubar, ContextMenu Basic, and
+  ContextMenu nested submenu typeahead are covered; next prefer a fresh retained/cached relation or
+  action-state mutation surface, or a narrow contract guard for state-sensitive cached subtrees that
+  must carry explicit cache keys.

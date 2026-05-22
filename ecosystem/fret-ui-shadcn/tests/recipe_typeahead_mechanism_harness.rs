@@ -54,12 +54,16 @@ enum RecipeTypeaheadScenario {
         timeout_ticks: u64,
         advance_ticks: u64,
     },
+    ContextMenuSubmenuOpenTypeahead {
+        key: TypeaheadKey,
+    },
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum TypeaheadKey {
     KeyB,
+    KeyN,
     KeyO,
     KeyR,
     KeyX,
@@ -107,6 +111,9 @@ fn observe_case(
             timeout_ticks,
             advance_ticks,
         ),
+        RecipeTypeaheadScenario::ContextMenuSubmenuOpenTypeahead { key } => {
+            observe_context_menu_submenu_open_typeahead(key)
+        }
     }
 }
 
@@ -381,6 +388,33 @@ fn observe_context_menu_open_buffer_timeout(
     )
 }
 
+fn observe_context_menu_submenu_open_typeahead(
+    key: TypeaheadKey,
+) -> Result<ObservedTree, ScenarioObserveError> {
+    let (mut ui, mut app, mut services, window, bounds, open) =
+        context_menu_submenu_open_on_save_page(/* timeout_ticks */ 30)?;
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, key.key_code());
+    render_context_menu_submenu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        30,
+    );
+
+    observed_with_open_metric(
+        &ui,
+        &app,
+        &open,
+        bounds,
+        "missing final context-menu submenu typeahead snapshot",
+    )
+}
+
 fn context_menu_open_on_back(
     timeout_ticks: u64,
 ) -> Result<
@@ -428,6 +462,96 @@ fn context_menu_open_on_back(
 
     dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
     render_context_menu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        timeout_ticks,
+    );
+
+    Ok((ui, app, services, window, bounds, open))
+}
+
+fn context_menu_submenu_open_on_save_page(
+    timeout_ticks: u64,
+) -> Result<
+    (
+        UiTree<App>,
+        App,
+        FakeServices,
+        AppWindowId,
+        Rect,
+        Model<bool>,
+    ),
+    ScenarioObserveError,
+> {
+    let window = AppWindowId::default();
+    let bounds = default_bounds();
+    let mut app = themed_app();
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    render_context_menu_submenu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        timeout_ticks,
+    );
+    right_click_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        "context-menu-submenu-trigger",
+    )?;
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+    render_context_menu_submenu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        timeout_ticks,
+    );
+
+    for _ in 0..3 {
+        dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+        render_context_menu_submenu_typeahead_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            open.clone(),
+            timeout_ticks,
+        );
+    }
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
+    render_context_menu_submenu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        timeout_ticks,
+    );
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+    render_context_menu_submenu_typeahead_frame(
         &mut ui,
         &mut app,
         &mut services,
@@ -623,6 +747,113 @@ fn render_context_menu_typeahead_frame(
     );
 }
 
+fn render_context_menu_submenu_typeahead_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    request_semantics: bool,
+    open: Model<bool>,
+    timeout_ticks: u64,
+) {
+    render_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "mechanism-recipe-typeahead-context-menu-submenu",
+        request_semantics,
+        move |cx| {
+            vec![
+                shadcn::ContextMenu::from_open(open)
+                    .content_test_id("context-menu-submenu-content")
+                    .typeahead_timeout_ticks(timeout_ticks)
+                    .into_element(
+                        cx,
+                        |cx| {
+                            shadcn::Button::new("Right click")
+                                .test_id("context-menu-submenu-trigger")
+                                .into_element(cx)
+                        },
+                        |_cx| {
+                            vec![
+                                shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(
+                                    vec![
+                                        shadcn::ContextMenuEntry::Item(
+                                            shadcn::ContextMenuItem::new("Copy")
+                                                .test_id("context-menu-submenu-item-copy"),
+                                        ),
+                                        shadcn::ContextMenuEntry::Item(
+                                            shadcn::ContextMenuItem::new("Cut")
+                                                .test_id("context-menu-submenu-item-cut"),
+                                        ),
+                                    ],
+                                )),
+                                shadcn::ContextMenuSub::new(
+                                    shadcn::ContextMenuSubTrigger::new("More Tools").refine(
+                                        |item| item.test_id("context-menu-submenu-more-tools"),
+                                    ),
+                                    shadcn::ContextMenuSubContent::new([
+                                        shadcn::ContextMenuEntry::Group(
+                                            shadcn::ContextMenuGroup::new(vec![
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new("Save Page...")
+                                                        .test_id(
+                                                            "context-menu-submenu-item-save-page",
+                                                        ),
+                                                ),
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new(
+                                                        "Create Shortcut...",
+                                                    )
+                                                    .test_id(
+                                                        "context-menu-submenu-item-create-shortcut",
+                                                    ),
+                                                ),
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new("Name Window...")
+                                                        .test_id(
+                                                            "context-menu-submenu-item-name-window",
+                                                        ),
+                                                ),
+                                            ]),
+                                        ),
+                                        shadcn::ContextMenuEntry::Separator,
+                                        shadcn::ContextMenuEntry::Group(
+                                            shadcn::ContextMenuGroup::new(vec![
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new(
+                                                        "Developer Tools",
+                                                    )
+                                                    .test_id(
+                                                        "context-menu-submenu-item-developer-tools",
+                                                    ),
+                                                ),
+                                            ]),
+                                        ),
+                                        shadcn::ContextMenuEntry::Separator,
+                                        shadcn::ContextMenuEntry::Group(
+                                            shadcn::ContextMenuGroup::new(vec![
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new("Delete").test_id(
+                                                        "context-menu-submenu-item-delete",
+                                                    ),
+                                                ),
+                                            ]),
+                                        ),
+                                    ]),
+                                )
+                                .into_entry(),
+                            ]
+                        },
+                    ),
+            ]
+        },
+    );
+}
+
 fn render_frame(
     ui: &mut UiTree<App>,
     app: &mut App,
@@ -755,6 +986,7 @@ impl TypeaheadKey {
     fn key_code(self) -> KeyCode {
         match self {
             Self::KeyB => KeyCode::KeyB,
+            Self::KeyN => KeyCode::KeyN,
             Self::KeyO => KeyCode::KeyO,
             Self::KeyR => KeyCode::KeyR,
             Self::KeyX => KeyCode::KeyX,

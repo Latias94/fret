@@ -172,6 +172,32 @@
         "upstream_ref": "Radix menu typeahead clears stale prefix input after the timeout",
         "note": "A stale no-match prefix should not poison the next matching ContextMenu typeahead key after timeout."
       }
+    },
+    {
+      "id": "context-menu-submenu-open-typeahead-focuses-name-window",
+      "scenario": { "kind": "context_menu_submenu_open_typeahead", "key": "key_n" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "context-menu-submenu-item-name-window" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix submenu content uses the same menu roving typeahead semantics as root menu content",
+        "note": "After keyboard-opening a ContextMenu submenu, printable typeahead should search the submenu content only, move focus from Save Page to Name Window, and keep the root menu path open."
+      }
     }
   ]
 }

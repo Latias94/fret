@@ -353,6 +353,13 @@ fn script_v2_roundtrip_ui_gallery_context_menu_basic_typeahead_reload() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_context_menu_submenu_typeahead_name_window() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_context_menu_basic_right_click_last_action() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json"

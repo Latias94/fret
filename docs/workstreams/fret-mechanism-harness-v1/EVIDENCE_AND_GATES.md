@@ -8162,6 +8162,61 @@ Next slice recommendation:
   `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-context-menu --dir target/fret-diag-context-menu-suite-typeahead-reload-v1 --session-auto --include-triage --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
   - result: passed 5/5; typeahead row run id `1779472350644`.
 
+## ContextMenu Submenu Typeahead Runtime Gate
+
+- invariant:
+  nested ContextMenu content should use the same Radix/menu roving typeahead semantics as root menu
+  content after keyboard-open focus transfer: once `ArrowRight` opens the submenu and focus moves
+  to the first submenu item, a printable matching key should search that submenu content, keep the
+  menu path open until activation, and activation should dispatch the focused submenu action.
+- finding:
+  no ContextMenu recipe/runtime defect was reproduced. The synthetic fixture proves submenu-open
+  typeahead moves focus from `Save Page...` to `Name Window...` while keeping the ContextMenu open.
+  The new UI Gallery runtime gate proves the Submenu page's right-click path enters root roving
+  focus, opens `More Tools`, typeahead-focuses `Name Window...`, dispatches
+  `ui_gallery.context_menu.submenu.name_window`, and closes the menu.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/tests/fixtures/recipe_typeahead_cases_v1.json`,
+  `ecosystem/fret-ui-shadcn/tests/recipe_typeahead_mechanism_harness.rs`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json`,
+  `tools/diag-scripts/suites/ui-gallery-context-menu/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  Radix menu submenu content participates in the same menu roving/typeahead model after focus is
+  transferred into the submenu. Fret maps that to `fret-ui-kit::menu::sub_content` roving prefix
+  typeahead and ContextMenu recipe-owned submenu panel rendering.
+- evidence anchors:
+  focused typeahead AI packet:
+  `target/fret-diag-context-menu-submenu-typeahead-name-window-v1/sessions/1779473854793-15920/1779473864097/ai.packet`;
+  focused typeahead pack:
+  `target/fret-diag-context-menu-submenu-typeahead-name-window-v1/sessions/1779473854793-15920/share/1779473864097.zip`;
+  refreshed ContextMenu suite summary:
+  `target/fret-diag-context-menu-suite-submenu-typeahead-v1/sessions/1779473909388-74436/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool ecosystem/fret-ui-shadcn/tests/fixtures/recipe_typeahead_cases_v1.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-context-menu/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo fmt -p fret-ui-shadcn -p fret-diag-protocol --check`
+  - result: passed.
+- focused Rust/protocol gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanism_harness mechanism_harness_recipe_typeahead_cases_match_oracles --no-fail-fast --no-capture`
+  - result: passed; run id `2137d669-1531-477e-a957-7dcee779c2ff`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_context_menu_submenu_typeahead_name_window --no-fail-fast --no-capture`
+  - result: passed; run id `0d475764-1f1d-4c86-b08d-c2e514192df2`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json --dir target/fret-diag-context-menu-submenu-typeahead-name-window-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779473864097`.
+- runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-context-menu --dir target/fret-diag-context-menu-suite-submenu-typeahead-v1 --session-auto --include-triage --timeout-ms 1000000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed 6/6; submenu typeahead row run id `1779474106732`;
+    `focus_mismatch_total=0`.
+
 ## HitTestOnly Stale Path-Cache Runtime Gate
 
 - invariant:

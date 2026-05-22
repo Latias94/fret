@@ -7486,6 +7486,33 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-context-menu-submenu-typeahead-name-window",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-context-menu"
+      ],
+      "tags": [
+        "context_menu",
+        "keyboard",
+        "regression_pack",
+        "roving_focus",
+        "shadcn",
+        "submenu",
+        "typeahead",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Context Menu Submenu section with the global status bar visible.",
+        "Opens the root ContextMenu by right click, navigates to More Tools, opens the submenu with ArrowRight, then uses printable-key typeahead to focus Name Window.",
+        "Activates Name Window with Enter and proves the submenu command dispatches while the menu closes."
+      ]
+    },
+    {
       "id": "ui-gallery-control-chrome-button-group-text-w-fit",
       "path": "tools/diag-scripts/ui-gallery/control-chrome/ui-gallery-control-chrome-button-group-text-w-fit.json",
       "required_capabilities": [
