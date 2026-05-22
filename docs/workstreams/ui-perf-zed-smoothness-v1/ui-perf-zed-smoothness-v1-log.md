@@ -16606,3 +16606,51 @@ Interpretation:
   gallery scenario still spends time in side-effect-boundary fallback layout plus paint-fingerprint refresh.
 - The next measured owner should be the `7` fallback layouts and pure-node paint-fingerprint refresh cost. Do not widen
   the Scroll fast path or renderer text path from this evidence.
+
+## 2026-05-22 14:33:03 +08:00 (clean-geometry apply phase split)
+
+Question:
+- Is the post-inline root apply residual dominated by side-effect-boundary fallback child layouts or by pure-node
+  paint-geometry fingerprint refresh?
+
+Change:
+- Added two additive clean-geometry apply timing counters to `UiDebugFrameStats`:
+  `layout_clean_geometry_apply_fallback_layouts_time_us` and
+  `layout_clean_geometry_apply_paint_fingerprint_time_us`.
+- Wired both counters through `fret-bootstrap` diagnostics snapshots, `fret-diag` perf keys, JSON summary buckets,
+  and the default `diag stats --top` human output.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui -p fret-diag -p fret-bootstrap --check
+cargo check -p fret-ui --lib
+cargo check -p fret-bootstrap
+cargo check -p fret-diag
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields trace_exported_perf_key_registry_contains_core_timeline_keys registered_perf_key_units_match_names --no-fail-fast
+cargo build -p fretboard-dev
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260522-r35-clean-geometry-apply-phase-split --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260522-r35-clean-geometry-apply-phase-split\sessions\1779431405490-261580\1779431447543-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+```
+
+Notes:
+- `cargo check` / build still report the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Evidence:
+- r35 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260522-r35-clean-geometry-apply-phase-split/sessions/1779431405490-261580/1779431447543-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r35 reports p50/p95 total `158/892us`, layout `50/488us`, prepaint `35/73us`, paint `47/445us`, and
+  `layout.engine_solve=0/0`.
+- Root phase p95/max reports request-build total/take/phase1/phase2/proof/compute/put
+  `224/9/43/163/162/0/6us` and roots total/apply/flush `231/230/0us`.
+- Clean-geometry counts at p95/max are proof nodes/boundaries `124/3 / 124/3` and
+  apply nodes/fallback-layouts `118/7 / 118/7`.
+- The new split reports `apply_us(fallback/fingerprint)=225/4 / 225/4`.
+
+Interpretation:
+- The post-inline root apply residual is dominated by side-effect-boundary fallback child layouts. Pure-node
+  paint-fingerprint refresh is measurable but not the owner in this repro.
+- The next clean-geometry optimization should either reduce those fallback child layouts or specialize a proven
+  side-effect boundary with focused gates. Do not target paint fingerprints, Scroll layout, or renderer text from this
+  evidence.

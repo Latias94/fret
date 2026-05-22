@@ -55,6 +55,10 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub layout_clean_geometry_apply_fallback_layouts: u64,
     #[serde(default)]
+    pub layout_clean_geometry_apply_fallback_layouts_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_apply_paint_fingerprint_time_us: u64,
+    #[serde(default)]
     pub layout_request_build_roots_phase2_compute_time_us: u64,
     #[serde(default)]
     pub layout_request_build_roots_put_engine_time_us: u64,
@@ -885,6 +889,12 @@ impl UiFrameStatsV1 {
             layout_clean_geometry_apply_nodes: stats.layout_clean_geometry_apply_nodes,
             layout_clean_geometry_apply_fallback_layouts: stats
                 .layout_clean_geometry_apply_fallback_layouts,
+            layout_clean_geometry_apply_fallback_layouts_time_us: stats
+                .layout_clean_geometry_apply_fallback_layouts_time
+                .as_micros() as u64,
+            layout_clean_geometry_apply_paint_fingerprint_time_us: stats
+                .layout_clean_geometry_apply_paint_fingerprint_time
+                .as_micros() as u64,
             layout_request_build_roots_phase2_compute_time_us: stats
                 .layout_request_build_roots_phase2_compute_time
                 .as_micros() as u64,

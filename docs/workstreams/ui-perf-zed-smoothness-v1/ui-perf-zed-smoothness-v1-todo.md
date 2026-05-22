@@ -464,6 +464,15 @@ not update checked-in baselines.
       - Decision: this lands as a focused traversal-shape cleanup and a correctness gate for window-root resize apply
         plans, not as a whole-frame p95 claim. The residual owner is now the side-effect-boundary fallback layouts
         and paint-fingerprint refresh under the same clean-geometry path.
+      - Follow-up attribution: clean-geometry apply diagnostics now split fallback child layout time from
+        paint-fingerprint refresh time.
+      - r35 evidence:
+        `target/fret-diag/text-clean-geometry-current-20260522-r35-clean-geometry-apply-phase-split/sessions/1779431405490-261580/1779431447543-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+      - r35 result: p50/p95 total `158/892us`, layout `50/488us`, paint `47/445us`, root apply p95/max `230/230us`.
+        The split reports `apply_us(fallback/fingerprint)=225/4 / 225/4`, with `7` fallback child layouts.
+      - Decision: the residual root-apply owner is side-effect-boundary fallback child layout, not paint-fingerprint
+        refresh. The next clean-geometry optimization, if any, should reduce or specialize those fallback layouts with
+        focused side-effect gates; do not target paint fingerprints or renderer text from this evidence.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
     Windows RTX4090 evidence.
 

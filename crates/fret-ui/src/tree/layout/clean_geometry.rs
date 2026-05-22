@@ -426,6 +426,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
+        let fallback_started = self.debug_enabled.then(Instant::now);
         for fallback in plan.fallback_layouts {
             if self.debug_enabled {
                 self.debug_stats
@@ -444,9 +445,23 @@ impl<H: UiHost> UiTree<H> {
                 overflow_ctx,
             );
         }
+        if self.debug_enabled
+            && let Some(fallback_started) = fallback_started
+        {
+            self.debug_stats
+                .layout_clean_geometry_apply_fallback_layouts_time += fallback_started.elapsed();
+        }
 
+        let fingerprint_started = self.debug_enabled.then(Instant::now);
         for node in plan.nodes_needing_paint_fingerprint {
             self.recompute_paint_geometry_fingerprint(node);
+        }
+        if self.debug_enabled
+            && let Some(fingerprint_started) = fingerprint_started
+        {
+            self.debug_stats
+                .layout_clean_geometry_apply_paint_fingerprint_time +=
+                fingerprint_started.elapsed();
         }
     }
 

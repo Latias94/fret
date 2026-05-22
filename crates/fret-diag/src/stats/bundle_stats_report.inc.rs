@@ -50,6 +50,8 @@ pub(super) struct BundleStatsReport {
     sum_layout_clean_geometry_proof_boundaries: u64,
     sum_layout_clean_geometry_apply_nodes: u64,
     sum_layout_clean_geometry_apply_fallback_layouts: u64,
+    sum_layout_clean_geometry_apply_fallback_layouts_time_us: u64,
+    sum_layout_clean_geometry_apply_paint_fingerprint_time_us: u64,
     sum_layout_request_build_roots_phase2_compute_time_us: u64,
     sum_layout_request_build_roots_put_engine_time_us: u64,
     sum_layout_roots_time_us: u64,
@@ -88,6 +90,8 @@ pub(super) struct BundleStatsReport {
     max_layout_clean_geometry_proof_boundaries: u64,
     max_layout_clean_geometry_apply_nodes: u64,
     max_layout_clean_geometry_apply_fallback_layouts: u64,
+    max_layout_clean_geometry_apply_fallback_layouts_time_us: u64,
+    max_layout_clean_geometry_apply_paint_fingerprint_time_us: u64,
     max_layout_request_build_roots_phase2_compute_time_us: u64,
     max_layout_request_build_roots_put_engine_time_us: u64,
     max_layout_roots_time_us: u64,
@@ -171,6 +175,10 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_layout_clean_geometry_apply_nodes: u64,
     pub(super) p50_layout_clean_geometry_apply_fallback_layouts: u64,
     pub(super) p95_layout_clean_geometry_apply_fallback_layouts: u64,
+    pub(super) p50_layout_clean_geometry_apply_fallback_layouts_time_us: u64,
+    pub(super) p95_layout_clean_geometry_apply_fallback_layouts_time_us: u64,
+    pub(super) p50_layout_clean_geometry_apply_paint_fingerprint_time_us: u64,
+    pub(super) p95_layout_clean_geometry_apply_paint_fingerprint_time_us: u64,
     pub(super) p50_layout_request_build_roots_phase2_compute_time_us: u64,
     pub(super) p95_layout_request_build_roots_phase2_compute_time_us: u64,
     pub(super) p50_layout_request_build_roots_put_engine_time_us: u64,
@@ -311,6 +319,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_clean_geometry_proof_boundaries: u64,
     pub(super) layout_clean_geometry_apply_nodes: u64,
     pub(super) layout_clean_geometry_apply_fallback_layouts: u64,
+    pub(super) layout_clean_geometry_apply_fallback_layouts_time_us: u64,
+    pub(super) layout_clean_geometry_apply_paint_fingerprint_time_us: u64,
     pub(super) layout_request_build_roots_phase2_compute_time_us: u64,
     pub(super) layout_request_build_roots_put_engine_time_us: u64,
     pub(super) layout_roots_time_us: u64,
@@ -2798,7 +2808,7 @@ impl BundleStatsReport {
             || self.max_layout_clean_geometry_apply_nodes > 0
         {
             println!(
-                "layout clean_geometry counts p95/max: proof(nodes/boundaries)={}/{} / {}/{} apply(nodes/fallback_layouts)={}/{} / {}/{}",
+                "layout clean_geometry counts p95/max: proof(nodes/boundaries)={}/{} / {}/{} apply(nodes/fallback_layouts)={}/{} / {}/{} apply_us(fallback/fingerprint)={}/{} / {}/{}",
                 self.p95_layout_clean_geometry_proof_nodes,
                 self.p95_layout_clean_geometry_proof_boundaries,
                 self.max_layout_clean_geometry_proof_nodes,
@@ -2807,6 +2817,10 @@ impl BundleStatsReport {
                 self.p95_layout_clean_geometry_apply_fallback_layouts,
                 self.max_layout_clean_geometry_apply_nodes,
                 self.max_layout_clean_geometry_apply_fallback_layouts,
+                self.p95_layout_clean_geometry_apply_fallback_layouts_time_us,
+                self.p95_layout_clean_geometry_apply_paint_fingerprint_time_us,
+                self.max_layout_clean_geometry_apply_fallback_layouts_time_us,
+                self.max_layout_clean_geometry_apply_paint_fingerprint_time_us,
             );
         }
         self.print_code_editor_paint_perf_summary();
@@ -3711,11 +3725,13 @@ impl BundleStatsReport {
                 || row.layout_clean_geometry_apply_nodes > 0
             {
                 println!(
-                    "    layout_clean_geometry.counts(proof_nodes/proof_boundaries/apply_nodes/apply_fallback_layouts)={}/{}/{}/{}",
+                    "    layout_clean_geometry.counts(proof_nodes/proof_boundaries/apply_nodes/apply_fallback_layouts)={}/{}/{}/{} apply_us(fallback/fingerprint)={}/{}",
                     row.layout_clean_geometry_proof_nodes,
                     row.layout_clean_geometry_proof_boundaries,
                     row.layout_clean_geometry_apply_nodes,
                     row.layout_clean_geometry_apply_fallback_layouts,
+                    row.layout_clean_geometry_apply_fallback_layouts_time_us,
+                    row.layout_clean_geometry_apply_paint_fingerprint_time_us,
                 );
             }
             if row.paint_input_context_time_us > 0
@@ -4789,6 +4805,14 @@ impl BundleStatsReport {
             Value::from(self.sum_layout_clean_geometry_apply_fallback_layouts),
         );
         sum.insert(
+            "layout_clean_geometry_apply_fallback_layouts_time_us".to_string(),
+            Value::from(self.sum_layout_clean_geometry_apply_fallback_layouts_time_us),
+        );
+        sum.insert(
+            "layout_clean_geometry_apply_paint_fingerprint_time_us".to_string(),
+            Value::from(self.sum_layout_clean_geometry_apply_paint_fingerprint_time_us),
+        );
+        sum.insert(
             "layout_request_build_roots_phase2_compute_time_us".to_string(),
             Value::from(self.sum_layout_request_build_roots_phase2_compute_time_us),
         );
@@ -4939,6 +4963,14 @@ impl BundleStatsReport {
         max.insert(
             "layout_clean_geometry_apply_fallback_layouts".to_string(),
             Value::from(self.max_layout_clean_geometry_apply_fallback_layouts),
+        );
+        max.insert(
+            "layout_clean_geometry_apply_fallback_layouts_time_us".to_string(),
+            Value::from(self.max_layout_clean_geometry_apply_fallback_layouts_time_us),
+        );
+        max.insert(
+            "layout_clean_geometry_apply_paint_fingerprint_time_us".to_string(),
+            Value::from(self.max_layout_clean_geometry_apply_paint_fingerprint_time_us),
         );
         max.insert(
             "layout_request_build_roots_phase2_compute_time_us".to_string(),
@@ -5248,6 +5280,20 @@ impl BundleStatsReport {
             )),
         );
         avg.insert(
+            "layout_clean_geometry_apply_fallback_layouts_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_clean_geometry_apply_fallback_layouts_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_clean_geometry_apply_paint_fingerprint_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_clean_geometry_apply_paint_fingerprint_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
             "layout_request_build_roots_phase2_compute_time_us".to_string(),
             Value::from(avg_us(
                 self.sum_layout_request_build_roots_phase2_compute_time_us,
@@ -5451,6 +5497,14 @@ impl BundleStatsReport {
         p50.insert(
             "layout_clean_geometry_apply_fallback_layouts".to_string(),
             Value::from(self.p50_layout_clean_geometry_apply_fallback_layouts),
+        );
+        p50.insert(
+            "layout_clean_geometry_apply_fallback_layouts_time_us".to_string(),
+            Value::from(self.p50_layout_clean_geometry_apply_fallback_layouts_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_apply_paint_fingerprint_time_us".to_string(),
+            Value::from(self.p50_layout_clean_geometry_apply_paint_fingerprint_time_us),
         );
         p50.insert(
             "layout_request_build_roots_phase2_compute_time_us".to_string(),
@@ -5718,6 +5772,14 @@ impl BundleStatsReport {
         p95.insert(
             "layout_clean_geometry_apply_fallback_layouts".to_string(),
             Value::from(self.p95_layout_clean_geometry_apply_fallback_layouts),
+        );
+        p95.insert(
+            "layout_clean_geometry_apply_fallback_layouts_time_us".to_string(),
+            Value::from(self.p95_layout_clean_geometry_apply_fallback_layouts_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_apply_paint_fingerprint_time_us".to_string(),
+            Value::from(self.p95_layout_clean_geometry_apply_paint_fingerprint_time_us),
         );
         p95.insert(
             "layout_request_build_roots_phase2_compute_time_us".to_string(),
@@ -6566,6 +6628,14 @@ impl BundleStatsReport {
                 obj.insert(
                     "layout_clean_geometry_apply_fallback_layouts".to_string(),
                     Value::from(row.layout_clean_geometry_apply_fallback_layouts),
+                );
+                obj.insert(
+                    "layout_clean_geometry_apply_fallback_layouts_time_us".to_string(),
+                    Value::from(row.layout_clean_geometry_apply_fallback_layouts_time_us),
+                );
+                obj.insert(
+                    "layout_clean_geometry_apply_paint_fingerprint_time_us".to_string(),
+                    Value::from(row.layout_clean_geometry_apply_paint_fingerprint_time_us),
                 );
                 obj.insert(
                     "layout_request_build_roots_phase2_compute_time_us".to_string(),

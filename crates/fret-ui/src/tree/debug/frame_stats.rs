@@ -275,6 +275,10 @@ pub struct UiDebugFrameStats {
     pub layout_clean_geometry_apply_nodes: u64,
     /// Number of child layouts run because clean-geometry propagation stopped at that child.
     pub layout_clean_geometry_apply_fallback_layouts: u64,
+    /// Total wall time spent running fallback child layouts during clean-geometry application.
+    pub layout_clean_geometry_apply_fallback_layouts_time: Duration,
+    /// Total wall time spent recomputing paint-geometry fingerprints during clean-geometry application.
+    pub layout_clean_geometry_apply_paint_fingerprint_time: Duration,
     /// First rejection reason observed for a clean-geometry root-solve skip attempt this frame.
     pub layout_clean_geometry_solve_skip_first_rejection: Option<&'static str>,
     /// First rejection detail observed for a clean-geometry root-solve skip attempt this frame.

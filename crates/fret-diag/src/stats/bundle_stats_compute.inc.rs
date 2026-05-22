@@ -1498,6 +1498,14 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_clean_geometry_apply_fallback_layouts"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_clean_geometry_apply_fallback_layouts_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_apply_fallback_layouts_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_apply_paint_fingerprint_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_apply_paint_fingerprint_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_request_build_roots_phase2_compute_time_us = stats
                 .and_then(|m| m.get("layout_request_build_roots_phase2_compute_time_us"))
                 .and_then(|v| v.as_u64())
@@ -1917,6 +1925,12 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.sum_layout_clean_geometry_apply_fallback_layouts = out
                 .sum_layout_clean_geometry_apply_fallback_layouts
                 .saturating_add(layout_clean_geometry_apply_fallback_layouts);
+            out.sum_layout_clean_geometry_apply_fallback_layouts_time_us = out
+                .sum_layout_clean_geometry_apply_fallback_layouts_time_us
+                .saturating_add(layout_clean_geometry_apply_fallback_layouts_time_us);
+            out.sum_layout_clean_geometry_apply_paint_fingerprint_time_us = out
+                .sum_layout_clean_geometry_apply_paint_fingerprint_time_us
+                .saturating_add(layout_clean_geometry_apply_paint_fingerprint_time_us);
             out.sum_layout_request_build_roots_phase2_compute_time_us = out
                 .sum_layout_request_build_roots_phase2_compute_time_us
                 .saturating_add(layout_request_build_roots_phase2_compute_time_us);
@@ -2049,6 +2063,12 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_layout_clean_geometry_apply_fallback_layouts = out
                 .max_layout_clean_geometry_apply_fallback_layouts
                 .max(layout_clean_geometry_apply_fallback_layouts);
+            out.max_layout_clean_geometry_apply_fallback_layouts_time_us = out
+                .max_layout_clean_geometry_apply_fallback_layouts_time_us
+                .max(layout_clean_geometry_apply_fallback_layouts_time_us);
+            out.max_layout_clean_geometry_apply_paint_fingerprint_time_us = out
+                .max_layout_clean_geometry_apply_paint_fingerprint_time_us
+                .max(layout_clean_geometry_apply_paint_fingerprint_time_us);
             out.max_layout_request_build_roots_phase2_compute_time_us = out
                 .max_layout_request_build_roots_phase2_compute_time_us
                 .max(layout_request_build_roots_phase2_compute_time_us);
@@ -2240,6 +2260,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_clean_geometry_proof_boundaries,
                 layout_clean_geometry_apply_nodes,
                 layout_clean_geometry_apply_fallback_layouts,
+                layout_clean_geometry_apply_fallback_layouts_time_us,
+                layout_clean_geometry_apply_paint_fingerprint_time_us,
                 layout_request_build_roots_phase2_compute_time_us,
                 layout_request_build_roots_put_engine_time_us,
                 layout_roots_time_us,
@@ -2750,6 +2772,20 @@ pub(super) fn bundle_stats_from_json_with_options(
     ) = p50_p95(
         rows.iter()
             .map(|r| r.layout_clean_geometry_apply_fallback_layouts),
+    );
+    (
+        out.p50_layout_clean_geometry_apply_fallback_layouts_time_us,
+        out.p95_layout_clean_geometry_apply_fallback_layouts_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_apply_fallback_layouts_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_apply_paint_fingerprint_time_us,
+        out.p95_layout_clean_geometry_apply_paint_fingerprint_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_apply_paint_fingerprint_time_us),
     );
     (
         out.p50_layout_request_build_roots_phase2_compute_time_us,
