@@ -191,6 +191,27 @@ pub fn log10_ticks(min: f64, max: f64, tick_count: usize) -> Vec<f64> {
     out
 }
 
+pub fn log10_decade_exponent(value: f64) -> Option<i32> {
+    if !value.is_finite() || value <= 0.0 {
+        return None;
+    }
+    let exp = value.log10();
+    if !exp.is_finite() {
+        return None;
+    }
+
+    let rounded = exp.round();
+    let eps = 1.0e-10_f64;
+    ((exp - rounded).abs() <= eps).then_some(rounded as i32)
+}
+
+pub fn log10_tick_label_or_empty(value: f64) -> String {
+    let Some(exp) = log10_decade_exponent(value) else {
+        return String::new();
+    };
+    format!("10^{exp}")
+}
+
 #[derive(Clone)]
 pub struct AxisLabelFormatter {
     key: u64,

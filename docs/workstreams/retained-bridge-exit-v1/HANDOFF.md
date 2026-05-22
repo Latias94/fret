@@ -373,6 +373,10 @@ legend, readout, pan/zoom/query, overlays, and non-line layers remain separate p
 The panel now paints per-series legend swatches and labels through `CanvasPainter::text(...)`
 using stable text cache keys while preserving seeded series paths. Legend hover/pin/toggle,
 tooltip/readout, pan/zoom/query, overlays, and non-line layers remain separate parity slices.
+`RBX-M3-240` then added a default declarative axis tick label baseline for `line_plot_panel(...)`.
+The panel now paints x/y tick labels through shared `plot::axis` formatting helpers, including
+log10 decade labels, while preserving seeded series paths. Tooltip/readout, pan/zoom/query,
+overlays, and non-line layers remain separate parity slices.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining

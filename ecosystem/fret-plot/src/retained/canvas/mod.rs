@@ -46,7 +46,10 @@ use crate::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
 
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform, PreparedPlotTransform};
 use crate::input_map::{ModifierKey, ModifiersMask, PlotInputMap};
-use crate::plot::axis::{AxisLabelFormat, AxisLabelFormatter, AxisTicks, axis_ticks_scaled};
+use crate::plot::axis::{
+    AxisLabelFormat, AxisLabelFormatter, AxisTicks, axis_ticks_scaled, log10_decade_exponent,
+    log10_tick_label_or_empty,
+};
 use crate::plot::colormap::ColorMapId;
 use crate::plot::view::{
     clamp_view_to_data_scaled, clamp_zoom_factors, data_rect_from_plot_points_scaled,
@@ -153,20 +156,6 @@ fn fit_view_bounds_with_zoom_locks(
         x_constraints,
         y_constraints,
     ))
-}
-
-fn log10_decade_exponent(v: f64) -> Option<i32> {
-    if !v.is_finite() || v <= 0.0 {
-        return None;
-    }
-    let e = v.log10();
-    if !e.is_finite() {
-        return None;
-    }
-
-    let rounded = e.round();
-    let eps = 1.0e-10_f64;
-    ((e - rounded).abs() <= eps).then_some(rounded as i32)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -287,13 +276,6 @@ fn paint_plot_images(
             opacity,
         });
     }
-}
-
-fn log10_tick_label_or_empty(v: f64) -> String {
-    let Some(exp) = log10_decade_exponent(v) else {
-        return String::new();
-    };
-    format!("10^{exp}")
 }
 
 fn format_colorbar_value(v: f32) -> String {

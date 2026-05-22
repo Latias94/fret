@@ -5388,6 +5388,37 @@ Related plan:
     - Added a render/layout/paint test that proves the declarative path emits legend swatch quads,
       legend text ops, and keeps seeded series paths intact.
     - Full default `fret-plot` package tests now pass with 25 tests.
+- [x] RBX-M3-240 Add declarative line plot axis tick label baseline.
+  - Scope:
+    - `ecosystem/fret-plot/src/declarative.rs`
+    - `ecosystem/fret-plot/src/plot/axis.rs`
+    - `ecosystem/fret-plot/src/retained/canvas/mod.rs`
+  - Goal:
+    - Move the default declarative line plot beyond guide lines and legend by painting x/y axis
+      tick labels without constructing retained `PlotCanvas`.
+    - Keep log10 formatting shared with retained plot and leave tooltip/readout, pan/zoom/query,
+      overlays, and non-line layers for later parity slices.
+  - Validation:
+    - `cargo nextest run -p fret-plot line_plot_panel_paints_axis_tick_labels_on_declarative_path`
+    - `cargo nextest run -p fret-plot`
+    - `cargo check -p fret-plot --features compat-retained-canvas`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+    - `rg -n "^(<<<<<<<|=======|>>>>>>>)" . -g '!target' -g '!repo-ref'`
+  - Evidence:
+    - `ecosystem/fret-plot/src/declarative.rs`
+    - `ecosystem/fret-plot/src/plot/axis.rs`
+    - `ecosystem/fret-plot/src/retained/canvas/mod.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-240-declarative-line-plot-axis-tick-label-baseline`
+  - Result:
+    - Added default declarative x/y tick label painting using shared axis label formatting and
+      shared log10 decade label helpers.
+    - Added a render/layout/paint test that proves the declarative path emits x/y axis tick label
+      text ops and keeps seeded series paths intact.
+    - `fret-plot` still passes the full package gate and the explicit `compat-retained-canvas`
+      check after the shared helper extraction.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

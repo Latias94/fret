@@ -12960,3 +12960,72 @@ Broader gates not run:
   - Reason: `RBX-M3-230` is a targeted default declarative `fret-plot` paint baseline slice. The
     red/green legend test, full `fret-plot` package gate, formatting, layering, catalog,
     conflict-marker scan, and whitespace checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-240 Declarative line plot axis tick label baseline
+
+Claim verified:
+
+- The default declarative `line_plot_panel(...)` now paints x/y axis tick labels without
+  constructing retained `PlotCanvas`.
+- Axis tick label formatting is shared with retained plot through `plot::axis` helpers, including
+  log10 decade labels.
+- Tooltip/readout, pan/zoom/query, overlays, and non-line layers remain future parity slices;
+  retained plot demos stay as explicit compatibility oracles for those behaviors.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative.rs`
+- `ecosystem/fret-plot/src/plot/axis.rs`
+- `ecosystem/fret-plot/src/retained/canvas/mod.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-plot line_plot_panel_paints_axis_tick_labels_on_declarative_path`
+  - Result: failed before implementation because the declarative line plot panel did not emit
+    axis tick label text.
+  - Scope proven: the new test started red and locked the missing declarative axis label behavior.
+- `cargo nextest run -p fret-plot line_plot_panel_paints_axis_tick_labels_on_declarative_path`
+  - Result: passed, 1 test, 25 skipped, with the pre-existing `fret-ui`
+    `current_effective_opacity` dead-code warning.
+  - Scope proven: the default declarative line plot panel emits x/y axis tick label text ops and
+    keeps seeded series paths intact.
+- `cargo nextest run -p fret-plot`
+  - Result: passed, 26 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: default `fret-plot` model, linking, input-map, cartesian, decimation, axis,
+    declarative paint, and public-surface policy tests remain green after adding axis labels.
+- `cargo check -p fret-plot --features compat-retained-canvas`
+  - Result: passed, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: the retained plot compatibility surface still compiles after extracting shared
+    axis label helpers.
+- `cargo fmt --check`
+  - Result: failed before running `cargo fmt` because rustfmt wanted to wrap the new label call
+    sites.
+  - Scope proven: formatting gate caught mechanical formatting drift before commit.
+- `cargo fmt`
+  - Result: passed.
+  - Scope proven: applied rustfmt to the changed Rust sources.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the axis label implementation.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 429 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" . -g '!target' -g '!repo-ref'`
+  - Result: no matches.
+  - Scope proven: the current worktree has no unresolved conflict markers after the user's pull.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-240` is a targeted default declarative `fret-plot` paint baseline slice. The
+    red/green axis-label test, full `fret-plot` package gate, explicit compat retained check,
+    formatting, layering, catalog, conflict-marker scan, and whitespace checks cover the changed
+    surface.

@@ -9,7 +9,9 @@ use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 
 use crate::cartesian::{AxisScale, PlotTransform, polyline_commands};
 use crate::models::LinePlotModel;
-use crate::plot::axis::{AxisTicks, axis_ticks_scaled};
+use crate::plot::axis::{
+    AxisLabelFormatter, AxisTicks, axis_ticks_scaled, log10_tick_label_or_empty,
+};
 use crate::plot::view::sanitize_data_rect_scaled;
 use crate::style::LinePlotStyle;
 
@@ -91,7 +93,7 @@ fn paint_line_plot_panel(
     y_scale: AxisScale,
 ) {
     let bounds = painter.bounds();
-    let plot = line_plot_inner_rect(bounds, style.padding);
+    let plot = line_plot_inner_rect(bounds, style);
     if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
         return;
     }
@@ -171,13 +173,22 @@ fn paint_line_plot_grid_and_axes(
         .unwrap_or_else(|| theme.color_required("border"));
     let tick_count = style.tick_count.max(2);
 
-    for x in axis_ticks_scaled(
+    let x_ticks = axis_ticks_scaled(
         transform.data.x_min,
         transform.data.x_max,
         tick_count,
         AxisTicks::Nice,
         transform.x_scale,
-    ) {
+    );
+    let y_ticks = axis_ticks_scaled(
+        transform.data.y_min,
+        transform.data.y_max,
+        tick_count,
+        AxisTicks::Nice,
+        transform.y_scale,
+    );
+
+    for x in x_ticks.iter().copied() {
         let Some(px) = transform.data_x_to_px(x) else {
             continue;
         };
@@ -191,13 +202,7 @@ fn paint_line_plot_grid_and_axes(
         );
     }
 
-    for y in axis_ticks_scaled(
-        transform.data.y_min,
-        transform.data.y_max,
-        tick_count,
-        AxisTicks::Nice,
-        transform.y_scale,
-    ) {
+    for y in y_ticks.iter().copied() {
         let Some(py) = transform.data_y_to_px(y) else {
             continue;
         };
@@ -236,6 +241,8 @@ fn paint_line_plot_grid_and_axes(
         DrawOrder(10),
         axis_color,
     );
+
+    paint_line_plot_axis_tick_labels(painter, transform, style, &x_ticks, &y_ticks);
 }
 
 fn push_vertical_line(
@@ -355,13 +362,110 @@ fn paint_line_plot_legend(
     }
 }
 
-fn line_plot_inner_rect(bounds: Rect, padding: Px) -> Rect {
-    let pad = padding.0.max(0.0);
+fn paint_line_plot_axis_tick_labels(
+    painter: &mut CanvasPainter<'_>,
+    transform: PlotTransform,
+    style: LinePlotStyle,
+    x_ticks: &[f64],
+    y_ticks: &[f64],
+) {
+    if x_ticks.is_empty() && y_ticks.is_empty() {
+        return;
+    }
+
+    let plot = transform.viewport;
+    let theme = painter.theme().snapshot();
+    let text_color = style
+        .label_color
+        .unwrap_or_else(|| theme.color_required("muted-foreground"));
+    let text_style = TextStyle {
+        size: Px(12.0),
+        weight: FontWeight::NORMAL,
+        ..TextStyle::default()
+    };
+    let constraints = CanvasTextConstraints {
+        max_width: Some(Px(72.0)),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+    let formatter = AxisLabelFormatter::default();
+    let x_span = (transform.data.x_max - transform.data.x_min).abs();
+    let y_span = (transform.data.y_max - transform.data.y_min).abs();
+    let scope = painter.key_scope(&"fret-plot.declarative.axis-labels");
+    let raster_scale_factor = painter.scale_factor();
+
+    let x_label_y = Px(plot.origin.y.0 + plot.size.height.0 + 2.0);
+    for (index, value) in x_ticks.iter().copied().enumerate() {
+        let Some(x) = transform.data_x_to_px(value) else {
+            continue;
+        };
+        let text = axis_tick_label_text(transform.x_scale, &formatter, value, x_span);
+        if text.is_empty() {
+            continue;
+        }
+        let key: u64 = painter
+            .child_key(scope, &("x", index, value.to_bits()))
+            .into();
+        let _ = painter.text(
+            key,
+            DrawOrder(11),
+            Point::new(Px(x.0 - 12.0), x_label_y),
+            text,
+            text_style.clone(),
+            text_color,
+            constraints,
+            raster_scale_factor,
+        );
+    }
+
+    let y_label_x = Px((plot.origin.x.0 - style.axis_gap.0 + 4.0).max(0.0));
+    for (index, value) in y_ticks.iter().copied().enumerate() {
+        let Some(y) = transform.data_y_to_px(value) else {
+            continue;
+        };
+        let text = axis_tick_label_text(transform.y_scale, &formatter, value, y_span);
+        if text.is_empty() {
+            continue;
+        }
+        let key: u64 = painter
+            .child_key(scope, &("y", index, value.to_bits()))
+            .into();
+        let _ = painter.text(
+            key,
+            DrawOrder(11),
+            Point::new(y_label_x, y),
+            text,
+            text_style.clone(),
+            text_color,
+            constraints,
+            raster_scale_factor,
+        );
+    }
+}
+
+fn axis_tick_label_text(
+    scale: AxisScale,
+    formatter: &AxisLabelFormatter,
+    value: f64,
+    span: f64,
+) -> String {
+    if scale == AxisScale::Log10 && formatter.is_number_auto() {
+        return log10_tick_label_or_empty(value);
+    }
+    formatter.format(value, span)
+}
+
+fn line_plot_inner_rect(bounds: Rect, style: LinePlotStyle) -> Rect {
+    let pad = style.padding.0.max(0.0);
+    let axis_gap = style.axis_gap.0.max(0.0);
     Rect::new(
-        Point::new(Px(bounds.origin.x.0 + pad), Px(bounds.origin.y.0 + pad)),
+        Point::new(
+            Px(bounds.origin.x.0 + pad + axis_gap),
+            Px(bounds.origin.y.0 + pad),
+        ),
         Size::new(
-            Px((bounds.size.width.0 - pad * 2.0).max(0.0)),
-            Px((bounds.size.height.0 - pad * 2.0).max(0.0)),
+            Px((bounds.size.width.0 - pad * 2.0 - axis_gap).max(0.0)),
+            Px((bounds.size.height.0 - pad * 2.0 - axis_gap).max(0.0)),
         ),
     )
 }
@@ -798,6 +902,87 @@ mod tests {
         assert!(
             line_paths > 0,
             "declarative line plot should keep series paths above grid/axes"
+        );
+
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+
+    #[test]
+    fn line_plot_panel_paints_axis_tick_labels_on_declarative_path() {
+        let mut app = TestHost::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+        let mut services = FakeServices;
+        let model = app
+            .models_mut()
+            .insert(LinePlotModel::from_series(vec![LineSeries::new(
+                "Series",
+                Series::from_points_sorted(
+                    vec![
+                        DataPoint { x: 0.0, y: 0.0 },
+                        DataPoint { x: 1.0, y: 1.0 },
+                        DataPoint { x: 2.0, y: 0.25 },
+                    ],
+                    true,
+                ),
+            )]));
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "plot-declarative-axis-labels",
+            |cx| vec![line_plot_panel(cx, LinePlotPanelProps::new(model.clone()))],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let axis_labels = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Text {
+                        order: DrawOrder(11),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert!(
+            axis_labels >= 4,
+            "declarative line plot should paint x/y tick labels"
+        );
+
+        let series_paths = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Path {
+                        order: DrawOrder(20),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert!(
+            series_paths > 0,
+            "axis label painting should not replace seeded series paths"
         );
 
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
