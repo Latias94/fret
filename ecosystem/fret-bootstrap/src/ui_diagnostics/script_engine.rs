@@ -85,6 +85,36 @@ fn no_frame_pointer_move_can_drive(app: &App, active: &ActiveScript) -> bool {
         })
 }
 
+fn convert_no_frame_injected_events_to_effects(
+    output: &mut UiScriptFrameOutput,
+    window: AppWindowId,
+) {
+    if output.events.is_empty() {
+        return;
+    }
+
+    for event in output.events.drain(..) {
+        output
+            .effects
+            .push(Effect::DiagInjectEvent { window, event });
+    }
+    output.effects.push(Effect::Redraw(window));
+    output.effects.push(Effect::RequestAnimationFrame(window));
+    output.request_redraw = true;
+}
+
+fn keepalive_wants_frame_effects(output: &mut UiScriptFrameOutput, window: AppWindowId) {
+    output.request_redraw = true;
+    output.effects.push(Effect::Redraw(window));
+    output.effects.push(Effect::RequestAnimationFrame(window));
+}
+
+fn no_frame_keepalive_redraw_output(window: AppWindowId) -> UiScriptFrameOutput {
+    let mut output = UiScriptFrameOutput::default();
+    keepalive_wants_frame_effects(&mut output, window);
+    output
+}
+
 pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
     if active.wait_until.is_some() {
         return true;
@@ -2213,12 +2243,25 @@ impl UiDiagnosticsService {
         }
 
         if active.wait_frames_remaining > 0 {
-            // `wait_frames` means rendered UI frames, not keepalive timer ticks. Consuming the
-            // counter here lets a script advance to its next input step while still using a stale
-            // semantics snapshot, which can make wheel-heavy diagnostics stall without ever seeing
-            // the frame that the wait was meant to observe.
+            let wait_step_index = active.next_step.saturating_sub(1);
+            let wait_started_by_previous_step = active.next_step > 0
+                && active
+                    .steps
+                    .get(wait_step_index)
+                    .is_some_and(|step| matches!(step, UiActionStepV2::WaitFrames { .. }));
+
+            if wait_started_by_previous_step {
+                // `wait_frames` normally counts rendered UI frames. In launched diagnostics,
+                // however, a window may stop delivering redraw callbacks after an input/effect-only
+                // step even though the script has explicitly requested redraw/RAF. Keepalive ticks
+                // may drain only the already-started wait counter; `next_step` is already positioned
+                // after the `wait_frames` step, so advancing it here would skip the real next step.
+                active.wait_frames_remaining = active.wait_frames_remaining.saturating_sub(1);
+                self.active_scripts.insert(window, active);
+                return no_frame_keepalive_redraw_output(window);
+            }
+
             if stall_age_ms >= Self::SCRIPT_NO_FRAME_DRIVE_HARD_TIMEOUT_MS {
-                let wait_step_index = active.next_step.saturating_sub(1);
                 return finalize_drive_script_for_window(
                     self,
                     app,
@@ -2243,10 +2286,7 @@ impl UiDiagnosticsService {
             }
 
             self.active_scripts.insert(window, active);
-            return UiScriptFrameOutput {
-                request_redraw: true,
-                ..UiScriptFrameOutput::default()
-            };
+            return no_frame_keepalive_redraw_output(window);
         }
 
         let prev_next_step = active.next_step;
@@ -2308,7 +2348,7 @@ impl UiDiagnosticsService {
                     },
                 );
                 active.next_step = active.next_step.saturating_add(1);
-                output.request_redraw = true;
+                keepalive_wants_frame_effects(&mut output, window);
                 handled = true;
             }
             UiActionStepV2::WaitUntil { .. } => {
@@ -2426,6 +2466,28 @@ impl UiDiagnosticsService {
                     &mut failure_reason,
                 );
             }
+            step @ (UiActionStepV2::PressKey { .. }
+            | UiActionStepV2::PressKeys { .. }
+            | UiActionStepV2::PressShortcut { .. }
+            | UiActionStepV2::TypeText { .. }
+            | UiActionStepV2::Ime { .. }) => {
+                handled = script_steps_input::handle_keyboard_text_steps(
+                    self,
+                    app,
+                    window,
+                    step_index,
+                    step,
+                    element_runtime,
+                    None,
+                    None,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut stop_script,
+                    &mut failure_reason,
+                );
+                convert_no_frame_injected_events_to_effects(&mut output, window);
+            }
             step @ UiActionStepV2::PointerMove { .. }
                 if no_frame_pointer_move_can_drive(app, &active) =>
             {
@@ -2443,18 +2505,13 @@ impl UiDiagnosticsService {
                     &mut stop_script,
                     &mut failure_reason,
                 );
-                if !output.events.is_empty() {
-                    for event in output.events.drain(..) {
-                        output
-                            .effects
-                            .push(Effect::DiagInjectEvent { window, event });
-                    }
-                    output.effects.push(Effect::Redraw(window));
-                    output.effects.push(Effect::RequestAnimationFrame(window));
-                    output.request_redraw = true;
-                }
+                convert_no_frame_injected_events_to_effects(&mut output, window);
             }
             _ => {}
+        }
+
+        if handled && !stop_script && output.request_redraw {
+            keepalive_wants_frame_effects(&mut output, window);
         }
 
         if !handled && stall_age_ms >= Self::SCRIPT_NO_FRAME_DRIVE_HARD_TIMEOUT_MS {
@@ -2915,17 +2972,18 @@ mod tests {
     }
 
     #[test]
-    fn no_frame_keepalive_does_not_consume_wait_frames() {
+    fn no_frame_keepalive_progresses_wait_frames_without_skipping_next_step() {
         let window = app_window(1);
         let mut active = active_pointer_move_script();
         active.steps = vec![
             UiActionStepV2::WaitFrames { window: None, n: 2 },
-            UiActionStepV2::Wheel {
+            UiActionStepV2::WaitUntil {
                 window: None,
-                pointer_kind: None,
-                target: test_id_selector("scroll-root"),
-                delta_x: 0.0,
-                delta_y: 120.0,
+                predicate: UiPredicateV1::EventKindSeen {
+                    event_kind: "timer".to_string(),
+                },
+                timeout_frames: 1,
+                timeout_ms: None,
             },
         ];
         active.next_step = 1;
@@ -2950,7 +3008,112 @@ mod tests {
         assert!(output.request_redraw);
         let active = service.active_scripts.get(&window).unwrap();
         assert_eq!(active.next_step, 1);
-        assert_eq!(active.wait_frames_remaining, 2);
+        assert_eq!(active.wait_frames_remaining, 1);
+    }
+
+    #[test]
+    fn no_frame_keepalive_can_finish_wait_frames_without_advancing_past_next_step() {
+        let window = app_window(1);
+        let mut active = active_pointer_move_script();
+        active.steps = vec![
+            UiActionStepV2::WaitFrames { window: None, n: 2 },
+            UiActionStepV2::WaitUntil {
+                window: None,
+                predicate: UiPredicateV1::EventKindSeen {
+                    event_kind: "timer".to_string(),
+                },
+                timeout_frames: 1,
+                timeout_ms: None,
+            },
+            UiActionStepV2::CaptureBundle {
+                label: Some("after-wait".to_string()),
+                max_snapshots: None,
+            },
+        ];
+        active.next_step = 1;
+        active.wait_frames_remaining = 2;
+        active.pointer_sessions.clear();
+
+        let mut service = UiDiagnosticsService::default();
+        service.active_scripts.insert(window, active);
+
+        let mut app = App::new();
+        let output = service.drive_script_for_window_no_frame(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(100.0), Px(100.0)),
+            ),
+            1.0,
+            UiDiagnosticsService::SCRIPT_NO_FRAME_DRIVE_STALL_THRESHOLD_MS,
+        );
+
+        assert!(output.request_redraw);
+        let active = service.active_scripts.get(&window).unwrap();
+        assert_eq!(active.next_step, 1);
+        assert_eq!(active.wait_frames_remaining, 1);
+
+        let output = service.drive_script_for_window_no_frame(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(100.0), Px(100.0)),
+            ),
+            1.0,
+            UiDiagnosticsService::SCRIPT_NO_FRAME_DRIVE_STALL_THRESHOLD_MS,
+        );
+
+        assert!(output.request_redraw);
+        let active = service.active_scripts.get(&window).unwrap();
+        assert_eq!(active.next_step, 1);
+        assert_eq!(active.wait_frames_remaining, 0);
+    }
+
+    #[test]
+    fn no_frame_keepalive_injects_keyboard_steps() {
+        let window = app_window(1);
+        let mut active = active_pointer_move_script();
+        active.steps = vec![
+            UiActionStepV2::PressKey {
+                key: "escape".to_string(),
+                modifiers: UiKeyModifiersV1::default(),
+                repeat: false,
+            },
+            UiActionStepV2::WaitFrames { window: None, n: 1 },
+        ];
+        active.pointer_sessions.clear();
+
+        let mut service = UiDiagnosticsService::default();
+        service.active_scripts.insert(window, active);
+
+        let mut app = App::new();
+        let output = service.drive_script_for_window_no_frame(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(100.0), Px(100.0)),
+            ),
+            1.0,
+            UiDiagnosticsService::SCRIPT_NO_FRAME_DRIVE_STALL_THRESHOLD_MS,
+        );
+
+        assert!(output.request_redraw);
+        assert!(output.events.is_empty());
+        assert!(output.effects.iter().any(
+            |effect| matches!(effect, Effect::DiagInjectEvent { window: w, .. } if *w == window)
+        ));
+        assert!(
+            output
+                .effects
+                .iter()
+                .any(|effect| matches!(effect, Effect::RequestAnimationFrame(w) if *w == window))
+        );
+        let active = service.active_scripts.get(&window).unwrap();
+        assert_eq!(active.next_step, 1);
+        assert_eq!(active.last_injected_step, Some(0));
     }
 
     fn app_with_drag_for_pointer(

@@ -1,0 +1,5 @@
+{
+  "kind": "script_redirect",
+  "schema_version": 1,
+  "to": "tools/diag-scripts/ui-gallery/form/ui-gallery-form-submit-validation-semantics.json"
+}

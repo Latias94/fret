@@ -1111,6 +1111,7 @@ mod tests {
     };
     use fret_ui::tree::UiTree;
     use fret_ui_kit::declarative::text as decl_text;
+    use fret_ui_kit::primitives::control_registry::ControlId;
 
     #[derive(Default)]
     struct FakeServices;
@@ -1240,6 +1241,42 @@ mod tests {
                 vec![
                     ToggleGroup::single(model)
                         .roving_focus(false)
+                        .items(items)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds, 1.0);
+        root
+    }
+
+    fn render_single_labelled_disabled(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        bounds: Rect,
+        model: Model<Option<Arc<str>>>,
+        control_id: ControlId,
+    ) -> fret_core::NodeId {
+        let root = fret_ui::declarative::render_root(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "toggle-group-single-labelled-disabled",
+            |cx| {
+                let items = vec![
+                    ToggleGroupItem::new("alpha", vec![]),
+                    ToggleGroupItem::new("beta", vec![]).disabled(true),
+                    ToggleGroupItem::new("gamma", vec![]),
+                ];
+                vec![
+                    ToggleGroup::single(model)
+                        .control_id(control_id.clone())
                         .items(items)
                         .into_element(cx),
                 ]
@@ -1501,6 +1538,102 @@ mod tests {
             .expect("focused node");
         assert_eq!(focused_node.role, SemanticsRole::RadioButton);
         assert_eq!(focused_node.label.as_deref(), Some("beta"));
+    }
+
+    #[test]
+    fn toggle_group_single_arrow_skips_disabled_and_exports_checked_state() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::from("alpha")));
+        let control_id = ControlId::from("toggle-group-labelled-disabled");
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = render_single_labelled_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            control_id.clone(),
+        );
+
+        let focusable = ui
+            .first_focusable_descendant_including_declarative(&mut app, window, root)
+            .expect("focusable item");
+        ui.set_focus(Some(focusable));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowRight,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        let _ = render_single_labelled_disabled(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+            control_id.clone(),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(selected.as_deref(), Some("alpha"));
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let focused = snap.focus.expect("focus");
+        let focused_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == focused)
+            .expect("focused node");
+        assert_eq!(focused_node.role, SemanticsRole::RadioButton);
+        assert_eq!(focused_node.label.as_deref(), Some("gamma"));
+        assert_eq!(focused_node.flags.checked, Some(false));
+        assert_eq!(
+            focused_node.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::False)
+        );
+
+        let alpha_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some("alpha"))
+            .expect("alpha radio node");
+        assert!(!alpha_node.flags.disabled);
+        assert_eq!(alpha_node.flags.checked, Some(true));
+        assert_eq!(
+            alpha_node.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::True)
+        );
+
+        let beta_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::RadioButton && n.label.as_deref() == Some("beta"))
+            .expect("beta radio node");
+        assert!(beta_node.flags.disabled);
+        assert_eq!(beta_node.flags.checked, Some(false));
+        assert_eq!(
+            beta_node.flags.checked_state,
+            Some(fret_core::SemanticsCheckedState::False)
+        );
+        assert!(!beta_node.actions.focus);
+        assert!(!beta_node.actions.invoke);
     }
 
     #[test]

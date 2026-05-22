@@ -32,7 +32,7 @@ pub enum ToggleGroupOrientation {
 ///
 /// Radix uses `aria-pressed` in multiple mode and `role="radio" + aria-checked` in single mode.
 /// Fret models this by switching the item role and using `pressed_state` for multiple mode and
-/// the `checked` flag for single mode.
+/// the explicit `checked_state` plus legacy `checked` flag for single mode.
 pub fn toggle_group_item_a11y_multiple(label: Arc<str>, pressed: bool) -> PressableA11y {
     PressableA11y {
         role: Some(SemanticsRole::Button),
@@ -52,6 +52,11 @@ pub fn toggle_group_item_a11y_single(label: Arc<str>, checked: bool) -> Pressabl
         role: Some(SemanticsRole::RadioButton),
         label: Some(label),
         checked: Some(checked),
+        checked_state: Some(if checked {
+            fret_core::SemanticsCheckedState::True
+        } else {
+            fret_core::SemanticsCheckedState::False
+        }),
         ..Default::default()
     }
 }
@@ -124,6 +129,10 @@ mod tests {
         let a11y = toggle_group_item_a11y_single(Arc::from("A"), true);
         assert_eq!(a11y.role, Some(SemanticsRole::RadioButton));
         assert_eq!(a11y.checked, Some(true));
+        assert_eq!(
+            a11y.checked_state,
+            Some(fret_core::SemanticsCheckedState::True)
+        );
         assert!(!a11y.selected);
     }
 

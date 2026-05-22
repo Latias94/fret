@@ -1,0 +1,235 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: Menubar disabled item action-state",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "menubar",
+      "FRET_UI_GALLERY_START_SECTION": "Demo",
+      "FRET_UI_GALLERY_STATUS_BAR": "1"
+    },
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "menubar",
+      "semantics",
+      "disabled",
+      "action-state",
+      "roving_focus",
+      "keyboard"
+    ],
+    "target_hints": [
+      "Starts directly on the Menubar Demo section with the global status bar visible.",
+      "Verifies that a disabled Menubar item carrying a command suppresses focus/invoke and cannot dispatch through pointer activation.",
+      "Verifies vertical roving focus skips the disabled item and lands on the next enabled menu item."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "set_window_inner_size", "width_px": 960.0, "height_px": 720.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "window_inner_size_approx_equal",
+        "width_px": 960.0,
+        "height_px": 740.0,
+        "eps_px": 2.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-menubar" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-file" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-status-last-action" },
+        "text": "last action: ready"
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-file" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-new-incognito-window" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-new-incognito-window" },
+        "role": "menu_item"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-new-incognito-window" },
+        "disabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-new-incognito-window" },
+        "action": "focus",
+        "enabled": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-new-incognito-window" },
+        "action": "invoke",
+        "enabled": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-new-window" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-new-incognito-window" }
+    },
+    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-new-incognito-window" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-status-last-action" },
+        "text": "last action: ready"
+      }
+    },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "focus",
+      "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-file" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-file" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "arrow_down" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-new-tab" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "arrow_down" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-new-window" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "arrow_down" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-share" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-new-incognito-window" },
+        "disabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-share" },
+        "action": "focus",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-menubar-demo-new-incognito-window" },
+        "action": "invoke",
+        "enabled": false
+      }
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-menubar-disabled-item-action-state"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-menubar-disabled-item-action-state",
+      "max_snapshots": 1
+    }
+  ]
+}

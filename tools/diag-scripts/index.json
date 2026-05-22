@@ -5403,6 +5403,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-checkbox-disabled-action-state",
+      "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-disabled-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-checkbox-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "checkbox",
+        "disabled",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Checkbox page.",
+        "Verifies that a disabled Checkbox exposes disabled=true, suppresses invoke, and does not mutate checked state through control or label activation."
+      ]
+    },
+    {
       "id": "ui-gallery-checkbox-invalid-code-tab-scroll-range",
       "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-invalid-code-tab-scroll-range.json",
       "required_capabilities": [
@@ -5423,6 +5448,34 @@
         "ui_gallery"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-checkbox-required-disabled-group-action-state",
+      "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-required-disabled-group-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-checkbox-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "checkbox",
+        "disabled",
+        "form",
+        "grouped-control",
+        "required",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Checkbox page and scopes rendering to the Required Disabled Group section.",
+        "Verifies that required semantics stay on each concrete checkbox while disabled action suppression and label forwarding are item-local."
+      ]
     },
     {
       "id": "ui-gallery-checkbox-rtl-and-checked-wrap",
@@ -5462,6 +5515,32 @@
       "target_hints": [
         "Scrolls the default Checkbox page to the RTL section and then samples the content viewport with no scripted input.",
         "The final idle-stability assertion fails if the viewport keeps drifting or oscillating after the RTL section is visible."
+      ]
+    },
+    {
+      "id": "ui-gallery-checkbox-table-mixed-state-action",
+      "path": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-table-mixed-state-action.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-checkbox-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "checkbox",
+        "mixed-state",
+        "semantics",
+        "shadcn",
+        "table",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Checkbox page.",
+        "Verifies that the table select-all checkbox exports explicit mixed/true checked-state semantics while keeping invoke enabled through row and select-all mutations."
       ]
     },
     {
@@ -7007,7 +7086,8 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command",
-        "ui-gallery-shadcn-conformance"
+        "ui-gallery-shadcn-conformance",
+        "ui-gallery-shadcn-runtime-evidence"
       ],
       "tags": [
         "a11y",
@@ -7193,7 +7273,8 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery"
+        "ui-gallery",
+        "ui-gallery-context-menu"
       ],
       "tags": [
         "context_menu",
@@ -7223,6 +7304,37 @@
         "ui_gallery"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-context-menu-disabled-item-action-state",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-context-menu",
+        "ui-gallery-context-menu-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "context_menu",
+        "disabled",
+        "keyboard",
+        "mouse",
+        "roving_focus",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Context Menu Basic section with the global status bar visible.",
+        "Verifies that the disabled Forward item carrying a command exports disabled=true while suppressing focus/invoke.",
+        "Verifies vertical roving focus skips the disabled item and that pointer activation cannot dispatch the disabled command.",
+        "Focused and suite runs use default bundle lint; the Basic overlay panel has a dedicated test id so it cannot collide with the DocSection content wrapper."
+      ]
     },
     {
       "id": "ui-gallery-context-menu-keyboard-escape-focus-restore",
@@ -7987,6 +8099,32 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-date-picker-required-invalid-semantics",
+      "path": "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-date-picker-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "date-picker",
+        "form-state",
+        "invalid",
+        "required",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Date Picker page and scopes rendering to the Compact Builder and Invalid sections.",
+        "Verifies that required and invalid form-state semantics live on the DatePicker trigger button rather than only on Field chrome."
+      ]
+    },
+    {
       "id": "ui-gallery-dialog-detached-trigger-focus-restore",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json",
       "required_capabilities": [
@@ -8461,6 +8599,59 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-form-disabled-field-action-state",
+      "path": "tools/diag-scripts/ui-gallery/form/ui-gallery-form-disabled-field-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-form-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "disabled",
+        "field",
+        "form",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Form page and scopes rendering to the Disabled Field section.",
+        "Verifies that disabled Field shell state is visual/grouping policy while disabled semantics and action suppression live on the concrete Input control."
+      ]
+    },
+    {
+      "id": "ui-gallery-form-submit-validation-semantics",
+      "path": "tools/diag-scripts/ui-gallery/form/ui-gallery-form-submit-validation-semantics.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-form-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "form",
+        "form-state",
+        "invalid",
+        "required",
+        "semantics",
+        "shadcn",
+        "submit-validation",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Form page and scopes rendering to the Submit Validation section.",
+        "Verifies that submit-driven FormState validation mutates required/invalid semantics on FormField-decorated controls."
+      ]
+    },
+    {
       "id": "ui-gallery-gesture-long-press-smoke",
       "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-gesture-long-press-smoke.json",
       "required_capabilities": [
@@ -8829,6 +9020,7 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-input-semantics",
         "ui-gallery-shadcn-runtime-evidence"
       ],
       "tags": [
@@ -8996,6 +9188,59 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-input-otp-invalid-required-semantics",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-otp-invalid-required-semantics.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-input-otp-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "form-state",
+        "input-otp",
+        "invalid",
+        "required",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Input OTP page.",
+        "Verifies that slot-level invalid chrome promotes invalid semantics to the hidden root OTP TextInput.",
+        "Verifies that required form-state semantics remain on the hidden root OTP TextInput in the verification form example."
+      ]
+    },
+    {
+      "id": "ui-gallery-input-required-invalid-semantics",
+      "path": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-required-invalid-semantics.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-input-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "form-state",
+        "input",
+        "invalid",
+        "required",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Input page.",
+        "Verifies that required and invalid form-state semantics live on the concrete TextInput nodes, not just on Field chrome."
+      ]
     },
     {
       "id": "ui-gallery-inspector-help-lock-match-copy-selector-steady",
@@ -9466,6 +9711,34 @@
       ],
       "target_hints": [
         "Starts on material3_tabs via env defaults so the steady probe measures tabs switching rather than sidebar navigation."
+      ]
+    },
+    {
+      "id": "ui-gallery-menubar-disabled-item-action-state",
+      "path": "tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-disabled-item-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-menubar-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "disabled",
+        "keyboard",
+        "menubar",
+        "roving_focus",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Menubar Demo section with the global status bar visible.",
+        "Verifies that a disabled Menubar item carrying a command suppresses focus/invoke and cannot dispatch through pointer activation.",
+        "Verifies vertical roving focus skips the disabled item and lands on the next enabled menu item."
       ]
     },
     {
@@ -10165,6 +10438,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-radio-group-checked-state-mutation",
+      "path": "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-checked-state-mutation.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-radio-group-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "checked",
+        "radio_group",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-radio-group-description-layout",
       "path": "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-description-layout.json",
       "required_capabilities": [],
@@ -10174,6 +10467,33 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-radio-group-required-disabled-action-state",
+      "path": "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-required-disabled-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-radio-group-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "action-state",
+        "disabled",
+        "form",
+        "radio_group",
+        "required",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Radio Group page and scopes rendering to the Required Disabled section.",
+        "Verifies that group-level required semantics stay on the RadioGroup root while disabled item semantics and action suppression stay on the concrete radio item and its label bridge."
+      ]
     },
     {
       "id": "ui-gallery-resizable-multi-viewport-combobox-placement",
@@ -10573,6 +10893,31 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-select-invalid-form-state",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-select-semantics",
+        "ui-gallery-shadcn-runtime-evidence"
+      ],
+      "tags": [
+        "form-state",
+        "invalid",
+        "select",
+        "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Select page and invalid section.",
+        "Verifies that invalid form-state semantics live on the concrete Select trigger combobox and clear after committing a value."
+      ]
     },
     {
       "id": "ui-gallery-select-keyboard-commit-apple",
@@ -11033,6 +11378,32 @@
       ]
     },
     {
+      "id": "ui-gallery-slider-numeric-action-state",
+      "path": "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-numeric-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence",
+        "ui-gallery-slider-semantics"
+      ],
+      "tags": [
+        "action-state",
+        "disabled",
+        "numeric",
+        "semantics",
+        "shadcn",
+        "slider",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Slider page.",
+        "Verifies enabled slider thumb numeric metadata and SetValue/Increment/Decrement actions, then verifies disabled slider thumbs suppress the same action surface."
+      ]
+    },
+    {
       "id": "ui-gallery-slider-set-value",
       "path": "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-set-value.json",
       "required_capabilities": [],
@@ -11153,6 +11524,33 @@
       "target_hints": [
         "Navigates to the Spinner page via the left nav search.",
         "Captures the upstream docs-path sections first, then the Fret-only `Extras` and `API Reference` follow-ups."
+      ]
+    },
+    {
+      "id": "ui-gallery-switch-choice-card-checked-state-mutation",
+      "path": "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-choice-card-checked-state-mutation.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence",
+        "ui-gallery-switch-semantics"
+      ],
+      "tags": [
+        "checked-state",
+        "choice-card",
+        "label",
+        "mutation",
+        "semantics",
+        "shadcn",
+        "switch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Switch page.",
+        "Verifies that card-style FieldLabel activation toggles paired Switch checked semantics independently."
       ]
     },
     {
@@ -11655,6 +12053,85 @@
         "ui_gallery"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-textarea-required-invalid-semantics",
+      "path": "tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence",
+        "ui-gallery-textarea-semantics"
+      ],
+      "tags": [
+        "form-state",
+        "invalid",
+        "required",
+        "semantics",
+        "shadcn",
+        "textarea",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Textarea page.",
+        "Verifies that required and invalid form-state semantics live on the concrete TextArea nodes, not just on Field chrome."
+      ]
+    },
+    {
+      "id": "ui-gallery-toggle-group-disabled-item-action-state",
+      "path": "tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-disabled-item-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence",
+        "ui-gallery-toggle-semantics"
+      ],
+      "tags": [
+        "action-state",
+        "checked-state",
+        "disabled",
+        "roving_focus",
+        "semantics",
+        "shadcn",
+        "toggle_group",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Toggle Group page and scopes rendering to the Disabled Item Action-State section.",
+        "Verifies that disabled single-mode items suppress focus/invoke, roving focus skips them, and checked_state stays observable on concrete radio-button items."
+      ]
+    },
+    {
+      "id": "ui-gallery-toggle-interaction-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-interaction-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-runtime-evidence",
+        "ui-gallery-toggle-semantics"
+      ],
+      "tags": [
+        "action-state",
+        "mutation",
+        "pressed-state",
+        "semantics",
+        "shadcn",
+        "toggle",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Toggle page.",
+        "Verifies that Toggle uses pressed_state semantics, not selected-state semantics, while keeping invoke enabled."
+      ]
     },
     {
       "id": "ui-gallery-tooltip-disabled-code-tab-scroll-range",

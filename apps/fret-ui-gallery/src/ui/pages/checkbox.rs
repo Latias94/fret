@@ -15,6 +15,7 @@ pub(super) fn preview_checkbox(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let disabled_section = snippets::disabled::render(cx);
     let with_title_section = snippets::with_title::render(cx);
     let group = snippets::group::render(cx);
+    let required_disabled_group = snippets::required_disabled_group::render(cx);
     let table = snippets::table::render(cx);
     let rtl_section = snippets::rtl::render(cx);
 
@@ -23,6 +24,7 @@ pub(super) fn preview_checkbox(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         "`Checkbox::new(...)`, `Checkbox::new_optional(...)`, and `Checkbox::new_tristate(...)` cover the model-backed checked and mixed-state paths; all three lanes now accept the narrow checked-state bridge traits, while `Checkbox::from_checked(...)` / `from_checked_state(...)` plus `.action(...)` cover the default source-aligned snapshot/action path. `.on_click(...)` remains the lower-level command bridge when explicit command routing is genuinely needed.",
         "`Checkbox::required(true)` now maps the upstream required semantics (`aria-required`) onto the checkbox control itself; the docs path still composes field labels/descriptions externally instead of widening the checkbox to a children API.",
         "Checkbox remains a leaf control surface: labels, descriptions, and larger click targets are composed through `Field`, `FieldContent`, `FieldLabel::for_control(...)`, and `FieldLabel::wrap(...)` rather than a generic children/`compose()` API on the checkbox itself.",
+        "`Required Disabled Group` keeps the fieldset and field-group shell caller-owned while each concrete checkbox owns `required=true`; disabled rows suppress focus/invoke and label-forwarded toggles only on the disabled control.",
         "Visual defaults such as control size, border, focus ring, and indicator chrome stay recipe-owned, while row width and form layout remain caller-owned.",
         "The top-level `Demo` now mirrors the upstream four-row composite preview (`Label`, description, disabled, and wrapped title/content) instead of collapsing that teaching surface into a single shortcut row.",
         "The docs-aligned `Description`, `Group`, and `Table` sections now keep the upstream row order, fieldset framing, and mixed select-all teaching surface visible on the page instead of hiding them behind unrelated composition shortcuts.",
@@ -65,6 +67,12 @@ pub(super) fn preview_checkbox(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let group = DocSection::build(cx, "Group", group)
         .description("Fieldset + legend + checkbox list pattern from the upstream docs.")
         .code_rust_from_file_region(snippets::group::SOURCE, "example");
+    let required_disabled_group =
+        DocSection::build(cx, "Required Disabled Group", required_disabled_group)
+            .description(
+                "Use `required(true)` on each checkbox control and item-level `disabled(true)` so group shell state, required semantics, and disabled action-state stay independent.",
+            )
+            .code_rust_from_file_region(snippets::required_disabled_group::SOURCE, "example");
     let table = DocSection::build(cx, "Table", table)
         .description("Table selection pattern with a derived mixed-state select-all checkbox on the action-first path.")
         .code_rust_from_file_region(snippets::table::SOURCE, "example");
@@ -93,6 +101,7 @@ pub(super) fn preview_checkbox(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
             description_section,
             disabled_section,
             group,
+            required_disabled_group,
             table,
             rtl_section,
             api_reference,

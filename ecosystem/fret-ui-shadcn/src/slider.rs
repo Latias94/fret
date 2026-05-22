@@ -25,7 +25,7 @@ use fret_ui_kit::{
 
 use crate::float_vec_model::IntoFloatVecModel;
 use crate::overlay_motion;
-use crate::test_id::attach_test_id_suffix;
+use crate::test_id::{attach_test_id_suffix, attach_test_id_suffix_dynamic};
 
 type OnValueCommit =
     Arc<dyn Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx, Vec<f32>) + 'static>;
@@ -243,7 +243,8 @@ impl Slider {
 
     /// Sets the stable automation prefix used to derive slider sub-part ids.
     ///
-    /// Derived ids include `{prefix}-track`, `{prefix}-range`, `{prefix}-thumb-{index}`, and
+    /// Derived ids include `{prefix}-track`, `{prefix}-range`, semantic thumbs
+    /// `{prefix}-thumb-{index}`, thumb chrome `{prefix}-thumb-{index}-chrome`, and
     /// `{prefix}-thumb-ring`. This matches the slider's existing diagnostics surface while making
     /// the prefix semantics explicit for call sites.
     pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
@@ -1256,10 +1257,11 @@ fn slider_element<H: UiHost>(
                                     );
                                     let ring_present =
                                         ring_alpha.animating || ring_alpha.value > 1e-6;
-                                    let thumb_el = attach_test_id_suffix(
+                                    let thumb_chrome_suffix = format!("thumb-{thumb_index}-chrome");
+                                    let thumb_el = attach_test_id_suffix_dynamic(
                                         cx.container(thumb, |_| Vec::new()),
                                         test_id_prefix.as_ref(),
-                                        "thumb",
+                                        &thumb_chrome_suffix,
                                     );
                                     if !ring_present {
                                         return vec![thumb_el];
@@ -1393,6 +1395,7 @@ mod tests {
     use super::*;
     use std::cell::Cell;
     use std::cell::RefCell;
+    use std::collections::BTreeMap;
     use std::rc::Rc;
     use std::time::Duration;
 
@@ -1403,7 +1406,7 @@ mod tests {
         TextMetrics, TextService,
     };
     use fret_runtime::FrameId;
-    use fret_ui::element::ElementKind;
+    use fret_ui::element::{AnyElement, ElementKind};
     use fret_ui::elements;
     use fret_ui::tree::UiTree;
     use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
@@ -1425,6 +1428,24 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some(test_id))
             .unwrap_or_else(|| panic!("missing semantics test_id={test_id}"))
             .id
+    }
+
+    fn collect_element_tree_test_ids(el: &AnyElement, out: &mut Vec<String>) {
+        if let Some(test_id) = el
+            .semantics_decoration
+            .as_ref()
+            .and_then(|decoration| decoration.test_id.as_ref())
+        {
+            out.push(test_id.to_string());
+        }
+        if let ElementKind::Semantics(props) = &el.kind
+            && let Some(test_id) = props.test_id.as_ref()
+        {
+            out.push(test_id.to_string());
+        }
+        for child in &el.children {
+            collect_element_tree_test_ids(child, out);
+        }
     }
 
     fn render_vertical_slider_root_height(requested_height: Px) -> Px {
@@ -1908,6 +1929,59 @@ mod tests {
             "expected range width > 1px, got {:?}",
             range_bounds.size.width
         );
+    }
+
+    #[test]
+    fn multi_thumb_slider_derives_unique_thumb_test_ids() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(60.0)),
+        );
+        let model = app.models_mut().insert(vec![20.0, 50.0, 80.0]);
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "shadcn-slider-unique-thumb-test-ids",
+            |cx| {
+                Slider::new(model.clone())
+                    .range(0.0, 100.0)
+                    .test_id("slider")
+                    .into_element(cx)
+            },
+        );
+
+        let mut ids = Vec::new();
+        collect_element_tree_test_ids(&element, &mut ids);
+        let mut counts = BTreeMap::<String, usize>::new();
+        for id in ids {
+            *counts.entry(id).or_default() += 1;
+        }
+        let duplicates = counts
+            .iter()
+            .filter_map(|(id, count)| (*count > 1).then_some(format!("{id} x{count}")))
+            .collect::<Vec<_>>();
+
+        assert!(
+            duplicates.is_empty(),
+            "expected Slider-derived element test_ids to be unique, duplicates={duplicates:?}",
+        );
+        for expected in [
+            "slider-thumb-0",
+            "slider-thumb-1",
+            "slider-thumb-2",
+            "slider-thumb-0-chrome",
+            "slider-thumb-1-chrome",
+            "slider-thumb-2-chrome",
+        ] {
+            assert!(
+                counts.contains_key(expected),
+                "expected derived slider test id `{expected}`, ids={counts:?}",
+            );
+        }
     }
 
     #[test]

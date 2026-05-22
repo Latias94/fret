@@ -12,7 +12,7 @@
 
 use std::sync::Arc;
 
-use fret_core::SemanticsRole;
+use fret_core::{SemanticsCheckedState, SemanticsRole};
 use fret_runtime::Model;
 use fret_ui::element::{
     PressableA11y, PressableProps, PressableState, RovingFlexProps, RovingFocusProps,
@@ -45,6 +45,11 @@ pub fn radio_button_a11y(label: Option<Arc<str>>, checked: bool) -> PressableA11
         role: Some(SemanticsRole::RadioButton),
         label,
         checked: Some(checked),
+        checked_state: Some(if checked {
+            SemanticsCheckedState::True
+        } else {
+            SemanticsCheckedState::False
+        }),
         ..Default::default()
     }
 }

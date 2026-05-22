@@ -76,6 +76,7 @@ pub mod demo;
 pub mod dob;
 pub mod dropdowns;
 pub mod input;
+pub mod invalid;
 pub mod label;
 pub mod natural_language;
 pub mod notes;

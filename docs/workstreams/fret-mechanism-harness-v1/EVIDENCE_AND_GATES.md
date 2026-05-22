@@ -1981,6 +1981,33 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     passed; 17 scripts, zero lint errors, zero reason codes.
   - suite evidence:
     `target/fret-diag-command-suite-disabled-focusable-v7/sessions/1778825524424-52724/suite.summary.json`
+  - fresh promotion gate:
+    the script is now also promoted into
+    `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`, and protocol
+    roundtrip coverage is locked by
+    `script_v2_roundtrip_ui_gallery_command_palette_disabled_focusable_keyboard_suppression`.
+  - fresh focused shadcn gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib cmdk_default_disabled_item_is_skipped_by_active_descendant_navigation cmdk_focusable_disabled_item_can_be_active_descendant_without_keyboard_activation`
+  - fresh focused shadcn result:
+    passed, 2 tests; run id `bfad983b-8637-449b-b925-bfedd2da209d`.
+  - fresh protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_command_palette_disabled_focusable_keyboard_suppression script_v2_roundtrip_ui_gallery_command_retained_active_descendant_action_state`
+  - fresh protocol roundtrip result:
+    passed, 2 tests; run id `35eb12fd-44fa-4db1-90cd-3fac0ac3d211`.
+  - fresh runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json --dir target/fret-diag-command-disabled-focusable-keyboard-suppression-runtime-evidence-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - fresh runtime result:
+    passed; run id `1779407145527`.
+  - fresh runtime evidence:
+    `target/fret-diag-command-disabled-focusable-keyboard-suppression-runtime-evidence-v2/sessions/1779407084356-243016/1779407145527/ai.packet`
+  - fresh runtime pack:
+    `target/fret-diag-command-disabled-focusable-keyboard-suppression-runtime-evidence-v2/sessions/1779407084356-243016/share/1779407145527.zip`
+  - row-only suite command:
+    `target/dev-fast/fretboard-dev.exe diag suite --glob "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json" --dir target/fret-diag-command-disabled-focusable-row-suite-v1 --session-auto --timeout-ms 720000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - row-only suite result:
+    passed 1/1; `stage_counts={"passed":1}`.
+  - row-only suite evidence:
+    `target/fret-diag-command-disabled-focusable-row-suite-v1/sessions/1779408495703-242652/suite.summary.json`
 - Retained/windowed active-descendant action-state mutation gate:
   `tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json`
   - suite membership:
@@ -6509,3 +6536,1400 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target\fret-diag-hit-test-only-paint-cache-suite-path-cache-v2 --session-auto --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
   - result: passed; script run id `1779259645062`; summary
     `target/fret-diag-hit-test-only-paint-cache-suite-path-cache-v2/sessions/1779259631852-148980/suite.summary.json`.
+
+## RadioGroup Checked-State Mutation Runtime Gate
+
+- invariant:
+  RadioGroup item `checked` semantics must move with real user selection. A visual dot and focus
+  ring are insufficient: diagnostics must prove the semantics nodes for Free, Pro, and Enterprise
+  update their `checked` flags after pointer activation.
+- finding:
+  no RadioGroup recipe/runtime defect was reproduced. The gap was missing non-list RadioGroup
+  checked-state mutation coverage; existing RadioGroup diagnostics covered label focus and RTL or
+  choice-card layout without asserting dynamic `checked` semantics. The broader
+  `ui-gallery-shadcn-runtime-evidence` suite currently has an unrelated Command
+  retained-active-descendant `script_stalled_no_frames` failure before it reaches RadioGroup, so the
+  durable gate is a focused `ui-gallery-radio-group-semantics` suite.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-checked-state-mutation.json`,
+  `tools/diag-scripts/suites/ui-gallery-radio-group-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-radio-group-checked-state-mutation-v1/sessions/1779261539435-153996/1779261557779/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-radio-group-checked-state-mutation-v1/sessions/1779261539435-153996/share/1779261557779.zip`;
+  dedicated suite summary:
+  `target/fret-diag-radio-group-semantics-suite-v4/sessions/1779263168285-151724/suite.summary.json`;
+  unrelated broad-suite Command no-frame failure:
+  `target/fret-diag-shadcn-runtime-evidence-radio-group-checked-v1/sessions/1779261599311-79120/suite.summary.json`.
+- JSON/registry:
+  `python -m json.tool tools\diag-scripts\ui-gallery\radio-group\ui-gallery-radio-group-checked-state-mutation.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-radio-group-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- format:
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_radio_group_checked_state_mutation --no-fail-fast --no-capture`
+  - result: passed; latest Nextest run id `7ced9cb1-5ecc-43bd-b118-4fc3cd0c6681`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\radio-group\ui-gallery-radio-group-checked-state-mutation.json --dir target\fret-diag-radio-group-checked-state-mutation-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779261557779`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-radio-group-semantics --dir target\fret-diag-radio-group-semantics-suite-v4 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; script run id `1779263181042`.
+- broad runtime suite triage:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-radio-group-checked-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: failed before reaching RadioGroup because existing
+    `ui-gallery-command-retained-active-descendant-action-state.json` stalled with no frames at
+    step 1. A focused rerun of that Command script also failed with `script_stalled_no_frames`, so
+    this is recorded as a separate diagnostics stability follow-up.
+
+## Desktop Repeating-Timer Redraw Starvation Repair
+
+- invariant:
+  a repeating runner timer must not fire more than once in the same event-loop tick, and repeating
+  timers must rearm from handler completion time rather than from the stale timestamp captured at
+  the beginning of an effect-drain turn. Diagnostics keepalive timers may request redraw and inject
+  events, but they must not starve the platform `RedrawRequested` they are trying to observe.
+- finding:
+  the broad `ui-gallery-shadcn-runtime-evidence` suite failure after the RadioGroup promotion was a
+  real runner scheduling defect, not a Command recipe defect. The Command
+  retained-active-descendant script stalled after `scroll_into_view` because a repeating
+  diagnostics keepalive timer could catch up inside the same fixed-point drain turn. Once the
+  runner tick guard and completion-time rearm landed, the focused Command script and the full broad
+  suite passed.
+- implementation anchors:
+  `crates/fret-launch/src/runner/desktop/runner/timers.rs`,
+  `crates/fret-launch/src/runner/desktop/runner/window.rs`,
+  `crates/fret-launch/src/runner/desktop/runner/asset_reload.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`, and
+  `ecosystem/fret-bootstrap/src/ui_app_driver.rs`.
+- evidence anchors:
+  focused Command AI packet:
+  `target/fret-diag-command-retained-active-descendant-action-state-runner-timer-fresh-20260521/sessions/1779298813208-173816/1779298834262/ai.packet`;
+  focused Command pack:
+  `target/fret-diag-command-retained-active-descendant-action-state-runner-timer-fresh-20260521/sessions/1779298813208-173816/share/1779298834262.zip`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521/sessions/1779299075645-7824/suite.summary.json`.
+- timer regression:
+  `cargo test --profile dev-fast -p fret-launch repeating_timer --lib -- --nocapture`
+  - result: passed; 2 tests.
+- diagnostics no-frame regression:
+  `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics --lib no_frame_keepalive -- --nocapture`
+  - result: passed; 3 tests.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\command\ui-gallery-command-retained-active-descendant-action-state.json --dir target\fret-diag-command-retained-active-descendant-action-state-runner-timer-fresh-20260521 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779298834262`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 13/13; `stage_counts={"passed":13}`; `reason_code_counts={}`.
+  - Command retained-active-descendant row: passed, run id `1779299206755`.
+  - RadioGroup checked-state mutation row: passed, run id `1779299568012`.
+
+## Runner Repeating-Timer Overlap Stress Gate
+
+- invariant:
+  the same-tick repeating-timer guard must apply across overlapping timers. A window-targeted
+  diagnostics keepalive timer and a windowless asset-reload-style polling timer can both be due in
+  a stale drain turn, but neither may catch up more than once before the runner tick advances.
+- finding:
+  no new runtime defect was reproduced. This is a regression-hardening companion to the F242
+  runtime failure so future scheduler changes can be checked cheaply without launching UI Gallery.
+- implementation anchors:
+  `crates/fret-launch/src/runner/desktop/runner/timers.rs`.
+- focused stress gate:
+  `cargo test --profile dev-fast -p fret-launch overlapping_repeating_timers --lib -- --nocapture`
+  - result: passed; 1 test.
+- full timer regression filter:
+  `cargo test --profile dev-fast -p fret-launch repeating_timer --lib -- --nocapture`
+  - result: passed; 3 tests.
+
+## Switch Choice-Card Checked-State Runtime Gate
+
+- invariant:
+  card-style `FieldLabel::wrap(...)` activation on the shadcn Switch docs-path Choice Card must
+  toggle the associated nested `Switch` and refresh the exported `checked` semantics for each
+  independent control. Visual card chrome and associated label hit testing are not enough without
+  proving the control semantics update.
+- finding:
+  no Switch recipe/runtime defect was reproduced. This slice closes missing coverage for a real
+  non-list form composition where card label activation, `ControlId` association, model mutation,
+  and exported `checked` semantics all have to stay aligned.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-choice-card-checked-state-mutation.json`,
+  `tools/diag-scripts/suites/ui-gallery-switch-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-switch-choice-card-checked-state-mutation-v1/sessions/1779301451133-110692/1779301465865/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-switch-choice-card-checked-state-mutation-v1/sessions/1779301451133-110692/share/1779301465865.zip`;
+  dedicated suite summary:
+  `target/fret-diag-switch-semantics-suite-v1/sessions/1779301571842-137052/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-switch-choice-card-v1/sessions/1779301689107-175712/suite.summary.json`.
+- JSON/registry:
+  `python -m json.tool tools\diag-scripts\ui-gallery\switch\ui-gallery-switch-choice-card-checked-state-mutation.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-switch-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_switch_choice_card_checked_state_mutation --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `3d7a846c-ec57-4044-8222-e81a4b9f978f`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\switch\ui-gallery-switch-choice-card-checked-state-mutation.json --dir target\fret-diag-switch-choice-card-checked-state-mutation-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779301465865`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-switch-semantics --dir target\fret-diag-switch-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; `stage_counts={"passed":1}`; script run id `1779301586186`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-switch-choice-card-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 14/14; `stage_counts={"passed":14}`; `reason_code_counts={}`;
+    Switch choice-card row run id `1779302260684`.
+
+## Checkbox Disabled Action-State Runtime Gate
+
+- invariant:
+  a disabled shadcn Checkbox must export `disabled=true`, suppress the `invoke` action, and keep its
+  checked state unchanged through both direct control activation and associated label activation.
+- finding:
+  no Checkbox recipe/runtime defect was reproduced. This slice closes missing coverage for a real
+  non-text form control where disabled chrome, `FieldLabel` control association, checked state, and
+  exported action metadata all have to stay aligned.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-disabled-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-checkbox-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-checkbox-disabled-action-state-v1/sessions/1779303551841-64456/1779303569865/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-checkbox-disabled-action-state-v1/sessions/1779303551841-64456/share/1779303569865.zip`;
+  dedicated suite summary:
+  `target/fret-diag-checkbox-semantics-suite-v1/sessions/1779303815632-98108/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-checkbox-disabled-v1/sessions/1779304064247-171464/suite.summary.json`.
+- JSON/registry:
+  `python -m json.tool tools\diag-scripts\ui-gallery\checkbox\ui-gallery-checkbox-disabled-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-checkbox-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_checkbox_disabled_action_state --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `8ace631b-a63d-4a0d-bc9b-55ccc1a64267`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\checkbox\ui-gallery-checkbox-disabled-action-state.json --dir target\fret-diag-checkbox-disabled-action-state-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779303569865`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-checkbox-semantics --dir target\fret-diag-checkbox-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; `stage_counts={"passed":1}`; script run id `1779303834251`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-checkbox-disabled-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 15/15; `stage_counts={"passed":15}`; `reason_code_counts={}`;
+    Checkbox disabled-action row run id `1779304154355`.
+
+
+## Slider Numeric Action-State and Thumb Test-ID Runtime Gate
+
+- invariant:
+  an enabled shadcn Slider thumb must export numeric value/min/max/step/jump plus enabled
+  `set_value`, `increment`, and `decrement`; a disabled Slider thumb must keep numeric metadata but
+  export `disabled=true` and suppress `set_value`, `increment`, `decrement`, and `focus`. Derived
+  thumb automation ids must also stay unique across multi-thumb recipe chrome and semantic thumbs.
+- finding:
+  the new runtime script did not reproduce a Slider numeric/action semantics defect. The first
+  linted suite run did find a real recipe diagnostics defect: visual thumb chrome reused bare
+  `{prefix}-thumb` ids for every thumb, creating duplicate `test_id`s in multi-thumb Slider
+  examples. The script also needed focus hygiene after scrolling away from a focused single thumb.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/slider.rs`,
+  `ecosystem/fret-ui-shadcn/src/test_id.rs`,
+  `tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-numeric-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-slider-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- discovery evidence:
+  initial lint failure before repair:
+  `target/fret-diag-slider-semantics-suite-v1/sessions/1779306432063-174216/1779306461660-ui-gallery-slider-numeric-action-state/check.lint.json`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-slider-numeric-action-state-v2/sessions/1779307920873-121240/1779307931755/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-slider-numeric-action-state-v2/sessions/1779307920873-121240/share/1779307931755.zip`;
+  dedicated suite summary:
+  `target/fret-diag-slider-semantics-suite-v2/sessions/1779307963346-175080/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-slider-numeric-v1/sessions/1779308003840-152848/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\slider\ui-gallery-slider-numeric-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-slider-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem\fret-ui-shadcn\src\test_id.rs ecosystem\fret-ui-shadcn\src\slider.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- Slider recipe unit gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn multi_thumb_slider_derives_unique_thumb_test_ids --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-shadcn slider_set_value_numeric_updates_model_via_accessibility_driver --lib -- --nocapture`
+  - result: passed; 1 test.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_slider_numeric_action_state --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `1e5e6033-7824-4d00-88c5-f9a857b3e4a8`.
+- build:
+  `cargo build --profile dev-fast -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\slider\ui-gallery-slider-numeric-action-state.json --dir target\fret-diag-slider-numeric-action-state-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779307931755`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-slider-semantics --dir target\fret-diag-slider-semantics-suite-v2 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; `stage_counts={"passed":1}`; script run id `1779307974845`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-slider-numeric-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 16/16; `stage_counts={"passed":16}`; `reason_code_counts={}`;
+    Slider numeric-action row run id `1779308615620`.
+
+
+## Checkbox Table Mixed Checked-State Runtime Gate
+
+- invariant:
+  a shadcn Checkbox table select-all control must expose explicit tri-state checked semantics:
+  `mixed` when only some rows are selected and `true` when all rows are selected. The same control
+  must keep `invoke=true` while row mutations move it between mixed and checked states.
+- finding:
+  no Checkbox recipe/runtime defect was reproduced. The slice closed a harness/protocol gap by
+  making explicit tri-state `checked_state` queryable instead of relying on the legacy binary
+  `checked` flag or `checked_is_none`.
+- implementation anchors:
+  `crates/fret-diag-protocol/src/lib.rs`,
+  `crates/fret-diag-protocol/src/builder.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`,
+  `crates/fret-mechanism-harness/src/oracle.rs`,
+  `crates/fret-mechanism-harness/src/lib.rs`,
+  `docs/ui-diagnostics-and-scripted-tests.md`,
+  `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-table-mixed-state-action.json`,
+  `tools/diag-scripts/suites/ui-gallery-checkbox-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-checkbox-table-mixed-state-action-v1/sessions/1779310480442-177764/1779310495372/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-checkbox-table-mixed-state-action-v1/sessions/1779310480442-177764/share/1779310495372.zip`;
+  dedicated suite summary:
+  `target/fret-diag-checkbox-semantics-suite-table-mixed-v1/sessions/1779310724199-166384/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-checkbox-table-mixed-v1/sessions/1779311169346-151568/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\checkbox\ui-gallery-checkbox-table-mixed-state-action.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-checkbox-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\src\builder.rs crates\fret-diag-protocol\src\lib.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs crates\fret-mechanism-harness\src\lib.rs crates\fret-mechanism-harness\src\oracle.rs ecosystem\fret-bootstrap\src\ui_diagnostics\predicates.rs ecosystem\fret-bootstrap\src\ui_diagnostics\script_steps_wait.rs`;
+  `git diff --check`
+  - result: passed.
+- protocol/bootstrap/mechanism gates:
+  `cargo test --profile dev-fast -p fret-diag-protocol predicate_checked_state_is_serializes_and_deserializes --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics checked_state_is_matches_semantics_checked_state --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui mechanism_harness_semantics_relations_match_oracles --lib -- --nocapture`
+  - result: passed; 1 test.
+- protocol script roundtrip:
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_checkbox_table_mixed_state_action -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\checkbox\ui-gallery-checkbox-table-mixed-state-action.json --dir target\fret-diag-checkbox-table-mixed-state-action-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779310495372`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-checkbox-semantics --dir target\fret-diag-checkbox-semantics-suite-table-mixed-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 2/2; `stage_counts={"passed":2}`; script run id `1779310910113`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-checkbox-table-mixed-v1 --session-auto --timeout-ms 900000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 17/17; `stage_counts={"passed":17}`; `reason_code_counts={}`;
+    Checkbox table mixed-state row run id `1779311405413`.
+
+## Toggle Pressed-State Runtime Gate
+
+- invariant:
+  a shadcn Toggle must expose explicit tri-state pressed semantics through `pressed_state`, not
+  selected semantics. The Bookmark toggle should move `false -> true -> false` across two
+  activations, keep `selected=false`, and keep `invoke=true`.
+- finding:
+  no Toggle recipe/runtime defect was reproduced. The existing script was wrong: after click, the
+  runtime bundle showed `role=button` and `flags.pressed_state="true"`, while the script asserted
+  `selected_is=true`. This slice closes that diagnostics expressiveness gap with a first-class
+  `pressed_state_is` predicate and updates the Toggle gate to assert the correct semantics axis.
+- implementation anchors:
+  `crates/fret-diag-protocol/src/lib.rs`,
+  `crates/fret-diag-protocol/src/builder.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`,
+  `crates/fret-mechanism-harness/src/oracle.rs`,
+  `crates/fret-mechanism-harness/src/lib.rs`,
+  `docs/ui-diagnostics-and-scripted-tests.md`,
+  `tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-interaction-screenshots.json`,
+  `tools/diag-scripts/suites/ui-gallery-toggle-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- discovery evidence:
+  old `selected_is=true` script failure:
+  `target/fret-diag-toggle-interaction-selected-probe-v1/sessions/1779313631621-83488/1779313643019/ai.packet`;
+  failure pack:
+  `target/fret-diag-toggle-interaction-selected-probe-v1/sessions/1779313631621-83488/share/1779313643019.zip`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-toggle-pressed-state-interaction-v1/sessions/1779314794606-180768/1779314805300/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-toggle-pressed-state-interaction-v1/sessions/1779314794606-180768/share/1779314805300.zip`;
+  dedicated suite summary:
+  `target/fret-diag-toggle-semantics-suite-v1/sessions/1779314830681-87028/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-toggle-pressed-v2/sessions/1779316094427-64032/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\toggle\ui-gallery-toggle-interaction-screenshots.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-toggle-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\src\builder.rs crates\fret-diag-protocol\src\lib.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs crates\fret-mechanism-harness\src\lib.rs crates\fret-mechanism-harness\src\oracle.rs ecosystem\fret-bootstrap\src\ui_diagnostics\predicates.rs ecosystem\fret-bootstrap\src\ui_diagnostics\script_steps_wait.rs`;
+  `git diff --check`
+  - result: passed.
+- protocol/bootstrap/mechanism gates:
+  `cargo test --profile dev-fast -p fret-diag-protocol predicate_pressed_state_is_serializes_and_deserializes --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics pressed_state_is_matches_semantics_pressed_state --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui mechanism_harness_semantics_relations_match_oracles --lib -- --nocapture`
+  - result: passed; 1 test.
+- protocol script roundtrip:
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_toggle_interaction_screenshots -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\toggle\ui-gallery-toggle-interaction-screenshots.json --dir target\fret-diag-toggle-pressed-state-interaction-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779314805300`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-toggle-semantics --dir target\fret-diag-toggle-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; script run id `1779314840880`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-toggle-pressed-v2 --session-auto --timeout-ms 1200000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 18/18; `stage_counts={"passed":18}`; `reason_code_counts={}`;
+    Toggle pressed-state row run id `1779317023787`.
+
+
+## Input Required/Invalid Form-State Runtime Gate
+
+- invariant:
+  a shadcn Input must expose required and invalid semantics on the concrete TextInput control, not
+  only through Field chrome. Invalid examples should export `invalid=true` and `required=false`;
+  required examples should export `required=true` and no invalid state. Both controls remain enabled
+  and must keep `focus=true` and `set_value=true`.
+- finding:
+  no Input recipe/runtime defect was reproduced. The slice closed a diagnostics expressiveness gap
+  (`required_is` / `invalid_is`) and a UI Gallery automation surface gap: the Invalid and Required
+  snippets now stamp stable concrete TextInput test ids so gates can target the owning node.
+- implementation anchors:
+  `crates/fret-diag-protocol/src/lib.rs`,
+  `crates/fret-diag-protocol/src/builder.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`,
+  `crates/fret-mechanism-harness/src/observe.rs`,
+  `crates/fret-mechanism-harness/src/oracle.rs`,
+  `crates/fret-mechanism-harness/src/lib.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/input/invalid.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/input/required.rs`,
+  `docs/ui-diagnostics-and-scripted-tests.md`,
+  `tools/diag-scripts/ui-gallery/input/ui-gallery-input-required-invalid-semantics.json`,
+  `tools/diag-scripts/suites/ui-gallery-input-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-input-required-invalid-semantics-v2/sessions/1779318958257-166004/1779318973423/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-input-required-invalid-semantics-v2/sessions/1779318958257-166004/share/1779318973423.zip`;
+  dedicated suite summary:
+  `target/fret-diag-input-semantics-suite-v1/sessions/1779319043334-48440/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-input-required-invalid-v1/sessions/1779319155073-96032/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\input\ui-gallery-input-required-invalid-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-input-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\input\invalid.rs apps\fret-ui-gallery\src\ui\snippets\input\required.rs crates\fret-diag-protocol\src\builder.rs crates\fret-diag-protocol\src\lib.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs crates\fret-mechanism-harness\src\lib.rs crates\fret-mechanism-harness\src\observe.rs crates\fret-mechanism-harness\src\oracle.rs ecosystem\fret-bootstrap\src\ui_diagnostics\predicates.rs ecosystem\fret-bootstrap\src\ui_diagnostics\script_steps_wait.rs`;
+  `git diff --check`
+  - result: passed.
+- protocol/bootstrap/mechanism gates:
+  `cargo test --profile dev-fast -p fret-diag-protocol predicate_required_is_serializes_and_deserializes --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol predicate_invalid_is_serializes_and_deserializes --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics required_and_invalid_is_match_form_control_semantics_flags --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-mechanism-harness semantics_value_state_actions_and_structured_metadata_are_queryable --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui mechanism_harness_semantics_relations_match_oracles --lib -- --nocapture`
+  - result: passed; 1 test.
+- protocol script roundtrip:
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_input_required_invalid_semantics -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\input\ui-gallery-input-required-invalid-semantics.json --dir target\fret-diag-input-required-invalid-semantics-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779318973423`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-input-semantics --dir target\fret-diag-input-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 2/2; `stage_counts={"passed":2}`; script run id `1779319084263`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-input-required-invalid-v1 --session-auto --timeout-ms 1200000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 19/19; `stage_counts={"passed":19}`; `reason_code_counts={}`;
+    Input required/invalid row run id `1779319975211`.
+
+
+## Select Invalid Form-State Runtime Gate
+
+- invariant:
+  a shadcn Select Invalid example must expose invalid form-state semantics on the concrete trigger
+  combobox while no value is selected, not only through Field chrome. After committing a value, the
+  trigger should clear invalid semantics, the FieldError should disappear, and the trigger should
+  retain enabled focus/invoke actions.
+- finding:
+  no Select recipe/runtime defect was reproduced. The slice promoted existing Select semantics
+  behavior into a live docs-path runtime gate and into the broad shadcn runtime-evidence suite.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-select-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- existing recipe anchors:
+  `ecosystem/fret-ui-shadcn/src/select.rs` (`Select::aria_invalid`, `Select::required`, and the
+  existing unit tests `select_aria_invalid_exposes_invalid_semantics` /
+  `select_required_exposes_required_semantics`).
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-select-invalid-form-state-v1/sessions/1779321642042-159492/1779321650994/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-select-invalid-form-state-v1/sessions/1779321642042-159492/share/1779321650994.zip`;
+  dedicated suite summary:
+  `target/fret-diag-select-semantics-suite-v1/sessions/1779321672604-100084/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-select-invalid-v1/sessions/1779321710285-137352/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\select\ui-gallery-select-invalid-form-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-select-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- Select recipe semantics gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn select_aria_invalid_exposes_invalid_semantics --lib -- --nocapture`
+  - result: passed; also matched `native_select::tests::native_select_aria_invalid_exposes_invalid_semantics`.
+  `cargo test --profile dev-fast -p fret-ui-shadcn select_required_exposes_required_semantics --lib -- --nocapture`
+  - result: passed; also matched `native_select::tests::native_select_required_exposes_required_semantics`.
+- protocol script roundtrip:
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_select_invalid_form_state -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\select\ui-gallery-select-invalid-form-state.json --dir target\fret-diag-select-invalid-form-state-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779321650994`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-select-semantics --dir target\fret-diag-select-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; script run id `1779321682202`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-select-invalid-v1 --session-auto --timeout-ms 1200000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 20/20; `stage_counts={"passed":20}`; `reason_code_counts={}`;
+    Select invalid row run id `1779322696285`.
+
+## Textarea Required/Invalid Form-State Runtime Gate
+
+- invariant:
+  a shadcn Textarea must expose required and invalid semantics on the concrete TextArea control,
+  not only through surrounding Field chrome. Invalid examples should export `invalid=true` and
+  `required=false`; required examples should export `required=true` and no invalid state. Both
+  controls remain enabled and must keep `focus=true` and `set_value=true`.
+- finding:
+  no Textarea recipe/runtime defect was reproduced. The slice closed a UI Gallery automation surface
+  gap: the Invalid snippet now stamps a stable concrete TextArea test id, and the docs page now has
+  a Required example with caller-owned marker composition and control-owned `required` semantics.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/textarea/invalid.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/textarea/required.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/textarea.rs`,
+  `ecosystem/fret-ui-shadcn/src/textarea.rs`,
+  `tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json`,
+  `tools/diag-scripts/suites/ui-gallery-textarea-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-textarea-required-invalid-semantics-v1/sessions/1779324589606-162572/1779324602377/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-textarea-required-invalid-semantics-v1/sessions/1779324589606-162572/share/1779324602377.zip`;
+  dedicated suite summary:
+  `target/fret-diag-textarea-semantics-suite-v1/sessions/1779324642363-184708/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-textarea-required-invalid-v2/sessions/1779326355415-96352/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\textarea\ui-gallery-textarea-required-invalid-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\textarea\ui-gallery-textarea-docs-screenshot.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-textarea-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\textarea\invalid.rs apps\fret-ui-gallery\src\ui\snippets\textarea\required.rs apps\fret-ui-gallery\src\ui\snippets\textarea\mod.rs apps\fret-ui-gallery\src\ui\pages\textarea.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs ecosystem\fret-ui-shadcn\src\textarea.rs apps\fret-ui-gallery\tests\textarea_docs_surface.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn textarea_required_builder_sets_textarea_required_semantics --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-shadcn textarea_aria_invalid_builder_sets_textarea_invalid_semantics --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_textarea_required_invalid_semantics -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_page_documents_source_axes_and_leaf_children_api_decision -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_snippets_keep_the_docs_path_examples_and_leaf_surface -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test textarea_docs_surface textarea_diag_scripts_cover_docs_path_and_label_follow_up -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app textarea_snippets_prefer_ui_cx_on_the_default_app_surface -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app textarea_page_uses_typed_doc_sections_for_app_facing_snippets -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_radio_input_and_textarea_docs_keep_required_ownership_on_the_control_surface -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_radio_input_and_textarea_docs_keep_invalid_ownership_on_the_control_surface -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\textarea\ui-gallery-textarea-required-invalid-semantics.json --dir target\fret-diag-textarea-required-invalid-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779324602377`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-textarea-semantics --dir target\fret-diag-textarea-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; script run id `1779324654768`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-textarea-required-invalid-v2 --session-auto --timeout-ms 1800000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 21/21; `stage_counts={"passed":21}`; `reason_code_counts={}`;
+    Textarea row run id `1779327669604`.
+
+## InputOTP Invalid/Required Form-State Runtime Gate
+
+- invariant:
+  shadcn InputOTP slot-invalid visual chrome must promote invalid form-state semantics to the
+  hidden root OTP TextInput, because that node owns editing, value, focus, and accessibility. The
+  Form example must expose required semantics on the same hidden root control. Both controls remain
+  enabled and keep `focus=true` and `set_value=true`.
+- finding:
+  no InputOTP recipe/runtime defect was reproduced. Existing recipe behavior was correct; the slice
+  promoted it into a deterministic runtime gate and avoided long-page suite drift by scoping the
+  page to `Invalid,Form`.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/input/ui-gallery-input-otp-invalid-required-semantics.json`,
+  `tools/diag-scripts/ui-gallery-input-otp-invalid-required-semantics.json`,
+  `tools/diag-scripts/suites/ui-gallery-input-otp-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- existing recipe anchors:
+  `ecosystem/fret-ui-shadcn/src/input_otp.rs`
+  (`InputOtp::required`, `InputOtpSlot::aria_invalid`, and the existing unit tests
+  `input_otp_slot_part_aria_invalid_sets_hidden_input_semantics_invalid` /
+  `input_otp_required_builder_exposes_required_semantics`).
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-input-otp-invalid-required-semantics-v2/sessions/1779329862109-172384/1779329877911/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-input-otp-invalid-required-semantics-v2/sessions/1779329862109-172384/share/1779329877911.zip`;
+  dedicated suite summary:
+  `target/fret-diag-input-otp-semantics-suite-v2/sessions/1779329954569-181280/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-input-otp-invalid-required-v1/sessions/1779330056274-195352/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\input\ui-gallery-input-otp-invalid-required-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-input-otp-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-input-otp-invalid-required-semantics.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn input_otp_slot_part_aria_invalid_sets_hidden_input_semantics_invalid --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-shadcn input_otp_required_builder_exposes_required_semantics --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_input_otp_invalid_required_semantics -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\input\ui-gallery-input-otp-invalid-required-semantics.json --dir target\fret-diag-input-otp-invalid-required-semantics-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779329877911`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-input-otp-semantics --dir target\fret-diag-input-otp-semantics-suite-v2 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; script run id `1779329969582`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-input-otp-invalid-required-v1 --session-auto --timeout-ms 1800000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 22/22; `stage_counts={"passed":22}`; `reason_code_counts={}`;
+    InputOTP row run id `1779331449795`.
+
+## DatePicker Required/Invalid Trigger Semantics Runtime Gate
+
+- invariant:
+  shadcn DatePicker is a button-backed popover trigger, so required and invalid form-state semantics
+  must be exported by the trigger button that owns focus/invoke and opens the calendar. Surrounding
+  `Field::invalid(true)` styling and `FieldError` copy remain caller-owned.
+- finding:
+  no DatePicker recipe/runtime defect was reproduced. Existing trigger semantics were correct; this
+  slice closed the missing UI Gallery invalid teaching surface and promoted the required/invalid
+  trigger contract into a deterministic runtime gate. The first broad-suite run also exposed a
+  diagnostics authoring hazard in the existing Select invalid gate: `click_stable` on an already
+  visible transient overlay option could stall with `timeout.no_frames`. The Select script now uses
+  direct semantic `click` for that committed option.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/date_picker/invalid.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/date_picker/mod.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/date_picker.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json`,
+  `tools/diag-scripts/ui-gallery-date-picker-required-invalid-semantics.json`,
+  `tools/diag-scripts/suites/ui-gallery-date-picker-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- existing recipe anchors:
+  `ecosystem/fret-ui-shadcn/src/date_picker.rs`
+  (`DatePicker::required`, `DatePicker::aria_invalid`, and the existing unit tests
+  `date_picker_required_exposes_required_semantics` /
+  `date_picker_aria_invalid_exposes_invalid_semantics`).
+- evidence anchors:
+  focused DatePicker runtime AI packet:
+  `target/fret-diag-date-picker-required-invalid-semantics-v1/sessions/1779334955994-144056/1779334968449/ai.packet`;
+  focused DatePicker runtime pack:
+  `target/fret-diag-date-picker-required-invalid-semantics-v1/sessions/1779334955994-144056/share/1779334968449.zip`;
+  dedicated DatePicker suite summary:
+  `target/fret-diag-date-picker-semantics-suite-v1/sessions/1779335003408-192508/suite.summary.json`;
+  hardened Select focused runtime AI packet:
+  `target/fret-diag-select-invalid-form-state-click-hardening-v1/sessions/1779337219903-189420/1779337229373/ai.packet`;
+  hardened Select focused runtime pack:
+  `target/fret-diag-select-invalid-form-state-click-hardening-v1/sessions/1779337219903-189420/share/1779337229373.zip`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2/sessions/1779337267974-91608/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\date-picker\ui-gallery-date-picker-required-invalid-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery\select\ui-gallery-select-invalid-form-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-date-picker-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-date-picker-required-invalid-semantics.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\date_picker\invalid.rs apps\fret-ui-gallery\src\ui\snippets\date_picker\mod.rs apps\fret-ui-gallery\src\ui\pages\date_picker.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn date_picker_required_exposes_required_semantics --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-shadcn date_picker_aria_invalid_exposes_invalid_semantics --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_date_picker_required_invalid_semantics -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_and_input_otp_docs_keep_required_ownership_on_the_control_surface -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_docs_keep_invalid_ownership_on_trigger_with_caller_owned_error_copy -- --nocapture`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_select_invalid_form_state -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused DatePicker runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\date-picker\ui-gallery-date-picker-required-invalid-semantics.json --dir target\fret-diag-date-picker-required-invalid-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779334968449`.
+- hardened Select focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\select\ui-gallery-select-invalid-form-state.json --dir target\fret-diag-select-invalid-form-state-click-hardening-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779337229373`.
+- dedicated DatePicker runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-date-picker-semantics --dir target\fret-diag-date-picker-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; script run id `1779335013570`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2 --session-auto --timeout-ms 2400000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 23/23; `stage_counts={"passed":23}`; `reason_code_counts={}`;
+    DatePicker row run id `1779338165138`; hardened Select row run id `1779338502088`.
+
+## Form Submit Validation Semantics Runtime Gate
+
+- invariant:
+  submit-driven `FormState` validation must mutate the semantics on the concrete controls decorated
+  by `FormField`, not only the surrounding visual field chrome. Required semantics are present
+  before submit; invalid semantics and caller-owned alert copy appear only after submit; on-change
+  repair clears invalid state; a final valid submit reports success.
+- finding:
+  no Form/FormField recipe or runtime defect was reproduced. Existing form registration,
+  submit-validation, and on-change revalidation behavior was correct; this slice promoted the
+  user-level multi-control validation journey into a deterministic runtime gate.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/form/submit_validation.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/form/mod.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/form.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/form/ui-gallery-form-submit-validation-semantics.json`,
+  `tools/diag-scripts/ui-gallery-form-submit-validation-semantics.json`,
+  `tools/diag-scripts/suites/ui-gallery-form-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- existing recipe anchors:
+  `ecosystem/fret-ui-shadcn/src/form_field.rs`,
+  `ecosystem/fret-ui-kit/src/declarative/form.rs`, and
+  `ecosystem/fret-ui-headless/src/form_state.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-form-submit-validation-semantics-v1/sessions/1779342775326-181112/1779342789863/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-form-submit-validation-semantics-v1/sessions/1779342775326-181112/share/1779342789863.zip`;
+  dedicated suite summary:
+  `target/fret-diag-form-semantics-suite-v1/sessions/1779342834313-22100/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-form-submit-validation-v2/sessions/1779344474432-184028/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\form\ui-gallery-form-submit-validation-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-form-submit-validation-semantics.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-form-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py --write`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\form\submit_validation.rs apps\fret-ui-gallery\src\ui\snippets\form\mod.rs apps\fret-ui-gallery\src\ui\pages\form.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn form_field_ --lib -- --nocapture`
+  - result: passed; 29 tests.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app form_ -- --nocapture`
+  - result: passed; 8 tests.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_form_submit_validation_semantics -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+  - note: the run emitted the pre-existing unrelated unused `start` warning from
+    `crates/fret-ui/src/declarative/host_widget/paint.rs`.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\form\ui-gallery-form-submit-validation-semantics.json --dir target\fret-diag-form-submit-validation-semantics-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779342789863`.
+- dedicated runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-form-semantics --dir target\fret-diag-form-semantics-suite-v1 --session-auto --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; script run id `1779342849187`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-form-submit-validation-v2 --session-auto --timeout-ms 2400000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 24/24; `stage_counts={"passed":24}`; `reason_code_counts={}`;
+    Form row run id `1779345780709`.
+
+## Form Disabled Field Action-State Runtime Gate
+
+- invariant:
+  shadcn Field disabled styling is field-shell/group state. The concrete disabled control must own
+  the accessibility and action semantics: `disabled=true`, `focus=false`, and `set_value=false`.
+  Sibling controls must not become disabled merely because a nearby Field shell is disabled.
+- finding:
+  no Form/Field recipe or runtime defect was reproduced. The gate corrected two diagnostics hazards
+  during authoring: an over-specific visual opacity probe was removed because it did not prove the
+  action-state invariant, and the companion value assertion now waits for the asynchronous model
+  update after `set_text_value`.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/form/disabled_field.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/form/mod.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/form.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/form/ui-gallery-form-disabled-field-action-state.json`,
+  `tools/diag-scripts/ui-gallery-form-disabled-field-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-form-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  upstream `repo-ref/ui/apps/v4/registry/new-york-v4/ui/field.tsx` has `Field` as a `div` group with
+  `data-disabled` styling; concrete controls own real disabled semantics.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-form-disabled-field-action-state-v3/sessions/1779351791667-101584/1779351805821/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-form-disabled-field-action-state-v3/sessions/1779351791667-101584/share/1779351805821.zip`;
+  dedicated suite summary:
+  `target/fret-diag-form-semantics-suite-disabled-field-rebuilt-v1/sessions/1779352801343-181708/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-form-disabled-field-v1/sessions/1779352876487-190332/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\form\ui-gallery-form-disabled-field-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-form-disabled-field-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-form-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\form\disabled_field.rs apps\fret-ui-gallery\src\ui\snippets\form\mod.rs apps\fret-ui-gallery\src\ui\pages\form.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app form_ -- --nocapture`
+  - result: passed; 9 tests.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_form_disabled_field_action_state -- --nocapture`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+  - note: rebuilding with `gallery-dev` was required after an earlier targeted Gallery test rebuilt
+    `target\dev-fast\fret-ui-gallery.exe` without the gallery feature and hid the Form page from
+    runtime diagnostics.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\form\ui-gallery-form-disabled-field-action-state.json --dir target\fret-diag-form-disabled-field-action-state-v3 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779351805821`.
+- dedicated Form runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite tools\diag-scripts\suites\ui-gallery-form-semantics\suite.json --dir target\fret-diag-form-semantics-suite-disabled-field-rebuilt-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 2/2; `stage_counts={"passed":2}`; disabled Field row run id `1779352815799`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-form-disabled-field-v1 --session-auto --timeout-ms 2400000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 25/25; `stage_counts={"passed":25}`; `reason_code_counts={}`;
+    disabled Field row run id `1779354050679`.
+
+## RadioGroup Required Disabled Action-State Runtime Gate
+
+- invariant:
+  shadcn/Radix RadioGroup owns required state on the group root, while disabled selection
+  suppression belongs to concrete radio items. A disabled item and its associated
+  `FieldLabel::for_control(...)` bridge must not mutate the selected value, but enabled sibling
+  items must remain focusable/invokable.
+- finding:
+  the disabled action-state path behaved correctly, but the slice found a semantics completeness gap:
+  RadioGroup items exposed legacy `checked` only. `radio_button_a11y(...)` now stamps explicit
+  `checked_state=true|false` as well, and the shadcn semantics unit test asserts both channels.
+- implementation anchors:
+  `ecosystem/fret-ui-kit/src/primitives/radio_group.rs`,
+  `ecosystem/fret-ui-shadcn/src/radio_group.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/radio_group/required_disabled.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/radio_group/mod.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/radio_group.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-required-disabled-action-state.json`,
+  `tools/diag-scripts/ui-gallery-radio-group-required-disabled-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-radio-group-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  upstream `repo-ref/ui/apps/v4/registry/new-york-v4/ui/radio-group.tsx` keeps disabled item chrome
+  on `RadioGroupPrimitive.Item`; Radix/APG owns the required group and radio checked-state semantics.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-radio-group-required-disabled-action-state-v1/sessions/1779358454419-182932/1779358468383/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-radio-group-required-disabled-action-state-v1/sessions/1779358454419-182932/share/1779358468383.zip`;
+  dedicated suite summary:
+  `target/fret-diag-radio-group-semantics-suite-required-disabled-v1/sessions/1779358495275-211416/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-radio-group-required-disabled-v1/sessions/1779358567107-208948/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\radio-group\ui-gallery-radio-group-required-disabled-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-radio-group-required-disabled-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-radio-group-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\index.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem\fret-ui-kit\src\primitives\radio_group.rs ecosystem\fret-ui-shadcn\src\radio_group.rs apps\fret-ui-gallery\src\ui\snippets\radio_group\required_disabled.rs apps\fret-ui-gallery\src\ui\snippets\radio_group\mod.rs apps\fret-ui-gallery\src\ui\pages\radio_group.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn radio_group_emits_radio_group_and_radio_button_semantics --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib radio_group_emits_radio_group_and_radio_button_semantics`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app radio_group_ -- --nocapture`
+  - result: passed; 7 tests.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app radio_group_required_disabled_snippet_keeps_group_required_and_item_action_state_separate`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_radio_group_required_disabled_action_state -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_radio_group_required_disabled_action_state`
+  - result: passed; 1 test.
+  Note: an initial `cargo nextest run --profile dev-fast -p fret-ui-shadcn ...` used the wrong
+  nextest profile flag and failed before running tests; a subsequent package-wide nextest attempt
+  built too many unrelated shadcn integration tests and hit local rustc OOM. The final nextest
+  commands above used `--cargo-profile dev-fast` plus `--lib`/test filtering and passed.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\radio-group\ui-gallery-radio-group-required-disabled-action-state.json --dir target\fret-diag-radio-group-required-disabled-action-state-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779358468383`.
+- dedicated RadioGroup runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite tools\diag-scripts\suites\ui-gallery-radio-group-semantics\suite.json --dir target\fret-diag-radio-group-semantics-suite-required-disabled-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 2/2; `stage_counts={"passed":2}`; required/disabled row run id `1779358534244`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-radio-group-required-disabled-v1 --session-auto --timeout-ms 2400000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 26/26; `stage_counts={"passed":26}`; `reason_code_counts={}`;
+    required/disabled row run id `1779360562701`.
+
+
+## Checkbox Required Disabled Group Action-State Runtime Gate
+
+- invariant:
+  shadcn Checkbox required semantics live on each concrete checkbox control, not on the caller-owned
+  fieldset/field-group shell. Disabled rows must suppress `focus`/`invoke` and label-forwarded
+  toggles only for the disabled checkbox, while enabled sibling labels remain able to mutate their
+  own checked state.
+- finding:
+  no Checkbox recipe/runtime defect was reproduced. The gate confirms that `Checkbox::required(true)`
+  composes correctly with item-level `Checkbox::disabled(true)`, `Field::disabled(true)` chrome, and
+  `FieldLabel::for_control(...)` forwarding in a grouped-control section.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/checkbox/required_disabled_group.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/checkbox/mod.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/checkbox.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-required-disabled-group-action-state.json`,
+  `tools/diag-scripts/ui-gallery-checkbox-required-disabled-group-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-checkbox-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  upstream `repo-ref/ui/apps/v4/registry/new-york-v4/ui/checkbox.tsx` keeps disabled/required
+  semantics on `CheckboxPrimitive.Root`; caller docs compose grouped rows through surrounding
+  field/fieldset structure rather than widening Checkbox into a generic children container.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-checkbox-required-disabled-group-action-state-v1/sessions/1779363089819-213872/1779363101513/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-checkbox-required-disabled-group-action-state-v1/sessions/1779363089819-213872/share/1779363101513.zip`;
+  dedicated suite summary:
+  `target/fret-diag-checkbox-semantics-suite-required-disabled-group-v1/sessions/1779363128715-208764/suite.summary.json`;
+  broad-suite summary:
+  `target/fret-diag-shadcn-runtime-evidence-checkbox-required-disabled-group-v1/sessions/1779363773383-195668/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\checkbox\ui-gallery-checkbox-required-disabled-group-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-checkbox-required-disabled-group-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-checkbox-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\index.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\snippets\checkbox\required_disabled_group.rs apps\fret-ui-gallery\src\ui\snippets\checkbox\mod.rs apps\fret-ui-gallery\src\ui\pages\checkbox.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-shadcn checkbox_required_exposes_required_semantics --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib checkbox_required_exposes_required_semantics`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_ -- --nocapture`
+  - result: passed; 7 tests.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app checkbox_required_disabled_group_snippet_keeps_required_and_disabled_action_state_on_concrete_controls`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_checkbox_required_disabled_group_action_state -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_checkbox_required_disabled_group_action_state`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\checkbox\ui-gallery-checkbox-required-disabled-group-action-state.json --dir target\fret-diag-checkbox-required-disabled-group-action-state-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779363101513`.
+- dedicated Checkbox runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite tools\diag-scripts\suites\ui-gallery-checkbox-semantics\suite.json --dir target\fret-diag-checkbox-semantics-suite-required-disabled-group-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 3/3; `stage_counts={"passed":3}`; required/disabled group row run id
+    `1779363388286`.
+- broad runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target\fret-diag-shadcn-runtime-evidence-checkbox-required-disabled-group-v1 --session-auto --timeout-ms 2400000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 27/27; `stage_counts={"passed":27}`; `reason_code_counts={}`;
+    required/disabled group row run id `1779364468762`.
+
+## ToggleGroup Disabled Item Action-State Runtime Gate
+
+- invariant:
+  single-mode shadcn/Radix ToggleGroup items behave as radio-button choices. Disabled item policy
+  belongs to each concrete item: disabled items must expose `disabled=true`, suppress `focus` and
+  `invoke`, and be skipped by roving focus without changing the selected value. The caller-owned
+  field label/description shell must not become the action-state owner.
+- finding:
+  disabled item action suppression and roving focus behavior were correct, but the slice found a
+  semantics completeness gap: single-mode ToggleGroup items exposed legacy `checked` only.
+  `toggle_group_item_a11y_single(...)` now stamps explicit `checked_state=true|false` while
+  preserving `checked`, so diagnostics and accessibility consumers can observe ToggleGroup radio
+  checked state through the same structured channel as Checkbox and RadioGroup.
+- implementation anchors:
+  `ecosystem/fret-ui-kit/src/primitives/toggle_group.rs`,
+  `ecosystem/fret-ui-shadcn/src/toggle_group.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/toggle_group/disabled_item_action_state.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/toggle_group/mod.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/toggle_group.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-disabled-item-action-state.json`,
+  `tools/diag-scripts/ui-gallery-toggle-group-disabled-item-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-toggle-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  upstream Radix ToggleGroup uses `role="radio"`/`aria-checked` for single mode and skips disabled
+  items in roving focus. Fret maps that to concrete `radio_button` semantics with explicit
+  `checked_state`, item-local disabled action suppression, and caller-owned label/field chrome.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-toggle-group-disabled-item-action-state-v2/sessions/1779371004637-185624/1779371026922/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-toggle-group-disabled-item-action-state-v2/sessions/1779371004637-185624/share/1779371026922.zip`;
+  dedicated suite summary:
+  `target/fret-diag-toggle-semantics-suite-disabled-item-v2/sessions/1779371056407-225584/suite.summary.json`;
+  row-only suite summary:
+  `target/fret-diag-toggle-group-disabled-item-suite-glob-v1/sessions/1779376207964-79492/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\toggle\ui-gallery-toggle-group-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-toggle-group-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-toggle-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem\fret-ui-kit\src\primitives\toggle_group.rs ecosystem\fret-ui-shadcn\src\toggle_group.rs apps\fret-ui-gallery\src\ui\snippets\toggle_group\disabled_item_action_state.rs apps\fret-ui-gallery\src\ui\snippets\toggle_group\mod.rs apps\fret-ui-gallery\src\ui\pages\toggle_group.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui-kit toggle_group_item_a11y_single_uses_radio_role_and_checked --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit --lib toggle_group_item_a11y_single_uses_radio_role_and_checked`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-shadcn toggle_group_single_arrow_skips_disabled_and_exports_checked_state --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib toggle_group_single_arrow_skips_disabled_and_exports_checked_state`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app toggle_group_ -- --nocapture`
+  - result: passed; 5 tests.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app toggle_group_disabled_item_action_state_snippet_keeps_roving_and_item_action_state_separate`
+  - result: passed; 1 test.
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_toggle_group_disabled_item_action_state -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_toggle_group_disabled_item_action_state`
+  - result: passed; 1 test.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\toggle\ui-gallery-toggle-group-disabled-item-action-state.json --dir target\fret-diag-toggle-group-disabled-item-action-state-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779371026922`.
+- dedicated Toggle runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite tools\diag-scripts\suites\ui-gallery-toggle-semantics\suite.json --dir target\fret-diag-toggle-semantics-suite-disabled-item-v2 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 2/2; `stage_counts={"passed":2}`; disabled-item row run id `1779371158503`.
+- row-only diagnostics suite:
+  `target\dev-fast\fretboard-dev.exe diag suite --glob 'tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-disabled-item-action-state.json' --dir target\fret-diag-toggle-group-disabled-item-suite-glob-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; disabled-item row run id `1779376227686`.
+- broad-suite note:
+  the script is promoted into `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`.
+  A local full-suite attempt using `target\fret-diag-shadcn-runtime-evidence-toggle-group-disabled-item-v1`
+  exceeded the outer shell timeout before reaching the new ToggleGroup row, so this slice uses the
+  focused runtime, dedicated Toggle suite, and row-only suite as passing evidence.
+
+## Menubar Disabled Item Action-State Runtime Gate
+
+- invariant:
+  shadcn/Radix Menubar disabled items must keep item-local ownership of disabled action-state:
+  disabled items expose `disabled=true`, suppress `focus` and `invoke`, never dispatch their command,
+  and are skipped by vertical roving focus. Enabled siblings and submenu triggers remain invokable,
+  and the current programmatic roving focus target must export a semantics `focus` action even when
+  it is outside default Tab traversal.
+- finding:
+  the gate found two real defects. First, Menubar content/submenu rows derived `focusable` by
+  comparing the active roving item index to the flattened entry index, so separators and labels could
+  shift the active tab stop onto the wrong row. Second, the `fret-ui` Pressable semantics bridge
+  suppressed `actions.focus` whenever `PressableProps::focusable=false`, even if that Pressable was
+  the current programmatic focus target used by roving focus. The fixes keep collection-index
+  roving state aligned and preserve current-focus semantics without widening default focus
+  traversal.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/host_widget/semantics.rs`,
+  `crates/fret-ui/src/declarative/tests/semantics.rs`,
+  `ecosystem/fret-ui-shadcn/src/menubar.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/menubar/demo.rs`,
+  `apps/fret-ui-gallery/src/spec.rs`,
+  `apps/fret-ui-gallery/src/driver/runtime_driver.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-disabled-item-action-state.json`,
+  `tools/diag-scripts/ui-gallery-menubar-disabled-item-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-menubar-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  Radix Menubar uses roving focus inside menu content, disabled items are skipped by focus movement
+  and are not invokable, and submenu triggers remain enabled menu items. Fret maps this to concrete
+  `menu_item` semantics, collection-position metadata, item-local disabled action suppression, and
+  current-focus semantics for the active roving tab stop.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-menubar-disabled-item-action-state-v5/sessions/1779383380213-231888/1779383395682/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-menubar-disabled-item-action-state-v5/sessions/1779383380213-231888/share/1779383395682.zip`;
+  dedicated suite summary:
+  `target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools\diag-scripts\ui-gallery\menubar\ui-gallery-menubar-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\ui-gallery-menubar-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-menubar-semantics\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\suites\ui-gallery-shadcn-runtime-evidence\suite.json > $null`;
+  `python -m json.tool tools\diag-scripts\index.json > $null`;
+  `python tools\check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates\fret-ui\src\declarative\host_widget\semantics.rs crates\fret-ui\src\declarative\tests\semantics.rs apps\fret-ui-gallery\src\spec.rs apps\fret-ui-gallery\src\ui\snippets\menubar\demo.rs ecosystem\fret-ui-shadcn\src\menubar.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs crates\fret-diag-protocol\tests\script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo test --profile dev-fast -p fret-ui --lib declarative_pressable_current_focus_preserves_semantics_focus_action_outside_tab_order -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui --lib declarative_pressable_current_focus_preserves_semantics_focus_action_outside_tab_order`
+  - result: passed; 1 test; run id `d8524063-5d0d-43d1-ad76-ae20ffd50f3a`.
+  `cargo test --profile dev-fast -p fret-ui-shadcn menubar_disabled_item_skips_roving_focus_and_suppresses_action_state --lib -- --nocapture`
+  - result: passed; 1 test.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib menubar_disabled_item_skips_roving_focus_and_suppresses_action_state`
+  - result: passed; 1 test; run id `1b2c363f-cfb8-42fe-9db2-db5196ecd623`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app menubar_demo_disabled_item_keeps_command_and_item_action_state_on_same_control`
+  - result: passed; 1 test; run id `954f6256-29cd-4217-9c83-48301de43fbe`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_menubar_disabled_item_action_state`
+  - result: passed; 1 test; run id `92c6d28f-ad5e-46c9-9cdf-b5841dc57b3e`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\menubar\ui-gallery-menubar-disabled-item-action-state.json --dir target\fret-diag-menubar-disabled-item-action-state-v5 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed; run id `1779383395682`.
+- dedicated Menubar runtime suite:
+  `target\dev-fast\fretboard-dev.exe diag suite tools\diag-scripts\suites\ui-gallery-menubar-semantics\suite.json --dir target\fret-diag-menubar-semantics-suite-disabled-item-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; disabled-item row run id `1779383578847`.
+- broad-suite note:
+  the script is promoted into `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`.
+  This slice uses the focused runtime and dedicated Menubar suite as passing evidence to avoid
+  burning the broad-suite timeout budget immediately after the previous long full-suite run.
+
+## ContextMenu Disabled Item Action-State Runtime Gate
+
+- invariant:
+  shadcn/Radix ContextMenu disabled command items must keep concrete item ownership of disabled
+  action-state: disabled rows expose `disabled=true`, suppress `focus` and `invoke`, never dispatch
+  their command, and are skipped by roving focus. Enabled siblings remain focusable/invokable.
+- finding:
+  no ContextMenu recipe/runtime defect was reproduced for this invariant. The current recipe already
+  suppresses disabled focus/invoke/command dispatch, preserves item collection metadata, and skips
+  disabled rows during vertical roving focus. A separate diagnostics lifecycle concern remains: a
+  default-lint dedicated suite can see duplicate `ui-gallery-context-menu-basic-content` nodes during
+  transition captures; the row-only suite passes with `--no-suite-lint` and that duplicate-id lint is
+  tracked as follow-up evidence rather than as an action-state failure.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/context_menu.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/basic.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json`,
+  `tools/diag-scripts/ui-gallery-context-menu-disabled-item-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-context-menu-semantics/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-context-menu/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  Radix ContextMenu uses roving focus inside menu content, disabled items are not invokable, and
+  disabled items are skipped by focus movement. Fret maps this to concrete `menu_item` semantics,
+  item-local disabled action suppression, command dispatch suppression, and collection-position
+  metadata on the disabled row itself.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-context-menu-disabled-item-action-state-v2/sessions/1779387831262-20088/1779387844608/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-context-menu-disabled-item-action-state-v2/sessions/1779387831262-20088/share/1779387844608.zip`;
+  passing row-only suite summary:
+  `target/fret-diag-context-menu-semantics-suite-disabled-item-v3/sessions/1779388133420-237500/suite.summary.json`;
+  default-lint follow-up artifact:
+  `target/fret-diag-context-menu-semantics-suite-disabled-item-v2/sessions/1779387897940-40144/1779387958229-ui-gallery-context-menu-disabled-item-action-state/check.lint.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery-context-menu-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-context-menu-semantics/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-context-menu/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/index.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem/fret-ui-shadcn/src/context_menu.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib context_menu_disabled_item_skips_roving_focus_and_suppresses_action_state`
+  - result: passed; 1 test; run id `15532758-d144-470e-8280-0652eedd58ce`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app context_menu_basic_disabled_item_keeps_command_and_item_action_state_on_same_control`
+  - result: passed; 1 test; run id `5ac59f43-0c69-42d6-95de-726bd386d30b`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_context_menu_disabled_item_action_state`
+  - result: passed; 1 test; run id `5ac78806-59db-45c3-84fd-146db8c77fa2`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json --dir target/fret-diag-context-menu-disabled-item-action-state-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779387844608`.
+- dedicated ContextMenu row-only runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-context-menu-semantics/suite.json --dir target/fret-diag-context-menu-semantics-suite-disabled-item-v3 --session-auto --no-suite-lint --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`; disabled-item row run id `1779388147006`.
+- default-lint suite concern:
+  `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-context-menu-semantics/suite.json --dir target/fret-diag-context-menu-semantics-suite-disabled-item-v2 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: script row passed, then suite lint failed with `semantics.duplicate_test_id` for
+    `ui-gallery-context-menu-basic-content`; follow-up artifact is
+    `target/fret-diag-context-menu-semantics-suite-disabled-item-v2/sessions/1779387897940-40144/1779387958229-ui-gallery-context-menu-disabled-item-action-state/check.lint.json`.
+- broad-suite note:
+  the script is promoted into `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`.
+  This slice uses the focused runtime plus row-only ContextMenu suite as passing evidence and keeps
+  the duplicate-id transition lint as a narrow diagnostics follow-up.
+
+## ContextMenu Basic Pointer-Open Keyboard Entry Runtime Gate
+
+- invariant:
+  shadcn/Radix ContextMenu pointer-open should initially focus the menu content panel; vertical
+  keyboard navigation from that panel should enter the first enabled item, skip disabled items, keep
+  command dispatch on enabled rows, and close on activation.
+- finding:
+  this follow-up found two real issues. The Basic example reused
+  `ui-gallery-context-menu-basic-content` for both the DocSection wrapper and the overlay panel,
+  causing default diagnostics lint to report duplicate ids. Separately, pointer-open ArrowDown
+  reached the focused panel key handler but the handler saw empty first/last item targets because
+  top-level panel entries bypassed the shared `ContextMenuContentRenderEnv` rendering path that
+  records persistent focus targets. A focused `fret-ui` mechanism test confirmed key routing itself
+  was correct for focused non-modal hit-test-inert overlays.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/context_menu.rs`,
+  `crates/fret-ui/src/tree/tests/key_dispatch_barrier_root.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/context_menu/basic.rs`,
+  `apps/fret-ui-gallery/tests/popup_menu_narrow_surface.rs`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json`,
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-basic-overlay-placement-trace.json`,
+  `tools/diag-scripts/suites/ui-gallery-context-menu/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  Radix ContextMenu keeps content focus as the opened menu entry point and lets roving keyboard
+  movement enter enabled items while skipping disabled rows. Fret maps that to a content-panel key
+  handler backed by persistent first/last enabled item targets across overlay render reuse.
+- evidence anchors:
+  focused keyboard-nav AI packet:
+  `target/fret-diag-context-menu-basic-keyboard-nav-focus-model-v3/sessions/1779402638361-240732/1779402658765/ai.packet`;
+  focused keyboard-nav pack:
+  `target/fret-diag-context-menu-basic-keyboard-nav-focus-model-v3/sessions/1779402638361-240732/share/1779402658765.zip`;
+  default-lint ContextMenu semantics suite summary:
+  `target/fret-diag-context-menu-semantics-suite-panel-id-v1/sessions/1779403614963-229576/suite.summary.json`;
+  promoted ContextMenu suite summary:
+  `target/fret-diag-context-menu-suite-keyboard-entry-v2/sessions/1779404255883-237716/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-basic-overlay-placement-trace.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-context-menu/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/index.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem/fret-ui-shadcn/src/context_menu.rs crates/fret-ui/src/tree/tests/key_dispatch_barrier_root.rs apps/fret-ui-gallery/src/ui/snippets/context_menu/basic.rs apps/fret-ui-gallery/tests/popup_menu_narrow_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib context_menu_pointer_open_arrow_down_enters_first_enabled_item context_menu_pointer_open_arrow_down_enters_first_enabled_checkbox_or_radio_item context_menu_disabled_item_skips_roving_focus_and_suppresses_action_state`
+  - result: passed; 3 tests; run id `5960047a-484b-4c5d-8a9e-1f7c86ed1dce`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui --lib key_events_route_to_focused_non_modal_occluding_overlay_layer`
+  - result: passed; 1 test; run id `1f37ca4f-b615-44f7-a238-c4431a6cca3d`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test popup_menu_narrow_surface context_menu_basic_snippet_uses_a_unique_overlay_panel_test_id context_menu_demo_snippet_uses_a_unique_overlay_panel_test_id`
+  - result: passed; 2 tests; run id `45c8dc6b-13b8-4b9f-b3d9-f6516e4411e7`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_context_menu_basic_keyboard_nav script_v2_roundtrip_ui_gallery_context_menu_disabled_item_action_state script_v2_roundtrip_ui_gallery_context_menu_basic_right_click_last_action script_v2_roundtrip_ui_gallery_context_menu_basic_touch_long_press_open script_v2_roundtrip_ui_gallery_context_menu_basic_overlay_placement_trace`
+  - result: passed; 5 tests; run id `c771179b-7984-479c-968a-7b836d24985f`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json --dir target/fret-diag-context-menu-basic-keyboard-nav-focus-model-v3 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779402658765`.
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json --dir target/fret-diag-context-menu-disabled-item-action-state-panel-id-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779402722466`.
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json --dir target/fret-diag-context-menu-basic-right-click-last-action-panel-id-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779402810724`.
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json --dir target/fret-diag-context-menu-basic-touch-long-press-open-panel-id-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779403249948`.
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-basic-overlay-placement-trace.json --dir target/fret-diag-context-menu-basic-overlay-placement-trace-panel-id-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779403333605`.
+- runtime suites:
+  `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-context-menu-semantics/suite.json --dir target/fret-diag-context-menu-semantics-suite-panel-id-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed 1/1; `stage_counts={"passed":1}`.
+  `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-context-menu/suite.json --dir target/fret-diag-context-menu-suite-keyboard-entry-v2 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed 4/4; `stage_counts={"passed":4}`; keyboard-nav row run id `1779404347719`.

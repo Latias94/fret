@@ -2400,9 +2400,7 @@ impl MenubarMenuEntries {
 
                                                   let mut item_ix: usize = 0;
 
-                                                 for (idx, entry) in
-                                                     entries_for_content.into_iter().enumerate()
-                                                {
+                                                 for entry in entries_for_content.into_iter() {
                                                                  match entry {
                                                                      MenubarEntry::Separator => {
                                                                          out.push(cx.container(
@@ -2445,8 +2443,8 @@ impl MenubarMenuEntries {
                                                             let collection_index = item_ix;
                                                             item_ix = item_ix.saturating_add(1);
 
-                                                            let focusable =
-                                                                active.is_some_and(|a| a == idx);
+                                                            let focusable = active
+                                                                .is_some_and(|a| a == collection_index);
                                                             let MenubarCheckboxItem {
                                                                 label,
                                                                 value,
@@ -2643,8 +2641,8 @@ impl MenubarMenuEntries {
                                                             let collection_index = item_ix;
                                                             item_ix = item_ix.saturating_add(1);
 
-                                                            let focusable =
-                                                                active.is_some_and(|a| a == idx);
+                                                            let focusable = active
+                                                                .is_some_and(|a| a == collection_index);
                                                             let MenubarRadioItem {
                                                                 label,
                                                                 value,
@@ -2861,8 +2859,8 @@ impl MenubarMenuEntries {
                                                             let collection_index = item_ix;
                                                             item_ix = item_ix.saturating_add(1);
 
-                                                             let focusable =
-                                                                 active.is_some_and(|a| a == idx);
+                                                            let focusable = active
+                                                                .is_some_and(|a| a == collection_index);
                                                             let MenubarItem {
                                                                 label,
                                                                 value,
@@ -3572,9 +3570,7 @@ impl MenubarMenuEntries {
                                                                  Vec::with_capacity(submenu_entries_for_panel.len());
                                                              let mut item_ix: usize = 0;
 
-                                                            for (idx, entry) in
-                                                                submenu_entries_for_panel.into_iter().enumerate()
-                                                            {
+                                                            for entry in submenu_entries_for_panel.into_iter() {
                                                                 match entry {
                                                                     MenubarEntry::Separator => {
                                                                         out.push(cx.container(
@@ -3613,7 +3609,8 @@ impl MenubarMenuEntries {
                                                                         let collection_index = item_ix;
                                                                         item_ix = item_ix.saturating_add(1);
 
-                                                                        let focusable = active.is_some_and(|a| a == idx);
+                                                                        let focusable = active
+                                                                            .is_some_and(|a| a == collection_index);
                                                                         let MenubarCheckboxItem {
                                                                             label,
                                                                             value,
@@ -3786,7 +3783,8 @@ impl MenubarMenuEntries {
                                                                         let collection_index = item_ix;
                                                                         item_ix = item_ix.saturating_add(1);
 
-                                                                        let focusable = active.is_some_and(|a| a == idx);
+                                                                        let focusable = active
+                                                                            .is_some_and(|a| a == collection_index);
                                                                         let MenubarRadioItem {
                                                                             label,
                                                                             value,
@@ -3971,7 +3969,8 @@ impl MenubarMenuEntries {
                                                                         let collection_index = item_ix;
                                                                         item_ix = item_ix.saturating_add(1);
 
-                                                                        let focusable = active.is_some_and(|a| a == idx);
+                                                                        let focusable = active
+                                                                            .is_some_and(|a| a == collection_index);
                                                                         let MenubarItem {
                                                                             label,
                                                                             value,
@@ -5030,6 +5029,180 @@ mod tests {
             .ok()
             .expect("payload type must match");
         assert_eq!(*payload, 57);
+    }
+
+    #[test]
+    fn menubar_disabled_item_skips_roving_focus_and_suppresses_action_state() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(260.0)),
+        );
+        let disabled_cmd = CommandId::new("menubar.tests.disabled_item_should_not_dispatch.v1");
+        let build_entries = || {
+            vec![
+                MenubarEntry::Item(MenubarItem::new("New Tab")),
+                MenubarEntry::Item(MenubarItem::new("New Window")),
+                MenubarEntry::Item(
+                    MenubarItem::new("New Incognito Window")
+                        .action(disabled_cmd.clone())
+                        .disabled(true),
+                ),
+                MenubarEntry::Item(MenubarItem::new("Share")),
+            ]
+        };
+
+        render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            build_entries(),
+        );
+        let snap0 = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger = menu_trigger_node_id(snap0, "View");
+        ui.set_focus(Some(trigger));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+
+        render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            build_entries(),
+        );
+        let snap1 = ui.semantics_snapshot().expect("semantics snapshot");
+        let first = snap1
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New Tab"))
+            .expect("New Tab item");
+        let focus = ui.focus().expect("expected focus after keyboard-open");
+        assert!(
+            ui.debug_node_path(focus).contains(&first.id),
+            "keyboard-open should focus the first enabled item"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            build_entries(),
+        );
+        let snap2 = ui.semantics_snapshot().expect("semantics snapshot");
+        let second = snap2
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("New Window"))
+            .expect("New Window item");
+        let focus = ui.focus().expect("expected focus after ArrowDown");
+        assert!(
+            ui.debug_node_path(focus).contains(&second.id),
+            "first ArrowDown should focus the second enabled item"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::KeyDown {
+                key: fret_core::KeyCode::ArrowDown,
+                modifiers: Modifiers::default(),
+                repeat: false,
+            },
+        );
+        render_frame_with_entries(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            build_entries(),
+        );
+        let snap3 = ui.semantics_snapshot().expect("semantics snapshot");
+        let disabled = snap3
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::MenuItem
+                    && n.label.as_deref() == Some("New Incognito Window")
+            })
+            .expect("disabled New Incognito item");
+        assert!(disabled.flags.disabled);
+        assert!(!disabled.actions.focus);
+        assert!(!disabled.actions.invoke);
+
+        let share = snap3
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Share"))
+            .expect("Share item");
+        let focus = ui.focus().expect("expected focus after disabled skip");
+        assert!(
+            ui.debug_node_path(focus).contains(&share.id),
+            "second ArrowDown should skip the disabled item and focus Share"
+        );
+
+        let disabled_pos = center(disabled.bounds);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: disabled_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: disabled_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().all(
+                |effect| !matches!(effect, Effect::Command { command, .. } if command.as_str() == disabled_cmd.as_str())
+            ),
+            "disabled item click should not dispatch {disabled_cmd:?}, got {effects:?}"
+        );
     }
 
     fn render_frame_with_test_id_prefix(

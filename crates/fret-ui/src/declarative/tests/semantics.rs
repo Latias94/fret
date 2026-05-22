@@ -1519,6 +1519,105 @@ fn declarative_pressable_focusable_controls_focus_traversal() {
 }
 
 #[test]
+fn declarative_pressable_current_focus_preserves_semantics_focus_action_outside_tab_order() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let mut first_id: Option<crate::GlobalElementId> = None;
+    let mut second_id: Option<crate::GlobalElementId> = None;
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "a11y-pressable-current-focus",
+        |cx| {
+            let mut props = crate::element::PressableProps::default();
+            props.layout.size.width = Length::Px(Px(80.0));
+            props.layout.size.height = Length::Px(Px(32.0));
+            props.focusable = false;
+            props.a11y.test_id = Some(Arc::from("roving-current"));
+
+            let first = cx.pressable_with_id(props, |cx, _st, id| {
+                first_id = Some(id);
+                vec![cx.text("first")]
+            });
+
+            let mut props2 = crate::element::PressableProps::default();
+            props2.layout.size.width = Length::Px(Px(80.0));
+            props2.layout.size.height = Length::Px(Px(32.0));
+            props2.focusable = true;
+            props2.a11y.test_id = Some(Arc::from("tab-stop"));
+
+            let second = cx.pressable_with_id(props2, |cx, _st, id| {
+                second_id = Some(id);
+                vec![cx.text("second")]
+            });
+
+            vec![cx.row(crate::element::RowProps::default(), move |_cx| {
+                vec![first, second]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let first_id = first_id.expect("first element id");
+    let second_id = second_id.expect("second element id");
+
+    let first_node =
+        crate::elements::node_for_element(&mut app, window, first_id).expect("first node");
+    let second_node =
+        crate::elements::node_for_element(&mut app, window, second_id).expect("second node");
+
+    assert_eq!(
+        ui.first_focusable_descendant_including_declarative(&mut app, window, root),
+        Some(second_node),
+        "a roving-only pressable must stay out of default focus traversal"
+    );
+
+    ui.set_focus(Some(first_node));
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+    let first = snap
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("roving-current"))
+        .expect("roving-current semantics node");
+    let second = snap
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("tab-stop"))
+        .expect("tab-stop semantics node");
+
+    assert!(
+        first.flags.focused,
+        "the programmatically focused roving item should expose focused state"
+    );
+    assert!(
+        first.actions.focus,
+        "the current roving focus target should keep its semantics focus action even while outside tab order"
+    );
+    assert!(
+        second.actions.focus,
+        "the ordinary tab stop should remain focusable"
+    );
+}
+
+#[test]
 fn declarative_semantics_focusable_controls_focus_traversal() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();

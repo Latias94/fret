@@ -653,6 +653,10 @@ date: 2026-05-12
     invalidation. No new mechanism defect was reproduced; the slice closed a harness coverage gap.
 - [ ] Add RTL/writing-mode layout primitive cases once the direction/writing-mode contract is
   explicit enough to avoid encoding a recipe policy as a mechanism oracle.
+  - 2026-05-20 audit: keep this blocked. `LayoutDirection` is currently a narrow core enum,
+    ADR 0057 covers declarative flex direction rather than a general writing-mode/logical-layout
+    primitive contract, and current RTL behavior lives in component/overlay policy surfaces. Do not
+    add fixture oracles here until that mechanism contract is explicit.
 - [x] Add a runtime UI Gallery companion for cached model/layout-query dependency mutation only if
   a real surface exposes a non-synthetic risk; otherwise continue with scroll/click stability or
   retained/component semantics mutation.
@@ -1231,6 +1235,23 @@ date: 2026-05-12
     exposed diagnostics authoring drift in the Command long-query script: a pre-positioning
     `scroll_into_view` could emit a wheel with no follow-up frame when the docs demo was already
     visible. That guard now uses `ensure_visible(within_window=true)`.
+- [x] Repair desktop repeating-timer redraw starvation that blocked the broad shadcn suite.
+  - Result:
+    the broad `ui-gallery-shadcn-runtime-evidence` suite no longer fails before RadioGroup on the
+    Command retained-active-descendant script. Desktop repeating timers now rearm from handler
+    completion time and record `last_fired_tick`, so a diagnostics keepalive timer cannot catch up
+    repeatedly inside one runner tick and starve the requested `RedrawRequested`. Diagnostics
+    no-frame keepalive paths also preserve redraw/RAF effects for effect-only, keyboard/text/IME,
+    and pointer-move injection. Fresh focused Command diagnostics passed with run id
+    `1779298834262`, and the broad shadcn runtime-evidence suite passed 13/13 with summary
+    `target/fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521/sessions/1779299075645-7824/suite.summary.json`.
+- [x] Add an owning-layer overlap stress gate for runner repeating timers.
+  - Result:
+    `overlapping_repeating_timers_do_not_catch_up_inside_one_runner_tick` covers a
+    script-keepalive-style window timer and an asset-reload-poll-style windowless timer that are
+    both made stale again inside the same runner tick. Neither timer refires until `tick_id`
+    advances. Focused gate `overlapping_repeating_timers` passed, and the full `repeating_timer`
+    filter now passes 3 timer tests.
 - [x] Refresh AI FileTree protocol coverage and auto-height VirtualList runtime proof.
   - Result: the four promoted `ui-gallery-ai-file-tree` scripts now have direct
     `fret-diag-protocol` roundtrip coverage. The fresh suite rerun re-exposed the auto-height
@@ -1444,3 +1465,294 @@ date: 2026-05-12
     widget while the stale lower-child path records a cache miss. A third move proves the refreshed
     higher-z dispatch path is cache-reusable. Focused checks passed with Nextest run id
     `093b8a5d-e67a-4b35-ab82-e02389f63173`.
+- [x] Add a Switch choice-card checked-state semantics runtime gate.
+  - Result:
+    `ui-gallery-switch-choice-card-checked-state-mutation.json` now starts directly on the Switch
+    page, scrolls to the docs-path Choice Card section, proves initial independent `checked`
+    semantics for Share and Notifications, asserts both nested controls expose `invoke=true`, then
+    toggles through each card-style label and through the Share control itself. The new
+    `ui-gallery-switch-semantics` suite passed 1/1, and the broad
+    `ui-gallery-shadcn-runtime-evidence` suite now passes 14/14 with the Switch row run id
+    `1779302260684`. No Switch runtime defect was reproduced.
+
+- [x] Add a Checkbox disabled action-state semantics runtime gate.
+  - Result:
+    `ui-gallery-checkbox-disabled-action-state.json` now starts directly on the Checkbox page,
+    scrolls to the Disabled section, proves the disabled checkbox is checked, exports
+    `disabled=true`, and suppresses `invoke=false`. It activates both the disabled control and its
+    associated label, then reasserts checked state and disabled action metadata. The new
+    `ui-gallery-checkbox-semantics` suite passed 1/1, and the broad
+    `ui-gallery-shadcn-runtime-evidence` suite now passes 15/15 with the Checkbox row run id
+    `1779304154355`. No Checkbox runtime defect was reproduced.
+
+
+- [x] Add a Slider numeric action-state semantics runtime gate.
+  - Result:
+    `ui-gallery-slider-numeric-action-state.json` now starts directly on the Slider page, proves the
+    enabled single thumb exports numeric value/min/max/step/jump and enabled
+    `set_value`/`increment`/`decrement`, mutates the value to 80, then proves the disabled thumb
+    exports `disabled=true` and suppresses `set_value`, `increment`, `decrement`, and `focus`.
+    The first dedicated suite run exposed a real lint defect: multi-thumb Slider visual chrome
+    reused bare `{prefix}-thumb` ids. The recipe now derives unique
+    `{prefix}-thumb-{index}-chrome` ids while preserving semantic `{prefix}-thumb-{index}`
+    selectors, and `multi_thumb_slider_derives_unique_thumb_test_ids` guards that contract.
+    Focused runtime passed with run id `1779307931755`, the new `ui-gallery-slider-semantics`
+    suite passed 1/1 with summary
+    `target/fret-diag-slider-semantics-suite-v2/sessions/1779307963346-175080/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 16/16 with Slider row run
+    id `1779308615620`.
+
+
+- [x] Add a Checkbox table mixed checked-state semantics runtime gate.
+  - Result:
+    `checked_state_is` is now a first-class diagnostics predicate over explicit tri-state checked
+    semantics, with protocol, bootstrap runtime, wait-trace, and mechanism-harness oracle support.
+    `ui-gallery-checkbox-table-mixed-state-action.json` starts directly on the Checkbox page,
+    gates the table select-all checkbox as `mixed`, proves `invoke=true`, selects all rows,
+    toggles a single row back to false, and proves the select-all checkbox returns to `mixed` before
+    selecting all again. Focused runtime passed with run id `1779310495372`, the updated
+    `ui-gallery-checkbox-semantics` suite passed 2/2 with summary
+    `target/fret-diag-checkbox-semantics-suite-table-mixed-v1/sessions/1779310724199-166384/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 17/17 with the new row run
+    id `1779311405413`.
+
+- [x] Add a Toggle pressed-state semantics runtime gate.
+  - Result:
+    `pressed_state_is` is now a first-class diagnostics predicate over explicit tri-state pressed
+    semantics, with protocol, bootstrap runtime, wait-trace, and mechanism-harness oracle support.
+    The existing Toggle interaction script used `selected_is` and failed against the real runtime:
+    shadcn Toggle correctly exports `role=button` with `pressed_state=true` after activation, not
+    `selected=true`. `ui-gallery-toggle-interaction-screenshots.json` now starts directly on the
+    Toggle page, gates the Bookmark toggle as `pressed_state=false -> true -> false`, keeps
+    `selected=false`, proves `invoke=true`, and captures screenshot/bundle evidence. Focused
+    runtime passed with run id `1779314805300`, the new `ui-gallery-toggle-semantics` suite passed
+    1/1 with summary
+    `target/fret-diag-toggle-semantics-suite-v1/sessions/1779314830681-87028/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 18/18 with the Toggle row
+    run id `1779317023787`.
+
+- [x] Add an Input required/invalid form-state semantics runtime gate.
+  - Result:
+    `required_is` and `invalid_is` are now first-class diagnostics predicates over form-control
+    semantics, with protocol, bootstrap runtime, wait-trace, and mechanism-harness oracle support.
+    `ui-gallery-input-required-invalid-semantics.json` starts directly on the Input page, gates the
+    Invalid control as `invalid=true` and `required=false`, gates the Required control as
+    `required=true` and `invalid=null`, and proves both concrete TextInput nodes keep enabled
+    `focus`/`set_value` actions. The Input snippets now stamp stable control-level test ids so the
+    gate targets the TextInput nodes rather than surrounding Field chrome. Focused runtime passed
+    with run id `1779318973423`, the new `ui-gallery-input-semantics` suite passed 2/2 with summary
+    `target/fret-diag-input-semantics-suite-v1/sessions/1779319043334-48440/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 19/19 with the new Input
+    row run id `1779319975211`.
+
+
+- [x] Add a Select invalid form-state semantics runtime gate.
+  - Result:
+    `ui-gallery-select-invalid-form-state.json` now starts directly on the Select page's Invalid
+    section, proves the invalid Select trigger exports `role=combo_box`, `invalid=true`,
+    `required=false`, and enabled `focus`/`invoke` actions, then commits Apple and proves the
+    trigger clears to `invalid=null`, keeps `required=false`, removes the field error node, and
+    updates its value text to `Apple`. Focused runtime passed with run id `1779321650994`, the new
+    `ui-gallery-select-semantics` suite passed 1/1 with summary
+    `target/fret-diag-select-semantics-suite-v1/sessions/1779321672604-100084/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 20/20 with the new Select
+    invalid row run id `1779322696285`.
+
+- [x] Add a Textarea required/invalid form-state semantics runtime gate.
+  - Result:
+    `ui-gallery-textarea-required-invalid-semantics.json` now starts directly on the Textarea page,
+    targets concrete TextArea nodes via stable control-level test ids, proves the Invalid control
+    exports `role=text_field`, `invalid=true`, `required=false`, and enabled `focus`/`set_value`,
+    then proves the new Required example exports `required=true`, `invalid=null`, and the same
+    enabled editing actions. The Textarea Invalid snippet now stamps `ui-gallery-textarea-invalid-control`,
+    and the new Required snippet keeps the visible required marker caller-owned while applying
+    `Textarea::required(true)` on the control. Focused runtime passed with run id `1779324602377`,
+    the new `ui-gallery-textarea-semantics` suite passed 1/1 with summary
+    `target/fret-diag-textarea-semantics-suite-v1/sessions/1779324642363-184708/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 21/21 with the Textarea row
+    run id `1779327669604`.
+
+- [x] Add an InputOTP invalid/required form-state semantics runtime gate.
+  - Result:
+    `ui-gallery-input-otp-invalid-required-semantics.json` now starts directly on the Input OTP page,
+    self-scopes the docs page to the Invalid and Form sections, proves slot-level invalid chrome
+    promotes `invalid=true` to the hidden root OTP `TextInput`, proves the Form example keeps
+    `required=true` and `invalid=null` on the same hidden root control, and verifies enabled
+    `focus`/`set_value` actions plus label-to-control focus and typed value mutation. Focused
+    runtime passed with run id `1779329877911`, the new `ui-gallery-input-otp-semantics` suite
+    passed 1/1 with summary
+    `target/fret-diag-input-otp-semantics-suite-v2/sessions/1779329954569-181280/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 22/22 with the InputOTP row
+    run id `1779331449795`.
+
+- [x] Add a DatePicker required/invalid trigger semantics runtime gate.
+  - Result:
+    `ui-gallery-date-picker-required-invalid-semantics.json` now starts directly on the Date Picker
+    page, self-scopes the docs page to `Compact Builder (Fret),Invalid`, proves the compact builder
+    trigger exports `role=button`, `required=true`, `invalid=null`, and enabled `focus`/`invoke`,
+    then proves the Invalid example trigger exports `required=true`, `invalid=true`, enabled
+    `focus`/`invoke`, caller-owned `FieldError` copy, label-to-trigger focus, and popover/calendar
+    creation. The Date Picker page now has a focused Invalid snippet that keeps
+    `DatePicker::required(true)` / `DatePicker::aria_invalid(true)` on the trigger while leaving
+    `Field::invalid(true)` and error copy caller-owned. The first broad-suite run exposed a
+    diagnostics authoring hazard in the existing Select invalid gate (`click_stable` over a live
+    overlay option could stall with no frames under the long suite); the script now uses a direct
+    semantic `click` for the already-resolved Apple option and the hardening was re-verified
+    focused. Focused DatePicker runtime passed with run id `1779334968449`, the new
+    `ui-gallery-date-picker-semantics` suite passed 1/1 with summary
+    `target/fret-diag-date-picker-semantics-suite-v1/sessions/1779335003408-192508/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 23/23 with the DatePicker
+    row run id `1779338165138` and hardened Select row run id `1779338502088`.
+
+- [x] Add a Field/Form submit-driven validation semantics runtime gate.
+  - Result:
+    The Form page now includes a `Submit Validation` section backed by a real `FormState` in
+    `FormValidateMode::OnSubmit`, a `FormRegistry`, and two `FormField`-decorated controls:
+    a concrete shadcn `Input` and a shadcn `RadioGroup`. The
+    `ui-gallery-form-submit-validation-semantics.json` gate starts directly on that section,
+    proves both controls export `required=true` and `invalid=null` before submit, submits the empty
+    form, then proves the concrete input and radio group mutate to `invalid=true`, publish
+    caller-visible `alert` messages, and update the status readout to `status=invalid`. It then
+    repairs both controls, proves invalid semantics and alert copy clear via on-change
+    revalidation, submits again, and proves `status=valid`. Focused runtime passed with run id
+    `1779342789863`, the new `ui-gallery-form-semantics` suite passed 1/1 with summary
+    `target/fret-diag-form-semantics-suite-v1/sessions/1779342834313-22100/suite.summary.json`,
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 24/24 with the Form row run
+    id `1779345780709` and summary
+    `target/fret-diag-shadcn-runtime-evidence-form-submit-validation-v2/sessions/1779344474432-184028/suite.summary.json`.
+
+- [x] Add a Form disabled Field action-state semantics runtime gate.
+  - Result:
+    `ui-gallery-form-disabled-field-action-state.json` now starts on the Form page's `Disabled Field`
+    section, proves the concrete disabled `Input` exports `role=text_field`, `disabled=true`,
+    `focus=false`, `set_value=false`, and preserves its value, then proves the companion field
+    remains enabled/editable so the gate catches accidental section-wide disabling. No
+    recipe/runtime defect was reproduced. Focused runtime passed with run id `1779351805821`; the
+    rebuilt `ui-gallery-form-semantics` suite passed 2/2 with summary
+    `target/fret-diag-form-semantics-suite-disabled-field-rebuilt-v1/sessions/1779352801343-181708/suite.summary.json`;
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 25/25 with the disabled
+    Field row run id `1779354050679` and summary
+    `target/fret-diag-shadcn-runtime-evidence-form-disabled-field-v1/sessions/1779352876487-190332/suite.summary.json`.
+
+- [x] Add a RadioGroup required/disabled grouped-control action-state runtime gate.
+  - Result:
+    `ui-gallery-radio-group-required-disabled-action-state.json` now starts on the Radio Group page's
+    `Required Disabled` section, proves the `RadioGroup` root exports `role=radio_group`,
+    `required=true`, and `disabled=false`, proves the disabled item exports
+    `role=radio_button`, `checked_state=false`, `checked=false`, `disabled=true`, `focus=false`,
+    and `invoke=false`, verifies both direct item click and associated label click cannot select the
+    disabled item, then proves an enabled label can still mutate selection to the Enterprise item.
+    The slice found and fixed a semantics completeness gap: RadioGroup items previously exported
+    legacy binary `checked` only; they now also export explicit `checked_state=true|false`. Focused
+    runtime passed with run id `1779358468383`; the rebuilt `ui-gallery-radio-group-semantics`
+    suite passed 2/2 with summary
+    `target/fret-diag-radio-group-semantics-suite-required-disabled-v1/sessions/1779358495275-211416/suite.summary.json`;
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 26/26 with the RadioGroup
+    required/disabled row run id `1779360562701` and summary
+    `target/fret-diag-shadcn-runtime-evidence-radio-group-required-disabled-v1/sessions/1779358567107-208948/suite.summary.json`.
+
+
+- [x] Add a Checkbox required/disabled grouped-control action-state runtime gate.
+  - Result:
+    `ui-gallery-checkbox-required-disabled-group-action-state.json` now starts on the Checkbox page's
+    `Required Disabled Group` section, proves each concrete Checkbox owns `required=true`, proves the
+    disabled Usage analytics item exports `role=checkbox`, `checked_state=false`, `checked=false`,
+    `disabled=true`, `focus=false`, and `invoke=false`, verifies both direct disabled-control click
+    and associated label click cannot toggle the disabled item, then proves enabled label forwarding
+    can still toggle the Beta updates and Backups items. No Checkbox recipe/runtime defect was
+    reproduced. Focused runtime passed with run id `1779363101513`; the rebuilt
+    `ui-gallery-checkbox-semantics` suite passed 3/3 with summary
+    `target/fret-diag-checkbox-semantics-suite-required-disabled-group-v1/sessions/1779363128715-208764/suite.summary.json`;
+    and the broad `ui-gallery-shadcn-runtime-evidence` suite now passes 27/27 with the Checkbox
+    required/disabled group row run id `1779364468762` and summary
+    `target/fret-diag-shadcn-runtime-evidence-checkbox-required-disabled-group-v1/sessions/1779363773383-195668/suite.summary.json`.
+
+- [x] Add a ToggleGroup disabled-item action-state and roving-focus runtime gate.
+  - Result:
+    `ui-gallery-toggle-group-disabled-item-action-state.json` now starts on the Toggle Group page's
+    `Disabled Item Action-State (Fret)` section, proves single-mode concrete items export
+    `role=radio_button` plus explicit `checked_state`, proves the disabled Beta item exports
+    `disabled=true`, `focus=false`, and `invoke=false`, verifies direct disabled-item click does not
+    change selection, then proves label focus plus ArrowRight roving focus skips the disabled item
+    and lands on Gamma without changing the selected Alpha value. The slice found and fixed a
+    semantics completeness gap: single-mode ToggleGroup items previously exported the legacy binary
+    `checked` flag only; they now also export explicit `checked_state=true|false`. Focused runtime
+    passed with run id `1779371026922`; the rebuilt `ui-gallery-toggle-semantics` suite passed 2/2
+    with summary
+    `target/fret-diag-toggle-semantics-suite-disabled-item-v2/sessions/1779371056407-225584/suite.summary.json`;
+    and a row-only diagnostics suite run passed with summary
+    `target/fret-diag-toggle-group-disabled-item-suite-glob-v1/sessions/1779376207964-79492/suite.summary.json`.
+
+- [x] Add a Menubar disabled-item action-state and roving-focus runtime gate.
+  - Result:
+    `ui-gallery-menubar-disabled-item-action-state.json` now starts on the Menubar page's `Demo`
+    section, proves the disabled `New Incognito Window` item carries a real command but exports
+    `role=menu_item`, `disabled=true`, `focus=false`, and `invoke=false`, verifies direct click does
+    not dispatch the command or update the status bar, then proves keyboard roving focus skips that
+    disabled item and lands on the enabled `Share` item. The slice found and fixed two real gaps:
+    Menubar content/submenu rows compared the roving active item index against flattened entry
+    indices that included separators/labels, and `fret-ui` Pressable semantics dropped the
+    `focus` action from the current programmatic roving focus target when it was outside default tab
+    order. Focused runtime passed with run id `1779383395682`; the new
+    `ui-gallery-menubar-semantics` suite passed 1/1 with summary
+    `target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json`.
+
+- [x] Add a ContextMenu disabled command-item action-state and roving-focus runtime gate.
+  - Result:
+    `ui-gallery-context-menu-disabled-item-action-state.json` now starts on the Context Menu page's
+    `Basic` section, proves the disabled `Forward` item still carries a command while exporting
+    `role=menu_item`, `disabled=true`, `focus=false`, and `invoke=false`, verifies direct disabled
+    click does not dispatch the command or update the status bar, then proves ArrowDown roving focus
+    skips the disabled item and lands on the enabled `Reload` item. No ContextMenu recipe/runtime
+    defect was reproduced for disabled item ownership: the current implementation already suppresses
+    disabled focus/invoke/command dispatch and skips disabled rows in roving focus. Focused runtime
+    passed with run id `1779387844608`; the row-only `ui-gallery-context-menu-semantics` suite passed
+    with `--no-suite-lint` and summary
+    `target/fret-diag-context-menu-semantics-suite-disabled-item-v3/sessions/1779388133420-237500/suite.summary.json`.
+    A default-lint suite run exposed a separate diagnostics lifecycle concern: transition captures can
+    retain a previous `role=menu` snapshot long enough to duplicate
+    `ui-gallery-context-menu-basic-content`; this is tracked as follow-up evidence rather than an
+    action-state defect.
+
+- [x] Resolve the ContextMenu Basic duplicate panel test-id lint and promote pointer-open keyboard
+  entry coverage.
+  - Result:
+    the Basic snippet now uses a dedicated overlay panel test id
+    `ui-gallery-context-menu-basic-panel`, so diagnostics no longer confuse the DocSection content
+    wrapper with the open menu panel. The follow-up proved the previous duplicate lint was not a
+    generic transition-capture defect for this row; the default-lint `ui-gallery-context-menu-semantics`
+    suite now passes with summary
+    `target/fret-diag-context-menu-semantics-suite-panel-id-v1/sessions/1779403614963-229576/suite.summary.json`.
+    The new `ui-gallery-context-menu-basic-keyboard-nav.json` runtime gate is promoted into the
+    ContextMenu suite and proves the pointer-open path focuses menu content first, ArrowDown enters
+    `Back`, the next ArrowDown skips disabled `Forward` and lands on `Reload`, Enter dispatches the
+    reload action, and the menu closes. Focused runtime passed with run id `1779402658765`; the
+    four-row `ui-gallery-context-menu` suite passed with `stage_counts={"passed":4}` and summary
+    `target/fret-diag-context-menu-suite-keyboard-entry-v2/sessions/1779404255883-237716/suite.summary.json`.
+    The root cause was recipe-owned focus target lifetime: the panel key handler existed and
+    key dispatch reached it, but top-level content rendering did not populate the persistent
+    first/last focus target models used by the handler. `ContextMenuContentRenderEnv` now owns
+    panel entry rendering and records enabled item targets, including checkbox/radio items, while a
+    focused `fret-ui` key-routing test proves non-modal hit-test-inert overlays still receive
+    keyboard events when focused.
+
+Next slice recommendation:
+
+- [x] Promote the Command disabled active-descendant action-state gate into broad runtime evidence.
+  - Result:
+    `ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json` was already the
+    correct Command action-state/runtime row: it proves default disabled rows are skipped, opt-in
+    disabled-focusable rows can become the active descendant, disabled semantics and
+    `invoke=false` stay on the active row, and Enter does not dispatch. This slice closed the
+    durability gaps around that existing gate by adding protocol roundtrip coverage and promoting it
+    into `ui-gallery-shadcn-runtime-evidence` alongside the retained/windowed Command mutation row.
+    Fresh focused runtime passed with run id `1779407145527`, and a row-only suite run passed with
+    summary
+    `target/fret-diag-command-disabled-focusable-row-suite-v1/sessions/1779408495703-242652/suite.summary.json`.
+
+Next slice recommendation:
+
+- Move from action-state/semantics into a retained or cached root-boundary surface where stale paint,
+  hit-test, or relation state can survive visual success. Avoid adding another Command action-state
+  row unless a new runtime bundle shows filtering or virtualization desynchronizing selection,
+  disabled semantics, or invoke suppression.

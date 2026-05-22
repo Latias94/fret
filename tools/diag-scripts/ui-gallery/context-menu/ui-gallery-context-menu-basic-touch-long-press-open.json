@@ -98,7 +98,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-content" }
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-panel" }
       },
       "timeout_frames": 240
     },
@@ -128,9 +128,9 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "label_contains",
-        "target": { "kind": "test_id", "id": "ui-gallery-status-last-action" },
-        "text": "ui_gallery.context_menu.basic.back"
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "ui_gallery.context_menu.basic.back"
       },
       "timeout_frames": 240
     },

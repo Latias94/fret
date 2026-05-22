@@ -5,5 +5,6 @@ pub mod disabled;
 pub mod fieldset;
 pub mod invalid;
 pub mod label;
+pub mod required_disabled;
 pub mod rtl;
 pub mod usage;

@@ -1674,6 +1674,11 @@ impl WinitAppDriver for UiGalleryDriver {
                     *v = Arc::<str>::from("menu.context.action");
                 });
             }
+            CMD_MENU_MENUBAR_NEW_INCOGNITO => {
+                let _ = app.models_mut().update(&state.last_action, |v| {
+                    *v = Arc::<str>::from("menu.menubar.new_incognito");
+                });
+            }
             CMD_APP_OPEN => {
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("cmd.open");

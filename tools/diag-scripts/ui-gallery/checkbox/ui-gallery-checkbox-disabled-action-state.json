@@ -1,0 +1,157 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: Checkbox disabled action-state",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "checkbox"
+    },
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "checkbox",
+      "semantics",
+      "disabled",
+      "action-state"
+    ],
+    "target_hints": [
+      "Starts directly on the Checkbox page.",
+      "Verifies that a disabled Checkbox exposes disabled=true, suppresses invoke, and does not mutate checked state through control or label activation."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 760.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-checkbox" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-disabled-field" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-disabled" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-disabled" },
+        "checked": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-disabled" },
+        "disabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-disabled" },
+        "action": "invoke",
+        "enabled": false
+      }
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-disabled" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-disabled" },
+        "checked": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-disabled" },
+        "action": "invoke",
+        "enabled": false
+      }
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-disabled-label" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-disabled" },
+        "checked": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-disabled" },
+        "disabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-disabled" },
+        "action": "invoke",
+        "enabled": false
+      }
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-checkbox-disabled-action-state",
+      "max_snapshots": 1
+    },
+    { "type": "capture_screenshot", "label": "ui-gallery-checkbox-disabled-action-state" }
+  ]
+}

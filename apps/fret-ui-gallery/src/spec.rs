@@ -789,6 +789,7 @@ pub(crate) const CMD_VIRTUAL_LIST_TORTURE_CLEAR_EDIT: &str =
 pub(crate) const CMD_MENU_DROPDOWN_APPLE: &str = "ui_gallery.menu.dropdown.apple";
 pub(crate) const CMD_MENU_DROPDOWN_ORANGE: &str = "ui_gallery.menu.dropdown.orange";
 pub(crate) const CMD_MENU_CONTEXT_ACTION: &str = "ui_gallery.menu.context.action";
+pub(crate) const CMD_MENU_MENUBAR_NEW_INCOGNITO: &str = "ui_gallery.menu.menubar.new_incognito";
 
 pub(crate) const CMD_TOAST_DEFAULT: &str = "ui_gallery.toast.default";
 pub(crate) const CMD_TOAST_SUCCESS: &str = "ui_gallery.toast.success";

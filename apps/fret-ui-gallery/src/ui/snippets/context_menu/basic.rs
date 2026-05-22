@@ -55,7 +55,7 @@ fn trigger_surface<H: UiHost>(
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::ContextMenu::uncontrolled(cx)
-        .content_test_id("ui-gallery-context-menu-basic-content")
+        .content_test_id("ui-gallery-context-menu-basic-panel")
         .compose()
         .trigger(trigger_surface(
             "Right click here",

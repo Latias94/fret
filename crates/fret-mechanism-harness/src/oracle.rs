@@ -1,14 +1,16 @@
 use fret_core::Rect;
 use fret_diag_protocol::{
     UiBoundsMetricV1, UiComparisonV1, UiPredicateV1, UiSelectorV1, UiSemanticsActionV1,
-    UiSemanticsLiveV1, UiSemanticsNumericFieldV1, UiSemanticsScrollFieldV1,
+    UiSemanticsCheckedStateV1, UiSemanticsInvalidV1, UiSemanticsLiveV1, UiSemanticsNumericFieldV1,
+    UiSemanticsPressedStateV1, UiSemanticsScrollFieldV1,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    BoundsSpace, ObservedNode, ObservedSemanticsAction, ObservedSemanticsFlag,
-    ObservedSemanticsLive, ObservedSemanticsRelation, ObservedTextRange, ObservedTextSelection,
-    ObservedTree,
+    BoundsSpace, ObservedNode, ObservedSemanticsAction, ObservedSemanticsCheckedState,
+    ObservedSemanticsFlag, ObservedSemanticsInvalid, ObservedSemanticsLive,
+    ObservedSemanticsPressedState, ObservedSemanticsRelation, ObservedTextRange,
+    ObservedTextSelection, ObservedTree,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -475,6 +477,7 @@ fn semantics_flag_value(node: &ObservedNode, flag: ObservedSemanticsFlag) -> Opt
         ObservedSemanticsFlag::Selected => node.selected,
         ObservedSemanticsFlag::Expanded => node.expanded,
         ObservedSemanticsFlag::Checked => node.checked,
+        ObservedSemanticsFlag::Required => node.required,
         ObservedSemanticsFlag::LiveAtomic => node.live_atomic,
     }
 }
@@ -671,6 +674,45 @@ fn eval_ui_predicate(
                 )
             })
         }
+        UiPredicateV1::CheckedStateIs { target, state } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let expected = state.map(observed_checked_state_from_protocol);
+            pass_bool(node.checked_state == expected, || {
+                format!(
+                    "checked_state_is mismatch target={target:?} expected={expected:?} actual={:?}",
+                    node.checked_state
+                )
+            })
+        }
+        UiPredicateV1::PressedStateIs { target, state } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let expected = state.map(observed_pressed_state_from_protocol);
+            pass_bool(node.pressed_state == expected, || {
+                format!(
+                    "pressed_state_is mismatch target={target:?} expected={expected:?} actual={:?}",
+                    node.pressed_state
+                )
+            })
+        }
+        UiPredicateV1::RequiredIs { target, required } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            pass_bool(node.required == Some(*required), || {
+                format!(
+                    "required_is mismatch target={target:?} expected={required} actual={:?}",
+                    node.required
+                )
+            })
+        }
+        UiPredicateV1::InvalidIs { target, invalid } => {
+            let node = tree.select_best(target).map_err(fail)?;
+            let expected = invalid.map(observed_invalid_from_protocol);
+            pass_bool(node.invalid == expected, || {
+                format!(
+                    "invalid_is mismatch target={target:?} expected={expected:?} actual={:?}",
+                    node.invalid
+                )
+            })
+        }
         UiPredicateV1::ExpandedIs { target, expanded } => {
             let node = tree.select_best(target).map_err(fail)?;
             pass_bool(node.expanded == Some(*expanded), || {
@@ -818,15 +860,12 @@ fn eval_ui_predicate(
         }
         UiPredicateV1::CheckedIsNone { target } => {
             let node = tree.select_best(target).map_err(fail)?;
-            pass_bool(
-                node.checked.is_none() && node.checked_state.is_none(),
-                || {
-                    format!(
-                        "checked_is_none mismatch target={target:?} checked={:?} checked_state={:?}",
-                        node.checked, node.checked_state
-                    )
-                },
-            )
+            pass_bool(node.checked.is_none(), || {
+                format!(
+                    "checked_is_none mismatch target={target:?} checked={:?}",
+                    node.checked
+                )
+            })
         }
         UiPredicateV1::ActiveItemIs { container, item } => {
             let container = tree.select_best(container).map_err(fail)?;
@@ -1040,6 +1079,34 @@ fn observed_live_from_protocol(live: UiSemanticsLiveV1) -> ObservedSemanticsLive
         UiSemanticsLiveV1::Off => ObservedSemanticsLive::Off,
         UiSemanticsLiveV1::Polite => ObservedSemanticsLive::Polite,
         UiSemanticsLiveV1::Assertive => ObservedSemanticsLive::Assertive,
+    }
+}
+
+fn observed_checked_state_from_protocol(
+    state: UiSemanticsCheckedStateV1,
+) -> ObservedSemanticsCheckedState {
+    match state {
+        UiSemanticsCheckedStateV1::False => ObservedSemanticsCheckedState::False,
+        UiSemanticsCheckedStateV1::True => ObservedSemanticsCheckedState::True,
+        UiSemanticsCheckedStateV1::Mixed => ObservedSemanticsCheckedState::Mixed,
+    }
+}
+
+fn observed_pressed_state_from_protocol(
+    state: UiSemanticsPressedStateV1,
+) -> ObservedSemanticsPressedState {
+    match state {
+        UiSemanticsPressedStateV1::False => ObservedSemanticsPressedState::False,
+        UiSemanticsPressedStateV1::True => ObservedSemanticsPressedState::True,
+        UiSemanticsPressedStateV1::Mixed => ObservedSemanticsPressedState::Mixed,
+    }
+}
+
+fn observed_invalid_from_protocol(invalid: UiSemanticsInvalidV1) -> ObservedSemanticsInvalid {
+    match invalid {
+        UiSemanticsInvalidV1::True => ObservedSemanticsInvalid::True,
+        UiSemanticsInvalidV1::Grammar => ObservedSemanticsInvalid::Grammar,
+        UiSemanticsInvalidV1::Spelling => ObservedSemanticsInvalid::Spelling,
     }
 }
 

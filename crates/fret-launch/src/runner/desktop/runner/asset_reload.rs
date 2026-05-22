@@ -102,6 +102,7 @@ impl PollTimerState {
                 window: None,
                 deadline: now + self.interval,
                 repeat: Some(self.interval),
+                last_fired_tick: None,
             },
         );
         self.token = Some(token);

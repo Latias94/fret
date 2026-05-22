@@ -319,7 +319,9 @@ impl ElementHostWidget {
                         cx.push_controlled(node);
                     }
                     cx.set_disabled(!props.enabled);
-                    cx.set_focusable(props.enabled && props.focusable);
+                    cx.set_focusable(
+                        props.enabled && (props.focusable || cx.focus == Some(cx.node)),
+                    );
                     if props.enabled {
                         if role == SemanticsRole::Slider || role == SemanticsRole::SpinButton {
                             cx.set_invokable(false);
