@@ -5419,6 +5419,35 @@ Related plan:
       text ops and keeps seeded series paths intact.
     - `fret-plot` still passes the full package gate and the explicit `compat-retained-canvas`
       check after the shared helper extraction.
+- [x] RBX-M3-250 Add declarative line plot managed-host pointer/output proof.
+  - Scope:
+    - `ecosystem/fret-plot/src/declarative.rs`
+  - Goal:
+    - Move the default declarative line plot one step beyond paint-only composition by proving the
+      managed-surface host can publish pointer-derived cursor/output state without constructing
+      retained `PlotCanvas`.
+    - Keep retained tooltip/readout, pan/zoom/query, overlays, and non-line layers for later parity
+      slices.
+  - Validation:
+    - `cargo nextest run -p fret-plot line_plot_panel_updates_output_cursor_on_pointer_move`
+    - `cargo nextest run -p fret-plot`
+    - `cargo check -p fret-plot --features compat-retained-canvas`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-plot/src/declarative.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-250-declarative-line-plot-managed-host-pointeroutput-proof`
+  - Result:
+    - Added a declarative managed-surface wrapper around `line_plot_panel(...)` so it can handle
+      pointer-move events without going through retained `PlotCanvas`.
+    - Added a `PlotOutput` publication path that stores a data-space cursor snapshot derived from
+      the pointer position and invalidates paint only when the snapshot changes.
+    - Added a focused test that proves pointer moves inside the plot region publish cursor data,
+      pointer moves outside clear cursor data, and the declarative series paint path remains intact.
+    - The full default `fret-plot` package gate and explicit compat retained check remain green
+      after the pointer/output proof.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

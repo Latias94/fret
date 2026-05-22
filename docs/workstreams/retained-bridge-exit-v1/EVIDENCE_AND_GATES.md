@@ -13029,3 +13029,67 @@ Broader gates not run:
     red/green axis-label test, full `fret-plot` package gate, explicit compat retained check,
     formatting, layering, catalog, conflict-marker scan, and whitespace checks cover the changed
     surface.
+
+## 2026-05-22 - RBX-M3-250 Declarative line plot managed host pointer/output proof
+
+Claim verified:
+
+- The default declarative `line_plot_panel(...)` now mounts through a managed-surface host that can
+  receive pointer-move events without constructing retained `PlotCanvas`.
+- `LinePlotPanelProps::output(...)` publishes a `PlotOutput` snapshot with data-space cursor state
+  derived from pointer position and clears that cursor when the pointer leaves the plot region.
+- This is only a pointer/output host proof. Retained plot tooltip/readout rendering, pan/zoom/query,
+  overlays, and non-line layers remain explicit future parity slices and migration oracles.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-plot line_plot_panel_updates_output_cursor_on_pointer_move`
+  - Result: failed during test calibration after the new event path published cursor data; the
+    initial assertion used an outer-frame center instead of the inner plot center.
+  - Scope proven: the managed-surface event path was live, and the test was corrected to assert
+    observable data-space cursor behavior against the actual plot region.
+- `cargo nextest run -p fret-plot line_plot_panel_updates_output_cursor_on_pointer_move`
+  - Result: passed, 1 test, 26 skipped, with the pre-existing `fret-ui`
+    `current_effective_opacity` dead-code warning.
+  - Scope proven: pointer moves inside the declarative plot region publish cursor data, pointer
+    moves outside clear cursor data, and declarative line painting remains intact.
+- `cargo nextest run -p fret-plot`
+  - Result: passed, 27 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: default `fret-plot` model, linking, input-map, cartesian, decimation, axis,
+    declarative paint, pointer/output, and public-surface policy tests remain green.
+- `cargo check -p fret-plot --features compat-retained-canvas`
+  - Result: passed, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: retained plot compatibility still compiles after the default declarative
+    managed-host pointer/output proof.
+- `cargo fmt --all -- --check`
+  - Result: failed before formatting because rustfmt wanted to wrap the new pointer/output helper
+    and assertion expressions.
+  - Scope proven: formatting gate caught mechanical formatting drift before commit.
+- `cargo fmt --all`
+  - Result: passed.
+  - Scope proven: applied rustfmt to the changed Rust source.
+- `cargo fmt --all -- --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the pointer/output proof.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 429 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-250` is a targeted default declarative `fret-plot` host/event/output slice. The
+    focused pointer/output test, full default `fret-plot` package gate, explicit compat retained
+    check, formatting, layering, catalog, and whitespace checks cover the changed surface.

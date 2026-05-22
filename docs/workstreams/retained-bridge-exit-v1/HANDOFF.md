@@ -377,11 +377,18 @@ tooltip/readout, pan/zoom/query, overlays, and non-line layers remain separate p
 The panel now paints x/y tick labels through shared `plot::axis` formatting helpers, including
 log10 decade labels, while preserving seeded series paths. Tooltip/readout, pan/zoom/query,
 overlays, and non-line layers remain separate parity slices.
+`RBX-M3-250` then moved the default declarative line plot from paint-only composition to a narrow
+managed-host pointer/output proof. `line_plot_panel(...)` now mounts through `ManagedSurface`,
+preserves the existing declarative canvas paint path as a child, and can publish `PlotOutput`
+cursor snapshots via `LinePlotPanelProps::output(...)` on pointer move without constructing
+retained `PlotCanvas`. This proves the host/event/output path for future tooltip/readout and
+pan/zoom/query migration, but those retained behavior families remain explicit future parity
+slices.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining
 public/demo/gallery/cookbook consumers that still rely on retained `ChartCanvas` behavior.
-Remaining M3 plot work still needs declarative parity for legend interactions, tooltips/readouts,
+Remaining M3 plot work still needs declarative parity for legend interactions, tooltip/readout UI,
 pan/zoom/box/query, overlays, heatmap/histogram/bar/scatter/area/stairs/shaded/candlestick layers,
 and first-party examples before deleting retained plot source or the `compat-retained-canvas`
 feature.
@@ -1189,10 +1196,10 @@ Pick the next task from:
 
 Recommended next implementation shape:
 
-- Current M3 priority: keep draining first-party chart consumers before deleting retained chart
-  source. Good next candidates are chart demos/examples that still instantiate retained
-  `ChartCanvas` directly, or retained-only chart capability families that still need declarative
-  coverage before `fret-chart` can leave the retained bridge allowlist.
+- Current M3 priority: keep shrinking retained chart/plot oracles before deleting retained source.
+  Good next candidates are either chart demos/examples that still instantiate retained
+  `ChartCanvas` directly, or the next plot host slice that uses the new declarative managed host to
+  cover tooltip/readout UI or pan/zoom/query behavior with tests before deleting retained plot code.
 - Continue M2 by shrinking the RBX-M2-080 ledger. The retained controls widget is now gone; the
   retained toolbar widgets are gone; retained minimap is gone; retained blackboard is gone; retained
   rename host is gone; retained diagnostics anchors are gone; retained a11y active-descendant

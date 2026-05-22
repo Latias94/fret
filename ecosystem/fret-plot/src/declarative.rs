@@ -1,24 +1,26 @@
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, FontWeight, Paint, PathStyle, Point, Px, Rect, Size,
+    Color, Corners, DrawOrder, Edges, Event, FontWeight, Paint, PathStyle, Point, Px, Rect, Size,
     StrokeStyle, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
 use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
-use fret_ui::element::{AnyElement, CanvasProps, Length};
+use fret_ui::element::{AnyElement, CanvasProps, Length, ManagedSurfaceProps};
 use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 
-use crate::cartesian::{AxisScale, PlotTransform, polyline_commands};
+use crate::cartesian::{AxisScale, DataPoint, PlotTransform, polyline_commands};
 use crate::models::LinePlotModel;
 use crate::plot::axis::{
     AxisLabelFormatter, AxisTicks, axis_ticks_scaled, log10_tick_label_or_empty,
 };
 use crate::plot::view::sanitize_data_rect_scaled;
+use crate::state::{PlotOutput, PlotOutputSnapshot};
 use crate::style::LinePlotStyle;
 
 #[derive(Clone)]
 pub struct LinePlotPanelProps {
     pub canvas: CanvasProps,
     pub model: Model<LinePlotModel>,
+    pub output: Option<Model<PlotOutput>>,
     pub style: LinePlotStyle,
     pub x_scale: AxisScale,
     pub y_scale: AxisScale,
@@ -29,10 +31,16 @@ impl LinePlotPanelProps {
         Self {
             canvas: CanvasProps::default(),
             model,
+            output: None,
             style: LinePlotStyle::default(),
             x_scale: AxisScale::Linear,
             y_scale: AxisScale::Linear,
         }
+    }
+
+    pub fn output(mut self, output: Model<PlotOutput>) -> Self {
+        self.output = Some(output);
+        self
     }
 
     pub fn style(mut self, style: LinePlotStyle) -> Self {
@@ -66,10 +74,55 @@ pub fn line_plot_panel<H: UiHost + 'static>(
     let style = props.style;
     let x_scale = props.x_scale;
     let y_scale = props.y_scale;
+    let output = props.output.clone();
+    let event_model = model.clone();
+    let event_output = output.clone();
+    let event_style = style;
+    let event_x_scale = x_scale;
+    let event_y_scale = y_scale;
 
-    cx.canvas(props.canvas, move |painter| {
-        paint_line_plot_panel(painter, &model, style, x_scale, y_scale);
-    })
+    let mut surface = ManagedSurfaceProps::default();
+    surface.layout = props.canvas.layout;
+    let canvas = props.canvas;
+    let element = cx.managed_surface(
+        surface,
+        |cx| {
+            cx.layout_unplaced_children(cx.bounds());
+            cx.set_hit_test_rects([cx.bounds()]);
+        },
+        |cx| {
+            let bounds = cx.bounds();
+            for child in cx.children().to_vec() {
+                cx.paint_child(child, bounds);
+            }
+        },
+        move |cx| {
+            let model = model.clone();
+            vec![cx.canvas(canvas, move |painter| {
+                paint_line_plot_panel(painter, &model, style, x_scale, y_scale);
+            })]
+        },
+    );
+    let surface_id = element.id;
+    cx.managed_surface_on_event_for(surface_id, move |cx, event| {
+        let bounds = cx.bounds();
+        let changed = handle_line_plot_panel_event(
+            cx.app(),
+            bounds,
+            event,
+            &event_model,
+            event_output.as_ref(),
+            event_style,
+            event_x_scale,
+            event_y_scale,
+        );
+        if changed {
+            cx.invalidate_self(fret_ui::Invalidation::Paint);
+            cx.request_redraw();
+            cx.notify();
+        }
+    });
+    element
 }
 
 /// Capability-first adapter for [`line_plot_panel`] when the caller only owns
@@ -151,6 +204,80 @@ fn paint_line_plot_panel(
     }
 
     paint_line_plot_legend(painter, model, plot, style);
+}
+
+fn handle_line_plot_panel_event<H: UiHost>(
+    app: &mut H,
+    bounds: Rect,
+    event: &Event,
+    model: &LinePlotModel,
+    output: Option<&Model<PlotOutput>>,
+    style: LinePlotStyle,
+    x_scale: AxisScale,
+    y_scale: AxisScale,
+) -> bool {
+    let Some(output) = output else {
+        return false;
+    };
+    let Event::Pointer(fret_core::PointerEvent::Move { position, .. }) = event else {
+        return false;
+    };
+    let snapshot =
+        line_plot_pointer_output_snapshot(*position, bounds, model, style, x_scale, y_scale);
+    output
+        .update(app, |state, _cx| {
+            if state.snapshot == snapshot {
+                return false;
+            }
+            state.revision = state.revision.wrapping_add(1);
+            state.snapshot = snapshot;
+            true
+        })
+        .ok()
+        .unwrap_or(false)
+}
+
+fn line_plot_pointer_output_snapshot(
+    pointer: Point,
+    bounds: Rect,
+    model: &LinePlotModel,
+    style: LinePlotStyle,
+    x_scale: AxisScale,
+    y_scale: AxisScale,
+) -> PlotOutputSnapshot {
+    let view_bounds = sanitize_data_rect_scaled(model.data_bounds, x_scale, y_scale);
+    let plot = line_plot_inner_rect(bounds, style);
+    let cursor = cursor_data_for_line_plot_pointer(pointer, plot, view_bounds, x_scale, y_scale);
+    PlotOutputSnapshot {
+        view_bounds,
+        view_bounds_y2: None,
+        view_bounds_y3: None,
+        view_bounds_y4: None,
+        cursor,
+        hover: None,
+        query: None,
+        drag: None,
+    }
+}
+
+fn cursor_data_for_line_plot_pointer(
+    pointer: Point,
+    plot: Rect,
+    view_bounds: crate::cartesian::DataRect,
+    x_scale: AxisScale,
+    y_scale: AxisScale,
+) -> Option<DataPoint> {
+    if !plot.contains(pointer) || plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
+        return None;
+    }
+    let transform = PlotTransform {
+        viewport: plot,
+        data: view_bounds,
+        x_scale,
+        y_scale,
+    };
+    let data = transform.px_to_data(pointer);
+    (data.x.is_finite() && data.y.is_finite()).then_some(data)
 }
 
 fn paint_line_plot_grid_and_axes(
@@ -487,10 +614,12 @@ mod tests {
     use crate::cartesian::DataPoint;
     use crate::models::{LinePlotModel, LineSeries};
     use crate::series::Series;
+    use crate::state::PlotOutput;
     use fret_core::{
-        AppWindowId, FrameId, MaterialDescriptor, MaterialId, MaterialRegistrationError,
-        MaterialService, PathCommand, PathConstraints, PathId, PathMetrics, PathService, Scene,
-        SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
+        AppWindowId, Event, FrameId, MaterialDescriptor, MaterialId, MaterialRegistrationError,
+        MaterialService, Modifiers, MouseButtons, PathCommand, PathConstraints, PathId,
+        PathMetrics, PathService, PointerEvent, PointerId, PointerType, Scene, SvgId, SvgService,
+        TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
     };
     use fret_runtime::{
         ClipboardToken, CommandRegistry, CommandsHost, DragHost, DragKindId, DragSession,
@@ -1097,5 +1226,112 @@ mod tests {
         );
 
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+
+    #[test]
+    fn line_plot_panel_updates_output_cursor_on_pointer_move() {
+        let mut app = TestHost::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+        let model = app
+            .models_mut()
+            .insert(LinePlotModel::from_series(vec![LineSeries::new(
+                "Series",
+                Series::from_points_sorted(
+                    vec![
+                        DataPoint { x: 0.0, y: 0.0 },
+                        DataPoint { x: 1.0, y: 1.0 },
+                        DataPoint { x: 2.0, y: 0.0 },
+                    ],
+                    true,
+                ),
+            )]));
+        let output = app.models_mut().insert(PlotOutput::default());
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "plot-declarative-pointer-output",
+            |cx| {
+                vec![line_plot_panel(
+                    cx,
+                    LinePlotPanelProps::new(model.clone()).output(output.clone()),
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                position: Point::new(Px(169.0), Px(81.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let published = output
+            .read_ref(&app, |output| *output)
+            .expect("plot output model should be readable");
+        assert_eq!(published.revision, 1);
+        let cursor = published
+            .snapshot
+            .cursor
+            .expect("pointer inside the plot region should publish cursor data");
+        assert!(
+            (cursor.x - 1.0).abs() < 0.02,
+            "expected pointer x to map to the middle of the data domain, got {:?}",
+            cursor
+        );
+        assert!(
+            (cursor.y - 0.5).abs() < 0.04,
+            "expected pointer y to map to the middle of the data domain, got {:?}",
+            cursor
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                position: Point::new(Px(4.0), Px(4.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        let published = output
+            .read_ref(&app, |output| *output)
+            .expect("plot output model should be readable");
+        assert_eq!(published.revision, 2);
+        assert_eq!(published.snapshot.cursor, None);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        assert!(
+            scene.ops().iter().any(|op| matches!(
+                op,
+                fret_core::SceneOp::Path {
+                    order: DrawOrder(20),
+                    ..
+                }
+            )),
+            "managed-surface pointer handling must preserve declarative line painting"
+        );
     }
 }
