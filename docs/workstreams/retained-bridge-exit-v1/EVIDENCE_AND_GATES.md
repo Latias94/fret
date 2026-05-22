@@ -12897,3 +12897,66 @@ Broader gates not run:
   - Reason: `RBX-M3-220` is a targeted default declarative `fret-plot` paint baseline slice. The
     red/green axes-grid test, full `fret-plot` package gate, formatting, layering, catalog, and
     whitespace checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-230 Declarative line plot legend paint baseline
+
+Claim verified:
+
+- The default declarative `line_plot_panel(...)` now paints per-series legend swatches and label
+  text without constructing retained `PlotCanvas`.
+- Legend painting preserves seeded series paths and uses the default declarative canvas/text path.
+- Legend hover/pin/toggle, tooltip/readout, pan/zoom/query, overlays, and non-line layers remain
+  future parity slices; retained plot demos stay as explicit compatibility oracles for those
+  behaviors.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-plot line_plot_panel_paints_series_legend_on_declarative_path`
+  - Result: failed before implementation because the declarative line plot panel did not emit
+    legend swatch quads.
+  - Scope proven: the new test started red and locked the missing declarative legend paint
+    behavior.
+- `cargo nextest run -p fret-plot line_plot_panel_paints_series_legend_on_declarative_path`
+  - Result: passed, 1 test, 24 skipped, with the pre-existing `fret-ui`
+    `current_effective_opacity` dead-code warning.
+  - Scope proven: the default declarative line plot panel emits per-series legend swatch quads,
+    legend label text ops, and keeps seeded series paths intact.
+- `cargo nextest run -p fret-plot`
+  - Result: passed, 25 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: default `fret-plot` model, linking, input-map, cartesian, decimation, axis,
+    declarative paint, and public-surface policy tests remain green after adding legend painting.
+- `cargo fmt --check`
+  - Result: failed before running `cargo fmt` because rustfmt wanted to wrap two new legend paint
+    call sites.
+  - Scope proven: formatting gate caught mechanical formatting drift before commit.
+- `cargo fmt`
+  - Result: passed.
+  - Scope proven: applied rustfmt to the changed Rust source.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the legend implementation.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 429 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" . -g '!target' -g '!repo-ref'`
+  - Result: no matches.
+  - Scope proven: the current worktree has no unresolved conflict markers after the user's pull.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-230` is a targeted default declarative `fret-plot` paint baseline slice. The
+    red/green legend test, full `fret-plot` package gate, formatting, layering, catalog,
+    conflict-marker scan, and whitespace checks cover the changed surface.

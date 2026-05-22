@@ -369,11 +369,15 @@ prevents the new declarative demo from teaching retained plot widget authoring.
 The panel now paints tick-derived grid lines and x/y axis lines through shared
 `axis_ticks_scaled(...)` and `PlotTransform` mapping before drawing series paths above them. Labels,
 legend, readout, pan/zoom/query, overlays, and non-line layers remain separate parity slices.
+`RBX-M3-230` then added a default declarative legend paint baseline for `line_plot_panel(...)`.
+The panel now paints per-series legend swatches and labels through `CanvasPainter::text(...)`
+using stable text cache keys while preserving seeded series paths. Legend hover/pin/toggle,
+tooltip/readout, pan/zoom/query, overlays, and non-line layers remain separate parity slices.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining
 public/demo/gallery/cookbook consumers that still rely on retained `ChartCanvas` behavior.
-Remaining M3 plot work still needs declarative parity for axes, legends, tooltips/readouts,
+Remaining M3 plot work still needs declarative parity for legend interactions, tooltips/readouts,
 pan/zoom/box/query, overlays, heatmap/histogram/bar/scatter/area/stairs/shaded/candlestick layers,
 and first-party examples before deleting retained plot source or the `compat-retained-canvas`
 feature.

@@ -5363,6 +5363,31 @@ Related plan:
     - Added a render/layout/paint test that proves the declarative path emits x/y axis quads,
       tick-derived grid quads, and keeps series paths above those guide layers.
     - Full default `fret-plot` package tests now pass with 24 tests.
+- [x] RBX-M3-230 Add declarative line plot legend paint baseline.
+  - Scope:
+    - `ecosystem/fret-plot/src/declarative.rs`
+  - Goal:
+    - Move the default declarative line plot beyond axes/grid by painting per-series legend
+      swatches and labels without constructing retained `PlotCanvas`.
+    - Keep legend hover/pin/toggle, tooltip/readout, pan/zoom/query, overlays, and non-line layers
+      as later parity slices.
+  - Validation:
+    - `cargo nextest run -p fret-plot line_plot_panel_paints_series_legend_on_declarative_path`
+    - `cargo nextest run -p fret-plot`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+    - `rg -n "^(<<<<<<<|=======|>>>>>>>)" . -g '!target' -g '!repo-ref'`
+  - Evidence:
+    - `ecosystem/fret-plot/src/declarative.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-230-declarative-line-plot-legend-paint-baseline`
+  - Result:
+    - Added default declarative legend painting for line plots using per-series palette/override
+      colors, stable text cache keys, and label text through `CanvasPainter::text(...)`.
+    - Added a render/layout/paint test that proves the declarative path emits legend swatch quads,
+      legend text ops, and keeps seeded series paths intact.
+    - Full default `fret-plot` package tests now pass with 25 tests.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

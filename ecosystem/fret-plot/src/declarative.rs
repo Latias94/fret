@@ -1,8 +1,9 @@
 use fret_core::{
-    Color, Corners, DrawOrder, Edges, Paint, PathStyle, Point, Px, Rect, Size, StrokeStyle,
+    Color, Corners, DrawOrder, Edges, FontWeight, Paint, PathStyle, Point, Px, Rect, Size,
+    StrokeStyle, TextOverflow, TextStyle, TextWrap,
 };
 use fret_runtime::Model;
-use fret_ui::canvas::CanvasPainter;
+use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
 use fret_ui::element::{AnyElement, CanvasProps, Length};
 use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 
@@ -146,6 +147,8 @@ fn paint_line_plot_panel(
             raster_scale_factor,
         );
     }
+
+    paint_line_plot_legend(painter, model, plot, style);
 }
 
 fn paint_line_plot_grid_and_axes(
@@ -275,6 +278,81 @@ fn push_horizontal_line(
         border_paint: Paint::Solid(Color::TRANSPARENT).into(),
         corner_radii: Corners::default(),
     });
+}
+
+fn paint_line_plot_legend(
+    painter: &mut CanvasPainter<'_>,
+    model: &LinePlotModel,
+    plot: Rect,
+    style: LinePlotStyle,
+) {
+    if model.series.is_empty() || plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
+        return;
+    }
+
+    let theme = painter.theme().snapshot();
+    let text_color = style
+        .label_color
+        .unwrap_or_else(|| theme.color_required("muted-foreground"));
+    let text_style = TextStyle {
+        size: Px(12.0),
+        weight: FontWeight::NORMAL,
+        ..TextStyle::default()
+    };
+    let text_constraints = CanvasTextConstraints {
+        max_width: Some(Px((plot.size.width.0 - 36.0).max(24.0))),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+
+    let series_count = model.series.len();
+    let row_height = Px(18.0);
+    let swatch = Size::new(Px(12.0), Px(3.0));
+    let gap = Px(6.0);
+    let inset = Px(8.0);
+    let text_baseline_offset = Px(12.0);
+    let x = Px(plot.origin.x.0 + inset.0);
+    let mut y = Px(plot.origin.y.0 + inset.0);
+    let max_y = plot.origin.y.0 + plot.size.height.0 - inset.0;
+    let scope = painter.key_scope(&"fret-plot.declarative.legend");
+    let raster_scale_factor = painter.scale_factor();
+
+    for (index, series) in model.series.iter().enumerate() {
+        if y.0 + row_height.0 > max_y {
+            break;
+        }
+
+        let color = series
+            .stroke_color
+            .unwrap_or_else(|| series_color(style, index, series_count));
+        let row_mid = y.0 + row_height.0 * 0.5;
+        painter.scene().push(fret_core::SceneOp::Quad {
+            order: DrawOrder(30),
+            rect: Rect::new(Point::new(x, Px(row_mid - swatch.height.0 * 0.5)), swatch),
+            background: Paint::Solid(color).into(),
+            border: Edges::default(),
+            border_paint: Paint::Solid(Color::TRANSPARENT).into(),
+            corner_radii: Corners::default(),
+        });
+
+        let key: u64 = painter
+            .child_key(scope, &("series", series.id.0, series.label.as_ref()))
+            .into();
+        let _ = painter.text(
+            key,
+            DrawOrder(31),
+            Point::new(
+                Px(x.0 + swatch.width.0 + gap.0),
+                Px(y.0 + text_baseline_offset.0),
+            ),
+            series.label.clone(),
+            text_style.clone(),
+            text_color,
+            text_constraints,
+            raster_scale_factor,
+        );
+        y = Px(y.0 + row_height.0);
+    }
 }
 
 fn line_plot_inner_rect(bounds: Rect, padding: Px) -> Rect {
@@ -720,6 +798,117 @@ mod tests {
         assert!(
             line_paths > 0,
             "declarative line plot should keep series paths above grid/axes"
+        );
+
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+
+    #[test]
+    fn line_plot_panel_paints_series_legend_on_declarative_path() {
+        let mut app = TestHost::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+        let mut services = FakeServices;
+        let series = vec![
+            LineSeries::new(
+                "Alpha",
+                Series::from_points_sorted(
+                    vec![
+                        DataPoint { x: 0.0, y: 1.0 },
+                        DataPoint { x: 1.0, y: 2.0 },
+                        DataPoint { x: 2.0, y: 1.5 },
+                    ],
+                    true,
+                ),
+            ),
+            LineSeries::new(
+                "Beta",
+                Series::from_points_sorted(
+                    vec![
+                        DataPoint { x: 0.0, y: 0.5 },
+                        DataPoint { x: 1.0, y: 1.0 },
+                        DataPoint { x: 2.0, y: 2.5 },
+                    ],
+                    true,
+                ),
+            ),
+        ];
+        let model = app.models_mut().insert(LinePlotModel::from_series(series));
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "plot-declarative-legend",
+            |cx| vec![line_plot_panel(cx, LinePlotPanelProps::new(model.clone()))],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let legend_swatches = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Quad {
+                        order: DrawOrder(30),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert!(
+            legend_swatches >= 2,
+            "declarative line plot should paint one legend swatch per series"
+        );
+
+        let legend_labels = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Text {
+                        order: DrawOrder(31),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert!(
+            legend_labels >= 2,
+            "declarative line plot should paint one legend label per series"
+        );
+
+        let series_paths = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Path {
+                        order: DrawOrder(20),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert_eq!(
+            series_paths, 2,
+            "legend painting should not replace seeded series paths"
         );
 
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
