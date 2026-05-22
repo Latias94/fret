@@ -1210,6 +1210,15 @@ date: 2026-05-12
     The focused run and suite run both pass without manually setting the environment variable,
     proving the promoted gate is self-contained for the non-retained view-cache
     `inputs_change` invalidation-detail path.
+- [x] Promote provider-sensitive ViewCache lifecycle coverage and Direction docs runtime evidence.
+  - Result: `view_cache_lifecycle_v1.json` now includes provider-state cases that document the
+    contract split for DirectionProvider-like inherited state: a provider-sensitive cache rerenders
+    only when the recipe includes the provider value in `ViewCacheProps::cache_key`; an unkeyed
+    provider-sensitive cache intentionally keeps reusing the first rendered subtree. Focused
+    `fret-ui` tests cover both the explicit-cache-key and documented-unkeyed paths. The existing
+    Direction docs smoke script is now promoted into the `ui-gallery-direction` runtime suite with
+    protocol roundtrip coverage, proving the public shadcn Direction page and provider docs surface
+    remain reachable in diagnostics. No new mechanism or recipe defect was reproduced.
 - [x] Add protocol coverage to the UI Gallery View Cache model-mutation gate.
   - Result: `ui-gallery-view-cache-model-mutation-through-cache.json` now has direct
     `fret-diag-protocol` roundtrip coverage. Fresh focused and suite runtime runs still prove

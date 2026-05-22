@@ -6338,6 +6338,52 @@ Next slice recommendation:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-view-cache --dir target\fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed; 2/2 rows; new script run id `1779244796106`.
 
+
+## Provider-Sensitive ViewCache and Direction Runtime Gate
+
+- invariant:
+  provider-style inherited state such as shadcn/Radix `DirectionProvider` is recipe policy, not an
+  implicit mechanism-layer external dependency. A cached subtree that reads provider state must use
+  an explicit `ViewCacheProps::cache_key` when provider changes should rebuild that subtree; an
+  unkeyed cached subtree keeps replaying the first rendered provider-sensitive output.
+- finding:
+  no new mechanism or recipe defect was reproduced. The gap was contract evidence: the ViewCache
+  lifecycle fixture covered cache keys and external environment/layout deps, while Direction had a
+  docs smoke script but no promoted runtime suite. The new fixture cases document both the safe
+  explicit-key path and the intentional unkeyed reuse hazard for DirectionProvider-like state.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/tests/fixtures/view_cache_lifecycle_v1.json`,
+  `crates/fret-ui/src/declarative/tests/view_cache_lifecycle_harness.rs`,
+  `crates/fret-ui/src/declarative/tests/view_cache.rs`,
+  `tools/diag-scripts/ui-gallery/direction/ui-gallery-direction-docs-smoke.json`,
+  `tools/diag-scripts/suites/ui-gallery-direction/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  Direction suite summary:
+  `target/fret-diag-ui-gallery-direction-suite-provider-v1/sessions/1779420909017-199712/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/view_cache_lifecycle_v1.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/direction/ui-gallery-direction-docs-smoke.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-direction/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/index.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates/fret-core/src/layout_direction.rs crates/fret-ui/src/declarative/tests/view_cache.rs crates/fret-ui/src/declarative/tests/view_cache_lifecycle_harness.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_view_cache_lifecycle_matches_oracles view_cache_explicit_cache_key_tracks_provider_state_changes view_cache_provider_state_changes_without_cache_key_keep_reusing_documented_contract --no-fail-fast`
+  - result: passed; run id `af739255-9dbe-4cd7-b397-673b7dc1415e`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_direction_docs_smoke --no-fail-fast`
+  - result: passed; run id `fac17852-1fe3-43f3-99e3-f371a17b889e`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- dedicated runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-direction --dir target/fret-diag-ui-gallery-direction-suite-provider-v1 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed 1/1; Direction docs-smoke run id `1779421149267`.
+
 ## HitTestOnly Paint-Cache Replay Runtime Gate
 
 - invariant:

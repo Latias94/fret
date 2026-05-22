@@ -8251,6 +8251,29 @@
       ]
     },
     {
+      "id": "ui-gallery-direction-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/direction/ui-gallery-direction-docs-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-direction"
+      ],
+      "tags": [
+        "direction",
+        "docs",
+        "provider",
+        "rtl",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the Direction page via the left nav search.",
+        "Verify the docs surface exposes the page root plus the `useDirection` and `Composable Children (Fret)` sections."
+      ]
+    },
+    {
       "id": "ui-gallery-drawer-docs-smoke",
       "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-docs-smoke.json",
       "required_capabilities": [
