@@ -85,4 +85,19 @@ mod public_surface_policy {
             }
         }
     }
+
+    #[test]
+    fn chart_linking_does_not_depend_on_retained_output_namespace() {
+        let source = include_str!("linking.rs");
+
+        for marker in [
+            "crate::retained::ChartCanvasOutput",
+            "retained::ChartCanvasOutput",
+        ] {
+            assert!(
+                !source.contains(marker),
+                "chart linking should import shared output contracts from top-level modules, not retained namespace marker `{marker}`"
+            );
+        }
+    }
 }

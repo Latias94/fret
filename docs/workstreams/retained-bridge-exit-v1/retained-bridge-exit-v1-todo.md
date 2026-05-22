@@ -5000,6 +5000,33 @@ Related plan:
       style/tooltip contracts from top-level `fret-chart` modules instead of `crate::retained::*`.
     - The full `fret-chart` package gate still passes, including declarative chart baselines,
       top-level tooltip/style tests, and ordinary retained chart oracle tests.
+- [x] RBX-M3-135 Move chart linking output contract off the retained namespace.
+  - Scope:
+    - `ecosystem/fret-chart/src/linking.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+  - Goal:
+    - Make `LinkedChartMember` and `LinkedChartGroup` consume top-level `ChartCanvasOutput`
+      directly instead of naming the shared output contract through `crate::retained::*`.
+    - Add a red/green source-policy test that prevents linking from depending on retained output
+      namespace markers again.
+  - Validation:
+    - `cargo nextest run -p fret-chart chart_linking_does_not_depend_on_retained_output_namespace`
+    - `cargo fmt --check`
+    - `cargo check -p fret-chart`
+    - `cargo nextest run -p fret-chart`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-chart/src/linking.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-135-chart-linking-output-contract-moved-off-retained-namespace`
+  - Result:
+    - `LinkedChartMember::output` and the linked output snapshot cache now use top-level
+      `ChartCanvasOutput`.
+    - The new public-surface policy test first failed on `crate::retained::ChartCanvasOutput`, then
+      passed after the import was moved to `crate::ChartCanvasOutput`.
+    - The full `fret-chart` package gate now passes with 50 tests.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

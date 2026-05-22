@@ -9,6 +9,8 @@ use delinea::{ChartSpec, LinkEvent};
 use fret_runtime::Model;
 use fret_ui::UiHost;
 
+use crate::ChartCanvasOutput;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LinkAxisKey {
     pub kind: AxisKind,
@@ -209,7 +211,7 @@ impl ChartLinkRouter {
 #[derive(Debug, Clone)]
 pub struct LinkedChartMember {
     pub router: ChartLinkRouter,
-    pub output: Model<crate::retained::ChartCanvasOutput>,
+    pub output: Model<ChartCanvasOutput>,
 }
 
 #[derive(Debug, Clone)]
@@ -267,8 +269,7 @@ impl LinkedChartGroup {
             return false;
         };
 
-        let mut outputs: Vec<Option<crate::retained::ChartCanvasOutput>> =
-            Vec::with_capacity(self.members.len());
+        let mut outputs: Vec<Option<ChartCanvasOutput>> = Vec::with_capacity(self.members.len());
         for m in &self.members {
             let out = m.output.read(app, |_app, o| o.clone()).ok();
             outputs.push(out);

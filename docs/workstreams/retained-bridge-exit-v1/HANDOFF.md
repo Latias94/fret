@@ -309,6 +309,10 @@ publication now import those contracts from the top-level crate surface instead 
 remaining behavior oracle. A public-surface policy test prevents declarative shared contracts from
 depending on retained namespace markers again. The full `fret-chart` package gate passes with 49
 tests after the move.
+`RBX-M3-135` then removed the same retained-namespace coupling from chart linking output contracts:
+`LinkedChartMember` and `LinkedChartGroup` now name top-level `ChartCanvasOutput` directly. The
+source-policy test was added red/green and prevents `linking.rs` from reintroducing
+`crate::retained::ChartCanvasOutput`; the full `fret-chart` package gate now passes with 50 tests.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining

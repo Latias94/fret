@@ -12223,3 +12223,58 @@ Broader gates not run:
   - Reason: `RBX-M3-130` is a targeted namespace and contract-ownership move within `fret-chart`.
     The full `fret-chart` package gate, public-surface policy test, formatting, layering, catalog,
     and whitespace checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-135 Chart linking output contract moved off retained namespace
+
+Claim verified:
+
+- `LinkedChartMember` and `LinkedChartGroup` now consume the top-level `ChartCanvasOutput`
+  contract instead of naming it through `crate::retained::*`.
+- A red/green `fret-chart` public-surface policy test prevents chart linking from depending on
+  retained output namespace markers again.
+- Linked chart behavior remains covered by the full `fret-chart` package gate after the namespace
+  move.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/linking.rs`
+- `ecosystem/fret-chart/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-chart chart_linking_does_not_depend_on_retained_output_namespace`
+  - Result: failed first after adding the policy test because `linking.rs` still used
+    `crate::retained::ChartCanvasOutput`; passed after moving the import to top-level
+    `ChartCanvasOutput`.
+  - Scope proven: the policy test acted as the red/green gate for removing the retained output
+    namespace dependency from chart linking.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after the linking import move and policy test.
+- `cargo check -p fret-chart`
+  - Result: passed, with the pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+  - Scope proven: chart linking compiles when naming the shared output contract from the top-level
+    crate surface.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 50 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility/linking/multi-grid baselines,
+    top-level tooltip/style tests, public-surface policy tests, and ordinary retained chart oracle
+    tests remain green after the linking output namespace move.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-135` is a targeted `fret-chart` linking namespace cleanup. The red/green
+    policy test, full `fret-chart` package gate, formatting, layering, catalog, and whitespace
+    checks cover the changed surface.
