@@ -1890,3 +1890,18 @@ Next slice recommendation:
   ContextMenu nested submenu typeahead are covered; next prefer a fresh retained/cached relation or
   action-state mutation surface, or a narrow contract guard for state-sensitive cached subtrees that
   must carry explicit cache keys.
+
+- [x] Add a state-sensitive cached subtree cache-key authoring guard.
+  - Result:
+    `fret_ui::cache_key::bool_key(...)` and `CachedSubtreeProps::cache_key_bool(...)` now make
+    boolean render inputs explicit in cached-subtree keys. The moving cached Combobox fixture uses
+    `.cache_key_bool(review_disabled_now)` instead of ad-hoc integer coercion, the Resizable docs
+    surface rejects the old `u64::from(review_disabled_now)` pattern, and the component author guide
+    documents typed cache-key helpers for state-sensitive cached content. Focused nextest gates
+    passed for `fret-ui`, `fret-ui-kit`, and `fret-ui-gallery`; no new runtime defect was
+    reproduced because the real disabled/action-state runtime path was already covered by F268.
+
+Next slice recommendation:
+
+- Move to a fresh retained/cached relation or action-state mutation surface outside the current
+  Resizable and ContextMenu clusters unless new evidence shows concrete drift there.

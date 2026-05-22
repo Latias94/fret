@@ -8266,3 +8266,31 @@ Next slice recommendation:
 - dedicated runtime suite:
   `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target/fret-diag-hit-test-only-paint-cache-suite-stale-path-v1 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
   - result: passed 2/2; `stage_counts={"passed":2}`; stale-path row run id `1779416013201`.
+
+## State-sensitive CachedSubtree Cache-Key Authoring Guard
+
+- invariant:
+  cached subtree output that depends on caller state while the callsite identity stays stable must
+  encode that state in the explicit cache key. Boolean state should use a typed helper instead of
+  ad-hoc integer coercion so stale retained/replayed metadata risks are visible in review.
+- finding:
+  no new mechanism or recipe defect was reproduced. The runtime disabled/action-state path was
+  already covered by the moving cached Combobox gate; this slice closes the authoring/API gap that
+  made the boolean dependency less reviewable.
+- implementation anchors:
+  `crates/fret-ui/src/cache_key.rs`,
+  `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/resizable/moving_cached_combobox.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/resizable/notes.rs`,
+  `apps/fret-ui-gallery/tests/resizable_docs_surface.rs`, and
+  `docs/component-author-guide.md`.
+- focused Rust gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui bool_key_tracks_boolean_state --no-fail-fast --no-capture`
+  - result: passed; run id `d1cd6ef8-cf4a-4b66-8123-fb469db4ceaf`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit cached_subtree_props_bool_key_tracks_state_sensitive_cached_content --no-fail-fast --no-capture`
+  - result: passed; run id `1b49d112-fa2c-41cb-868a-51984555a007`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --features gallery-dev resizable_snippets_stay_copyable_and_docs_aligned --no-fail-fast --no-capture`
+  - result: passed; run id `e9808d7f-2af3-41a3-bf4d-ceeb03b858bc`.
+- build:
+  `cargo build --profile dev-fast -p fret-ui-gallery --features gallery-dev`
+  - result: passed.

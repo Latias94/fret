@@ -118,10 +118,8 @@ fn cached_combobox_source<H: UiHost>(
     cx.cached_subtree_with(
         CachedSubtreeProps::default()
             .layout(cache_layout)
-            .cache_key(fret_ui::cache_key::mix(
-                0x7a59_d111_6a1d_c0de,
-                u64::from(review_disabled_now),
-            )),
+            .cache_key(0x7a59_d111_6a1d_c0de)
+            .cache_key_bool(review_disabled_now),
         move |cx| {
             let header = ui::h_flex(|cx| {
                 vec![

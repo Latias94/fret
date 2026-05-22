@@ -82,6 +82,13 @@ pub fn mix(seed: u64, value: u64) -> u64 {
     b.finish()
 }
 
+/// Build a cache-key fragment for a boolean render input.
+pub fn bool_key(value: bool) -> u64 {
+    let mut b = CacheKeyBuilder::new();
+    b.write_bool(value);
+    b.finish()
+}
+
 pub fn rect_key(rect: Rect) -> u64 {
     let mut b = CacheKeyBuilder::new();
     b.write_rect(rect);
@@ -136,5 +143,12 @@ mod tests {
     fn mix_is_stable_for_same_inputs() {
         assert_eq!(mix(1, 2), mix(1, 2));
         assert_ne!(mix(1, 2), mix(2, 1));
+    }
+
+    #[test]
+    fn bool_key_tracks_boolean_state() {
+        assert_eq!(bool_key(true), bool_key(true));
+        assert_eq!(bool_key(false), bool_key(false));
+        assert_ne!(bool_key(true), bool_key(false));
     }
 }
