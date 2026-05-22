@@ -5027,6 +5027,36 @@ Related plan:
     - The new public-surface policy test first failed on `crate::retained::ChartCanvasOutput`, then
       passed after the import was moved to `crate::ChartCanvasOutput`.
     - The full `fret-chart` package gate now passes with 50 tests.
+- [x] RBX-M3-140 Delete retained chart output compatibility re-export.
+  - Scope:
+    - `ecosystem/fret-chart/src/retained/mod.rs`
+    - `ecosystem/fret-chart/src/retained/output.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+  - Goal:
+    - Remove the no-user `retained::ChartCanvasOutput` / `retained::ChartCanvasOutputSnapshot`
+      compatibility re-export now that output contracts live at the crate root.
+    - Make retained `ChartCanvas` consume top-level `ChartCanvasOutput` directly while keeping it as
+      the remaining chart behavior oracle.
+    - Add a public-surface policy test that prevents the retained output re-export from returning.
+  - Validation:
+    - `cargo nextest run -p fret-chart retained_output_reexport_is_removed_from_public_surface`
+    - `cargo fmt --check`
+    - `cargo check -p fret-chart`
+    - `cargo nextest run -p fret-chart`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-chart/src/retained/mod.rs`
+    - deleted `ecosystem/fret-chart/src/retained/output.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-140-retained-chart-output-re-export-deletion`
+  - Result:
+    - Deleted `retained/output.rs` and removed its retained public re-export.
+    - Retained `ChartCanvas` now imports `ChartCanvasOutput` from the top-level output module.
+    - The full `fret-chart` package gate now passes with 51 tests.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

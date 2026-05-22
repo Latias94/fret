@@ -12278,3 +12278,63 @@ Broader gates not run:
   - Reason: `RBX-M3-135` is a targeted `fret-chart` linking namespace cleanup. The red/green
     policy test, full `fret-chart` package gate, formatting, layering, catalog, and whitespace
     checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-140 Retained chart output re-export deletion
+
+Claim verified:
+
+- The no-user `retained::ChartCanvasOutput` / `retained::ChartCanvasOutputSnapshot` compatibility
+  re-export has been deleted.
+- Retained `ChartCanvas` now consumes top-level `ChartCanvasOutput` directly while remaining as the
+  ordinary retained chart behavior oracle.
+- A `fret-chart` public-surface policy test prevents the retained output re-export from returning.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/retained/mod.rs`
+- deleted `ecosystem/fret-chart/src/retained/output.rs`
+- `ecosystem/fret-chart/src/retained/canvas.rs`
+- `ecosystem/fret-chart/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `rg -n "retained::ChartCanvasOutput|crate::retained::ChartCanvasOutput|pub use crate::output::\\{ChartCanvasOutput" ecosystem/fret-chart apps ecosystem crates -g '*.rs'`
+  - Result: no external consumer matches; remaining pre-change matches were the retained
+    compatibility re-export, retained canvas's self-import, and public-surface policy marker
+    strings.
+  - Scope proven: deleting the retained output re-export does not remove a known first-party
+    consumer path.
+- `cargo nextest run -p fret-chart retained_output_reexport_is_removed_from_public_surface`
+  - Result: passed, 1 test, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: retained `mod output` / `pub use output::*` stayed deleted and retained
+    `ChartCanvas` no longer imports `crate::retained::ChartCanvasOutput`.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after deleting the re-export module.
+- `cargo check -p fret-chart`
+  - Result: passed, with the pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+  - Scope proven: `fret-chart` compiles after deleting the retained output re-export and moving
+    retained `ChartCanvas` to the top-level output contract import.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 51 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility/linking/multi-grid baselines,
+    top-level tooltip/style tests, public-surface policy tests, and ordinary retained chart oracle
+    tests remain green after the retained output re-export deletion.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-140` is a targeted deletion of a no-user `fret-chart` compatibility re-export.
+    The consumer scan, public-surface policy test, full `fret-chart` package gate, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

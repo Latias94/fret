@@ -28,10 +28,9 @@ use crate::a11y::ChartA11yIndex;
 use crate::input_map::{ChartInputMap, ModifierKey, ModifiersMask};
 use crate::linking::{AxisPointerLinkAnchor, BrushSelectionLink2D, ChartLinkRouter, LinkAxisKey};
 use crate::output::{
-    chart_canvas_output_link_events_batch, chart_canvas_output_snapshot_for_engine,
-    update_chart_canvas_output,
+    ChartCanvasOutput, chart_canvas_output_link_events_batch,
+    chart_canvas_output_snapshot_for_engine, update_chart_canvas_output,
 };
-use crate::retained::ChartCanvasOutput;
 use crate::retained::text_cache::{KeyBuilder, TextCacheGroup};
 use crate::style::ChartStyle;
 use crate::tooltip::{DefaultTooltipFormatter, TooltipFormatter};

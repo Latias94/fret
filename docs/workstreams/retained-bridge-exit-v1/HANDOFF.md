@@ -313,6 +313,11 @@ tests after the move.
 `LinkedChartMember` and `LinkedChartGroup` now name top-level `ChartCanvasOutput` directly. The
 source-policy test was added red/green and prevents `linking.rs` from reintroducing
 `crate::retained::ChartCanvasOutput`; the full `fret-chart` package gate now passes with 50 tests.
+`RBX-M3-140` then deleted the retained chart output compatibility re-export. `retained/output.rs`
+is gone, `retained/mod.rs` no longer re-exports shared output contracts, and retained
+`ChartCanvas` imports top-level `ChartCanvasOutput` directly. A public-surface policy test prevents
+the retained output re-export from returning; the full `fret-chart` package gate now passes with 51
+tests.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining

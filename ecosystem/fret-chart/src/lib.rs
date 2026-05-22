@@ -100,4 +100,19 @@ mod public_surface_policy {
             );
         }
     }
+
+    #[test]
+    fn retained_output_reexport_is_removed_from_public_surface() {
+        let retained_mod = compact(include_str!("retained/mod.rs"));
+        let retained_canvas = include_str!("retained/canvas.rs");
+
+        assert!(
+            !retained_mod.contains("modoutput;") && !retained_mod.contains("pubuseoutput::*;"),
+            "retained chart should not re-export shared output contracts from a retained output module"
+        );
+        assert!(
+            !retained_canvas.contains("crate::retained::ChartCanvasOutput"),
+            "retained ChartCanvas should consume top-level ChartCanvasOutput directly"
+        );
+    }
 }
