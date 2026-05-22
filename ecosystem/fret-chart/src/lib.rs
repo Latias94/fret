@@ -125,4 +125,28 @@ mod public_surface_policy {
             "retained chart widgets should require explicit fret_chart::retained imports"
         );
     }
+
+    #[test]
+    fn legend_scroll_policy_lives_in_shared_logic() {
+        let retained_canvas = include_str!("retained/canvas.rs");
+        let declarative_legend = include_str!("declarative/legend_overlay.rs");
+
+        for (name, source) in [
+            ("retained/canvas.rs", retained_canvas),
+            ("declarative/legend_overlay.rs", declarative_legend),
+        ] {
+            assert!(
+                source.contains("crate::legend_logic::legend_scroll_after_wheel"),
+                "{name} should route legend wheel scrolling through shared legend_logic"
+            );
+            assert!(
+                source.contains("crate::legend_logic::legend_clamp_scroll_y"),
+                "{name} should route legend scroll clamping through shared legend_logic"
+            );
+            assert!(
+                !source.contains("0.75f32"),
+                "{name} should not duplicate the legend wheel speed policy"
+            );
+        }
+    }
 }

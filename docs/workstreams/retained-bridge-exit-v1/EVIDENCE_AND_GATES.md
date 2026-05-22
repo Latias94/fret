@@ -12393,3 +12393,62 @@ Broader gates not run:
   - Reason: `RBX-M3-145` is a targeted `fret-chart` public-surface contraction. The first-party
     consumer scan, public-surface policy test, full `fret-chart` package gate, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-150 Chart legend scroll policy moved to shared logic
+
+Claim verified:
+
+- Chart legend scroll max/clamp/wheel policy now lives in shared `legend_logic` instead of being
+  duplicated in retained and declarative chart paths.
+- Retained `ChartCanvas` and the declarative legend overlay both consume the shared scroll policy.
+- Retained legend scroll oracle coverage remains green, and direct shared-policy tests cover the
+  moved behavior.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/legend_logic.rs`
+- `ecosystem/fret-chart/src/declarative/legend_overlay.rs`
+- `ecosystem/fret-chart/src/retained/canvas.rs`
+- `ecosystem/fret-chart/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-chart legend_scroll_policy`
+  - Result: passed, 3 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: shared legend scroll policy clamps to content height, applies the retained 0.75
+    wheel speed, resets stale scroll when content fits, and both retained/declarative paths route
+    through the shared policy.
+- `cargo nextest run -p fret-chart legend_scroll_clamps_to_content_height`
+  - Result: passed, 1 test, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: the retained legend scroll oracle remains green after delegating to shared
+    `legend_logic`.
+- `cargo check -p fret-chart`
+  - Result: passed, with the pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+  - Scope proven: retained and declarative chart paths compile after the shared policy extraction,
+    with no new `fret-chart` dead-code warnings.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after the shared policy extraction.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 55 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility/linking/multi-grid baselines,
+    shared legend/tooltip/style tests, public-surface policy tests, and ordinary retained chart
+    oracle tests remain green after moving legend scroll policy.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-150` is a targeted `fret-chart` shared-policy extraction. The direct shared
+    policy tests, retained oracle test, source-policy test, full `fret-chart` package gate,
+    formatting, layering, catalog, and whitespace checks cover the changed surface.

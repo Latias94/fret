@@ -5083,6 +5083,42 @@ Related plan:
     - The new policy test initially self-matched its marker string; after switching to a dynamic
       marker, the intended crate-root surface check passed.
     - The full `fret-chart` package gate now passes with 52 tests.
+- [x] RBX-M3-150 Move chart legend scroll policy onto shared/default chart logic.
+  - Scope:
+    - `ecosystem/fret-chart/src/legend_logic.rs`
+    - `ecosystem/fret-chart/src/declarative/legend_overlay.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+  - Goal:
+    - Remove duplicated retained/declarative legend scroll max/clamp/wheel policy.
+    - Make both retained `ChartCanvas` and declarative legend overlay consume the same shared
+      `legend_logic` scroll policy.
+    - Keep retained legend scroll oracle coverage green while adding direct shared-policy tests and
+      a source-policy guard.
+  - Validation:
+    - `cargo nextest run -p fret-chart legend_scroll_policy`
+    - `cargo nextest run -p fret-chart legend_scroll_clamps_to_content_height`
+    - `cargo check -p fret-chart`
+    - `cargo fmt --check`
+    - `cargo nextest run -p fret-chart`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-chart/src/legend_logic.rs`
+    - `ecosystem/fret-chart/src/declarative/legend_overlay.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-150-chart-legend-scroll-policy-moved-to-shared-logic`
+  - Result:
+    - Added shared `legend_max_scroll_y`, `legend_clamp_scroll_y`, and
+      `legend_scroll_after_wheel` policy functions in `legend_logic`.
+    - Retained `ChartCanvas` and declarative legend overlay now route wheel scrolling and layout
+      scroll clamping through the shared policy.
+    - Added shared policy tests for clamp/wheel behavior and content-fits reset behavior, plus a
+      source-policy test preventing duplicated legend wheel speed policy in retained/declarative
+      paths.
+    - The full `fret-chart` package gate now passes with 55 tests.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

@@ -2212,24 +2212,15 @@ impl ChartCanvas {
             .find_map(|(action, r)| r.contains(pos).then_some(*action))
     }
 
-    fn legend_max_scroll_y(&self) -> Px {
-        if self.legend_content_height.0 <= self.legend_view_height.0 {
-            return Px(0.0);
-        }
-        Px(self.legend_content_height.0 - self.legend_view_height.0)
-    }
-
     fn apply_legend_wheel_scroll(&mut self, wheel_delta_y: Px) -> bool {
-        let max_scroll = self.legend_max_scroll_y();
-        if max_scroll.0 <= 0.0 {
-            return false;
-        }
-
-        let prev = self.legend_scroll_y;
-        let speed = 0.75f32;
-        let next = (self.legend_scroll_y.0 - wheel_delta_y.0 * speed).clamp(0.0, max_scroll.0);
-        self.legend_scroll_y = Px(next);
-        self.legend_scroll_y.0 != prev.0
+        let (next, changed) = crate::legend_logic::legend_scroll_after_wheel(
+            self.legend_scroll_y,
+            self.legend_content_height,
+            self.legend_view_height,
+            wheel_delta_y,
+        );
+        self.legend_scroll_y = next;
+        changed
     }
 
     fn apply_legend_select_all(&mut self) -> bool {
@@ -2416,10 +2407,11 @@ impl ChartCanvas {
         let view_h = (legend_h - selector_row_h - pad.top.0 - pad.bottom.0).max(1.0);
         self.legend_content_height = Px(items_h);
         self.legend_view_height = Px(view_h);
-        self.legend_scroll_y = Px(self
-            .legend_scroll_y
-            .0
-            .clamp(0.0, self.legend_max_scroll_y().0));
+        self.legend_scroll_y = crate::legend_logic::legend_clamp_scroll_y(
+            self.legend_scroll_y,
+            self.legend_content_height,
+            self.legend_view_height,
+        );
 
         let x0 =
             (plot.origin.x.0 + plot.size.width.0 - legend_w - margin).max(plot.origin.x.0 + margin);
@@ -6530,7 +6522,14 @@ mod tests {
         canvas.legend_content_height = Px(500.0);
         canvas.legend_view_height = Px(120.0);
 
-        assert_eq!(canvas.legend_max_scroll_y().0, 380.0);
+        assert_eq!(
+            crate::legend_logic::legend_max_scroll_y(
+                canvas.legend_content_height,
+                canvas.legend_view_height
+            )
+            .0,
+            380.0
+        );
 
         assert!(canvas.apply_legend_wheel_scroll(Px(-200.0)));
         assert!(canvas.legend_scroll_y.0 > 0.0);

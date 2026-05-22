@@ -323,6 +323,12 @@ widgets remain available only through explicit `fret_chart::retained` imports wh
 oracles; the default `fret_chart::*` surface now favors declarative panels and shared contracts. A
 public-surface policy test prevents `pub use retained::*` from returning, and the full `fret-chart`
 package gate now passes with 52 tests.
+`RBX-M3-150` then moved chart legend scroll max/clamp/wheel policy into shared `legend_logic`.
+Retained `ChartCanvas` and the declarative legend overlay now both route wheel scrolling and layout
+scroll clamping through the same shared functions. Shared policy tests cover clamp/wheel behavior
+and content-fits reset behavior; a source-policy test prevents retained/declarative paths from
+duplicating the legend wheel speed policy again. The full `fret-chart` package gate now passes with
+55 tests.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining

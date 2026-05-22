@@ -68,24 +68,15 @@ impl LegendOverlayState {
             .find_map(|(action, r)| r.contains(pos).then_some(*action))
     }
 
-    fn max_scroll_y(&self) -> Px {
-        if self.content_height.0 <= self.view_height.0 {
-            return Px(0.0);
-        }
-        Px(self.content_height.0 - self.view_height.0)
-    }
-
     fn apply_wheel_scroll(&mut self, wheel_delta_y: Px) -> bool {
-        let max_scroll = self.max_scroll_y();
-        if max_scroll.0 <= 0.0 {
-            return false;
-        }
-
-        let prev = self.scroll_y;
-        let speed = 0.75f32;
-        let next = (self.scroll_y.0 - wheel_delta_y.0 * speed).clamp(0.0, max_scroll.0);
-        self.scroll_y = Px(next);
-        self.scroll_y.0 != prev.0
+        let (next, changed) = crate::legend_logic::legend_scroll_after_wheel(
+            self.scroll_y,
+            self.content_height,
+            self.view_height,
+            wheel_delta_y,
+        );
+        self.scroll_y = next;
+        changed
     }
 
     pub fn sync_series(&mut self, series: Vec<LegendSeriesEntry>) {
@@ -404,7 +395,11 @@ pub(crate) fn legend_overlay_tool(
             let view_h = (legend_h - selector_row_h - pad.top.0 - pad.bottom.0).max(1.0);
             st.content_height = Px(items_h);
             st.view_height = Px(view_h);
-            st.scroll_y = Px(st.scroll_y.0.clamp(0.0, st.max_scroll_y().0));
+            st.scroll_y = crate::legend_logic::legend_clamp_scroll_y(
+                st.scroll_y,
+                st.content_height,
+                st.view_height,
+            );
 
             let x0 = (plot.origin.x.0 + plot.size.width.0 - legend_w - margin)
                 .max(plot.origin.x.0 + margin);
