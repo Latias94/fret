@@ -334,6 +334,11 @@ duplicating the legend wheel speed policy again. The full `fret-chart` package g
 shared `SliderDragKind`, norm/value mapping, and window-after-delta policy. Shared slider tests and
 a source-policy test prevent those pure math helpers from moving back into retained canvas. The full
 `fret-chart` package gate now passes with 58 tests.
+`RBX-M3-170` then moved pure visual-map track layout, track hit selection, domain-window conversion,
+and value-to-y mapping into shared `visual_map_logic`. Retained `ChartCanvas` still owns retained
+paint/event/action orchestration, but it now consumes shared visual-map geometry and mapping policy.
+Shared tests cover endpoint y mapping, padded/gapped track layout, and hit selection; retained
+visual-map oracle tests remain green and the full `fret-chart` package gate now passes with 62 tests.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining

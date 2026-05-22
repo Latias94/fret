@@ -37,6 +37,9 @@ use crate::slider_logic::{
 };
 use crate::style::ChartStyle;
 use crate::tooltip::{DefaultTooltipFormatter, TooltipFormatter};
+use crate::visual_map_logic::{
+    VisualMapTrackLayout, visual_map_domain_window, visual_map_track_layouts, visual_map_y_at_value,
+};
 
 fn mark_path_cache_key(mark_id: delinea::ids::MarkId, variant: u8) -> u64 {
     use std::collections::hash_map::DefaultHasher;
@@ -1810,20 +1813,7 @@ impl ChartCanvas {
         extent
     }
 
-    fn visual_map_tracks(
-        &self,
-    ) -> Vec<(
-        delinea::VisualMapId,
-        delinea::engine::model::VisualMapModel,
-        Rect,
-    )> {
-        let Some(band) = self.last_layout.visual_map else {
-            return Vec::new();
-        };
-        if band.size.width.0 <= 0.0 || band.size.height.0 <= 0.0 {
-            return Vec::new();
-        }
-
+    fn visual_map_tracks(&self) -> Vec<VisualMapTrackLayout> {
         let maps: Vec<(delinea::VisualMapId, delinea::engine::model::VisualMapModel)> = self
             .with_engine(|engine| {
                 engine
@@ -1833,57 +1823,16 @@ impl ChartCanvas {
                     .map(|(id, vm)| (*id, *vm))
                     .collect()
             });
-        if maps.is_empty() {
-            return Vec::new();
-        }
-
-        let gap = self.style.visual_map_item_gap.0.max(0.0);
-        let pad = self.style.visual_map_padding.0.max(0.0);
-
-        let total_gap = gap * (maps.len().saturating_sub(1) as f32);
-        let item_h = ((band.size.height.0 - total_gap) / (maps.len() as f32)).max(1.0);
-
-        let mut y = band.origin.y.0;
-        let mut out = Vec::with_capacity(maps.len());
-        for (id, vm) in maps {
-            let item = Rect::new(
-                Point::new(band.origin.x, Px(y)),
-                Size::new(band.size.width, Px(item_h)),
-            );
-            y += item_h + gap;
-
-            let track = Rect::new(
-                Point::new(Px(item.origin.x.0 + pad), Px(item.origin.y.0 + pad)),
-                Size::new(
-                    Px((item.size.width.0 - 2.0 * pad).max(1.0)),
-                    Px((item.size.height.0 - 2.0 * pad).max(1.0)),
-                ),
-            );
-            if track.size.width.0 > 0.0 && track.size.height.0 > 0.0 {
-                out.push((id, vm, track));
-            }
-        }
-        out
+        visual_map_track_layouts(
+            self.last_layout.visual_map,
+            &maps,
+            self.style.visual_map_item_gap,
+            self.style.visual_map_padding,
+        )
     }
 
-    fn visual_map_track_at(
-        &self,
-        position: Point,
-    ) -> Option<(
-        delinea::VisualMapId,
-        delinea::engine::model::VisualMapModel,
-        Rect,
-    )> {
-        self.visual_map_tracks()
-            .into_iter()
-            .find(|(_, _, track)| track.contains(position))
-    }
-
-    fn visual_map_domain_window(vm: delinea::engine::model::VisualMapModel) -> DataWindow {
-        DataWindow {
-            min: vm.domain.min,
-            max: vm.domain.max,
-        }
+    fn visual_map_track_at(&self, position: Point) -> Option<VisualMapTrackLayout> {
+        crate::visual_map_logic::visual_map_track_at(&self.visual_map_tracks(), position)
     }
 
     fn current_visual_map_window(
@@ -1891,7 +1840,7 @@ impl ChartCanvas {
         id: delinea::VisualMapId,
         vm: delinea::engine::model::VisualMapModel,
     ) -> DataWindow {
-        let domain = Self::visual_map_domain_window(vm);
+        let domain = visual_map_domain_window(vm);
         let range =
             self.with_engine(|engine| engine.state().visual_map_range.get(&id).copied().flatten());
         match range {
@@ -1923,17 +1872,6 @@ impl ChartCanvas {
                 .flatten()
         });
         piece_mask.or(vm.initial_piece_mask).unwrap_or(full_mask) & full_mask
-    }
-
-    fn visual_map_y_at_value(track: Rect, domain: DataWindow, value: f64) -> f32 {
-        let mut domain = domain;
-        domain.clamp_non_degenerate();
-        let span = domain.span();
-        if !span.is_finite() || span <= 0.0 {
-            return track.origin.y.0 + track.size.height.0;
-        }
-        let t = ((value - domain.min) / span).clamp(0.0, 1.0) as f32;
-        track.origin.y.0 + (1.0 - t) * track.size.height.0
     }
 
     fn reset_view_for_axes(&mut self, x_axis: delinea::AxisId, y_axis: delinea::AxisId) {
@@ -2409,7 +2347,10 @@ impl ChartCanvas {
             return;
         }
 
-        for (i, (vm_id, vm, track)) in tracks.into_iter().enumerate() {
+        for (i, layout) in tracks.into_iter().enumerate() {
+            let vm_id = layout.id;
+            let vm = layout.model;
+            let track = layout.track;
             let order = DrawOrder(
                 self.style
                     .draw_order
@@ -2468,11 +2409,11 @@ impl ChartCanvas {
                         });
                     }
 
-                    let domain = Self::visual_map_domain_window(vm);
+                    let domain = visual_map_domain_window(vm);
                     let window = self.current_visual_map_window(vm_id, vm);
 
-                    let y_min = Self::visual_map_y_at_value(track, domain, window.min);
-                    let y_max = Self::visual_map_y_at_value(track, domain, window.max);
+                    let y_min = visual_map_y_at_value(track, domain, window.min);
+                    let y_max = visual_map_y_at_value(track, domain, window.max);
                     let top = y_max.min(y_min);
                     let bottom = y_max.max(y_min);
 
@@ -3767,12 +3708,15 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     && self.box_zoom_drag.is_none()
                     && self.brush_drag.is_none()
                     && self.slider_drag.is_none()
-                    && let Some((vm_id, vm, track)) = self.visual_map_track_at(*position)
+                    && let Some(layout) = self.visual_map_track_at(*position)
                     && (*button == MouseButton::Left
-                        || (vm.mode == delinea::VisualMapMode::Piecewise
+                        || (layout.model.mode == delinea::VisualMapMode::Piecewise
                             && *button == MouseButton::Right))
                 {
-                    let domain = Self::visual_map_domain_window(vm);
+                    let vm_id = layout.id;
+                    let vm = layout.model;
+                    let track = layout.track;
+                    let domain = visual_map_domain_window(vm);
                     let click_value =
                         delinea::engine::axis::data_at_y_in_rect(domain, position.y.0, track);
 
@@ -3854,8 +3798,8 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     let current_window = self.current_visual_map_window(vm_id, vm);
 
                     let handle_hit_px = 8.0f32;
-                    let y_min = Self::visual_map_y_at_value(track, domain, current_window.min);
-                    let y_max = Self::visual_map_y_at_value(track, domain, current_window.max);
+                    let y_min = visual_map_y_at_value(track, domain, current_window.min);
+                    let y_max = visual_map_y_at_value(track, domain, current_window.max);
                     let (top, bottom) = (y_max.min(y_min), y_max.max(y_min));
 
                     let (kind, start_window) = if (position.y.0 - y_min).abs() <= handle_hit_px {
@@ -7200,14 +7144,8 @@ mod tests {
         };
 
         let bottom = track.origin.y.0 + track.size.height.0;
-        assert_eq!(
-            ChartCanvas::visual_map_y_at_value(track, domain, 0.0),
-            bottom
-        );
-        assert_eq!(
-            ChartCanvas::visual_map_y_at_value(track, domain, 10.0),
-            track.origin.y.0
-        );
+        assert_eq!(visual_map_y_at_value(track, domain, 0.0), bottom);
+        assert_eq!(visual_map_y_at_value(track, domain, 10.0), track.origin.y.0);
     }
 
     #[test]
@@ -7228,7 +7166,7 @@ mod tests {
 
         let tracks = canvas.visual_map_tracks();
         assert_eq!(tracks.len(), 1);
-        let (_id, _vm, track) = tracks[0];
+        let track = tracks[0].track;
         let outer = canvas
             .last_layout
             .visual_map

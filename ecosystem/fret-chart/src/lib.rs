@@ -18,6 +18,7 @@ mod a11y;
 mod legend_logic;
 mod slider_logic;
 mod tooltip_layout;
+mod visual_map_logic;
 
 pub use declarative::*;
 pub use input_map::*;
@@ -175,6 +176,34 @@ mod public_surface_policy {
             assert!(
                 retained_canvas.contains(marker),
                 "retained ChartCanvas should consume shared slider policy marker `{marker}`"
+            );
+        }
+    }
+
+    #[test]
+    fn visual_map_policy_lives_in_shared_logic() {
+        let retained_canvas = include_str!("retained/canvas.rs");
+
+        for marker in [
+            "fn visual_map_domain_window(",
+            "fn visual_map_y_at_value(",
+            "fn visual_map_track_layouts(",
+        ] {
+            assert!(
+                !retained_canvas.contains(marker),
+                "retained ChartCanvas should route pure visual-map policy through shared visual_map_logic; unexpected `{marker}`"
+            );
+        }
+
+        for marker in [
+            "use crate::visual_map_logic::{",
+            "visual_map_domain_window(",
+            "visual_map_track_layouts(",
+            "visual_map_y_at_value(",
+        ] {
+            assert!(
+                retained_canvas.contains(marker),
+                "retained ChartCanvas should consume shared visual-map policy marker `{marker}`"
             );
         }
     }

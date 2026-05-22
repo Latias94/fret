@@ -5152,6 +5152,42 @@ Related plan:
     - Added shared slider tests and a public-surface policy test that prevents the pure slider math
       functions from returning to retained `ChartCanvas`.
     - The full `fret-chart` package gate now passes with 58 tests.
+- [x] RBX-M3-170 Move chart visual-map layout/mapping policy onto shared/default chart logic.
+  - Scope:
+    - `ecosystem/fret-chart/src/visual_map_logic.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+  - Goal:
+    - Remove retained-only ownership of pure visual-map track layout, hit-test routing input, domain
+      window conversion, and value-to-y mapping policy.
+    - Keep retained `ChartCanvas` paint/event/engine orchestration as the current oracle, but make
+      it consume shared visual-map geometry and mapping policy.
+    - Add shared visual-map tests and a source-policy guard preventing pure visual-map policy from
+      moving back into retained `ChartCanvas`.
+  - Validation:
+    - `cargo nextest run -p fret-chart visual_map`
+    - `cargo check -p fret-chart`
+    - `cargo fmt --check`
+    - `cargo nextest run -p fret-chart`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-chart/src/visual_map_logic.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-170-chart-visual-map-policy-moved-to-shared-logic`
+  - Result:
+    - Added shared `VisualMapTrackLayout`, `visual_map_track_layouts`,
+      `visual_map_track_at`, `visual_map_domain_window`, and `visual_map_y_at_value` in
+      `visual_map_logic`.
+    - Retained `ChartCanvas` now consumes shared visual-map track layout, hit-test selection,
+      domain-window conversion, and value-to-y mapping while retaining paint/event/action
+      orchestration as the oracle.
+    - Added shared visual-map tests for endpoint y mapping, padding/gap track layout, and track
+      hit selection, plus a public-surface policy test that prevents those pure functions from
+      returning to retained `ChartCanvas`.
+    - The full `fret-chart` package gate now passes with 62 tests.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.
