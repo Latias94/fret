@@ -989,6 +989,13 @@ fn script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_hit_test_only_stale_path_cover_move() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-stale-path-cover-move.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_listlike_pointer_selection() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-listlike-pointer-selection.json"

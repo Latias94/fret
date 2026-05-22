@@ -5,6 +5,7 @@
     "max_warning_issues": 0
   },
   "scripts": [
-    "tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-paint-cache-probe-sweep.json"
+    "tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-paint-cache-probe-sweep.json",
+    "tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-stale-path-cover-move.json"
   ]
 }

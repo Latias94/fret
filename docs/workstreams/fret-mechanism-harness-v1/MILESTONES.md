@@ -4483,3 +4483,47 @@ serialization coverage.
   `target\dev-fast\fretboard-dev.exe diag suite --glob "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json" --dir target\fret-diag-command-disabled-focusable-row-suite-v1 --session-auto --timeout-ms 720000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   with `stage_counts={"passed":1}` and summary
   `target/fret-diag-command-disabled-focusable-row-suite-v1/sessions/1779408495703-242652/suite.summary.json`.
+
+## M180: HitTestOnly Stale Path-Cache Runtime Gate
+
+Status: complete for promoting higher-z stale hit-path rejection into UI Gallery runtime evidence.
+
+- Extended the hidden HitTestOnly Paint-Cache Probe page with a cached-root stale-path surface. The
+  lower target's first pointer-move handler moves a higher-z cover over the same point; the next
+  move must reject the stale lower-target cached path, fall back to full hit testing, route to the
+  cover, and refresh the path cache.
+- Added `ui-gallery-hit-test-only-stale-path-cover-move.json` and promoted it into
+  `ui-gallery-hit-test-only-paint-cache`. The gate asserts the visible status
+  `stale_path_hit=cover`, `hit_test_path_cache_misses_ge(min=1)`, and
+  `hit_test_path_cache_hits_ge(min=1)` with the hit-test bounds tree disabled for deterministic
+  cached-path exercise.
+- Added protocol roundtrip coverage for the new script and refreshed the diagnostics script
+  registry.
+- JSON, registry, formatting, and diff hygiene gates pass:
+  `python -m json.tool tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-stale-path-cover-move.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-hit-test-only-paint-cache/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/index.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_only_paint_cache_probe.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  and `git diff --check`.
+- Focused build/check gates pass:
+  `cargo check --profile dev-fast -p fret-ui-gallery --features gallery-dev`;
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused Rust gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep script_v2_roundtrip_ui_gallery_hit_test_only_stale_path_cover_move`
+  with run id `967b9ba4-5eb8-4a7c-847e-9310162471fa`;
+  and
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path`
+  with run id `3214e28c-f4c6-45a9-b838-ae016e824ede`.
+- Focused runtime diagnostics pass:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-stale-path-cover-move.json --dir target/fret-diag-hit-test-only-stale-path-cover-move-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with run id `1779415611375`, AI packet
+  `target/fret-diag-hit-test-only-stale-path-cover-move-v1/sessions/1779415325602-253012/1779415611375/ai.packet`,
+  and pack
+  `target/fret-diag-hit-test-only-stale-path-cover-move-v1/sessions/1779415325602-253012/share/1779415611375.zip`.
+- Dedicated runtime suite passes 2/2:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target/fret-diag-hit-test-only-paint-cache-suite-stale-path-v1 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  with summary
+  `target/fret-diag-hit-test-only-paint-cache-suite-stale-path-v1/sessions/1779415674198-166024/suite.summary.json`;
+  the stale-path row run id is `1779416013201`.

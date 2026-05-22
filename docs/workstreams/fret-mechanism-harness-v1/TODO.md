@@ -1465,6 +1465,17 @@ date: 2026-05-12
     widget while the stale lower-child path records a cache miss. A third move proves the refreshed
     higher-z dispatch path is cache-reusable. Focused checks passed with Nextest run id
     `093b8a5d-e67a-4b35-ab82-e02389f63173`.
+- [x] Promote higher-z stale hit-path coverage into a UI Gallery runtime gate.
+  - Result:
+    `ui-gallery-hit-test-only-stale-path-cover-move.json` extends the hidden HitTestOnly
+    Paint-Cache Probe page with a cached-root stale-path surface. The first pointer-move over a
+    lower target moves a higher-z cover over the same point from inside the move handler, keeping
+    the move-only path-cache scenario live. The gate then proves the stale cached target path
+    records `hit_test_path_cache_misses_ge(min=1)`, refreshes into a reusable cover path with
+    `hit_test_path_cache_hits_ge(min=1)`, and updates the visible status to
+    `stale_path_hit=cover`. The dedicated `ui-gallery-hit-test-only-paint-cache` suite now passes
+    2/2 with summary
+    `target/fret-diag-hit-test-only-paint-cache-suite-stale-path-v1/sessions/1779415674198-166024/suite.summary.json`.
 - [x] Add a Switch choice-card checked-state semantics runtime gate.
   - Result:
     `ui-gallery-switch-choice-card-checked-state-mutation.json` now starts directly on the Switch

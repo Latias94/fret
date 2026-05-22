@@ -388,6 +388,17 @@ date: 2026-05-12
   targets the lower-z widget, then after the higher-z sibling moves under the same pointer the
   stale path records a miss and mapped event-chain delivery reaches the moved sibling. Focused
   evidence uses Nextest run id `093b8a5d-e67a-4b35-ab82-e02389f63173`.
+- Hit-test stale-path runtime update:
+  `ui-gallery-hit-test-only-stale-path-cover-move.json` promotes the higher-z sibling stale-path
+  invariant from synthetic dispatch tests into UI Gallery runtime diagnostics. The HitTestOnly
+  Paint-Cache Probe page now has a cached-root target/cover surface where the target's first
+  pointer move repositions a higher-z cover over the same point. The script disables the hit-test
+  bounds tree, sweeps the target, waits for `stale_path_hit=cover`, gates
+  `hit_test_path_cache_misses_ge(min=1)` and `hit_test_path_cache_hits_ge(min=1)`, and is part of
+  the zero-warning `ui-gallery-hit-test-only-paint-cache` suite. Focused evidence is anchored at
+  `target/fret-diag-hit-test-only-stale-path-cover-move-v1/sessions/1779415325602-253012/1779415611375/ai.packet`;
+  suite evidence is anchored at
+  `target/fret-diag-hit-test-only-paint-cache-suite-stale-path-v1/sessions/1779415674198-166024/suite.summary.json`.
 - Node Graph cull-window update:
   `ui-gallery-node-graph-cull`, `ui-gallery-node-graph-cull-window-shifts`, and
   `ui-gallery-node-graph-cull-window-no-shifts-small-pan` now have protocol roundtrip coverage for
