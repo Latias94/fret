@@ -667,6 +667,13 @@ fn script_v2_roundtrip_ui_gallery_command_palette_controlled_selection_value() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_command_palette_disabled_focusable_keyboard_suppression() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_command_docs_demo_long_query_text() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-command-docs-demo-long-query-text.json"

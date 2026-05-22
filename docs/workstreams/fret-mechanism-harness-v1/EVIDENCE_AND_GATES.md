@@ -1981,6 +1981,33 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     passed; 17 scripts, zero lint errors, zero reason codes.
   - suite evidence:
     `target/fret-diag-command-suite-disabled-focusable-v7/sessions/1778825524424-52724/suite.summary.json`
+  - fresh promotion gate:
+    the script is now also promoted into
+    `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`, and protocol
+    roundtrip coverage is locked by
+    `script_v2_roundtrip_ui_gallery_command_palette_disabled_focusable_keyboard_suppression`.
+  - fresh focused shadcn gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib cmdk_default_disabled_item_is_skipped_by_active_descendant_navigation cmdk_focusable_disabled_item_can_be_active_descendant_without_keyboard_activation`
+  - fresh focused shadcn result:
+    passed, 2 tests; run id `bfad983b-8637-449b-b925-bfedd2da209d`.
+  - fresh protocol roundtrip gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_command_palette_disabled_focusable_keyboard_suppression script_v2_roundtrip_ui_gallery_command_retained_active_descendant_action_state`
+  - fresh protocol roundtrip result:
+    passed, 2 tests; run id `35eb12fd-44fa-4db1-90cd-3fac0ac3d211`.
+  - fresh runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json --dir target/fret-diag-command-disabled-focusable-keyboard-suppression-runtime-evidence-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - fresh runtime result:
+    passed; run id `1779407145527`.
+  - fresh runtime evidence:
+    `target/fret-diag-command-disabled-focusable-keyboard-suppression-runtime-evidence-v2/sessions/1779407084356-243016/1779407145527/ai.packet`
+  - fresh runtime pack:
+    `target/fret-diag-command-disabled-focusable-keyboard-suppression-runtime-evidence-v2/sessions/1779407084356-243016/share/1779407145527.zip`
+  - row-only suite command:
+    `target/dev-fast/fretboard-dev.exe diag suite --glob "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json" --dir target/fret-diag-command-disabled-focusable-row-suite-v1 --session-auto --timeout-ms 720000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - row-only suite result:
+    passed 1/1; `stage_counts={"passed":1}`.
+  - row-only suite evidence:
+    `target/fret-diag-command-disabled-focusable-row-suite-v1/sessions/1779408495703-242652/suite.summary.json`
 - Retained/windowed active-descendant action-state mutation gate:
   `tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json`
   - suite membership:

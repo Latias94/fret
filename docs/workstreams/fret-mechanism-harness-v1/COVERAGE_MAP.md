@@ -78,6 +78,13 @@ date: 2026-05-12
   now proves the same focus/invoke/key separation through real menu roving focus.
   `ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json` proves the same
   focus/invoke/key separation through Command active-descendant/list semantics.
+- Command disabled active-descendant promotion update:
+  the direct disabled-focusable Command row now has protocol roundtrip coverage and broad
+  `ui-gallery-shadcn-runtime-evidence` membership, matching the retained/windowed Command
+  action-state mutation row. Fresh focused evidence lives at
+  `target/fret-diag-command-disabled-focusable-keyboard-suppression-runtime-evidence-v2/sessions/1779407084356-243016/1779407145527/ai.packet`,
+  and the row-only suite summary is
+  `target/fret-diag-command-disabled-focusable-row-suite-v1/sessions/1779408495703-242652/suite.summary.json`.
   `pressable_key_activation_v1.json` backs the keyboard-suppression mechanism with a core Pressable
   key-activation fixture. `ui-gallery-command-retained-active-descendant-action-state.json` plus
   `combobox_active_descendant_interaction_v1.json` now cover retained/windowed active-descendant

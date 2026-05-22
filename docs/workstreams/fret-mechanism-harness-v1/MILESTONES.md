@@ -4442,3 +4442,44 @@ entry behavior, and ContextMenu suite promotion.
 - Promoted ContextMenu runtime suite passes 4/4 with summary
   `target/fret-diag-context-menu-suite-keyboard-entry-v2/sessions/1779404255883-237716/suite.summary.json`;
   the keyboard-nav row run id is `1779404347719`.
+
+## M179: Command Disabled Active-Descendant Runtime Evidence Promotion
+
+Status: complete for Command disabled-focusable active-descendant broad-suite promotion and protocol
+serialization coverage.
+
+- Confirmed the existing Command disabled-focusable script is the correct action-state comparison
+  row for this axis: default disabled rows are skipped by active-descendant navigation, opt-in
+  disabled-focusable rows can become the active descendant, and the active disabled row keeps
+  `disabled=true`, `invoke=false`, and no Enter dispatch.
+- Added protocol roundtrip coverage for
+  `ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json`.
+- Promoted the script into `ui-gallery-shadcn-runtime-evidence`, so broad runtime evidence now
+  includes both the direct disabled-focusable Command row and the retained/windowed
+  active-descendant action-state mutation row.
+- JSON, registry, formatting, and diff hygiene gates pass:
+  `python -m json.tool tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/index.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  and `git diff --check`.
+- Focused Rust gates pass:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib cmdk_default_disabled_item_is_skipped_by_active_descendant_navigation cmdk_focusable_disabled_item_can_be_active_descendant_without_keyboard_activation`
+  with run id `bfad983b-8637-449b-b925-bfedd2da209d`;
+  and
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_command_palette_disabled_focusable_keyboard_suppression script_v2_roundtrip_ui_gallery_command_retained_active_descendant_action_state`
+  with run id `35eb12fd-44fa-4db1-90cd-3fac0ac3d211`.
+- Build passes:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`.
+- Focused runtime diagnostics pass:
+  `target\dev-fast\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\command\ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json --dir target\fret-diag-command-disabled-focusable-keyboard-suppression-runtime-evidence-v2 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with run id `1779407145527`, AI packet
+  `target/fret-diag-command-disabled-focusable-keyboard-suppression-runtime-evidence-v2/sessions/1779407084356-243016/1779407145527/ai.packet`,
+  and pack
+  `target/fret-diag-command-disabled-focusable-keyboard-suppression-runtime-evidence-v2/sessions/1779407084356-243016/share/1779407145527.zip`.
+- Row-only suite evidence passes:
+  `target\dev-fast\fretboard-dev.exe diag suite --glob "tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json" --dir target\fret-diag-command-disabled-focusable-row-suite-v1 --session-auto --timeout-ms 720000 --launch -- target\dev-fast\fret-ui-gallery.exe`
+  with `stage_counts={"passed":1}` and summary
+  `target/fret-diag-command-disabled-focusable-row-suite-v1/sessions/1779408495703-242652/suite.summary.json`.

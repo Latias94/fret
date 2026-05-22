@@ -7086,7 +7086,8 @@
       "required_launch_features": [],
       "suite_memberships": [
         "ui-gallery-command",
-        "ui-gallery-shadcn-conformance"
+        "ui-gallery-shadcn-conformance",
+        "ui-gallery-shadcn-runtime-evidence"
       ],
       "tags": [
         "a11y",

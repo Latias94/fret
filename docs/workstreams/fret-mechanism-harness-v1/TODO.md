@@ -1738,6 +1738,21 @@ date: 2026-05-12
 
 Next slice recommendation:
 
-- Continue the action-state axis into Command disabled active-descendant rows, where command
-  filtering, active-descendant mutation, disabled semantics, and invoke suppression can drift
-  independently from roving-focus menu widgets.
+- [x] Promote the Command disabled active-descendant action-state gate into broad runtime evidence.
+  - Result:
+    `ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json` was already the
+    correct Command action-state/runtime row: it proves default disabled rows are skipped, opt-in
+    disabled-focusable rows can become the active descendant, disabled semantics and
+    `invoke=false` stay on the active row, and Enter does not dispatch. This slice closed the
+    durability gaps around that existing gate by adding protocol roundtrip coverage and promoting it
+    into `ui-gallery-shadcn-runtime-evidence` alongside the retained/windowed Command mutation row.
+    Fresh focused runtime passed with run id `1779407145527`, and a row-only suite run passed with
+    summary
+    `target/fret-diag-command-disabled-focusable-row-suite-v1/sessions/1779408495703-242652/suite.summary.json`.
+
+Next slice recommendation:
+
+- Move from action-state/semantics into a retained or cached root-boundary surface where stale paint,
+  hit-test, or relation state can survive visual success. Avoid adding another Command action-state
+  row unless a new runtime bundle shows filtering or virtualization desynchronizing selection,
+  disabled semantics, or invoke suppression.
