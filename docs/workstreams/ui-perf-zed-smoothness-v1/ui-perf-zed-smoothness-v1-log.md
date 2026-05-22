@@ -16549,3 +16549,60 @@ Interpretation:
   frame.
 - The next candidate should optimize clean-geometry proof/apply traversal or boundary-aware application directly.
   Do not broaden the Scroll fast path from this evidence, because Scroll self time is no longer the dominant owner.
+
+## 2026-05-22 13:20:24 +08:00 (inline clean-geometry apply plan)
+
+Question:
+- Can the r28 clean-geometry proof/apply double traversal be collapsed without weakening side-effect boundaries,
+  layout-query bounds, hit-test bounds, or paint-cache geometry fingerprints?
+
+Change:
+- Added `CleanGeometryApplyPlan` for clean resize roots. `request_build_window_roots_if_final(...)` now returns the
+  apply plans it proves, so the subsequent roots loop can skip re-running the root widget layout when the proof already
+  applied pure geometry.
+- Pure clean-geometry nodes are written during proof traversal, using rollback snapshots for node bounds/measured size
+  plus scratch bounds truncation if a later descendant rejects the proof.
+- Side-effect boundaries remain fallback layouts. The final apply step now only runs those fallback layouts and
+  recomputes paint-geometry fingerprints for pure nodes applied during proof.
+- Added a window-root resize regression proving that a direct pure root consumes the apply plan with
+  `layout_engine_solves=0` and `layout_nodes_performed=0`, while descendant element bounds still update to the new
+  width.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui
+cargo check -p fret-ui --lib
+cargo nextest run -p fret-ui -E 'test(clean_geometry_window_root_resize_consumes_apply_plan_without_root_layout) | test(clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary) | test(clean_geometry_small_resize_skips_barrier_root_engine_solve) | test(clean_geometry_skips_nested_fixed_size_horizontal_flex_origin_only_move)' --no-fail-fast
+cargo nextest run -p fret-ui -E 'test(clean_geometry_window_root_resize_consumes_apply_plan_without_root_layout) | test(clean_geometry_small_resize_propagates_through_hover_and_hit_test_wrappers) | test(clean_geometry_small_resize_propagates_through_semantics_wrapper) | test(clean_geometry_small_resize_propagates_through_pressable_wrapper) | test(clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary) | test(clean_geometry_skips_default_shrink_fixed_px_horizontal_flex_with_free_space) | test(clean_geometry_rejects_default_shrink_fixed_px_horizontal_flex_without_free_space) | test(clean_geometry_skips_nested_fixed_size_horizontal_flex_origin_only_move) | test(clean_geometry_small_resize_skips_barrier_root_engine_solve)' --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260522-r33-clean-geometry-inline-apply-fresh --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260522-r34-clean-geometry-inline-apply-repeat --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260522-r34-clean-geometry-inline-apply-repeat\sessions\1779426690797-256808\1779426737560-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+git diff --check
+```
+
+Notes:
+- `cargo check` / build still report the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+- The `fret-ui-gallery` rebuild was rerun after the code change so r33/r34 used a fresh gallery binary.
+
+Evidence:
+- r33 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260522-r33-clean-geometry-inline-apply-fresh/sessions/1779426429223-250268/1779426467689-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r33 reports p50/p95 total `100/1374us`, layout `30/752us`, prepaint `34/63us`, paint `34/581us`, and
+  `layout.engine_solve=0/0`. Root phase p95/max reports request-build total/take/phase1/phase2/proof/compute/put
+  `420/12/83/314/313/0/9us` and roots total/apply/flush `277/276/0us`.
+- r34 repeat bundle:
+  `target/fret-diag/text-clean-geometry-current-20260522-r34-clean-geometry-inline-apply-repeat/sessions/1779426690797-256808/1779426737560-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r34 reports p50/p95 total `134/949us`, layout `39/490us`, prepaint `39/52us`, paint `44/426us`, and
+  `layout.engine_solve=0/0`. Root phase p95/max reports request-build total/take/phase1/phase2/proof/compute/put
+  `241/13/42/181/180/0/14us` and roots total/apply/flush `207/206/0us`.
+- r34 clean-geometry counts at p95/max are proof nodes/boundaries `124/3 / 124/3` and
+  apply nodes/fallback-layouts `118/7 / 118/7`.
+
+Interpretation:
+- This is a traversal-shape cleanup with a direct correctness gate, not a broad p95 win claim. It keeps the important
+  resize invariant (`layout.engine_solve=0`) and removes root/widget relayout for pure clean-geometry roots, while the
+  gallery scenario still spends time in side-effect-boundary fallback layout plus paint-fingerprint refresh.
+- The next measured owner should be the `7` fallback layouts and pure-node paint-fingerprint refresh cost. Do not widen
+  the Scroll fast path or renderer text path from this evidence.

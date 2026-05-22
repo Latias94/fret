@@ -3,7 +3,7 @@
   "slug": "ui-perf-zed-smoothness-v1",
   "title": "UI Performance Zed Smoothness v1",
   "status": "active",
-  "updated": "2026-05-21",
+  "updated": "2026-05-22",
   "scope_kind": "execution",
   "problem": "Establish and maintain Fret's editor-grade UI performance and architecture closure against Zed/GPUI and egui by keeping real editor scenarios such as scroll, input, resize, text, rendering, caching, and view reuse under repeatable p50/p95/max and renderer payload contracts. Core contracts, resource semantics, and redundant code cleanup should be fixed before broad optimization, and fearless refactors should proceed only when measured evidence proves the hot path.",
   "authoritative_docs": [

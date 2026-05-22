@@ -138,6 +138,26 @@ enum CleanGeometryWidthDeltaSizeStability {
     TextCachedMetrics,
 }
 
+#[derive(Clone, Copy)]
+struct CleanGeometryFallbackLayout {
+    node: NodeId,
+    bounds: Rect,
+}
+
+#[derive(Clone, Copy)]
+struct CleanGeometryAppliedNodeSnapshot {
+    node: NodeId,
+    bounds: Rect,
+    measured_size: Size,
+}
+
+#[derive(Default)]
+pub(super) struct CleanGeometryApplyPlan {
+    fallback_layouts: Vec<CleanGeometryFallbackLayout>,
+    nodes_needing_paint_fingerprint: Vec<NodeId>,
+    applied_node_snapshots: Vec<CleanGeometryAppliedNodeSnapshot>,
+}
+
 impl CleanGeometryNodeContract {
     fn pure(child_bounds: CleanGeometryChildBoundsStrategy) -> Self {
         Self {
@@ -356,6 +376,347 @@ impl<H: UiHost> UiTree<H> {
 
         self.recompute_paint_geometry_fingerprint(node);
         Some(size)
+    }
+
+    pub(super) fn clean_geometry_apply_plan_for_resize(
+        &mut self,
+        app: &mut H,
+        engine: &mut crate::layout_engine::TaffyLayoutEngine,
+        root: NodeId,
+        bounds: Rect,
+        prev_bounds: Rect,
+        scale_factor: f32,
+    ) -> Option<CleanGeometryApplyPlan> {
+        match self.clean_geometry_apply_plan_decision(
+            app,
+            engine,
+            root,
+            bounds,
+            prev_bounds,
+            scale_factor,
+        ) {
+            Ok(plan) => {
+                if self.debug_enabled {
+                    self.debug_clean_geometry_solve_skip_rejections
+                        .remove(&root);
+                }
+                Some(plan)
+            }
+            Err(rejection) => {
+                self.debug_record_clean_geometry_solve_skip_rejection(
+                    app,
+                    root,
+                    rejection.at_node_if_missing(root),
+                );
+                None
+            }
+        }
+    }
+
+    pub(super) fn apply_clean_geometry_plan(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        plan: CleanGeometryApplyPlan,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+        overflow_ctx: crate::layout::overflow::LayoutOverflowContext,
+    ) {
+        if pass_kind != LayoutPassKind::Final {
+            return;
+        }
+
+        for fallback in plan.fallback_layouts {
+            if self.debug_enabled {
+                self.debug_stats
+                    .layout_clean_geometry_apply_fallback_layouts = self
+                    .debug_stats
+                    .layout_clean_geometry_apply_fallback_layouts
+                    .saturating_add(1);
+            }
+            let _ = self.layout_node(
+                app,
+                services,
+                fallback.node,
+                fallback.bounds,
+                scale_factor,
+                pass_kind,
+                overflow_ctx,
+            );
+        }
+
+        for node in plan.nodes_needing_paint_fingerprint {
+            self.recompute_paint_geometry_fingerprint(node);
+        }
+    }
+
+    fn clean_geometry_apply_plan_decision(
+        &mut self,
+        app: &mut H,
+        engine: &mut crate::layout_engine::TaffyLayoutEngine,
+        root: NodeId,
+        bounds: Rect,
+        prev_bounds: Rect,
+        scale_factor: f32,
+    ) -> Result<CleanGeometryApplyPlan, CleanGeometrySolveSkipRejection> {
+        if !self.interactive_resize_is_small_step() {
+            return Err(CleanGeometrySolveSkipRejection::new(
+                CleanGeometrySolveSkipRejectionReason::NotInteractiveResizeSmallStep,
+            ));
+        }
+        if prev_bounds == bounds {
+            return Err(CleanGeometrySolveSkipRejection::new(
+                CleanGeometrySolveSkipRejectionReason::NoSizeDelta,
+            ));
+        }
+        if (bounds.size.height.0 - prev_bounds.size.height.0).abs() > 0.01 {
+            return Err(CleanGeometrySolveSkipRejection::new(
+                CleanGeometrySolveSkipRejectionReason::HeightDelta,
+            ));
+        }
+        let Some(window) = self.window else {
+            return Err(CleanGeometrySolveSkipRejection::new(
+                CleanGeometrySolveSkipRejectionReason::MissingWindow,
+            ));
+        };
+        if let Err(rejection) = self.clean_geometry_node_clean_result(root) {
+            return Err(rejection.at_node_if_missing(root));
+        }
+        if Self::clean_size_matches(prev_bounds.size, bounds.size) {
+            return Ok(CleanGeometryApplyPlan::default());
+        }
+
+        let mut plan = CleanGeometryApplyPlan::default();
+        let scratch_bounds_len = self.scratch_bounds_records.len();
+        if let Err(rejection) = self.build_clean_geometry_apply_plan_checked(
+            app,
+            engine,
+            window,
+            root,
+            bounds,
+            prev_bounds,
+            scale_factor,
+            true,
+            true,
+            &mut plan,
+        ) {
+            self.rollback_clean_geometry_applied_nodes(&plan, scratch_bounds_len);
+            return Err(rejection);
+        }
+        plan.applied_node_snapshots.clear();
+        Ok(plan)
+    }
+
+    fn rollback_clean_geometry_applied_nodes(
+        &mut self,
+        plan: &CleanGeometryApplyPlan,
+        scratch_bounds_len: usize,
+    ) {
+        self.scratch_bounds_records.truncate(scratch_bounds_len);
+        for snapshot in plan.applied_node_snapshots.iter().rev() {
+            if let Some(node_entry) = self.nodes.get_mut(snapshot.node) {
+                node_entry.bounds = snapshot.bounds;
+                node_entry.measured_size = snapshot.measured_size;
+            }
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn build_clean_geometry_apply_plan_checked(
+        &mut self,
+        app: &mut H,
+        engine: &mut crate::layout_engine::TaffyLayoutEngine,
+        window: AppWindowId,
+        node: NodeId,
+        bounds: Rect,
+        prev_bounds: Rect,
+        scale_factor: f32,
+        is_root: bool,
+        emit: bool,
+        plan: &mut CleanGeometryApplyPlan,
+    ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        if self.debug_enabled {
+            self.debug_stats.layout_clean_geometry_proof_nodes = self
+                .debug_stats
+                .layout_clean_geometry_proof_nodes
+                .saturating_add(1);
+        }
+
+        if self.clean_geometry_absent_interactivity_gate_leaf(app, window, node) {
+            let Some(entry) = self.nodes.get(node) else {
+                return Err(CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::MissingNode,
+                )
+                .at_node(node));
+            };
+            if entry.invalidation.layout {
+                return Err(CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::LayoutDirty,
+                )
+                .at_node(node));
+            }
+            if emit {
+                plan.fallback_layouts
+                    .push(CleanGeometryFallbackLayout { node, bounds });
+            }
+            return Ok(());
+        }
+        if self.clean_geometry_explicit_zero_driver_leaf(app, window, node) {
+            let Some(entry) = self.nodes.get(node) else {
+                return Err(CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::MissingNode,
+                )
+                .at_node(node));
+            };
+            if entry.invalidation.layout {
+                return Err(CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::LayoutDirty,
+                )
+                .at_node(node));
+            }
+            if self.node_subtree_layout_dirty(node) {
+                return Err(CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::SubtreeLayoutDirty,
+                )
+                .at_node(node));
+            }
+            if emit {
+                plan.fallback_layouts
+                    .push(CleanGeometryFallbackLayout { node, bounds });
+            }
+            return Ok(());
+        }
+
+        let (children, measured_size, layout_dirty_children_suppressed) = self
+            .nodes
+            .get(node)
+            .map(|entry| {
+                (
+                    entry.children.clone(),
+                    entry.measured_size,
+                    entry.layout_dirty_children_suppressed,
+                )
+            })
+            .ok_or_else(|| {
+                CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::MissingNode,
+                )
+                .at_node(node)
+            })?;
+        let record = crate::declarative::frame::element_record_for_node(app, window, node)
+            .ok_or_else(|| {
+                CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::MissingElementRecord,
+                )
+                .at_node(node)
+            })?;
+        let kind = record.instance.kind_name();
+        let contract = Self::clean_geometry_node_contract(&record.instance, &children, kind)
+            .map_err(|rejection| rejection.at_node_if_missing(node))?;
+        if !is_root
+            && matches!(
+                contract.layout_effect,
+                CleanGeometryLayoutEffect::SideEffectBoundary
+            )
+        {
+            if self.debug_enabled {
+                self.debug_stats.layout_clean_geometry_proof_boundaries = self
+                    .debug_stats
+                    .layout_clean_geometry_proof_boundaries
+                    .saturating_add(1);
+            }
+            if emit {
+                plan.fallback_layouts
+                    .push(CleanGeometryFallbackLayout { node, bounds });
+            }
+            return Ok(());
+        }
+
+        self.clean_geometry_node_clean_result(node)?;
+
+        let child_bounds = self
+            .clean_manual_geometry_child_bounds_for_contract_checked(
+                app,
+                window,
+                node,
+                &children,
+                bounds,
+                prev_bounds,
+                scale_factor,
+                &record,
+                &contract,
+            )
+            .map_err(|rejection| rejection.at_node_if_missing(node))?;
+        let apply_element = if measured_size != Size::default() && !layout_dirty_children_suppressed
+        {
+            Self::clean_geometry_apply_element_after_checked_child_bounds(&record, &children)
+        } else {
+            None
+        };
+        let mut has_emitted_pure_geometry = false;
+        let emit_children = emit && apply_element.is_some();
+        for (child, child_bounds) in child_bounds {
+            let child_prev_bounds =
+                self.nodes
+                    .get(child)
+                    .map(|entry| entry.bounds)
+                    .ok_or_else(|| {
+                        CleanGeometrySolveSkipRejection::new(
+                            CleanGeometrySolveSkipRejectionReason::MissingNode,
+                        )
+                        .at_node(child)
+                    })?;
+            self.build_clean_geometry_apply_plan_checked(
+                app,
+                engine,
+                window,
+                child,
+                child_bounds,
+                child_prev_bounds,
+                scale_factor,
+                false,
+                emit_children,
+                plan,
+            )?;
+        }
+
+        if let Some(element) = apply_element {
+            if emit {
+                let next_measured_size = if children.is_empty() && prev_bounds.size == bounds.size {
+                    measured_size
+                } else {
+                    bounds.size
+                };
+                engine.mark_seen_if_present(node);
+                if let Some(node_entry) = self.nodes.get_mut(node) {
+                    plan.applied_node_snapshots
+                        .push(CleanGeometryAppliedNodeSnapshot {
+                            node,
+                            bounds: node_entry.bounds,
+                            measured_size: node_entry.measured_size,
+                        });
+                    node_entry.bounds = bounds;
+                    node_entry.measured_size = next_measured_size;
+                }
+                self.queue_layout_bounds_for_element(element, bounds);
+                plan.nodes_needing_paint_fingerprint.push(node);
+                has_emitted_pure_geometry = true;
+            }
+        } else if emit {
+            plan.fallback_layouts
+                .push(CleanGeometryFallbackLayout { node, bounds });
+        }
+
+        if has_emitted_pure_geometry {
+            if self.debug_enabled {
+                self.debug_stats.layout_clean_geometry_apply_nodes = self
+                    .debug_stats
+                    .layout_clean_geometry_apply_nodes
+                    .saturating_add(1);
+            }
+        }
+
+        Ok(())
     }
 
     pub(crate) fn can_skip_clean_geometry_engine_solve_for_resize(
@@ -744,6 +1105,33 @@ impl<H: UiHost> UiTree<H> {
         let kind = record.instance.kind_name();
         let contract = Self::clean_geometry_node_contract(&record.instance, children, kind)
             .map_err(|rejection| rejection.at_node_if_missing(node))?;
+        self.clean_manual_geometry_child_bounds_for_contract_checked(
+            app,
+            window,
+            node,
+            children,
+            bounds,
+            prev_bounds,
+            scale_factor,
+            &record,
+            &contract,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn clean_manual_geometry_child_bounds_for_contract_checked(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        children: &[NodeId],
+        bounds: Rect,
+        prev_bounds: Rect,
+        scale_factor: f32,
+        record: &crate::declarative::frame::ElementRecord,
+        contract: &CleanGeometryNodeContract,
+    ) -> Result<Vec<(NodeId, Rect)>, CleanGeometrySolveSkipRejection> {
+        let kind = record.instance.kind_name();
         match contract.layout_effect {
             CleanGeometryLayoutEffect::Pure => {}
             CleanGeometryLayoutEffect::SideEffectBoundary => {
@@ -772,7 +1160,7 @@ impl<H: UiHost> UiTree<H> {
                 )?;
             }
         }
-        match contract.child_bounds {
+        match &contract.child_bounds {
             CleanGeometryChildBoundsStrategy::PreserveLocalOrigins => self
                 .clean_preserved_origin_width_delta_child_bounds_checked(
                     app,
@@ -789,7 +1177,7 @@ impl<H: UiHost> UiTree<H> {
                     children,
                     bounds,
                     prev_bounds,
-                    props,
+                    *props,
                     kind,
                 ),
             CleanGeometryChildBoundsStrategy::HorizontalFixedFlex(props) => self
@@ -799,7 +1187,7 @@ impl<H: UiHost> UiTree<H> {
                     children,
                     bounds,
                     prev_bounds,
-                    props,
+                    *props,
                     kind,
                 ),
             CleanGeometryChildBoundsStrategy::ContainerPxInsets(props) => self
@@ -809,7 +1197,7 @@ impl<H: UiHost> UiTree<H> {
                     children,
                     bounds,
                     prev_bounds,
-                    props,
+                    *props,
                     kind,
                 ),
             CleanGeometryChildBoundsStrategy::SingleColumnAutoRowsGrid(props) => self
@@ -819,7 +1207,7 @@ impl<H: UiHost> UiTree<H> {
                     children,
                     bounds,
                     prev_bounds,
-                    props,
+                    props.clone(),
                     kind,
                 ),
             CleanGeometryChildBoundsStrategy::None => Ok(Vec::new()),
@@ -2674,6 +3062,33 @@ impl<H: UiHost> UiTree<H> {
                 }
                 _ => false,
             };
+        supported.then_some(record.element)
+    }
+
+    fn clean_geometry_apply_element_after_checked_child_bounds(
+        record: &crate::declarative::frame::ElementRecord,
+        children: &[NodeId],
+    ) -> Option<GlobalElementId> {
+        let supported = match &record.instance {
+            crate::declarative::frame::ElementInstance::Scroll(_)
+            | crate::declarative::frame::ElementInstance::TextInput(_)
+            | crate::declarative::frame::ElementInstance::TextArea(_)
+            | crate::declarative::frame::ElementInstance::ViewCache(_)
+            | crate::declarative::frame::ElementInstance::ResizablePanelGroup(_)
+            | crate::declarative::frame::ElementInstance::VirtualList(_)
+            | crate::declarative::frame::ElementInstance::ManagedSurface(_)
+            | crate::declarative::frame::ElementInstance::ViewportSurface(_) => false,
+            #[cfg(feature = "unstable-retained-bridge")]
+            crate::declarative::frame::ElementInstance::RetainedSubtree(_) => false,
+            crate::declarative::frame::ElementInstance::Canvas(_)
+            | crate::declarative::frame::ElementInstance::Spacer(_)
+            | crate::declarative::frame::ElementInstance::Image(_)
+            | crate::declarative::frame::ElementInstance::SvgIcon(_)
+            | crate::declarative::frame::ElementInstance::SvgImage(_)
+            | crate::declarative::frame::ElementInstance::Spinner(_)
+            | crate::declarative::frame::ElementInstance::Scrollbar(_) => children.is_empty(),
+            _ => true,
+        };
         supported.then_some(record.element)
     }
 

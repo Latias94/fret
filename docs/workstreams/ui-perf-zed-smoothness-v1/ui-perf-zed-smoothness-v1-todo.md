@@ -443,6 +443,27 @@ not update checked-in baselines.
       - Next owner: optimize or short-circuit clean-geometry proof traversal only if a focused gate preserves scroll
         extent, hit-test, element bounds, semantics bounds, and layout-query correctness. Do not widen Scroll itself
         from the current evidence.
+    - [x] Inline pure-node clean-geometry application into the proof pass.
+      - r28 attribution:
+        `target/fret-diag/text-clean-geometry-current-20260521-r28-clean-geometry-counts/sessions/1779410967540-10020/1779410999120-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+      - Finding: the hot resize frames still skipped Taffy solve, but clean-geometry did two broad traversals: proof
+        around `121` nodes and root apply around `117` nodes, with `10` fallback child layouts.
+      - Mechanism fix: `request_build_window_roots_if_final(...)` now returns a `CleanGeometryApplyPlan` for clean
+        resize roots. Pure nodes are written during the proof traversal with rollback snapshots; the later roots pass
+        only runs side-effect-boundary fallback layouts and paint-geometry fingerprint refreshes.
+      - Focused gate:
+        `cargo nextest run -p fret-ui -E 'test(clean_geometry_window_root_resize_consumes_apply_plan_without_root_layout) | test(clean_geometry_small_resize_propagates_through_hover_and_hit_test_wrappers) | test(clean_geometry_small_resize_propagates_through_semantics_wrapper) | test(clean_geometry_small_resize_propagates_through_pressable_wrapper) | test(clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary) | test(clean_geometry_skips_default_shrink_fixed_px_horizontal_flex_with_free_space) | test(clean_geometry_rejects_default_shrink_fixed_px_horizontal_flex_without_free_space) | test(clean_geometry_skips_nested_fixed_size_horizontal_flex_origin_only_move) | test(clean_geometry_small_resize_skips_barrier_root_engine_solve)' --no-fail-fast`.
+      - Fresh rebuilt-gallery evidence:
+        - r33:
+          `target/fret-diag/text-clean-geometry-current-20260522-r33-clean-geometry-inline-apply-fresh/sessions/1779426429223-250268/1779426467689-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+        - r34:
+          `target/fret-diag/text-clean-geometry-current-20260522-r34-clean-geometry-inline-apply-repeat/sessions/1779426690797-256808/1779426737560-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+      - Result: r33/r34 keep `layout.engine_solve=0/0`; r34 reports p50/p95 total `134/949us`, layout
+        `39/490us`, paint `44/426us`, request-build proof `180us`, roots apply `206us`, and clean-geometry counts
+        proof/apply/fallback `124/118/7`.
+      - Decision: this lands as a focused traversal-shape cleanup and a correctness gate for window-root resize apply
+        plans, not as a whole-frame p95 claim. The residual owner is now the side-effect-boundary fallback layouts
+        and paint-fingerprint refresh under the same clean-geometry path.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
     Windows RTX4090 evidence.
 

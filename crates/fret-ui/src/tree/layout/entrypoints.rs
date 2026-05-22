@@ -93,6 +93,16 @@ impl LayoutAllProfileTimings {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn consume_clean_geometry_apply_plan(
+        plans: &mut Vec<(NodeId, super::clean_geometry::CleanGeometryApplyPlan)>,
+        root: NodeId,
+    ) -> Option<super::clean_geometry::CleanGeometryApplyPlan> {
+        plans
+            .iter()
+            .position(|(plan_root, _)| *plan_root == root)
+            .map(|idx| plans.swap_remove(idx).1)
+    }
+
     pub fn layout_all(
         &mut self,
         app: &mut H,
@@ -402,7 +412,7 @@ impl<H: UiHost> UiTree<H> {
             }
         };
 
-        let (_, request_build_elapsed) = fret_perf::measure_span(
+        let (mut clean_geometry_apply_plans, request_build_elapsed) = fret_perf::measure_span(
             layout_phase_time_enabled,
             trace_layout,
             || {
@@ -422,7 +432,7 @@ impl<H: UiHost> UiTree<H> {
                     bounds,
                     scale_factor,
                     pass_kind,
-                );
+                )
             },
         );
         if profile_layout_all {
@@ -449,15 +459,29 @@ impl<H: UiHost> UiTree<H> {
             || {
                 for root in roots {
                     let apply_started = self.debug_enabled.then(Instant::now);
-                    let _ = self.layout_in_with_pass_kind(
-                        app,
-                        services,
+                    if let Some(plan) = Self::consume_clean_geometry_apply_plan(
+                        &mut clean_geometry_apply_plans,
                         root,
-                        bounds,
-                        scale_factor,
-                        pass_kind,
-                        crate::layout::overflow::LayoutOverflowContext::default(),
-                    );
+                    ) {
+                        self.apply_clean_geometry_plan(
+                            app,
+                            services,
+                            plan,
+                            scale_factor,
+                            pass_kind,
+                            crate::layout::overflow::LayoutOverflowContext::default(),
+                        );
+                    } else {
+                        let _ = self.layout_in_with_pass_kind(
+                            app,
+                            services,
+                            root,
+                            bounds,
+                            scale_factor,
+                            pass_kind,
+                            crate::layout::overflow::LayoutOverflowContext::default(),
+                        );
+                    }
                     if self.debug_enabled
                         && let Some(apply_started) = apply_started
                     {
@@ -1246,7 +1270,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut viewport_cursor: usize = 0;
         self.begin_layout_engine_frame(app);
-        self.request_build_window_roots_if_final(
+        let mut clean_geometry_apply_plans = self.request_build_window_roots_if_final(
             app,
             services,
             std::slice::from_ref(&root),
@@ -1254,15 +1278,32 @@ impl<H: UiHost> UiTree<H> {
             scale_factor,
             LayoutPassKind::Final,
         );
-        let size = self.layout_in_with_pass_kind(
-            app,
-            services,
-            root,
-            bounds,
-            scale_factor,
-            LayoutPassKind::Final,
-            crate::layout::overflow::LayoutOverflowContext::default(),
-        );
+        let size = if let Some(plan) =
+            Self::consume_clean_geometry_apply_plan(&mut clean_geometry_apply_plans, root)
+        {
+            self.apply_clean_geometry_plan(
+                app,
+                services,
+                plan,
+                scale_factor,
+                LayoutPassKind::Final,
+                crate::layout::overflow::LayoutOverflowContext::default(),
+            );
+            self.nodes
+                .get(root)
+                .map(|entry| entry.measured_size)
+                .unwrap_or_default()
+        } else {
+            self.layout_in_with_pass_kind(
+                app,
+                services,
+                root,
+                bounds,
+                scale_factor,
+                LayoutPassKind::Final,
+                crate::layout::overflow::LayoutOverflowContext::default(),
+            )
+        };
         self.flush_viewport_roots_after_root(
             app,
             services,
@@ -1306,7 +1347,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut viewport_cursor: usize = 0;
         self.begin_layout_engine_frame(app);
-        self.request_build_window_roots_if_final(
+        let mut clean_geometry_apply_plans = self.request_build_window_roots_if_final(
             app,
             services,
             std::slice::from_ref(&root),
@@ -1314,15 +1355,32 @@ impl<H: UiHost> UiTree<H> {
             scale_factor,
             LayoutPassKind::Final,
         );
-        let size = self.layout_in_with_pass_kind(
-            app,
-            services,
-            root,
-            bounds,
-            scale_factor,
-            LayoutPassKind::Final,
-            crate::layout::overflow::LayoutOverflowContext::default(),
-        );
+        let size = if let Some(plan) =
+            Self::consume_clean_geometry_apply_plan(&mut clean_geometry_apply_plans, root)
+        {
+            self.apply_clean_geometry_plan(
+                app,
+                services,
+                plan,
+                scale_factor,
+                LayoutPassKind::Final,
+                crate::layout::overflow::LayoutOverflowContext::default(),
+            );
+            self.nodes
+                .get(root)
+                .map(|entry| entry.measured_size)
+                .unwrap_or_default()
+        } else {
+            self.layout_in_with_pass_kind(
+                app,
+                services,
+                root,
+                bounds,
+                scale_factor,
+                LayoutPassKind::Final,
+                crate::layout::overflow::LayoutOverflowContext::default(),
+            )
+        };
         self.flush_viewport_roots_after_root(
             app,
             services,
@@ -1892,13 +1950,13 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
         pass_kind: LayoutPassKind,
-    ) {
+    ) -> Vec<(NodeId, super::clean_geometry::CleanGeometryApplyPlan)> {
         if pass_kind != LayoutPassKind::Final {
-            return;
+            return Vec::new();
         }
 
         let Some(window) = self.window else {
-            return;
+            return Vec::new();
         };
 
         let runtime_cfg = crate::runtime_config::ui_runtime_config();
@@ -2071,6 +2129,7 @@ impl<H: UiHost> UiTree<H> {
         // overlays + other detached flow roots), solving them one-by-one can amplify fixed per-solve
         // overhead into tail spikes. Prefer batching via the layout engine's synthetic-root path.
         let mut pending_solves: Vec<(NodeId, LayoutSize<AvailableSpace>)> = Vec::new();
+        let mut clean_geometry_apply_plans = Vec::new();
         for &root in roots {
             let (has_element, needs_layout, is_translation_only, prev_bounds, layout_invalidated) =
                 match self.nodes.get(root) {
@@ -2095,11 +2154,12 @@ impl<H: UiHost> UiTree<H> {
             if !has_element || !needs_layout || is_translation_only {
                 continue;
             }
-            let can_skip_clean_geometry =
+            let clean_geometry_apply_plan =
                 if !layout_invalidated && engine.layout_id_for_node(root).is_some() {
                     let clean_geometry_proof_started = self.debug_enabled.then(Instant::now);
-                    let can_skip = self.can_skip_clean_geometry_engine_solve_for_resize(
+                    let plan = self.clean_geometry_apply_plan_for_resize(
                         app,
+                        &mut engine,
                         root,
                         bounds,
                         prev_bounds,
@@ -2112,11 +2172,12 @@ impl<H: UiHost> UiTree<H> {
                             .layout_request_build_roots_phase2_clean_geometry_proof_time +=
                             clean_geometry_proof_started.elapsed();
                     }
-                    can_skip
+                    plan
                 } else {
-                    false
+                    None
                 };
-            if can_skip_clean_geometry {
+            if let Some(plan) = clean_geometry_apply_plan {
+                clean_geometry_apply_plans.push((root, plan));
                 continue;
             }
 
@@ -2238,6 +2299,8 @@ impl<H: UiHost> UiTree<H> {
                 "layout root request/build profile"
             );
         }
+
+        clean_geometry_apply_plans
     }
 
     fn flush_viewport_roots_after_root(
