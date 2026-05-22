@@ -1,3 +1,6 @@
+use std::cell::Cell;
+use std::rc::Rc;
+
 use fret_core::{
     Color, Corners, DrawOrder, Edges, Event, FontWeight, Paint, PathStyle, Point, Px, Rect, Size,
     StrokeStyle, TextOverflow, TextStyle, TextWrap,
@@ -14,7 +17,7 @@ use crate::plot::axis::{
 };
 use crate::plot::view::sanitize_data_rect_scaled;
 use crate::state::{PlotOutput, PlotOutputSnapshot};
-use crate::style::LinePlotStyle;
+use crate::style::{LinePlotStyle, MouseReadoutMode, OverlayAnchor};
 
 #[derive(Clone)]
 pub struct LinePlotPanelProps {
@@ -71,12 +74,20 @@ pub fn line_plot_panel<H: UiHost + 'static>(
     let model = cx
         .read_model_ref(&props.model, fret_ui::Invalidation::Paint, Clone::clone)
         .expect("line plot model should exist");
+    let output_snapshot = props.output.as_ref().and_then(|output| {
+        cx.read_model_ref(output, fret_ui::Invalidation::Paint, |output| {
+            output.snapshot
+        })
+        .ok()
+    });
+    let output_snapshot = Rc::new(Cell::new(output_snapshot));
     let style = props.style;
     let x_scale = props.x_scale;
     let y_scale = props.y_scale;
     let output = props.output.clone();
     let event_model = model.clone();
     let event_output = output.clone();
+    let event_output_snapshot = output_snapshot.clone();
     let event_style = style;
     let event_x_scale = x_scale;
     let event_y_scale = y_scale;
@@ -98,25 +109,37 @@ pub fn line_plot_panel<H: UiHost + 'static>(
         },
         move |cx| {
             let model = model.clone();
+            let output_snapshot = output_snapshot.clone();
             vec![cx.canvas(canvas, move |painter| {
-                paint_line_plot_panel(painter, &model, style, x_scale, y_scale);
+                paint_line_plot_panel(
+                    painter,
+                    &model,
+                    output_snapshot.get(),
+                    style,
+                    x_scale,
+                    y_scale,
+                );
             })]
         },
     );
     let surface_id = element.id;
     cx.managed_surface_on_event_for(surface_id, move |cx, event| {
         let bounds = cx.bounds();
-        let changed = handle_line_plot_panel_event(
-            cx.app(),
-            bounds,
+        let Some(snapshot) = line_plot_panel_event_snapshot(
             event,
+            bounds,
             &event_model,
-            event_output.as_ref(),
             event_style,
             event_x_scale,
             event_y_scale,
-        );
-        if changed {
+        ) else {
+            return;
+        };
+        let visual_changed = event_output_snapshot.get() != Some(snapshot);
+        event_output_snapshot.set(Some(snapshot));
+        let output_changed =
+            publish_line_plot_panel_output(cx.app(), event_output.as_ref(), snapshot);
+        if visual_changed || output_changed {
             cx.invalidate_self(fret_ui::Invalidation::Paint);
             cx.request_redraw();
             cx.notify();
@@ -141,6 +164,7 @@ where
 fn paint_line_plot_panel(
     painter: &mut CanvasPainter<'_>,
     model: &LinePlotModel,
+    output: Option<PlotOutputSnapshot>,
     style: LinePlotStyle,
     x_scale: AxisScale,
     y_scale: AxisScale,
@@ -204,31 +228,41 @@ fn paint_line_plot_panel(
     }
 
     paint_line_plot_legend(painter, model, plot, style);
+    paint_line_plot_cursor_readout(painter, plot, output, style, x_scale, y_scale);
 }
 
-fn handle_line_plot_panel_event<H: UiHost>(
-    app: &mut H,
-    bounds: Rect,
+fn line_plot_panel_event_snapshot(
     event: &Event,
+    bounds: Rect,
     model: &LinePlotModel,
-    output: Option<&Model<PlotOutput>>,
     style: LinePlotStyle,
     x_scale: AxisScale,
     y_scale: AxisScale,
+) -> Option<PlotOutputSnapshot> {
+    let Event::Pointer(fret_core::PointerEvent::Move { position, .. }) = event else {
+        return None;
+    };
+    Some(line_plot_pointer_output_snapshot(
+        *position, bounds, model, style, x_scale, y_scale,
+    ))
+}
+
+fn publish_line_plot_panel_output<H: UiHost>(
+    app: &mut H,
+    output: Option<&Model<PlotOutput>>,
+    snapshot: PlotOutputSnapshot,
 ) -> bool {
     let Some(output) = output else {
         return false;
     };
-    let Event::Pointer(fret_core::PointerEvent::Move { position, .. }) = event else {
+    if output
+        .read_ref(app, |state| state.snapshot == snapshot)
+        .unwrap_or(false)
+    {
         return false;
-    };
-    let snapshot =
-        line_plot_pointer_output_snapshot(*position, bounds, model, style, x_scale, y_scale);
+    }
     output
         .update(app, |state, _cx| {
-            if state.snapshot == snapshot {
-                return false;
-            }
             state.revision = state.revision.wrapping_add(1);
             state.snapshot = snapshot;
             true
@@ -570,6 +604,135 @@ fn paint_line_plot_axis_tick_labels(
     }
 }
 
+fn paint_line_plot_cursor_readout(
+    painter: &mut CanvasPainter<'_>,
+    plot: Rect,
+    output: Option<PlotOutputSnapshot>,
+    style: LinePlotStyle,
+    x_scale: AxisScale,
+    y_scale: AxisScale,
+) {
+    let Some(snapshot) = output else {
+        return;
+    };
+    let Some(cursor) = snapshot.cursor else {
+        return;
+    };
+    if style.mouse_readout == MouseReadoutMode::Disabled {
+        return;
+    }
+
+    let transform = PlotTransform {
+        viewport: plot,
+        data: snapshot.view_bounds,
+        x_scale,
+        y_scale,
+    };
+    let cursor_px = transform.data_to_px(cursor);
+    if !plot.contains(cursor_px) {
+        return;
+    }
+
+    let theme = painter.theme().snapshot();
+    let mut crosshair_color = style
+        .crosshair_color
+        .unwrap_or_else(|| theme.color_required("muted-foreground"));
+    crosshair_color.a = (crosshair_color.a * 0.45).clamp(0.05, 1.0);
+    push_vertical_line(
+        painter,
+        Px(cursor_px.x.0.round()),
+        plot.origin.y,
+        plot.size.height,
+        DrawOrder(3),
+        crosshair_color,
+    );
+    push_horizontal_line(
+        painter,
+        plot.origin.x,
+        Px(cursor_px.y.0.round()),
+        plot.size.width,
+        DrawOrder(3),
+        crosshair_color,
+    );
+
+    if style.mouse_readout != MouseReadoutMode::Overlay {
+        return;
+    }
+
+    let tooltip_background = style
+        .tooltip_background
+        .unwrap_or_else(|| theme.color_required("popover"));
+    let tooltip_border = style
+        .tooltip_border
+        .unwrap_or_else(|| theme.color_required("border"));
+    let text_color = style
+        .tooltip_text_color
+        .or(style.label_color)
+        .unwrap_or_else(|| theme.color_required("popover-foreground"));
+
+    let x_span = (snapshot.view_bounds.x_max - snapshot.view_bounds.x_min).abs();
+    let y_span = (snapshot.view_bounds.y_max - snapshot.view_bounds.y_min).abs();
+    let formatter = AxisLabelFormatter::default();
+    let x_text = axis_tick_label_text(x_scale, &formatter, cursor.x, x_span);
+    let y_text = axis_tick_label_text(y_scale, &formatter, cursor.y, y_span);
+    let text = format!("x={x_text}  y={y_text}");
+
+    let text_style = TextStyle {
+        size: Px(12.0),
+        weight: FontWeight::NORMAL,
+        ..TextStyle::default()
+    };
+    let constraints = CanvasTextConstraints {
+        max_width: Some(Px(plot.size.width.0.max(24.0))),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+    let raster_scale_factor = painter.scale_factor();
+    let scope = painter.key_scope(&"fret-plot.declarative.cursor-readout");
+    let text_key: u64 = painter.child_key(scope, &("text", text.as_str())).into();
+    let (_blob, metrics) = painter.prepare_text_with_blob(
+        text_key,
+        text.clone(),
+        text_style.clone(),
+        constraints,
+        raster_scale_factor,
+    );
+
+    let pad = Px(6.0);
+    let margin = Px(6.0);
+    let overlay_size = Size::new(
+        Px(metrics.size.width.0 + pad.0 * 2.0),
+        Px(metrics.size.height.0 + pad.0 * 2.0),
+    );
+    let Some(rect) =
+        overlay_rect_in_line_plot(plot, overlay_size, style.mouse_readout_anchor, margin)
+    else {
+        return;
+    };
+    painter.scene().push(fret_core::SceneOp::Quad {
+        order: DrawOrder(12),
+        rect,
+        background: Paint::Solid(tooltip_background).into(),
+        border: Edges::all(Px(1.0)),
+        border_paint: Paint::Solid(tooltip_border).into(),
+        corner_radii: Corners::all(Px(6.0)),
+    });
+
+    let _ = painter.text(
+        text_key,
+        DrawOrder(13),
+        Point::new(
+            Px(rect.origin.x.0 + pad.0),
+            Px(rect.origin.y.0 + pad.0 + metrics.baseline.0),
+        ),
+        text,
+        text_style,
+        text_color,
+        constraints,
+        raster_scale_factor,
+    );
+}
+
 fn axis_tick_label_text(
     scale: AxisScale,
     formatter: &AxisLabelFormatter,
@@ -580,6 +743,46 @@ fn axis_tick_label_text(
         return log10_tick_label_or_empty(value);
     }
     formatter.format(value, span)
+}
+
+fn overlay_rect_in_line_plot(
+    plot: Rect,
+    size: Size,
+    anchor: OverlayAnchor,
+    margin: Px,
+) -> Option<Rect> {
+    if plot.size.width.0 <= 0.0 || plot.size.height.0 <= 0.0 {
+        return None;
+    }
+    if size.width.0 <= 0.0 || size.height.0 <= 0.0 {
+        return None;
+    }
+
+    let w = size.width.0;
+    let h = size.height.0;
+    let m = margin.0.max(0.0);
+    let x = match anchor {
+        OverlayAnchor::TopLeft | OverlayAnchor::BottomLeft => plot.origin.x.0 + m,
+        OverlayAnchor::TopRight | OverlayAnchor::BottomRight => {
+            plot.origin.x.0 + plot.size.width.0 - m - w
+        }
+    };
+    let y = match anchor {
+        OverlayAnchor::TopLeft | OverlayAnchor::TopRight => plot.origin.y.0 + m,
+        OverlayAnchor::BottomLeft | OverlayAnchor::BottomRight => {
+            plot.origin.y.0 + plot.size.height.0 - m - h
+        }
+    };
+
+    let max_x = plot.origin.x.0 + plot.size.width.0 - w;
+    let max_y = plot.origin.y.0 + plot.size.height.0 - h;
+    Some(Rect::new(
+        Point::new(
+            Px(x.clamp(plot.origin.x.0, max_x)),
+            Px(y.clamp(plot.origin.y.0, max_y)),
+        ),
+        size,
+    ))
 }
 
 fn line_plot_inner_rect(bounds: Rect, style: LinePlotStyle) -> Rect {
@@ -1332,6 +1535,125 @@ mod tests {
                 }
             )),
             "managed-surface pointer handling must preserve declarative line painting"
+        );
+    }
+
+    #[test]
+    fn line_plot_panel_paints_cursor_readout_without_output_model_on_declarative_path() {
+        let mut app = TestHost::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+        let model = app
+            .models_mut()
+            .insert(LinePlotModel::from_series(vec![LineSeries::new(
+                "Series",
+                Series::from_points_sorted(
+                    vec![
+                        DataPoint { x: 0.0, y: 0.0 },
+                        DataPoint { x: 1.0, y: 1.0 },
+                        DataPoint { x: 2.0, y: 0.0 },
+                    ],
+                    true,
+                ),
+            )]));
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "plot-declarative-cursor-readout",
+            |cx| vec![line_plot_panel(cx, LinePlotPanelProps::new(model.clone()))],
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                position: Point::new(Px(169.0), Px(81.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let cursor_guides = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Quad {
+                        order: DrawOrder(3),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert!(
+            cursor_guides >= 2,
+            "declarative line plot should paint cursor crosshair guides"
+        );
+
+        let readout_backgrounds = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Quad {
+                        order: DrawOrder(12),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert!(
+            readout_backgrounds >= 1,
+            "declarative line plot should paint mouse readout overlay chrome"
+        );
+
+        let readout_text = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Text {
+                        order: DrawOrder(13),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert!(
+            readout_text >= 1,
+            "declarative line plot should paint mouse readout text"
+        );
+
+        assert!(
+            scene.ops().iter().any(|op| matches!(
+                op,
+                fret_core::SceneOp::Path {
+                    order: DrawOrder(20),
+                    ..
+                }
+            )),
+            "cursor readout painting must preserve declarative line painting"
         );
     }
 }

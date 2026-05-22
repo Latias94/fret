@@ -384,14 +384,20 @@ cursor snapshots via `LinePlotPanelProps::output(...)` on pointer move without c
 retained `PlotCanvas`. This proves the host/event/output path for future tooltip/readout and
 pan/zoom/query migration, but those retained behavior families remain explicit future parity
 slices.
+`RBX-M3-251` then used that managed-host snapshot to paint cursor crosshair guides and the
+mouse-coordinate readout overlay on the default declarative line plot path. The readout works
+without requiring a caller-owned `PlotOutput` model, while `LinePlotPanelProps::output(...)` still
+publishes cursor snapshots for external coordination. Rich tooltip/readout rows, linked cursor
+readout, legend interactions, pan/zoom/query, overlays, and non-line layers remain future parity
+slices before retained plot source can be deleted.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining
 public/demo/gallery/cookbook consumers that still rely on retained `ChartCanvas` behavior.
-Remaining M3 plot work still needs declarative parity for legend interactions, tooltip/readout UI,
-pan/zoom/box/query, overlays, heatmap/histogram/bar/scatter/area/stairs/shaded/candlestick layers,
-and first-party examples before deleting retained plot source or the `compat-retained-canvas`
-feature.
+Remaining M3 plot work still needs declarative parity for legend interactions, rich tooltip/readout
+rows and linked cursor readout, pan/zoom/box/query, overlays, heatmap/histogram/bar/scatter/area/
+stairs/shaded/candlestick layers, and first-party examples before deleting retained plot source or
+the `compat-retained-canvas` feature.
 
 ## Completed Implementation
 

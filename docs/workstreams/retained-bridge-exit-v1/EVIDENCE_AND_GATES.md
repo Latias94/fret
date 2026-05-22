@@ -13093,3 +13093,59 @@ Broader gates not run:
   - Reason: `RBX-M3-250` is a targeted default declarative `fret-plot` host/event/output slice. The
     focused pointer/output test, full default `fret-plot` package gate, explicit compat retained
     check, formatting, layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-251 Declarative line plot cursor readout overlay
+
+Claim verified:
+
+- The default declarative line plot now paints cursor crosshair guides and the mouse-coordinate
+  readout overlay directly from the managed-host snapshot.
+- The readout overlay does not require a caller-owned `PlotOutput` model to exist, but the
+  pointer/output publication path still updates that model when present.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-plot line_plot_panel_paints_cursor_readout_without_output_model_on_declarative_path`
+  - Result: passed, 1 test, 27 skipped.
+  - Scope proven: the declarative line plot paints crosshair guides, overlay chrome, and readout
+    text without needing a caller-owned output model for rendering.
+- `cargo nextest run -p fret-plot line_plot_panel_updates_output_cursor_on_pointer_move`
+  - Result: passed, 1 test, 27 skipped.
+  - Scope proven: pointer moves still publish cursor output data for callers that attach a
+    `PlotOutput` model.
+- `cargo nextest run -p fret-plot`
+  - Result: passed, 28 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: the default `fret-plot` package gate remains green after the overlay extension.
+- `cargo check -p fret-plot --features compat-retained-canvas`
+  - Result: passed, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: retained plot compatibility still compiles after the declarative readout
+    extension.
+- `cargo fmt --all -- --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the readout overlay update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 429 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" . -g '!target' -g '!repo-ref'`
+  - Result: no matches.
+  - Scope proven: the current worktree has no unresolved conflict markers after the user's pull.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-251` is a targeted default declarative `fret-plot` overlay extension slice.
+    The focused overlay test, pointer/output test, full default `fret-plot` package gate, explicit
+    compat retained check, formatting, layering, catalog, conflict-marker scan, and whitespace
+    checks cover the changed surface.
