@@ -718,7 +718,14 @@ fn script_v2_roundtrip_ui_gallery_data_table_default_pagination_collection_metad
 #[test]
 fn script_v2_roundtrip_ui_gallery_virtual_list_retained_collection_metadata_bounce() {
     assert_script_v2_roundtrip(include_str!(
-        "../../../tools/diag-scripts/ui-gallery-virtual-list-retained-collection-metadata-bounce.json"
+        "../../../tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-collection-metadata-bounce.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_virtual_list_retained_selected_action_state_bounce() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-selected-action-state-bounce.json"
     ));
 }
 

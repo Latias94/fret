@@ -259,6 +259,30 @@ Current runtime evidence anchors:
   - proof:
     bundle frame 54 recorded an `escape` retained reconcile with
     `reused_from_keep_alive_items=9` and `keep_alive_pool_len_after=9`.
+- Virtual-list retained selected/action-state bounce gate:
+  `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-selected-action-state-bounce.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-vlist-retained-action-state/suite.json`
+  - proof:
+    drives the dev-only Virtual List Torture page with retained keep-alive plus row-cache enabled,
+    selects row 2, boundary-scrolls until row 2 detaches, clears the editing/selection model while
+    the row is detached, then bounces back and asserts row 2 reattaches with `selected=false` while
+    preserving `semantics_action_is(invoke)=true`.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/ui/previews/pages/harness/virtual_list_torture.rs`,
+    `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-selected-action-state-bounce.json`,
+    `tools/diag-scripts/suites/ui-gallery-vlist-retained-action-state/suite.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - focused runtime evidence:
+    `target/fret-diag-vlist-retained-selected-action-state-bounce-v2/sessions/1779431631089-228876/1779431677188/ai.packet`;
+    share pack
+    `target/fret-diag-vlist-retained-selected-action-state-bounce-v2/sessions/1779431631089-228876/share/1779431677188.zip`.
+  - dedicated suite evidence:
+    `target/fret-diag-vlist-retained-action-state-v1/sessions/1779433457108-255908/suite.summary.json`
+    passed 1/1 with row run id `1779433613838`.
+  - retained boundary suite refresh:
+    `target/fret-diag-vlist-window-boundary-retained-selected-action-state-v3/sessions/1779433457127-264980/suite.summary.json`
+    passed 2/2 after the action-state row moved out of the minimal boundary suite.
 - Synthetic retained-host reconcile fixture:
   `crates/fret-ui/src/declarative/tests/fixtures/retained_virtual_list_reconcile_v1.json`
   - runner:

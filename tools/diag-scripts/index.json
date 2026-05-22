@@ -12476,6 +12476,34 @@
       ]
     },
     {
+      "id": "ui-gallery-virtual-list-retained-selected-action-state-bounce",
+      "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-selected-action-state-bounce.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-vlist-retained-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "feature:gallery-dev",
+        "mechanism_harness",
+        "retained",
+        "scroll",
+        "selected_state",
+        "semantics",
+        "ui_gallery",
+        "view_cache",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+        "The gate enables retained keep-alive plus row cache to exercise cached selected/action metadata.",
+        "A selected row is detached, the selection model is cleared while it is off-window, and the row must reattach unselected with invoke still available."
+      ]
+    },
+    {
       "id": "ui-gallery-virtual-list-small-scroll-no-window-shifts",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json",
       "required_capabilities": [

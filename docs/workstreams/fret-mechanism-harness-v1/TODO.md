@@ -374,6 +374,13 @@ date: 2026-05-12
     The slice found a mechanism observability gap: `SemanticsDecoration` and `SemanticsProps`
     could not stamp collection metadata, so non-pressable retained rows were not queryable without
     policy-layer workarounds.
+- [x] Add retained selected/action-state bounce coverage for Virtual List row-cache freshness.
+  - Result: `ui-gallery-virtual-list-retained-selected-action-state-bounce.json` now starts on the
+    dev-only Virtual List Torture page, selects row 2, clears selection while the row is detached,
+    and reattaches the row with `selected=false` and `invoke=true` under retained keep-alive plus
+    row-cache. The first attempt exposed a suite-contract mismatch: the minimal retained
+    window-boundary suite forces `FRET_UI_GALLERY_VLIST_MINIMAL=1`, so this gate moved into its own
+    `ui-gallery-vlist-retained-action-state` suite instead of sharing the minimal boundary row.
 - [x] Add a retained/windowed non-list semantics mutation gate, such as tree hierarchy
   `level`/expanded metadata on FileTree/Tree torture or row action-state mutation on retained
   DataTable rows.
@@ -1772,7 +1779,8 @@ Next slice recommendation:
 
 Next slice recommendation:
 
-- Move from action-state/semantics into a retained or cached root-boundary surface where stale paint,
-  hit-test, or relation state can survive visual success. Avoid adding another Command action-state
-  row unless a new runtime bundle shows filtering or virtualization desynchronizing selection,
+- Move from retained Virtual List row semantics into a cached overlay/root-boundary surface where
+  stale relation edges or hit-test/paint replay can survive visual success. The row-cache selected
+  state path is now covered; prefer a trigger/content or moving cached-source relation gate over
+  adding another list row unless a fresh bundle shows stale `labelled_by`, `controls`, selection,
   disabled semantics, or invoke suppression.
