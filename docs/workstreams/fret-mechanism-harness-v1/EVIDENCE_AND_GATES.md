@@ -8338,3 +8338,51 @@ Next slice recommendation:
 - build:
   `cargo build --profile dev-fast -p fret-ui-gallery --features gallery-dev`
   - result: passed.
+
+## Retained Table Row-Pinning Selected/Action-State Gate
+
+- invariant:
+  a pinned retained Table row that survives a pagination/window boundary must keep fresh semantics
+  metadata. Presence alone is insufficient; the row must still expose `selected=true` after pointer
+  selection and `invoke=true` after it is pinned and page 2 is shown.
+- finding:
+  no retained Table stale selected/invoke defect was reproduced. The slice closes the diagnostics
+  gap where the existing keep-pinned row gate asserted row existence but did not verify retained
+  row semantics/action-state freshness after pagination.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-true.json`
+  now starts directly on the retained Table Torture page, selects row 0, verifies selected/invoke
+  semantics, pins row 0, advances to page 2, and verifies row 0 still exists with fresh
+  selected/invoke semantics.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-true.json`,
+  `tools/diag-scripts/suites/ui-gallery-table-retained/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`, and
+  `apps/fret-ui-gallery/src/ui/previews/gallery/torture/table_retained_torture.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-table-retained-row-pinning-selected-action-v1/sessions/1779480713460-19924/1779480725739/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-table-retained-row-pinning-selected-action-v1/sessions/1779480713460-19924/share/1779480725739.zip`;
+  full retained Table suite summary:
+  `target/fret-diag-table-retained-suite-row-pinning-selected-action-v1/sessions/1779480750237-48512/suite.summary.json`.
+- JSON/registry:
+  `python -m json.tool tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-true.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_table_retained_row_pinning_keep_pinned_true --no-fail-fast --no-capture`
+  - result: passed; run id `8dbf737e-559d-4dfd-b340-15def5ed7771`.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-true.json --dir target/fret-diag-table-retained-row-pinning-selected-action-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; run id `1779480725739`.
+- retained Table runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-table-retained --dir target/fret-diag-table-retained-suite-row-pinning-selected-action-v1 --session-auto --include-triage --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed 7/7; strengthened keep-pinned row run id `1779480853485`.
+- bounded evidence:
+  `target/dev-fast/fretboard-dev.exe diag query test-id target/fret-diag-table-retained-row-pinning-selected-action-v1/sessions/1779480713460-19924 ui-gallery-table-retained-row-0 --json --top 10`
+  found row 0 and its visible cells once in the final focused bundle.
+  `target/dev-fast/fretboard-dev.exe diag slice target/fret-diag-table-retained-row-pinning-selected-action-v1/sessions/1779480713460-19924 --test-id ui-gallery-table-retained-row-0 --json --max-matches 2 --max-ancestors 6`
+  shows row 0 under `ui-gallery-table-retained-torture-root` with role `list_item`,
+  `flags.selected=true`, and `actions.invoke=true`.

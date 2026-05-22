@@ -309,6 +309,15 @@ date: 2026-05-12
   `target/fret-diag-ai-transcript-append-window-refresh-v2/sessions/1779479206565-76328/1779479217864/ai.packet`,
   and the four-row suite evidence is anchored at
   `target/fret-diag-ai-transcript-retained-suite-append-window-refresh-v3/sessions/1779479378187-25176/suite.summary.json`.
+- Retained Table row-pinning selected/action-state update:
+  `ui-gallery-table-retained-row-pinning-keep-pinned-true.json` now strengthens the retained Table
+  keep-pinned row gate from existence-only proof to selected/action-state proof. It selects row 0,
+  verifies `selected=true` and `invoke=true`, pins the row, advances to page 2, and verifies the
+  pinned retained row still exists with fresh selected/invoke semantics. Focused evidence is
+  anchored at
+  `target/fret-diag-table-retained-row-pinning-selected-action-v1/sessions/1779480713460-19924/1779480725739/ai.packet`;
+  the retained Table suite evidence is anchored at
+  `target/fret-diag-table-retained-suite-row-pinning-selected-action-v1/sessions/1779480750237-48512/suite.summary.json`.
 - Structural slot hygiene update:
   Recipe-internal child classification now uses `AnyElement::component_slot` for the discovered
   shadcn structural markers: AlertAction, CardAction, CardFooter, AvatarBadge, ItemMedia, and

@@ -11984,8 +11984,18 @@
         "ui-gallery-table-retained",
         "ui-gallery-table-retained-measured"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "action-state",
+        "retained",
+        "row-pinning",
+        "semantics",
+        "table",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the retained Table Torture page.",
+        "Pins selected row 0, advances to page 2, and proves the pinned retained row keeps fresh selected/invoke semantics."
+      ]
     },
     {
       "id": "ui-gallery-table-retained-sort-desc",

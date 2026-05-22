@@ -1913,3 +1913,19 @@ Next slice recommendation:
 
 - Move to a fresh retained/cached relation or action-state mutation surface outside the current
   Resizable and ContextMenu clusters unless new evidence shows concrete drift there.
+
+- [x] Add a retained Table row-pinning selected/action-state companion.
+  - Result:
+    `ui-gallery-table-retained-row-pinning-keep-pinned-true.json` now pins selected row 0, advances
+    to page 2, and asserts the pinned retained row still exists with `selected=true` and
+    `invoke=true`. The previous gate only proved row existence after pagination; the strengthened
+    gate closes the stale selected/invoke semantics risk for a retained row that survives a
+    pagination/window boundary. No retained Table defect was reproduced. Focused runtime passed with
+    run id `1779480725739`; the seven-row `ui-gallery-table-retained` suite passed with summary
+    `target/fret-diag-table-retained-suite-row-pinning-selected-action-v1/sessions/1779480750237-48512/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat retained Table row-pinning selected/invoke semantics as covered. Move to another
+  retained/cached relation or action-state mutation surface outside the Resizable, ContextMenu, AI
+  transcript, and retained Table clusters unless a fresh bundle shows concrete drift there.
