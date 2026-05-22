@@ -88,7 +88,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-content" }
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-panel" }
       },
       "timeout_frames": 240
     },
@@ -120,8 +120,17 @@
     {
       "type": "wait_until",
       "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-panel" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "arrow_down" },
+    {
+      "type": "wait_until",
+      "predicate": {
         "kind": "focused_descendant_is",
-        "scope": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-content" },
+        "scope": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-panel" },
         "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-back" }
       },
       "timeout_frames": 240
@@ -132,18 +141,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "focused_descendant_is",
-        "scope": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-content" },
-        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-forward" }
-      },
-      "timeout_frames": 240
-    },
-
-    { "type": "press_key", "key": "arrow_down" },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "focused_descendant_is",
-        "scope": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-content" },
+        "scope": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-panel" },
         "target": { "kind": "test_id", "id": "ui-gallery-context-menu-basic-reload" }
       },
       "timeout_frames": 240
@@ -153,9 +151,9 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "label_contains",
-        "target": { "kind": "test_id", "id": "ui-gallery-status-last-action" },
-        "text": "ui_gallery.context_menu.basic.reload"
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "ui_gallery.context_menu.basic.reload"
       },
       "timeout_frames": 240
     },

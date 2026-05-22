@@ -49,6 +49,24 @@ DOCKING_PERF_THRESHOLDS: tuple[tuple[str, str, int], ...] = (
 FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
+DEMO_METRICS_DEBUG_ROUTE_ID = "demo-metrics-debug"
+DEMO_METRICS_DEBUG_ROUTE_COMMANDS = {
+    "demo_commands": {
+        "demo editor proof": "cargo run -p fret-demo --bin imui_editor_proof_demo",
+        "demo editor notes": "cargo run -p fret-demo --bin editor_notes_demo",
+        "demo device shell": "cargo run -p fret-demo --bin editor_notes_device_shell_demo",
+    },
+    "metrics_commands": {
+        "metrics stats": "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json",
+        "metrics layout perf": "cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json",
+        "metrics memory": "cargo run -p fretboard-dev -- diag memory-summary <bundle-or-dir> --json",
+    },
+    "debug_commands": {
+        "debug triage": "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json",
+        "debug hotspots": "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json",
+        "debug trace": "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json",
+    },
+}
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
@@ -315,6 +333,38 @@ def _validate_tool_apps_json(payload: dict) -> None:
             "Step failed: list tool apps json (missing imui-product-chain perf artifacts)"
         )
 
+    first_open_routes = payload.get("first_open_routes")
+    if not isinstance(first_open_routes, list):
+        raise SystemExit("Step failed: list tool apps json (missing first_open_routes array)")
+    demo_metrics_route = next(
+        (
+            item
+            for item in first_open_routes
+            if isinstance(item, dict) and item.get("id") == DEMO_METRICS_DEBUG_ROUTE_ID
+        ),
+        None,
+    )
+    if demo_metrics_route is None:
+        raise SystemExit("Step failed: list tool apps json (missing demo-metrics-debug route)")
+    if demo_metrics_route.get("docs") != FIRST_OPEN_DOC:
+        raise SystemExit("Step failed: list tool apps json (unexpected demo-metrics-debug docs)")
+    if not isinstance(demo_metrics_route.get("purpose"), str) or not demo_metrics_route["purpose"]:
+        raise SystemExit("Step failed: list tool apps json (missing demo-metrics-debug purpose)")
+    for group, expected_commands in DEMO_METRICS_DEBUG_ROUTE_COMMANDS.items():
+        commands = demo_metrics_route.get(group)
+        if not isinstance(commands, list):
+            raise SystemExit(f"Step failed: list tool apps json (missing {group})")
+        commands_by_label = {
+            item.get("label"): item.get("command")
+            for item in commands
+            if isinstance(item, dict)
+        }
+        for label, command in expected_commands.items():
+            if commands_by_label.get(label) != command:
+                raise SystemExit(
+                    f"Step failed: list tool apps json (unexpected demo-metrics-debug {label})"
+                )
+
     tool_apps = payload.get("tool_apps")
     if not isinstance(tool_apps, list):
         raise SystemExit("Step failed: list tool apps json (missing tool_apps array)")
@@ -409,6 +459,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         'const DEVTOOLS_METRICS_STATS_COMMAND: &str =',
         'const DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =',
+        'const DEVTOOLS_DEBUG_TRACE_COMMAND: &str =',
         "DevtoolsGateScriptTargetCommandInputV1",
         "DevtoolsGatePerfThresholdCommandInputV1",
         "DevtoolsGateResourceFootprintThresholdCommandInputV1",
@@ -511,6 +562,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "gate_run::gate_run_result_history_summary_lines(",
         "gate_run::gate_run_result_history_selected_or_latest_entry(",
         "gate_run::gate_run_result_history_entry_detail_lines(",
+        "gate_run::load_recent_gate_run_result_history(",
         "fret_devtools_gate_run_result",
         'join(".fret").join("diag").join("gate-runs")',
         "new_gate_run_channel",
@@ -574,6 +626,7 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}",
         "metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}",
         "debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}",
+        "debug trace: {DEVTOOLS_DEBUG_TRACE_COMMAND}",
         "devtools_demo_metrics_debug_lines_surface_canonical_routes",
         "devtools_dogfood_workflow_lines_surface_ui_gallery_loop",
         "devtools_gate_command_lines_surface_first_class_gates",
@@ -605,6 +658,11 @@ def _validate_devtools_gui_product_workflow_source(repo_root: Path) -> None:
         "copy selected follow-up JSON refused (no selected-bundle result JSON yet)",
         "Open selected follow-up JSON",
         "open selected follow-up JSON refused (no selected-bundle result artifact yet)",
+        "Copy selected trace artifact",
+        "copy selected trace artifact refused (no selected-bundle trace artifact yet)",
+        "Open selected trace artifact",
+        "open selected trace artifact refused (no selected-bundle trace artifact yet)",
+        "selected_followup_trace_artifact_path_from_state",
         "Follow-up Result Details",
         "Selected result status, path, command, bundle, and error preview for reproduction.",
         "Follow-up Result Summary",
@@ -717,6 +775,8 @@ def _validate_devtools_gui_followup_source(repo_root: Path) -> None:
         "pub(crate) fn followup_result_history_entries_for_selected_bundle",
         "pub(crate) fn followup_result_history_selected_or_latest_entry",
         "pub(crate) fn followup_result_history_entry_detail_lines",
+        "pub(crate) fn load_recent_followup_result_history",
+        "load_recent_followup_result_history_from_dir",
         "fret_devtools_regression_followup_result",
         "follow-up result: <invalid json>",
         "follow-up history: <none for selected bundle>",
@@ -729,8 +789,17 @@ def _validate_devtools_gui_followup_source(repo_root: Path) -> None:
         "regression_followup_command_rejects_baseline_required_commands",
         "regression_followup_command_returns_direct_diag_args",
         "regression_followup_result_record_has_stable_shape",
+        "trace_report: Option<FollowupTraceReportV1>",
+        "struct FollowupTraceReportV1",
+        "followup_trace_report_for_artifacts(&output_artifacts, repo_root)",
+        "followup_trace_artifact_path_from_result_json",
+        "regression_followup_trace_artifact_path_prefers_trace_report",
+        "regression_followup_trace_artifact_path_falls_back_to_output_artifacts",
+        "trace_source: {source}",
+        "real_spans_included: {included}",
         "regression_followup_result_summary_lines_project_status_and_duration",
         "regression_followup_result_history_summary_filters_to_selected_bundle",
+        "load_recent_followup_result_history_reads_latest_valid_records",
         "regression_followup_result_history_latest_path_prefers_selected_bundle",
         "regression_followup_result_history_selected_entry_overrides_latest_when_matching",
         "regression_followup_result_history_entry_detail_lines_surface_repro_fields",
@@ -759,6 +828,8 @@ def _validate_devtools_mcp_product_workflow_source(repo_root: Path) -> None:
         'const IMUI_PRODUCT_WORKFLOW_LAUNCHED_COMMAND: &str =',
         'const IMUI_PRODUCT_WORKFLOW_SUITE: &str =',
         'const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[',
+        'const DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug"',
+        'const DEBUG_TRACE_COMMAND: &str =',
         "mcp_first_open_resource_text",
         "mcp first-open: {DEVTOOLS_FIRST_OPEN_DOC}",
         "mcp workflow: {DEVTOOLS_MCP_DOC}",
@@ -772,6 +843,8 @@ def _validate_devtools_mcp_product_workflow_source(repo_root: Path) -> None:
         "product workflow docs: {IMUI_PRODUCT_WORKFLOW_DOC}",
         "product workflow artifacts: {}",
         "IMUI_PRODUCT_WORKFLOW_ARTIFACTS.join(\", \")",
+        "route: {DEMO_METRICS_DEBUG_ROUTE_ID}",
+        "debug trace: {DEBUG_TRACE_COMMAND}",
         "regression_summary_drilldown(&summary)",
         "regression_bundle_followup_commands",
         "regression_bundle_followup_command_lines(drilldown.bundle_dirs.iter().map(String::as_str))",
@@ -853,6 +926,10 @@ def _validate_discovery(repo_root: Path, fretboard_exe: Path) -> None:
     _assert_contains(tool_apps.stdout, "perf-docking/regression.summary.json", "list tool apps")
     _assert_contains(tool_apps.stdout, "perf-docking/check.perf_thresholds.json", "list tool apps")
     _assert_contains(tool_apps.stdout, "perf-docking/*/trace.chrome.json", "list tool apps")
+    _assert_contains(tool_apps.stdout, "route: demo-metrics-debug", "list tool apps")
+    for command_groups in DEMO_METRICS_DEBUG_ROUTE_COMMANDS.values():
+        for label, command in command_groups.items():
+            _assert_contains(tool_apps.stdout, f"{label}: {command}", "list tool apps")
     _assert_contains(tool_apps.stdout, "fret-devtools", "list tool apps")
     _assert_contains(tool_apps.stdout, "cargo run -p fret-devtools", "list tool apps")
     _assert_contains(tool_apps.stdout, DEVTOOLS_GUI_DOC, "list tool apps")

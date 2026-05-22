@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use fret_core::{
-    NodeId, Point, Rect, SemanticsCheckedState, SemanticsLive, SemanticsPressedState,
-    SemanticsRole, SemanticsSnapshot,
+    NodeId, Point, Rect, SemanticsCheckedState, SemanticsInvalid, SemanticsLive,
+    SemanticsPressedState, SemanticsRole, SemanticsSnapshot,
 };
 use fret_diag_protocol::UiSelectorV1;
 use serde::{Deserialize, Serialize};
@@ -157,6 +157,8 @@ impl ObservedTree {
                     .flags
                     .pressed_state
                     .map(ObservedSemanticsPressedState::from),
+                required: Some(node.flags.required),
+                invalid: node.flags.invalid.map(ObservedSemanticsInvalid::from),
                 value: node.value.clone(),
                 level: node.extra.level,
                 pos_in_set: node.pos_in_set,
@@ -548,6 +550,10 @@ pub struct ObservedNode {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pressed_state: Option<ObservedSemanticsPressedState>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub required: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub invalid: Option<ObservedSemanticsInvalid>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub level: Option<u32>,
@@ -598,6 +604,8 @@ impl ObservedNode {
             checked: None,
             checked_state: None,
             pressed_state: None,
+            required: None,
+            invalid: None,
             value: None,
             level: None,
             pos_in_set: None,
@@ -641,6 +649,7 @@ pub enum ObservedSemanticsFlag {
     Selected,
     Expanded,
     Checked,
+    Required,
     LiveAtomic,
 }
 
@@ -763,6 +772,26 @@ impl From<SemanticsPressedState> for ObservedSemanticsPressedState {
             SemanticsPressedState::False => Self::False,
             SemanticsPressedState::True => Self::True,
             SemanticsPressedState::Mixed => Self::Mixed,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ObservedSemanticsInvalid {
+    True,
+    Grammar,
+    Spelling,
+    Unknown,
+}
+
+impl From<SemanticsInvalid> for ObservedSemanticsInvalid {
+    fn from(invalid: SemanticsInvalid) -> Self {
+        match invalid {
+            SemanticsInvalid::True => Self::True,
+            SemanticsInvalid::Grammar => Self::Grammar,
+            SemanticsInvalid::Spelling => Self::Spelling,
             _ => Self::Unknown,
         }
     }

@@ -33,7 +33,7 @@ date: 2026-05-12
 | Layout primitives | auto size, fill, percent sizing under definite containers, min/max clamps, percent min/max intrinsic measurement behavior, wrapped text height propagation, text measurement/paint wrap-width agreement, text overflow/scale constraint agreement, scroll-root child layout preservation, absolute percent inset placement, static inset ignore behavior, relative inset final-position and flow-sibling preservation, auto-container child margin measurement, HoverRegion absolute-child layout/measure/hit-test envelope including fractional and right/bottom insets, Pressable absolute-only and mixed flow/absolute wrapper envelope consistency, RenderTransform mixed flow/absolute layout/visual/hit envelope consistency, FractionalRenderTransform size-derived visual/hit translation consistency, flex stretch, flex gap layout plus max-content measurement consistency, flex wrap gap layout plus definite-width max-content measurement consistency, flex visual-order layout, wrap-sensitive intrinsic measurement consistency, and left/right/top auto-margin visual-order post-processing, transparent wrapper, chrome outer/inner sizing, grid fr/auto, grid column/row gap layout plus max-content measurement consistency, layout/visual/hit transform spaces, and clean-reuse view-cache movement replay for mixed flow/absolute wrappers plus relative-inset final-position wrappers across hit-test and semantics bounds | `crates/fret-ui/src/declarative/tests/fixtures/layout_primitives_v1.json`; `crates/fret-ui/src/declarative/tests/view_cache.rs` | shadcn seed diagnostics for ButtonGroupText alignment; `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_layout_primitives_match_oracles --no-fail-fast --no-capture`; `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_hit_moving_relative_inset_wrapper_updates_bounds_and_hit_test --no-fail-fast --no-capture`; `cargo nextest run --cargo-profile dev-fast -p fret-ui view_cache_semantics_moving_relative_inset_updates_bounds_without_rerender --no-fail-fast --no-capture` | Add RTL/writing-mode cases once the direction/writing-mode contract is explicit; continue probing late layout post-processing, layout/measure/paint/hit-test contract splits, and visual-order edge cases only when they intersect cached/replayed or retained runtime risk. |
 | Layout dirty invalidation | child dirty aggregation, suppressed child boundary, subtree removal, underflow repair, visible sibling preservation, contained view-cache relayout, scroll/direct-child dirty frontier coverage, detached dirty cache-root pruning, view-cache layout-dirty expansion attribution, declarative cache-hit lifecycle coverage for clean reuse, element state preservation, cache-key misses, RAF invalidation, model dependency scoping, inspection bypass, and layout-query next-frame invalidation | `crates/fret-ui/src/tree/tests/fixtures/layout_dirty_invalidation_v1.json`; `crates/fret-ui/src/declarative/tests/fixtures/view_cache_lifecycle_v1.json` | `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-demo-with-title-toggle-underflow.json`; focused gates in `crates/fret-ui/src/tree/tests/view_cache.rs`, `crates/fret-ui/src/declarative/tests/view_cache_lifecycle_harness.rs`, `crates/fret-ui/src/declarative/tests/layout/scroll.rs`, and `crates/fret-ui/src/tree/tests/interactive_resize_flow_rebuild.rs` | Add a runtime UI Gallery companion only if a real surface exposes cached model/layout-query dependency mutation; otherwise move to scroll/click stability or retained/component semantics mutation. |
 | Environment view-cache invalidation | viewport-size, reduced-motion, color-scheme, contrast, forced-colors, text-scale, reduced-transparency, accent-color, safe-area, and occlusion changes rerender only dependent cache roots through the real `WindowMetricsService` path; shell-level UI Gallery Theme/Motion preset mutation exposes model state plus effective Theme color-scheme and motion tokens in app snapshots; diagnostics-injected platform preferences now drive the runner `WindowMetricsService` path and are observed by both app snapshots and `ElementContext` environment-query probes | `crates/fret-ui/src/declarative/tests/fixtures/environment_view_cache_invalidation_v1.json`; `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`; `apps/fret-ui-gallery/src/ui/snippets/motion_presets/environment_probe.rs`; `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json`; `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json` | focused gates in `crates/fret-ui/src/declarative/tests/environment_queries.rs`; runtime gates `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-preset-runtime-token-mutation.json` and `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json` | Add runtime environment mutation companions for safe-area, forced-colors, or occlusion only when a stable UI Gallery surface can expose those platform changes without synthetic-only proxies. |
-| Diagnostics authoring and current-state predicates | strict page-entry lint for promoted Command, Combobox, Select, Motion Presets, DataTable, HoverCard, Date Picker, Menubar Placement, DropdownMenu, ContextMenu, and Button Group suites; strict long-page click-visibility lint for promoted Command, Combobox, Select, Motion Presets/Sidebar, ScrollArea, ViewCache, HoverCard, Menubar Placement, DropdownMenu, ContextMenu, and Button Group suites; strict Gallery nav-click visibility lint for the cleared Canvas Cull, Chart Torture, and Node Graph Cull suites; current-state debug predicates now read the latest debug snapshot instead of stale ring entries, while aggregate predicates retain ring history and can match stale latest snapshots; promoted pointer/capture scripts now reject event-adjacent current-state `assert` steps and require bounded convergence waits; no-frame keepalive ticks no longer consume `wait_frames`; `scroll_into_view` now distinguishes impossible unscrollable-axis containment from generic no-progress loops; Command long-query pre-positioning now uses `ensure_visible(within_window=true)` so an already-visible docs demo does not fail with `timeout.no_frames` after a no-op wheel | `tools/check_diag_scripts_registry.py`; `tools/test_check_diag_scripts_registry.py`; `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_predicates.rs`; `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`; `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_scroll.rs`; `tools/diag-scripts/suites/ui-gallery-command/suite.json`; `tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-long-query-text.json`; `tools/diag-scripts/suites/ui-gallery-date-picker/suite.json`; `tools/diag-scripts/suites/ui-gallery-hover-card/suite.json`; `tools/diag-scripts/suites/ui-gallery-menubar-placement/suite.json`; `tools/diag-scripts/suites/ui-gallery-dropdown-menu/suite.json`; `tools/diag-scripts/suites/ui-gallery-context-menu/suite.json`; `tools/diag-scripts/suites/ui-gallery-button-group/suite.json`; `tools/diag-scripts/suites/ui-gallery-canvas-cull/suite.json`; `tools/diag-scripts/suites/ui-gallery-chart-torture/suite.json`; `tools/diag-scripts/suites/ui-gallery-node-graph-cull/suite.json` | `python tools/test_check_diag_scripts_registry.py`; `python tools/check_diag_scripts_registry.py`; `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics current_state_predicates_do_not_match_stale_ring_snapshots input_pointer_capture_active_predicate_reads_debug_snapshot --no-fail-fast`; `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics history_predicates_can_match_stale_latest_snapshot retained_virtual_list_reconciles_matching_predicate_counts_ring_snapshots no_frame_keepalive_does_not_consume_wait_frames --no-fail-fast`; `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics scroll_unscrollable_axis --no-fail-fast`; `target/debug/fretboard-dev.exe diag suite ui-gallery-scroll-area --dir target/fret-diag-scroll-area-suite-pointer-current-state-lint-v1 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-command --dir target/fret-diag-command-suite-retained-action-state-roundtrip-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-date-picker --dir target/fret-diag-date-picker-strict-v3 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hover-card --dir target/fret-diag-hover-card-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-menubar-placement --dir target/fret-diag-menubar-placement-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-dropdown-menu --dir target/fret-diag-dropdown-menu-strict-authoring-v2 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-context-menu --dir target/fret-diag-context-menu-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-button-group --dir target/fret-diag-button-group-strict-authoring-v2 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe` | Expand strict authoring lints suite-by-suite only after each family has a clear page-entry and visibility model; for new defect discovery, prefer retained relation/action-state mutation or another layout/measure/paint/hit-test contract split with a real runtime surface. |
+| Diagnostics authoring and current-state predicates | strict page-entry lint for promoted Command, Combobox, Select, Motion Presets, DataTable, HoverCard, Date Picker, Menubar Placement, DropdownMenu, ContextMenu, and Button Group suites; strict long-page click-visibility lint for promoted Command, Combobox, Select, Motion Presets/Sidebar, ScrollArea, ViewCache, HoverCard, Menubar Placement, DropdownMenu, ContextMenu, and Button Group suites; strict Gallery nav-click visibility lint for the cleared Canvas Cull, Chart Torture, and Node Graph Cull suites; current-state debug predicates now read the latest debug snapshot instead of stale ring entries, while aggregate predicates retain ring history and can match stale latest snapshots; promoted pointer/capture scripts now reject event-adjacent current-state `assert` steps and require bounded convergence waits; no-frame keepalive ticks can drain already-started `wait_frames` without skipping the next script step and preserve redraw/RAF for effect-only, keyboard/text/IME, and pointer-move injection paths; desktop repeating timers now rearm from handler completion time and fire at most once per runner tick, preventing diagnostics keepalive catch-up from starving requested redraw delivery; `scroll_into_view` now distinguishes impossible unscrollable-axis containment from generic no-progress loops; Command long-query pre-positioning now uses `ensure_visible(within_window=true)` so an already-visible docs demo does not fail with `timeout.no_frames` after a no-op wheel | `tools/check_diag_scripts_registry.py`; `tools/test_check_diag_scripts_registry.py`; `crates/fret-launch/src/runner/desktop/runner/timers.rs`; `crates/fret-launch/src/runner/desktop/runner/window.rs`; `crates/fret-launch/src/runner/desktop/runner/asset_reload.rs`; `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_predicates.rs`; `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`; `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`; `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_scroll.rs`; `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`; `ecosystem/fret-bootstrap/src/ui_app_driver.rs`; `tools/diag-scripts/suites/ui-gallery-command/suite.json`; `tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-long-query-text.json`; `tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json`; `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`; `tools/diag-scripts/suites/ui-gallery-date-picker/suite.json`; `tools/diag-scripts/suites/ui-gallery-hover-card/suite.json`; `tools/diag-scripts/suites/ui-gallery-menubar-placement/suite.json`; `tools/diag-scripts/suites/ui-gallery-dropdown-menu/suite.json`; `tools/diag-scripts/suites/ui-gallery-context-menu/suite.json`; `tools/diag-scripts/suites/ui-gallery-button-group/suite.json`; `tools/diag-scripts/suites/ui-gallery-canvas-cull/suite.json`; `tools/diag-scripts/suites/ui-gallery-chart-torture/suite.json`; `tools/diag-scripts/suites/ui-gallery-node-graph-cull/suite.json` | `python tools/test_check_diag_scripts_registry.py`; `python tools/check_diag_scripts_registry.py`; `cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics current_state_predicates_do_not_match_stale_ring_snapshots input_pointer_capture_active_predicate_reads_debug_snapshot --no-fail-fast`; `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics history_predicates_can_match_stale_latest_snapshot retained_virtual_list_reconciles_matching_predicate_counts_ring_snapshots no_frame_keepalive_does_not_consume_wait_frames --no-fail-fast`; `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics scroll_unscrollable_axis --no-fail-fast`; `cargo test --profile dev-fast -p fret-launch repeating_timer --lib -- --nocapture`; `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics --lib no_frame_keepalive -- --nocapture`; `target/debug/fretboard-dev.exe diag suite ui-gallery-scroll-area --dir target/fret-diag-scroll-area-suite-pointer-current-state-lint-v1 --session-auto --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-command --dir target/fret-diag-command-suite-retained-action-state-roundtrip-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`; `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json --dir target/fret-diag-command-retained-active-descendant-action-state-runner-timer-fresh-20260521 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 300000 --launch -- target/dev-fast/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-shadcn-runtime-evidence --dir target/fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-date-picker --dir target/fret-diag-date-picker-strict-v3 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hover-card --dir target/fret-diag-hover-card-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-menubar-placement --dir target/fret-diag-menubar-placement-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-dropdown-menu --dir target/fret-diag-dropdown-menu-strict-authoring-v2 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-context-menu --dir target/fret-diag-context-menu-strict-authoring-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`; `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-button-group --dir target/fret-diag-button-group-strict-authoring-v2 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe` | Add a focused runner-scheduling stress gate for overlapping repeating timers, asset-reload polling, script keepalive, redraw/RAF, and slow handlers so future scheduler regressions do not require a full UI Gallery launch to reproduce. For new defect discovery, prefer retained relation/action-state mutation or another layout/measure/paint/hit-test contract split with a real runtime surface. |
 | Scroll-handle invalidation and virtualization | scroll-handle registry change classification, windowed-paint cache-root dirtying, revision-only internal offset baseline behavior, virtual-list window escape, detached stale binding filtering, synthetic retained-host reconcile attach/detach/keep-alive reuse metrics, prepaint virtual-list window-update reason/detail fixture coverage for scroll offset, viewport resize, items revision, scroll-to-item, and length-shrink inputs-change paths, non-retained and retained boundary-crossing owner/reason coverage, retained keep-alive bounce/reuse telemetry, retained collection-metadata bounce coverage, Virtual List Torture small-scroll no-window-shift telemetry, default Checkbox RTL post-scroll idle-stability sampling, ScrollArea dynamic content-growth extent and wheelability coverage, ScrollArea RTL nested-scroll idle-stability sampling over both the inner RTL viewport and outer Gallery content viewport, Table RTL post-scroll idle-stability sampling, retained Table sorting/typeahead/row-pinning/sort-select-scroll/window-boundary-scroll runtime coverage, DataTable retained filter-shrink input-change telemetry, DataTable view-cache filter-shrink non-retained invalidation-detail telemetry, and DataTable RTL post-scroll idle-stability sampling | `crates/fret-ui/src/tree/tests/fixtures/scroll_handle_invalidation_v1.json`; `crates/fret-ui/src/declarative/tests/fixtures/retained_virtual_list_reconcile_v1.json`; `crates/fret-ui/src/tree/prepaint/tests/fixtures/virtual_list_window_update_v1.json`; `crates/fret-ui/src/tree/prepaint/tests.rs`; `crates/fret-ui/src/tree/prepaint/virtual_list.rs`; `crates/fret-ui/src/tree/debug/virtual_list.rs`; `ecosystem/fret-ui-kit/src/declarative/table.rs`; `crates/fret-diag-protocol/src/lib.rs` (`assert_semantics_scroll_idle_stable`, `virtual_list_window_shift_samples_len_le`, `virtual_list_windows_matching_ge.invalidation_detail`, `press_keys`) | focused gates in `crates/fret-ui/src/tree/tests/view_cache.rs`, `crates/fret-ui/src/declarative/tests/virtual_list/retained.rs`, `crates/fret-ui/src/declarative/tests/retained_virtual_list_reconcile_harness.rs`, `crates/fret-ui/src/tree/prepaint/tests/prepaint_virtual_list_window_update_harness.rs`, `crates/fret-ui/src/declarative/frame.rs`, and `crates/fret-ui/src/tree/prepaint/tests.rs`; runtime gates `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-small-scroll-no-window-shifts.json`, `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll.json`, `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll-retained.json`, `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-collection-metadata-bounce.json`, `tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-scroll-to-rtl-field.json`, `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json`, `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-rtl-idle-stability.json`, `tools/diag-scripts/ui-gallery/table/ui-gallery-table-rtl-idle-stability.json`, `tools/diag-scripts/suites/ui-gallery-table-retained/suite.json`, `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-filter-shrink-vlist-inputs-change.json`, `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-view-cache-filter-shrink-vlist-inputs-change.json`, and `tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-rtl-idle-stability.json` | Add deeper RTL scroll reproduction only when a fresh failing route is captured; otherwise move to retained relation/action-state mutation or another cached/replayed state path with a real runtime surface. |
 | Hit-test routing | transform spaces, clipping, transparent wrappers, disabled hit-test gates, MaskLayer paint-only hit behavior versus explicit overflow clipping, EffectLayer computation-bound hit behavior versus explicit overflow clipping, CompositeGroup computation-bound hit behavior versus explicit overflow clipping, BackdropSourceGroup computation-bound hit behavior versus explicit overflow clipping, overlay roots, modal barrier roots, pointer occlusion dispatch, outside-press/pointer-move observer routing, captured-pointer routing, a UI Gallery context-menu `BlockMouseExceptScroll` wheel pass-through gate that proves underlay scroll movement while the menu remains mounted, a UI Gallery scrollbar-drag pointer-capture lifecycle gate that proves capture becomes active during drag and releases on pointer-up, owner-level `captured_is` runtime attribution for the captured scrollbar node, a pointer-cancel gate that proves active capture and owner state clear on cancel, a multi-pointer runtime gate where pointer 0 keeps scrollbar capture while pointer 1 touch-down/up targets an underlay viewport probe, a cross-window docking arbitration gate where pointer 0 keeps a dock drag active while pointer 1 probes the under-moving main-window viewport without starting viewport capture, a selector-unique ContextMenu submenu branch/corridor gate that proves moving into submenu content/back to trigger preserves the branch while moving away or onto another parent item closes the nested submenu, and Popover/DropdownMenu non-modal underlay activation-status gates proving outside press reaches the underlay action handler instead of only moving focus | `crates/fret-ui/src/declarative/tests/fixtures/hit_test_routing_v1.json`; `crates/fret-ui/src/tree/tests/fixtures/pointer_occlusion_routing_v1.json`; `crates/fret-diag-protocol/src/lib.rs` (`input_pointer_capture_active_is`, `captured_is`, pointer-session `pointer_id`, `dock_viewport_capture_active_is`); `crates/fret-ui/src/tree/ui_tree_semantics.rs`; `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer_session.rs`; `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`; `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs`; `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/flags.rs` | focused gates in `crates/fret-ui/src/tree/tests/pointer_occlusion.rs`, `crates/fret-ui/src/tree/tests/pointer_move_layers.rs`, `crates/fret-ui/src/tree/tests/semantics_focus_shortcuts.rs`, and runtime gates `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json`, `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`, `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json`, `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-multipointer-underlay-touch.json`, `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-dock-drag-suppresses-viewport-touch.json`, `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-branch-corridor-routing.json`, `tools/diag-scripts/suites/ui-gallery-context-menu/suite.json`, `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json`, and `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json` | Add dropdown/menubar branch-corridor companions only if future Radix parity evidence needs them; otherwise move to semantics/accessibility runtime gates. |
 | Timer dispatch lifecycle | targeted timer dispatch reaches visible base nodes and visible hit-test-inert transition overlay nodes, while hidden or removed overlay targets are treated as missing targets so visible-layer timer broadcast can continue | `crates/fret-ui/src/tree/tests/fixtures/timer_dispatch_v1.json`; `crates/fret-ui/src/tree/tests/timer_dispatch_harness.rs`; `crates/fret-ui/src/tree/tests/timer_dispatch.rs` | `cargo test --profile dev-fast -p fret-ui --lib mechanism_harness_timer_dispatch_matches_oracles -- --nocapture`; `cargo test --profile dev-fast -p fret-ui --lib timer_dispatch -- --nocapture`; runtime evidence from `tools/diag-scripts/ui-gallery/select/ui-gallery-select-typeahead-commit-banana.json` after F138 | Extend only if more timer-heavy overlay families expose stale node-target or repeat-timer behavior; current high-risk hidden-layer target path is covered synthetically and by the Select runtime gate. |
@@ -78,6 +78,13 @@ date: 2026-05-12
   now proves the same focus/invoke/key separation through real menu roving focus.
   `ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json` proves the same
   focus/invoke/key separation through Command active-descendant/list semantics.
+- Command disabled active-descendant promotion update:
+  the direct disabled-focusable Command row now has protocol roundtrip coverage and broad
+  `ui-gallery-shadcn-runtime-evidence` membership, matching the retained/windowed Command
+  action-state mutation row. Fresh focused evidence lives at
+  `target/fret-diag-command-disabled-focusable-keyboard-suppression-runtime-evidence-v2/sessions/1779407084356-243016/1779407145527/ai.packet`,
+  and the row-only suite summary is
+  `target/fret-diag-command-disabled-focusable-row-suite-v1/sessions/1779408495703-242652/suite.summary.json`.
   `pressable_key_activation_v1.json` backs the keyboard-suppression mechanism with a core Pressable
   key-activation fixture. `ui-gallery-command-retained-active-descendant-action-state.json` plus
   `combobox_active_descendant_interaction_v1.json` now cover retained/windowed active-descendant
@@ -135,6 +142,16 @@ date: 2026-05-12
   UI Gallery driver-handled commands could be visible only as `UiTree` `handled=false` traces, so
   the driver now records `handled_by_driver=true` command dispatch decisions for owned command
   paths.
+- Switch choice-card checked-state update:
+  `ui-gallery-switch-choice-card-checked-state-mutation.json` now covers the docs-path Choice Card
+  form composition. It starts directly on the Switch page, asserts Share and Notifications expose
+  independent `checked` semantics and `invoke=true`, toggles both switches through card-style
+  `FieldLabel` activation, toggles Share again through the control, and is promoted into both the
+  focused `ui-gallery-switch-semantics` suite and the broad `ui-gallery-shadcn-runtime-evidence`
+  suite. Focused evidence is anchored at
+  `target/fret-diag-switch-choice-card-checked-state-mutation-v1/sessions/1779301451133-110692/1779301465865/ai.packet`,
+  and the broad suite now passes 14/14 at
+  `target/fret-diag-shadcn-runtime-evidence-switch-choice-card-v1/sessions/1779301689107-175712/suite.summary.json`.
 - Leaf TextInput disabled action-state update:
   `ui-gallery-input-disabled-action-state.json` now covers the Input page disabled TextInput leaf
   directly. The gate asserts the concrete TextInput semantics node reports `disabled=true` while
@@ -319,6 +336,58 @@ date: 2026-05-12
   `ui-gallery-hit-test-only-paint-cache` suite with zero-warning lint policy. Suite evidence is
   anchored at
   `target/fret-diag-hit-test-only-paint-cache-suite-v3/sessions/1779249174760-142600/suite.summary.json`.
+- RadioGroup checked-state semantics update:
+  `ui-gallery-radio-group-checked-state-mutation.json` now covers the non-list shadcn RadioGroup
+  checked-state mutation path. The gate starts from the Label Association example, proves Free is
+  checked while Pro/Enterprise are unchecked, clicks Pro and Enterprise through stable hit testing,
+  and proves `checked` semantics transfer after each selection. Focused runtime evidence is anchored
+  at
+  `target/fret-diag-radio-group-checked-state-mutation-v1/sessions/1779261539435-153996/1779261557779/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-radio-group-semantics-suite-v4/sessions/1779263168285-151724/suite.summary.json`.
+- Desktop repeating-timer redraw starvation update:
+  the broad `ui-gallery-shadcn-runtime-evidence` suite is no longer blocked by the Command
+  retained-active-descendant no-frame stall. The owning fix is in the desktop runner: repeating
+  timers now rearm from handler completion time and record `last_fired_tick`, preventing
+  diagnostics keepalive timers from firing repeatedly inside one fixed-point drain turn and
+  starving the `RedrawRequested` they requested. Diagnostics no-frame liveness now preserves
+  redraw/RAF effects for effect-only, keyboard/text/IME, and pointer-move injection paths. Fresh
+  focused evidence is anchored at
+  `target/fret-diag-command-retained-active-descendant-action-state-runner-timer-fresh-20260521/sessions/1779298813208-173816/1779298834262/ai.packet`,
+  and the fresh broad-suite summary is anchored at
+  `target/fret-diag-shadcn-runtime-evidence-runner-timer-fresh-20260521/sessions/1779299075645-7824/suite.summary.json`.
+- Runner repeating-timer overlap stress update:
+  `overlapping_repeating_timers_do_not_catch_up_inside_one_runner_tick` now locks the same
+  scheduler invariant without launching UI Gallery. It covers a window-targeted
+  script-keepalive-style timer and a windowless asset-reload-poll-style timer that are both made
+  stale again in the same runner tick; neither may refire until `tick_id` advances. The full
+  `repeating_timer` filter now has 3 passing timer tests.
+- Hit-test path-cache runtime update:
+  the same promoted script now also injects `FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE=1` and waits for
+  `hit_test_path_cache_hits_ge(min=1)`, proving real cached-path reuse during the runtime pointer
+  sweep. The stricter gate exposed an over-conservative sibling validator in
+  `try_hit_test_along_cached_path`: transformed or non-clipping higher-z siblings forced misses even
+  when real hit testing showed they did not intercept the pointer. The mechanism now validates
+  higher-z siblings with `hit_test_node`, with focused guards for non-hit-testable overlaps and
+  transformed interceptors. Fresh suite evidence is anchored at
+  `target/fret-diag-hit-test-only-paint-cache-suite-path-cache-v2/sessions/1779259631852-148980/suite.summary.json`.
+- Moved cache-root stale hit-path update:
+  `prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path` now covers the
+  focused mechanism path where a root-only `hit_test_path_cache` entry survives across a clean
+  view-cache root move. The guard proves translated interaction-cache replay still happens, but the
+  stale root-only cached path is rejected before hit testing returns the moved leaf. Focused
+  evidence uses Nextest run id `84167c6c-c03b-4feb-aa11-0693f55659b2`.
+- Higher-z sibling stale hit-path update:
+  `hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer` now covers
+  the child-path variant: a cached lower-child path must miss when a higher-z sibling moves under
+  the same pointer, then refresh to the moved sibling for subsequent cache hits. Focused evidence
+  uses Nextest run id `92315d8d-56fd-4c3e-bfc1-bbfc849e954b`.
+- Pointer-move dispatch stale hit-path update:
+  `pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer` now proves
+  the same child-path invariant through `UiTree::dispatch_event`. Real pointer-move delivery first
+  targets the lower-z widget, then after the higher-z sibling moves under the same pointer the
+  stale path records a miss and mapped event-chain delivery reaches the moved sibling. Focused
+  evidence uses Nextest run id `093b8a5d-e67a-4b35-ab82-e02389f63173`.
 - Node Graph cull-window update:
   `ui-gallery-node-graph-cull`, `ui-gallery-node-graph-cull-window-shifts`, and
   `ui-gallery-node-graph-cull-window-no-shifts-small-pan` now have protocol roundtrip coverage for
@@ -339,6 +408,28 @@ date: 2026-05-12
   `scroll_into_view` window guard, while exempting `ui-gallery-nav-search` and
   `ui-gallery-nav-scroll`.
 
+- Checkbox disabled action-state update:
+  `ui-gallery-checkbox-disabled-action-state.json` now covers the non-text shadcn Checkbox disabled
+  semantics path. The gate starts on the Checkbox page, scrolls to the Disabled section, proves the
+  control is checked, exports `disabled=true`, suppresses `invoke=false`, and remains unchanged
+  after both control and associated-label activation. Focused runtime evidence is anchored at
+  `target/fret-diag-checkbox-disabled-action-state-v1/sessions/1779303551841-64456/1779303569865/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-checkbox-semantics-suite-v1/sessions/1779303815632-98108/suite.summary.json`.
+
+
+- Slider numeric action-state and thumb test-id update:
+  `ui-gallery-slider-numeric-action-state.json` now covers the shadcn Slider numeric semantics path.
+  The gate starts on the Slider page, proves enabled thumb numeric value/min/max/step/jump plus
+  enabled `set_value`/`increment`/`decrement`, mutates the value through diagnostics, then proves a
+  disabled thumb keeps numeric metadata while suppressing `set_value`, `increment`, `decrement`, and
+  `focus`. The first linted suite run exposed duplicate visual thumb ids on multi-thumb Slider
+  examples; recipe chrome now derives `{prefix}-thumb-{index}-chrome` while semantic thumbs keep
+  `{prefix}-thumb-{index}`. Focused runtime evidence is anchored at
+  `target/fret-diag-slider-numeric-action-state-v2/sessions/1779307920873-121240/1779307931755/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-slider-semantics-suite-v2/sessions/1779307963346-175080/suite.summary.json`.
+
 A mechanism invariant is covered only when it has at least one of these:
 
 - a synthetic fixture case with stable case id and oracle predicates;
@@ -349,3 +440,205 @@ A mechanism invariant is covered only when it has at least one of these:
 Passing diagnostics alone is not enough. Passing synthetic fixtures alone is not enough for a
 high-risk app path. The goal is controlled mechanism proof plus one real runtime lock where the
 mechanism can visibly fail.
+
+
+- Checkbox table mixed checked-state update:
+  `checked_state_is` now covers explicit tri-state checked semantics across protocol roundtrip,
+  bootstrap runtime evaluation, wait-until selector tracing, and mechanism-harness oracles. The
+  `ui-gallery-checkbox-table-mixed-state-action.json` gate starts on the Checkbox page, proves the
+  table select-all checkbox exports `mixed` when rows are partially selected, proves it becomes
+  `true` when all rows are selected, toggles one row back off to return to `mixed`, and then selects
+  all rows again. Focused runtime evidence is anchored at
+  `target/fret-diag-checkbox-table-mixed-state-action-v1/sessions/1779310480442-177764/1779310495372/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-checkbox-semantics-suite-table-mixed-v1/sessions/1779310724199-166384/suite.summary.json`.
+- Toggle pressed-state update:
+  `pressed_state_is` now covers explicit tri-state pressed semantics across protocol roundtrip,
+  bootstrap runtime evaluation, wait-until selector tracing, and mechanism-harness oracles. The
+  refreshed `ui-gallery-toggle-interaction-screenshots.json` gate starts on the Toggle page, proves
+  the Bookmark toggle exports `pressed_state=false`, keeps `selected=false`, exposes `invoke=true`,
+  toggles to `pressed_state=true`, and toggles back to `pressed_state=false`. The old selected-state
+  probe failed because Toggle correctly exports pressed state rather than selected state. Focused
+  runtime evidence is anchored at
+  `target/fret-diag-toggle-pressed-state-interaction-v1/sessions/1779314794606-180768/1779314805300/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-toggle-semantics-suite-v1/sessions/1779314830681-87028/suite.summary.json`.
+
+- Input required/invalid form-state update:
+  `required_is` and `invalid_is` now cover required and invalid form-control semantics across
+  protocol roundtrip, bootstrap runtime evaluation, wait-until selector tracing, and
+  mechanism-harness oracles. The new `ui-gallery-input-required-invalid-semantics.json` gate starts
+  on the Input page, targets concrete TextInput nodes via stable control-level test ids, proves the
+  Invalid control exports `invalid=true` and `required=false`, proves the Required control exports
+  `required=true` and `invalid=null`, and keeps enabled `focus`/`set_value` actions on both.
+  Focused runtime evidence is anchored at
+  `target/fret-diag-input-required-invalid-semantics-v2/sessions/1779318958257-166004/1779318973423/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-input-semantics-suite-v1/sessions/1779319043334-48440/suite.summary.json`.
+
+
+- Select invalid form-state update:
+  `ui-gallery-select-invalid-form-state.json` now covers live invalid-state mutation for the shadcn
+  Select trigger combobox. The gate starts on the Invalid section, proves the trigger exports
+  `invalid=true`, `required=false`, `focus=true`, and `invoke=true`, commits Apple, then proves the
+  trigger clears invalid semantics to `null`, keeps `required=false`, removes the field error node,
+  and exposes value text `Apple`. Focused runtime evidence is anchored at
+  `target/fret-diag-select-invalid-form-state-v1/sessions/1779321642042-159492/1779321650994/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-select-semantics-suite-v1/sessions/1779321672604-100084/suite.summary.json`.
+
+- Textarea required/invalid form-state update:
+  `ui-gallery-textarea-required-invalid-semantics.json` now covers form-control semantics on concrete
+  shadcn Textarea controls. The gate starts on the Textarea page, proves the Invalid control exports
+  `role=text_field`, `invalid=true`, `required=false`, `focus=true`, and `set_value=true`, then proves
+  the Required control exports `required=true`, `invalid=null`, `focus=true`, and `set_value=true`.
+  The docs page now includes a Required example with caller-owned marker composition, and the Invalid
+  example has a stable concrete control selector. Focused runtime evidence is anchored at
+  `target/fret-diag-textarea-required-invalid-semantics-v1/sessions/1779324589606-162572/1779324602377/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-textarea-semantics-suite-v1/sessions/1779324642363-184708/suite.summary.json`.
+
+- InputOTP invalid/required form-state update:
+  `ui-gallery-input-otp-invalid-required-semantics.json` now covers the multi-slot OTP form-state
+  path where visual slot chrome and the editable semantics owner are different nodes. The gate
+  starts on the Input OTP docs page, scopes rendering to Invalid and Form, proves
+  `InputOTPSlot::aria_invalid(true)` promotes `invalid=true` to the hidden root
+  `ui-gallery-input-otp-invalid.input` TextInput, proves the Form example exports `required=true`
+  and `invalid=null` on `ui-gallery-input-otp-form.input`, and verifies label focus plus typed value
+  mutation through the hidden root control. Focused runtime evidence is anchored at
+  `target/fret-diag-input-otp-invalid-required-semantics-v2/sessions/1779329862109-172384/1779329877911/ai.packet`,
+  and the dedicated suite evidence is anchored at
+  `target/fret-diag-input-otp-semantics-suite-v2/sessions/1779329954569-181280/suite.summary.json`.
+
+- DatePicker required/invalid trigger semantics update:
+  `ui-gallery-date-picker-required-invalid-semantics.json` now covers required/invalid semantics on
+  the concrete shadcn DatePicker trigger button. The gate starts on the Date Picker docs page,
+  scopes rendering to Compact Builder and Invalid, proves the compact builder trigger exports
+  `role=button`, `required=true`, `invalid=null`, `focus=true`, and `invoke=true`, then proves the
+  Invalid trigger exports `required=true`, `invalid=true`, `focus=true`, and `invoke=true`.
+  It also verifies caller-owned error copy, associated-label focus, and popover/calendar creation.
+  The Date Picker page now has a first-party Invalid example that keeps `DatePicker::required(true)`
+  / `DatePicker::aria_invalid(true)` on the trigger while keeping `Field::invalid(true)` and
+  `FieldError` copy outside the recipe. The slice also hardened the existing
+  `ui-gallery-select-invalid-form-state.json` gate by replacing a transient overlay-option
+  `click_stable` with direct semantic `click` after existence convergence. Focused DatePicker
+  runtime evidence is anchored at
+  `target/fret-diag-date-picker-required-invalid-semantics-v1/sessions/1779334955994-144056/1779334968449/ai.packet`,
+  the dedicated suite evidence is anchored at
+  `target/fret-diag-date-picker-semantics-suite-v1/sessions/1779335003408-192508/suite.summary.json`,
+  and the broad runtime suite now passes 23/23 with summary
+  `target/fret-diag-shadcn-runtime-evidence-date-picker-required-invalid-v2/sessions/1779337267974-91608/suite.summary.json`.
+
+- Form submit validation semantics update:
+  `ui-gallery-form-submit-validation-semantics.json` now covers submit-driven `FormState` mutation
+  across `FormField`-decorated shadcn `Input` and `RadioGroup` controls. The gate starts on the
+  Form page's `Submit Validation` section, proves both controls export `required=true` and
+  `invalid=null` before submit, submits the empty form, proves both controls mutate to
+  `invalid=true` with caller-owned alert copy and `status=invalid`, repairs both controls through
+  diagnostics actions, proves invalid semantics and alerts clear, then submits again and proves
+  `status=valid`. Focused runtime evidence is anchored at
+  `target/fret-diag-form-submit-validation-semantics-v1/sessions/1779342775326-181112/1779342789863/ai.packet`,
+  the dedicated suite evidence is anchored at
+  `target/fret-diag-form-semantics-suite-v1/sessions/1779342834313-22100/suite.summary.json`,
+  and the broad runtime suite now passes 24/24 with summary
+  `target/fret-diag-shadcn-runtime-evidence-form-submit-validation-v2/sessions/1779344474432-184028/suite.summary.json`.
+
+- Form disabled Field action-state update:
+  `ui-gallery-form-disabled-field-action-state.json` now covers the source-aligned split between a
+  disabled Field shell and concrete disabled control semantics. The gate starts on the Form page's
+  `Disabled Field` section, proves the disabled shadcn Input exports `role=text_field`,
+  `disabled=true`, `focus=false`, `set_value=false`, and unchanged value text, then proves the
+  companion control remains enabled and editable so accidental section-wide disabling is caught.
+  Focused runtime evidence is anchored at
+  `target/fret-diag-form-disabled-field-action-state-v3/sessions/1779351791667-101584/1779351805821/ai.packet`,
+  the dedicated suite evidence is anchored at
+  `target/fret-diag-form-semantics-suite-disabled-field-rebuilt-v1/sessions/1779352801343-181708/suite.summary.json`,
+  and the broad runtime suite now passes 25/25 with summary
+  `target/fret-diag-shadcn-runtime-evidence-form-disabled-field-v1/sessions/1779352876487-190332/suite.summary.json`.
+
+- RadioGroup required/disabled action-state update:
+  `ui-gallery-radio-group-required-disabled-action-state.json` now covers the grouped-control path
+  where required semantics live on the shadcn `RadioGroup` root while disabled action-state lives on
+  an individual `RadioGroupItem` plus its `FieldLabel::for_control(...)` bridge. The gate starts on
+  the Radio Group page's `Required Disabled` section, proves the root exports `required=true` and
+  `disabled=false`, proves the disabled item exports `checked_state=false`, `checked=false`,
+  `disabled=true`, `focus=false`, and `invoke=false`, verifies disabled item and disabled-label
+  clicks do not mutate selection, then proves an enabled label can still select the Enterprise item.
+  This slice also closes the RadioGroup checked-state semantics gap by stamping explicit
+  `checked_state=true|false` on radio buttons while preserving legacy `checked`. Focused runtime
+  evidence is anchored at
+  `target/fret-diag-radio-group-required-disabled-action-state-v1/sessions/1779358454419-182932/1779358468383/ai.packet`,
+  the dedicated suite evidence is anchored at
+  `target/fret-diag-radio-group-semantics-suite-required-disabled-v1/sessions/1779358495275-211416/suite.summary.json`,
+  and the broad runtime suite now passes 26/26 with summary
+  `target/fret-diag-shadcn-runtime-evidence-radio-group-required-disabled-v1/sessions/1779358567107-208948/suite.summary.json`.
+
+
+- Checkbox required/disabled group action-state update:
+  `ui-gallery-checkbox-required-disabled-group-action-state.json` now covers the grouped Checkbox
+  path where the fieldset/field-group shell is caller-owned while each concrete checkbox owns
+  `required=true`, checked-state, disabled state, and action semantics. The gate starts on the
+  Checkbox page's `Required Disabled Group` section, proves the disabled Usage analytics checkbox
+  exports `checked_state=false`, `checked=false`, `required=true`, `disabled=true`, `focus=false`,
+  and `invoke=false`, verifies direct disabled-control and disabled-label clicks do not toggle it,
+  then proves enabled sibling labels still mutate the Beta updates and Backups checkbox states.
+  Focused runtime evidence is anchored at
+  `target/fret-diag-checkbox-required-disabled-group-action-state-v1/sessions/1779363089819-213872/1779363101513/ai.packet`,
+  the dedicated suite evidence is anchored at
+  `target/fret-diag-checkbox-semantics-suite-required-disabled-group-v1/sessions/1779363128715-208764/suite.summary.json`,
+  and the broad runtime suite now passes 27/27 with summary
+  `target/fret-diag-shadcn-runtime-evidence-checkbox-required-disabled-group-v1/sessions/1779363773383-195668/suite.summary.json`.
+
+- ToggleGroup disabled item action-state update:
+  `ui-gallery-toggle-group-disabled-item-action-state.json` now covers the single-mode ToggleGroup
+  owner split where caller-owned FieldLabel/description chrome focuses the group while each
+  concrete ToggleGroup item owns radio-button checked-state, disabled state, focus, and invoke
+  semantics. The gate starts on the Toggle Group page's `Disabled Item Action-State (Fret)`
+  section, proves Alpha exports `checked_state=true`, proves the disabled Beta item exports
+  `checked_state=false`, `disabled=true`, `focus=false`, and `invoke=false`, verifies direct
+  disabled-item click does not mutate selection, then proves label focus plus ArrowRight roving
+  focus skips Beta and lands on Gamma while Alpha stays selected. This slice also closes the
+  ToggleGroup checked-state semantics gap by stamping explicit `checked_state=true|false` on
+  single-mode items while preserving legacy `checked`. Focused runtime evidence is anchored at
+  `target/fret-diag-toggle-group-disabled-item-action-state-v2/sessions/1779371004637-185624/1779371026922/ai.packet`,
+  the dedicated suite evidence is anchored at
+  `target/fret-diag-toggle-semantics-suite-disabled-item-v2/sessions/1779371056407-225584/suite.summary.json`,
+  and a row-only suite evidence pass is anchored at
+  `target/fret-diag-toggle-group-disabled-item-suite-glob-v1/sessions/1779376207964-79492/suite.summary.json`.
+
+- Menubar disabled item action-state update:
+  `ui-gallery-menubar-disabled-item-action-state.json` now covers the shadcn Menubar path where
+  separators, submenu triggers, disabled command items, collection metadata, and vertical roving
+  focus interact. The gate starts on the Menubar page's `Demo` section, proves the disabled
+  `New Incognito Window` item exports `disabled=true`, `focus=false`, and `invoke=false`, verifies
+  direct disabled click cannot dispatch its command, and proves ArrowDown skips the disabled item
+  while preserving focus/action semantics on the enabled row. This slice closes a Menubar
+  collection-index roving bug and a `fret-ui` current-programmatic-focus semantics bug. Focused
+  runtime evidence is anchored at
+  `target/fret-diag-menubar-disabled-item-action-state-v5/sessions/1779383380213-231888/1779383395682/ai.packet`,
+  and dedicated suite evidence is anchored at
+  `target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json`.
+- ContextMenu disabled item action-state update:
+  `ui-gallery-context-menu-disabled-item-action-state.json` now covers the Basic ContextMenu path
+  where a disabled command row owns item-local disabled semantics, suppresses focus/invoke, skips
+  roving focus, and cannot dispatch its command through pointer activation. Focused runtime evidence
+  is anchored at
+  `target/fret-diag-context-menu-disabled-item-action-state-v2/sessions/1779387831262-20088/1779387844608/ai.packet`,
+  and the passing row-only suite evidence is anchored at
+  `target/fret-diag-context-menu-semantics-suite-disabled-item-v3/sessions/1779388133420-237500/suite.summary.json`.
+  The default-lint suite probe also records follow-up diagnostics debt for duplicate
+  `ui-gallery-context-menu-basic-content` during transition captures at
+  `target/fret-diag-context-menu-semantics-suite-disabled-item-v2/sessions/1779387897940-40144/1779387958229-ui-gallery-context-menu-disabled-item-action-state/check.lint.json`.
+
+- ContextMenu Basic pointer-open keyboard-entry update:
+  `ui-gallery-context-menu-basic-keyboard-nav.json` now covers the pointer-open content-focus entry
+  path for the Basic ContextMenu. It verifies content panel focus, ArrowDown entry into `Back`,
+  disabled `Forward` skip, `Reload` keyboard activation, app-snapshot last-action mutation, and
+  menu close. The Basic overlay panel now uses the unique test id
+  `ui-gallery-context-menu-basic-panel`, so default diagnostics lint no longer confuses the
+  DocSection content wrapper with the open menu panel. Focused runtime evidence is anchored at
+  `target/fret-diag-context-menu-basic-keyboard-nav-focus-model-v3/sessions/1779402638361-240732/1779402658765/ai.packet`,
+  the fixed default-lint semantics suite is anchored at
+  `target/fret-diag-context-menu-semantics-suite-panel-id-v1/sessions/1779403614963-229576/suite.summary.json`,
+  and the promoted ContextMenu suite is anchored at
+  `target/fret-diag-context-menu-suite-keyboard-entry-v2/sessions/1779404255883-237716/suite.summary.json`.

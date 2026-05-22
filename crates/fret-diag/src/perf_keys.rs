@@ -13,6 +13,7 @@ pub(crate) enum PerfKeyUnit {
     Pixels,
     Boolean,
     Id,
+    Label,
 }
 
 impl PerfKeyUnit {
@@ -25,6 +26,7 @@ impl PerfKeyUnit {
             Self::Pixels => "px",
             Self::Boolean => "bool",
             Self::Id => "id",
+            Self::Label => "label",
         }
     }
 }
@@ -35,6 +37,7 @@ pub(crate) enum PerfKeyKind {
     Counter,
     Flag,
     Identifier,
+    Label,
 }
 
 impl PerfKeyKind {
@@ -44,6 +47,7 @@ impl PerfKeyKind {
             Self::Counter => "counter",
             Self::Flag => "flag",
             Self::Identifier => "identifier",
+            Self::Label => "label",
         }
     }
 }
@@ -223,9 +227,70 @@ pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_TIME_US: PerfKey = trace_timing_key(
     "layout",
     PerfKeyAggregate::P95,
 );
+pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_TAKE_ENGINE_TIME_US: PerfKey = trace_timing_key(
+    "layout_request_build_roots_take_engine_time_us",
+    "layout.request_build_roots.take_engine",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_PHASE1_TIME_US: PerfKey = trace_timing_key(
+    "layout_request_build_roots_phase1_time_us",
+    "layout.request_build_roots.phase1",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_TIME_US: PerfKey = trace_timing_key(
+    "layout_request_build_roots_phase2_time_us",
+    "layout.request_build_roots.phase2",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_CLEAN_GEOMETRY_PROOF_TIME_US: PerfKey =
+    trace_timing_key(
+        "layout_request_build_roots_phase2_clean_geometry_proof_time_us",
+        "layout.request_build_roots.phase2.clean_geometry_proof",
+        "layout",
+        PerfKeyAggregate::P95,
+    );
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_NODES: PerfKey =
+    count_key("layout_clean_geometry_proof_nodes", PerfKeyAggregate::Max);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_BOUNDARIES: PerfKey = count_key(
+    "layout_clean_geometry_proof_boundaries",
+    PerfKeyAggregate::Max,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_APPLY_NODES: PerfKey =
+    count_key("layout_clean_geometry_apply_nodes", PerfKeyAggregate::Max);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS: PerfKey = count_key(
+    "layout_clean_geometry_apply_fallback_layouts",
+    PerfKeyAggregate::Max,
+);
+pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_COMPUTE_TIME_US: PerfKey = trace_timing_key(
+    "layout_request_build_roots_phase2_compute_time_us",
+    "layout.request_build_roots.phase2.compute",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_PUT_ENGINE_TIME_US: PerfKey = trace_timing_key(
+    "layout_request_build_roots_put_engine_time_us",
+    "layout.request_build_roots.put_engine",
+    "layout",
+    PerfKeyAggregate::P95,
+);
 pub(crate) const LAYOUT_ROOTS_TIME_US: PerfKey = trace_timing_key(
     "layout_roots_time_us",
     "layout.roots",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_ROOTS_APPLY_TIME_US: PerfKey = trace_timing_key(
+    "layout_roots_apply_time_us",
+    "layout.roots.apply",
+    "layout",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_ROOTS_FLUSH_VIEWPORT_TIME_US: PerfKey = trace_timing_key(
+    "layout_roots_flush_viewport_time_us",
+    "layout.roots.flush_viewport",
     "layout",
     PerfKeyAggregate::P95,
 );
@@ -303,6 +368,16 @@ pub(crate) const LAYOUT_NODES_PERFORMED: PerfKey =
     count_key("layout_nodes_performed", PerfKeyAggregate::Max);
 pub(crate) const LAYOUT_ENGINE_SOLVES: PerfKey =
     count_key("layout_engine_solves", PerfKeyAggregate::Max);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_REJECTIONS: PerfKey = count_key(
+    "layout_clean_geometry_solve_skip_rejections",
+    PerfKeyAggregate::Max,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_REJECTION: PerfKey =
+    label_key("layout_clean_geometry_solve_skip_first_rejection");
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_DETAIL: PerfKey =
+    label_key("layout_clean_geometry_solve_skip_first_detail");
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_ELEMENT_KIND: PerfKey =
+    label_key("layout_clean_geometry_solve_skip_first_element_kind");
 pub(crate) const LAYOUT_ENGINE_CHILD_RECT_QUERIES: PerfKey =
     count_key("layout_engine_child_rect_queries", PerfKeyAggregate::Max);
 pub(crate) const LAYOUT_ENGINE_WIDGET_FALLBACK_SOLVES: PerfKey = count_key(
@@ -845,7 +920,19 @@ pub(crate) const TRACE_EXPORTED_FRAME_KEYS: &[PerfKey] = &[
     LAYOUT_INVALIDATE_SCROLL_HANDLE_BINDINGS_TIME_US,
     LAYOUT_EXPAND_VIEW_CACHE_INVALIDATIONS_TIME_US,
     LAYOUT_REQUEST_BUILD_ROOTS_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_TAKE_ENGINE_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE1_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_CLEAN_GEOMETRY_PROOF_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_NODES,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_BOUNDARIES,
+    LAYOUT_CLEAN_GEOMETRY_APPLY_NODES,
+    LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_COMPUTE_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PUT_ENGINE_TIME_US,
     LAYOUT_ROOTS_TIME_US,
+    LAYOUT_ROOTS_APPLY_TIME_US,
+    LAYOUT_ROOTS_FLUSH_VIEWPORT_TIME_US,
     LAYOUT_VIEW_CACHE_TIME_US,
     LAYOUT_ENGINE_SOLVE_TIME_US,
     LAYOUT_PENDING_BARRIER_RELAYOUTS_TIME_US,
@@ -885,6 +972,16 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     LAYOUT_INVALIDATE_SCROLL_HANDLE_BINDINGS_TIME_US,
     LAYOUT_EXPAND_VIEW_CACHE_INVALIDATIONS_TIME_US,
     LAYOUT_REQUEST_BUILD_ROOTS_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_TAKE_ENGINE_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE1_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_CLEAN_GEOMETRY_PROOF_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_NODES,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_BOUNDARIES,
+    LAYOUT_CLEAN_GEOMETRY_APPLY_NODES,
+    LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS,
+    LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_COMPUTE_TIME_US,
+    LAYOUT_REQUEST_BUILD_ROOTS_PUT_ENGINE_TIME_US,
     LAYOUT_PENDING_BARRIER_RELAYOUTS_TIME_US,
     LAYOUT_REPAIR_VIEW_CACHE_BOUNDS_TIME_US,
     LAYOUT_CONTAINED_VIEW_CACHE_ROOTS_TIME_US,
@@ -894,6 +991,8 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     LAYOUT_OBSERVATION_RECORD_GLOBALS_ITEMS,
     LAYOUT_PREPAINT_AFTER_LAYOUT_TIME_US,
     LAYOUT_ROOTS_TIME_US,
+    LAYOUT_ROOTS_APPLY_TIME_US,
+    LAYOUT_ROOTS_FLUSH_VIEWPORT_TIME_US,
     LAYOUT_BARRIER_RELAYOUTS_TIME_US,
     LAYOUT_VIEW_CACHE_TIME_US,
     LAYOUT_SEMANTICS_REFRESH_TIME_US,
@@ -901,6 +1000,10 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     LAYOUT_DEFERRED_CLEANUP_TIME_US,
     LAYOUT_NODES_PERFORMED,
     LAYOUT_ENGINE_SOLVES,
+    LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_REJECTIONS,
+    LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_REJECTION,
+    LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_DETAIL,
+    LAYOUT_CLEAN_GEOMETRY_SOLVE_SKIP_FIRST_ELEMENT_KIND,
     LAYOUT_ENGINE_SOLVE_TIME_US,
     LAYOUT_ENGINE_CHILD_RECT_QUERIES,
     LAYOUT_ENGINE_CHILD_RECT_TIME_US,
@@ -1704,6 +1807,17 @@ const fn id_key(key: &'static str) -> PerfKey {
     }
 }
 
+const fn label_key(key: &'static str) -> PerfKey {
+    PerfKey {
+        key,
+        unit: PerfKeyUnit::Label,
+        kind: PerfKeyKind::Label,
+        scope: PerfKeyScope::Frame,
+        suggested_aggregate: PerfKeyAggregate::None,
+        trace: None,
+    }
+}
+
 const fn pointer_move_timing_key(
     key: &'static str,
     suggested_aggregate: PerfKeyAggregate,
@@ -1847,6 +1961,15 @@ mod tests {
                 );
             }
             if matches!(key.kind, PerfKeyKind::Identifier) {
+                assert_eq!(
+                    key.suggested_aggregate,
+                    PerfKeyAggregate::None,
+                    "{}",
+                    key.key
+                );
+            }
+            if matches!(key.kind, PerfKeyKind::Label) {
+                assert_eq!(key.unit, PerfKeyUnit::Label, "{}", key.key);
                 assert_eq!(
                     key.suggested_aggregate,
                     PerfKeyAggregate::None,

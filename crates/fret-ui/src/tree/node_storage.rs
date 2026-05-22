@@ -93,6 +93,14 @@ pub(super) struct TextWrapNoneMeasureCache {
     pub(super) size: Size,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub(super) struct TextWrappedMeasureCache {
+    pub(super) fingerprint: u64,
+    pub(super) constraints_max_width: Option<Px>,
+    pub(super) measured_size: Size,
+    pub(super) clamped_size: Size,
+}
+
 pub(super) struct Node<H: UiHost> {
     pub(super) widget: Option<Box<dyn Widget<H>>>,
     pub(super) element: Option<GlobalElementId>,
@@ -103,8 +111,11 @@ pub(super) struct Node<H: UiHost> {
     pub(super) bounds_written_paint_pass: u64,
     pub(super) measured_size: Size,
     pub(super) paint_geometry_fingerprint: u64,
+    pub(super) inherited_text_style_fingerprint: Option<u64>,
+    pub(super) paint_passthrough: Option<NodePaintPassthrough>,
     pub(super) measure_cache: Option<NodeMeasureCache>,
     pub(super) text_wrap_none_measure_cache: Option<TextWrapNoneMeasureCache>,
+    pub(super) text_wrapped_measure_cache: Option<TextWrappedMeasureCache>,
     pub(super) invalidation: InvalidationFlags,
     pub(super) subtree_layout_dirty_count: u32,
     pub(super) layout_dirty_children_suppressed: bool,
@@ -146,8 +157,11 @@ impl<H: UiHost> Node<H> {
             bounds_written_paint_pass: 0,
             measured_size: Size::default(),
             paint_geometry_fingerprint: 0,
+            inherited_text_style_fingerprint: None,
+            paint_passthrough: None,
             measure_cache: None,
             text_wrap_none_measure_cache: None,
+            text_wrapped_measure_cache: None,
             invalidation: InvalidationFlags {
                 layout: true,
                 paint: true,

@@ -156,8 +156,15 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_engine_solves = 0;
             self.debug_stats.layout_engine_solve_time = Duration::default();
             self.debug_stats.layout_clean_geometry_solve_skip_rejections = 0;
+            self.debug_stats.layout_clean_geometry_proof_nodes = 0;
+            self.debug_stats.layout_clean_geometry_proof_boundaries = 0;
+            self.debug_stats.layout_clean_geometry_apply_nodes = 0;
+            self.debug_stats
+                .layout_clean_geometry_apply_fallback_layouts = 0;
             self.debug_stats
                 .layout_clean_geometry_solve_skip_first_rejection = None;
+            self.debug_stats
+                .layout_clean_geometry_solve_skip_first_detail = None;
             self.debug_stats
                 .layout_clean_geometry_solve_skip_first_element_kind = None;
             self.debug_stats.layout_engine_child_rect_queries = 0;
@@ -168,6 +175,14 @@ impl<H: UiHost> UiTree<H> {
                 .layout_invalidate_scroll_handle_bindings_time = Duration::default();
             self.debug_stats.layout_expand_view_cache_invalidations_time = Duration::default();
             self.debug_stats.layout_request_build_roots_time = Duration::default();
+            self.debug_stats.layout_request_build_roots_take_engine_time = Duration::default();
+            self.debug_stats.layout_request_build_roots_phase1_time = Duration::default();
+            self.debug_stats.layout_request_build_roots_phase2_time = Duration::default();
+            self.debug_stats
+                .layout_request_build_roots_phase2_clean_geometry_proof_time = Duration::default();
+            self.debug_stats
+                .layout_request_build_roots_phase2_compute_time = Duration::default();
+            self.debug_stats.layout_request_build_roots_put_engine_time = Duration::default();
             self.debug_stats.layout_pending_barrier_relayouts_time = Duration::default();
             self.debug_stats.layout_repair_view_cache_bounds_time = Duration::default();
             self.debug_stats.layout_contained_view_cache_roots_time = Duration::default();
@@ -178,6 +193,8 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_prepaint_after_layout_time = Duration::default();
             self.debug_stats.layout_skipped_engine_frame = false;
             self.debug_stats.layout_fast_path_taken = false;
+            self.debug_stats.layout_roots_apply_time = Duration::default();
+            self.debug_stats.layout_roots_flush_viewport_time = Duration::default();
             self.debug_stats.layout_invalidations_count = self.layout_invalidations_count;
             self.debug_stats.view_cache_active = self.view_cache_active();
             self.debug_stats.focus = self.focus;
@@ -431,6 +448,7 @@ impl<H: UiHost> UiTree<H> {
             },
             || {
                 for root in roots {
+                    let apply_started = self.debug_enabled.then(Instant::now);
                     let _ = self.layout_in_with_pass_kind(
                         app,
                         services,
@@ -440,7 +458,13 @@ impl<H: UiHost> UiTree<H> {
                         pass_kind,
                         crate::layout::overflow::LayoutOverflowContext::default(),
                     );
+                    if self.debug_enabled
+                        && let Some(apply_started) = apply_started
+                    {
+                        self.debug_stats.layout_roots_apply_time += apply_started.elapsed();
+                    }
 
+                    let flush_started = self.debug_enabled.then(Instant::now);
                     self.flush_viewport_roots_after_root(
                         app,
                         services,
@@ -448,6 +472,12 @@ impl<H: UiHost> UiTree<H> {
                         pass_kind,
                         &mut viewport_cursor,
                     );
+                    if self.debug_enabled
+                        && let Some(flush_started) = flush_started
+                    {
+                        self.debug_stats.layout_roots_flush_viewport_time +=
+                            flush_started.elapsed();
+                    }
                 }
             },
         );
@@ -1504,10 +1534,9 @@ impl<H: UiHost> UiTree<H> {
         self.scratch_node_stack.clear();
         self.scratch_node_stack.push(root);
         while let Some(node) = self.scratch_node_stack.pop() {
-            if engine.layout_id_for_node(node).is_some() {
+            if engine.mark_seen_if_present(node) {
                 marked = marked.saturating_add(1);
             }
-            engine.mark_seen_if_present(node);
             if let Some(entry) = self.nodes.get(node) {
                 if entry.layout_dirty_children_suppressed {
                     continue;
@@ -1882,9 +1911,17 @@ impl<H: UiHost> UiTree<H> {
             AvailableSpace::Definite(bounds.size.height),
         );
 
+        let take_engine_started = self.debug_enabled.then(Instant::now);
         let mut engine = self.take_layout_engine();
+        if self.debug_enabled
+            && let Some(take_engine_started) = take_engine_started
+        {
+            self.debug_stats.layout_request_build_roots_take_engine_time +=
+                take_engine_started.elapsed();
+        }
         engine.set_measure_profiling_enabled(self.debug_enabled && profile_layout);
 
+        let phase1_debug_started = self.debug_enabled.then(Instant::now);
         let phase1_started = profile_layout.then(Instant::now);
         let reuse_cached_flow = self.interactive_resize_active();
         let force_post_resize_rebuild = self.interactive_resize_requires_full_rebuild();
@@ -2019,7 +2056,14 @@ impl<H: UiHost> UiTree<H> {
             }
         }
         let phase1_elapsed = phase1_started.map(|s| s.elapsed());
+        if self.debug_enabled
+            && let Some(phase1_debug_started) = phase1_debug_started
+        {
+            self.debug_stats.layout_request_build_roots_phase1_time +=
+                phase1_debug_started.elapsed();
+        }
 
+        let phase2_debug_started = self.debug_enabled.then(Instant::now);
         let phase2_started = profile_layout.then(Instant::now);
         // Phase 2: compute/apply only when layout is needed.
         //
@@ -2051,16 +2095,28 @@ impl<H: UiHost> UiTree<H> {
             if !has_element || !needs_layout || is_translation_only {
                 continue;
             }
-            if !layout_invalidated
-                && engine.layout_id_for_node(root).is_some()
-                && self.can_skip_clean_geometry_engine_solve_for_resize(
-                    app,
-                    root,
-                    bounds,
-                    prev_bounds,
-                    sf,
-                )
-            {
+            let can_skip_clean_geometry =
+                if !layout_invalidated && engine.layout_id_for_node(root).is_some() {
+                    let clean_geometry_proof_started = self.debug_enabled.then(Instant::now);
+                    let can_skip = self.can_skip_clean_geometry_engine_solve_for_resize(
+                        app,
+                        root,
+                        bounds,
+                        prev_bounds,
+                        sf,
+                    );
+                    if self.debug_enabled
+                        && let Some(clean_geometry_proof_started) = clean_geometry_proof_started
+                    {
+                        self.debug_stats
+                            .layout_request_build_roots_phase2_clean_geometry_proof_time +=
+                            clean_geometry_proof_started.elapsed();
+                    }
+                    can_skip
+                } else {
+                    false
+                };
+            if can_skip_clean_geometry {
                 continue;
             }
 
@@ -2068,11 +2124,18 @@ impl<H: UiHost> UiTree<H> {
         }
 
         if !pending_solves.is_empty() {
+            let compute_started = self.debug_enabled.then(Instant::now);
             let solves_before = engine.solve_count();
             let solve_time_before = engine.last_solve_time();
             engine.compute_independent_roots_with_measure_if_needed(&pending_solves, sf, |n, c| {
                 self.measure_in(app, services, n, c, sf)
             });
+            if self.debug_enabled
+                && let Some(compute_started) = compute_started
+            {
+                self.debug_stats
+                    .layout_request_build_roots_phase2_compute_time += compute_started.elapsed();
+            }
 
             if self.debug_enabled && engine.solve_count() > solves_before {
                 let elapsed = engine.last_solve_time().saturating_sub(solve_time_before);
@@ -2148,8 +2211,21 @@ impl<H: UiHost> UiTree<H> {
             }
         }
         let phase2_elapsed = phase2_started.map(|s| s.elapsed());
+        if self.debug_enabled
+            && let Some(phase2_debug_started) = phase2_debug_started
+        {
+            self.debug_stats.layout_request_build_roots_phase2_time +=
+                phase2_debug_started.elapsed();
+        }
 
+        let put_engine_started = self.debug_enabled.then(Instant::now);
         self.put_layout_engine(engine);
+        if self.debug_enabled
+            && let Some(put_engine_started) = put_engine_started
+        {
+            self.debug_stats.layout_request_build_roots_put_engine_time +=
+                put_engine_started.elapsed();
+        }
 
         if let Some(started) = total_started {
             let total = started.elapsed();

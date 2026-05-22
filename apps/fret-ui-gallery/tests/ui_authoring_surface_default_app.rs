@@ -929,6 +929,30 @@ fn context_menu_usage_and_basic_examples_stay_docs_aligned() {
 }
 
 #[test]
+fn context_menu_basic_disabled_item_keeps_command_and_item_action_state_on_same_control() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/context_menu/basic.rs",
+        &[
+            "shadcn::ContextMenuItem::new(\"Back\")",
+            ".action(CommandId::new(\"ui_gallery.context_menu.basic.back\"))",
+            ".test_id(\"ui-gallery-context-menu-basic-back\")",
+            "shadcn::ContextMenuItem::new(\"Forward\")",
+            ".action(CommandId::new(\"ui_gallery.context_menu.basic.forward\"))",
+            ".disabled(true)",
+            ".test_id(\"ui-gallery-context-menu-basic-forward\")",
+            "shadcn::ContextMenuItem::new(\"Reload\")",
+            ".action(CommandId::new(\"ui_gallery.context_menu.basic.reload\"))",
+            ".test_id(\"ui-gallery-context-menu-basic-reload\")",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("cx.interactivity_gate(true,false"),
+        "src/ui/snippets/context_menu/basic.rs should rely on ContextMenuItem::disabled(true), not a gallery-local interactivity gate"
+    );
+}
+
+#[test]
 fn context_menu_rtl_example_keeps_the_richer_upstream_preview_shape() {
     let rtl = read("src/ui/snippets/context_menu/rtl.rs");
     assert!(
@@ -1755,6 +1779,26 @@ fn menubar_snippets_prefer_ui_cx_on_the_default_app_surface() {
 }
 
 #[test]
+fn menubar_demo_disabled_item_keeps_command_and_item_action_state_on_same_control() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/menubar/demo.rs",
+        &[
+            "const CMD_MENU_MENUBAR_NEW_INCOGNITO: &str = \"ui_gallery.menu.menubar.new_incognito\";",
+            "MenubarItem::new(\"New Incognito Window\")",
+            ".action(CommandId::new(CMD_MENU_MENUBAR_NEW_INCOGNITO))",
+            ".disabled(true)",
+            ".test_id(\"ui-gallery-menubar-demo-new-incognito-window\")",
+            ".test_id(\"ui-gallery-menubar-demo-share\")",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("cx.interactivity_gate(true,false"),
+        "src/ui/snippets/menubar/demo.rs should rely on MenubarItem::disabled(true), not a gallery-local interactivity gate"
+    );
+}
+
+#[test]
 fn menubar_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/menubar.rs",
@@ -2432,6 +2476,7 @@ fn textarea_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/textarea/field.rs",
             "src/ui/snippets/textarea/invalid.rs",
             "src/ui/snippets/textarea/label.rs",
+            "src/ui/snippets/textarea/required.rs",
             "src/ui/snippets/textarea/rtl.rs",
             "src/ui/snippets/textarea/usage.rs",
             "src/ui/snippets/textarea/with_text.rs",
@@ -2459,6 +2504,7 @@ fn textarea_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Field\", field)",
             "DocSection::build(cx, \"Disabled\", disabled)",
             "DocSection::build(cx, \"Invalid\", invalid)",
+            "DocSection::build(cx, \"Required\", required)",
             "DocSection::build(cx, \"Button\", button)",
             "DocSection::build(cx, \"RTL\", rtl)",
             "DocSection::build(cx, \"With Text\", with_text)",
@@ -2470,6 +2516,7 @@ fn textarea_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Field\", field)",
             "DocSection::new(\"Disabled\", disabled)",
             "DocSection::new(\"Invalid\", invalid)",
+            "DocSection::new(\"Required\", required)",
             "DocSection::new(\"Button\", button)",
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"With Text\", with_text)",
@@ -3416,9 +3463,11 @@ fn form_snippets_prefer_ui_cx_on_the_default_app_surface() {
         &[
             "src/ui/snippets/form/controls.rs",
             "src/ui/snippets/form/demo.rs",
+            "src/ui/snippets/form/disabled_field.rs",
             "src/ui/snippets/form/fieldset.rs",
             "src/ui/snippets/form/input.rs",
             "src/ui/snippets/form/rtl.rs",
+            "src/ui/snippets/form/submit_validation.rs",
             "src/ui/snippets/form/textarea.rs",
             "src/ui/snippets/form/upstream_demo.rs",
             "src/ui/snippets/form/usage.rs",
@@ -3443,6 +3492,8 @@ fn form_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::build(cx, \"Form Demo\", upstream_demo)",
             "DocSection::build(cx, \"Usage\", usage)",
+            "DocSection::build(cx, \"Submit Validation\", submit_validation)",
+            "DocSection::build(cx, \"Disabled Field\", disabled_field)",
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Input\", input)",
             "DocSection::build(cx, \"Textarea\", textarea)",
@@ -3454,6 +3505,8 @@ fn form_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::new(\"Form Demo\", upstream_demo)",
             "DocSection::new(\"Usage\", usage)",
+            "DocSection::new(\"Submit Validation\", submit_validation)",
+            "DocSection::new(\"Disabled Field\", disabled_field)",
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Input\", input)",
             "DocSection::new(\"Textarea\", textarea)",
@@ -3462,6 +3515,72 @@ fn form_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Notes\", notes)",
         ],
+    );
+}
+
+#[test]
+fn form_submit_validation_snippet_keeps_submit_driven_form_state_runtime_surface() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/form/submit_validation.rs",
+        &[
+            "use fret::app::AppRenderActionsExt as _;",
+            "FormState { validate_mode: FormValidateMode::OnSubmit,",
+            "FormRegistry::new().options(FormRegistryOptions {",
+            "touch_on_change: true,",
+            "revalidate_mode: FormRevalidateMode::OnChange,",
+            "registry.register_field(\"username\", username.clone(), String::new(), |value|",
+            "registry.register_field(\"plan\", plan.clone(), None::<Arc<str>>, |value|",
+            "registry.register_into_form_state(&mut *cx.app, &form_state);",
+            "registry.handle_model_changes(&mut *cx.app, &form_state, &[username.id(), plan.id()]);",
+            "registry.submit_action_host(host, &form_state)",
+            ".test_id(\"ui-gallery-form-submit-validation-username-control\")",
+            ".test_id_prefix(\"ui-gallery-form-submit-validation-plan\")",
+            "decl_text::text_control_readout(cx, format!(\"status={result_status}\"))",
+            ".test_id(\"ui-gallery-form-submit-validation-result\")",
+        ],
+        &[
+            "use fret_ui::action::OnActivate",
+            "let on_activate: fret_ui::action::OnActivate",
+            "shadcn::RadioGroup::new(plan.clone())",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/form.rs",
+        &[
+            "Submit-driven FormState validation mutates FormField-decorated controls",
+            "copyable Usage and submit-validation sections",
+        ],
+        &[],
+    );
+}
+
+#[test]
+fn form_disabled_field_snippet_keeps_field_shell_and_control_semantics_separate() {
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/snippets/form/disabled_field.rs",
+        &[
+            "shadcn::Field::new(ui::children![",
+            ".disabled(true)",
+            ".test_id(\"ui-gallery-form-disabled-field\")",
+            ".test_id(\"ui-gallery-form-disabled-field-control\")",
+            ".test_id(\"ui-gallery-form-disabled-field-enabled-control\")",
+            "\"The field shell is disabled because its concrete control is disabled.\"",
+        ],
+        &[
+            "field_state_prim::with_field_state_provider",
+            "cx.interactivity_gate(true, false",
+            "shadcn::FieldSet::new(",
+        ],
+    );
+
+    assert_selected_generic_helpers_prefer_into_ui_element(
+        "src/ui/pages/form.rs",
+        &[
+            "DocSection::build(cx, \"Disabled Field\", disabled_field)",
+            "concrete disabled Input owns disabled semantics",
+        ],
+        &[],
     );
 }
 
@@ -3763,9 +3882,19 @@ fn checkbox_radio_input_and_textarea_docs_keep_required_ownership_on_the_control
             ],
         ),
         (
+            "src/ui/snippets/textarea/required.rs",
+            vec![
+                "shadcn::Textarea::new(value)",
+                ".control_id(required_id)",
+                ".required(true)",
+                "shadcn::raw::typography::muted(\"*\")",
+            ],
+        ),
+        (
             "src/ui/pages/textarea.rs",
             vec![
                 "`Textarea::required(true)` keeps required semantics on the textarea control itself; any visible required marker stays caller-owned label composition.",
+                "Use root `Textarea::required(true)` on the textarea and keep the visible required marker caller-owned in the label.",
             ],
         ),
     ] {
@@ -3929,6 +4058,45 @@ fn input_otp_docs_keep_invalid_ownership_on_slots_with_caller_owned_error_copy()
             vec![
                 "`InputOTPSlot::aria_invalid(true)` mirrors the upstream slot-level invalid lane, while root `control_id(...)`, `labelled_by_element(...)`, `a11y_label(...)`, and `required(...)` cover form association and accessibility.",
                 "Invalid state mirrors upstream slot-level `InputOTPSlot::aria_invalid(true)` and keeps error copy caller-owned via `FieldError` composition.",
+            ],
+        ),
+    ] {
+        let path = manifest_path(relative_path);
+        let source = read_path(&path);
+        let normalized = source.split_whitespace().collect::<String>();
+
+        for marker in required_markers {
+            let marker = marker.split_whitespace().collect::<String>();
+            assert!(
+                normalized.contains(&marker),
+                "{} is missing invalid ownership marker `{}`",
+                path.display(),
+                marker
+            );
+        }
+    }
+}
+
+#[test]
+fn date_picker_docs_keep_invalid_ownership_on_trigger_with_caller_owned_error_copy() {
+    for (relative_path, required_markers) in [
+        (
+            "src/ui/snippets/date_picker/invalid.rs",
+            vec![
+                "shadcn::DatePicker::new(open,month,selected)",
+                ".control_id(control_id.clone())",
+                ".required(true)",
+                ".aria_invalid(true)",
+                ".test_id_prefix(\"ui-gallery-date-picker-invalid\")",
+                "shadcn::FieldError::new(\"Please select a date.\").for_control(control_id.clone())",
+                ".invalid(true)",
+            ],
+        ),
+        (
+            "src/ui/pages/date_picker.rs",
+            vec![
+                "`DatePicker::aria_invalid(true)` and `DatePicker::required(true)` stay on the trigger for chrome/semantics",
+                "Invalid state keeps root `DatePicker::aria_invalid(true)` on the trigger and caller-owned field error copy.",
             ],
         ),
     ] {
@@ -10021,6 +10189,7 @@ fn toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/toggle_group/custom.rs",
             "src/ui/snippets/toggle_group/demo.rs",
             "src/ui/snippets/toggle_group/disabled.rs",
+            "src/ui/snippets/toggle_group/disabled_item_action_state.rs",
             "src/ui/snippets/toggle_group/flex_1_items.rs",
             "src/ui/snippets/toggle_group/full_width_items.rs",
             "src/ui/snippets/toggle_group/label.rs",
@@ -10051,6 +10220,7 @@ fn toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
 fn toggle_group_snippet_item_text_uses_button_label_role() {
     for relative_path in [
         "src/ui/snippets/toggle_group/children.rs",
+        "src/ui/snippets/toggle_group/disabled_item_action_state.rs",
         "src/ui/snippets/toggle_group/flex_1_items.rs",
         "src/ui/snippets/toggle_group/full_width_items.rs",
         "src/ui/snippets/toggle_group/label.rs",
@@ -10087,6 +10257,7 @@ fn toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Spacing\", spacing)",
             "DocSection::build(cx, \"Vertical\", vertical)",
             "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Disabled Item Action-State (Fret)\", disabled_item_action_state)",
             "DocSection::build(cx, \"Custom\", custom)",
             "DocSection::build(cx, \"RTL\", rtl)",
             "DocSection::build(cx, \"Children (Fret)\", children)",
@@ -10105,6 +10276,7 @@ fn toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Spacing\", spacing)",
             "DocSection::new(\"Vertical\", vertical)",
             "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Disabled Item Action-State (Fret)\", disabled_item_action_state)",
             "DocSection::new(\"Custom\", custom)",
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Children (Fret)\", children)",
@@ -10115,6 +10287,33 @@ fn toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Full Width Items (Fret)\", full_width_items)",
             "DocSection::new(\"Flex-1 Items (Fret)\", stretch)",
         ],
+    );
+}
+
+#[test]
+fn toggle_group_disabled_item_action_state_snippet_keeps_roving_and_item_action_state_separate() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/toggle_group/disabled_item_action_state.rs",
+        &[
+            "ToggleGroup::single(selected)",
+            ".deselectable(false)",
+            ".control_id(control_id.clone())",
+            ".test_id_prefix(\"ui-gallery-toggle-group-disabled-item-action-state\")",
+            ".disabled(true)",
+            "FieldLabel::new(\"Formatting mode\")",
+            ".for_control(control_id.clone())",
+            ".test_id(\"ui-gallery-toggle-group-disabled-item-action-state-label\")",
+            "ui-gallery-toggle-group-disabled-item-action-state",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("cx.interactivity_gate(true,false"),
+        "src/ui/snippets/toggle_group/disabled_item_action_state.rs should use item disabled state instead of a local interactivity gate"
+    );
+    assert!(
+        !normalized.contains("field_state_prim::with_field_state_provider"),
+        "src/ui/snippets/toggle_group/disabled_item_action_state.rs should stay on public Field/ToggleGroup surfaces"
     );
 }
 
@@ -10247,6 +10446,7 @@ fn checkbox_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/checkbox/group.rs",
             "src/ui/snippets/checkbox/invalid_state.rs",
             "src/ui/snippets/checkbox/label.rs",
+            "src/ui/snippets/checkbox/required_disabled_group.rs",
             "src/ui/snippets/checkbox/rtl.rs",
             "src/ui/snippets/checkbox/table.rs",
             "src/ui/snippets/checkbox/usage.rs",
@@ -10278,6 +10478,7 @@ fn checkbox_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Description\", description_section)",
             "DocSection::build(cx, \"Disabled\", disabled_section)",
             "DocSection::build(cx, \"Group\", group)",
+            "DocSection::build(cx, \"Required Disabled Group\", required_disabled_group)",
             "DocSection::build(cx, \"Table\", table)",
             "DocSection::build(cx, \"RTL\", rtl_section)",
             "DocSection::build(cx, \"Label Association (Fret)\", label)",
@@ -10292,11 +10493,50 @@ fn checkbox_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Description\", description_section)",
             "DocSection::new(\"Disabled\", disabled_section)",
             "DocSection::new(\"Group\", group)",
+            "DocSection::new(\"Required Disabled Group\", required_disabled_group)",
             "DocSection::new(\"Table\", table)",
             "DocSection::new(\"RTL\", rtl_section)",
             "DocSection::new(\"Label Association (Fret)\", label)",
             "DocSection::new(\"With Title (Fret)\", with_title_section)",
         ],
+    );
+}
+
+#[test]
+fn checkbox_required_disabled_group_snippet_keeps_required_and_disabled_action_state_on_concrete_controls()
+ {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/checkbox/required_disabled_group.rs",
+        &[
+            "shadcn::Checkbox::new(value)",
+            ".required(true)",
+            ".control_id(test_id)",
+            ".a11y_label(label)",
+            ".test_id(test_id)",
+            "checkbox.disabled(true)",
+            "FieldLabel::new(label)",
+            ".for_control(test_id)",
+            ".test_id(label_test_id)",
+            "FieldLegend::new(\"Required desktop items\")",
+            "Choose required items. Disabled managed options cannot be toggled.",
+            "ui-gallery-checkbox-required-disabled-backups",
+            "ui-gallery-checkbox-required-disabled-backups-label",
+            "ui-gallery-checkbox-required-disabled-analytics",
+            "ui-gallery-checkbox-required-disabled-analytics-label",
+            "ui-gallery-checkbox-required-disabled-beta",
+            "ui-gallery-checkbox-required-disabled-beta-label",
+            "Enabled option used by diagnostics to prove mutation still works.",
+            ".test_id(\"ui-gallery-checkbox-required-disabled-group\")",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("field_state_prim::with_field_state_provider"),
+        "src/ui/snippets/checkbox/required_disabled_group.rs should use public Field/Checkbox surfaces instead of reaching into field-state internals"
+    );
+    assert!(
+        !normalized.contains("cx.interactivity_gate(true,false"),
+        "src/ui/snippets/checkbox/required_disabled_group.rs should not fake disabled action-state with a gallery-local interactivity gate"
     );
 }
 
@@ -10546,6 +10786,7 @@ fn radio_group_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/radio_group/fieldset.rs",
             "src/ui/snippets/radio_group/invalid.rs",
             "src/ui/snippets/radio_group/label.rs",
+            "src/ui/snippets/radio_group/required_disabled.rs",
             "src/ui/snippets/radio_group/rtl.rs",
             "src/ui/snippets/radio_group/usage.rs",
         ],
@@ -10573,6 +10814,7 @@ fn radio_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Choice Card\", choice_card)",
             "DocSection::build(cx, \"Fieldset\", fieldset)",
             "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"Required Disabled\", required_disabled)",
             "DocSection::build(cx, \"Invalid\", invalid)",
             "DocSection::build(cx, \"RTL\", rtl)",
             "DocSection::build(cx, \"Label Association (Fret)\", label)",
@@ -10584,6 +10826,7 @@ fn radio_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Choice Card\", choice_card)",
             "DocSection::new(\"Fieldset\", fieldset)",
             "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"Required Disabled\", required_disabled)",
             "DocSection::new(\"Invalid\", invalid)",
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Label Association (Fret)\", label)",
@@ -10603,6 +10846,12 @@ fn radio_group_page_teaches_docs_parity_parts_without_generic_children_api() {
     );
     assert!(
         radio_group_page.contains(
+            "`Required Disabled` keeps required semantics on the radio group root while disabled semantics and action suppression stay on the disabled item control and its `FieldLabel::for_control(...)` bridge."
+        ),
+        "src/ui/pages/radio_group.rs should describe the required/disabled grouped-control action-state split"
+    );
+    assert!(
+        radio_group_page.contains(
             "Selection semantics, roving navigation, icon chrome, border, and focus ring remain recipe-owned; surrounding fieldset and row layout remain caller-owned composition, so a generic root children API is still unnecessary here."
         ),
         "src/ui/pages/radio_group.rs should explain why parts are sufficient without widening to a generic root children API"
@@ -10615,9 +10864,45 @@ fn radio_group_page_teaches_docs_parity_parts_without_generic_children_api() {
     );
     assert!(
         radio_group_page.contains(
-            "Preview mirrors the shadcn Radio Group docs path first: Demo, Usage, Description, Choice Card, Fieldset, Disabled, Invalid, RTL, and API Reference. The docs-path rows now use `into_element_parts(...)` for source-shaped composition, while `Label Association` stays as a focused Fret follow-up."
+            "Preview mirrors the shadcn Radio Group docs path first: Demo, Usage, Description, Choice Card, Fieldset, Disabled, Required Disabled, Invalid, RTL, and API Reference. The docs-path rows now use `into_element_parts(...)` for source-shaped composition, while `Label Association` stays as a focused Fret follow-up."
         ),
         "src/ui/pages/radio_group.rs should summarize the shift to the docs-shaped parts lane"
+    );
+}
+
+#[test]
+fn radio_group_required_disabled_snippet_keeps_group_required_and_item_action_state_separate() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/snippets/radio_group/required_disabled.rs",
+        &[
+            "shadcn::RadioGroup::new(value)",
+            ".required(true)",
+            ".a11y_label(\"Support plan\")",
+            ".test_id_prefix(\"ui-gallery-radio-group-required-disabled\")",
+            "RadioGroupItem::new(\"self-service\", \"Self-service\")",
+            ".disabled(true)",
+            ".control_id(self_service_id)",
+            "FieldLabel::new(\"Self-service\")",
+            ".for_control(self_service_id)",
+            ".test_id(\"ui-gallery-radio-group-required-disabled-item-0-label\")",
+            "FieldLabel::new(\"Team\")",
+            ".test_id(\"ui-gallery-radio-group-required-disabled-item-1-label\")",
+            "FieldLabel::new(\"Enterprise\")",
+            ".test_id(\"ui-gallery-radio-group-required-disabled-item-2-label\")",
+            "FieldLegend::new(\"Support plan\")",
+            "Disabled plans cannot be selected, even when their label is clicked.",
+            "Disabled rows keep disabled action-state on the concrete radio item.",
+            ".test_id(\"ui-gallery-radio-group-required-disabled\")",
+        ],
+    );
+
+    assert!(
+        !normalized.contains("field_state_prim::with_field_state_provider"),
+        "src/ui/snippets/radio_group/required_disabled.rs should use public Field/RadioGroup surfaces instead of reaching into field-state internals"
+    );
+    assert!(
+        !normalized.contains("cx.interactivity_gate(true,false"),
+        "src/ui/snippets/radio_group/required_disabled.rs should not fake disabled action-state with a gallery-local interactivity gate"
     );
 }
 

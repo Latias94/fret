@@ -6,8 +6,9 @@ use crate::element::{
 use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
 use fret_core::{
     AttributedText, MaterialDescriptor, MaterialId, MaterialRegistrationError, PathCommand,
-    PathConstraints, PathId, PathMetrics, PathStyle, SvgId, TextBlobId, TextFontFeatureSetting,
-    TextInput, TextLineHeightPolicy, TextMetrics, TextSpan, TextStyleRefinement, TextWrap,
+    PathConstraints, PathId, PathMetrics, PathStyle, SvgId, TextBlobId, TextFontAxisSetting,
+    TextFontFeatureSetting, TextInput, TextLineHeightPolicy, TextMetrics, TextSpan,
+    TextStyleRefinement, TextWrap,
 };
 use std::sync::Arc;
 
@@ -133,6 +134,15 @@ fn inherited_numeric_refinement(size: f32, line_height: f32) -> TextStyleRefinem
     refinement.features.push(TextFontFeatureSetting {
         tag: "tnum".into(),
         value: 1,
+    });
+    refinement
+}
+
+fn inherited_axis_refinement(size: f32, line_height: f32) -> TextStyleRefinement {
+    let mut refinement = inherited_refinement(size, line_height);
+    refinement.axes.push(TextFontAxisSetting {
+        tag: "wdth".into(),
+        value: 90.0,
     });
     refinement
 }
@@ -340,6 +350,49 @@ fn inherited_text_style_features_affect_passive_text_measurement() {
 }
 
 #[test]
+fn inherited_text_style_axes_affect_passive_text_measurement() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    let mut services = StyleRecordingTextService::default();
+
+    let root = render_root_for_frame_local(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds(),
+        "text-style-inheritance-axes",
+        |cx| {
+            vec![
+                cx.container(ContainerProps::default(), |cx| vec![cx.text("variable")])
+                    .inherit_text_style(inherited_axis_refinement(14.0, 20.0)),
+            ]
+        },
+    );
+
+    let scope = only_child(&ui, root);
+    let text = only_child(&ui, scope);
+    let _ = ui.measure_in(
+        &mut app,
+        &mut services,
+        text,
+        max_content_constraints(),
+        1.0,
+    );
+
+    assert!(
+        services
+            .last_style()
+            .axes
+            .iter()
+            .any(|axis| axis.tag.as_str() == "wdth" && (axis.value - 90.0).abs() < f32::EPSILON),
+        "expected inherited text-style axes to reach passive text measurement"
+    );
+}
+
+#[test]
 fn wrap_none_measure_cache_tracks_inherited_text_style_changes() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -380,6 +433,78 @@ fn wrap_none_measure_cache_tracks_inherited_text_style_changes() {
 
     assert_eq!(first, Size::new(Px(12.0), Px(16.0)));
     assert_eq!(second, Size::new(Px(28.0), Px(36.0)));
+}
+
+#[test]
+fn paint_cache_key_tracks_node_inherited_text_style_fingerprint() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+    ui.set_paint_cache_enabled(true);
+    let mut services = StyleRecordingTextService::default();
+    let bounds = bounds();
+
+    let render = |ui: &mut UiTree<TestHost>,
+                  app: &mut TestHost,
+                  services: &mut StyleRecordingTextService,
+                  style: TextStyleRefinement| {
+        render_root_for_frame_local(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            "text-style-paint-cache",
+            |cx| {
+                vec![
+                    cx.keyed(1u64, |cx| cx.text("cache"))
+                        .inherit_text_style(style),
+                ]
+            },
+        )
+    };
+
+    let root = render(
+        &mut ui,
+        &mut app,
+        &mut services,
+        inherited_numeric_refinement(14.0, 20.0),
+    );
+    let text = only_child(&ui, root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert!(
+        ui.debug_stats().paint_cache_hits == 0,
+        "first paint should populate the cache"
+    );
+    ui.ingest_paint_cache_source(&mut scene);
+    scene.clear();
+
+    let root = render(
+        &mut ui,
+        &mut app,
+        &mut services,
+        inherited_axis_refinement(14.0, 20.0),
+    );
+    let text_after = only_child(&ui, root);
+    assert_eq!(text_after, text, "expected keyed text node reuse");
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.test_clear_node_invalidations(text_after);
+    ui.invalidate(root, Invalidation::Paint);
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().paint_cache_hits,
+        0,
+        "inherited text-style changes must not replay stale cached text ops"
+    );
+    assert!(
+        ui.debug_stats().paint_cache_misses > 0,
+        "expected the inherited text-style fingerprint to force a cache miss"
+    );
 }
 
 fn measure_text_input_size(with_inherited: bool) -> Size {

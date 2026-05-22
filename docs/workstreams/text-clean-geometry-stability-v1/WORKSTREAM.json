@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "slug": "text-clean-geometry-stability-v1",
+  "title": "Text Clean Geometry Stability v1",
+  "status": "closed",
+  "updated": "2026-05-21",
+  "scope_kind": "execution",
+  "problem": "Decide and prove which text nodes may participate in clean-geometry resize propagation without rerunning authoritative layout, while keeping wrapped and width-derived text on the authoritative path until line-break and computed-box stability evidence exists.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/text-clean-geometry-stability-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/text-clean-geometry-stability-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/text-clean-geometry-stability-v1/MILESTONES.md"
+    },
+    {
+      "role": "evidence",
+      "path": "docs/workstreams/text-clean-geometry-stability-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/text-clean-geometry-stability-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/text-clean-geometry-stability-v1/CLOSEOUT_AUDIT_2026-05-21.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run the focused text clean-geometry boundary gate before changing text layout eligibility. The current contract accepts cached nowrap text only and rejects wrapped or height-changing text as text_reflow.",
+    "commands": [
+      "cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow clean_geometry_small_resize_skips_nowrap_text_width_delta_when_height_stable clean_geometry_small_resize_rejects_nowrap_text_height_delta --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "text-clean-geometry-boundary",
+      "command": "cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow clean_geometry_small_resize_skips_nowrap_text_width_delta_when_height_stable clean_geometry_small_resize_rejects_nowrap_text_height_delta --no-fail-fast"
+    },
+    {
+      "name": "text-clean-geometry-fmt",
+      "command": "cargo fmt -p fret-ui -p fret-bootstrap --check"
+    },
+    {
+      "name": "text-clean-geometry-diagnostics-schema",
+      "command": "cargo nextest run -p fret-bootstrap --features ui-app-driver,diagnostics clean_geometry_rejection_detail_is_additive --no-fail-fast"
+    },
+    {
+      "name": "text-clean-geometry-diag-bundle",
+      "command": "cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/text-wrap/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target/fret-diag/text-clean-geometry-detail-20260521-r1 --session-auto --pack --ai-packet --launch -- cargo run -p fret-ui-gallery --features gallery-dev"
+    },
+    {
+      "name": "workstream-json-valid",
+      "command": "python -m json.tool docs/workstreams/text-clean-geometry-stability-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "crates/fret-ui/src/tree/layout/clean_geometry.rs",
+    "crates/fret-ui/src/tree/debug/layout.rs",
+    "crates/fret-ui/src/declarative/tests/layout/layout_engine.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/layout_paint_hotspot_diagnostics.rs",
+    "tools/diag-scripts/ui-gallery/text-wrap/ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json",
+    "ecosystem/fret-ui-shadcn/src/card.rs",
+    "apps/fret-ui-gallery/src/ui/content.rs",
+    "docs/workstreams/scroll-optimization-v1/HANDOFF.md",
+    "docs/workstreams/scroll-optimization-v1/EVIDENCE_AND_GATES.md"
+  ],
+  "adr_refs": [],
+  "continue_policy": {
+    "default_action": "stay_closed",
+    "notes": "The boundary and diagnostics proof is complete. Do not continue implementation in this lane by default. Start a new behavior-changing follow-on only if fresh evidence shows wrapped text is a material perf owner, and do not enable TextWrap::Word or shadcn CardDescription clean-geometry propagation until a dedicated line-break/computed-box signature proves unchanged layout, measure, glyph, and paint outcomes."
+  }
+}

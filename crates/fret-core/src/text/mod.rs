@@ -350,6 +350,12 @@ pub struct TextStyleRefinement {
     /// tags, so a later child/default can override an earlier parent default for the same tag.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub features: Vec<TextFontFeatureSetting>,
+    /// Optional variable font axis overrides applied as subtree defaults.
+    ///
+    /// Parent scopes merge before child scopes. Shaping backends treat unsupported axes as
+    /// best-effort no-ops, matching [`TextStyle::axes`] and span shaping behavior.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub axes: Vec<TextFontAxisSetting>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub vertical_placement: Option<TextVerticalPlacement>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -367,6 +373,7 @@ impl TextStyleRefinement {
             && self.line_height_policy.is_none()
             && self.letter_spacing_em.is_none()
             && self.features.is_empty()
+            && self.axes.is_empty()
             && self.vertical_placement.is_none()
             && self.leading_distribution.is_none()
     }
@@ -398,6 +405,7 @@ impl TextStyleRefinement {
             self.letter_spacing_em = Some(letter_spacing_em);
         }
         self.features.extend(other.features.iter().cloned());
+        self.axes.extend(other.axes.iter().cloned());
         if let Some(vertical_placement) = other.vertical_placement {
             self.vertical_placement = Some(vertical_placement);
         }
@@ -441,6 +449,7 @@ impl TextStyle {
             self.letter_spacing_em = Some(letter_spacing_em);
         }
         self.features.extend(refinement.features.iter().cloned());
+        self.axes.extend(refinement.axes.iter().cloned());
         if let Some(vertical_placement) = refinement.vertical_placement {
             self.vertical_placement = vertical_placement;
         }
@@ -705,6 +714,13 @@ mod tests {
         }
     }
 
+    fn font_axis(tag: &str, value: f32) -> TextFontAxisSetting {
+        TextFontAxisSetting {
+            tag: tag.into(),
+            value,
+        }
+    }
+
     #[test]
     fn attributed_text_shaping_eq_ignores_paint() {
         let text: Arc<str> = Arc::<str>::from("hello");
@@ -786,6 +802,38 @@ mod tests {
         assert_eq!(
             style.features,
             vec![font_feature("liga", 0), font_feature("tnum", 1)]
+        );
+    }
+
+    #[test]
+    fn text_style_refinement_merges_font_axes_in_parent_child_order() {
+        let mut parent = TextStyleRefinement::default();
+        parent.axes.push(font_axis("wdth", 90.0));
+
+        let mut child = TextStyleRefinement::default();
+        child.axes.push(font_axis("opsz", 12.0));
+
+        parent.merge(&child);
+
+        assert_eq!(
+            parent.axes,
+            vec![font_axis("wdth", 90.0), font_axis("opsz", 12.0)]
+        );
+    }
+
+    #[test]
+    fn text_style_refine_applies_inherited_font_axes_after_leaf_defaults() {
+        let mut style = TextStyle::default();
+        style.axes.push(font_axis("wdth", 90.0));
+
+        let mut refinement = TextStyleRefinement::default();
+        refinement.axes.push(font_axis("opsz", 12.0));
+
+        style.refine(&refinement);
+
+        assert_eq!(
+            style.axes,
+            vec![font_axis("wdth", 90.0), font_axis("opsz", 12.0)]
         );
     }
 }

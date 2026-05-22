@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-20
+Last updated: 2026-05-21
 
 ## M0 - Current Source Baseline
 
@@ -985,6 +985,67 @@ Exit criteria:
   compact tabular emphasis readout role (`text-xs font-medium tabular-nums`) instead of local
   sidebar-only text sizing. The badge keeps its `h-5 min-w-5` chrome and sidebar foreground, while
   the text role owns no-wrap, shrink, min-width-0, and ellipsis behavior under resize.
+  2026-05-20 shadcn SidebarMenuButton/SubButton label result: default sidebar menu and sub-menu
+  labels now consume fill-width button-label role variants instead of sidebar-local text builders.
+  The main default/lg labels use `text_button_label_fill(...)`, small main/sub labels use
+  `text_button_label_compact_fill(...)`, and collapsed tooltip labels use `text_button_label(...)`.
+  This keeps upstream truncate behavior in the shared button-label family while leaving sidebar
+  chrome, foreground, collapse motion, RTL ordering, and tooltip placement recipe-owned.
+  2026-05-20 inherited-axis + shadcn Button default-label result: `TextStyleRefinement` now carries
+  variable font axes as subtree defaults alongside OpenType features, with merge/refine,
+  measurement, cache-fingerprint, and typography bridge gates. shadcn `Button` default labels now
+  consume the shared button-label role instead of local `ui::text(...).fixed_line_box_px(...)`
+  builders, while preserving label font, feature, axis, weight, foreground, and `test_id` suffix
+  behavior through inherited text/foreground metadata.
+  2026-05-20 shadcn CalendarDayButton text-role result: Calendar day numbers and optional
+  supporting text now consume shared button-label/readout role helpers instead of local
+  `ui::label(...).line_height_px(...).nowrap()` builders. Calendar still owns fixed day-cell
+  chrome, center alignment, range/selected/today foreground, and disabled opacity, while both
+  single and range calendar day cells share the same single-line shrink/ellipsis text contract.
+  2026-05-20 shadcn CalendarMultiple text-role result: multiple-selection calendar day numbers now
+  consume the same `calendar_day_button_children(...)` helper as single/range day cells instead of
+  carrying a local `ui::label(day_text).text_size_px(...).line_height_px(...).font_medium()`
+  builder. Multiple selection still owns selection updates and cell chrome, while shared text roles
+  own no-wrap, shrink, min-width-zero, ellipsis, and inherited typography/foreground.
+  2026-05-20 shadcn CalendarHijri text-role result: Hijri day numbers now consume the same shared
+  day-cell helper instead of direct `TextProps::new(day_text)` fixed-line/clipped text. Hijri keeps
+  RTL order, Persian digits, Gregorian-date test ids, and selection chrome; shared roles own the
+  fixed-cell text resize contract.
+  2026-05-20 shadcn Kbd/ShortcutHint keycap text-role result: fixed keycap/hint chrome now consumes
+  `text_keycap_label(...)` instead of local `ui::label(...).fixed_line_box_px(...)` builders. Kbd
+  and ShortcutHint still own shadcn `component.kbd.*` typography refinements, foreground, tooltip
+  slot colors, icon children, and row layout; the shared role owns no-wrap, shrink,
+  min-width-zero, and ellipsis.
+  2026-05-20 shadcn menu item label text-role result: shared `text_list_row_label(...)` now truly
+  owns fill/grow/basis-zero row-label layout, and DropdownMenu, ContextMenu, and Menubar overlay
+  item labels consume a shared shadcn menu item label helper instead of local
+  `ui::text(...).text_size_px(...).nowrap()` builders. Menu recipes still own row chrome,
+  destructive/disabled/focused foregrounds, shortcut/trailing slots, and icon currentColor
+  inheritance.
+  2026-05-20 shadcn NativeSelect text-role result: NativeSelect selected/placeholder trigger text
+  now consumes `text_control_label(...)`, and option rows consume `text_list_row_label(...)`,
+  with shadcn NativeSelect/Command typography and state foreground layered through inherited
+  metadata. NativeSelect keeps trigger chrome, popover/listbox behavior, check icons, placeholder
+  state, and RTL ordering recipe-owned; the shared roles own the resize-critical single-line,
+  fill/grow/shrink, min-width-zero, and ellipsis contracts.
+  2026-05-20 shadcn Combobox text-role result: default Combobox selected/placeholder trigger text
+  now consumes `text_control_label(...)`, and non-search option rows consume
+  `text_list_row_label(...)`, with Combobox/Command typography and state foreground layered
+  through inherited metadata. Combobox keeps trigger chrome, inline addons, clear/chevron buttons,
+  popover/drawer policy, search-enabled CommandPalette behavior, custom item content, and RTL
+  ordering recipe-owned; the shared roles own the default-label single-line, fill/grow/shrink,
+  min-width-zero, and ellipsis contracts.
+  2026-05-21 shadcn ComboboxChips text-role result: empty-trigger placeholder text now consumes
+  `text_control_label(...)`, while selected chip pill labels consume `text_chip_label(...)`. The new
+  shared chip role owns compact medium no-wrap/min-width-zero/ellipsis without fill/grow, so chip
+  chrome can shrink safely without behaving like a row/control label. ComboboxChips keeps
+  trigger/chip chrome, remove actions, popover/search policy, selected-value mapping, wrapping chip
+  layout, and RTL ordering recipe-owned.
+  2026-05-21 shadcn Badge default-label result: Badge default labels now consume
+  `text_chip_label(...)` instead of local fixed-line `ui::text(...)` builders. Badge layers font,
+  feature, weight, foreground/currentColor, and link-hover underline behavior through inherited
+  metadata, while the shared chip role owns no-wrap, min-width-zero, shrink, ellipsis, and
+  non-growing inline-badge text layout.
   2026-05-18 IMUI virtual-list fixed-row clip result: fixed/known-height `fret-ui-kit::imui`
   virtual-list rows now mount as fixed-height `Overflow::Clip` row containers, while measured rows
   stay auto-height/visible so runtime measurement still works.
@@ -1015,6 +1076,11 @@ Exit criteria:
   2026-05-16 first-open gate wording result: diagnostics/DevTools entrypoint discovery now has an
   explicit cold-start gate and an explicit `--reuse-built` drift check. This keeps DevTools
   discoverability source-backed without treating Rust build latency as a GUI/MCP product failure.
+  2026-05-21 demo/metrics/debug discovery result: `fretboard-dev list tool-apps` and its JSON form
+  now expose the `demo-metrics-debug` first-open route with grouped demo, metrics, and debug
+  commands, including trace drill-down. This moves the Dear ImGui-style Demo/Metrics/Debug
+  entrypoint into the shared CLI/JSON discovery surface instead of leaving it discoverable only
+  inside the DevTools GUI guide.
   Current performance-alignment review result: `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
   belongs in the active gap lane's evidence set. Keep runtime smoothness work in
   `diag-perf-attribution-v1`, `ui-perf-zed-smoothness-v1`, and the product-chain docking perf gate;

@@ -1,5 +1,5 @@
 use super::super::*;
-use crate::tree::node_storage::TextWrapNoneMeasureCache;
+use crate::tree::node_storage::{TextWrapNoneMeasureCache, TextWrappedMeasureCache};
 
 impl<H: UiHost> UiTree<H> {
     pub(crate) fn create_node(&mut self, widget: impl Widget<H> + 'static) -> NodeId {
@@ -38,6 +38,32 @@ impl<H: UiHost> UiTree<H> {
             return;
         };
         n.text_wrap_none_measure_cache = None;
+    }
+
+    pub(crate) fn set_node_text_wrapped_measure_cache(
+        &mut self,
+        node: NodeId,
+        fingerprint: u64,
+        constraints_max_width: Option<Px>,
+        measured_size: Size,
+        clamped_size: Size,
+    ) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        n.text_wrapped_measure_cache = Some(TextWrappedMeasureCache {
+            fingerprint,
+            constraints_max_width,
+            measured_size,
+            clamped_size,
+        });
+    }
+
+    pub(crate) fn clear_node_text_wrapped_measure_cache(&mut self, node: NodeId) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        n.text_wrapped_measure_cache = None;
     }
 
     #[cfg(test)]

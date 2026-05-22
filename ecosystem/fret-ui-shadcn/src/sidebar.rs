@@ -3,8 +3,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use fret_core::{
-    Color, CursorIcon, Edges, FontId, FontWeight, KeyCode, Modifiers, Point, Px, SemanticsRole,
-    TextOverflow, TextStyle, TextWrap, Transform2D,
+    Color, CursorIcon, Edges, KeyCode, Modifiers, Point, Px, SemanticsRole, Transform2D,
 };
 use fret_icons::IconId;
 use fret_runtime::keymap::Binding;
@@ -32,7 +31,7 @@ use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::transition as transition_prim;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
 use crate::input::Input;
@@ -309,42 +308,18 @@ fn sidebar_rail_line_bg(theme: &Theme, hovered: bool, pressed: bool) -> Color {
     }
 }
 
-fn menu_button_style(theme: &Theme) -> TextStyle {
-    let size = theme
-        .metric_by_key("component.sidebar.menu_button_px")
-        .or_else(|| theme.metric_by_key("font.size"))
-        .unwrap_or_else(|| theme.metric_token("font.size"));
-    let line_height = theme
-        .metric_by_key("component.sidebar.menu_button_line_height")
-        .or_else(|| theme.metric_by_key("font.line_height"))
-        .unwrap_or_else(|| theme.metric_token("font.line_height"));
-    let mut style = typography::fixed_line_box_style(FontId::ui(), size, line_height);
-    style.weight = FontWeight::MEDIUM;
-    style
-}
-
-fn menu_sub_button_style(theme: &Theme, size: SidebarMenuSubButtonSize) -> TextStyle {
-    let (size_key, size_fallback, line_key, line_fallback) = match size {
-        SidebarMenuSubButtonSize::Sm => (
-            "component.sidebar.menu_sub_button.text_px_sm",
-            Px(12.0),
-            "component.sidebar.menu_sub_button.line_height_sm",
-            Px(16.0),
-        ),
-        SidebarMenuSubButtonSize::Md => (
-            "component.sidebar.menu_sub_button.text_px",
-            Px(14.0),
-            "component.sidebar.menu_sub_button.line_height",
-            Px(20.0),
-        ),
+fn sidebar_button_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    compact: bool,
+    fg: Color,
+) -> AnyElement {
+    let text = if compact {
+        decl_text::text_button_label_compact_fill(cx, label)
+    } else {
+        decl_text::text_button_label_fill(cx, label)
     };
-
-    let text_px = theme.metric_by_key(size_key).unwrap_or(size_fallback);
-    let line_height = theme.metric_by_key(line_key).unwrap_or(line_fallback);
-
-    let mut style = typography::fixed_line_box_style(FontId::ui(), text_px, line_height);
-    style.weight = FontWeight::MEDIUM;
-    style
+    text.inherit_foreground(fg)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -3654,7 +3629,7 @@ impl SidebarMenuSubButton {
                 cx.pressable_on_activate(on_activate);
             }
 
-            let (fg, props, style, gap) = {
+            let (fg, props, gap) = {
                 let theme = Theme::global(&*cx.app);
                 let bg = if active || st.hovered || st.pressed {
                     sidebar_accent(theme)
@@ -3682,9 +3657,8 @@ impl SidebarMenuSubButton {
                     chrome,
                     LayoutRefinement::default().w_full().h_px(h),
                 );
-                let style = menu_sub_button_style(theme, size);
                 let gap = decl_style::space(theme, Space::N2);
-                (fg, props, style, gap)
+                (fg, props, gap)
             };
 
             let mut chrome = cx.container(props, move |cx| {
@@ -3722,19 +3696,12 @@ impl SidebarMenuSubButton {
                             return custom_children;
                         }
 
-                        let mut text = ui::text(label.clone())
-                            .w_full()
-                            .min_w_0()
-                            .flex_1()
-                            .basis_0()
-                            .text_size_px(style.size)
-                            .font_weight(style.weight)
-                            .text_color(ColorRef::Color(fg))
-                            .truncate();
-                        if let Some(line_height) = style.line_height {
-                            text = text.line_height_px(line_height);
-                        }
-                        let text = text.into_element(cx);
+                        let text = sidebar_button_label_text(
+                            cx,
+                            label.clone(),
+                            matches!(size, SidebarMenuSubButtonSize::Sm),
+                            fg,
+                        );
 
                         let mut out = Vec::new();
                         match dir {
@@ -4049,7 +4016,7 @@ impl SidebarMenuButton {
             if let Some(on_activate) = on_activate.clone() {
                 cx.pressable_add_on_activate(on_activate);
             }
-            let (fg, props, inner_gap, label_style) = {
+            let (fg, props, inner_gap) = {
                 let theme = Theme::global(&*cx.app);
                 let bg = if active || st.hovered || st.pressed {
                     sidebar_accent(theme)
@@ -4102,8 +4069,7 @@ impl SidebarMenuButton {
                 props.layout.overflow = Overflow::Clip;
 
                 let inner_gap = decl_style::space(theme, Space::N2); // `gap-2`
-                let label_style = menu_button_style(theme);
-                (fg, props, inner_gap, label_style)
+                (fg, props, inner_gap)
             };
 
             let mut chrome = cx.container(props, move |cx| {
@@ -4148,25 +4114,12 @@ impl SidebarMenuButton {
                         // layout remains stable across the width transition. This matches the DOM
                         // recipe shape (overflow-hidden + truncate) and avoids a "pop" when the label
                         // branch appears/disappears at `opacity == 0`.
-                        let text = ui::text(label.clone())
-                            .w_full()
-                            .min_w_0()
-                            .flex_1()
-                            .basis_0()
-                            .text_size_px(label_style.size)
-                            .font_weight(label_style.weight)
-                            .text_color(ColorRef::Color(fg))
-                            .truncate();
-
-                        let mut text = text;
-                        if let Some(line_height) = label_style.line_height {
-                            text = text.line_height_px(line_height);
-                        }
-                        if let Some(letter_spacing_em) = label_style.letter_spacing_em {
-                            text = text.letter_spacing_em(letter_spacing_em);
-                        }
-
-                        let text = text.into_element(cx);
+                        let text = sidebar_button_label_text(
+                            cx,
+                            label.clone(),
+                            matches!(size, SidebarMenuButtonSize::Sm),
+                            fg,
+                        );
                         let text = cx.opacity_props(
                             OpacityProps {
                                 layout: fret_ui::element::LayoutStyle::default(),
@@ -4239,7 +4192,7 @@ impl SidebarMenuButton {
         }
 
         // In collapsed (icon) mode, show the label via a tooltip.
-        let (popover_bg, border, fg, label_style) = {
+        let (popover_bg, border, fg) = {
             let theme = Theme::global(&*cx.app);
             let popover_bg = theme
                 .color_by_key("popover.background")
@@ -4248,8 +4201,7 @@ impl SidebarMenuButton {
                 .color_by_key("border")
                 .unwrap_or_else(|| theme.color_token("border"));
             let fg = sidebar_fg(theme);
-            let label_style = menu_button_style(theme);
-            (popover_bg, border, fg, label_style)
+            (popover_bg, border, fg)
         };
 
         let label = this.label.clone();
@@ -4261,19 +4213,7 @@ impl SidebarMenuButton {
             .rounded(Radius::Md)
             .p(Space::N2);
         let content = TooltipContent::new({
-            let mut text = ui::text(label.clone())
-                .text_size_px(label_style.size)
-                .font_weight(label_style.weight)
-                .text_color(ColorRef::Color(fg))
-                .wrap(TextWrap::Word)
-                .overflow(TextOverflow::Clip);
-            if let Some(line_height) = label_style.line_height {
-                text = text.line_height_px(line_height);
-            }
-            if let Some(letter_spacing_em) = label_style.letter_spacing_em {
-                text = text.letter_spacing_em(letter_spacing_em);
-            }
-            vec![text.into_element(cx)]
+            vec![decl_text::text_button_label(cx, label.clone()).inherit_foreground(fg)]
         })
         .refine_style(chrome)
         .refine_layout(
@@ -4299,9 +4239,10 @@ mod tests {
     use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
     use fret_app::App;
     use fret_core::{
-        AppWindowId, NodeId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, Point,
-        Px, Rect, SemanticsNode, SemanticsRole, SemanticsSnapshot, Size as CoreSize, SvgId,
-        SvgService, TextBlobId, TextConstraints, TextMetrics, TextService,
+        AppWindowId, FontWeight, NodeId, PathCommand, PathConstraints, PathId, PathMetrics,
+        PathService, Point, Px, Rect, SemanticsNode, SemanticsRole, SemanticsSnapshot,
+        Size as CoreSize, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics,
+        TextOverflow, TextService, TextWrap,
     };
     use fret_runtime::{Effect, FrameId, TickId};
     use fret_ui::element::{
@@ -4310,7 +4251,7 @@ mod tests {
     };
     use fret_ui::elements;
     use fret_ui::tree::UiTree;
-    use fret_ui_kit::OverlayController;
+    use fret_ui_kit::{OverlayController, ui};
 
     struct FakeServices;
 
@@ -4407,6 +4348,7 @@ mod tests {
         match &el.kind {
             ElementKind::SvgIcon(_) => "icon",
             ElementKind::Opacity(_) => "label",
+            ElementKind::Text(props) if props.text.as_ref() == "Projects" => "label",
             ElementKind::Text(props) if props.text.as_ref() == "Custom Leading" => "leading",
             ElementKind::Text(props) if props.text.as_ref() == "Custom Center" => "center",
             ElementKind::Text(props) if props.text.as_ref() == "Custom Trailing" => "trailing",
@@ -8072,7 +8014,7 @@ mod tests {
                 .iter()
                 .map(sidebar_row_child_signature)
                 .collect::<Vec<_>>(),
-            vec!["icon", "other"],
+            vec!["icon", "label"],
             "expected LTR sidebar menu sub button default lane to keep icon before label"
         );
         assert_eq!(
@@ -8080,7 +8022,7 @@ mod tests {
                 .iter()
                 .map(sidebar_row_child_signature)
                 .collect::<Vec<_>>(),
-            vec!["other", "icon"],
+            vec!["label", "icon"],
             "expected RTL sidebar menu sub button default lane to mirror the DOM visual order"
         );
     }
@@ -8362,6 +8304,118 @@ mod tests {
             Some(&expected_style)
         );
         assert_eq!(text_element.inherited_foreground, Some(expected_fg));
+    }
+
+    #[test]
+    fn sidebar_menu_button_label_uses_shared_fill_button_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(96.0), Px(64.0)),
+        );
+
+        for (size, expected_size) in [
+            (SidebarMenuButtonSize::Default, typography::UiTextSize::Sm),
+            (SidebarMenuButtonSize::Sm, typography::UiTextSize::Xs),
+        ] {
+            let element = elements::with_element_cx(
+                &mut app,
+                window,
+                bounds,
+                "sidebar-menu-button-label",
+                |cx| {
+                    SidebarMenuButton::new("Projects and workspace settings")
+                        .size(size)
+                        .into_element(cx)
+                },
+            );
+
+            let text_element = find_text_element(&element, "Projects and workspace settings")
+                .expect("expected sidebar menu button label text");
+            let ElementKind::Text(text) = &text_element.kind else {
+                panic!("expected sidebar menu button label text leaf");
+            };
+
+            assert!(text.style.is_none());
+            assert!(text.color.is_none());
+            assert_eq!(text.layout.size.width, Length::Fill);
+            assert_eq!(text.layout.flex.grow, 1.0);
+            assert_eq!(text.layout.flex.shrink, 1.0);
+            assert_eq!(text.layout.flex.basis, Length::Px(Px(0.0)));
+            assert_eq!(text.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert_eq!(text.wrap, TextWrap::None);
+            assert_eq!(text.overflow, TextOverflow::Ellipsis);
+
+            let theme = Theme::global(&app);
+            let mut expected_style = typography::composable_refinement_from_style(
+                &typography::control_text_style(theme, expected_size),
+            );
+            expected_style.weight = Some(FontWeight::MEDIUM);
+            assert_eq!(
+                text_element.inherited_text_style.as_ref(),
+                Some(&expected_style)
+            );
+            assert_eq!(text_element.inherited_foreground, Some(sidebar_fg(theme)));
+        }
+    }
+
+    #[test]
+    fn sidebar_menu_sub_button_label_uses_shared_fill_button_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(96.0), Px(64.0)),
+        );
+
+        for (size, expected_size) in [
+            (SidebarMenuSubButtonSize::Md, typography::UiTextSize::Sm),
+            (SidebarMenuSubButtonSize::Sm, typography::UiTextSize::Xs),
+        ] {
+            let element = elements::with_element_cx(
+                &mut app,
+                window,
+                bounds,
+                "sidebar-menu-sub-button-label",
+                |cx| {
+                    SidebarMenuSubButton::new("Nested project tools")
+                        .size(size)
+                        .into_element(cx)
+                },
+            );
+
+            let text_element = find_text_element(&element, "Nested project tools")
+                .expect("expected sidebar menu sub button label text");
+            let ElementKind::Text(text) = &text_element.kind else {
+                panic!("expected sidebar menu sub button label text leaf");
+            };
+
+            assert!(text.style.is_none());
+            assert!(text.color.is_none());
+            assert_eq!(text.layout.size.width, Length::Fill);
+            assert_eq!(text.layout.flex.grow, 1.0);
+            assert_eq!(text.layout.flex.shrink, 1.0);
+            assert_eq!(text.layout.flex.basis, Length::Px(Px(0.0)));
+            assert_eq!(text.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert_eq!(text.wrap, TextWrap::None);
+            assert_eq!(text.overflow, TextOverflow::Ellipsis);
+
+            let theme = Theme::global(&app);
+            let mut expected_style = typography::composable_refinement_from_style(
+                &typography::control_text_style(theme, expected_size),
+            );
+            expected_style.weight = Some(FontWeight::MEDIUM);
+            assert_eq!(
+                text_element.inherited_text_style.as_ref(),
+                Some(&expected_style)
+            );
+            assert_eq!(text_element.inherited_foreground, Some(sidebar_fg(theme)));
+        }
     }
 
     #[test]

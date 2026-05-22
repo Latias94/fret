@@ -192,7 +192,7 @@ pub use runner_frame_drive_diagnostics::{
 };
 pub use runner_monitor_topology_diagnostics::{
     RunnerMonitorInfoV1, RunnerMonitorRectPhysicalV1, RunnerMonitorTopologyDiagnosticsStore,
-    RunnerMonitorTopologySnapshotV1,
+    RunnerMonitorTopologySnapshotV1, update_runner_monitor_topology_diagnostics,
 };
 pub use runner_platform_window_receiver_diagnostics::{
     RunnerPlatformWindowReceiverAtCursorSnapshotV1, RunnerPlatformWindowReceiverAtCursorSourceV1,

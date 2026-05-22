@@ -16,6 +16,56 @@ demo/metrics/debug route, and gate-command reference live under the default `Evi
 Guide` tab. This keeps the GUI source-backed and discoverable without making the first viewport a
 raw command wall.
 
+Status note (2026-05-21): `Evidence & Results -> Guide` now also has a `Workflow Runs` panel. It
+keeps first-open campaign validation, IMUI P3 campaign validation, and selected-session docking
+perf suite execution as GUI actions over shared `fret_diag::diag_cmd`, with bounded
+`.fret/diag/workflow-runs/*.json` history and redacted DevTools tokens.
+That history now restores from existing workflow-run result artifacts on startup, so reopening
+DevTools preserves the last suite/summarize evidence handoff.
+Suite workflow records also expose `output_artifacts[]` for `suite.summary.json` and
+`regression.summary.json`, keeping GUI-launched suite evidence handoff aligned with the shared
+regression artifacts consumed by CLI, MCP, and the Regression workspace. The selected workflow
+`suite.summary.json` and `regression.summary.json` artifacts are now copyable/openable directly
+from Workflow Result Details, so the handoff does not require reading raw result JSON first. The
+`regression.summary.json` artifact can be loaded into the existing Regression Workspace selection,
+keeping follow-up commands and perf/capability drill-down on the shared regression surfaces. The
+first-open next-action summary distinguishes this selected-summary state from a loaded aggregate
+regression index. Regression Workspace also shows a
+compact `Follow-up Readiness` projection so maintainers can see the next runnable command before
+reading the full command list. Once a selected-bundle follow-up result exists, the same first-open
+summary reports that result-ready state and routes review to Follow-up Result Summary/History.
+Workflow Runs now also projects `Workflow Handoff Readiness`, so a selected workflow result tells
+maintainers whether to run the workflow, load the workflow `regression.summary.json`, or move into
+Regression Workspace follow-up actions without scanning raw JSON first.
+That readiness block now also reports `aggregate_index_loaded` and a separate
+`aggregate_next_action`, so a generated `regression.index.json` is not confused with an aggregate
+workspace that has already loaded the workflow artifact root.
+When the suite-local summary does not yet have a sibling `regression.index.json`, the panel now
+derives and can run the shared `diag summarize <regression.summary.json> --dir <same-dir> --json`
+handoff command, keeping aggregate index generation explicit instead of pretending `diag suite`
+produced that artifact directly.
+The workflow summarize result record also projects both aggregate artifacts through
+`output_artifacts[]`, so the result summary/details surface can expose `regression.index.json`
+without parsing raw JSON or command text. When the index exists, Workflow Runs can load it into
+Regression Workspace by reusing the existing aggregate refresh over the index parent directory;
+the same ready index artifact is copyable/openable from Workflow Result Details for direct
+handoff.
+
+Status note (2026-05-21): Regression Workspace now turns baseline-required visual and footprint
+compare templates into GUI-runnable follow-up actions after the user supplies a baseline bundle,
+directory, or footprint session. The result still flows through the shared diagnostics runner and
+selected-bundle follow-up history, keeping compare as an artifact-layer command rather than a
+GUI-private diff model.
+
+Status note (2026-05-21): generated Gate Command result history now restores from recent valid
+`.fret/diag/gate-runs/*.json` artifacts on startup. This keeps stale/pixels/perf/resource-footprint
+gate evidence available after reopening DevTools without adding a GUI-private gate state file.
+
+Status note (2026-05-21): selected-summary follow-up history now also restores recent valid
+`.fret/diag/followups/*.json` artifacts on startup. The restored entries remain filtered by the
+currently selected bundle in Regression Workspace, so cross-bundle evidence does not masquerade as
+the active summary's latest result.
+
 # Diagnostics DevTools GUI Refresh v1
 
 This workstream defines a focused product/UX refresh for `apps/fret-devtools`.

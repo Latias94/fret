@@ -1099,6 +1099,7 @@ impl ElementHostWidget {
             clamp_to_constraints_in_measure(measured_size, props.layout, layout_constraints);
 
         if props.wrap == TextWrap::None {
+            cx.tree.clear_node_text_wrapped_measure_cache(cx.node);
             let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_plain(
                 &props.text,
                 &style,
@@ -1121,6 +1122,29 @@ impl ElementHostWidget {
             }
         } else {
             cx.tree.clear_node_text_wrap_none_measure_cache(cx.node);
+            if props.wrap == TextWrap::Word
+                && props.overflow == fret_core::TextOverflow::Clip
+                && props.align == fret_core::TextAlign::Start
+            {
+                let fingerprint = crate::text_props::text_wrapped_measure_fingerprint_plain(
+                    &props.text,
+                    &style,
+                    props.wrap,
+                    props.overflow,
+                    props.align,
+                    cx.scale_factor,
+                    font_stack_key,
+                );
+                cx.tree.set_node_text_wrapped_measure_cache(
+                    cx.node,
+                    fingerprint,
+                    text_constraints.max_width,
+                    metrics.size,
+                    clamped,
+                );
+            } else {
+                cx.tree.clear_node_text_wrapped_measure_cache(cx.node);
+            }
         }
 
         clamped
@@ -1196,6 +1220,7 @@ impl ElementHostWidget {
             clamp_to_constraints_in_measure(measured_size, props.layout, layout_constraints);
 
         if props.wrap == TextWrap::None {
+            cx.tree.clear_node_text_wrapped_measure_cache(cx.node);
             let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
                 &props.rich,
                 &style,
@@ -1218,6 +1243,7 @@ impl ElementHostWidget {
             }
         } else {
             cx.tree.clear_node_text_wrap_none_measure_cache(cx.node);
+            cx.tree.clear_node_text_wrapped_measure_cache(cx.node);
         }
 
         clamped
@@ -1293,6 +1319,7 @@ impl ElementHostWidget {
             clamp_to_constraints_in_measure(measured_size, props.layout, layout_constraints);
 
         if props.wrap == TextWrap::None {
+            cx.tree.clear_node_text_wrapped_measure_cache(cx.node);
             let fingerprint = crate::text_props::text_wrap_none_measure_fingerprint_rich(
                 &props.rich,
                 &style,
@@ -1315,6 +1342,7 @@ impl ElementHostWidget {
             }
         } else {
             cx.tree.clear_node_text_wrap_none_measure_cache(cx.node);
+            cx.tree.clear_node_text_wrapped_measure_cache(cx.node);
         }
 
         clamped

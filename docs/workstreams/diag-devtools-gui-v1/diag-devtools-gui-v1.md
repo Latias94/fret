@@ -79,13 +79,108 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - That shared script-target projection now carries structured `diag_args` and `missing_inputs`, so
   the GUI can distinguish copyable templates from runnable gate commands without parsing shell
   command strings.
+- The Guide now starts with `Recent Evidence`, a compact projection over restored generated-gate,
+  workflow-run, and selected-bundle follow-up histories. It shows the latest artifact in each lane,
+  counts recent failing evidence, selects the newest failed evidence across lanes from result JSON
+  timestamps first and timestamped path prefixes as a compatibility fallback, reports the full
+  failed evidence artifact path, includes the failed follow-up `bundle_dir` when available, and
+  points at the next evidence action without creating a GUI-private result store. Empty status,
+  `-`, and case-varied `passed` values are normalized out of the failure set, so restored placeholder
+  records do not become first-open failures.
+- That `Recent Evidence` block is now directly actionable: maintainers can copy the compact
+  evidence report, copy the first failed evidence artifact path, copy the failed follow-up bundle
+  directory when present, rerun failed evidence when its result JSON carries runnable structured
+  `diag_args`, copy the command that produced that artifact, copy the restored failed evidence JSON
+  payload, or open the first failed evidence JSON from the first-open Guide without navigating into
+  the individual gate/workflow/follow-up panels first. The rerun action uses stored structured
+  `diag_args` when they are complete; workflow reruns are stricter and always re-materialize the
+  same workflow id from the current selected session and current token instead of reusing stored
+  workflow `diag_args`. Missing args, unknown workflow ids, or missing selected session still keep
+  rerun disabled and now surface a concrete unavailable reason, so display command strings never
+  become an executable protocol. The
+  visible/copyable compact report uses the same state-aware rerun decision as the button, and its
+  next-action line now points at the concrete repair step: rerun, select a session, refresh workflow
+  commands, run a current workflow, or inspect the result JSON. First-open guidance and action
+  availability therefore stay aligned.
+- The same block can select the first failed evidence into the existing Gate, Workflow, or
+  Follow-up history state. Follow-up selection also carries its `bundle_dir` into Regression
+  Workspace so the selected-bundle follow-up inspector is aligned with the artifact that failed.
+- The shell header `First-open Next Actions` also reports restored failed GUI-launched evidence and
+  its rerun command plus current rerun availability or unavailable reason, so a maintainer sees the
+  current failure and why it is or is not directly rerunnable before opening the Guide. It now also
+  mirrors the same `recent evidence next` repair step as the Guide report, so the first viewport can
+  point at rerun, session selection, workflow refresh, current workflow evidence, or result JSON
+  inspection without requiring a tab change.
+- The same header now mirrors the Guide's `Copy recent evidence report`, `Select failed evidence`,
+  and `Rerun failed evidence` actions as first-open shortcut buttons. The buttons reuse the Guide
+  command ids and disabled-state rules, so the header does not create a parallel execution path.
+- The MCP first-open surface now exposes a matching read-only `fret_diag_recent_evidence` tool and
+  `fret-diag://recent-evidence.json` resource over the same `.fret/diag/gate-runs`,
+  `.fret/diag/workflow-runs`, and `.fret/diag/followups` records. It reports latest lane
+  evidence, the newest failed result across lanes, and a next-action hint, but does not re-run
+  historical workflow args because current session/token rerun decisions remain GUI-owned. The
+  sessionless resource list/template source is tested so `first-open.md` and
+  `recent-evidence.json` remain discoverable together. Restored GUI histories and the MCP scan sort
+  valid result records by `finished_unix_ms` / `started_unix_ms` before filesystem mtime/path, so
+  copied or synced `.fret/diag` artifacts keep their recorded recency after reopen.
+- The same header now projects the selected diagnostics session scope. With no session it tells the
+  maintainer to launch or choose a target; with one session it confirms actions target that
+  session; with multiple sessions it names the selected session and points at the Session selector
+  before inspect, bundle, screenshot, or selected-session suite actions are sent.
 - The GUI can now launch a generated stale paint/scene or pixels-changed script-target gate command
   through the shared diagnostics engine. Each run records in-flight/error state in the panel and
   writes a lightweight `.fret/diag/gate-runs/*.json` result artifact with command/status/timing
   metadata.
 - Generated gate results are retained as a bounded selectable history. The panel shows selected
   result details, a structured summary, raw JSON, copy actions for path/command/JSON, and a
-  platform URL open action for the selected result artifact.
+  platform URL open action for the selected result artifact. DevTools startup restores the latest
+  valid records from `.fret/diag/gate-runs/*.json`, so maintainers can reopen the GUI and inspect
+  recent generated-gate evidence without rerunning the gate first.
+- The Guide now includes a `Workflow Runs` block that turns the first-open/product diagnostics
+  loop into GUI-runnable presets rather than prose only. The initial presets validate the
+  `devtools-first-open-smoke` and `imui-p3-multiwindow-parity` campaign manifests and can run the
+  `perf-docking-arbitration-steady` suite through the selected WebSocket session using the shared
+  `fret_diag::diag_cmd` path.
+- Each GUI-launched workflow run writes a lightweight `.fret/diag/workflow-runs/*.json` record with
+  status, timing, command, redacted `diag_args`, and copy/open actions. DevTools tokens are redacted
+  from stored JSON and command previews while the runtime command still receives the real token.
+  DevTools startup restores the latest valid records from that directory, so a maintainer can reopen
+  the GUI and continue from recent workflow evidence without rerunning the suite first.
+- Suite workflow result records now also project shared diagnostics handoff paths through
+  `output_artifacts[]`, including `suite.summary.json` and `regression.summary.json` for the
+  selected-session `perf-docking-arbitration-steady --dir ...` run. The Workflow Result Summary and
+  Details panels surface those paths above raw JSON so GUI-launched suite runs can hand off evidence
+  to regression triage without re-deriving output locations. The selected suite
+  `suite.summary.json` and `regression.summary.json` artifacts can also be copied or opened
+  directly from Workflow Result Details, matching the selected-summary trace artifact handoff
+  pattern. The selected suite `regression.summary.json` can also be loaded into the existing
+  Regression Workspace selection, reusing the shared drill-down and follow-up command surfaces
+  instead of adding a workflow-private regression inspector. The first-open next-action summary
+  treats that state as `selected summary loaded`, distinct from aggregate
+  `regression.index.json` readiness. Regression Workspace also shows a compact `Follow-up
+  Readiness` block with selected bundle count, runnable/manual follow-up counts, and the first
+  runnable command, so workflow-loaded suite summaries move directly into the next diagnostics
+  action. After a selected-bundle follow-up result exists, the first-open next-action summary also
+  reports the selected follow-up result state and points maintainers at Follow-up Result
+  Summary/History instead of leaving them to rediscover the artifact through raw JSON.
+- Workflow Runs now includes a compact `Workflow Handoff Readiness` block. It projects whether the
+  selected workflow result exists, whether it produced a `regression.summary.json`, whether that
+  summary has a sibling `regression.index.json`, whether that summary is already loaded into
+  Regression Workspace, whether the sibling aggregate index is already loaded into the aggregate
+  workspace, and the next action (`Run workflow`, `Run workflow summarize`, `Load workflow
+  regression summary`, `Load workflow regression index`, or use Regression Workspace follow-up
+  actions).
+- Workflow Runs also exposes `Workflow Summarize Handoff`, which derives a shared
+  `diag summarize <regression.summary.json> --dir <same-dir> --json` command from the selected
+  suite result. This keeps `regression.index.json` generation explicit when `diag suite` has only
+  produced the suite-local summary artifact.
+- GUI-launched workflow summarize records now surface both `regression.summary.json` and
+  `regression.index.json` through `output_artifacts[]`, so the result summary/details panels can
+  hand the aggregate index back to Regression Workspace without inferring it from raw command text.
+- When that workflow `regression.index.json` is ready, Workflow Runs can load it into Regression
+  Workspace by setting the aggregate artifacts root to the index parent directory and reusing the
+  existing aggregate refresh path. The same index artifact can also be copied or opened directly
+  from Workflow Result Details. The GUI still does not parse a workflow-private index model.
 - The same generated-gate builder now includes a perf-threshold profile. `fret-diag` owns the
   structured `diag perf` command projection for target, repeat, warmup frames, aggregate, and the
   first threshold fields; the GUI only renders the form and runs the shared `diag_args`.
@@ -107,6 +202,11 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
 - Bundle-local runnable follow-ups can now be launched from the selected-summary inspector through
   the shared diagnostics engine, with in-flight/error status recorded in the GUI; baseline-required
   compare commands remain manual until the user supplies a baseline.
+- Baseline-required visual and footprint compare templates can now be materialized from the
+  Regression Workspace. `Baseline Compare Actions` accepts a baseline bundle/directory or baseline
+  footprint session, then launches the shared `diag compare ... --json` /
+  `diag compare ... --footprint --json` follow-up path and records the candidate bundle result in
+  the same selected-bundle history.
 - Each GUI-launched follow-up now writes a result JSON under `.fret/diag/followups/` and exposes the
   latest result path for copying, so the GUI path leaves a lightweight evidence artifact.
 - Trace follow-up result JSON now includes an `output_artifacts` entry for
@@ -119,7 +219,9 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   the raw JSON, keeping status, command, duration, and error preview readable at scan speed.
 - GUI-launched follow-up results are also retained as a bounded in-memory history and filtered by
   the selected bundle, so authors do not confuse a previous bundle's last result with the current
-  selected-summary evidence.
+  selected-summary evidence. DevTools startup restores recent valid `.fret/diag/followups/*.json`
+  records into that same history; the Regression Workspace still filters them by the currently
+  selected bundle before showing summary, details, raw JSON, or copy targets.
 - That selected-bundle history is now rendered as selectable result entries, allowing authors to
   switch the summary/raw JSON/copy target between recent follow-up artifacts.
 - The selected result now has a details block with status, path, command, bundle, and error preview,
@@ -131,6 +233,9 @@ The missing piece for “everyday use” is a **DevTools GUI** that:
   global last result, so copied evidence paths stay aligned with the current selected summary.
 - The same selected-bundle result JSON can be copied directly from the inspector, giving issue
   reports and AI-assisted triage the exact payload shown in the panel.
+- Trace follow-up artifacts can now be copied or opened directly from the same selected-result
+  actions. The GUI resolves relative `trace.chrome.json` paths against the repo root and still
+  keeps the result JSON as the durable evidence record.
 - The live inspect path now has a real minimal WS payload loop instead of only a GUI raw-JSON
   receiver. `fret-diag-protocol` owns `UiInspectHoverV1`, `UiInspectFocusV1`, overlay hook, and
   `UiOverlaySummaryV1` types; `fret-bootstrap` publishes changed `inspect.hover`,
@@ -550,9 +655,18 @@ They can evolve, but treat them as sticky unless we have strong evidence.
 9. **MCP integration**:
    - add a dedicated headless MCP server (`apps/fret-devtools-mcp`) using `rmcp` (stdio first),
    - keep the tool surface small and map 1:1 to existing CLI/GUI operations.
+10. **Multi-session targeting (v1)**:
+   - keep the current selected session if it still exists after a `session.list` / add / remove refresh,
+   - otherwise fall back to the first advertised session,
+   - filter session-scoped incoming payloads to the selected session,
+   - treat no selected session as the compatibility state that accepts incoming payloads until the first
+     valid selection is established,
+   - send inspect, pick, bundle, screenshot, and selected-session suite actions to the selected session;
+     the first-open header must show that scope before those actions are used.
 
 ## Open questions (remaining)
 
 1. **Transport evolution**: do we later add HTTP endpoints for large artifact download, or keep WS-only + zip export?
-2. **Multi-session UX**: how DevTools chooses a session/window when multiple apps connect.
+2. **Per-session window targeting**: whether a later v2 needs an explicit window selector inside a
+   selected diagnostics session, beyond the current command payloads' window selectors.
 3. **Binary encoding**: when (if ever) to add a binary framing for perf-heavy payloads.

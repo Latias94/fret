@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole};
+use fret_core::{Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextStyle};
 use fret_runtime::Model;
 use fret_ui::action::OnCloseAutoFocus;
 use fret_ui::element::{
@@ -16,6 +16,7 @@ use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::primitives::control_registry::{
     ControlAction, ControlEntry, ControlId, control_registry_model,
 };
@@ -38,6 +39,34 @@ use crate::test_id::test_id_slug;
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn native_select_text_refinement(style: &TextStyle) -> fret_core::TextStyleRefinement {
+    let mut refinement = typography::composable_refinement_from_style(style);
+    refinement.weight = Some(style.weight);
+    refinement
+}
+
+fn native_select_trigger_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    style: &TextStyle,
+    foreground: Color,
+) -> AnyElement {
+    decl_text::text_control_label(cx, label)
+        .inherit_text_style(native_select_text_refinement(style))
+        .inherit_foreground(foreground)
+}
+
+fn native_select_item_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    style: &TextStyle,
+    foreground: Color,
+) -> AnyElement {
+    decl_text::text_list_row_label(cx, label)
+        .inherit_text_style(native_select_text_refinement(style))
+        .inherit_foreground(foreground)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -590,22 +619,11 @@ fn render_native_select<H: UiHost>(
                         };
                         cx.container(surface_props, move |cx| {
                             let fg = if label_is_placeholder {
-                                ColorRef::Color(muted_fg)
+                                muted_fg
                             } else {
-                                ColorRef::Color(resolved.text_color)
+                                resolved.text_color
                             };
-                            let mut content = ui::text(label)
-                                .text_size_px(text_style.size)
-                                .fixed_line_box_px(
-                                    text_style.line_height.unwrap_or(text_style.size),
-                                )
-                                .line_box_in_bounds()
-                                .font_normal()
-                                .nowrap()
-                                .text_color(fg)
-                                .truncate();
-
-                            content = content.overflow(fret_core::TextOverflow::Clip);
+                            let content = native_select_trigger_text(cx, label, &text_style, fg);
 
                             let mut icon = decl_icon::icon_with(
                                 cx,
@@ -618,8 +636,7 @@ fn render_native_select<H: UiHost>(
                             }
 
                             vec![
-                                ui::h_row(|cx| {
-                                    let content = content.flex_1().min_w_0().into_element(cx);
+                                ui::h_row(|_cx| {
                                     let (a, b) =
                                         crate::rtl::inline_start_end_pair(dir, content, icon);
                                     vec![a, b]
@@ -723,26 +740,12 @@ fn render_native_select<H: UiHost>(
                         let icon =
                             cx.opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| vec![icon]);
 
-                        let text = {
-                            let mut label = ui::label(label_text.clone())
-                                .text_size_px(label_style.size)
-                                .font_weight(label_style.weight)
-                                .text_color(ColorRef::Color(if item_disabled {
-                                    fg_disabled
-                                } else {
-                                    fg
-                                }))
-                                .truncate();
-                            if let Some(line_height) = label_style.line_height {
-                                label = label.line_height_px(line_height).line_height_policy(
-                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                );
-                            }
-                            if let Some(letter_spacing_em) = label_style.letter_spacing_em {
-                                label = label.letter_spacing_em(letter_spacing_em);
-                            }
-                            label.into_element(cx)
-                        };
+                        let text = native_select_item_text(
+                            cx,
+                            label_text.clone(),
+                            &label_style,
+                            if item_disabled { fg_disabled } else { fg },
+                        );
 
                         let mut item = CommandItem::new(label_text)
                             .value(option.value.clone())
@@ -929,6 +932,81 @@ mod tests {
             }
             _ => panic!("expected {context} height to resolve to px"),
         }
+    }
+
+    fn assert_native_select_role_text(element: &AnyElement, expected_fg: Color) {
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected native select role text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert!(element.inherited_text_style.is_some());
+        assert_eq!(element.inherited_foreground, Some(expected_fg));
+    }
+
+    #[test]
+    fn native_select_trigger_and_item_text_use_shared_resize_roles() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        let mut trigger_style = typography::fixed_line_box_style(FontId::ui(), Px(14.0), Px(20.0));
+        trigger_style.weight = FontWeight::NORMAL;
+        let trigger_fg = Color {
+            r: 0.10,
+            g: 0.20,
+            b: 0.30,
+            a: 1.0,
+        };
+
+        let trigger_text = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "native-select-trigger-text",
+            |cx| {
+                native_select_trigger_text(
+                    cx,
+                    Arc::from("Very long selected option label"),
+                    &trigger_style,
+                    trigger_fg,
+                )
+            },
+        );
+        assert_native_select_role_text(&trigger_text, trigger_fg);
+
+        let mut item_style = crate::command::item_text_style(&Theme::global(&app).snapshot());
+        item_style.letter_spacing_em = Some(0.015);
+        let item_fg = Color {
+            r: 0.40,
+            g: 0.30,
+            b: 0.20,
+            a: 0.75,
+        };
+
+        let item_text = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "native-select-item-text",
+            |cx| {
+                native_select_item_text(
+                    cx,
+                    Arc::from("Very long listbox option label"),
+                    &item_style,
+                    item_fg,
+                )
+            },
+        );
+        assert_native_select_role_text(&item_text, item_fg);
     }
 
     #[test]

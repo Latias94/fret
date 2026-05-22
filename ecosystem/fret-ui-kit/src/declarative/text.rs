@@ -50,6 +50,24 @@ pub(crate) fn text_button_label_refinement(theme: &Theme) -> TextStyleRefinement
     refinement
 }
 
+pub(crate) fn text_button_label_compact_refinement(theme: &Theme) -> TextStyleRefinement {
+    let mut refinement = text_xs_refinement(theme);
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
+}
+
+pub(crate) fn text_chip_label_refinement(theme: &Theme) -> TextStyleRefinement {
+    let mut refinement = text_xs_refinement(theme);
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
+}
+
+pub(crate) fn text_keycap_label_refinement(theme: &Theme) -> TextStyleRefinement {
+    let mut refinement = text_xs_refinement(theme);
+    refinement.weight = Some(FontWeight::MEDIUM);
+    refinement
+}
+
 pub(crate) fn text_chrome_title_refinement(theme: &Theme) -> TextStyleRefinement {
     let mut refinement = text_sm_refinement(theme);
     refinement.weight = Some(FontWeight::MEDIUM);
@@ -261,7 +279,7 @@ pub fn text_list_row_label<H: UiHost>(
 
     ui_typography::scope_text_style(
         cx.text_props(TextProps {
-            layout: fill_shrinkable_single_line_layout(),
+            layout: fill_growing_zero_min_layout(),
             text: text.into(),
             style: None,
             color: None,
@@ -290,7 +308,7 @@ pub fn text_list_row_label_attributed<H: UiHost>(
 
     ui_typography::scope_text_style(
         cx.styled_text_props(StyledTextProps {
-            layout: fill_shrinkable_single_line_layout(),
+            layout: fill_growing_zero_min_layout(),
             rich,
             style: None,
             color: None,
@@ -517,6 +535,118 @@ pub fn text_button_label<H: UiHost>(
     )
 }
 
+/// Fill-width variant of [`text_button_label`].
+///
+/// Use this when a button-like row label owns the remaining inline space between icons/actions.
+/// It stays in the button-label family while adding fill/grow/basis-zero flex behavior.
+pub fn text_button_label_fill<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_button_label_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: fill_growing_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Compact fill-width variant of [`text_button_label`].
+///
+/// Use this for `text-xs font-medium` button-like triggers such as small sidebar menu rows.
+pub fn text_button_label_compact_fill<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_button_label_compact_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: fill_growing_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Declarative text helper for compact chip, tag, and inline badge labels.
+///
+/// Use this inside pill-like chrome whose container owns the inline size. The label can shrink to
+/// zero and ellipsize, but it does not fill or grow like row/control labels.
+pub fn text_chip_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_chip_label_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
+/// Declarative text helper for fixed keycap labels.
+///
+/// Use this for keyboard shortcut caps and adjacent key-hint labels. The owning component may
+/// refine typography and foreground, while the role owns the single-line shrink/ellipsis contract
+/// that keeps fixed-height keycap chrome from growing under resize.
+pub fn text_keycap_label<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text: impl Into<Arc<str>>,
+) -> AnyElement {
+    let refinement = {
+        let theme = Theme::global(&*cx.app);
+        text_keycap_label_refinement(theme)
+    };
+
+    ui_typography::scope_text_style(
+        cx.text_props(TextProps {
+            layout: shrinkable_single_line_layout(),
+            text: text.into(),
+            style: None,
+            color: None,
+            wrap: TextWrap::None,
+            overflow: TextOverflow::Ellipsis,
+            align: TextAlign::Start,
+            ink_overflow: TextInkOverflow::None,
+        }),
+        refinement,
+    )
+}
+
 /// Declarative text helper for compact control labels.
 ///
 /// Use this for checkbox, radio, switch, combo, and slider captions that occupy remaining control
@@ -604,8 +734,9 @@ pub fn text_chrome_glyph<H: UiHost>(
 
 /// Declarative text helper for fill-width chrome titles.
 ///
-/// Use this for window/panel title bars that occupy remaining chrome row space. It keeps compact
-/// medium-weight chrome text while opting into fill, grow, and `min-width: 0` layout.
+/// Use this for window/panel title bars that fill the available inline space while staying
+/// shrinkable for ellipsis. It avoids main-axis growth so the same title helper remains safe in
+/// vertical chrome lanes.
 pub fn text_chrome_title<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     text: impl Into<Arc<str>>,
@@ -617,7 +748,7 @@ pub fn text_chrome_title<H: UiHost>(
 
     ui_typography::scope_text_style(
         cx.text_props(TextProps {
-            layout: fill_growing_single_line_layout(),
+            layout: fill_shrinkable_single_line_layout(),
             text: text.into(),
             style: None,
             color: None,
@@ -1500,7 +1631,9 @@ mod tests {
         assert!(props.style.is_none());
         assert!(props.color.is_none());
         assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
         assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
@@ -1530,7 +1663,9 @@ mod tests {
         assert!(props.style.is_none());
         assert!(props.color.is_none());
         assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
         assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
@@ -1771,6 +1906,147 @@ mod tests {
     }
 
     #[test]
+    fn fill_button_label_text_uses_growing_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_button_label_fill(cx, "Project settings and workspace tools")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_button_label_fill(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_button_label_refinement(&theme))
+        );
+    }
+
+    #[test]
+    fn compact_fill_button_label_text_uses_xs_growing_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_button_label_compact_fill(cx, "Small nested project row")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_button_label_compact_fill(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_button_label_compact_refinement(&theme))
+        );
+        assert_eq!(
+            el.inherited_text_style
+                .as_ref()
+                .and_then(|style| style.size),
+            text_xs_refinement(&theme).size
+        );
+    }
+
+    #[test]
+    fn chip_label_text_uses_xs_medium_non_growing_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_chip_label(cx, "Long selected framework chip")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_chip_label(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Auto);
+        assert_eq!(props.layout.flex.grow, 0.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Auto);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_chip_label_refinement(&theme))
+        );
+        assert_eq!(
+            el.inherited_text_style
+                .as_ref()
+                .and_then(|style| style.weight),
+            Some(FontWeight::MEDIUM)
+        );
+        assert_eq!(
+            el.inherited_text_style
+                .as_ref()
+                .and_then(|style| style.size),
+            text_xs_refinement(&theme).size
+        );
+    }
+
+    #[test]
+    fn keycap_label_text_uses_xs_medium_single_line_truncation() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let bounds = test_bounds();
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            text_keycap_label(cx, "Ctrl+Shift+P")
+        });
+        let theme = Theme::global(&app);
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected text_keycap_label(...) to build a Text element");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Ellipsis);
+        assert_eq!(
+            el.inherited_text_style,
+            Some(text_keycap_label_refinement(&theme))
+        );
+        assert_eq!(
+            el.inherited_text_style
+                .as_ref()
+                .and_then(|style| style.weight),
+            Some(FontWeight::MEDIUM)
+        );
+    }
+
+    #[test]
     fn section_chrome_label_text_uses_single_line_truncation() {
         let window = AppWindowId::default();
         let mut app = test_app();
@@ -1795,7 +2071,7 @@ mod tests {
     }
 
     #[test]
-    fn chrome_title_text_uses_medium_fill_width_single_line_truncation() {
+    fn chrome_title_text_fills_width_without_main_axis_growth() {
         let window = AppWindowId::default();
         let mut app = test_app();
         let bounds = test_bounds();
@@ -1812,9 +2088,9 @@ mod tests {
         assert!(props.style.is_none());
         assert!(props.color.is_none());
         assert_eq!(props.layout.size.width, Length::Fill);
-        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.grow, 0.0);
         assert_eq!(props.layout.flex.shrink, 1.0);
-        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.flex.basis, Length::Auto);
         assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
@@ -1895,6 +2171,18 @@ mod tests {
         );
         assert_single_line_text_role("button-label", Px(18.0), move |cx| {
             text_button_label(cx, long)
+        });
+        assert_single_line_text_role("button-label-fill", Px(18.0), move |cx| {
+            text_button_label_fill(cx, long)
+        });
+        assert_single_line_text_role("button-label-compact-fill", Px(18.0), move |cx| {
+            text_button_label_compact_fill(cx, long)
+        });
+        assert_single_line_text_role("chip-label", Px(16.0), move |cx| {
+            text_chip_label(cx, "Very long selected framework tag")
+        });
+        assert_single_line_text_role("keycap-label", Px(16.0), move |cx| {
+            text_keycap_label(cx, "Ctrl+Shift+P")
         });
         assert_single_line_text_role("table-cell", Px(18.0), move |cx| text_table_cell(cx, long));
         assert_single_line_text_role("code-label", Px(18.0), move |cx| {

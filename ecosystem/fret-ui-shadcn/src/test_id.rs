@@ -17,6 +17,20 @@ pub(crate) fn attach_test_id_suffix(
     attach_test_id(el, Arc::<str>::from(format!("{prefix}-{suffix}")))
 }
 
+pub(crate) fn attach_test_id_suffix_dynamic(
+    el: AnyElement,
+    prefix: Option<&Arc<str>>,
+    suffix: impl AsRef<str>,
+) -> AnyElement {
+    let Some(prefix) = prefix else {
+        return el;
+    };
+    attach_test_id(
+        el,
+        Arc::<str>::from(format!("{prefix}-{}", suffix.as_ref())),
+    )
+}
+
 /// Converts an arbitrary identifier into a stable `test_id`-safe slug.
 ///
 /// This is intentionally conservative: keep ASCII alphanumerics, lowercase them, and replace all

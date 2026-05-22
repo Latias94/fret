@@ -100,15 +100,32 @@ impl<H: UiHost> UiTree<H> {
             .window_runtime_snapshot_command_availability_eval_time = Duration::default();
         self.debug_stats
             .window_runtime_snapshot_shortcut_overlay_time = Duration::default();
+        self.debug_stats.layout_request_build_roots_take_engine_time = Duration::default();
+        self.debug_stats.layout_request_build_roots_phase1_time = Duration::default();
+        self.debug_stats.layout_request_build_roots_phase2_time = Duration::default();
+        self.debug_stats
+            .layout_request_build_roots_phase2_clean_geometry_proof_time = Duration::default();
+        self.debug_stats
+            .layout_request_build_roots_phase2_compute_time = Duration::default();
+        self.debug_stats.layout_request_build_roots_put_engine_time = Duration::default();
         self.debug_stats.layout_roots_time = Duration::default();
+        self.debug_stats.layout_roots_apply_time = Duration::default();
+        self.debug_stats.layout_roots_flush_viewport_time = Duration::default();
         self.debug_stats.layout_barrier_relayouts_time = Duration::default();
         self.debug_stats.layout_view_cache_time = Duration::default();
         self.debug_stats.layout_semantics_refresh_time = Duration::default();
         self.debug_stats.layout_focus_repair_time = Duration::default();
         self.debug_stats.layout_deferred_cleanup_time = Duration::default();
         self.debug_stats.layout_clean_geometry_solve_skip_rejections = 0;
+        self.debug_stats.layout_clean_geometry_proof_nodes = 0;
+        self.debug_stats.layout_clean_geometry_proof_boundaries = 0;
+        self.debug_stats.layout_clean_geometry_apply_nodes = 0;
+        self.debug_stats
+            .layout_clean_geometry_apply_fallback_layouts = 0;
         self.debug_stats
             .layout_clean_geometry_solve_skip_first_rejection = None;
+        self.debug_stats
+            .layout_clean_geometry_solve_skip_first_detail = None;
         self.debug_stats
             .layout_clean_geometry_solve_skip_first_element_kind = None;
         self.debug_stats.layout_subtree_dirty_agg_enabled = true;

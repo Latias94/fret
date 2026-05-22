@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-20
+Last updated: 2026-05-21
 
 ## Evidence Anchors
 
@@ -1591,6 +1591,21 @@ Run evidence:
   surface. Focused gates passed locally:
   `cargo nextest run -p fret-devtools devtools_first_open_next_action_lines_prioritize_stateful_workflow devtools_first_open_lines_surface_canonical_paths devtools_dogfood_workflow_lines_surface_ui_gallery_loop devtools_demo_metrics_debug_lines_surface_canonical_routes devtools_gate_command_lines_surface_first_class_gates --no-fail-fast`
   and `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`.
+- 2026-05-21: DevTools demo/metrics/debug discovery now has a shared CLI/JSON route, not only a
+  GUI guide panel. `fretboard-dev list tool-apps` prints `route: demo-metrics-debug`, and
+  `fretboard-dev list tool-apps --json` exposes the same route under `first_open_routes` with
+  grouped editor demo, metrics, and debug commands, including `diag trace <bundle-or-dir> --json`.
+  Focused gates passed locally for this slice:
+  `cargo fmt -p fretboard-dev --check`,
+  `cargo fmt -p fretboard-dev -p fret-devtools -p fret-devtools-mcp --check`,
+  `cargo nextest run -p fretboard-dev tool_apps_list_names_first_open_routes tool_apps_json_value_exposes_stable_machine_readable_shape --no-fail-fast`,
+  `cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes --no-fail-fast`,
+  `cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast`,
+  `cargo build -p fretboard-dev -p fret-devtools -p fret-devtools-mcp`,
+  `python -m py_compile tools/diag_gate_imui_p2_devtools_first_open.py tools/diag_gate_imui_product_chain.py tools/gate_imui_workstream_source.py`,
+  `python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built`,
+  `python tools/diag_gate_imui_product_chain.py --only discovery --reuse-built`,
+  `python tools/gate_imui_workstream_source.py`, and `git diff --check`.
 - 2026-05-14: tightened the first-open discovery gate so `docs/diagnostics-first-open.md` must link
   maintainers from aggregate `skipped_policy` outcomes to the policy-skip / capability-provenance
   checklist, while preserving the distinction between `capability_source` and
@@ -4726,6 +4741,341 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 - `cargo check -p fret-ui-shadcn --lib` passed.
+
+2026-05-20 shadcn SidebarMenuButton/SubButton fill button-label slice:
+
+- Source gap before fix: default `SidebarMenuButton` and `SidebarMenuSubButton` labels lived in
+  fixed-height sidebar rows but still hand-rolled local `ui::text(...).w_full().min_w_0().flex_1()
+  .basis_0().text_size_px(...).font_weight(...).line_height_px(...).truncate()` policy. The
+  collapsed sidebar tooltip label also used local `wrap(TextWrap::Word)` / `TextOverflow::Clip`.
+  That duplicated role policy in the sidebar recipe and left the small-row `text-xs` shadcn axis
+  outside the shared button-label family.
+- `text_button_label_fill(...)` and `text_button_label_compact_fill(...)` now exist as derived
+  button-label roles. They add fill/grow/basis-zero layout to the button-label resize contract,
+  while the compact variant owns `text-xs font-medium` for small trigger rows.
+- `SidebarMenuButton` and `SidebarMenuSubButton` default labels now consume those derived roles
+  through a small sidebar helper and inherit sidebar foreground. `size=sm` maps to the compact
+  role, default/lg and md rows map to the regular fill role, and collapsed tooltip labels use
+  `text_button_label(...)` instead of local wrapping text. Sidebar still owns row chrome,
+  foreground state, collapse opacity, RTL ordering, and tooltip placement.
+- `fill_button_label_text_uses_growing_single_line_truncation` and
+  `compact_fill_button_label_text_uses_xs_growing_single_line_truncation` prove the derived role
+  contracts. `sidebar_menu_button_label_uses_shared_fill_button_role` and
+  `sidebar_menu_sub_button_label_uses_shared_fill_button_role` prove sidebar default labels keep
+  fill/grow/min-width-0/no-wrap/ellipsis semantics and the correct `text-sm` vs `text-xs` inherited
+  typography.
+- `cargo nextest run -p fret-ui-kit --lib
+  fill_button_label_text_uses_growing_single_line_truncation
+  compact_fill_button_label_text_uses_xs_growing_single_line_truncation
+  base_single_line_text_roles_stay_single_line_under_narrow_layout --no-fail-fast` passed.
+- First `cargo nextest run -p fret-ui-shadcn --lib
+  sidebar_menu_button_label_uses_shared_fill_button_role
+  sidebar_menu_sub_button_label_uses_shared_fill_button_role
+  sidebar_menu_button_default_content_reorders_in_rtl
+  sidebar_menu_sub_button_default_content_reorders_in_rtl --no-fail-fast` timed out while Cargo was
+  still compiling. No process was killed; after Cargo exited naturally the same focused command was
+  rerun. The first rerun exposed the expected test update for sub-button row signatures after the
+  label became a shared role, and the post-fix run passed.
+- `cargo fmt --check -p fret-ui-kit -p fret-ui-shadcn` passed.
+- `python tools\gate_imui_facade_teaching_source.py` passed.
+- `python tools\gate_imui_workstream_source.py` passed.
+- `cargo check -p fret-ui-shadcn --lib` passed.
+
+2026-05-20 inherited-axis + shadcn Button default-label role slice:
+
+- Source gap before fix: shadcn `Button` default labels still used a local
+  `ui::text(...).text_size_px(...).fixed_line_box_px(...).nowrap().text_color(...)` builder inside
+  fixed-height button chrome. Migrating that path directly to `text_button_label(...)` exposed a
+  mechanism gap: `TextStyleRefinement` carried OpenType features but not variable font axes, so
+  existing `Button::label_font_axis(...)` could not stay on the inherited-role path.
+- `TextStyleRefinement` now carries variable font axes as subtree defaults. Merge/refine,
+  passive-text measurement, cache fingerprints, and `fret-ui-kit` typography refinements all carry
+  axes alongside features.
+- `Button` default labels now render through a small helper backed by
+  `decl_text::text_button_label(...)`. Button-owned font, feature, axis, explicit weight,
+  foreground, and label `test_id` suffix behavior are layered through inherited text/foreground
+  metadata instead of leaf-local style/color. The default text size follows the shared shadcn
+  `text-sm font-medium whitespace-nowrap` baseline, with the existing Fret `xs/icon-xs` extension
+  mapped to the shared `text-xs` preset.
+- Focused proof:
+  `text_style_refinement_merges_font_axes_in_parent_child_order`,
+  `text_style_refine_applies_inherited_font_axes_after_leaf_defaults`,
+  `inherited_text_style_axes_affect_passive_text_measurement`,
+  `inherited_text_style_fingerprint_tracks_axis_overrides`,
+  `composable_refinement_keeps_font_features_and_axes`,
+  `button_default_label_uses_shared_button_label_role`,
+  `button_default_label_keeps_font_feature_and_axis_overrides_on_role`, and
+  `button_default_label_keeps_weight_override_on_role`.
+
+2026-05-20 shadcn CalendarDayButton shared text-role slice:
+
+- Source gap before fix: `CalendarDayButton` day numbers and optional supporting text rendered with
+  Calendar-local `ui::label(...).text_size_px(...).line_height_px(...).text_color(...).nowrap()`
+  builders inside fixed-size day cells. That duplicated the single-line resize contract in the
+  calendar recipe and left the same day-cell text policy outside the shared role/gate vocabulary.
+- `calendar_day_label_text(...)` now backs day numbers with `decl_text::text_button_label(...)`,
+  layered with Calendar-owned normal weight, foreground, and center alignment through inherited
+  text/foreground metadata. `calendar_day_supporting_text(...)` backs optional supporting text with
+  `decl_text::text_control_readout(...)`, keeping the auxiliary value in the readout family while
+  preserving Calendar-owned center alignment and opacity behavior.
+- `Calendar` and `CalendarRange` both feed the same `day_text_style` into
+  `calendar_day_button_children(...)`, so single-date and range day cells share the role contract.
+  Calendar still owns day-cell chrome, selected/today/range foregrounds, disabled opacity, and
+  test-id/ARIA semantics.
+- `calendar_day_button_text_uses_shared_roles` proves day and supporting text leaves keep
+  `style: None`, `color: None`, fill width, shrink, `min-width: 0`, no-wrap, ellipsis, center
+  alignment, inherited text style, and inherited foreground. Existing supporting-text visibility
+  tests still prove out-of-month supporting text remains absent.
+- Focused gates passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  calendar_day_button_text_uses_shared_roles
+  calendar_day_button_supporting_text_renders_only_for_in_month_days --no-fail-fast`,
+  `cargo nextest run -p fret-ui-shadcn --lib calendar_range --no-fail-fast`, and
+  `cargo check -p fret-ui-shadcn --lib`.
+
+2026-05-20 shadcn menu item label shared text-role slice:
+
+- Source gap before fix: DropdownMenu, ContextMenu, and Menubar overlay item labels still rendered
+  local `ui::text(label).text_size_px(...).font_weight(...).nowrap()` leaves inside fixed menu rows.
+  That duplicated the resize contract already assigned to `text_list_row_label(...)`, and it made
+  menu rows another place where text policy could drift from the IMUI/editor row vocabulary.
+- `text_list_row_label(...)` and its attributed variant now use the same fill/grow/basis-zero
+  single-line layout expected by dense row labels. The existing tests now assert grow and zero
+  basis instead of only checking fill/shrink/min-width-0.
+- `menu_text::menu_item_label(...)` backs shadcn menu-family item labels with
+  `decl_text::text_list_row_label(...)` and layers menu-owned resolved typography plus foreground
+  through inherited text/foreground metadata. DropdownMenu, ContextMenu, and Menubar overlay rows
+  consume that helper. Menubar's top-level trigger remains out of this slice because it is
+  button-like trigger text, not an overlay item row.
+- DropdownMenu no longer wraps entire rows in icon `currentColor` after labels moved to inherited
+  foreground. Icon/custom/trailing subtrees still receive icon foreground, while label foreground
+  remains the menu item's resolved state foreground.
+- Focused gates passed:
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  list_row_label_text_uses_fill_width_single_line_truncation
+  attributed_list_row_label_text_uses_fill_width_single_line_truncation --no-fail-fast`,
+  `cargo nextest run -p fret-ui-shadcn --lib
+  menu_item_label_uses_shared_list_row_role_with_menu_refinement
+  dropdown_menu_label_element_uses_shared_menu_group_text_role
+  context_menu_label_element_uses_shared_menu_group_text_role
+  menubar_label_element_uses_shared_menu_group_text_role --no-fail-fast`, and
+  `cargo check -p fret-ui-shadcn --lib`.
+- Source/format gates passed: `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`,
+  `cargo fmt --check -p fret-ui-kit -p fret-ui-shadcn`, and `git diff --check`.
+
+2026-05-20 shadcn CalendarMultiple shared text-role slice:
+
+- Source gap before fix: `CalendarMultiple` still rendered multiple-selection day numbers with a
+  local `ui::label(day_text).text_size_px(...).line_height_px(...).font_medium().w_full()
+  .text_align(...).text_color(...).nowrap()` builder, even though `Calendar` and `CalendarRange`
+  had already moved day-cell text into the shared button-label/readout role helper.
+- `CalendarMultiple` now reuses `calendar_day_button_children(...)` with the same normal-weight
+  `day_text_style` as the single-date/range calendar day cells. Multiple selection still owns
+  fixed cell chrome, selected/today foregrounds, disabled opacity, and selection updates; the day
+  number text contract is no longer component-local.
+- `calendar_multiple_day_text_uses_shared_role` proves multiple calendar day text keeps leaf
+  `style: None`, `color: None`, fill width, shrink, `min-width: 0`, no-wrap, ellipsis, center
+  alignment, inherited text style, and inherited foreground.
+- `tools/gate_imui_workstream_source.py` now requires the CalendarMultiple helper/test shape and
+  forbids the old local `ui::label(day_text.clone())` fixed-style block from returning.
+- Focused gates passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  calendar_multiple_day_text_uses_shared_role
+  calendar_multiple_nav_buttons_render_svg_icons --no-fail-fast`,
+  `cargo check -p fret-ui-shadcn --lib`,
+  `cargo fmt --check -p fret-ui-shadcn`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
+
+2026-05-20 shadcn CalendarHijri shared text-role slice:
+
+- Source gap before fix: `CalendarHijri` kept a separate day-cell text implementation that created
+  `TextProps::new(day_text)` directly, installed a local fixed line box and foreground, and clipped
+  overflow inside fixed-size day cells. This duplicated the day-cell text contract already shared
+  by single, range, and multiple Gregorian calendars.
+- `hijri_day_cell(...)` now reuses `calendar_day_button_children(...)` with normal-weight inherited
+  typography and Persian-digit day labels. Hijri still owns RTL visual order, Gregorian-date test
+  ids, fixed cell chrome, outside-month foreground, selected foreground, and selection updates.
+- `calendar_hijri_day_text_uses_shared_role` proves the selected Hijri day text keeps leaf
+  `style: None`, `color: None`, fill width, shrink, `min-width: 0`, no-wrap, ellipsis, center
+  alignment, inherited text style, and inherited foreground.
+- `tools/gate_imui_workstream_source.py` now requires the CalendarHijri helper/test shape and
+  forbids the old day-cell `TextProps::new(Arc::clone(&day_text))` style block from returning.
+- Focused gates passed:
+  `cargo nextest run -p fret-ui-shadcn --lib
+  calendar_hijri_day_text_uses_shared_role
+  calendar_hijri_day_cells_render_stable_test_ids --no-fail-fast`,
+  `cargo fmt -p fret-ui-shadcn`,
+  `cargo fmt --check -p fret-ui-shadcn`,
+  `cargo check -p fret-ui-shadcn --lib`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
+
+2026-05-20 shadcn Kbd/ShortcutHint keycap text-role slice:
+
+- Source gap before fix: `Kbd` and `ShortcutHint` both live in fixed `h-5` keycap/hint chrome but
+  still rendered text through local `ui::label(...).fixed_line_box_px(...).line_box_in_bounds()`
+  builders with leaf-local style/color. That kept the keycap resize contract outside the shared
+  text-role vocabulary and allowed future fixed-chrome key labels to drift from no-wrap/ellipsis
+  behavior.
+- `fret-ui-kit::declarative::text::text_keycap_label(...)` now owns the compact keycap label role:
+  `text-xs font-medium`, shrink, `min-width: 0`, no-wrap, and ellipsis. It is a narrow derived
+  role for fixed key chrome, not a new `fret-imui` runtime surface.
+- `Kbd` and `ShortcutHint` now consume `text_keycap_label(...)` and layer their shadcn
+  `component.kbd.text_px` / `component.kbd.line_height` typography plus foreground through
+  inherited text/foreground metadata. Keycap chrome, tooltip-slot colors, icon escape hatches, and
+  hint-row layout remain recipe-owned.
+- Focused gates passed:
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  keycap_label_text_uses_xs_medium_single_line_truncation
+  base_single_line_text_roles_stay_single_line_under_narrow_layout --no-fail-fast` and
+  `cargo nextest run -p fret-ui-shadcn --lib
+  kbd_defaults_match_shadcn_constraints_and_typography
+  shortcut_hint_label_uses_shared_keycap_role --no-fail-fast`.
+- Environment note: the first `fret-ui-shadcn` run failed before compiling crate code because
+  `C:\Users\Frankorz\AppData\Local\Temp` had no free space (`os error 112`). The successful retry
+  set `TMP`/`TEMP` to `F:\SourceCodes\Rust\fret\.fret\tmp`; Cargo still warned that the global
+  cache last-use database on C: was full, but both focused tests passed.
+- Source/format gates passed:
+  `cargo fmt -p fret-ui-kit -p fret-ui-shadcn`,
+  `cargo fmt --check -p fret-ui-kit -p fret-ui-shadcn`,
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo check -p fret-ui-shadcn --lib`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
+
+2026-05-20 shadcn NativeSelect shared text-role slice:
+
+- Source gap before fix: NativeSelect trigger selected/placeholder text and popover option labels
+  were still component-local `ui::text(...)` / `ui::label(...)` fixed-line builders. They had
+  no-wrap styling, but the resize contract lived in the recipe instead of the shared text-role
+  vocabulary, making select trigger/listbox rows easy to drift under future layout changes.
+- `native_select_trigger_text(...)` now backs the trigger value with
+  `decl_text::text_control_label(...)`; `native_select_item_text(...)` backs option labels with
+  `decl_text::text_list_row_label(...)`. Both layer NativeSelect/Command typography and state
+  foreground through inherited metadata, leaving leaf `style` and `color` empty.
+- NativeSelect still owns trigger chrome, placeholder vs selected foreground, listbox command
+  selection, check icon visibility, popover placement, and RTL ordering. No new `fret-imui` API or
+  runtime text role was added.
+- `native_select_trigger_and_item_text_use_shared_resize_roles` proves both helper paths keep
+  fill/grow/shrink/basis-zero, `min-width: 0`, no-wrap, ellipsis, inherited text style, and
+  inherited foreground.
+- `tools/gate_imui_workstream_source.py` now requires the helper/test shape and forbids the old
+  local trigger/item text builders from returning.
+- Focused Rust gates initially exposed a local partial `1.92` toolchain install (`rustup show`
+  reported a missing manifest and the toolchain bin directory lacked `rustc.exe`). A non-destructive
+  `rustup toolchain install 1.92 --profile default` repaired the pinned toolchain.
+- Focused gates passed on the pinned `1.92` toolchain:
+  `cargo fmt --check -p fret-ui-shadcn`,
+  `cargo check -p fret-ui-shadcn --lib`, and
+  `cargo nextest run -p fret-ui-shadcn --lib
+  native_select_trigger_and_item_text_use_shared_resize_roles --no-fail-fast`.
+- Passed: `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`, `python tools\gate_imui_facade_teaching_source.py`,
+  and `git diff --check`.
+
+2026-05-20 shadcn Combobox shared text-role slice:
+
+- Source gap before fix: default Combobox trigger selected/placeholder text and non-search popover
+  option labels still used component-local `ui::label(...)` fixed-line builders. This duplicated
+  the same resize-sensitive text contract fixed in NativeSelect and left Combobox trigger/listbox
+  defaults easy to drift from the shared role vocabulary.
+- `combobox_trigger_text(...)` now backs default trigger labels with
+  `decl_text::text_control_label(...)`; `combobox_item_text(...)` backs non-search option labels
+  with `decl_text::text_list_row_label(...)`. Both layer Combobox/Command typography and state
+  foreground through inherited metadata, leaving leaf `style` and `color` empty.
+- Combobox still owns trigger chrome, placeholder vs selected foreground, inline addons,
+  clear/chevron buttons, popover/drawer policy, search-enabled `CommandPalette` behavior, custom
+  item content, and RTL ordering. No new `fret-imui` API or runtime text role was added.
+- `combobox_trigger_and_item_text_use_shared_resize_roles` proves both helper paths keep
+  fill/grow/shrink/basis-zero, `min-width: 0`, no-wrap, ellipsis, inherited text style, inherited
+  foreground, and the trigger-label test id hook.
+- `tools/gate_imui_workstream_source.py` now requires the helper/test shape and forbids the old
+  local trigger/item default text builders from returning.
+- Focused gates passed:
+  `cargo fmt --check -p fret-ui-shadcn`,
+  `cargo check -p fret-ui-shadcn --lib`,
+  `cargo nextest run -p fret-ui-shadcn --lib
+  combobox_trigger_and_item_text_use_shared_resize_roles --no-fail-fast`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
+
+2026-05-21 shadcn ComboboxChips shared text-role slice:
+
+- Source gap before fix: ComboboxChips still hand-built empty-trigger placeholder text and selected
+  chip pill labels with local `ui::label(...).text_size_px(...).font_weight(...).truncate()`
+  builders. Placeholder text needs the same fill/grow control-label contract as other combo
+  triggers, but chip labels need a compact non-growing role so the pill chrome can shrink without
+  becoming a row/control label.
+- `text_chip_label(...)` is now the shared compact chip/tag/inline-badge text role in
+  `fret-ui-kit::declarative::text`. It owns `text-xs font-medium`, no-wrap, shrink,
+  `min-width: 0`, and ellipsis, but deliberately leaves width/flex-grow/basis at the non-growing
+  defaults.
+- `combobox_chips_placeholder_text(...)` backs empty trigger placeholder text with
+  `decl_text::text_control_label(...)`; `combobox_chip_label_text(...)` backs selected chip labels
+  with `decl_text::text_chip_label(...)`. ComboboxChips still owns trigger and chip chrome, remove
+  button behavior, selected-value lookup, popover/search policy, chip row wrapping, and RTL order.
+  No new `fret-imui` API or runtime text role was added.
+- `chip_label_text_uses_xs_medium_non_growing_single_line_truncation` proves the shared role keeps
+  `width: auto`, `flex-grow: 0`, `flex-basis: auto`, shrink, `min-width: 0`, no-wrap, ellipsis,
+  and inherited typography. `combobox_chips_placeholder_and_chip_text_use_shared_resize_roles`
+  proves the recipe uses fill/grow control-label semantics for placeholders and non-growing chip
+  semantics for selected pill labels while layering shadcn typography and foreground through
+  inherited metadata.
+- `tools/gate_imui_workstream_source.py` now requires the helper/test shape and forbids the old
+  local ComboboxChips placeholder/chip text builders from returning.
+- Focused gates passed:
+  `cargo fmt --check -p fret-ui-kit -p fret-ui-shadcn`,
+  `cargo check -p fret-ui-kit --lib`,
+  `cargo check -p fret-ui-shadcn --lib`,
+  `cargo nextest run -p fret-ui-kit --lib
+  chip_label_text_uses_xs_medium_non_growing_single_line_truncation --no-fail-fast`,
+  `cargo nextest run -p fret-ui-shadcn --lib
+  combobox_chips_placeholder_and_chip_text_use_shared_resize_roles --no-fail-fast`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
+
+2026-05-21 shadcn Badge default-label shared text-role slice:
+
+- Source gap before fix: Badge default labels still hand-built local
+  `ui::text(...).text_size_px(...).fixed_line_box_px(...).text_color(...)` leaves. That duplicated
+  the compact chip/tag text contract already introduced for selected ComboboxChips pill labels and
+  made the link-hover underline path easy to convert back to direct leaf style/color ownership.
+- `badge_label_text(...)` now backs default Badge labels with `decl_text::text_chip_label(...)` and
+  layers Badge-owned font, OpenType feature, weight, and foreground/currentColor behavior through
+  inherited text/foreground metadata. Badge still owns variant chrome, icon sizing, link/action
+  semantics, hover underline, foreground scoping, leading/trailing child fallback styling, and RTL
+  order.
+- `apply_badge_hover_underline(...)` now preserves `AnyElement` layout-transparent metadata when it
+  converts passive text to styled text for link-hover underline, so the shared label role does not
+  disappear only on the hovered link path.
+- `badge_default_label_uses_shared_chip_label_role` proves the default label keeps auto width,
+  non-growing shrink/min-width-zero, no-wrap, ellipsis, empty leaf style/color, inherited medium
+  typography, and inherited foreground. The font/feature and weight override tests prove Badge
+  refinements stay layered on the inherited role instead of reverting to leaf-local text styles.
+  `badge_hover_underline_preserves_default_label_role_metadata` locks the link-hover conversion
+  path.
+- `tools/gate_imui_workstream_source.py` now requires the helper/test shape and forbids the old
+  local Badge default label builder from returning.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-shadcn --check`,
+  `cargo check -p fret-ui-shadcn --lib`,
+  `cargo nextest run -p fret-ui-shadcn --lib
+  badge_default_label_uses_shared_chip_label_role
+  badge_default_label_keeps_font_and_feature_overrides_on_role
+  badge_default_label_keeps_weight_override_on_role
+  badge_hover_underline_preserves_default_label_role_metadata
+  badge_leading_icon_and_label_follow_variant_fg --no-fail-fast`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_facade_teaching_source.py`, and `git diff --check`.
 
 2026-05-19 shadcn NavigationMenuLink role-preservation slice:
 

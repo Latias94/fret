@@ -157,6 +157,12 @@ pub struct UiDebugFrameStats {
     pub layout_invalidate_scroll_handle_bindings_time: Duration,
     pub layout_expand_view_cache_invalidations_time: Duration,
     pub layout_request_build_roots_time: Duration,
+    pub layout_request_build_roots_take_engine_time: Duration,
+    pub layout_request_build_roots_phase1_time: Duration,
+    pub layout_request_build_roots_phase2_time: Duration,
+    pub layout_request_build_roots_phase2_clean_geometry_proof_time: Duration,
+    pub layout_request_build_roots_phase2_compute_time: Duration,
+    pub layout_request_build_roots_put_engine_time: Duration,
     pub layout_pending_barrier_relayouts_time: Duration,
     pub layout_repair_view_cache_bounds_time: Duration,
     pub layout_contained_view_cache_roots_time: Duration,
@@ -170,6 +176,8 @@ pub struct UiDebugFrameStats {
     pub layout_prepaint_after_layout_time: Duration,
     pub layout_skipped_engine_frame: bool,
     pub layout_roots_time: Duration,
+    pub layout_roots_apply_time: Duration,
+    pub layout_roots_flush_viewport_time: Duration,
     pub layout_barrier_relayouts_time: Duration,
     pub layout_view_cache_time: Duration,
     pub layout_semantics_refresh_time: Duration,
@@ -259,8 +267,18 @@ pub struct UiDebugFrameStats {
     pub layout_engine_solve_time: Duration,
     /// Count of clean-geometry root-solve skip attempts rejected during the current frame.
     pub layout_clean_geometry_solve_skip_rejections: u32,
+    /// Number of nodes visited while proving clean-geometry root-solve skips.
+    pub layout_clean_geometry_proof_nodes: u64,
+    /// Number of side-effect boundary nodes accepted while proving clean-geometry root-solve skips.
+    pub layout_clean_geometry_proof_boundaries: u64,
+    /// Number of nodes updated by clean-geometry layout propagation.
+    pub layout_clean_geometry_apply_nodes: u64,
+    /// Number of child layouts run because clean-geometry propagation stopped at that child.
+    pub layout_clean_geometry_apply_fallback_layouts: u64,
     /// First rejection reason observed for a clean-geometry root-solve skip attempt this frame.
     pub layout_clean_geometry_solve_skip_first_rejection: Option<&'static str>,
+    /// First rejection detail observed for a clean-geometry root-solve skip attempt this frame.
+    pub layout_clean_geometry_solve_skip_first_detail: Option<&'static str>,
     /// Element kind attached to the first clean-geometry root-solve skip rejection, when known.
     pub layout_clean_geometry_solve_skip_first_element_kind: Option<&'static str>,
     /// Total number of `layout_engine_child_local_rect` queries performed during the current frame.

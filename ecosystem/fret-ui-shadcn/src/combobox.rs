@@ -22,6 +22,7 @@ use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::primitives::combobox as kit_combobox;
 use fret_ui_kit::primitives::control_registry::{
     ControlAction, ControlEntry, ControlId, control_registry_model,
@@ -29,6 +30,7 @@ use fret_ui_kit::primitives::control_registry::{
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
 use fret_ui_kit::primitives::popper;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, OverrideSlot, Radius,
     ShadowPreset, Size, Space, WidgetState, WidgetStateProperty, WidgetStates,
@@ -46,6 +48,39 @@ use crate::test_id::test_id_slug;
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn combobox_text_refinement(style: &TextStyle) -> fret_core::TextStyleRefinement {
+    let mut refinement = typography::composable_refinement_from_style(style);
+    refinement.weight = Some(style.weight);
+    refinement
+}
+
+fn combobox_trigger_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    style: &TextStyle,
+    foreground: Color,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let mut element = decl_text::text_control_label(cx, label)
+        .inherit_text_style(combobox_text_refinement(style))
+        .inherit_foreground(foreground);
+    if let Some(test_id) = test_id {
+        element = element.test_id(test_id);
+    }
+    element
+}
+
+fn combobox_item_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    style: &TextStyle,
+    foreground: Color,
+) -> AnyElement {
+    decl_text::text_list_row_label(cx, label)
+        .inherit_text_style(combobox_text_refinement(style))
+        .inherit_foreground(foreground)
 }
 
 #[derive(Default)]
@@ -1801,41 +1836,21 @@ fn combobox_with_patch<H: UiHost>(
                                     move |cx| {
                                         let label_style = text_style.clone();
                                         let show_clear = show_clear && selected.is_some();
-                                        let label_el = {
-                                            let mut label = ui::label( resolved_label.clone())
-                                                .w_full()
-                                                .min_w_0()
-                                                .flex_1()
-                                                .basis_0()
-                                                .text_size_px(label_style.size)
-                                                .font_weight(label_style.weight)
-                                                .text_color(if label_is_placeholder {
-                                                    ColorRef::Color(placeholder_fg_for_trigger)
-                                                } else {
-                                                    fg_ref.clone()
-                                                })
-                                                .truncate();
-                                            if let Some(line_height) = label_style.line_height {
-                                                label = label
-                                                    .line_height_px(line_height)
-                                                    .line_height_policy(
-                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                    );
-                                            }
-                                            if let Some(letter_spacing_em) =
-                                                label_style.letter_spacing_em
-                                            {
-                                                label = label.letter_spacing_em(letter_spacing_em);
-                                            }
-                                            if let Some(prefix) =
-                                                test_id_prefix_for_trigger.as_deref()
-                                            {
-                                                label = label.test_id(format!(
+                                        let label_el = combobox_trigger_text(
+                                            cx,
+                                            resolved_label.clone(),
+                                            &label_style,
+                                            if label_is_placeholder {
+                                                placeholder_fg_for_trigger
+                                            } else {
+                                                fg
+                                            },
+                                            test_id_prefix_for_trigger.as_deref().map(|prefix| {
+                                                Arc::<str>::from(format!(
                                                     "{prefix}-trigger-label"
-                                                ));
-                                            }
-                                            label.into_element(cx)
-                                        };
+                                                ))
+                                            }),
+                                        );
 
                                         let inline_start = (!inline_start.is_empty()).then(|| {
                                             combobox_input_inline_addon(cx, dir, inline_start, true)
@@ -2273,28 +2288,12 @@ fn combobox_with_patch<H: UiHost>(
                                             .basis_0()
                                             .into_element(cx)
                                     } else {
-                                        let mut label = ui::label( label_text.clone())
-                                            .text_size_px(label_style.size)
-                                            .font_weight(label_style.weight)
-                                            .text_color(ColorRef::Color(if item_disabled {
-                                                fg_disabled
-                                            } else {
-                                                fg
-                                            }))
-                                            .truncate();
-                                        if let Some(line_height) = label_style.line_height {
-                                            label = label
-                                                .line_height_px(line_height)
-                                                .line_height_policy(
-                                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                );
-                                        }
-                                        if let Some(letter_spacing_em) =
-                                            label_style.letter_spacing_em
-                                        {
-                                            label = label.letter_spacing_em(letter_spacing_em);
-                                        }
-                                        label.into_element(cx)
+                                        combobox_item_text(
+                                            cx,
+                                            label_text.clone(),
+                                            &label_style,
+                                            if item_disabled { fg_disabled } else { fg },
+                                        )
                                     };
 
                                     let mut cmd_item = CommandItem::new(label_text)
@@ -2647,37 +2646,19 @@ fn combobox_with_patch<H: UiHost>(
                             move |cx| {
                                 let label_style = text_style.clone();
                                 let show_clear = show_clear && selected.is_some();
-                                let label_el = {
-                                    let mut label = ui::label( resolved_label.clone())
-                                        .w_full()
-                                        .min_w_0()
-                                        .flex_1()
-                                        .basis_0()
-                                        .text_size_px(label_style.size)
-                                        .font_weight(label_style.weight)
-                                        .text_color(if label_is_placeholder {
-                                            ColorRef::Color(placeholder_fg_for_trigger)
-                                        } else {
-                                            fg_ref.clone()
-                                        })
-                                        .truncate();
-                                    if let Some(line_height) = label_style.line_height {
-                                        label = label
-                                            .line_height_px(line_height)
-                                            .line_height_policy(
-                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                            );
-                                    }
-                                    if let Some(letter_spacing_em) = label_style.letter_spacing_em
-                                    {
-                                        label = label.letter_spacing_em(letter_spacing_em);
-                                    }
-                                    if let Some(prefix) = test_id_prefix_for_trigger.as_deref() {
-                                        label =
-                                            label.test_id(format!("{prefix}-trigger-label"));
-                                    }
-                                    label.into_element(cx)
-                                };
+                                let label_el = combobox_trigger_text(
+                                    cx,
+                                    resolved_label.clone(),
+                                    &label_style,
+                                    if label_is_placeholder {
+                                        placeholder_fg_for_trigger
+                                    } else {
+                                        fg
+                                    },
+                                    test_id_prefix_for_trigger.as_deref().map(|prefix| {
+                                        Arc::<str>::from(format!("{prefix}-trigger-label"))
+                                    }),
+                                );
 
                                 let inline_start = (!inline_start.is_empty()).then(|| {
                                     combobox_input_inline_addon(cx, dir, inline_start, true)
@@ -3085,26 +3066,12 @@ fn combobox_with_patch<H: UiHost>(
                                 .basis_0()
                                 .into_element(cx)
                         } else {
-                            let mut label = ui::label( label_text.clone())
-                                .text_size_px(label_style.size)
-                                .font_weight(label_style.weight)
-                                .text_color(ColorRef::Color(if item_disabled {
-                                    fg_disabled
-                                } else {
-                                    fg
-                                }))
-                                .truncate();
-                            if let Some(line_height) = label_style.line_height {
-                                label = label
-                                    .line_height_px(line_height)
-                                    .line_height_policy(
-                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                    );
-                            }
-                            if let Some(letter_spacing_em) = label_style.letter_spacing_em {
-                                label = label.letter_spacing_em(letter_spacing_em);
-                            }
-                            label.into_element(cx)
+                            combobox_item_text(
+                                cx,
+                                label_text.clone(),
+                                &label_style,
+                                if item_disabled { fg_disabled } else { fg },
+                            )
                         };
 
                         let mut cmd_item = CommandItem::new(label_text)
@@ -3283,8 +3250,107 @@ mod tests {
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::{FrameId, TickId};
+    use fret_ui::element::ElementKind;
     use fret_ui::tree::UiTree;
     use fret_ui_kit::primitives::popover as radix_popover;
+
+    fn assert_combobox_role_text(element: &AnyElement, expected_fg: Color) {
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected combobox role text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert!(element.inherited_text_style.is_some());
+        assert_eq!(element.inherited_foreground, Some(expected_fg));
+    }
+
+    #[test]
+    fn combobox_trigger_and_item_text_use_shared_resize_roles() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let mut trigger_style = TextStyle {
+            font: FontId::ui(),
+            size: Px(14.0),
+            weight: FontWeight::NORMAL,
+            line_height: Some(Px(20.0)),
+            letter_spacing_em: Some(0.015),
+            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
+            vertical_placement: fret_core::TextVerticalPlacement::BoundsAsLineBox,
+            ..Default::default()
+        };
+        trigger_style.axes.push(fret_core::TextFontAxisSetting {
+            tag: "wdth".into(),
+            value: 92.0,
+        });
+        let trigger_fg = Color {
+            r: 0.10,
+            g: 0.20,
+            b: 0.30,
+            a: 1.0,
+        };
+
+        let trigger_text = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "combobox-trigger-text",
+            |cx| {
+                combobox_trigger_text(
+                    cx,
+                    Arc::from("Very long selected combobox label"),
+                    &trigger_style,
+                    trigger_fg,
+                    Some(Arc::from("combobox-trigger-label")),
+                )
+            },
+        );
+        assert_combobox_role_text(&trigger_text, trigger_fg);
+        assert_eq!(
+            trigger_text
+                .semantics_decoration
+                .as_ref()
+                .and_then(|s| s.test_id.as_deref()),
+            Some("combobox-trigger-label")
+        );
+
+        let mut item_style = crate::command::item_text_style(&Theme::global(&app).snapshot());
+        item_style.letter_spacing_em = Some(0.025);
+        let item_fg = Color {
+            r: 0.40,
+            g: 0.30,
+            b: 0.20,
+            a: 0.75,
+        };
+
+        let item_text = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "combobox-item-text",
+            |cx| {
+                combobox_item_text(
+                    cx,
+                    Arc::from("Very long listbox option label"),
+                    &item_style,
+                    item_fg,
+                )
+            },
+        );
+        assert_combobox_role_text(&item_text, item_fg);
+    }
 
     #[test]
     fn combobox_content_placement_tracks_offsets() {

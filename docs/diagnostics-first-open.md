@@ -208,6 +208,9 @@ The `fretboard_tool_apps` JSON includes `product_workflows`; today that names th
 product-chain gate, its focused discovery-only form, the launched docking perf form, and the
 expected `perf-docking/regression.summary.json`, `perf-docking/check.perf_thresholds.json`, and
 `perf-docking/*/trace.chrome.json` artifacts that DevTools-style consumers should surface first.
+The same JSON also includes `first_open_routes`; today that names `demo-metrics-debug`, its editor
+proof/editor notes/device shell demos, and the current `diag stats`, `diag layout-perf-summary`,
+`diag memory-summary`, `diag triage`, `diag hotspots`, and `diag trace` commands.
 
 Open:
 
@@ -225,9 +228,9 @@ Launch the GUI directly with:
 cargo run -p fret-devtools
 ```
 
-The GUI shell keeps both the `First-open Evidence Path` and the `demo-metrics-debug` route visible:
-editor proof demos, current metrics commands, and debug drill-down commands stay discoverable from
-the same top-level workspace.
+The GUI shell keeps both the `First-open Evidence Path` and the same `demo-metrics-debug` route
+visible: editor proof demos, current metrics commands, and debug drill-down commands stay
+discoverable from the same top-level workspace and the shared `list tool-apps --json` index.
 
 Launch the MCP adapter directly with:
 

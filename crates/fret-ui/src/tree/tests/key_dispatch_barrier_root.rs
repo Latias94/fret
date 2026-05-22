@@ -77,6 +77,58 @@ fn key_events_route_to_focus_barrier_root_when_unfocused() {
 }
 
 #[test]
+fn key_events_route_to_focused_non_modal_occluding_overlay_layer() {
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let window = AppWindowId::default();
+    let mut ui: UiTree<crate::test_host::TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let underlay_hits = app.models_mut().insert(0u32);
+    let overlay_hits = app.models_mut().insert(0u32);
+
+    let base_root = ui.create_node(KeyCounter::new(underlay_hits.clone()));
+    ui.set_root(base_root);
+
+    let overlay_root = ui.create_node(KeyCounter::new(overlay_hits.clone()));
+    let overlay_layer = ui.push_overlay_root_with_options(
+        overlay_root,
+        crate::OverlayRootOptions {
+            blocks_underlay_input: false,
+            hit_testable: false,
+        },
+    );
+    ui.set_layer_pointer_occlusion(overlay_layer, PointerOcclusion::BlockMouseExceptScroll);
+    ui.set_focus(Some(overlay_root));
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(80.0)));
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: fret_core::KeyCode::ArrowDown,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert_eq!(
+        app.models().get_copied(&underlay_hits).unwrap_or_default(),
+        0,
+        "expected focused non-modal overlay to keep keyboard routing out of the underlay"
+    );
+    assert_eq!(
+        app.models().get_copied(&overlay_hits).unwrap_or_default(),
+        1,
+        "expected focused non-modal overlay to receive key events even while hit-test inert"
+    );
+}
+
+#[test]
 fn shortcuts_use_focus_barrier_key_context_scope_when_input_barrier_is_off() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());

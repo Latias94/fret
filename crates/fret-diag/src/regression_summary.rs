@@ -60,6 +60,8 @@ pub struct RegressionBundleFollowupCommandV1 {
     pub diag_args: Vec<String>,
     #[serde(default)]
     pub requires_baseline: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_bundle_dir: Option<String>,
 }
 
 impl RegressionBundleFollowupCommandV1 {
@@ -172,6 +174,7 @@ fn regression_bundle_followup_commands_for(
                 "--json".to_string(),
             ],
             requires_baseline: false,
+            target_bundle_dir: Some(bundle_dir.to_string()),
         },
         RegressionBundleFollowupCommandV1 {
             id: indexed_followup_id("layout-perf-summary", index),
@@ -185,6 +188,7 @@ fn regression_bundle_followup_commands_for(
                 "--json".to_string(),
             ],
             requires_baseline: false,
+            target_bundle_dir: Some(bundle_dir.to_string()),
         },
         RegressionBundleFollowupCommandV1 {
             id: indexed_followup_id("memory-summary", index),
@@ -198,6 +202,7 @@ fn regression_bundle_followup_commands_for(
                 "--json".to_string(),
             ],
             requires_baseline: false,
+            target_bundle_dir: Some(bundle_dir.to_string()),
         },
         RegressionBundleFollowupCommandV1 {
             id: indexed_followup_id("triage", index),
@@ -209,6 +214,7 @@ fn regression_bundle_followup_commands_for(
                 "--json".to_string(),
             ],
             requires_baseline: false,
+            target_bundle_dir: Some(bundle_dir.to_string()),
         },
         RegressionBundleFollowupCommandV1 {
             id: indexed_followup_id("hotspots", index),
@@ -222,6 +228,7 @@ fn regression_bundle_followup_commands_for(
                 "--json".to_string(),
             ],
             requires_baseline: false,
+            target_bundle_dir: Some(bundle_dir.to_string()),
         },
         RegressionBundleFollowupCommandV1 {
             id: indexed_followup_id("trace", index),
@@ -233,6 +240,7 @@ fn regression_bundle_followup_commands_for(
                 "--json".to_string(),
             ],
             requires_baseline: false,
+            target_bundle_dir: Some(bundle_dir.to_string()),
         },
         RegressionBundleFollowupCommandV1 {
             id: indexed_followup_id("visual-compare", index),
@@ -242,6 +250,7 @@ fn regression_bundle_followup_commands_for(
             ),
             diag_args: Vec::new(),
             requires_baseline: true,
+            target_bundle_dir: Some(bundle_dir.to_string()),
         },
         RegressionBundleFollowupCommandV1 {
             id: indexed_followup_id("footprint-compare", index),
@@ -251,6 +260,7 @@ fn regression_bundle_followup_commands_for(
             ),
             diag_args: Vec::new(),
             requires_baseline: true,
+            target_bundle_dir: Some(bundle_dir.to_string()),
         },
     ]
 }
@@ -1075,6 +1085,8 @@ mod tests {
         assert_eq!(manual.len(), 2);
         assert!(runnable.iter().any(|command| {
             command.id == "stats"
+                && command.target_bundle_dir.as_deref()
+                    == Some("target/fret-diag/perf-docking/run-a")
                 && command.diag_args
                     == vec![
                         "stats".to_string(),
@@ -1084,6 +1096,8 @@ mod tests {
         }));
         assert!(runnable.iter().any(|command| {
             command.id == "trace"
+                && command.target_bundle_dir.as_deref()
+                    == Some("target/fret-diag/perf-docking/run-a")
                 && command.diag_args
                     == vec![
                         "trace".to_string(),
@@ -1092,6 +1106,12 @@ mod tests {
                     ]
         }));
         assert!(manual.iter().all(|command| command.diag_args.is_empty()));
+        assert!(
+            manual
+                .iter()
+                .all(|command| command.target_bundle_dir.as_deref()
+                    == Some("target/fret-diag/perf-docking/run-a"))
+        );
         assert!(manual.iter().any(|command| command.id == "visual-compare"));
         assert!(
             manual

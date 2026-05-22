@@ -87,6 +87,67 @@ const IMUI_DOCKING_PERF_ARTIFACTS: &[&str] = &[
     "perf-docking/check.perf_thresholds.json",
     "perf-docking/*/trace.chrome.json",
 ];
+const DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug";
+const DEMO_METRICS_DEBUG_DOC: &str = DIAG_FIRST_OPEN_DOC;
+const DEMO_METRICS_DEBUG_PURPOSE: &str =
+    "Dear ImGui-style demo, metrics, and debug first-open route";
+const DEMO_EDITOR_PROOF_COMMAND: &str = "cargo run -p fret-demo --bin imui_editor_proof_demo";
+const DEMO_EDITOR_NOTES_COMMAND: &str = "cargo run -p fret-demo --bin editor_notes_demo";
+const DEMO_DEVICE_SHELL_COMMAND: &str =
+    "cargo run -p fret-demo --bin editor_notes_device_shell_demo";
+const METRICS_STATS_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json";
+const METRICS_LAYOUT_PERF_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json";
+const METRICS_MEMORY_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag memory-summary <bundle-or-dir> --json";
+const DEBUG_TRIAGE_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json";
+const DEBUG_HOTSPOTS_COMMAND: &str =
+    "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
+const DEBUG_TRACE_COMMAND: &str = "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
+const DEMO_METRICS_DEBUG_DEMO_COMMANDS: &[RouteCommand] = &[
+    RouteCommand {
+        label: "demo editor proof",
+        command: DEMO_EDITOR_PROOF_COMMAND,
+    },
+    RouteCommand {
+        label: "demo editor notes",
+        command: DEMO_EDITOR_NOTES_COMMAND,
+    },
+    RouteCommand {
+        label: "demo device shell",
+        command: DEMO_DEVICE_SHELL_COMMAND,
+    },
+];
+const DEMO_METRICS_DEBUG_METRICS_COMMANDS: &[RouteCommand] = &[
+    RouteCommand {
+        label: "metrics stats",
+        command: METRICS_STATS_COMMAND,
+    },
+    RouteCommand {
+        label: "metrics layout perf",
+        command: METRICS_LAYOUT_PERF_COMMAND,
+    },
+    RouteCommand {
+        label: "metrics memory",
+        command: METRICS_MEMORY_COMMAND,
+    },
+];
+const DEMO_METRICS_DEBUG_DEBUG_COMMANDS: &[RouteCommand] = &[
+    RouteCommand {
+        label: "debug triage",
+        command: DEBUG_TRIAGE_COMMAND,
+    },
+    RouteCommand {
+        label: "debug hotspots",
+        command: DEBUG_HOTSPOTS_COMMAND,
+    },
+    RouteCommand {
+        label: "debug trace",
+        command: DEBUG_TRACE_COMMAND,
+    },
+];
 
 pub(crate) fn list_tool_apps(args: Vec<String>) -> Result<(), String> {
     let output_json = parse_tool_apps_json_flag(args)?;
@@ -111,6 +172,17 @@ pub(crate) fn list_tool_apps(args: Vec<String>) -> Result<(), String> {
                 workflow.suite,
                 workflow.docs,
                 workflow.expected_artifacts.join(", ")
+            );
+        }
+        for route in first_open_routes() {
+            println!(
+                "route: {}    # {} | demos: {} | metrics: {} | debug: {} | docs: {}",
+                route.id,
+                route.purpose,
+                route_commands_human(route.demo_commands),
+                route_commands_human(route.metrics_commands),
+                route_commands_human(route.debug_commands),
+                route.docs
             );
         }
         for tool in tool_apps() {
@@ -146,6 +218,16 @@ fn tool_apps_json_value() -> serde_json::Value {
                 "expected_artifacts": workflow.expected_artifacts,
             })
         }).collect::<Vec<_>>(),
+        "first_open_routes": first_open_routes().iter().map(|route| {
+            serde_json::json!({
+                "id": route.id,
+                "purpose": route.purpose,
+                "docs": route.docs,
+                "demo_commands": route_commands_json(route.demo_commands),
+                "metrics_commands": route_commands_json(route.metrics_commands),
+                "debug_commands": route_commands_json(route.debug_commands),
+            })
+        }).collect::<Vec<_>>(),
         "tool_apps": tool_apps().iter().map(|tool| {
             serde_json::json!({
                 "id": tool.id,
@@ -166,6 +248,21 @@ struct ToolApp {
     best_for: &'static str,
     docs: &'static str,
     gate: &'static str,
+}
+
+#[derive(Clone, Copy)]
+struct RouteCommand {
+    label: &'static str,
+    command: &'static str,
+}
+
+struct FirstOpenRoute {
+    id: &'static str,
+    purpose: &'static str,
+    docs: &'static str,
+    demo_commands: &'static [RouteCommand],
+    metrics_commands: &'static [RouteCommand],
+    debug_commands: &'static [RouteCommand],
 }
 
 struct ProductWorkflow {
@@ -190,6 +287,37 @@ fn product_workflows() -> &'static [ProductWorkflow] {
         suite: IMUI_DOCKING_PERF_SUITE,
         expected_artifacts: IMUI_DOCKING_PERF_ARTIFACTS,
     }]
+}
+
+fn first_open_routes() -> &'static [FirstOpenRoute] {
+    &[FirstOpenRoute {
+        id: DEMO_METRICS_DEBUG_ROUTE_ID,
+        purpose: DEMO_METRICS_DEBUG_PURPOSE,
+        docs: DEMO_METRICS_DEBUG_DOC,
+        demo_commands: DEMO_METRICS_DEBUG_DEMO_COMMANDS,
+        metrics_commands: DEMO_METRICS_DEBUG_METRICS_COMMANDS,
+        debug_commands: DEMO_METRICS_DEBUG_DEBUG_COMMANDS,
+    }]
+}
+
+fn route_commands_human(commands: &[RouteCommand]) -> String {
+    commands
+        .iter()
+        .map(|command| format!("{}: {}", command.label, command.command))
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn route_commands_json(commands: &[RouteCommand]) -> Vec<serde_json::Value> {
+    commands
+        .iter()
+        .map(|command| {
+            serde_json::json!({
+                "label": command.label,
+                "command": command.command,
+            })
+        })
+        .collect()
 }
 
 fn tool_apps() -> &'static [ToolApp] {
@@ -558,6 +686,34 @@ mod tests {
     }
 
     #[test]
+    fn tool_apps_list_names_first_open_routes() {
+        let routes = first_open_routes();
+        assert!(routes.iter().any(|route| {
+            route.id == "demo-metrics-debug"
+                && route.docs == "docs/diagnostics-first-open.md"
+                && route.demo_commands.iter().any(|command| {
+                    command.label == "demo editor proof"
+                        && command.command == "cargo run -p fret-demo --bin imui_editor_proof_demo"
+                })
+                && route.metrics_commands.iter().any(|command| {
+                    command.label == "metrics stats"
+                        && command.command
+                            == "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json"
+                })
+                && route.debug_commands.iter().any(|command| {
+                    command.label == "debug hotspots"
+                        && command.command
+                            == "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json"
+                })
+                && route.debug_commands.iter().any(|command| {
+                    command.label == "debug trace"
+                        && command.command
+                            == "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json"
+                })
+        }));
+    }
+
+    #[test]
     fn tool_apps_json_flag_parser_is_explicit() {
         assert!(!parse_tool_apps_json_flag(Vec::new()).unwrap());
         assert!(parse_tool_apps_json_flag(vec!["--json".to_string()]).unwrap());
@@ -606,6 +762,43 @@ mod tests {
                 && artifacts
                     .iter()
                     .any(|artifact| artifact == "perf-docking/*/trace.chrome.json")
+        }));
+
+        let routes = value["first_open_routes"]
+            .as_array()
+            .expect("first_open_routes array");
+        assert!(routes.iter().any(|route| {
+            let demos = route["demo_commands"]
+                .as_array()
+                .expect("demo_commands array");
+            let metrics = route["metrics_commands"]
+                .as_array()
+                .expect("metrics_commands array");
+            let debug = route["debug_commands"]
+                .as_array()
+                .expect("debug_commands array");
+            route["id"] == "demo-metrics-debug"
+                && route["docs"] == "docs/diagnostics-first-open.md"
+                && demos.iter().any(|command| {
+                    command["label"] == "demo editor notes"
+                        && command["command"]
+                            == "cargo run -p fret-demo --bin editor_notes_demo"
+                })
+                && metrics.iter().any(|command| {
+                    command["label"] == "metrics layout perf"
+                        && command["command"]
+                            == "cargo run -p fretboard-dev -- diag layout-perf-summary <bundle-or-dir> --json"
+                })
+                && debug.iter().any(|command| {
+                    command["label"] == "debug triage"
+                        && command["command"]
+                            == "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json"
+                })
+                && debug.iter().any(|command| {
+                    command["label"] == "debug trace"
+                        && command["command"]
+                            == "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json"
+                })
         }));
 
         let tools = value["tool_apps"].as_array().expect("tool_apps array");

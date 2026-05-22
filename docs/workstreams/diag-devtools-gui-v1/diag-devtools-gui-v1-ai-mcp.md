@@ -94,6 +94,20 @@ Batch run:
 - tool: `fret_diag_pack_last_bundle` (creates a zip on disk; returns `pack_path`)
 - open `tools/fret-bundle-viewer` and load the resulting `.zip` file
 
+### Step 5: Resume from recent GUI-launched evidence
+
+- tool: `fret_diag_recent_evidence`
+  - reads the same `.fret/diag/gate-runs/*.json`, `.fret/diag/workflow-runs/*.json`, and
+    `.fret/diag/followups/*.json` records that the GUI restores in its `Recent Evidence` block,
+  - returns latest gate/workflow/follow-up evidence, the first failed result, a compact human
+    summary, and a next-action hint,
+  - sorts valid records by result JSON `finished_unix_ms` / `started_unix_ms` before filesystem
+    mtime/path fallback, matching the GUI's restored history order after artifact copy or sync,
+  - stays read-only and does not re-run historical commands; workflow rerun decisions still belong
+    to the GUI because they require the current selected session and current token.
+
+Workflow reruns still require the GUI's current selected session/token state.
+
 ## MCP resources (artifacts as resources)
 
 The MCP server exposes key artifacts as resources. These are derived from the most recent
@@ -102,14 +116,23 @@ fresh dump with `fret_diag_bundle_dump` first.
 
 The server also exposes `fret-diag://first-open.md`, a sessionless text resource that mirrors the
 shared first-open diagnostics path and points at the same IMUI product-chain route used by the GUI
-and CLI discoverability maps.
+and CLI discoverability maps, plus the `demo-metrics-debug` route with stats/layout/memory/triage,
+hotspots, trace drill-down commands, and the `fret_diag_recent_evidence` bridge for restored GUI
+evidence.
 
 ### Resource URIs
 
 Global:
 
 - `fret-diag://first-open.md`
-  - Markdown text for the shared first-open diagnostics path and IMUI product-chain route
+  - Markdown text for the shared first-open diagnostics path, IMUI product-chain route, and
+    `demo-metrics-debug` route, including the read-only `fret_diag_recent_evidence` bridge to
+    restored GUI-launched evidence records
+- `fret-diag://recent-evidence.json`
+  - JSON report for recent GUI-launched gate, workflow, and selected-bundle follow-up result
+    records under `.fret/diag`
+- `apps/fret-devtools-mcp/src/native.rs::sessionless_resource_specs()`
+  - Tested source for sessionless resource/list template discoverability.
 
 For a session `<session_id>`:
 

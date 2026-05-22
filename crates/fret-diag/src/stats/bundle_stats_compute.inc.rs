@@ -1418,6 +1418,24 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_engine_solve_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_clean_geometry_solve_skip_rejections = stats
+                .and_then(|m| m.get("layout_clean_geometry_solve_skip_rejections"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0)
+                .min(u32::MAX as u64)
+                as u32;
+            let layout_clean_geometry_solve_skip_first_rejection = stats
+                .and_then(|m| m.get("layout_clean_geometry_solve_skip_first_rejection"))
+                .and_then(|v| v.as_str())
+                .map(str::to_string);
+            let layout_clean_geometry_solve_skip_first_detail = stats
+                .and_then(|m| m.get("layout_clean_geometry_solve_skip_first_detail"))
+                .and_then(|v| v.as_str())
+                .map(str::to_string);
+            let layout_clean_geometry_solve_skip_first_element_kind = stats
+                .and_then(|m| m.get("layout_clean_geometry_solve_skip_first_element_kind"))
+                .and_then(|v| v.as_str())
+                .map(str::to_string);
             let layout_engine_child_rect_queries = stats
                 .and_then(|m| m.get("layout_engine_child_rect_queries"))
                 .and_then(|v| v.as_u64())
@@ -1446,8 +1464,58 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_request_build_roots_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_request_build_roots_take_engine_time_us = stats
+                .and_then(|m| m.get("layout_request_build_roots_take_engine_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_request_build_roots_phase1_time_us = stats
+                .and_then(|m| m.get("layout_request_build_roots_phase1_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_request_build_roots_phase2_time_us = stats
+                .and_then(|m| m.get("layout_request_build_roots_phase2_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_request_build_roots_phase2_clean_geometry_proof_time_us = stats
+                .and_then(|m| {
+                    m.get("layout_request_build_roots_phase2_clean_geometry_proof_time_us")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_nodes = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_nodes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_boundaries = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_boundaries"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_apply_nodes = stats
+                .and_then(|m| m.get("layout_clean_geometry_apply_nodes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_apply_fallback_layouts = stats
+                .and_then(|m| m.get("layout_clean_geometry_apply_fallback_layouts"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_request_build_roots_phase2_compute_time_us = stats
+                .and_then(|m| m.get("layout_request_build_roots_phase2_compute_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_request_build_roots_put_engine_time_us = stats
+                .and_then(|m| m.get("layout_request_build_roots_put_engine_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_roots_time_us = stats
                 .and_then(|m| m.get("layout_roots_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_roots_apply_time_us = stats
+                .and_then(|m| m.get("layout_roots_apply_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_roots_flush_viewport_time_us = stats
+                .and_then(|m| m.get("layout_roots_flush_viewport_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let layout_pending_barrier_relayouts_time_us = stats
@@ -1825,9 +1893,45 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.sum_layout_request_build_roots_time_us = out
                 .sum_layout_request_build_roots_time_us
                 .saturating_add(layout_request_build_roots_time_us);
+            out.sum_layout_request_build_roots_take_engine_time_us = out
+                .sum_layout_request_build_roots_take_engine_time_us
+                .saturating_add(layout_request_build_roots_take_engine_time_us);
+            out.sum_layout_request_build_roots_phase1_time_us = out
+                .sum_layout_request_build_roots_phase1_time_us
+                .saturating_add(layout_request_build_roots_phase1_time_us);
+            out.sum_layout_request_build_roots_phase2_time_us = out
+                .sum_layout_request_build_roots_phase2_time_us
+                .saturating_add(layout_request_build_roots_phase2_time_us);
+            out.sum_layout_request_build_roots_phase2_clean_geometry_proof_time_us = out
+                .sum_layout_request_build_roots_phase2_clean_geometry_proof_time_us
+                .saturating_add(layout_request_build_roots_phase2_clean_geometry_proof_time_us);
+            out.sum_layout_clean_geometry_proof_nodes = out
+                .sum_layout_clean_geometry_proof_nodes
+                .saturating_add(layout_clean_geometry_proof_nodes);
+            out.sum_layout_clean_geometry_proof_boundaries = out
+                .sum_layout_clean_geometry_proof_boundaries
+                .saturating_add(layout_clean_geometry_proof_boundaries);
+            out.sum_layout_clean_geometry_apply_nodes = out
+                .sum_layout_clean_geometry_apply_nodes
+                .saturating_add(layout_clean_geometry_apply_nodes);
+            out.sum_layout_clean_geometry_apply_fallback_layouts = out
+                .sum_layout_clean_geometry_apply_fallback_layouts
+                .saturating_add(layout_clean_geometry_apply_fallback_layouts);
+            out.sum_layout_request_build_roots_phase2_compute_time_us = out
+                .sum_layout_request_build_roots_phase2_compute_time_us
+                .saturating_add(layout_request_build_roots_phase2_compute_time_us);
+            out.sum_layout_request_build_roots_put_engine_time_us = out
+                .sum_layout_request_build_roots_put_engine_time_us
+                .saturating_add(layout_request_build_roots_put_engine_time_us);
             out.sum_layout_roots_time_us = out
                 .sum_layout_roots_time_us
                 .saturating_add(layout_roots_time_us);
+            out.sum_layout_roots_apply_time_us = out
+                .sum_layout_roots_apply_time_us
+                .saturating_add(layout_roots_apply_time_us);
+            out.sum_layout_roots_flush_viewport_time_us = out
+                .sum_layout_roots_flush_viewport_time_us
+                .saturating_add(layout_roots_flush_viewport_time_us);
             out.sum_layout_collapse_layout_observations_time_us = out
                 .sum_layout_collapse_layout_observations_time_us
                 .saturating_add(layout_collapse_layout_observations_time_us);
@@ -1921,7 +2025,42 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_layout_request_build_roots_time_us = out
                 .max_layout_request_build_roots_time_us
                 .max(layout_request_build_roots_time_us);
+            out.max_layout_request_build_roots_take_engine_time_us = out
+                .max_layout_request_build_roots_take_engine_time_us
+                .max(layout_request_build_roots_take_engine_time_us);
+            out.max_layout_request_build_roots_phase1_time_us = out
+                .max_layout_request_build_roots_phase1_time_us
+                .max(layout_request_build_roots_phase1_time_us);
+            out.max_layout_request_build_roots_phase2_time_us = out
+                .max_layout_request_build_roots_phase2_time_us
+                .max(layout_request_build_roots_phase2_time_us);
+            out.max_layout_request_build_roots_phase2_clean_geometry_proof_time_us = out
+                .max_layout_request_build_roots_phase2_clean_geometry_proof_time_us
+                .max(layout_request_build_roots_phase2_clean_geometry_proof_time_us);
+            out.max_layout_clean_geometry_proof_nodes = out
+                .max_layout_clean_geometry_proof_nodes
+                .max(layout_clean_geometry_proof_nodes);
+            out.max_layout_clean_geometry_proof_boundaries = out
+                .max_layout_clean_geometry_proof_boundaries
+                .max(layout_clean_geometry_proof_boundaries);
+            out.max_layout_clean_geometry_apply_nodes = out
+                .max_layout_clean_geometry_apply_nodes
+                .max(layout_clean_geometry_apply_nodes);
+            out.max_layout_clean_geometry_apply_fallback_layouts = out
+                .max_layout_clean_geometry_apply_fallback_layouts
+                .max(layout_clean_geometry_apply_fallback_layouts);
+            out.max_layout_request_build_roots_phase2_compute_time_us = out
+                .max_layout_request_build_roots_phase2_compute_time_us
+                .max(layout_request_build_roots_phase2_compute_time_us);
+            out.max_layout_request_build_roots_put_engine_time_us = out
+                .max_layout_request_build_roots_put_engine_time_us
+                .max(layout_request_build_roots_put_engine_time_us);
             out.max_layout_roots_time_us = out.max_layout_roots_time_us.max(layout_roots_time_us);
+            out.max_layout_roots_apply_time_us =
+                out.max_layout_roots_apply_time_us.max(layout_roots_apply_time_us);
+            out.max_layout_roots_flush_viewport_time_us = out
+                .max_layout_roots_flush_viewport_time_us
+                .max(layout_roots_flush_viewport_time_us);
             out.max_layout_view_cache_time_us = out
                 .max_layout_view_cache_time_us
                 .max(layout_view_cache_time_us);
@@ -2093,7 +2232,19 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_invalidate_scroll_handle_bindings_time_us,
                 layout_expand_view_cache_invalidations_time_us,
                 layout_request_build_roots_time_us,
+                layout_request_build_roots_take_engine_time_us,
+                layout_request_build_roots_phase1_time_us,
+                layout_request_build_roots_phase2_time_us,
+                layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                layout_clean_geometry_proof_nodes,
+                layout_clean_geometry_proof_boundaries,
+                layout_clean_geometry_apply_nodes,
+                layout_clean_geometry_apply_fallback_layouts,
+                layout_request_build_roots_phase2_compute_time_us,
+                layout_request_build_roots_put_engine_time_us,
                 layout_roots_time_us,
+                layout_roots_apply_time_us,
+                layout_roots_flush_viewport_time_us,
                 layout_pending_barrier_relayouts_time_us,
                 layout_barrier_relayouts_time_us,
                 layout_repair_view_cache_bounds_time_us,
@@ -2356,6 +2507,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable,
                 layout_engine_solves,
                 layout_engine_solve_time_us,
+                layout_clean_geometry_solve_skip_rejections,
+                layout_clean_geometry_solve_skip_first_rejection,
+                layout_clean_geometry_solve_skip_first_detail,
+                layout_clean_geometry_solve_skip_first_element_kind,
                 layout_engine_child_rect_queries,
                 layout_engine_child_rect_time_us,
                 layout_engine_widget_fallback_solves,
@@ -2558,8 +2713,60 @@ pub(super) fn bundle_stats_from_json_with_options(
         out.p50_layout_request_build_roots_time_us,
         out.p95_layout_request_build_roots_time_us,
     ) = p50_p95(rows.iter().map(|r| r.layout_request_build_roots_time_us));
+    (
+        out.p50_layout_request_build_roots_take_engine_time_us,
+        out.p95_layout_request_build_roots_take_engine_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_request_build_roots_take_engine_time_us));
+    (
+        out.p50_layout_request_build_roots_phase1_time_us,
+        out.p95_layout_request_build_roots_phase1_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_request_build_roots_phase1_time_us));
+    (
+        out.p50_layout_request_build_roots_phase2_time_us,
+        out.p95_layout_request_build_roots_phase2_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_request_build_roots_phase2_time_us));
+    (
+        out.p50_layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+        out.p95_layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_request_build_roots_phase2_clean_geometry_proof_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_nodes,
+        out.p95_layout_clean_geometry_proof_nodes,
+    ) = p50_p95(rows.iter().map(|r| r.layout_clean_geometry_proof_nodes));
+    (
+        out.p50_layout_clean_geometry_proof_boundaries,
+        out.p95_layout_clean_geometry_proof_boundaries,
+    ) = p50_p95(rows.iter().map(|r| r.layout_clean_geometry_proof_boundaries));
+    (
+        out.p50_layout_clean_geometry_apply_nodes,
+        out.p95_layout_clean_geometry_apply_nodes,
+    ) = p50_p95(rows.iter().map(|r| r.layout_clean_geometry_apply_nodes));
+    (
+        out.p50_layout_clean_geometry_apply_fallback_layouts,
+        out.p95_layout_clean_geometry_apply_fallback_layouts,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_apply_fallback_layouts),
+    );
+    (
+        out.p50_layout_request_build_roots_phase2_compute_time_us,
+        out.p95_layout_request_build_roots_phase2_compute_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_request_build_roots_phase2_compute_time_us));
+    (
+        out.p50_layout_request_build_roots_put_engine_time_us,
+        out.p95_layout_request_build_roots_put_engine_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_request_build_roots_put_engine_time_us));
     (out.p50_layout_roots_time_us, out.p95_layout_roots_time_us) =
         p50_p95(rows.iter().map(|r| r.layout_roots_time_us));
+    (out.p50_layout_roots_apply_time_us, out.p95_layout_roots_apply_time_us) =
+        p50_p95(rows.iter().map(|r| r.layout_roots_apply_time_us));
+    (
+        out.p50_layout_roots_flush_viewport_time_us,
+        out.p95_layout_roots_flush_viewport_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_roots_flush_viewport_time_us));
     (
         out.p50_layout_view_cache_time_us,
         out.p95_layout_view_cache_time_us,

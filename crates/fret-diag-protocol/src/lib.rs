@@ -1948,6 +1948,30 @@ pub enum UiSemanticsLiveV1 {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+pub enum UiSemanticsCheckedStateV1 {
+    False,
+    True,
+    Mixed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiSemanticsPressedStateV1 {
+    False,
+    True,
+    Mixed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiSemanticsInvalidV1 {
+    True,
+    Grammar,
+    Spelling,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum UiSemanticsActionV1 {
     Focus,
     Invoke,
@@ -2095,6 +2119,41 @@ pub enum UiPredicateV1 {
     CheckedIs {
         target: UiSelectorV1,
         checked: bool,
+    },
+    /// True when the target exists and its tri-state checked semantics matches.
+    ///
+    /// Prefer this for indeterminate checkboxes: `checked_is_none` only proves that the legacy
+    /// binary flag is absent, while this predicate proves the explicit mixed/true/false
+    /// checked-state contract.
+    CheckedStateIs {
+        target: UiSelectorV1,
+        /// Use `null` to assert that no tri-state checked semantics are exposed.
+        state: Option<UiSemanticsCheckedStateV1>,
+    },
+    /// True when the target exists and its tri-state pressed semantics matches.
+    ///
+    /// Use this for Radix/shadcn Toggle and multiple ToggleGroup items. Those controls expose
+    /// ARIA-like `aria-pressed` through Fret's portable `pressed_state` surface, not through
+    /// `selected_is`.
+    PressedStateIs {
+        target: UiSelectorV1,
+        /// Use `null` to assert that no tri-state pressed semantics are exposed.
+        state: Option<UiSemanticsPressedStateV1>,
+    },
+    /// True when the target exists and its required form-control semantics matches.
+    ///
+    /// This gates ARIA-like `aria-required` outcomes on the concrete control node rather than on
+    /// surrounding form-field chrome.
+    RequiredIs {
+        target: UiSelectorV1,
+        required: bool,
+    },
+    /// True when the target exists and its invalid form-control semantics matches.
+    ///
+    /// Use `null` to assert that no invalid-state semantics are exposed.
+    InvalidIs {
+        target: UiSelectorV1,
+        invalid: Option<UiSemanticsInvalidV1>,
     },
     ExpandedIs {
         target: UiSelectorV1,
@@ -2785,6 +2844,23 @@ pub enum UiPredicateV1 {
     /// probe becomes a layout/paint invalidation regression instead of a hit-test-only path.
     PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe {
         max: u64,
+    },
+    /// True when recent debug snapshots contain a frame whose hit-test path-cache hit counter is at
+    /// least `min`.
+    ///
+    /// This is a mechanism-level predicate for pointer routing diagnostics. It proves runtime
+    /// pointer movement reached the cached hit-test fast path, rather than only exercising fallback
+    /// hit testing or bounds-tree queries.
+    HitTestPathCacheHitsGe {
+        min: u64,
+    },
+    /// True when recent debug snapshots contain a frame whose hit-test path-cache miss counter is at
+    /// least `min`.
+    ///
+    /// This complements `hit_test_path_cache_hits_ge` for stale-path probes: a moved target should
+    /// reject the old cached path and increment misses before fallback hit testing refreshes it.
+    HitTestPathCacheMissesGe {
+        min: u64,
     },
     /// True when `debug.input_arbitration.pointer_capture_active == active`.
     ///
@@ -4610,6 +4686,102 @@ mod tests {
     }
 
     #[test]
+    fn predicate_checked_state_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::CheckedStateIs {
+            target: UiSelectorV1::TestId {
+                id: "select-all".to_string(),
+                root_z_index: None,
+            },
+            state: Some(UiSemanticsCheckedStateV1::Mixed),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "checked_state_is",
+                "target": { "kind": "test_id", "id": "select-all" },
+                "state": "mixed",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::CheckedStateIs { .. }));
+    }
+
+    #[test]
+    fn predicate_pressed_state_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::PressedStateIs {
+            target: UiSelectorV1::TestId {
+                id: "toggle-bookmark".to_string(),
+                root_z_index: None,
+            },
+            state: Some(UiSemanticsPressedStateV1::True),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "pressed_state_is",
+                "target": { "kind": "test_id", "id": "toggle-bookmark" },
+                "state": "true",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::PressedStateIs { .. }));
+    }
+
+    #[test]
+    fn predicate_required_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::RequiredIs {
+            target: UiSelectorV1::TestId {
+                id: "required-input".to_string(),
+                root_z_index: None,
+            },
+            required: true,
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "required_is",
+                "target": { "kind": "test_id", "id": "required-input" },
+                "required": true,
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::RequiredIs { .. }));
+    }
+
+    #[test]
+    fn predicate_invalid_is_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::InvalidIs {
+            target: UiSelectorV1::TestId {
+                id: "invalid-input".to_string(),
+                root_z_index: None,
+            },
+            invalid: Some(UiSemanticsInvalidV1::True),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "invalid_is",
+                "target": { "kind": "test_id", "id": "invalid-input" },
+                "invalid": "true",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::InvalidIs { .. }));
+    }
+
+    #[test]
     fn predicate_element_effective_opacity_approx_eq_serializes_and_deserializes() {
         let value = serde_json::to_value(UiPredicateV1::ElementEffectiveOpacityApproxEq {
             target: UiSelectorV1::TestId {
@@ -5467,6 +5639,38 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::PaintCacheHitTestOnlyReplayRejectedKeyMismatchLe { max: 0 }
+        ));
+    }
+
+    #[test]
+    fn predicate_hit_test_path_cache_counters_serialize() {
+        let hits = serde_json::to_value(UiPredicateV1::HitTestPathCacheHitsGe { min: 1 }).unwrap();
+        assert_eq!(
+            hits,
+            serde_json::json!({
+                "kind": "hit_test_path_cache_hits_ge",
+                "min": 1,
+            })
+        );
+        let roundtrip: UiPredicateV1 = serde_json::from_value(hits).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::HitTestPathCacheHitsGe { min: 1 }
+        ));
+
+        let misses =
+            serde_json::to_value(UiPredicateV1::HitTestPathCacheMissesGe { min: 1 }).unwrap();
+        assert_eq!(
+            misses,
+            serde_json::json!({
+                "kind": "hit_test_path_cache_misses_ge",
+                "min": 1,
+            })
+        );
+        let roundtrip: UiPredicateV1 = serde_json::from_value(misses).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::HitTestPathCacheMissesGe { min: 1 }
         ));
     }
 

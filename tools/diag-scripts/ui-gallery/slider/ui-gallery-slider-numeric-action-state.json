@@ -1,0 +1,342 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: Slider numeric action-state",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "slider"
+    },
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "slider",
+      "semantics",
+      "numeric",
+      "action-state",
+      "disabled"
+    ],
+    "target_hints": [
+      "Starts directly on the Slider page.",
+      "Verifies enabled slider thumb numeric metadata and SetValue/Increment/Decrement actions, then verifies disabled slider thumbs suppress the same action surface."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 820.0, "height_px": 760.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-slider" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-slider-single" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single-thumb-0" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single-thumb-0" },
+        "role": "slider"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single-thumb-0" },
+        "disabled": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single-thumb-0" },
+        "field": "value",
+        "value": 75.0,
+        "eps": 0.01
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single-thumb-0" },
+        "field": "min",
+        "value": 0.0,
+        "eps": 0.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single-thumb-0" },
+        "field": "max",
+        "value": 100.0,
+        "eps": 0.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single-thumb-0" },
+        "field": "step",
+        "value": 1.0,
+        "eps": 0.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single-thumb-0" },
+        "field": "jump",
+        "value": 10.0,
+        "eps": 0.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single-thumb-0" },
+        "action": "set_value",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single-thumb-0" },
+        "action": "increment",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single-thumb-0" },
+        "action": "decrement",
+        "enabled": true
+      }
+    },
+
+    {
+      "type": "set_slider_value",
+      "target": { "kind": "test_id", "id": "ui-gallery-slider-single" },
+      "value": 80.0,
+      "min": 0.0,
+      "max": 100.0,
+      "epsilon": 0.5,
+      "timeout_frames": 600,
+      "drag_steps": 12
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single-thumb-0" },
+        "field": "value",
+        "value": 80.0,
+        "eps": 0.5
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-single-thumb-0" },
+        "action": "set_value",
+        "enabled": true
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-slider-numeric-action-state-enabled",
+      "max_snapshots": 1
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-slider-disabled" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-disabled-thumb-0" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-disabled-thumb-0" },
+        "role": "slider"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-disabled-thumb-0" },
+        "disabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-disabled-thumb-0" },
+        "field": "value",
+        "value": 50.0,
+        "eps": 0.01
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-disabled-thumb-0" },
+        "field": "min",
+        "value": 0.0,
+        "eps": 0.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-disabled-thumb-0" },
+        "field": "max",
+        "value": 100.0,
+        "eps": 0.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-disabled-thumb-0" },
+        "field": "step",
+        "value": 1.0,
+        "eps": 0.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-disabled-thumb-0" },
+        "action": "set_value",
+        "enabled": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-disabled-thumb-0" },
+        "action": "increment",
+        "enabled": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-disabled-thumb-0" },
+        "action": "decrement",
+        "enabled": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-slider-disabled-thumb-0" },
+        "action": "focus",
+        "enabled": false
+      }
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-slider-numeric-action-state-disabled",
+      "max_snapshots": 1
+    },
+    { "type": "capture_screenshot", "label": "ui-gallery-slider-numeric-action-state" }
+  ]
+}

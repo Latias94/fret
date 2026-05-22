@@ -15731,3 +15731,821 @@ cargo test -p fret-ui interactive_resize_wrapped_text_ -- --nocapture
 
 Decision:
 - Keep the default UX exact. Treat width bucketing as a deliberate experiment, not a correctness path.
+
+## 2026-05-21 17:20:00 +08:00 (runner monitor topology global-change de-noise)
+
+Question:
+- Was the retained row-fragment follow-up's changed `RunnerMonitorTopologyDiagnosticsStore` signal real topology
+  churn, or a diagnostics global being marked changed even when the snapshot was unchanged?
+
+Finding:
+- `RunnerMonitorTopologyDiagnosticsStore::update_snapshot` already returned `false` for identical snapshots, but the
+  desktop runner refreshed it through tracked `App::with_global_mut` during `about_to_wait`.
+- In `App`, tracked global mutation always queues the global type for propagation. This made an unchanged per-frame
+  monitor-topology refresh visible as global-change work to UI drivers and diagnostics.
+
+Change:
+- Added `fret_runtime::update_runner_monitor_topology_diagnostics(...)`, which checks the current snapshot before
+  entering the tracked mutation path.
+- `WinitRunner::refresh_runner_monitor_topology_diagnostics` now calls the helper, so unchanged monitor snapshots do
+  not produce `changed_globals`; real topology changes still update the store and propagate.
+
+Validation:
+```powershell
+cargo nextest run -p fret-app monitor_topology_refresh_tracks_only_real_snapshot_changes --no-fail-fast
+cargo nextest run -p fret-runtime topology_update_marks_global_changed_only_for_real_snapshot_changes update_snapshot_detects_real_changes clear_snapshot_removes_last_topology --no-fail-fast
+cargo check -p fret-launch
+cargo fmt -p fret-app -p fret-runtime -p fret-launch --check
+```
+
+Decision:
+- Treat the earlier diagnostics-global signal as fixed instrumentation noise, not as a new editor paint owner.
+- The remaining resize-jitter owner is still the changing-bounds layout/root solve under the content `Scroll`; this
+  slice does not replace the required repeat=3 resize-jitter bundle for that owner.
+
+## 2026-05-21 13:12:37 +08:00 (clean-geometry solve-skip attribution in diag stats)
+
+Question:
+- Before widening the changing-bounds layout/root fast path, can `diag stats` explain why a top root solve did not use
+  the existing clean-geometry resize skip?
+
+Finding:
+- `fret-ui` already records `clean_geometry_solve_skip_rejection` on `UiDebugLayoutEngineSolve`, but `fret-diag`
+  dropped that nested object while building `top_layout_engine_solves`.
+- The local resize-jitter evidence therefore showed the top root-solve owners and solve profiles, but not the
+  precondition that rejected the clean-geometry skip.
+
+Change:
+- `BundleStatsLayoutEngineSolve` now preserves the nested clean-geometry rejection with reason, detail, node, element,
+  element kind, element path, and semantics role/test_id when available.
+- `diag stats` human output, stats JSON, and triage JSON expose the same rejection object.
+- Added a focused synthetic-bundle test that verifies stats JSON and triage JSON both preserve the rejection and its
+  semantics test id.
+
+Validation:
+```powershell
+cargo nextest run -p fret-diag bundle_stats_preserves_clean_geometry_solve_skip_rejection --no-fail-fast
+cargo check -p fret-diag
+cargo fmt -p fret-diag --check
+```
+
+Decision:
+- Treat this as attribution-only; no layout behavior changed.
+- The next repeat resize-jitter bundle should inspect
+  `top_layout_engine_solves[].clean_geometry_solve_skip_rejection` before choosing the contained-root apply/solve
+  optimization.
+
+## 2026-05-21 13:54:10 +08:00 (nowrap ellipsis clean-geometry resize propagation)
+
+Question:
+- Which clean-geometry rejection can be safely removed from the resize-jitter root-solve owner without weakening text
+  correctness?
+
+Finding:
+- The retained text-measure resize bundle already contained runtime `clean_geometry_solve_skip_rejection` objects even
+  before `fret-diag` surfaced them. Its root `Stack` solve was blocked by
+  `text_reflow/text_overflow_not_clip` on `TextWrap::None + Ellipsis`; a nested `Semantics` root was separately blocked
+  by `text_reflow/text_wrap_not_none`.
+- `TextWrap::None + Ellipsis` is a safe narrower case than wrapped text: measurement already records a wrap-none
+  fingerprint and stable cached height, and the visible text remains single-line while the parent width changes.
+
+Change:
+- `clean_nowrap_text_cached_metrics_supported` now accepts `TextOverflow::Ellipsis` for `TextWrap::None` text when the
+  cached wrap-none fingerprint matches and the propagated bounds keep the cached height.
+- Added a layout-engine regression test proving a small width-only resize skips the authoritative engine solve for
+  fill-width ellipsis text while preserving the single-line height.
+
+Validation:
+```powershell
+cargo nextest run -p fret-ui clean_geometry_small_resize --no-fail-fast
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+```
+
+Decision:
+- Keep `TextWrap::Word` rejected for now. That remaining owner requires a separate line-break-stability proof before
+  clean propagation can bypass the authoritative solve.
+
+## 2026-05-21 14:19:13 +08:00 (frame-level clean-geometry rejection fields in diag stats)
+
+Question:
+- Can `diag stats` distinguish a sampled top-solve clean-geometry rejection from frame-wide clean-geometry skip churn?
+
+Finding:
+- Runtime debug stats already exported `layout_clean_geometry_solve_skip_rejections`,
+  `layout_clean_geometry_solve_skip_first_rejection`, and
+  `layout_clean_geometry_solve_skip_first_element_kind`, but `fret-diag` did not consume these frame-level fields.
+- The nested `top_layout_engine_solves[].clean_geometry_solve_skip_rejection` remains useful for node/path attribution,
+  but it is bounded by top-solve sampling and cannot by itself prove how broad the rejection pattern was in a frame.
+
+Change:
+- `BundleStatsSnapshotRow`, stats JSON, human stats output, triage JSON, and the registered frame-stats inventory now
+  include the frame-level clean-geometry rejection count and first rejection labels.
+- The perf-key registry gained a string `label` kind/unit so non-numeric diagnostic labels are registered explicitly
+  instead of being treated as thresholdable counters.
+
+Validation:
+```powershell
+cargo nextest run -p fret-diag bundle_stats_preserves_clean_geometry_solve_skip_rejection full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_contract_keeps_stats_and_gate_keys_additive --no-fail-fast
+cargo check -p fret-diag
+cargo fmt -p fret-diag --check
+```
+
+Decision:
+- This is still attribution-only. The remaining resize-jitter owner should use both the frame-level rejection fields
+  and `top_layout_engine_solves[].clean_geometry_solve_skip_rejection` before widening any contained-root
+  clean-geometry fast path.
+
+## 2026-05-21 15:11:58 +08:00 (frame-level clean-geometry rejection detail)
+
+Question:
+- Can frame-level clean-geometry rejection stats distinguish `text_reflow/text_wrap_not_none` from
+  `text_reflow/text_overflow_not_clip` without relying on sampled `top_layout_engine_solves[]`?
+
+Finding:
+- The previous frame-level fields exposed the first rejection reason and element kind, but not the detail. That made
+  `text_reflow` ambiguous in root-level stats even though the nested solve rejection object already carried the detail.
+- The retained text-measure bundle showed both old subcases: the now-fixed nowrap ellipsis rejection and the still
+  intentionally rejected wrapped-text reflow owner.
+
+Change:
+- `UiDebugFrameStats`, diagnostics bundle stats, `diag stats` JSON/human output, triage JSON, and the registered
+  frame-stats inventory now include `layout_clean_geometry_solve_skip_first_detail`.
+- Added source and consumer coverage so `TextWrap::Word` records `text_wrap_not_none` at the frame level, and synthetic
+  bundle stats/triage preserve the same label.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check
+cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast
+cargo nextest run -p fret-diag bundle_stats_preserves_clean_geometry_solve_skip_rejection full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_contract_keeps_stats_and_gate_keys_additive registered_perf_key_inventory_doc_is_in_sync --no-fail-fast
+cargo check -p fret-bootstrap
+git diff --check
+```
+
+Decision:
+- Keep this slice attribution-only. `TextWrap::Word` remains rejected from clean-geometry solve skipping until the text
+  layer exposes a line-break or measured-height-stability proof.
+
+## 2026-05-21 16:07:37 +08:00 (content-stable nowrap text measure fingerprints)
+
+Question:
+- Why did the current text-measure resize rerun still report a clean-geometry `text_reflow/text_fingerprint_mismatch`
+  rejection on `ui-gallery-content-header-copy` after the single-line ellipsis case was allowed?
+
+Finding:
+- The wrap-none text measure cache fingerprint mixed the `Arc<str>` allocation address and length, not the text bytes.
+  Gallery header copy rebuilds can produce a distinct `Arc<str>` allocation for the same content, so clean geometry
+  conservatively rejected the cached single-line metrics even when the measured text content and style were stable.
+- The same pointer-based fingerprint also left a theoretical same-length false-positive risk for rebuilt text if an
+  allocator reused an address for different content.
+- Rerun before the fix:
+  `target/fret-diag/text-clean-geometry-current-20260521-r3/sessions/1779349055563-188588/1779349083805-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+  Top frames each reported two clean-geometry rejections: `ui-gallery-content-header-copy` with
+  `text_reflow/text_fingerprint_mismatch`, and the preview card header with `text_reflow/text_wrap_not_none`.
+
+Change:
+- `text_wrap_none_measure_fingerprint_plain` and `text_wrap_none_measure_fingerprint_rich` now mix the text bytes
+  instead of the `Arc<str>` pointer address.
+- Added tests proving rebuilt same-content plain/rich text has the same wrap-none fingerprint, while same-length
+  different content still changes the fingerprint.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui nowrap_measure_fingerprint --no-fail-fast
+cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow --no-fail-fast
+cargo nextest run -p fret-ui clean_geometry_skip nowrap_measure_fingerprint --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r4 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+git diff --check
+```
+
+Post-fix evidence:
+- Rerun bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r4/sessions/1779350759019-115264/1779350782758-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- Top clean-geometry rejections dropped from two per slow frame to one per slow frame. The remaining first detail is
+  `text_wrap_not_none`; `text_fingerprint_mismatch` no longer appears in the top-frame rejecting solves.
+- The remaining rejection is still the intentionally blocked wrapped-text owner and should not be bypassed until text
+  layout exposes a line-break or measured-height-stability proof.
+
+## 2026-05-21 16:58:01 +08:00 (wrapped text shrink stability proof)
+
+Question:
+- Can clean geometry skip the remaining `TextWrap::Word` owner without changing shadcn `CardTitle` semantics or
+  pretending all wrapped text is stable under resize?
+
+Finding:
+- `CardTitle::new("Preview")` intentionally uses `TextWrap::Word + Clip` to match the shadcn card title policy, so
+  changing the component to single-line text would be a policy regression.
+- Fret text metrics do not expose line-break spans yet, so broad wrapped-text clean propagation is still unsafe.
+- There is a smaller proof: if a width-only resize shrinks the text bounds, and the previous measured line width still
+  fits inside the new max width, the previously prepared lines remain valid and the measured height stays stable.
+
+Change:
+- Added a node-local wrapped text measure cache for plain `TextWrap::Word + Clip + Start` text, keyed by content,
+  resolved style, wrap/overflow/align, scale factor, and font stack key.
+- Clean geometry now accepts that narrow wrapped-text shrink case only when the cached measured line width still fits
+  the new max width and the propagated bounds keep the cached height.
+- Expansion, rich/selectable text, non-start alignment, non-clip overflow, and shrink-below-line-width cases still
+  reject and use the authoritative layout solve.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui clean_geometry_small_resize_rejects_auto_height_text_reflow clean_geometry_small_resize_skips_nowrap_text_width_delta_when_height_stable clean_geometry_small_resize_skips_nowrap_ellipsis_text_width_delta_when_height_stable clean_geometry_small_resize_skips_wrapped_text_shrink_when_cached_line_width_still_fits clean_geometry_small_resize_rejects_wrapped_text_shrink_below_cached_line_width --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r5 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+git diff --check
+```
+
+Post-fix evidence:
+- Rerun bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r5/sessions/1779353781500-189308/1779353805755-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r4 top frames: remaining clean-geometry rejection was `text_reflow/text_wrap_not_none`, with layout sum
+  `9815us` and p95 layout `1488us`.
+- r5 top frames: `text_wrap_not_none` no longer appears; the next rejection is `flex_cross_align` on the preview
+  card/content path. Layout sum dropped to `7892us`, p95 layout to `1115us`, and p95 engine solve to `403us`.
+- Next slice should investigate the `flex_cross_align` owner before widening any more text layout contracts.
+
+## 2026-05-21 17:30:59 +08:00 (items-start vertical flex resize propagation)
+
+Question:
+- Can clean geometry accept the r5 `flex_cross_align` owner without changing shadcn `CardContent` from
+  `items-start` to stretch?
+
+Finding:
+- `CardContent` intentionally maps to `VStackProps::default().items_start()` so inline-sized children are not stretched
+  by recipe policy.
+- The existing clean-geometry vertical flex width-delta path only accepted `CrossAlign::Stretch`, so an otherwise stable
+  width-only resize still fell back to a layout-engine solve when the flex container used `CrossAlign::Start`.
+- `CrossAlign::Start` has a narrow stable case: vertical, no-wrap flex with unchanged height can keep each child at its
+  previous cross-axis origin and width while reusing the existing main-axis propagation rules.
+
+Change:
+- Clean geometry now accepts `CrossAlign::Start` for the existing vertical flex width-delta propagation path, preserving
+  child widths instead of stretching them to the new inner width.
+- Center/end and other unsupported cross-axis alignments still reject with `flex_cross_align`.
+- Added a focused test proving an `items-start` vertical flex child skips the solve and preserves child bounds, while
+  the existing center-aligned rejection test still covers the unsafe alignment case.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui clean_geometry_small_resize_skips_items_start_vertical_flex_child clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child --no-fail-fast
+cargo nextest run -p fret-ui clean_geometry_small_resize_skips_items_start_vertical_flex_child clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child clean_geometry_small_resize_skips_stable_auto_height_vertical_flex_child --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r6 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+git diff --check
+```
+
+Post-fix evidence:
+- Rerun bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r6/sessions/1779355767908-199780/1779355792904-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r6 top frames no longer report `flex_cross_align`; the first remaining clean-geometry rejection is `non_px_margin`
+  on a `Flex` node.
+- r6 summary from `diag stats --sort time --top 20 --json`: layout sum `6659us`, p95 layout `1054us`, and p95 engine
+  solve `358us`.
+- Next slice should investigate `non_px_margin` before broadening margin handling or contained-root propagation.
+
+## 2026-05-21 18:36:38 +08:00 (vertical flex horizontal auto-margin resize propagation)
+
+Question:
+- Can clean geometry accept the r6 `non_px_margin` owner without treating all non-px margins as stable?
+
+Finding:
+- The r6 owner was the gallery preview page column under `ui-gallery-preview-card-content`. It uses horizontal
+  `auto` margins to center a fill-width, max-width doc column.
+- Auto margins are not equivalent to zero margins: for `mx-auto`, the cross-axis origin changes when the parent width
+  changes even if the child width stays clamped by `max_width`.
+- There is a narrow stable case for vertical, no-wrap flex: when only left/right margins are `Auto`, top/bottom margins
+  are px, and the child width resolves from `Fill`/`Px` plus px min/max constraints, clean geometry can recompute the
+  centered x origin from the new inner width.
+
+Change:
+- The vertical flex width-delta propagation path now accepts horizontal `auto` margins only for the centered
+  left/right-auto case. It recomputes child width from the next inner width plus px constraints, then recomputes the
+  centered origin.
+- The propagation supported-element prefilter now uses the same narrow flex margin predicate, so root solve skipping
+  and post-solve clean propagation agree.
+- Added a focused test proving `width: Fill + max_width + mx-auto` recentering skips the layout solve while preserving
+  child width and updating the x origin. Vertical auto margins, fractional/fill min/max constraints, and non-vertical
+  flex still remain outside this proof.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui clean_geometry_small_resize_skips_horizontal_auto_margin_vertical_flex_child clean_geometry_small_resize_skips_items_start_vertical_flex_child clean_geometry_small_resize_rejects_center_aligned_vertical_flex_child --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r7 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+git diff --check
+```
+
+Notes:
+- One intermediate nextest rebuild hit `rustc-LLVM ERROR: out of memory` while compiling the `fret-ui` test binary on
+  Windows. After stale/background compile pressure cleared, the same focused nextest command passed.
+
+Post-fix evidence:
+- Rerun bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r7/sessions/1779359695078-201076/1779359724805-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r7 top frames no longer report `non_px_margin`; the first remaining clean-geometry rejection is
+  `unsupported_kind` on `Canvas`.
+- r7 summary from `diag stats --sort time --top 20 --json`: layout sum `7742us`, p95 layout `1175us`, and p95 engine
+  solve `393us`. Treat the higher layout sum versus r6 as evidence to attribute the new Canvas owner and run repeated
+  confirmation before claiming a monotonic perf win.
+- Next slice should investigate whether Canvas can expose a stable clean-geometry contract for this resize page, or
+  whether the remaining solve is required by canvas text-measure side effects.
+
+## 2026-05-21 19:17:03 +08:00 (canvas leaf clean-geometry propagation)
+
+Question:
+- Can the r7 `Canvas` / `unsupported_kind` owner be accepted after proving it has no layout-time side effects?
+
+Finding:
+- `Canvas` measure/layout are pure constraint clamps around `CanvasProps::layout`; the paint and prepaint hooks run
+  later with final bounds and are not consulted during layout propagation.
+- `ManagedSurface` is different: it has a layout callback and can publish layout-time output, so it remains outside
+  the clean-geometry propagated-leaf contract.
+- The existing descendant rejection test used `Canvas` only because it was an unsupported leaf, not because it modeled
+  side-effectful layout.
+
+Change:
+- Childless `Canvas` is now accepted as a propagated clean-geometry leaf in both the node contract and the
+  supported-element prefilter.
+- The descendant rejection attribution test now uses `ManagedSurface` so the test still proves unsupported descendant
+  attribution on a real layout-side-effect boundary.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui clean_geometry_rejection_reports_descendant_node_attribution clean_geometry_small_resize_skips_horizontal_auto_margin_vertical_flex_child clean_geometry_small_resize_skips_items_start_vertical_flex_child --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r8 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+git diff --check
+```
+
+Post-fix evidence:
+- Rerun bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r8/sessions/1779362032346-211792/1779362056912-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r8 top frames no longer report `Canvas` / `unsupported_kind`; top-frame
+  `layout_clean_geometry_solve_skip_rejections` is `0`.
+- r7 -> r8 from `diag stats --sort time --top 20 --json`: p95 engine solve improved `393us -> 200us`, layout sum
+  improved `7742us -> 6512us`, and p95 layout improved `1175us -> 896us`.
+- Next slice should stop chasing clean-geometry rejection owners for this page unless repeated evidence reintroduces
+  one. Remaining top-frame work should be attributed through request-build/layout-roots/paint timing with repeat
+  confirmation before claiming the broader perf win.
+
+## 2026-05-21 20:56:07 +08:00 (chrome title vertical lane height repair)
+
+Question:
+- After r8 removed clean-geometry solve-skip rejection owners, why did r9 still show a repeated layout invalidation
+  walk rooted at the content header title text?
+
+Finding:
+- The remaining owner was not declarative diff propagation. The r9 layout invalidation walk stayed
+  `source=other`, `detail=null`, and rooted at `text_chrome_title` (`ecosystem/fret-ui-kit/src/declarative/text.rs`).
+- The title text had a `0px` semantic height in the content header while the sibling readout had a normal text height.
+- `text_chrome_title` used `fill_growing_single_line_layout()`, so `flex-grow: 1` and `flex-basis: 0` applied to the
+  vertical main axis when the helper was used in a vertical header-copy lane. Paint-time text prepare then repaired
+  the auto-height mismatch by invalidating layout.
+
+Change:
+- `text_chrome_title` now uses fill-width shrinkable single-line layout instead of the growing variant.
+- The helper still keeps `width: Fill`, shrink, `min-width: 0`, nowrap, and ellipsis, but leaves the main-axis
+  `grow=0` and `basis=Auto` so it is safe in vertical chrome lanes.
+
+Validation:
+```powershell
+cargo nextest run -p fret-ui-kit chrome_title_text_fills_width_without_main_axis_growth --no-fail-fast
+cargo check -p fret-ui-kit
+cargo fmt -p fret-ui-kit --check
+cargo fmt -p fret-ui --check
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r10 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r10\sessions\1779367085442-198548\1779367130341-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort cpu_cycles --top 30
+git diff --check
+```
+
+Post-fix evidence:
+- Rerun bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r10/sessions/1779367085442-198548/1779367130341-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r10 semantics show the header title text (`4294968222`, "Text / Measured Bounds Overlay") at `h=20.0` instead of
+  the r9 `h=0.0` owner.
+- r10 `diag stats --sort cpu_cycles --top 30` reports sampled top frames with `inv.calls=0` and `inv.nodes=0`.
+- This should be treated as a correctness and repair-invalidation fix. Do not claim a broad p95 win from this single
+  run; the next local owner remains request-build/layout-roots/paint timing with repeat confirmation.
+
+## 2026-05-21 23:58:00 +08:00 (fixed flex resize and origin-only clean geometry)
+
+Question:
+- After the chrome title repair removed the repeated layout invalidation walk, why did the text-measure resize repro
+  still show a clean-geometry solve on the theme preset Select trigger?
+
+Finding:
+- r11 proved the outer presets row was safe after allowing fixed-px, default-shrink horizontal flex children while
+  positive free space remained. The remaining owner moved down to `ui-gallery-theme-preset-trigger.chrome` with
+  `flex_item_sizing`.
+- r12 changed the trigger's inner flex from `SpaceBetween` to `Start`; r13 also made the chevron opacity wrapper a
+  fixed `16x16` non-shrinking flex item. Both were useful recipe corrections, but neither alone removed the same
+  `ui-gallery-theme-preset-trigger.chrome` rejection.
+- The missing mechanism was origin-only propagation: an outer grow item can absorb the width delta and move a fixed-size
+  trigger left/right without changing the trigger or its descendants' sizes. Re-proving the nested trigger's internal
+  grow/fixed split under a width delta was unnecessary and too strict.
+
+Change:
+- Clean geometry now accepts fixed-px horizontal flex children with default `flex-shrink` only while the next line
+  extent still fits the next inner width; once free space goes negative it still rejects and solves.
+- Clean geometry now propagates child bounds by translating previous child rects when a pure subtree's own size is
+  unchanged and only its origin changes.
+- The shadcn Select trigger now uses `justify: Start` and gives the chevron opacity wrapper an explicit fixed-size,
+  non-shrinking layout.
+- Added focused tests for the accepted positive-free-space fixed flex case, the rejected negative-free-space case, and
+  the nested fixed-size trigger origin-only move.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo nextest run -p fret-ui clean_geometry_skips_default_shrink_fixed_px_horizontal_flex_with_free_space clean_geometry_rejects_default_shrink_fixed_px_horizontal_flex_without_free_space clean_geometry_skips_nested_fixed_size_horizontal_flex_origin_only_move --no-fail-fast
+cargo check -p fret-ui-shadcn
+cargo fmt -p fret-ui --check
+cargo fmt -p fret-ui-shadcn --check
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r14 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r14\sessions\1779381598567-198224\1779381628889-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+git diff --check
+```
+
+Notes:
+- Focused `fret-ui-shadcn` test-binary builds timed out on this Windows session, so the shadcn-side gate for this slice
+  is `cargo check -p fret-ui-shadcn` plus the runtime gallery diag repro.
+- `cargo check` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Post-fix evidence:
+- r14 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r14/sessions/1779381598567-198224/1779381628889-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r14 `diag stats --sort time --top 12` reports p50/p95 total `91/1223us`, layout `26/672us`, and
+  `hot p50/p95 layout.engine_solve=0/0`.
+- Top resize ticks `325/328/331` have `layout.solve_us=0`, `layout.nodes=3`, `clean_rejections=0`, and
+  `inv.calls=0` / `inv.nodes=0`, with no `solve_rejection` and no rejecting `test_id`.
+- Treat this as closing the current clean-geometry rejection owner on the local text-measure resize repro. The next
+  measured owner is the remaining `layout.nodes=3` and paint-cache/text width-change work; do not broaden this into a
+  perf-baseline claim until repeat=3 resize evidence confirms the shape.
+
+## 2026-05-22 01:20:00 +08:00 (cached-flow seen marking single lookup)
+
+Question:
+- After the clean-geometry solve owner closed, can the remaining cached-flow request-build cost be reduced without
+  changing layout-engine stale-node pruning semantics?
+
+Finding:
+- r14 resize top frames were already `mode=cached_flow_reuse`, `subtree_dirty=false`, `layout.engine_solve=0`, and
+  `nodes_marked_seen=134`.
+- The hot request-build helper checked `layout_id_for_node(node).is_some()` and then called
+  `mark_seen_if_present(node)`, which checked the same `node_to_layout` map again.
+- A broad "mark all retained nodes seen" shortcut remains too risky because `TaffyLayoutEngine::end_frame()` depends
+  on the seen set to prune stale layout nodes.
+
+Change:
+- `TaffyLayoutEngine::mark_seen_if_present(...)` now returns `true` when a node was engine-backed and marked seen.
+- `mark_layout_engine_seen_subtree_from_ui_children(...)` uses that return value for `nodes_marked_seen`, avoiding the
+  extra map lookup per cached-flow node while preserving the same DFS and prune behavior.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui -E 'test(end_frame_prunes_stale_children_from_live_parent_edges) | test(interactive_resize_cached_flow_reuse_defers_full_rebuild_until_quiet_window) | test(layout_request_build_roots_sample_dirty_descendant_sources) | test(probe_layout_does_not_prune_layout_engine_nodes)' --no-fail-fast
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r17-mark-seen-single-lookup --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r17-mark-seen-single-lookup\sessions\1779383600205-214800\1779383619147-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+git diff --check
+```
+
+Post-fix evidence:
+- r17 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r17-mark-seen-single-lookup/sessions/1779383600205-214800/1779383619147-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r17 `diag stats --sort time --top 12` reports p50/p95 total `76/931us`, layout `20/465us`, paint `27/441us`, and
+  `hot p50/p95 layout.engine_solve=0/0`.
+- Top resize ticks `234/237/240` keep `layout.nodes=3`, `paint.cache_misses=133`, and cached-flow
+  `nodes_marked_seen=134`; representative `layout_request_build_roots_time_us` is `199/176/158us` versus r14's
+  `291/208/208us` on top resize ticks.
+- Treat this as a small request-build mechanism cleanup with single-run smoke evidence. The next owner is still the
+  remaining paint cache/text-width change path and residual root traversal timing; a repeat=3 resize confirmation is
+  required before making a broader smoothness claim.
+
+## 2026-05-22 02:31:00 +08:00 (paint-cache key inherited text-style fingerprint)
+
+Question:
+- Can the remaining paint-cache key construction cost be reduced without weakening inherited text-style correctness
+  for cached text subtrees?
+
+Finding:
+- r17 top resize frames still painted `133` nodes and spent `paint_cache_key_time_us=53us` p95/max.
+- The hot cache-key path queried `ElementFrame` and cloned `inherited_text_style` for every painted node, then hashed
+  it into the key. This preserved correctness, but duplicated data already known during declarative mount.
+- Skipping inherited text-style from non-text nodes would be riskier because ancestor cache entries replay descendant
+  ops. Keeping the same fingerprint in the key is the conservative mechanism.
+
+Change:
+- Added `Node::inherited_text_style_fingerprint`.
+- Declarative mount computes the fingerprint alongside `ElementRecord.inherited_text_style` and syncs it into the
+  retained node.
+- `paint_node` now reads the node-local fingerprint when building `PaintCacheKey`, avoiding the per-node
+  `ElementFrame` lookup and style clone.
+- Added a regression test where inherited text style changes its font features/axes while text size stays stable; the
+  cache still misses instead of replaying stale cached text ops.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+cargo test -p fret-ui --lib paint_cache_key_tracks_node_inherited_text_style_fingerprint -- --nocapture
+cargo nextest run -p fret-ui -E 'test(paint_cache_key_tracks_node_inherited_text_style_fingerprint) | test(wrap_none_measure_cache_tracks_inherited_text_style_changes) | test(previous_frame_paint_recording_replay_preserves_text_blob_side_index) | test(paint_cache_key_tracks_child_geometry_changes_when_parent_size_is_stable)' --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r19-node-text-style-fingerprint-built --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r19-node-text-style-fingerprint-built\sessions\1779388233302-146908\1779388254822-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+git diff --check
+```
+
+Notes:
+- An earlier r18 smoke used an old `fret-ui-gallery.exe`; it only proved script health. r19 is the rebuilt-gallery
+  evidence for this change.
+- `cargo test -- --exact` compiled and linked the test binary but ran `0` tests because the filter did not include the
+  full module path; the non-exact rerun executed the intended test.
+- `cargo check` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Post-fix evidence:
+- r19 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r19-node-text-style-fingerprint-built/sessions/1779388233302-146908/1779388254822-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r19 `diag stats --sort time --top 12` reports p50/p95 total `87/742us`, layout `24/420us`, paint `30/307us`, and
+  `hot p50/p95 layout.engine_solve=0/0`.
+- r17 -> r19 single-run JSON comparison: `paint_cache_key_time_us` p95/max moved `53/53us -> 7/7us`.
+- Top resize ticks `292/295/289` keep `layout.engine_solve_time_us=0`, `paint_cache_misses=133`, and
+  `invalidation_walk_calls=0`.
+- Treat this as a narrow paint-cache key construction cleanup with single-run smoke evidence. The remaining local
+  paint owner is host-widget instance lookup / widget paint / observation bookkeeping, not inherited text-style
+  fingerprint lookup.
+
+## 2026-05-22 05:10:31 +08:00 (transparent paint wrapper passthrough)
+
+Question:
+- After moving inherited text-style fingerprinting out of the paint-cache key, can the remaining host-widget instance
+  lookup cost be reduced without changing paint observations or wrapper semantics?
+
+Finding:
+- r19 still painted `133` nodes on resize ticks and spent `paint_host_widget_instance_lookup_time_us=43us` p95 across
+  `133` calls.
+- The first passthrough attempt reduced lookup calls to `58` in r20, but did not move lookup p95 (`44us`) because
+  wrappers with observed-deps presence still entered `ElementHostWidget::paint_impl`.
+- The safe boundary is the observed-deps presence snapshot: when the snapshot is active, transparent wrappers can skip
+  instance lookup; wrappers with observations must replay those model/global dependencies before painting children.
+
+Change:
+- Added node-local `NodePaintPassthrough` metadata and synced it from declarative mount for paint-transparent wrappers
+  such as layout containers, gates, semantic wrappers, foreground scopes, scroll containers, and spacers.
+- `paint_node` now uses that metadata to paint children directly, preserving overflow clips, inherited foreground, and
+  children render transforms.
+- When the presence snapshot says a passthrough element has observed dependencies, `paint_node` replays those
+  dependencies through the same model/global observation path and debug counters used by host-widget paint.
+- Added regression tests for pure transparent wrapper lookup avoidance, observed-deps replay through passthrough, and
+  clip/foreground preservation.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+git diff --check
+cargo nextest run -p fret-ui -E 'test(transparent_wrappers_use_paint_passthrough_without_instance_lookup) | test(paint_passthrough_replays_observed_deps_for_transparent_wrapper) | test(paint_passthrough_preserves_clip_and_inherited_foreground) | test(paint_cache_key_tracks_node_inherited_text_style_fingerprint) | test(paint_cache_key_tracks_child_geometry_changes_when_parent_size_is_stable) | test(paint_cache_replay_translates_descendant_bounds_for_descendants)' --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r21-paint-passthrough-observed-deps-built --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r22-paint-passthrough-observed-deps-repeat --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+```
+
+Notes:
+- The first `cargo nextest` run after adding the observed-deps regression test timed out while compiling/linking the
+  large `fret-ui` test binary. The process continued and finished naturally; the immediate rerun executed the intended
+  six tests and passed.
+- `cargo check` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Post-fix evidence:
+- r21 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r21-paint-passthrough-observed-deps-built/sessions/1779396246186-26724/1779396274160-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r22 repeat bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r22-paint-passthrough-observed-deps-repeat/sessions/1779397662647-239112/1779397692672-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r19/r20/r21/r22 comparison from `diag stats --sort time --top 12 --json`:
+  - r19: p50/p95 total `87/742us`, layout `24/420us`, paint `30/307us`,
+    `paint.widget=134us`, lookup p95/calls `43us/133`, observed-deps calls `133`.
+  - r20: p50/p95 total `118/1019us`, layout `32/578us`, paint `41/406us`,
+    `paint.widget=150us`, lookup p95/calls `44us/58`, observed-deps calls `58`.
+  - r21: p50/p95 total `92/913us`, layout `28/527us`, paint `31/356us`,
+    `paint.widget=125us`, lookup p95/calls `25us/55`, observed-deps calls `58`.
+  - r22: p50/p95 total `90/997us`, layout `27/624us`, paint `31/339us`,
+    `paint.widget=120us`, lookup p95/calls `29us/55`, observed-deps calls `58`.
+- Interpretation: the targeted host-widget lookup owner improved repeatably, and observed-deps calls stayed stable,
+  so passthrough did not drop paint observations. Whole-frame p95 remains dominated by resize layout and renderer
+  finish/upload variance in this script, so this is not a checked-in baseline improvement claim.
+
+## 2026-05-22 06:26:00 +08:00 (clean geometry through interaction wrappers)
+
+Question:
+- After paint-wrapper passthrough, can the remaining resize-jitter `layout.nodes=3` surface be narrowed without
+  weakening scroll extent correctness?
+
+Finding:
+- r23 layout-node profiling kept `layout.engine_solve=0`, but top resize ticks still ran three layout nodes. The
+  measured owners were the content `Scroll` node plus pure wrapper work from `HoverRegion` and `HitTestGate`.
+- `HitTestGate` state sync is mount-owned, and `HoverRegion` state is derived from runtime hover/hit-test state. These
+  wrappers can propagate clean bounds when their child subtree is already clean. Scroll remains a boundary because it
+  owns viewport/extent work.
+
+Change:
+- Added `HoverRegion` and `HitTestGate` to the clean-geometry propagated wrapper set.
+- Added a focused regression test that resizes a precomputed clean child tree through `HoverRegion -> HitTestGate ->
+  Flex`, checks zero engine solves/rejections, keeps performed layout at the invalidated parent only, and verifies
+  descendant element bounds refresh to the new width.
+
+Validation:
+```powershell
+cargo check -p fret-ui --lib
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui -E 'test(clean_geometry_small_resize_propagates_through_hover_and_hit_test_wrappers) | test(clean_geometry_small_resize_propagates_through_semantics_wrapper) | test(clean_geometry_small_resize_propagates_through_pressable_wrapper) | test(clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary) | test(clean_geometry_skips_default_shrink_fixed_px_horizontal_flex_with_free_space) | test(clean_geometry_rejects_default_shrink_fixed_px_horizontal_flex_without_free_space) | test(clean_geometry_skips_nested_fixed_size_horizontal_flex_origin_only_move)' --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r24-hover-hit-test-clean-prop --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r25-hover-hit-test-clean-prop-repeat --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --launch -- target\debug\fret-ui-gallery.exe
+git diff --check
+```
+
+Notes:
+- The first two `cargo nextest` attempts timed out while compiling/linking the large `fret-ui` test binary. The
+  compile continued and finished naturally; direct binary runs passed the new test and related clean-geometry
+  regressions, and the final selector-based nextest run passed 7 tests once the binary was warm.
+- `cargo check` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Post-fix evidence:
+- r24 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r24-hover-hit-test-clean-prop/sessions/1779401974317-157548/1779402006880-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r25 repeat bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r25-hover-hit-test-clean-prop-repeat/sessions/1779402139244-229784/1779402168609-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r24 `diag stats --sort time --top 15` reports p50/p95 total `104/1195us`, layout `31/694us`, paint `37/468us`,
+  and `layout.engine_solve=0` at p95. Top resize ticks move to `layout.nodes=1`; the remaining hotspot is `Scroll`
+  (`79/136/80us` across the sampled resize ticks).
+- r25 repeat reports p50/p95 total `91/1089us`, layout `27/728us`, paint `31/323us`, and `layout.engine_solve=0` at
+  p95. Top resize ticks again stay at `layout.nodes=1`; only `Scroll` remains (`93/144/76us`).
+- Interpretation: wrapper layout work was removed repeatably, but whole-frame/layout p95 is still noisy. The next
+  owner is Scroll plus request-build/proof/root traversal timing, not another pure wrapper.
+
+## 2026-05-22 07:31:00 +08:00 (post-wrapper resize root attribution)
+
+Question:
+- After r24/r25 reduced resize-jitter top frames to a single `Scroll` layout node, is the remaining tail actually
+  inside Scroll layout, or is it dominated by root request/build and root traversal work around the clean-geometry
+  path?
+
+Command:
+```powershell
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r26-scroll-phase-profile --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r26-scroll-phase-profile\sessions\1779402798867-239144\1779402829741-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 20
+```
+
+Evidence:
+- r26 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r26-scroll-phase-profile/sessions/1779402798867-239144/1779402829741-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r26 reports p50/p95 total `101/860us`, layout `30/503us`, prepaint `33/42us`, paint `34/327us`, and
+  `layout.engine_solve=0` at p95.
+- Top resize ticks:
+  - tick 214: total/layout/prepaint/paint `860/503/30/327us`, request-build roots `209us`, layout roots `258us`,
+    `layout.nodes=1`.
+  - tick 208: `809/482/25/302us`, request-build roots `211us`, layout roots `240us`, `layout.nodes=1`.
+  - tick 211: `785/457/26/302us`, request-build roots `185us`, layout roots `239us`, `layout.nodes=1`.
+- The remaining `Scroll` node is not the dominant cost by itself. Its per-node profile is roughly `68..75us` on the
+  sampled resize ticks, with `solve_barrier=29..33us` and `layout_children_first_pass=23..26us`.
+- The sampled cached-flow root record is also only `26..35us` while it marks `134` retained nodes seen, so the current
+  `layout_request_build_roots_time_us` aggregate is missing internal attribution for the rest of the `185..211us`.
+
+Interpretation:
+- Do not widen the Scroll layout fast path from this evidence. Scroll extent work is now a secondary owner.
+- The next slice should split request-build/root traversal timing before another mechanism change: the measured tail is
+  `request_build_roots + layout_roots` around clean-geometry proof/application, not a clear Scroll-internal hotspot.
+- A speculative proof recursion shortcut was left unlanded because the gallery rebuild/runtime evidence was not
+  available; keep this lane evidence-led.
+
+## 2026-05-22 08:08:00 +08:00 (layout root phase timing diagnostics)
+
+Question:
+- Can the r26 `layout_request_build_roots_time_us + layout_roots_time_us` aggregate be split enough to choose the next
+  owner before changing layout behavior?
+
+Change:
+- Added additive debug stats for request-build root subphases:
+  `layout_request_build_roots_take_engine_time_us`, `phase1`, `phase2`, `phase2_clean_geometry_proof`,
+  `phase2_compute`, and `put_engine`.
+- Added additive debug stats for layout roots:
+  `layout_roots_apply_time_us` and `layout_roots_flush_viewport_time_us`.
+- Wired the fields through `fret-bootstrap` diagnostics snapshots, `fret-diag` perf keys, JSON summaries/top rows, and
+  the default `diag stats --top` human output.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui
+cargo fmt -p fret-bootstrap --check
+cargo fmt -p fret-diag --check
+cargo check -p fret-ui --lib
+cargo check -p fret-bootstrap
+cargo check -p fret-diag
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields trace_exported_perf_key_registry_contains_core_timeline_keys registered_perf_key_units_match_names --no-fail-fast
+cargo build -p fretboard-dev
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r27-root-phase-split --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r27-root-phase-split\sessions\1779407664059-191108\1779407703518-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+git diff --check
+```
+
+Notes:
+- The first `fret-ui-gallery` build command timed out at the outer Codex command timeout while `rustc` kept compiling.
+  The process finished naturally; the immediate rerun reported `Finished`.
+- The first `fretboard-dev` rebuild after adding human-output wiring was required because the existing binary was older
+  than the `fret-diag` report change.
+- `cargo check` / build still report the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Evidence:
+- r27 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r27-root-phase-split/sessions/1779407664059-191108/1779407703518-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r27 reports p50/p95 total `154/1572us`, layout `46/916us`, paint `51/602us`, and `layout.engine_solve=0/0`.
+- Root phase p95/max now reports request-build total/take/phase1/phase2/proof/compute/put
+  `365/10/49/303/303/0/6us` and layout roots total/apply/flush `499/498/0us`.
+- Top resize ticks:
+  - tick `208`: total/layout/paint `1572/916/602us`; request-build `365us`, proof `303us`; layout roots/apply
+    `499/498us`.
+  - tick `211`: `1451/829/572us`; request-build/proof `318/253us`; layout roots/apply `459/458us`.
+  - tick `214`: `1346/757/541us`; request-build/proof `310/245us`; layout roots/apply `396/395us`.
+
+Interpretation:
+- This slice is attribution-only. It confirms the remaining root-side layout cost is clean-geometry proof traversal
+  plus root apply traversal, not engine solve or viewport-root flush.
+- The next optimization candidate is a focused clean-geometry proof/apply traversal shortcut with explicit correctness
+  gates. Do not broaden the Scroll layout fast path from this evidence.
+
+## 2026-05-22 08:58:00 +08:00 (clean-geometry traversal count diagnostics)
+
+Question:
+- Is the r27 clean-geometry proof/apply timing dominated by broad node traversal, by side-effect boundaries, or by
+  fallback layout work?
+
+Change:
+- Added additive clean-geometry traversal counters to `UiDebugFrameStats`:
+  `layout_clean_geometry_proof_nodes`, `layout_clean_geometry_proof_boundaries`,
+  `layout_clean_geometry_apply_nodes`, and `layout_clean_geometry_apply_fallback_layouts`.
+- Wired the counters through `fret-bootstrap` diagnostics snapshots, `fret-diag` perf keys, JSON summaries/top rows,
+  and the default `diag stats --top` human output.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui
+cargo fmt -p fret-bootstrap
+cargo fmt -p fret-diag
+cargo check -p fret-ui --lib
+cargo check -p fret-bootstrap
+cargo check -p fret-diag
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields trace_exported_perf_key_registry_contains_core_timeline_keys registered_perf_key_units_match_names --no-fail-fast
+cargo build -p fretboard-dev
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r28-clean-geometry-counts --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r28-clean-geometry-counts\sessions\1779410967540-10020\1779410999120-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+git diff --check
+```
+
+Notes:
+- The previous `fret-ui-gallery` build timed out at the outer Codex command timeout while `rustc` continued in the
+  background. The process finished naturally; the binary timestamp moved to `2026-05-22 08:45:43 +08:00`, and a
+  follow-up incremental build completed successfully.
+- `cargo check` / build still report the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Evidence:
+- r28 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r28-clean-geometry-counts/sessions/1779410967540-10020/1779410999120-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r28 reports p50/p95 total `96/891us`, layout `28/504us`, prepaint `33/65us`, paint `33/357us`, and
+  `layout.engine_solve=0/0`.
+- `diag stats` now reports clean-geometry counts at p95/max:
+  proof nodes/boundaries `121/3 / 121/3`; apply nodes/fallback-layouts `117/10 / 117/10`.
+- Top resize ticks:
+  - tick `217`: total/layout/paint `891/504/357us`; proof `153us` over `121` nodes and `3` boundaries; apply
+    `265us` over `117` nodes with `10` fallback child layouts.
+  - tick `214`: `821/457/315us`; proof `141us` over `121` nodes and `3` boundaries; apply `235us` over `117`
+    nodes with `10` fallback child layouts.
+  - tick `220`: `796/470/301us`; proof `145us` over `121` nodes and `3` boundaries; apply `242us` over `117`
+    nodes with `10` fallback child layouts.
+
+Interpretation:
+- This remains attribution-only. The remaining resize layout cost is now measurably a medium-width clean-geometry
+  traversal around roughly `120` nodes, with limited proof boundaries and `10` fallback child layouts per hot resize
+  frame.
+- The next candidate should optimize clean-geometry proof/apply traversal or boundary-aware application directly.
+  Do not broaden the Scroll fast path from this evidence, because Scroll self time is no longer the dominant owner.

@@ -4,6 +4,7 @@ pub mod disabled;
 pub mod field;
 pub mod invalid;
 pub mod label;
+pub mod required;
 pub mod rtl;
 pub mod usage;
 pub mod with_text;

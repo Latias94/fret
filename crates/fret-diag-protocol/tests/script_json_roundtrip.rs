@@ -318,6 +318,48 @@ fn script_v2_roundtrip_ui_gallery_menubar_escape_exits_active() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_menubar_disabled_item_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-disabled-item-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_context_menu_disabled_item_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_context_menu_basic_keyboard_nav() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_context_menu_basic_right_click_last_action() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_context_menu_basic_touch_long_press_open() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-touch-long-press-open.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_context_menu_basic_overlay_placement_trace() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-basic-overlay-placement-trace.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_canvas_cull_torture_pan_zoom() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-canvas-cull-torture-pan-zoom.json"
@@ -477,6 +519,48 @@ fn script_v2_roundtrip_ui_gallery_input_disabled_action_state() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_input_required_invalid_semantics() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/input/ui-gallery-input-required-invalid-semantics.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_input_otp_invalid_required_semantics() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/input/ui-gallery-input-otp-invalid-required-semantics.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_date_picker_required_invalid_semantics() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_textarea_required_invalid_semantics() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_checkbox_disabled_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-disabled-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_checkbox_required_disabled_group_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-required-disabled-group-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_button_group_input_group_long_text() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-button-group-input-group-long-text.json"
@@ -579,6 +663,13 @@ fn script_v2_roundtrip_ui_gallery_command_palette_controlled_selection_arrowdown
 fn script_v2_roundtrip_ui_gallery_command_palette_controlled_selection_value() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-command-palette-controlled-selection-value.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_command_palette_disabled_focusable_keyboard_suppression() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-disabled-focusable-keyboard-suppression.json"
     ));
 }
 
@@ -705,6 +796,41 @@ fn script_v2_roundtrip_ui_gallery_switch_read_only_dynamic_action_state() {
 fn script_v2_roundtrip_ui_gallery_switch_command_gated_action_state() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-switch-command-gated-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_switch_choice_card_checked_state_mutation() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-choice-card-checked-state-mutation.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_slider_numeric_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-numeric-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_checkbox_table_mixed_state_action() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-table-mixed-state-action.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_toggle_interaction_screenshots() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-interaction-screenshots.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_toggle_group_disabled_item_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-disabled-item-action-state.json"
     ));
 }
 
@@ -933,6 +1059,27 @@ fn script_v2_roundtrip_ui_gallery_select_commit_and_label_update() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_select_invalid_form_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/select/ui-gallery-select-invalid-form-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_form_submit_validation_semantics() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/form/ui-gallery-form-submit-validation-semantics.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_form_disabled_field_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/form/ui-gallery-form-disabled-field-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_select_demo_open_layout() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json"
@@ -1006,6 +1153,20 @@ fn script_v2_roundtrip_ui_gallery_combobox_typeahead_commit_banana() {
 fn script_v2_roundtrip_ui_gallery_tabs_selected_state_mutation() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-selected-state-mutation.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_radio_group_checked_state_mutation() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-checked-state-mutation.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_radio_group_required_disabled_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-required-disabled-action-state.json"
     ));
 }
 

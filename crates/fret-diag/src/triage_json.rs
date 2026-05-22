@@ -1,7 +1,9 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-use crate::stats::{BundleStatsReport, BundleStatsSort};
+use crate::stats::{
+    BundleStatsReport, BundleStatsSort, clean_geometry_solve_skip_rejection_to_json,
+};
 use fret_diag_protocol::{FilesystemCapabilitiesV1, UiScriptResultV1};
 
 fn candidate_sidecar_paths(bundle_dir: &Path, file_name: &str) -> [PathBuf; 2] {
@@ -238,6 +240,10 @@ pub(crate) fn triage_json_from_stats(
                         "layout_engine_solve_time_us": worst.layout_engine_solve_time_us,
                         "layout_engine_solves": worst.layout_engine_solves,
                         "layout_engine_solve_us_per_solve": per_solve,
+                        "layout_clean_geometry_solve_skip_rejections": worst.layout_clean_geometry_solve_skip_rejections,
+                        "layout_clean_geometry_solve_skip_first_rejection": worst.layout_clean_geometry_solve_skip_first_rejection.as_deref(),
+                        "layout_clean_geometry_solve_skip_first_detail": worst.layout_clean_geometry_solve_skip_first_detail.as_deref(),
+                        "layout_clean_geometry_solve_skip_first_element_kind": worst.layout_clean_geometry_solve_skip_first_element_kind.as_deref(),
                         "layout_time_us": worst.layout_time_us,
                         "layout_engine_solve_pct_of_layout": pct,
                     }
@@ -1085,6 +1091,7 @@ pub(crate) fn triage_json_from_stats(
         };
         json!({
             "layout_engine_solve_us_per_solve": if worst.layout_engine_solves == 0 { None } else { Some(worst.layout_engine_solve_time_us / worst.layout_engine_solves) },
+            "layout_clean_geometry_solve_skip_rejections_per_solve": if worst.layout_engine_solves == 0 { None } else { Some((worst.layout_clean_geometry_solve_skip_rejections as f64) / (worst.layout_engine_solves as f64)) },
             "layout_engine_child_rect_us_per_query": if worst.layout_engine_child_rect_queries == 0 { None } else { Some(worst.layout_engine_child_rect_time_us / worst.layout_engine_child_rect_queries) },
             "paint_text_prepare_us_per_call": if worst.paint_text_prepare_calls == 0 { None } else { Some(worst.paint_text_prepare_time_us / (worst.paint_text_prepare_calls as u64)) },
             "layout_obs_record_us_per_model_item": if worst.layout_observation_record_models_items == 0 { None } else { Some(worst.layout_observation_record_time_us / (worst.layout_observation_record_models_items as u64)) },
@@ -1107,10 +1114,14 @@ pub(crate) fn triage_json_from_stats(
 	            "frame_id": row.frame_id,
 	            "timestamp_unix_ms": row.timestamp_unix_ms,
 	            "total_time_us": row.total_time_us,
-	            "layout_time_us": row.layout_time_us,
-	            "prepaint_time_us": row.prepaint_time_us,
-	            "paint_time_us": row.paint_time_us,
-	            "renderer_encode_scene_us": row.renderer_encode_scene_us,
+            "layout_time_us": row.layout_time_us,
+            "prepaint_time_us": row.prepaint_time_us,
+            "paint_time_us": row.paint_time_us,
+            "layout_clean_geometry_solve_skip_rejections": row.layout_clean_geometry_solve_skip_rejections,
+            "layout_clean_geometry_solve_skip_first_rejection": row.layout_clean_geometry_solve_skip_first_rejection.as_deref(),
+            "layout_clean_geometry_solve_skip_first_detail": row.layout_clean_geometry_solve_skip_first_detail.as_deref(),
+            "layout_clean_geometry_solve_skip_first_element_kind": row.layout_clean_geometry_solve_skip_first_element_kind.as_deref(),
+            "renderer_encode_scene_us": row.renderer_encode_scene_us,
 	            "renderer_upload_us": row.renderer_upload_us,
             "renderer_record_passes_us": row.renderer_record_passes_us,
             "renderer_encoder_finish_us": row.renderer_encoder_finish_us,
@@ -1341,6 +1352,7 @@ pub(crate) fn triage_json_from_stats(
                         "flex_wrap_patch_mutations": p.flex_wrap_patch_mutations,
                         "flex_wrap_patch_skipped_no_wrap_descendant": p.flex_wrap_patch_skipped_no_wrap_descendant,
                     })),
+                    "clean_geometry_solve_skip_rejection": s.clean_geometry_solve_skip_rejection.as_ref().map(clean_geometry_solve_skip_rejection_to_json),
                     "measure_calls": s.measure_calls,
                     "measure_cache_hits": s.measure_cache_hits,
                     "measure_time_us": s.measure_time_us,

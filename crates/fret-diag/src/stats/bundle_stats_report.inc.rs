@@ -42,7 +42,19 @@ pub(super) struct BundleStatsReport {
     sum_layout_invalidate_scroll_handle_bindings_time_us: u64,
     sum_layout_expand_view_cache_invalidations_time_us: u64,
     sum_layout_request_build_roots_time_us: u64,
+    sum_layout_request_build_roots_take_engine_time_us: u64,
+    sum_layout_request_build_roots_phase1_time_us: u64,
+    sum_layout_request_build_roots_phase2_time_us: u64,
+    sum_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    sum_layout_clean_geometry_proof_nodes: u64,
+    sum_layout_clean_geometry_proof_boundaries: u64,
+    sum_layout_clean_geometry_apply_nodes: u64,
+    sum_layout_clean_geometry_apply_fallback_layouts: u64,
+    sum_layout_request_build_roots_phase2_compute_time_us: u64,
+    sum_layout_request_build_roots_put_engine_time_us: u64,
     sum_layout_roots_time_us: u64,
+    sum_layout_roots_apply_time_us: u64,
+    sum_layout_roots_flush_viewport_time_us: u64,
     sum_layout_collapse_layout_observations_time_us: u64,
     sum_layout_time_us: u64,
     sum_layout_view_cache_time_us: u64,
@@ -68,7 +80,19 @@ pub(super) struct BundleStatsReport {
     max_layout_invalidate_scroll_handle_bindings_time_us: u64,
     max_layout_expand_view_cache_invalidations_time_us: u64,
     max_layout_request_build_roots_time_us: u64,
+    max_layout_request_build_roots_take_engine_time_us: u64,
+    max_layout_request_build_roots_phase1_time_us: u64,
+    max_layout_request_build_roots_phase2_time_us: u64,
+    max_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    max_layout_clean_geometry_proof_nodes: u64,
+    max_layout_clean_geometry_proof_boundaries: u64,
+    max_layout_clean_geometry_apply_nodes: u64,
+    max_layout_clean_geometry_apply_fallback_layouts: u64,
+    max_layout_request_build_roots_phase2_compute_time_us: u64,
+    max_layout_request_build_roots_put_engine_time_us: u64,
     max_layout_roots_time_us: u64,
+    max_layout_roots_apply_time_us: u64,
+    max_layout_roots_flush_viewport_time_us: u64,
     max_layout_collapse_layout_observations_time_us: u64,
     max_layout_time_us: u64,
     max_layout_view_cache_time_us: u64,
@@ -131,8 +155,32 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_layout_collect_roots_time_us: u64,
     pub(super) p50_layout_request_build_roots_time_us: u64,
     pub(super) p95_layout_request_build_roots_time_us: u64,
+    pub(super) p50_layout_request_build_roots_take_engine_time_us: u64,
+    pub(super) p95_layout_request_build_roots_take_engine_time_us: u64,
+    pub(super) p50_layout_request_build_roots_phase1_time_us: u64,
+    pub(super) p95_layout_request_build_roots_phase1_time_us: u64,
+    pub(super) p50_layout_request_build_roots_phase2_time_us: u64,
+    pub(super) p95_layout_request_build_roots_phase2_time_us: u64,
+    pub(super) p50_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    pub(super) p95_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_nodes: u64,
+    pub(super) p95_layout_clean_geometry_proof_nodes: u64,
+    pub(super) p50_layout_clean_geometry_proof_boundaries: u64,
+    pub(super) p95_layout_clean_geometry_proof_boundaries: u64,
+    pub(super) p50_layout_clean_geometry_apply_nodes: u64,
+    pub(super) p95_layout_clean_geometry_apply_nodes: u64,
+    pub(super) p50_layout_clean_geometry_apply_fallback_layouts: u64,
+    pub(super) p95_layout_clean_geometry_apply_fallback_layouts: u64,
+    pub(super) p50_layout_request_build_roots_phase2_compute_time_us: u64,
+    pub(super) p95_layout_request_build_roots_phase2_compute_time_us: u64,
+    pub(super) p50_layout_request_build_roots_put_engine_time_us: u64,
+    pub(super) p95_layout_request_build_roots_put_engine_time_us: u64,
     pub(super) p50_layout_roots_time_us: u64,
     pub(super) p95_layout_roots_time_us: u64,
+    pub(super) p50_layout_roots_apply_time_us: u64,
+    pub(super) p95_layout_roots_apply_time_us: u64,
+    pub(super) p50_layout_roots_flush_viewport_time_us: u64,
+    pub(super) p95_layout_roots_flush_viewport_time_us: u64,
     pub(super) p50_layout_view_cache_time_us: u64,
     pub(super) p95_layout_view_cache_time_us: u64,
     pub(super) p50_layout_collapse_layout_observations_time_us: u64,
@@ -255,7 +303,19 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_invalidate_scroll_handle_bindings_time_us: u64,
     pub(super) layout_expand_view_cache_invalidations_time_us: u64,
     pub(super) layout_request_build_roots_time_us: u64,
+    pub(super) layout_request_build_roots_take_engine_time_us: u64,
+    pub(super) layout_request_build_roots_phase1_time_us: u64,
+    pub(super) layout_request_build_roots_phase2_time_us: u64,
+    pub(super) layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    pub(super) layout_clean_geometry_proof_nodes: u64,
+    pub(super) layout_clean_geometry_proof_boundaries: u64,
+    pub(super) layout_clean_geometry_apply_nodes: u64,
+    pub(super) layout_clean_geometry_apply_fallback_layouts: u64,
+    pub(super) layout_request_build_roots_phase2_compute_time_us: u64,
+    pub(super) layout_request_build_roots_put_engine_time_us: u64,
     pub(super) layout_roots_time_us: u64,
+    pub(super) layout_roots_apply_time_us: u64,
+    pub(super) layout_roots_flush_viewport_time_us: u64,
     pub(super) layout_pending_barrier_relayouts_time_us: u64,
     pub(super) layout_barrier_relayouts_time_us: u64,
     pub(super) layout_repair_view_cache_bounds_time_us: u64,
@@ -520,6 +580,10 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable: u64,
     pub(super) layout_engine_solves: u64,
     pub(super) layout_engine_solve_time_us: u64,
+    pub(super) layout_clean_geometry_solve_skip_rejections: u32,
+    pub(super) layout_clean_geometry_solve_skip_first_rejection: Option<String>,
+    pub(super) layout_clean_geometry_solve_skip_first_detail: Option<String>,
+    pub(super) layout_clean_geometry_solve_skip_first_element_kind: Option<String>,
     pub(super) layout_engine_child_rect_queries: u64,
     pub(super) layout_engine_child_rect_time_us: u64,
     pub(super) layout_engine_widget_fallback_solves: u64,
@@ -1999,12 +2063,82 @@ pub(super) struct BundleStatsLayoutEngineSolve {
     pub(super) root_element_path: Option<String>,
     pub(super) solve_time_us: u64,
     pub(super) solve_profile: Option<BundleStatsLayoutEngineSolveProfile>,
+    pub(super) clean_geometry_solve_skip_rejection:
+        Option<BundleStatsCleanGeometrySolveSkipRejection>,
     pub(super) measure_calls: u64,
     pub(super) measure_cache_hits: u64,
     pub(super) measure_time_us: u64,
     pub(super) top_measures: Vec<BundleStatsLayoutEngineMeasureHotspot>,
     pub(super) root_role: Option<String>,
     pub(super) root_test_id: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct BundleStatsCleanGeometrySolveSkipRejection {
+    pub(super) reason: String,
+    pub(super) detail: Option<String>,
+    pub(super) node: Option<u64>,
+    pub(super) element: Option<u64>,
+    pub(super) element_kind: Option<String>,
+    pub(super) element_path: Option<String>,
+    pub(super) role: Option<String>,
+    pub(super) test_id: Option<String>,
+}
+
+pub(super) fn clean_geometry_solve_skip_rejection_to_json(
+    rejection: &BundleStatsCleanGeometrySolveSkipRejection,
+) -> Value {
+    let mut obj = Map::new();
+    obj.insert("reason".to_string(), Value::from(rejection.reason.clone()));
+    obj.insert(
+        "detail".to_string(),
+        rejection
+            .detail
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    obj.insert(
+        "node".to_string(),
+        rejection.node.map(Value::from).unwrap_or(Value::Null),
+    );
+    obj.insert(
+        "element".to_string(),
+        rejection.element.map(Value::from).unwrap_or(Value::Null),
+    );
+    obj.insert(
+        "element_kind".to_string(),
+        rejection
+            .element_kind
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    obj.insert(
+        "element_path".to_string(),
+        rejection
+            .element_path
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    obj.insert(
+        "role".to_string(),
+        rejection
+            .role
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    obj.insert(
+        "test_id".to_string(),
+        rejection
+            .test_id
+            .clone()
+            .map(Value::from)
+            .unwrap_or(Value::Null),
+    );
+    Value::Object(obj)
 }
 
 #[derive(Debug, Default, Clone)]
@@ -2629,6 +2763,52 @@ impl BundleStatsReport {
                 );
             }
         }
+        if self.p95_layout_request_build_roots_time_us > 0
+            || self.max_layout_request_build_roots_time_us > 0
+            || self.p95_layout_roots_time_us > 0
+            || self.max_layout_roots_time_us > 0
+        {
+            println!(
+                "layout root phases p95/max (us): request_build(total/take/phase1/phase2/proof/compute/put)={}/{}/{}/{}/{}/{}/{} / {}/{}/{}/{}/{}/{}/{} roots(total/apply/flush_viewport)={}/{}/{} / {}/{}/{}",
+                self.p95_layout_request_build_roots_time_us,
+                self.p95_layout_request_build_roots_take_engine_time_us,
+                self.p95_layout_request_build_roots_phase1_time_us,
+                self.p95_layout_request_build_roots_phase2_time_us,
+                self.p95_layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                self.p95_layout_request_build_roots_phase2_compute_time_us,
+                self.p95_layout_request_build_roots_put_engine_time_us,
+                self.max_layout_request_build_roots_time_us,
+                self.max_layout_request_build_roots_take_engine_time_us,
+                self.max_layout_request_build_roots_phase1_time_us,
+                self.max_layout_request_build_roots_phase2_time_us,
+                self.max_layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                self.max_layout_request_build_roots_phase2_compute_time_us,
+                self.max_layout_request_build_roots_put_engine_time_us,
+                self.p95_layout_roots_time_us,
+                self.p95_layout_roots_apply_time_us,
+                self.p95_layout_roots_flush_viewport_time_us,
+                self.max_layout_roots_time_us,
+                self.max_layout_roots_apply_time_us,
+                self.max_layout_roots_flush_viewport_time_us,
+            );
+        }
+        if self.p95_layout_clean_geometry_proof_nodes > 0
+            || self.max_layout_clean_geometry_proof_nodes > 0
+            || self.p95_layout_clean_geometry_apply_nodes > 0
+            || self.max_layout_clean_geometry_apply_nodes > 0
+        {
+            println!(
+                "layout clean_geometry counts p95/max: proof(nodes/boundaries)={}/{} / {}/{} apply(nodes/fallback_layouts)={}/{} / {}/{}",
+                self.p95_layout_clean_geometry_proof_nodes,
+                self.p95_layout_clean_geometry_proof_boundaries,
+                self.max_layout_clean_geometry_proof_nodes,
+                self.max_layout_clean_geometry_proof_boundaries,
+                self.p95_layout_clean_geometry_apply_nodes,
+                self.p95_layout_clean_geometry_apply_fallback_layouts,
+                self.max_layout_clean_geometry_apply_nodes,
+                self.max_layout_clean_geometry_apply_fallback_layouts,
+            );
+        }
         self.print_code_editor_paint_perf_summary();
         self.print_paint_widget_hotspot_summary();
         if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
@@ -2715,6 +2895,32 @@ impl BundleStatsReport {
                 row.propagated_global_change_observation_edges,
                 row.propagated_global_change_unobserved_globals
             );
+            if row.layout_roots_time_us > 0 || row.layout_request_build_roots_time_us > 0 {
+                line.push_str(&format!(
+                    " layout.root_phases.us(request_build total/take/phase1/phase2/proof/compute/put roots total/apply/flush_viewport)={}/{}/{}/{}/{}/{}/{} {}/{}/{}",
+                    row.layout_request_build_roots_time_us,
+                    row.layout_request_build_roots_take_engine_time_us,
+                    row.layout_request_build_roots_phase1_time_us,
+                    row.layout_request_build_roots_phase2_time_us,
+                    row.layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                    row.layout_request_build_roots_phase2_compute_time_us,
+                    row.layout_request_build_roots_put_engine_time_us,
+                    row.layout_roots_time_us,
+                    row.layout_roots_apply_time_us,
+                    row.layout_roots_flush_viewport_time_us,
+                ));
+            }
+            if row.layout_clean_geometry_proof_nodes > 0
+                || row.layout_clean_geometry_apply_nodes > 0
+            {
+                line.push_str(&format!(
+                    " layout.clean_geometry.counts(proof_nodes/proof_boundaries/apply_nodes/apply_fallback_layouts)={}/{}/{}/{}",
+                    row.layout_clean_geometry_proof_nodes,
+                    row.layout_clean_geometry_proof_boundaries,
+                    row.layout_clean_geometry_apply_nodes,
+                    row.layout_clean_geometry_apply_fallback_layouts,
+                ));
+            }
             if row.renderer_encode_scene_us > 0
                 || row.renderer_prepare_text_us > 0
                 || row.renderer_prepare_svg_us > 0
@@ -3090,6 +3296,46 @@ impl BundleStatsReport {
             self.p50_layout_prepaint_after_layout_time_us,
             self.p95_layout_prepaint_after_layout_time_us
         );
+        if self.p95_layout_request_build_roots_phase1_time_us > 0
+            || self.p95_layout_request_build_roots_phase2_time_us > 0
+            || self.p95_layout_roots_apply_time_us > 0
+            || self.p95_layout_roots_flush_viewport_time_us > 0
+        {
+            println!(
+                "layout root phases p50/p95 (us): request_build(take/phase1/phase2/proof/compute/put)={}/{}/{}/{}/{}/{} / {}/{}/{}/{}/{}/{} roots(apply/flush_viewport)={}/{} / {}/{}",
+                self.p50_layout_request_build_roots_take_engine_time_us,
+                self.p50_layout_request_build_roots_phase1_time_us,
+                self.p50_layout_request_build_roots_phase2_time_us,
+                self.p50_layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                self.p50_layout_request_build_roots_phase2_compute_time_us,
+                self.p50_layout_request_build_roots_put_engine_time_us,
+                self.p95_layout_request_build_roots_take_engine_time_us,
+                self.p95_layout_request_build_roots_phase1_time_us,
+                self.p95_layout_request_build_roots_phase2_time_us,
+                self.p95_layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                self.p95_layout_request_build_roots_phase2_compute_time_us,
+                self.p95_layout_request_build_roots_put_engine_time_us,
+                self.p50_layout_roots_apply_time_us,
+                self.p50_layout_roots_flush_viewport_time_us,
+                self.p95_layout_roots_apply_time_us,
+                self.p95_layout_roots_flush_viewport_time_us,
+            );
+        }
+        if self.p95_layout_clean_geometry_proof_nodes > 0
+            || self.p95_layout_clean_geometry_apply_nodes > 0
+        {
+            println!(
+                "layout clean_geometry counts p50/p95: proof(nodes/boundaries)={}/{} / {}/{} apply(nodes/fallback_layouts)={}/{} / {}/{}",
+                self.p50_layout_clean_geometry_proof_nodes,
+                self.p50_layout_clean_geometry_proof_boundaries,
+                self.p95_layout_clean_geometry_proof_nodes,
+                self.p95_layout_clean_geometry_proof_boundaries,
+                self.p50_layout_clean_geometry_apply_nodes,
+                self.p50_layout_clean_geometry_apply_fallback_layouts,
+                self.p95_layout_clean_geometry_apply_nodes,
+                self.p95_layout_clean_geometry_apply_fallback_layouts,
+            );
+        }
         println!(
             "paint breakdown p50/p95 (us): input_ctx={}/{} scroll_inv={}/{} collect_roots={}/{} text_snapshot={}/{} collapse={}/{}",
             self.p50_paint_input_context_time_us,
@@ -3444,6 +3690,34 @@ impl BundleStatsReport {
                     row.layout_expand_view_cache_invalidations_time_us,
                 );
             }
+            if row.layout_request_build_roots_phase1_time_us > 0
+                || row.layout_request_build_roots_phase2_time_us > 0
+                || row.layout_roots_apply_time_us > 0
+                || row.layout_roots_flush_viewport_time_us > 0
+            {
+                println!(
+                    "    layout_root_phases.us(request_build take/phase1/phase2/proof/compute/put roots apply/flush_viewport)={}/{}/{}/{}/{}/{} {}/{}",
+                    row.layout_request_build_roots_take_engine_time_us,
+                    row.layout_request_build_roots_phase1_time_us,
+                    row.layout_request_build_roots_phase2_time_us,
+                    row.layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                    row.layout_request_build_roots_phase2_compute_time_us,
+                    row.layout_request_build_roots_put_engine_time_us,
+                    row.layout_roots_apply_time_us,
+                    row.layout_roots_flush_viewport_time_us,
+                );
+            }
+            if row.layout_clean_geometry_proof_nodes > 0
+                || row.layout_clean_geometry_apply_nodes > 0
+            {
+                println!(
+                    "    layout_clean_geometry.counts(proof_nodes/proof_boundaries/apply_nodes/apply_fallback_layouts)={}/{}/{}/{}",
+                    row.layout_clean_geometry_proof_nodes,
+                    row.layout_clean_geometry_proof_boundaries,
+                    row.layout_clean_geometry_apply_nodes,
+                    row.layout_clean_geometry_apply_fallback_layouts,
+                );
+            }
             if row.paint_input_context_time_us > 0
                 || row.paint_scroll_handle_invalidation_time_us > 0
                 || row.paint_collect_roots_time_us > 0
@@ -3584,6 +3858,21 @@ impl BundleStatsReport {
                     })
                     .collect();
                 println!("    paint_text_prepare_hotspots: {}", items.join(" | "));
+            }
+            if row.layout_clean_geometry_solve_skip_rejections > 0 {
+                println!(
+                    "    clean_geometry_solve_skip_rejections={} first={} detail={} kind={}",
+                    row.layout_clean_geometry_solve_skip_rejections,
+                    row.layout_clean_geometry_solve_skip_first_rejection
+                        .as_deref()
+                        .unwrap_or("?"),
+                    row.layout_clean_geometry_solve_skip_first_detail
+                        .as_deref()
+                        .unwrap_or("?"),
+                    row.layout_clean_geometry_solve_skip_first_element_kind
+                        .as_deref()
+                        .unwrap_or("?"),
+                );
             }
             if !row.paint_widget_hotspots.is_empty() {
                 let items: Vec<String> = row
@@ -4052,6 +4341,40 @@ impl BundleStatsReport {
                                 out.push_str(&format!(" frame_delta={frame_delta}"));
                             }
                         }
+                        if let Some(rejection) = s.clean_geometry_solve_skip_rejection.as_ref() {
+                            if !rejection.reason.is_empty() {
+                                out.push_str(&format!(" clean.reject={}", rejection.reason));
+                            }
+                            if let Some(detail) = rejection.detail.as_deref()
+                                && !detail.is_empty()
+                            {
+                                out.push_str(&format!(" clean.detail={detail}"));
+                            }
+                            if let Some(node) = rejection.node {
+                                out.push_str(&format!(" clean.node={node}"));
+                            }
+                            if let Some(kind) = rejection.element_kind.as_deref()
+                                && !kind.is_empty()
+                            {
+                                out.push_str(&format!(" clean.kind={kind}"));
+                            }
+                            if let Some(test_id) = rejection.test_id.as_deref()
+                                && !test_id.is_empty()
+                            {
+                                out.push_str(&format!(" clean.test_id={test_id}"));
+                            }
+                            if let Some(role) = rejection.role.as_deref()
+                                && !role.is_empty()
+                            {
+                                out.push_str(&format!(" clean.role={role}"));
+                            }
+                            if let Some(path) = rejection.element_path.as_deref()
+                                && !path.is_empty()
+                            {
+                                let path = compact_debug_path(path);
+                                out.push_str(&format!(" clean.path={path}"));
+                            }
+                        }
                         if let Some(el) = s.root_element {
                             out.push_str(&format!(" root.element={el}"));
                         }
@@ -4434,8 +4757,56 @@ impl BundleStatsReport {
             Value::from(self.sum_layout_request_build_roots_time_us),
         );
         sum.insert(
+            "layout_request_build_roots_take_engine_time_us".to_string(),
+            Value::from(self.sum_layout_request_build_roots_take_engine_time_us),
+        );
+        sum.insert(
+            "layout_request_build_roots_phase1_time_us".to_string(),
+            Value::from(self.sum_layout_request_build_roots_phase1_time_us),
+        );
+        sum.insert(
+            "layout_request_build_roots_phase2_time_us".to_string(),
+            Value::from(self.sum_layout_request_build_roots_phase2_time_us),
+        );
+        sum.insert(
+            "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
+            Value::from(self.sum_layout_request_build_roots_phase2_clean_geometry_proof_time_us),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_nodes".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_nodes),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_boundaries".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_boundaries),
+        );
+        sum.insert(
+            "layout_clean_geometry_apply_nodes".to_string(),
+            Value::from(self.sum_layout_clean_geometry_apply_nodes),
+        );
+        sum.insert(
+            "layout_clean_geometry_apply_fallback_layouts".to_string(),
+            Value::from(self.sum_layout_clean_geometry_apply_fallback_layouts),
+        );
+        sum.insert(
+            "layout_request_build_roots_phase2_compute_time_us".to_string(),
+            Value::from(self.sum_layout_request_build_roots_phase2_compute_time_us),
+        );
+        sum.insert(
+            "layout_request_build_roots_put_engine_time_us".to_string(),
+            Value::from(self.sum_layout_request_build_roots_put_engine_time_us),
+        );
+        sum.insert(
             "layout_roots_time_us".to_string(),
             Value::from(self.sum_layout_roots_time_us),
+        );
+        sum.insert(
+            "layout_roots_apply_time_us".to_string(),
+            Value::from(self.sum_layout_roots_apply_time_us),
+        );
+        sum.insert(
+            "layout_roots_flush_viewport_time_us".to_string(),
+            Value::from(self.sum_layout_roots_flush_viewport_time_us),
         );
         sum.insert(
             "layout_collapse_layout_observations_time_us".to_string(),
@@ -4538,8 +4909,56 @@ impl BundleStatsReport {
             Value::from(self.max_layout_request_build_roots_time_us),
         );
         max.insert(
+            "layout_request_build_roots_take_engine_time_us".to_string(),
+            Value::from(self.max_layout_request_build_roots_take_engine_time_us),
+        );
+        max.insert(
+            "layout_request_build_roots_phase1_time_us".to_string(),
+            Value::from(self.max_layout_request_build_roots_phase1_time_us),
+        );
+        max.insert(
+            "layout_request_build_roots_phase2_time_us".to_string(),
+            Value::from(self.max_layout_request_build_roots_phase2_time_us),
+        );
+        max.insert(
+            "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
+            Value::from(self.max_layout_request_build_roots_phase2_clean_geometry_proof_time_us),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_nodes".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_nodes),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_boundaries".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_boundaries),
+        );
+        max.insert(
+            "layout_clean_geometry_apply_nodes".to_string(),
+            Value::from(self.max_layout_clean_geometry_apply_nodes),
+        );
+        max.insert(
+            "layout_clean_geometry_apply_fallback_layouts".to_string(),
+            Value::from(self.max_layout_clean_geometry_apply_fallback_layouts),
+        );
+        max.insert(
+            "layout_request_build_roots_phase2_compute_time_us".to_string(),
+            Value::from(self.max_layout_request_build_roots_phase2_compute_time_us),
+        );
+        max.insert(
+            "layout_request_build_roots_put_engine_time_us".to_string(),
+            Value::from(self.max_layout_request_build_roots_put_engine_time_us),
+        );
+        max.insert(
             "layout_roots_time_us".to_string(),
             Value::from(self.max_layout_roots_time_us),
+        );
+        max.insert(
+            "layout_roots_apply_time_us".to_string(),
+            Value::from(self.max_layout_roots_apply_time_us),
+        );
+        max.insert(
+            "layout_roots_flush_viewport_time_us".to_string(),
+            Value::from(self.max_layout_roots_flush_viewport_time_us),
         );
         max.insert(
             "layout_collapse_layout_observations_time_us".to_string(),
@@ -4773,9 +5192,93 @@ impl BundleStatsReport {
             )),
         );
         avg.insert(
+            "layout_request_build_roots_take_engine_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_request_build_roots_take_engine_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_request_build_roots_phase1_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_request_build_roots_phase1_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_request_build_roots_phase2_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_request_build_roots_phase2_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_clean_geometry_proof_nodes".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_clean_geometry_proof_nodes,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_clean_geometry_proof_boundaries".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_clean_geometry_proof_boundaries,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_clean_geometry_apply_nodes".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_clean_geometry_apply_nodes,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_clean_geometry_apply_fallback_layouts".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_clean_geometry_apply_fallback_layouts,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_request_build_roots_phase2_compute_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_request_build_roots_phase2_compute_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_request_build_roots_put_engine_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_request_build_roots_put_engine_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
             "layout_roots_time_us".to_string(),
             Value::from(avg_us(
                 self.sum_layout_roots_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_roots_apply_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_roots_apply_time_us,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_roots_flush_viewport_time_us".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_roots_flush_viewport_time_us,
                 self.snapshots_considered,
             )),
         );
@@ -4918,8 +5421,56 @@ impl BundleStatsReport {
             Value::from(self.p50_layout_request_build_roots_time_us),
         );
         p50.insert(
+            "layout_request_build_roots_take_engine_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_take_engine_time_us),
+        );
+        p50.insert(
+            "layout_request_build_roots_phase1_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_phase1_time_us),
+        );
+        p50.insert(
+            "layout_request_build_roots_phase2_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_phase2_time_us),
+        );
+        p50.insert(
+            "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_phase2_clean_geometry_proof_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_nodes".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_nodes),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_boundaries".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_boundaries),
+        );
+        p50.insert(
+            "layout_clean_geometry_apply_nodes".to_string(),
+            Value::from(self.p50_layout_clean_geometry_apply_nodes),
+        );
+        p50.insert(
+            "layout_clean_geometry_apply_fallback_layouts".to_string(),
+            Value::from(self.p50_layout_clean_geometry_apply_fallback_layouts),
+        );
+        p50.insert(
+            "layout_request_build_roots_phase2_compute_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_phase2_compute_time_us),
+        );
+        p50.insert(
+            "layout_request_build_roots_put_engine_time_us".to_string(),
+            Value::from(self.p50_layout_request_build_roots_put_engine_time_us),
+        );
+        p50.insert(
             "layout_roots_time_us".to_string(),
             Value::from(self.p50_layout_roots_time_us),
+        );
+        p50.insert(
+            "layout_roots_apply_time_us".to_string(),
+            Value::from(self.p50_layout_roots_apply_time_us),
+        );
+        p50.insert(
+            "layout_roots_flush_viewport_time_us".to_string(),
+            Value::from(self.p50_layout_roots_flush_viewport_time_us),
         );
         p50.insert(
             "layout_view_cache_time_us".to_string(),
@@ -5137,8 +5688,56 @@ impl BundleStatsReport {
             Value::from(self.p95_layout_request_build_roots_time_us),
         );
         p95.insert(
+            "layout_request_build_roots_take_engine_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_take_engine_time_us),
+        );
+        p95.insert(
+            "layout_request_build_roots_phase1_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_phase1_time_us),
+        );
+        p95.insert(
+            "layout_request_build_roots_phase2_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_phase2_time_us),
+        );
+        p95.insert(
+            "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_phase2_clean_geometry_proof_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_nodes".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_nodes),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_boundaries".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_boundaries),
+        );
+        p95.insert(
+            "layout_clean_geometry_apply_nodes".to_string(),
+            Value::from(self.p95_layout_clean_geometry_apply_nodes),
+        );
+        p95.insert(
+            "layout_clean_geometry_apply_fallback_layouts".to_string(),
+            Value::from(self.p95_layout_clean_geometry_apply_fallback_layouts),
+        );
+        p95.insert(
+            "layout_request_build_roots_phase2_compute_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_phase2_compute_time_us),
+        );
+        p95.insert(
+            "layout_request_build_roots_put_engine_time_us".to_string(),
+            Value::from(self.p95_layout_request_build_roots_put_engine_time_us),
+        );
+        p95.insert(
             "layout_roots_time_us".to_string(),
             Value::from(self.p95_layout_roots_time_us),
+        );
+        p95.insert(
+            "layout_roots_apply_time_us".to_string(),
+            Value::from(self.p95_layout_roots_apply_time_us),
+        );
+        p95.insert(
+            "layout_roots_flush_viewport_time_us".to_string(),
+            Value::from(self.p95_layout_roots_flush_viewport_time_us),
         );
         p95.insert(
             "layout_view_cache_time_us".to_string(),
@@ -5882,6 +6481,31 @@ impl BundleStatsReport {
                     Value::from(row.layout_engine_solve_time_us),
                 );
                 obj.insert(
+                    "layout_clean_geometry_solve_skip_rejections".to_string(),
+                    Value::from(row.layout_clean_geometry_solve_skip_rejections),
+                );
+                obj.insert(
+                    "layout_clean_geometry_solve_skip_first_rejection".to_string(),
+                    row.layout_clean_geometry_solve_skip_first_rejection
+                        .clone()
+                        .map(Value::from)
+                        .unwrap_or(Value::Null),
+                );
+                obj.insert(
+                    "layout_clean_geometry_solve_skip_first_detail".to_string(),
+                    row.layout_clean_geometry_solve_skip_first_detail
+                        .clone()
+                        .map(Value::from)
+                        .unwrap_or(Value::Null),
+                );
+                obj.insert(
+                    "layout_clean_geometry_solve_skip_first_element_kind".to_string(),
+                    row.layout_clean_geometry_solve_skip_first_element_kind
+                        .clone()
+                        .map(Value::from)
+                        .unwrap_or(Value::Null),
+                );
+                obj.insert(
                     "layout_engine_child_rect_queries".to_string(),
                     Value::from(row.layout_engine_child_rect_queries),
                 );
@@ -5910,8 +6534,58 @@ impl BundleStatsReport {
                     Value::from(row.layout_request_build_roots_time_us),
                 );
                 obj.insert(
+                    "layout_request_build_roots_take_engine_time_us".to_string(),
+                    Value::from(row.layout_request_build_roots_take_engine_time_us),
+                );
+                obj.insert(
+                    "layout_request_build_roots_phase1_time_us".to_string(),
+                    Value::from(row.layout_request_build_roots_phase1_time_us),
+                );
+                obj.insert(
+                    "layout_request_build_roots_phase2_time_us".to_string(),
+                    Value::from(row.layout_request_build_roots_phase2_time_us),
+                );
+                obj.insert(
+                    "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
+                    Value::from(
+                        row.layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                    ),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_nodes".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_nodes),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_boundaries".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_boundaries),
+                );
+                obj.insert(
+                    "layout_clean_geometry_apply_nodes".to_string(),
+                    Value::from(row.layout_clean_geometry_apply_nodes),
+                );
+                obj.insert(
+                    "layout_clean_geometry_apply_fallback_layouts".to_string(),
+                    Value::from(row.layout_clean_geometry_apply_fallback_layouts),
+                );
+                obj.insert(
+                    "layout_request_build_roots_phase2_compute_time_us".to_string(),
+                    Value::from(row.layout_request_build_roots_phase2_compute_time_us),
+                );
+                obj.insert(
+                    "layout_request_build_roots_put_engine_time_us".to_string(),
+                    Value::from(row.layout_request_build_roots_put_engine_time_us),
+                );
+                obj.insert(
                     "layout_roots_time_us".to_string(),
                     Value::from(row.layout_roots_time_us),
+                );
+                obj.insert(
+                    "layout_roots_apply_time_us".to_string(),
+                    Value::from(row.layout_roots_apply_time_us),
+                );
+                obj.insert(
+                    "layout_roots_flush_viewport_time_us".to_string(),
+                    Value::from(row.layout_roots_flush_viewport_time_us),
                 );
                 obj.insert(
                     "layout_pending_barrier_relayouts_time_us".to_string(),
@@ -6988,6 +7662,13 @@ impl BundleStatsReport {
                                     );
                                     Value::Object(p_obj)
                                 })
+                                .unwrap_or(Value::Null),
+                        );
+                        s_obj.insert(
+                            "clean_geometry_solve_skip_rejection".to_string(),
+                            s.clean_geometry_solve_skip_rejection
+                                .as_ref()
+                                .map(clean_geometry_solve_skip_rejection_to_json)
                                 .unwrap_or(Value::Null),
                         );
                         s_obj.insert("measure_calls".to_string(), Value::from(s.measure_calls));

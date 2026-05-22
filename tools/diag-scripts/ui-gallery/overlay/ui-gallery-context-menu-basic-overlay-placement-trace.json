@@ -144,7 +144,7 @@
       "type": "wait_overlay_placement_trace",
       "query": {
         "kind": "anchored_panel",
-        "content_test_id": "ui-gallery-context-menu-basic-content"
+        "content_test_id": "ui-gallery-context-menu-basic-panel"
       },
       "timeout_frames": 240
     },
@@ -154,7 +154,7 @@
         "kind": "bounds_within_window",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-context-menu-basic-content"
+          "id": "ui-gallery-context-menu-basic-panel"
         },
         "padding_px": 2.0,
         "eps_px": 0.5

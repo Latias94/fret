@@ -312,6 +312,8 @@ Current status:
 - 2026-05-15 generated gate result history makes stale paint/scene and pixels-changed gate runs
   reviewable inside the GUI: selected result details, structured summary, raw JSON, path/command/JSON
   copy actions, and platform URL open support all point at `.fret/diag/gate-runs/*.json` artifacts.
+  A 2026-05-21 refresh now restores recent valid generated-gate records from that directory on
+  DevTools startup.
 - 2026-05-15 DevTools perf-threshold generated gate builder extends that same loop to
   `perf-thresholds`: `fret-diag` owns the structured `diag perf` command projection, while the GUI
   renders target/repeat/warmup/aggregate/threshold inputs and reuses the generated gate runner plus
@@ -331,6 +333,66 @@ Current status:
   diagnostics owner lane instead of becoming another GUI-private command path.
 - 2026-05-16 GUI-launched trace follow-ups now record `trace.chrome.json` in
   `output_artifacts`, and the selected-result summary/details expose that artifact path for reuse.
+- 2026-05-21 GUI-launched workflow suite runs now expose the selected
+  `regression.summary.json` artifact as a direct copy/open action from Workflow Result Details,
+  resolving relative `target/fret-diag/...` paths against the repo root before platform URL open.
+- 2026-05-21 GUI-launched workflow suite summaries can now be loaded into the existing Regression
+  Workspace selection, reusing the shared drill-down/follow-up model instead of creating a separate
+  workflow-private regression inspector.
+- 2026-05-21 DevTools first-open next actions now distinguish a loaded selected summary from a
+  loaded aggregate regression index, keeping workflow-suite handoff honest while still surfacing
+  follow-up readiness.
+- 2026-05-21 Regression Workspace now surfaces `Follow-up Readiness` for the selected summary,
+  including bundle count, runnable/manual follow-up counts, and the first runnable command, making
+  workflow-loaded suite summaries immediately actionable without reading the full command wall.
+- 2026-05-21 DevTools first-open next actions now also report when the selected summary already
+  has a selected-bundle follow-up result loaded, routing maintainers to Follow-up Result
+  Summary/History after the next diagnostics command produces evidence.
+- 2026-05-21 DevTools Workflow Runs now surfaces `Workflow Handoff Readiness`, showing whether the
+  selected workflow result should be run, loaded into Regression Workspace, or followed up through
+  the existing Regression Workspace actions.
+- 2026-05-21 DevTools Workflow Runs now also surfaces `Workflow Summarize Handoff`, deriving and
+  running the shared `diag summarize <regression.summary.json> --dir <same-dir> --json` command
+  when a suite result has not yet produced a sibling `regression.index.json`. This keeps aggregate
+  index generation explicit and contract-faithful instead of treating the index as a direct suite
+  output.
+- 2026-05-21 DevTools Workflow Runs can load a ready workflow `regression.index.json` back into
+  Regression Workspace by reusing the existing aggregate refresh over the index parent directory,
+  keeping aggregate browsing on the shared `regression.index.json` contract.
+- 2026-05-21 DevTools Workflow Handoff Readiness now reports aggregate index load state separately
+  from aggregate index readiness, including an `aggregate_next_action` that points at
+  `Load workflow regression index` until the workflow artifact root is loaded.
+- 2026-05-21 DevTools Workflow Runs now restores recent `.fret/diag/workflow-runs/*.json` records
+  on startup, so suite/summarize evidence handoff survives reopening the GUI instead of living only
+  in one process' memory.
+- 2026-05-21 DevTools Workflow Runs can copy/open the selected workflow `suite.summary.json`
+  artifact directly from Workflow Result Details, matching the regression-summary/index handoff
+  actions and keeping full suite evidence reachable without raw JSON inspection.
+- 2026-05-21 DevTools Guide now starts with `Recent Evidence`, a restored-history projection over
+  generated gate, workflow, and selected-bundle follow-up result artifacts. This keeps the latest
+  evidence paths and failing-evidence count visible on first open without adding a GUI-private
+  artifact store. The block can now select the failed artifact into the existing history state and
+  copy its path, follow-up bundle directory, rerun command, restored result JSON payload, or open
+  it directly from the Guide; the bundle-dir copy action is only enabled for failed evidence that
+  actually carries a non-empty follow-up `bundle_dir`. It can also rerun failed evidence from
+  restored structured `diag_args`; redacted workflow tokens can be recovered from the current
+  selected session when the workflow id still maps to a runnable first-party command, while missing
+  args, unknown workflow ids, or missing session keep rerun disabled with a visible unavailable
+  reason instead of executing display-only shell text. The compact next-action line now points at
+  the concrete repair step instead of a generic history-inspection hint, and the header next-action
+  summary mirrors that same repair step with restored failed evidence, rerun availability, and
+  first-open copy/select/rerun shortcut buttons before the Guide is opened.
+- 2026-05-21 DevTools first-open next actions now also surface diagnostics session scope. The
+  header tells maintainers whether DevTools is waiting for a session, needs an available session
+  selected, is targeting the current session, or is targeting one selected session among multiple
+  connected sessions. The matching `ws.rs` unit tests lock the v1 rule: keep valid selection,
+  otherwise choose the first advertised session, and filter session-scoped payloads to the selected
+  session.
+- 2026-05-21 Regression Workspace now turns baseline-required visual and footprint compare
+  templates into runnable GUI follow-up actions after a baseline bundle/directory or footprint
+  session is supplied. The shared `fret-diag` projection carries `target_bundle_dir`, and
+  follow-up results are keyed to the candidate bundle so selected-bundle history stays aligned with
+  the failing evidence.
 - 2026-05-15 DevTools MCP regression dashboard now consumes the same shared drill-down/follow-up
   projection, returning bundle dirs, capability provenance, perf evidence, and follow-up command
   lines in both structured JSON and the human summary.
@@ -354,7 +416,8 @@ Current status:
   immediately scannable.
 - 2026-05-15 follow-up results are retained as a bounded in-memory history filtered to the selected
   bundle, so selected-summary triage can distinguish current evidence from a previous bundle's last
-  launched follow-up.
+  launched follow-up. A 2026-05-21 refresh now restores recent valid `.fret/diag/followups/*.json`
+  records on DevTools startup before applying that same selected-bundle filter.
 - 2026-05-15 selected-bundle follow-up history now renders as selectable result entries, allowing
   authors to switch the summary/raw JSON/copy target between recent artifacts.
 - 2026-05-15 selected follow-up results now have a details block with status, path, command,
@@ -366,6 +429,10 @@ Current status:
   path instead of the global last result artifact, keeping copied evidence aligned with selection.
 - 2026-05-15 the selected-bundle follow-up JSON is now copyable from the same inspector, keeping
   the exact payload one click away for issue reports and AI triage.
+- 2026-05-21 the selected trace follow-up artifact can now be copied or opened directly from the
+  same inspector. The action prefers `trace_report.trace_chrome_json_path`, falls back to the
+  `trace.chrome.json` output artifact row, and resolves relative paths against the repo root before
+  clipboard or platform URL handling.
 - 2026-05-15 DevTools GUI perf-evidence drill-down extracts selected regression summary perf
   evidence into a dedicated `Perf Evidence` section above raw JSON. The focused unit gate covers
   `perf_summary_json`, `compare_json`, curated metric lines, and threshold failure counts/JSON.
@@ -463,6 +530,23 @@ Current status:
   `target/imui-product-chain-perf-docking-trace-gate-2026-05-16-release-after-fix/1778898757233`,
   with two passing perf cases, zero threshold failures, and real-span trace event counts of 40 and
   45 for the promoted suite scripts.
+- 2026-05-21 text clean-geometry owner split:
+  `docs/workstreams/text-clean-geometry-stability-v1/` now closes as the text clean-geometry
+  boundary record split out of `scroll-optimization-v1`. The focused boundary gate keeps cached
+  `TextWrap::None` text eligible while keeping wrapped or height-changing text on the authoritative
+  solve path as `text_reflow`. A UI Gallery text-measure-overlay resize bundle now proves the
+  additive rejection `detail` field reaches shareable diagnostics artifacts (`text_wrap_not_none` /
+  `text_overflow_not_clip`). Future wrapped-text eligibility remains a separate behavior-changing
+  proof lane. This does not close broad perf/smoothness attribution.
+- 2026-05-21 DevTools MCP recent-evidence bridge:
+  `apps/fret-devtools-mcp/src/native.rs` now exposes `fret_diag_recent_evidence` as a read-only
+  projection over the same `.fret/diag/gate-runs`, `.fret/diag/workflow-runs`, and
+  `.fret/diag/followups` records restored by the GUI `Recent Evidence` surface. The MCP
+  `fret-diag://first-open.md` resource now points AI clients at that bridge, and
+  `fret-diag://recent-evidence.json` exposes the same report as a discoverable sessionless
+  resource. Safe workflow reruns stay GUI-owned because they require the current selected session
+  and current token.
+  This improves first-open AI/tooling continuity without closing broader DevTools GUI maturity.
 - P3 remains the active global parity lane when real backend/runner acceptance is available, while
   the latest non-multi-window local follow-on is now closed in
   `docs/workstreams/imui-collection-second-proof-surface-v1/` after command-package closeout.

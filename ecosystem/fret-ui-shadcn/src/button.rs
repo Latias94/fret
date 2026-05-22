@@ -19,6 +19,7 @@ use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::primitives::control_registry::{
     ControlAction, ControlEntry, ControlId, control_registry_model,
 };
@@ -26,7 +27,7 @@ use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, MetricRef, OverrideSlot,
     PaddingRefinement, Radius, ShadowPreset, Size as ComponentSize, Space, WidgetStateProperty,
-    WidgetStates, resolve_override_slot, ui,
+    WidgetStates, resolve_override_slot,
 };
 
 use crate::bool_model::IntoBoolModel;
@@ -433,12 +434,27 @@ pub(crate) fn variant_colors(
 }
 
 pub(crate) fn button_text_style(theme: &Theme, size: ButtonSize) -> TextStyle {
-    let px = size.component_size().control_text_px(theme);
-    let line_height = theme.metric_token("font.line_height");
-
-    let mut style = typography::fixed_line_box_style(FontId::ui(), px, line_height);
+    let text_size = match size {
+        ButtonSize::Xs | ButtonSize::IconXs => typography::UiTextSize::Xs,
+        _ => typography::UiTextSize::Sm,
+    };
+    let mut style = typography::control_text_style(theme, text_size);
     style.weight = FontWeight::MEDIUM;
     style
+}
+
+fn button_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    text_style: TextStyle,
+    fg: ColorRef,
+) -> AnyElement {
+    let mut refinement = typography::composable_refinement_from_style(&text_style);
+    refinement.weight = Some(text_style.weight);
+
+    decl_text::text_button_label(cx, label)
+        .inherit_text_style(refinement)
+        .inherit_foreground(fg.resolve(Theme::global(&*cx.app)))
 }
 
 fn button_padding_refinement(
@@ -1004,11 +1020,7 @@ impl Button {
             let border_width_override = self.border_width_override;
             let corner_radii_override = self.corner_radii_override;
             let text_style = button_text_style(Theme::global(&*cx.app), self.size);
-            let text_px = text_style.size;
             let text_weight = self.text_weight_override.unwrap_or(text_style.weight);
-            let text_line_height = text_style
-                .line_height
-                .unwrap_or_else(|| theme.metric_token("font.line_height"));
             let has_content_override = !self.children.is_empty();
             let has_inline_start_svg_like_children = !has_content_override
                 && (self.leading_icon.is_some()
@@ -1304,24 +1316,23 @@ impl Button {
                             inline_start.extend(leading_children.take().unwrap_or_default());
 
                             let label = if !visible_label.is_empty() {
-                                let mut label = ui::text(visible_label.clone())
-                                    .text_size_px(text_px)
-                                    .fixed_line_box_px(text_line_height)
-                                    .line_box_in_bounds()
-                                    .font_weight(text_weight)
-                                    .nowrap()
-                                    .text_color(fg.clone());
-                                if let Some(font) = label_font_override {
-                                    label = label.font(font);
+                                let mut label_text_style = text_style.clone();
+                                label_text_style.weight = text_weight;
+                                if let Some(font) = label_font_override.clone() {
+                                    label_text_style.font = font;
                                 }
-                                for feature in &label_features_override {
-                                    label =
-                                        label.font_feature(feature.tag.to_string(), feature.value);
-                                }
-                                for axis in &label_axes_override {
-                                    label = label.font_axis(axis.tag.to_string(), axis.value);
-                                }
-                                let label = label.into_element(cx);
+                                label_text_style
+                                    .features
+                                    .extend(label_features_override.iter().cloned());
+                                label_text_style
+                                    .axes
+                                    .extend(label_axes_override.iter().cloned());
+                                let label = button_label_text(
+                                    cx,
+                                    visible_label.clone(),
+                                    label_text_style,
+                                    fg.clone(),
+                                );
                                 Some(crate::test_id::attach_test_id_suffix(
                                     label,
                                     test_id.as_ref(),
@@ -1952,6 +1963,25 @@ mod tests {
             .find_map(find_first_inherited_foreground_node)
     }
 
+    fn assert_shared_button_label_leaf(
+        el: &AnyElement,
+        label: &str,
+    ) -> fret_core::TextStyleRefinement {
+        let text = find_text_element(el, label).expect("expected button label text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        text.inherited_text_style
+            .clone()
+            .expect("expected button label to inherit shared text role")
+    }
+
     fn collect_horizontal_content_texts(el: &AnyElement) -> Vec<String> {
         let content =
             find_first_horizontal_content_element(el).expect("expected horizontal content stack");
@@ -2003,6 +2033,115 @@ mod tests {
         assert_eq!(
             collect_horizontal_content_texts(&rtl),
             vec!["end", "Main", "start"]
+        );
+    }
+
+    #[test]
+    fn button_default_label_uses_shared_button_label_role() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "button-default-label-role",
+            |cx| {
+                Button::new("Run Build")
+                    .test_id("run-build")
+                    .into_element(cx)
+            },
+        );
+        let theme = Theme::global(&app);
+
+        let inherited = assert_shared_button_label_leaf(&element, "Run Build");
+        assert_eq!(
+            inherited,
+            typography::composable_refinement_from_style(&button_text_style(
+                theme,
+                ButtonSize::Default
+            ))
+        );
+        assert_eq!(
+            inherited.weight,
+            Some(FontWeight::MEDIUM),
+            "default button label should remain `font-medium`"
+        );
+        assert!(
+            find_first_inherited_foreground_node(&element).is_some(),
+            "expected Button foreground to remain inherited through the default label"
+        );
+    }
+
+    #[test]
+    fn button_default_label_keeps_font_feature_and_axis_overrides_on_role() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "button-default-label-axis-role",
+            |cx| {
+                Button::new("128")
+                    .label_tabular_nums()
+                    .label_font_axis("wdth", 90.0)
+                    .into_element(cx)
+            },
+        );
+
+        let inherited = assert_shared_button_label_leaf(&element, "128");
+        assert!(
+            inherited
+                .features
+                .iter()
+                .any(|feature| feature.tag.as_str() == "tnum" && feature.value == 1),
+            "expected button label font features to stay on inherited role style"
+        );
+        assert!(
+            inherited
+                .axes
+                .iter()
+                .any(|axis| axis.tag.as_str() == "wdth" && (axis.value - 90.0).abs() < f32::EPSILON),
+            "expected button label variable font axes to stay on inherited role style"
+        );
+    }
+
+    #[test]
+    fn button_default_label_keeps_weight_override_on_role() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "button-default-label-weight-role",
+            |cx| {
+                Button::new("Normal")
+                    .text_weight(FontWeight::NORMAL)
+                    .into_element(cx)
+            },
+        );
+
+        let inherited = assert_shared_button_label_leaf(&element, "Normal");
+        assert_eq!(
+            inherited.weight,
+            Some(FontWeight::NORMAL),
+            "explicit Button text_weight(...) override must survive the shared role path"
         );
     }
 

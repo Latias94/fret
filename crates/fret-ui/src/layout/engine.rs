@@ -407,9 +407,12 @@ impl TaffyLayoutEngine {
         self.node_to_layout.get(node).copied()
     }
 
-    pub(crate) fn mark_seen_if_present(&mut self, node: NodeId) {
+    pub(crate) fn mark_seen_if_present(&mut self, node: NodeId) -> bool {
         if self.node_to_layout.contains_key(node) {
             self.mark_seen(node);
+            true
+        } else {
+            false
         }
     }
 

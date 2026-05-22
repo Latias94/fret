@@ -837,6 +837,53 @@ mod global_lease_tests {
         );
         assert_eq!(app.take_changed_globals(), vec![counter_id]);
     }
+
+    #[test]
+    fn monitor_topology_refresh_tracks_only_real_snapshot_changes() {
+        let mut app = App::new();
+        let _ = app.take_changed_globals();
+        let topology_id = TypeId::of::<fret_runtime::RunnerMonitorTopologyDiagnosticsStore>();
+        let rect = |x, y, width, height| fret_runtime::RunnerMonitorRectPhysicalV1 {
+            x,
+            y,
+            width,
+            height,
+        };
+        let snapshot = fret_runtime::RunnerMonitorTopologySnapshotV1 {
+            virtual_desktop_bounds_physical: Some(rect(0, 0, 1920, 1080)),
+            monitors: vec![fret_runtime::RunnerMonitorInfoV1 {
+                bounds_physical: rect(0, 0, 1920, 1080),
+                scale_factor: 1.0,
+            }],
+        };
+
+        assert!(fret_runtime::update_runner_monitor_topology_diagnostics(
+            &mut app,
+            snapshot.clone()
+        ));
+        assert_eq!(app.take_changed_globals(), vec![topology_id]);
+
+        assert!(!fret_runtime::update_runner_monitor_topology_diagnostics(
+            &mut app,
+            snapshot.clone()
+        ));
+        assert!(
+            app.take_changed_globals().is_empty(),
+            "unchanged per-frame topology refreshes should not trigger global-change invalidation"
+        );
+
+        let changed = fret_runtime::RunnerMonitorTopologySnapshotV1 {
+            virtual_desktop_bounds_physical: Some(rect(0, 0, 2560, 1440)),
+            monitors: vec![fret_runtime::RunnerMonitorInfoV1 {
+                bounds_physical: rect(0, 0, 2560, 1440),
+                scale_factor: 1.25,
+            }],
+        };
+        assert!(fret_runtime::update_runner_monitor_topology_diagnostics(
+            &mut app, changed
+        ));
+        assert_eq!(app.take_changed_globals(), vec![topology_id]);
+    }
 }
 
 fn default_keymap_service() -> KeymapService {

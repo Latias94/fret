@@ -13,6 +13,7 @@ enum CleanGeometrySolveSkipDecision {
 #[derive(Debug, Clone, Copy)]
 struct CleanGeometrySolveSkipRejection {
     reason: CleanGeometrySolveSkipRejectionReason,
+    detail: Option<CleanGeometrySolveSkipRejectionDetail>,
     node: Option<NodeId>,
     element_kind: Option<&'static str>,
 }
@@ -21,6 +22,7 @@ impl CleanGeometrySolveSkipRejection {
     fn new(reason: CleanGeometrySolveSkipRejectionReason) -> Self {
         Self {
             reason,
+            detail: None,
             node: None,
             element_kind: None,
         }
@@ -29,9 +31,15 @@ impl CleanGeometrySolveSkipRejection {
     fn for_kind(reason: CleanGeometrySolveSkipRejectionReason, element_kind: &'static str) -> Self {
         Self {
             reason,
+            detail: None,
             node: None,
             element_kind: Some(element_kind),
         }
+    }
+
+    fn with_detail(mut self, detail: CleanGeometrySolveSkipRejectionDetail) -> Self {
+        self.detail = Some(detail);
+        self
     }
 
     fn at_node(mut self, node: NodeId) -> Self {
@@ -78,6 +86,18 @@ enum CleanGeometrySolveSkipRejectionReason {
     FractionalChildSize,
 }
 
+#[derive(Debug, Clone, Copy)]
+enum CleanGeometrySolveSkipRejectionDetail {
+    TextHeightDelta,
+    TextWrapNotNone,
+    TextOverflowNotClip,
+    TextAlignNotStart,
+    TextMissingWrapNoneMeasureCache,
+    TextCachedSizeMismatch,
+    TextFingerprintMismatch,
+    TextUnsupportedInstance,
+}
+
 #[derive(Clone)]
 struct CleanGeometryNodeContract {
     layout_effect: CleanGeometryLayoutEffect,
@@ -115,7 +135,7 @@ enum CleanGeometryWidthDeltaSizeStability {
     Propagated,
     /// `TextWrap::None` text with cached width-independent metrics may keep stable height while
     /// its parent-provided width changes.
-    NoWrapTextCachedMetrics,
+    TextCachedMetrics,
 }
 
 impl CleanGeometryNodeContract {
@@ -178,6 +198,21 @@ impl CleanGeometrySolveSkipRejectionReason {
     }
 }
 
+impl CleanGeometrySolveSkipRejectionDetail {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::TextHeightDelta => "text_height_delta",
+            Self::TextWrapNotNone => "text_wrap_not_none",
+            Self::TextOverflowNotClip => "text_overflow_not_clip",
+            Self::TextAlignNotStart => "text_align_not_start",
+            Self::TextMissingWrapNoneMeasureCache => "text_missing_wrap_none_measure_cache",
+            Self::TextCachedSizeMismatch => "text_cached_size_mismatch",
+            Self::TextFingerprintMismatch => "text_fingerprint_mismatch",
+            Self::TextUnsupportedInstance => "text_unsupported_instance",
+        }
+    }
+}
+
 impl<H: UiHost> UiTree<H> {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn try_propagate_clean_engine_layout(
@@ -208,6 +243,12 @@ impl<H: UiHost> UiTree<H> {
         };
         if measured_size == Size::default() || layout_dirty_children_suppressed {
             return None;
+        }
+        if self.debug_enabled {
+            self.debug_stats.layout_clean_geometry_apply_nodes = self
+                .debug_stats
+                .layout_clean_geometry_apply_nodes
+                .saturating_add(1);
         }
         let element = self.clean_engine_geometry_propagation_supported_element(
             app,
@@ -294,6 +335,13 @@ impl<H: UiHost> UiTree<H> {
                 )
                 .is_none()
             {
+                if self.debug_enabled {
+                    self.debug_stats
+                        .layout_clean_geometry_apply_fallback_layouts = self
+                        .debug_stats
+                        .layout_clean_geometry_apply_fallback_layouts
+                        .saturating_add(1);
+                }
                 let _ = self.layout_node(
                     app,
                     services,
@@ -356,7 +404,7 @@ impl<H: UiHost> UiTree<H> {
                 CleanGeometrySolveSkipRejectionReason::NotInteractiveResizeSmallStep,
             ));
         }
-        if prev_bounds == bounds || prev_bounds.size == bounds.size {
+        if prev_bounds == bounds {
             return CleanGeometrySolveSkipDecision::Rejected(CleanGeometrySolveSkipRejection::new(
                 CleanGeometrySolveSkipRejectionReason::NoSizeDelta,
             ));
@@ -373,6 +421,9 @@ impl<H: UiHost> UiTree<H> {
         };
         if let Err(rejection) = self.clean_geometry_node_clean_result(root) {
             return CleanGeometrySolveSkipDecision::Rejected(rejection.at_node_if_missing(root));
+        }
+        if Self::clean_size_matches(prev_bounds.size, bounds.size) {
+            return CleanGeometrySolveSkipDecision::Supported;
         }
         match self.clean_manual_geometry_subtree_supported_checked(
             app,
@@ -410,6 +461,9 @@ impl<H: UiHost> UiTree<H> {
         {
             self.debug_stats
                 .layout_clean_geometry_solve_skip_first_rejection = Some(rejection.reason.as_str());
+            self.debug_stats
+                .layout_clean_geometry_solve_skip_first_detail =
+                rejection.detail.map(|detail| detail.as_str());
             self.debug_stats
                 .layout_clean_geometry_solve_skip_first_element_kind = rejection.element_kind;
         }
@@ -451,6 +505,7 @@ impl<H: UiHost> UiTree<H> {
             root,
             UiDebugCleanGeometrySolveSkipRejection {
                 reason: rejection.reason.as_str(),
+                detail: rejection.detail.map(|detail| detail.as_str()),
                 node: Some(rejected_node),
                 element: rejected_element,
                 element_kind: rejected_element_kind,
@@ -469,6 +524,12 @@ impl<H: UiHost> UiTree<H> {
         scale_factor: f32,
         is_root: bool,
     ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        if self.debug_enabled {
+            self.debug_stats.layout_clean_geometry_proof_nodes = self
+                .debug_stats
+                .layout_clean_geometry_proof_nodes
+                .saturating_add(1);
+        }
         if self.clean_geometry_absent_interactivity_gate_leaf(app, window, node) {
             let Some(entry) = self.nodes.get(node) else {
                 return Err(CleanGeometrySolveSkipRejection::new(
@@ -511,6 +572,12 @@ impl<H: UiHost> UiTree<H> {
                 .clean_geometry_boundary_layout_node_kind(app, window, node)
                 .is_some()
         {
+            if self.debug_enabled {
+                self.debug_stats.layout_clean_geometry_proof_boundaries = self
+                    .debug_stats
+                    .layout_clean_geometry_proof_boundaries
+                    .saturating_add(1);
+            }
             return Ok(());
         }
         let children = self
@@ -539,6 +606,12 @@ impl<H: UiHost> UiTree<H> {
                 .clean_geometry_boundary_layout_node_kind(app, window, child)
                 .is_some()
             {
+                if self.debug_enabled {
+                    self.debug_stats.layout_clean_geometry_proof_boundaries = self
+                        .debug_stats
+                        .layout_clean_geometry_proof_boundaries
+                        .saturating_add(1);
+                }
                 continue;
             }
             let child_prev_bounds =
@@ -681,10 +754,13 @@ impl<H: UiHost> UiTree<H> {
                 .at_node(node));
             }
         }
+        if Self::clean_size_matches(prev_bounds.size, bounds.size) {
+            return self.clean_origin_only_child_bounds_checked(children, bounds, prev_bounds);
+        }
         match contract.size_stability {
             CleanGeometryWidthDeltaSizeStability::Propagated => {}
-            CleanGeometryWidthDeltaSizeStability::NoWrapTextCachedMetrics => {
-                self.clean_nowrap_text_cached_metrics_supported(
+            CleanGeometryWidthDeltaSizeStability::TextCachedMetrics => {
+                self.clean_text_cached_metrics_supported(
                     app,
                     window,
                     node,
@@ -814,10 +890,11 @@ impl<H: UiHost> UiTree<H> {
                 Ok(CleanGeometryNodeContract {
                     layout_effect: CleanGeometryLayoutEffect::Pure,
                     child_bounds: CleanGeometryChildBoundsStrategy::None,
-                    size_stability: CleanGeometryWidthDeltaSizeStability::NoWrapTextCachedMetrics,
+                    size_stability: CleanGeometryWidthDeltaSizeStability::TextCachedMetrics,
                 })
             }
-            crate::declarative::frame::ElementInstance::Spacer(_)
+            crate::declarative::frame::ElementInstance::Canvas(_)
+            | crate::declarative::frame::ElementInstance::Spacer(_)
             | crate::declarative::frame::ElementInstance::Image(_)
             | crate::declarative::frame::ElementInstance::SvgIcon(_)
             | crate::declarative::frame::ElementInstance::SvgImage(_)
@@ -834,7 +911,7 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn clean_nowrap_text_cached_metrics_supported(
+    fn clean_text_cached_metrics_supported(
         &mut self,
         app: &mut H,
         window: AppWindowId,
@@ -853,24 +930,9 @@ impl<H: UiHost> UiTree<H> {
                 CleanGeometrySolveSkipRejectionReason::TextReflow,
                 element_kind,
             )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextHeightDelta)
             .at_node(node));
         }
-        let Some((cached_fingerprint, cached_size)) = self.node_text_wrap_none_measure_cache(node)
-        else {
-            return Err(CleanGeometrySolveSkipRejection::for_kind(
-                CleanGeometrySolveSkipRejectionReason::TextReflow,
-                element_kind,
-            )
-            .at_node(node));
-        };
-        if !Self::clean_size_matches(cached_size, bounds.size) {
-            return Err(CleanGeometrySolveSkipRejection::for_kind(
-                CleanGeometrySolveSkipRejectionReason::TextReflow,
-                element_kind,
-            )
-            .at_node(node));
-        }
-
         let theme = crate::Theme::global(&*app).snapshot();
         let inherited_text_style =
             crate::declarative::frame::inherited_text_style_for_node(app, window, node);
@@ -880,36 +942,84 @@ impl<H: UiHost> UiTree<H> {
             .unwrap_or(0);
         let fingerprint = match instance {
             crate::declarative::frame::ElementInstance::Text(props) => {
-                if props.wrap != TextWrap::None
-                    || props.overflow != TextOverflow::Clip
-                    || props.align != TextAlign::Start
-                {
+                if !matches!(props.overflow, TextOverflow::Clip | TextOverflow::Ellipsis) {
                     return Err(CleanGeometrySolveSkipRejection::for_kind(
                         CleanGeometrySolveSkipRejectionReason::TextReflow,
                         element_kind,
                     )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextOverflowNotClip)
+                    .at_node(node));
+                }
+                if props.align != TextAlign::Start {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextAlignNotStart)
                     .at_node(node));
                 }
                 let resolved_style =
                     props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
-                crate::text_props::text_wrap_none_measure_fingerprint_plain(
-                    &props.text,
-                    &resolved_style,
-                    props.overflow,
-                    props.align,
-                    scale_factor,
-                    font_stack_key,
-                )
+                match props.wrap {
+                    TextWrap::None => crate::text_props::text_wrap_none_measure_fingerprint_plain(
+                        &props.text,
+                        &resolved_style,
+                        props.overflow,
+                        props.align,
+                        scale_factor,
+                        font_stack_key,
+                    ),
+                    TextWrap::Word if props.overflow == TextOverflow::Clip => {
+                        let fingerprint = crate::text_props::text_wrapped_measure_fingerprint_plain(
+                            &props.text,
+                            &resolved_style,
+                            props.wrap,
+                            props.overflow,
+                            props.align,
+                            scale_factor,
+                            font_stack_key,
+                        );
+                        return self.clean_wrapped_text_cached_metrics_supported(
+                            node,
+                            bounds,
+                            instance,
+                            element_kind,
+                            fingerprint,
+                        );
+                    }
+                    _ => {
+                        return Err(CleanGeometrySolveSkipRejection::for_kind(
+                            CleanGeometrySolveSkipRejectionReason::TextReflow,
+                            element_kind,
+                        )
+                        .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+                        .at_node(node));
+                    }
+                }
             }
             crate::declarative::frame::ElementInstance::StyledText(props) => {
-                if props.wrap != TextWrap::None
-                    || props.overflow != TextOverflow::Clip
-                    || props.align != TextAlign::Start
-                {
+                if props.wrap != TextWrap::None {
                     return Err(CleanGeometrySolveSkipRejection::for_kind(
                         CleanGeometrySolveSkipRejectionReason::TextReflow,
                         element_kind,
                     )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+                    .at_node(node));
+                }
+                if !matches!(props.overflow, TextOverflow::Clip | TextOverflow::Ellipsis) {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextOverflowNotClip)
+                    .at_node(node));
+                }
+                if props.align != TextAlign::Start {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextAlignNotStart)
                     .at_node(node));
                 }
                 let resolved_style =
@@ -924,14 +1034,28 @@ impl<H: UiHost> UiTree<H> {
                 )
             }
             crate::declarative::frame::ElementInstance::SelectableText(props) => {
-                if props.wrap != TextWrap::None
-                    || props.overflow != TextOverflow::Clip
-                    || props.align != TextAlign::Start
-                {
+                if props.wrap != TextWrap::None {
                     return Err(CleanGeometrySolveSkipRejection::for_kind(
                         CleanGeometrySolveSkipRejectionReason::TextReflow,
                         element_kind,
                     )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+                    .at_node(node));
+                }
+                if !matches!(props.overflow, TextOverflow::Clip | TextOverflow::Ellipsis) {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextOverflowNotClip)
+                    .at_node(node));
+                }
+                if props.align != TextAlign::Start {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        element_kind,
+                    )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextAlignNotStart)
                     .at_node(node));
                 }
                 let resolved_style =
@@ -950,14 +1074,118 @@ impl<H: UiHost> UiTree<H> {
                     CleanGeometrySolveSkipRejectionReason::TextReflow,
                     element_kind,
                 )
+                .with_detail(CleanGeometrySolveSkipRejectionDetail::TextUnsupportedInstance)
                 .at_node(node));
             }
+        };
+        let Some((cached_fingerprint, cached_size)) = self.node_text_wrap_none_measure_cache(node)
+        else {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextMissingWrapNoneMeasureCache)
+            .at_node(node));
+        };
+        let expected_size = if matches!(
+            instance,
+            crate::declarative::frame::ElementInstance::Text(props)
+                if props.overflow == TextOverflow::Ellipsis
+        ) || matches!(
+            instance,
+            crate::declarative::frame::ElementInstance::StyledText(props)
+                if props.overflow == TextOverflow::Ellipsis
+        ) || matches!(
+            instance,
+            crate::declarative::frame::ElementInstance::SelectableText(props)
+                if props.overflow == TextOverflow::Ellipsis
+        ) {
+            Size::new(bounds.size.width, cached_size.height)
+        } else {
+            cached_size
+        };
+        if !Self::clean_size_matches(expected_size, bounds.size) {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextCachedSizeMismatch)
+            .at_node(node));
+        }
+        if fingerprint != cached_fingerprint {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextFingerprintMismatch)
+            .at_node(node));
+        }
+
+        Ok(())
+    }
+
+    fn clean_wrapped_text_cached_metrics_supported(
+        &self,
+        node: NodeId,
+        bounds: Rect,
+        instance: &crate::declarative::frame::ElementInstance,
+        element_kind: &'static str,
+        fingerprint: u64,
+    ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        let Some((cached_fingerprint, constraints_max_width, measured_size, clamped_size)) =
+            self.node_text_wrapped_measure_cache(node)
+        else {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextMissingWrapNoneMeasureCache)
+            .at_node(node));
         };
         if fingerprint != cached_fingerprint {
             return Err(CleanGeometrySolveSkipRejection::for_kind(
                 CleanGeometrySolveSkipRejectionReason::TextReflow,
                 element_kind,
             )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextFingerprintMismatch)
+            .at_node(node));
+        }
+
+        let next_max_width = match instance {
+            crate::declarative::frame::ElementInstance::Text(props) => {
+                match props.layout.size.width {
+                    crate::element::Length::Fill => Some(bounds.size.width),
+                    _ => constraints_max_width,
+                }
+            }
+            _ => constraints_max_width,
+        };
+
+        let Some(next_max_width) = next_max_width else {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+            .at_node(node));
+        };
+        if measured_size.width.0 > next_max_width.0 + 0.01
+            || next_max_width.0 > constraints_max_width.map(|w| w.0).unwrap_or(f32::INFINITY) + 0.01
+        {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+            .at_node(node));
+        }
+        let expected_size = Size::new(bounds.size.width, clamped_size.height);
+        if !Self::clean_size_matches(expected_size, bounds.size) {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                element_kind,
+            )
+            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextCachedSizeMismatch)
             .at_node(node));
         }
 
@@ -1147,6 +1375,40 @@ impl<H: UiHost> UiTree<H> {
                         Px(bounds.origin.y.0 + local_y),
                     ),
                     Size::new(width, prev_child.size.height),
+                ),
+            ));
+        }
+        Ok(out)
+    }
+
+    fn clean_origin_only_child_bounds_checked(
+        &self,
+        children: &[NodeId],
+        bounds: Rect,
+        prev_bounds: Rect,
+    ) -> Result<Vec<(NodeId, Rect)>, CleanGeometrySolveSkipRejection> {
+        let dx = bounds.origin.x.0 - prev_bounds.origin.x.0;
+        let dy = bounds.origin.y.0 - prev_bounds.origin.y.0;
+        let mut out = Vec::with_capacity(children.len());
+        for &child in children {
+            let prev_child = self
+                .nodes
+                .get(child)
+                .ok_or_else(|| {
+                    CleanGeometrySolveSkipRejection::new(
+                        CleanGeometrySolveSkipRejectionReason::MissingNode,
+                    )
+                    .at_node(child)
+                })?
+                .bounds;
+            out.push((
+                child,
+                Rect::new(
+                    Point::new(
+                        Px(prev_child.origin.x.0 + dx),
+                        Px(prev_child.origin.y.0 + dy),
+                    ),
+                    prev_child.size,
                 ),
             ));
         }
@@ -1457,7 +1719,11 @@ impl<H: UiHost> UiTree<H> {
                 element_kind,
             ));
         }
-        if props.align != crate::element::CrossAlign::Stretch {
+        let align = props.align;
+        if !matches!(
+            align,
+            crate::element::CrossAlign::Stretch | crate::element::CrossAlign::Start
+        ) {
             return Err(CleanGeometrySolveSkipRejection::for_kind(
                 CleanGeometrySolveSkipRejectionReason::FlexCrossAlign,
                 element_kind,
@@ -1511,7 +1777,9 @@ impl<H: UiHost> UiTree<H> {
                     element_kind,
                 ));
             }
-            if !Self::clean_margin_edges_are_px(child_style.margin) {
+            let horizontal_auto_margin =
+                Self::clean_vertical_flex_horizontal_auto_margin_centered(child_style.margin);
+            if !Self::clean_margin_edges_are_px(child_style.margin) && !horizontal_auto_margin {
                 return Err(CleanGeometrySolveSkipRejection::for_kind(
                     CleanGeometrySolveSkipRejectionReason::NonPxMargin,
                     element_kind,
@@ -1531,25 +1799,109 @@ impl<H: UiHost> UiTree<H> {
                 .bounds;
             let local_x = prev_child.origin.x.0 - prev_bounds.origin.x.0;
             let local_y = prev_child.origin.y.0 - prev_bounds.origin.y.0;
-            let width = if (prev_child.size.width.0 - prev_inner_width).abs() <= 0.01
-                || matches!(child_style.size.width, crate::element::Length::Fill)
-            {
-                Px(next_inner_width)
+            let width = match align {
+                crate::element::CrossAlign::Stretch => {
+                    if horizontal_auto_margin {
+                        Self::clean_vertical_flex_horizontal_auto_margin_child_width(
+                            child_style,
+                            next_inner_width,
+                            element_kind,
+                        )?
+                    } else if (prev_child.size.width.0 - prev_inner_width).abs() <= 0.01
+                        || matches!(child_style.size.width, crate::element::Length::Fill)
+                    {
+                        Px(next_inner_width)
+                    } else {
+                        prev_child.size.width
+                    }
+                }
+                crate::element::CrossAlign::Start => {
+                    if horizontal_auto_margin {
+                        Self::clean_vertical_flex_horizontal_auto_margin_child_width(
+                            child_style,
+                            next_inner_width,
+                            element_kind,
+                        )?
+                    } else {
+                        prev_child.size.width
+                    }
+                }
+                _ => unreachable!("unsupported vertical flex cross-axis alignment rejected above"),
+            };
+            let origin_x = if horizontal_auto_margin {
+                Px(bounds.origin.x.0 + pad_left + (next_inner_width - width.0).max(0.0) * 0.5)
             } else {
-                prev_child.size.width
+                Px(bounds.origin.x.0 + local_x)
             };
             out.push((
                 child,
                 Rect::new(
-                    Point::new(
-                        Px(bounds.origin.x.0 + local_x),
-                        Px(bounds.origin.y.0 + local_y),
-                    ),
+                    Point::new(origin_x, Px(bounds.origin.y.0 + local_y)),
                     Size::new(width, prev_child.size.height),
                 ),
             ));
         }
         Ok(out)
+    }
+
+    fn clean_vertical_flex_horizontal_auto_margin_centered(
+        margin: crate::element::MarginEdges,
+    ) -> bool {
+        matches!(margin.left, crate::element::MarginEdge::Auto)
+            && matches!(margin.right, crate::element::MarginEdge::Auto)
+            && matches!(margin.top, crate::element::MarginEdge::Px(_))
+            && matches!(margin.bottom, crate::element::MarginEdge::Px(_))
+    }
+
+    fn clean_vertical_flex_horizontal_auto_margin_child_width(
+        child_style: crate::element::LayoutStyle,
+        next_inner_width: f32,
+        element_kind: &'static str,
+    ) -> Result<Px, CleanGeometrySolveSkipRejection> {
+        let mut width = match child_style.size.width {
+            crate::element::Length::Fill => next_inner_width,
+            crate::element::Length::Px(px) => px.0.max(0.0),
+            crate::element::Length::Auto => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::NonPxMargin,
+                    element_kind,
+                ));
+            }
+            crate::element::Length::Fraction(_) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                    element_kind,
+                ));
+            }
+        };
+
+        match child_style.size.min_width {
+            Some(crate::element::Length::Px(px)) => {
+                width = width.max(px.0.max(0.0));
+            }
+            Some(crate::element::Length::Auto) | None => {}
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                    element_kind,
+                ));
+            }
+        }
+
+        match child_style.size.max_width {
+            Some(crate::element::Length::Px(px)) => {
+                width = width.min(px.0.max(0.0));
+            }
+            Some(crate::element::Length::Auto) | None => {}
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                    element_kind,
+                ));
+            }
+        }
+
+        Ok(Px(width.max(0.0)))
     }
 
     fn clean_horizontal_fixed_flex_width_delta_child_bounds(
@@ -1621,6 +1973,9 @@ impl<H: UiHost> UiTree<H> {
         let mut out = Vec::with_capacity(children.len());
         let mut width_offset_after_flexible = 0.0;
         let mut flexible_children = 0usize;
+        let mut preserved_shrink_children = 0usize;
+        let mut next_line_extent = 0.0f32;
+        let mut all_margins_non_negative = true;
         for &child in children {
             let child_style = crate::declarative::frame::layout_style_for_node(app, window, child);
             if child_style.position != crate::element::PositionStyle::Static {
@@ -1635,6 +1990,8 @@ impl<H: UiHost> UiTree<H> {
                     element_kind,
                 ));
             }
+            all_margins_non_negative &=
+                Self::clean_margin_edges_are_non_negative_px(child_style.margin);
             Self::clean_child_height_style_supported_for_width_delta(child_style, element_kind)?;
 
             let prev_child = self
@@ -1672,17 +2029,30 @@ impl<H: UiHost> UiTree<H> {
                 width_offset_after_flexible += next_width.0 - prev_child.size.width.0;
                 next_width
             } else {
-                Self::clean_horizontal_fixed_flex_item_supported(
+                let fixed_item_supported = Self::clean_horizontal_fixed_flex_item_supported(
                     child_style,
                     prev_child.size.width,
                     element_kind,
-                )?;
+                )
+                .is_ok();
+                if !fixed_item_supported {
+                    Self::clean_horizontal_preserved_px_flex_item_supported(
+                        child_style,
+                        prev_child.size.width,
+                        element_kind,
+                    )?;
+                    preserved_shrink_children = preserved_shrink_children.saturating_add(1);
+                }
                 prev_child.size.width
             };
             let local_x = prev_child.origin.x.0 - prev_bounds.origin.x.0;
             let local_y = prev_child.origin.y.0 - prev_bounds.origin.y.0;
             let x = bounds.origin.x.0 + local_x + width_offset_after_flexible
                 - (next_width.0 - prev_child.size.width.0);
+            if let crate::element::MarginEdge::Px(margin_right) = child_style.margin.right {
+                next_line_extent = next_line_extent
+                    .max(x - bounds.origin.x.0 - pad_left + next_width.0 + margin_right.0);
+            }
             let height = if (prev_child.size.height.0
                 - (prev_bounds.size.height.0 - pad_top - pad_bottom).max(0.0))
             .abs()
@@ -1699,6 +2069,15 @@ impl<H: UiHost> UiTree<H> {
                     Point::new(Px(x), Px(bounds.origin.y.0 + local_y)),
                     Size::new(next_width, height),
                 ),
+            ));
+        }
+
+        if preserved_shrink_children > 0
+            && (!all_margins_non_negative || next_line_extent > next_inner_width + 0.01)
+        {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FlexItemSizing,
+                element_kind,
             ));
         }
 
@@ -2021,6 +2400,65 @@ impl<H: UiHost> UiTree<H> {
         Self::clean_child_width_style_supported_for_width_delta(child_style, element_kind)
     }
 
+    fn clean_horizontal_preserved_px_flex_item_supported(
+        child_style: crate::element::LayoutStyle,
+        prev_width: Px,
+        element_kind: &'static str,
+    ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        if child_style.flex.order != 0
+            || child_style.flex.grow.abs() > 0.01
+            || !child_style.flex.shrink.is_finite()
+            || child_style.flex.shrink < -0.01
+            || !matches!(child_style.flex.basis, crate::element::Length::Auto)
+            || child_style.flex.align_self.is_some()
+        {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FlexItemSizing,
+                element_kind,
+            ));
+        }
+
+        let crate::element::Length::Px(mut resolved_width) = child_style.size.width else {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FlexItemSizing,
+                element_kind,
+            ));
+        };
+        resolved_width = Px(resolved_width.0.max(0.0));
+        match child_style.size.min_width {
+            Some(crate::element::Length::Px(px)) => {
+                resolved_width = Px(resolved_width.0.max(px.0.max(0.0)));
+            }
+            Some(crate::element::Length::Auto) | None => {}
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                    element_kind,
+                ));
+            }
+        }
+        match child_style.size.max_width {
+            Some(crate::element::Length::Px(px)) => {
+                resolved_width = Px(resolved_width.0.min(px.0.max(0.0)));
+            }
+            Some(crate::element::Length::Auto) | None => {}
+            Some(crate::element::Length::Fill | crate::element::Length::Fraction(_)) => {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::FractionalChildSize,
+                    element_kind,
+                ));
+            }
+        }
+        if (prev_width.0 - resolved_width.0).abs() > 0.01 {
+            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                CleanGeometrySolveSkipRejectionReason::FlexItemSizing,
+                element_kind,
+            ));
+        }
+
+        Ok(())
+    }
+
     fn clean_child_width_constraints_allow_preserved_width(
         child_style: crate::element::LayoutStyle,
         prev_width: Px,
@@ -2146,6 +2584,14 @@ impl<H: UiHost> UiTree<H> {
             && matches!(margin.bottom, crate::element::MarginEdge::Px(_))
     }
 
+    fn clean_margin_edges_are_non_negative_px(margin: crate::element::MarginEdges) -> bool {
+        let is_non_negative = |edge: crate::element::MarginEdge| matches!(edge, crate::element::MarginEdge::Px(px) if px.0 >= -0.01);
+        is_non_negative(margin.left)
+            && is_non_negative(margin.right)
+            && is_non_negative(margin.top)
+            && is_non_negative(margin.bottom)
+    }
+
     fn clean_margin_edges_are_zero_px(margin: crate::element::MarginEdges) -> bool {
         let is_zero = |edge: crate::element::MarginEdge| matches!(edge, crate::element::MarginEdge::Px(px) if px.0.abs() <= 0.01);
         is_zero(margin.left)
@@ -2191,45 +2637,59 @@ impl<H: UiHost> UiTree<H> {
             return None;
         };
 
-        let supported = match &record.instance {
-            crate::declarative::frame::ElementInstance::Stack(_)
-            | crate::declarative::frame::ElementInstance::Pressable(_)
-            | crate::declarative::frame::ElementInstance::Semantics(_) => true,
-            crate::declarative::frame::ElementInstance::Container(_) => true,
-            crate::declarative::frame::ElementInstance::Grid(_) => true,
-            crate::declarative::frame::ElementInstance::Flex(_)
-            | crate::declarative::frame::ElementInstance::SemanticFlex(_)
-            | crate::declarative::frame::ElementInstance::RovingFlex(_) => {
-                !children.iter().copied().any(|child| {
-                    let style =
-                        crate::declarative::frame::layout_style_for_node(app, window, child);
-                    matches!(style.margin.left, crate::element::MarginEdge::Auto)
-                        || matches!(style.margin.right, crate::element::MarginEdge::Auto)
-                        || matches!(style.margin.top, crate::element::MarginEdge::Auto)
-                        || matches!(style.margin.bottom, crate::element::MarginEdge::Auto)
-                })
-            }
-            crate::declarative::frame::ElementInstance::Spacer(_) => children.is_empty(),
-            crate::declarative::frame::ElementInstance::Text(_)
-            | crate::declarative::frame::ElementInstance::StyledText(_)
-            | crate::declarative::frame::ElementInstance::SelectableText(_) => {
-                children.is_empty()
-                    && self
-                        .clean_nowrap_text_cached_metrics_supported(
-                            app,
-                            window,
-                            node,
-                            bounds,
-                            prev_bounds,
-                            &record.instance,
-                            record.instance.kind_name(),
-                            scale_factor,
-                        )
-                        .is_ok()
-            }
-            _ => false,
-        };
+        let supported =
+            match &record.instance {
+                crate::declarative::frame::ElementInstance::Stack(_)
+                | crate::declarative::frame::ElementInstance::Pressable(_)
+                | crate::declarative::frame::ElementInstance::Semantics(_)
+                | crate::declarative::frame::ElementInstance::HoverRegion(_)
+                | crate::declarative::frame::ElementInstance::HitTestGate(_) => true,
+                crate::declarative::frame::ElementInstance::Container(_) => true,
+                crate::declarative::frame::ElementInstance::Grid(_) => true,
+                crate::declarative::frame::ElementInstance::Flex(props) => {
+                    self.clean_engine_geometry_flex_margin_supported(app, window, children, *props)
+                }
+                crate::declarative::frame::ElementInstance::SemanticFlex(props) => self
+                    .clean_engine_geometry_flex_margin_supported(app, window, children, props.flex),
+                crate::declarative::frame::ElementInstance::RovingFlex(props) => self
+                    .clean_engine_geometry_flex_margin_supported(app, window, children, props.flex),
+                crate::declarative::frame::ElementInstance::Canvas(_)
+                | crate::declarative::frame::ElementInstance::Spacer(_) => children.is_empty(),
+                crate::declarative::frame::ElementInstance::Text(_)
+                | crate::declarative::frame::ElementInstance::StyledText(_)
+                | crate::declarative::frame::ElementInstance::SelectableText(_) => {
+                    children.is_empty()
+                        && self
+                            .clean_text_cached_metrics_supported(
+                                app,
+                                window,
+                                node,
+                                bounds,
+                                prev_bounds,
+                                &record.instance,
+                                record.instance.kind_name(),
+                                scale_factor,
+                            )
+                            .is_ok()
+                }
+                _ => false,
+            };
         supported.then_some(record.element)
+    }
+
+    fn clean_engine_geometry_flex_margin_supported(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        children: &[NodeId],
+        props: crate::element::FlexProps,
+    ) -> bool {
+        children.iter().copied().all(|child| {
+            let style = crate::declarative::frame::layout_style_for_node(app, window, child);
+            Self::clean_margin_edges_are_px(style.margin)
+                || (props.direction == fret_core::Axis::Vertical
+                    && Self::clean_vertical_flex_horizontal_auto_margin_centered(style.margin))
+        })
     }
 
     fn clean_engine_geometry_propagation_requires_manual_child_bounds(

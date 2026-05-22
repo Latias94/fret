@@ -18,7 +18,9 @@ use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::primitives::combobox as kit_combobox;
+use fret_ui_kit::typography;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, ShadowPreset,
     Size, Space, WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
@@ -70,6 +72,45 @@ impl From<ComboboxContent> for ComboboxChipsPart {
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn combobox_chips_text_refinement(style: &TextStyle) -> fret_core::TextStyleRefinement {
+    let mut refinement = typography::composable_refinement_from_style(style);
+    refinement.weight = Some(style.weight);
+    refinement
+}
+
+fn combobox_chips_placeholder_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    style: &TextStyle,
+    foreground: Color,
+) -> AnyElement {
+    decl_text::text_control_label(cx, label)
+        .inherit_text_style(combobox_chips_text_refinement(style))
+        .inherit_foreground(foreground)
+}
+
+fn combobox_chip_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    style: &TextStyle,
+    foreground: Color,
+) -> AnyElement {
+    decl_text::text_chip_label(cx, label)
+        .inherit_text_style(combobox_chips_text_refinement(style))
+        .inherit_foreground(foreground)
+}
+
+fn combobox_chip_label_style(control_style: &TextStyle) -> TextStyle {
+    let mut style = TextStyle {
+        font: FontId::default(),
+        size: Px(12.0),
+        weight: FontWeight::MEDIUM,
+        ..Default::default()
+    };
+    style.line_height = control_style.line_height;
+    style
 }
 
 fn combobox_value_label_map(
@@ -654,6 +695,7 @@ fn combobox_chips_with_patch<H: UiHost>(
 
 	                        (props, chrome_props, move |cx| {
 	                            let label_style = text_style.clone();
+	                            let chip_label_style = combobox_chip_label_style(&label_style);
 	                            let chip_prefix = test_id_prefix_for_trigger
 	                                .clone()
 	                                .unwrap_or_else(|| Arc::from("combobox"));
@@ -675,14 +717,12 @@ fn combobox_chips_with_patch<H: UiHost>(
                                 move |cx| {
                                     let mut out: Vec<AnyElement> = Vec::new();
                                     if selected_values_for_trigger.is_empty() {
-                                        out.push(
-                                            ui::label( placeholder_for_trigger.clone())
-                                                .text_size_px(label_style.size)
-                                                .font_weight(label_style.weight)
-                                                .text_color(ColorRef::Color(muted_fg))
-                                                .truncate()
-                                                .into_element(cx),
-                                        );
+                                        out.push(combobox_chips_placeholder_text(
+                                            cx,
+                                            placeholder_for_trigger.clone(),
+                                            &label_style,
+                                            muted_fg,
+                                        ));
                                         return out;
                                     }
 
@@ -706,6 +746,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                                             .get(value.as_ref())
                                             .cloned()
                                             .unwrap_or_else(|| value.clone());
+                                        let chip_label_style = chip_label_style.clone();
 
 	                                        let chip_props = ContainerProps {
 	                                            layout: LayoutStyle::default(),
@@ -735,14 +776,12 @@ fn combobox_chips_with_patch<H: UiHost>(
                                                     },
                                                     move |cx| {
                                                         let mut out = vec![
-                                                            ui::label( label.clone())
-                                                                .text_size_px(Px(12.0))
-                                                                .font_weight(FontWeight::MEDIUM)
-                                                                .text_color(ColorRef::Color(
-                                                                    chip_fg,
-                                                                ))
-                                                                .truncate()
-                                                                .into_element(cx),
+                                                            combobox_chip_label_text(
+                                                                cx,
+                                                                label.clone(),
+                                                                &chip_label_style,
+                                                                chip_fg,
+                                                            ),
                                                         ];
                                                         if chip_show_remove_for_trigger {
                                                             let values_for_remove =
@@ -1066,6 +1105,123 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect};
+    use fret_ui::element::ElementKind;
+
+    fn assert_combobox_chips_control_text(element: &AnyElement, expected_fg: Color) {
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected combobox chips control text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Fill);
+        assert_eq!(props.layout.flex.grow, 1.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert!(element.inherited_text_style.is_some());
+        assert_eq!(element.inherited_foreground, Some(expected_fg));
+    }
+
+    fn assert_combobox_chips_chip_text(element: &AnyElement, expected_fg: Color) {
+        let ElementKind::Text(props) = &element.kind else {
+            panic!("expected combobox chips chip text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Auto);
+        assert_eq!(props.layout.flex.grow, 0.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Auto);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        assert!(element.inherited_text_style.is_some());
+        assert_eq!(element.inherited_foreground, Some(expected_fg));
+    }
+
+    #[test]
+    fn combobox_chips_placeholder_and_chip_text_use_shared_resize_roles() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(120.0)),
+        );
+
+        let control_style = TextStyle {
+            font: FontId::ui(),
+            size: Px(14.0),
+            weight: FontWeight::NORMAL,
+            line_height: Some(Px(20.0)),
+            letter_spacing_em: Some(0.015),
+            line_height_policy: fret_core::TextLineHeightPolicy::FixedFromStyle,
+            vertical_placement: fret_core::TextVerticalPlacement::BoundsAsLineBox,
+            ..Default::default()
+        };
+        let placeholder_fg = Color {
+            r: 0.10,
+            g: 0.20,
+            b: 0.30,
+            a: 0.70,
+        };
+
+        let placeholder_text = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "combobox-chips-placeholder-text",
+            |cx| {
+                combobox_chips_placeholder_text(
+                    cx,
+                    Arc::from("Select frameworks"),
+                    &control_style,
+                    placeholder_fg,
+                )
+            },
+        );
+        assert_combobox_chips_control_text(&placeholder_text, placeholder_fg);
+
+        let chip_style = combobox_chip_label_style(&control_style);
+        let chip_fg = Color {
+            r: 0.40,
+            g: 0.30,
+            b: 0.20,
+            a: 1.0,
+        };
+        let chip_text = fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "combobox-chip-label-text",
+            |cx| {
+                combobox_chip_label_text(
+                    cx,
+                    Arc::from("Very long selected framework chip"),
+                    &chip_style,
+                    chip_fg,
+                )
+            },
+        );
+        assert_combobox_chips_chip_text(&chip_text, chip_fg);
+        assert_eq!(
+            chip_text
+                .inherited_text_style
+                .as_ref()
+                .and_then(|style| style.size),
+            Some(Px(12.0))
+        );
+        assert_eq!(
+            chip_text
+                .inherited_text_style
+                .as_ref()
+                .and_then(|style| style.weight),
+            Some(FontWeight::MEDIUM)
+        );
+    }
 
     #[test]
     fn combobox_chips_parts_patch_maps_search_placeholder_and_chip_remove() {

@@ -58,6 +58,26 @@ impl<H: UiHost> UiTree<H> {
         self.sync_view_boundary_state_for_node(node);
     }
 
+    pub(crate) fn set_node_inherited_text_style_fingerprint(
+        &mut self,
+        node: NodeId,
+        fingerprint: Option<u64>,
+    ) {
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.inherited_text_style_fingerprint = fingerprint;
+        }
+    }
+
+    pub(crate) fn set_node_paint_passthrough(
+        &mut self,
+        node: NodeId,
+        passthrough: Option<NodePaintPassthrough>,
+    ) {
+        if let Some(n) = self.nodes.get_mut(node) {
+            n.paint_passthrough = passthrough;
+        }
+    }
+
     pub(crate) fn node_element(&self, node: NodeId) -> Option<GlobalElementId> {
         self.nodes.get(node).and_then(|n| n.element)
     }
@@ -77,6 +97,22 @@ impl<H: UiHost> UiTree<H> {
         self.nodes.get(node).and_then(|n| {
             n.text_wrap_none_measure_cache
                 .map(|cache| (cache.fingerprint, cache.size))
+        })
+    }
+
+    pub(crate) fn node_text_wrapped_measure_cache(
+        &self,
+        node: NodeId,
+    ) -> Option<(u64, Option<Px>, Size, Size)> {
+        self.nodes.get(node).and_then(|n| {
+            n.text_wrapped_measure_cache.map(|cache| {
+                (
+                    cache.fingerprint,
+                    cache.constraints_max_width,
+                    cache.measured_size,
+                    cache.clamped_size,
+                )
+            })
         })
     }
 }

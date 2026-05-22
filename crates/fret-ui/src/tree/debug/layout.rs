@@ -70,6 +70,7 @@ pub struct UiDebugLayoutEngineSolve {
 #[derive(Debug, Clone)]
 pub struct UiDebugCleanGeometrySolveSkipRejection {
     pub reason: &'static str,
+    pub detail: Option<&'static str>,
     pub node: Option<NodeId>,
     pub element: Option<GlobalElementId>,
     pub element_kind: Option<&'static str>,

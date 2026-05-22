@@ -520,18 +520,30 @@ fn ensure_session_selection_is_valid(app: &mut App, st: &mut State) {
         .read(&st.sessions, |v| v.clone())
         .unwrap_or_default();
 
-    if let Some(selected) = selected.as_deref() {
-        if sessions.iter().any(|s| s.session_id == selected) {
-            return;
-        }
-    }
-
-    let new_selected = sessions
-        .first()
-        .map(|s| Arc::<str>::from(s.session_id.clone()));
+    let new_selected = selected_session_after_session_list_refresh(
+        selected.as_deref(),
+        sessions.iter().map(|s| s.session_id.as_str()),
+    )
+    .map(Arc::<str>::from);
     let _ = app
         .models_mut()
         .update(&st.selected_session_id, |v| *v = new_selected);
+}
+
+fn selected_session_after_session_list_refresh<'a>(
+    selected: Option<&str>,
+    sessions: impl IntoIterator<Item = &'a str>,
+) -> Option<String> {
+    let mut first = None::<String>;
+    for session in sessions {
+        if first.is_none() {
+            first = Some(session.to_string());
+        }
+        if selected.is_some_and(|selected| selected == session) {
+            return selected.map(str::to_string);
+        }
+    }
+    first
 }
 
 fn message_matches_selected_session(
@@ -544,10 +556,14 @@ fn message_matches_selected_session(
         .read(&st.selected_session_id, |v| v.clone())
         .ok()
         .flatten();
-    let Some(selected) = selected else {
-        return true;
-    };
-    msg.session_id.as_deref() == Some(selected.as_ref())
+    message_session_matches_selected(selected.as_deref(), msg.session_id.as_deref())
+}
+
+fn message_session_matches_selected(selected: Option<&str>, message_session: Option<&str>) -> bool {
+    match selected {
+        Some(selected) => message_session == Some(selected),
+        None => true,
+    }
 }
 
 fn maybe_start_pack_after_run(app: &mut App, st: &mut State) {
@@ -665,6 +681,43 @@ fn option_u64_text(value: Option<u64>) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn selected_session_refresh_keeps_valid_selection_or_falls_back_to_first_session() {
+        let sessions = ["session-a", "session-b"];
+
+        assert_eq!(
+            selected_session_after_session_list_refresh(Some("session-b"), sessions),
+            Some("session-b".to_string())
+        );
+        assert_eq!(
+            selected_session_after_session_list_refresh(Some("stale-session"), sessions),
+            Some("session-a".to_string())
+        );
+        assert_eq!(
+            selected_session_after_session_list_refresh(None, sessions),
+            Some("session-a".to_string())
+        );
+        assert_eq!(
+            selected_session_after_session_list_refresh(Some("stale-session"), []),
+            None
+        );
+    }
+
+    #[test]
+    fn message_session_matching_uses_selected_session_when_present() {
+        assert!(message_session_matches_selected(None, None));
+        assert!(message_session_matches_selected(None, Some("session-b")));
+        assert!(message_session_matches_selected(
+            Some("session-b"),
+            Some("session-b")
+        ));
+        assert!(!message_session_matches_selected(
+            Some("session-b"),
+            Some("session-a")
+        ));
+        assert!(!message_session_matches_selected(Some("session-b"), None));
+    }
 
     #[test]
     fn live_semantics_request_decision_throttles_unchanged_selection_to_one_hz() {

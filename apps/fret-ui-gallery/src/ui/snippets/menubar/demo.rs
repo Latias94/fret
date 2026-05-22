@@ -8,6 +8,8 @@ use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
+const CMD_MENU_MENUBAR_NEW_INCOGNITO: &str = "ui_gallery.menu.menubar.new_incognito";
+
 #[derive(Default, Clone)]
 struct MenubarDemoState {
     view_bookmarks_bar: bool,
@@ -42,6 +44,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         .trailing(shadcn::MenubarShortcut::new("⌘N").into_element(cx))
                         .into(),
                     shadcn::MenubarItem::new("New Incognito Window")
+                        .action(CommandId::new(CMD_MENU_MENUBAR_NEW_INCOGNITO))
                         .disabled(true)
                         .test_id("ui-gallery-menubar-demo-new-incognito-window")
                         .into(),

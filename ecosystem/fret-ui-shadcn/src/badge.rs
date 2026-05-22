@@ -12,7 +12,7 @@ use fret_ui::ThemeNamedColorKey;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ElementKind, LayoutStyle, Length, PressableA11y, PressableKeyActivation,
-    PressableProps, SpinnerProps, SvgIconProps,
+    PressableProps, SemanticsDecoration, SpinnerProps, SvgIconProps,
 };
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
@@ -23,6 +23,8 @@ use fret_ui_kit::declarative::motion::{
     drive_tween_color_for_element, drive_tween_f32_for_element,
 };
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
+use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, IntoUiElement, LayoutRefinement, Radius, Space, ui};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -343,6 +345,20 @@ fn bg_for(theme: &ThemeSnapshot, variant: BadgeVariant) -> Option<Color> {
     }
 }
 
+fn badge_label_text<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    text_style: fret_core::TextStyle,
+    foreground: Color,
+) -> AnyElement {
+    let mut refinement = typography::composable_refinement_from_style(&text_style);
+    refinement.weight = Some(text_style.weight);
+
+    decl_text::text_chip_label(cx, label)
+        .inherit_text_style(refinement)
+        .inherit_foreground(foreground)
+}
+
 fn with_alpha(mut color: Color, alpha: f32) -> Color {
     color.a = alpha.clamp(0.0, 1.0);
     color
@@ -450,14 +466,39 @@ fn underline_rich_text(rich: AttributedText) -> AttributedText {
     AttributedText::new(rich.text, Arc::from(spans.into_boxed_slice()))
 }
 
-fn apply_badge_hover_underline(mut element: AnyElement) -> AnyElement {
-    element.children = element
-        .children
+fn with_badge_transparent_metadata(
+    mut element: AnyElement,
+    inherited_foreground: Option<Color>,
+    inherited_text_style: Option<fret_core::TextStyleRefinement>,
+    semantics_decoration: Option<SemanticsDecoration>,
+    key_context: Option<Arc<str>>,
+    component_slot: Option<Arc<str>>,
+) -> AnyElement {
+    element.inherited_foreground = inherited_foreground;
+    element.inherited_text_style = inherited_text_style;
+    element.semantics_decoration = semantics_decoration;
+    element.key_context = key_context;
+    element.component_slot = component_slot;
+    element
+}
+
+fn apply_badge_hover_underline(element: AnyElement) -> AnyElement {
+    let AnyElement {
+        id,
+        kind,
+        children,
+        inherited_foreground,
+        inherited_text_style,
+        semantics_decoration,
+        key_context,
+        component_slot,
+    } = element;
+    let children = children
         .into_iter()
         .map(apply_badge_hover_underline)
         .collect();
 
-    match element.kind {
+    match kind {
         ElementKind::Text(props) => {
             let text = props.text.clone();
             let mut span = TextSpan::new(text.as_ref().len());
@@ -478,25 +519,45 @@ fn apply_badge_hover_underline(mut element: AnyElement) -> AnyElement {
             styled.overflow = props.overflow;
             styled.align = props.align;
             styled.ink_overflow = props.ink_overflow;
-            AnyElement::new(
-                element.id,
-                ElementKind::StyledText(styled),
-                element.children,
+            with_badge_transparent_metadata(
+                AnyElement::new(id, ElementKind::StyledText(styled), children),
+                inherited_foreground,
+                inherited_text_style,
+                semantics_decoration,
+                key_context,
+                component_slot,
             )
         }
         ElementKind::StyledText(mut props) => {
             props.rich = underline_rich_text(props.rich);
-            AnyElement::new(element.id, ElementKind::StyledText(props), element.children)
+            with_badge_transparent_metadata(
+                AnyElement::new(id, ElementKind::StyledText(props), children),
+                inherited_foreground,
+                inherited_text_style,
+                semantics_decoration,
+                key_context,
+                component_slot,
+            )
         }
         ElementKind::SelectableText(mut props) => {
             props.rich = underline_rich_text(props.rich);
-            AnyElement::new(
-                element.id,
-                ElementKind::SelectableText(props),
-                element.children,
+            with_badge_transparent_metadata(
+                AnyElement::new(id, ElementKind::SelectableText(props), children),
+                inherited_foreground,
+                inherited_text_style,
+                semantics_decoration,
+                key_context,
+                component_slot,
             )
         }
-        kind => AnyElement::new(element.id, kind, element.children),
+        kind => with_badge_transparent_metadata(
+            AnyElement::new(id, kind, children),
+            inherited_foreground,
+            inherited_text_style,
+            semantics_decoration,
+            key_context,
+            component_slot,
+        ),
     }
 }
 
@@ -595,25 +656,21 @@ fn badge_with_patch<H: UiHost>(
                                        resolved_fg: Color,
                                        hover_underline: bool| {
         current_color::scope_children(cx, resolved_fg_ref.clone(), |cx| {
-            let mut label = ui::text(label_for_content.clone())
-                .text_size_px(text_px)
-                .fixed_line_box_px(line_height)
-                .line_box_in_bounds()
-                .font_weight(label_weight_override.unwrap_or(FontWeight::MEDIUM))
-                .nowrap()
-                .text_color(resolved_fg_ref.clone());
-
+            let mut label_text_style =
+                typography::fixed_line_box_style(FontId::ui(), text_px, line_height);
+            label_text_style.weight = label_weight_override.unwrap_or(FontWeight::MEDIUM);
             if let Some(font) = label_font_override {
-                label = label.font(font);
+                label_text_style.font = font;
             }
-            for feature in &label_features_override {
-                label = label.font_feature(feature.tag.to_string(), feature.value);
-            }
-            for axis in &label_axes_override {
-                label = label.font_axis(axis.tag.to_string(), axis.value);
-            }
+            label_text_style
+                .features
+                .extend(label_features_override.iter().cloned());
+            label_text_style
+                .axes
+                .extend(label_axes_override.iter().cloned());
 
-            let mut label = label.into_element(cx);
+            let mut label =
+                badge_label_text(cx, label_for_content.clone(), label_text_style, resolved_fg);
             if hover_underline {
                 label = apply_badge_hover_underline(label);
             }
@@ -930,11 +987,19 @@ mod tests {
                 "expected badge currentColor scope to resolve to variant fg"
             );
 
+            let label =
+                find_text_element(&el, "Verified").expect("expected badge label text element");
+            let ElementKind::Text(label_props) = &label.kind else {
+                panic!("expected badge label text leaf");
+            };
             assert!(
-                texts
-                    .iter()
-                    .any(|(t, c)| t.as_ref() == "Verified" && *c == Some(expected_fg)),
-                "expected badge label to resolve to variant fg"
+                label_props.color.is_none(),
+                "expected shared Badge label role to inherit foreground, not stamp leaf color"
+            );
+            assert_eq!(
+                find_inherited_foreground(label),
+                Some(expected_fg),
+                "expected badge label role to inherit variant fg"
             );
             assert!(
                 icons.len() >= 2 && icons.iter().all(|(_, inherit)| *inherit),
@@ -968,8 +1033,31 @@ mod tests {
             .find_map(|child| find_text_element(child, needle))
     }
 
+    fn assert_shared_badge_label_leaf(
+        el: &AnyElement,
+        label: &str,
+    ) -> fret_core::TextStyleRefinement {
+        let text = find_text_element(el, label).expect("expected badge label text");
+        let ElementKind::Text(props) = &text.kind else {
+            panic!("expected text leaf");
+        };
+
+        assert!(props.style.is_none());
+        assert!(props.color.is_none());
+        assert_eq!(props.layout.size.width, Length::Auto);
+        assert_eq!(props.layout.flex.grow, 0.0);
+        assert_eq!(props.layout.flex.shrink, 1.0);
+        assert_eq!(props.layout.flex.basis, Length::Auto);
+        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+        assert_eq!(props.wrap, fret_core::TextWrap::None);
+        assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+        text.inherited_text_style
+            .clone()
+            .expect("expected badge label to inherit shared chip text role")
+    }
+
     #[test]
-    fn badge_defaults_to_font_medium_and_shrink_0() {
+    fn badge_default_label_uses_shared_chip_label_role() {
         let window = AppWindowId::default();
         let mut app = App::new();
 
@@ -989,12 +1077,105 @@ mod tests {
                 "expected shadcn Badge to default to overflow-hidden (clip)"
             );
 
-            let label = find_text(&el, "Draft").expect("badge label text element");
-            let style = label.style.as_ref().expect("badge label has a text style");
+            let inherited = assert_shared_badge_label_leaf(&el, "Draft");
             assert_eq!(
-                style.weight,
-                FontWeight::MEDIUM,
+                inherited.weight,
+                Some(FontWeight::MEDIUM),
                 "expected shadcn Badge label to use font-medium"
+            );
+            assert!(inherited.size.is_some());
+            assert!(inherited.line_height.is_some());
+            assert!(
+                find_inherited_foreground(&el).is_some(),
+                "expected Badge foreground to remain inherited through the default label"
+            );
+        });
+    }
+
+    #[test]
+    fn badge_default_label_keeps_font_and_feature_overrides_on_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let el = Badge::new("128")
+                .label_font_monospace()
+                .label_tabular_nums()
+                .into_element(cx);
+
+            let inherited = assert_shared_badge_label_leaf(&el, "128");
+            assert_eq!(inherited.font, Some(FontId::monospace()));
+            assert!(
+                inherited
+                    .features
+                    .iter()
+                    .any(|feature| feature.tag.as_str() == "tnum" && feature.value == 1),
+                "expected Badge label font features to stay on inherited role style"
+            );
+        });
+    }
+
+    #[test]
+    fn badge_default_label_keeps_weight_override_on_role() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let el = Badge::new("Plain")
+                .label_weight(FontWeight::NORMAL)
+                .into_element(cx);
+
+            let inherited = assert_shared_badge_label_leaf(&el, "Plain");
+            assert_eq!(
+                inherited.weight,
+                Some(FontWeight::NORMAL),
+                "expected Badge label weight override to stay on inherited role style"
+            );
+        });
+    }
+
+    #[test]
+    fn badge_hover_underline_preserves_default_label_role_metadata() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let theme = Theme::global(&*cx.app).snapshot();
+            let fg = fg_for(&theme, BadgeVariant::Link);
+            let mut text_style = typography::fixed_line_box_style(FontId::ui(), Px(12.0), Px(16.0));
+            text_style.weight = FontWeight::MEDIUM;
+
+            let text = badge_label_text(cx, Arc::from("Docs"), text_style, fg);
+            let underlined = apply_badge_hover_underline(text);
+            let ElementKind::StyledText(props) = &underlined.kind else {
+                panic!("expected hover underline to convert Text to StyledText");
+            };
+
+            assert!(props.style.is_none());
+            assert!(props.color.is_none());
+            assert_eq!(props.layout.size.width, Length::Auto);
+            assert_eq!(props.layout.flex.grow, 0.0);
+            assert_eq!(props.layout.flex.shrink, 1.0);
+            assert_eq!(props.layout.flex.basis, Length::Auto);
+            assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+            assert_eq!(props.wrap, fret_core::TextWrap::None);
+            assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
+            assert!(
+                props
+                    .rich
+                    .spans
+                    .iter()
+                    .all(|span| span.paint.underline.is_some()),
+                "expected hover underline to mark every rich-text span"
+            );
+            assert!(
+                underlined.inherited_text_style.is_some(),
+                "expected hover underline conversion to preserve shared label role style"
+            );
+            assert_eq!(
+                underlined.inherited_foreground,
+                Some(fg),
+                "expected hover underline conversion to preserve inherited foreground"
             );
         });
     }

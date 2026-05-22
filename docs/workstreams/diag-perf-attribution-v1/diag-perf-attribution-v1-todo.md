@@ -108,12 +108,19 @@
   - GUI-launched trace follow-up result records now include the generated
     `trace.chrome.json` under `output_artifacts`, and the selected-result summary/details render the
     artifact path for immediate reuse.
+  - Successful GUI-launched trace follow-up records now also project additive `trace_report`
+    metadata from the generated trace artifact (`trace_source`, real-span counts/keys, and
+    `trace_event_count`), so attribution quality is visible in the selected-result summary/details
+    without opening the full Chrome trace payload.
+  - The DevTools selected-result actions now let maintainers copy or open the generated
+    `trace.chrome.json` artifact directly; relative trace paths are resolved against the repo root
+    before reaching the clipboard or platform URL handler.
   - MCP dashboard results now include structured follow-up command rows with `diag_args`, mirroring
     the GUI runnable/manual split without forcing AI clients to parse command-line strings.
   - Gate:
     `cargo nextest run -p fret-diag regression_summary_drilldown_projects_perf_evidence regression_bundle_followup_command_lines_use_selected_bundle_dir regression_bundle_followup_commands_classify_runnable_and_baseline_required regression_bundle_followup_commands_cover_each_selected_bundle perf_row_to_regression_item_uses_single_run_bundle_artifact perf_row_to_regression_item_marks_threshold_failures --no-fail-fast`
   - GUI bridge gate:
-    `cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_output_artifacts load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast`
+    `cargo nextest run -p fret-devtools runnable_followup_command_action_lines_surface_indexed_bundle_commands regression_followup_trace_result_record_projects_output_artifact regression_followup_result_summary_lines_project_output_artifacts regression_followup_trace_artifact_path_prefers_trace_report regression_followup_trace_artifact_path_falls_back_to_output_artifacts file_url_from_path_projects_trace_artifact_paths regression_followup_result_history_entry_detail_lines_surface_repro_fields load_regression_summary_drilldown_collects_perf_evidence --no-fail-fast`
   - MCP bridge gate:
     `cargo nextest run -p fret-devtools-mcp build_regression_dashboard_result_limits_top_rows_and_builds_human_summary --no-fail-fast`
 - [x] Add a “field inventory” doc section (keys + meaning + where measured):
