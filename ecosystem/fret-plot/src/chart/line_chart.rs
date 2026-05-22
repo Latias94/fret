@@ -2,7 +2,9 @@ use fret_runtime::Model;
 use fret_runtime::ModelHost;
 
 use crate::cartesian::{DataPoint, DataRect};
-use crate::retained::{LinePlotCanvas, LinePlotModel, LineSeries};
+use crate::models::{LinePlotModel, LineSeries};
+#[cfg(feature = "compat-retained-canvas")]
+use crate::retained::LinePlotCanvas;
 use crate::series::Series;
 
 type Accessor<T> = Box<dyn Fn(&T) -> Option<f64> + 'static>;
@@ -110,6 +112,7 @@ impl<T> LineChart<T> {
         host.models_mut().insert(self.build_model())
     }
 
+    #[cfg(feature = "compat-retained-canvas")]
     pub fn into_canvas(self, host: &mut impl ModelHost) -> LinePlotCanvas {
         let model = self.install(host);
         LinePlotCanvas::new(model)

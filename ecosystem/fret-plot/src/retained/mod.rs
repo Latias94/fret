@@ -5,12 +5,9 @@
 mod canvas;
 mod layers;
 mod layout;
-mod models;
-mod state;
-mod style;
 
+pub use crate::models::*;
+pub use crate::state::*;
+pub use crate::style::*;
 pub use canvas::*;
 pub use layers::*;
-pub use models::*;
-pub use state::*;
-pub use style::*;

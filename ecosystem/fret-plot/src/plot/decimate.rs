@@ -1,3 +1,5 @@
+#![cfg_attr(test, allow(dead_code))]
+
 use fret_core::PathCommand;
 use fret_core::geometry::{Point, Px};
 

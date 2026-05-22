@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "compat-retained-canvas"), allow(dead_code))]
+
 #[derive(Debug, Clone)]
 pub(crate) struct HistogramBins {
     pub(crate) x_min: f64,

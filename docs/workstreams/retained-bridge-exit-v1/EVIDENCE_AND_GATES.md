@@ -12686,3 +12686,79 @@ Broader gates not run:
     The direct shared-policy tests, retained slider oracle test, source-policy test, full
     `fret-chart` package gate, formatting, layering, catalog, and whitespace checks cover the
     changed surface.
+
+## 2026-05-22 - RBX-M3-200 Default declarative `fret-plot` line plot baseline and retained bridge isolation
+
+Claim verified:
+
+- Default `fret-plot` no longer enables `fret-ui/unstable-retained-bridge`.
+- Shared plot data/state/style contracts live on the default `fret_plot::{models,state,style}`
+  surface instead of requiring `fret_plot::retained`.
+- A default declarative `line_plot_panel(...)` renders seeded line-series data through
+  `fret_ui::ElementContext::canvas(...)` without constructing retained `PlotCanvas`.
+- Retained plot canvases remain available only behind the explicit `compat-retained-canvas` feature
+  as the migration oracle for remaining retained plot demos and interactions.
+
+Evidence:
+
+- `ecosystem/fret-plot/Cargo.toml`
+- `ecosystem/fret-plot/src/declarative.rs`
+- `ecosystem/fret-plot/src/lib.rs`
+- `ecosystem/fret-plot/src/models.rs`
+- `ecosystem/fret-plot/src/state.rs`
+- `ecosystem/fret-plot/src/style.rs`
+- `ecosystem/fret-plot/src/retained/mod.rs`
+- `apps/fret-examples/Cargo.toml`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo check -p fret-plot`
+  - Result: passed, with the pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+  - Scope proven: default `fret-plot` compiles without enabling retained bridge features and with
+    no new `fret-plot` warnings.
+- `cargo nextest run -p fret-plot line_plot_panel_paints_seeded_line_on_declarative_path`
+  - Result: passed, 1 test, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: default declarative line plot panel can render/layout/paint seeded line data and
+    emits a canvas path without retained `PlotCanvas`.
+- `cargo nextest run -p fret-plot`
+  - Result: passed, 23 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: default `fret-plot` model, linking, input-map, cartesian, decimation, axis, and
+    public-surface policy tests remain green after moving shared contracts out of retained.
+- `cargo check -p fret-plot --features compat-retained-canvas`
+  - Result: passed, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: retained plot canvases still compile as an explicit compatibility oracle.
+- `cargo check -p fret-examples`
+  - Result: passed.
+  - Scope proven: first-party examples that still consume `fret_plot::retained::*` continue to
+    compile through the explicit `fret-plot/compat-retained-canvas` opt-in instead of relying on
+    default retained bridge access.
+- `cargo metadata --no-deps --format-version 1 | python3 -c '...'`
+  - Result: printed an empty feature list for `fret-plot`'s `fret-ui` dependency.
+  - Scope proven: default `fret-plot` depends on `fret-ui` without `unstable-retained-bridge`.
+- `rg -n "unstable-retained-bridge|compat-retained-canvas|pub mod retained|LinePlotPanelProps|line_plot_panel" ecosystem/fret-plot/Cargo.toml ecosystem/fret-plot/src -g '*.rs' -g 'Cargo.toml'`
+  - Result: retained bridge usage appears only in the `compat-retained-canvas` feature definition,
+    retained module/compat gates, and source-policy tests; declarative line-plot API markers are
+    present.
+  - Scope proven: retained bridge access is explicitly gated and the default declarative entry
+    point exists.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after the module moves and declarative panel addition.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering remains valid after narrowing `fret-plot` retained bridge access.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 429 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-200` is a targeted `fret-plot` default-surface and declarative-baseline slice.
+    The default/compat `fret-plot` checks, full `fret-plot` package tests, metadata dependency
+    proof, formatting, layering, catalog, and whitespace checks cover the changed surface.

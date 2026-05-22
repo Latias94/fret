@@ -350,10 +350,24 @@ drag-update projection, and window-span anchor choice. Retained `ChartCanvas` st
 event routing, capture/invalidation/redraw, and engine action I/O, but it now consumes the shared
 slider decisions. Shared tests cover x/y handle, pan, jump, lock, and drag-update behavior; the
 full `fret-chart` package gate now passes with 67 tests.
+`RBX-M3-200` then opened the `fret-plot` migration lane by moving shared plot data/state/style
+contracts to default `fret_plot::{models,state,style}`, gating retained plot canvases and
+`LineChart::into_canvas(...)` behind explicit `compat-retained-canvas`, and adding a default
+declarative `line_plot_panel(...)` that paints seeded line-series data through
+`ElementContext::canvas(...)` without constructing retained `PlotCanvas`. Default `fret-plot` now
+depends on `fret-ui` without dependency features, while the retained plot oracle still compiles
+under `compat-retained-canvas`. `apps/fret-examples` now opts into that compatibility feature
+explicitly for the old retained plot demos, keeping them as migration oracles while the crate
+default stays declarative-first. The full default `fret-plot` package gate now passes with 23
+tests.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining
 public/demo/gallery/cookbook consumers that still rely on retained `ChartCanvas` behavior.
+Remaining M3 plot work still needs declarative parity for axes, legends, tooltips/readouts,
+pan/zoom/box/query, overlays, heatmap/histogram/bar/scatter/area/stairs/shaded/candlestick layers,
+and first-party examples before deleting retained plot source or the `compat-retained-canvas`
+feature.
 
 ## Completed Implementation
 

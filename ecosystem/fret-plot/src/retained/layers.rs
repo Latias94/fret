@@ -23,10 +23,9 @@ use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
 use super::canvas::PlotCanvas;
-use super::models::*;
-use super::style::*;
 
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform};
+use crate::models::*;
 use crate::plot::colormap::ColorMapLut;
 use crate::plot::decimate::{
     SamplePoint, decimate_points, decimate_polyline, decimate_samples, decimate_shaded_band,
@@ -35,6 +34,7 @@ use crate::plot::decimate::{
 use crate::plot::histogram::histogram_bins;
 use crate::plot::view::data_rect_key_scaled;
 use crate::series::{SeriesData, SeriesId};
+use crate::style::*;
 
 fn report_layer_path_cache_stats<H: UiHost>(
     cx: &mut PaintCx<'_, H>,

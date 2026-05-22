@@ -5256,6 +5256,53 @@ Related plan:
       extended the source-policy guard so those pure interaction decisions cannot move back into
       retained canvas.
     - The full `fret-chart` package gate now passes with 67 tests.
+- [x] RBX-M3-200 Establish default declarative `fret-plot` line plot baseline and isolate retained plot bridge.
+  - Scope:
+    - `ecosystem/fret-plot/Cargo.toml`
+    - `ecosystem/fret-plot/src/declarative.rs`
+    - `ecosystem/fret-plot/src/{models,state,style}.rs`
+    - `ecosystem/fret-plot/src/retained/`
+    - `ecosystem/fret-plot/src/lib.rs`
+  - Goal:
+    - Stop enabling `fret-ui/unstable-retained-bridge` from the default `fret-plot` dependency.
+    - Move shared plot data/state/style contracts out of the retained namespace so declarative
+      authoring has a default-gated contract surface.
+    - Add a default declarative `line_plot_panel(...)` baseline that paints real line-series data
+      through `fret_ui::ElementContext::canvas(...)` without constructing retained `PlotCanvas`.
+    - Keep retained plot canvases available only behind explicit `compat-retained-canvas` as the
+      migration oracle for remaining plot demos and interactions.
+  - Validation:
+    - `cargo check -p fret-plot`
+    - `cargo nextest run -p fret-plot line_plot_panel_paints_seeded_line_on_declarative_path`
+    - `cargo nextest run -p fret-plot`
+    - `cargo check -p fret-plot --features compat-retained-canvas`
+    - `cargo check -p fret-examples`
+    - `cargo metadata --no-deps --format-version 1 | ... fret-plot fret-ui dependency features`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-plot/Cargo.toml`
+    - `ecosystem/fret-plot/src/declarative.rs`
+    - `ecosystem/fret-plot/src/lib.rs`
+    - `ecosystem/fret-plot/src/models.rs`
+    - `ecosystem/fret-plot/src/state.rs`
+    - `ecosystem/fret-plot/src/style.rs`
+    - `apps/fret-examples/Cargo.toml`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-200-default-declarative-fret-plot-line-plot-baseline-and-retained-bridge-isolation`
+  - Result:
+    - Default `fret-plot` now depends on `fret-ui` without dependency features; the retained bridge
+      is reachable only through the explicit `compat-retained-canvas` feature.
+    - `fret_plot::{models,state,style}` expose the shared plot contracts on the default surface,
+      while `fret_plot::retained` and `LineChart::into_canvas(...)` are compat-gated.
+    - Added `LinePlotPanelProps` and `line_plot_panel(...)` plus a real render/layout/paint test
+      that proves seeded line data emits a declarative canvas path without retained `PlotCanvas`.
+    - `apps/fret-examples` now opts into `fret-plot/compat-retained-canvas` explicitly so retained
+      plot demos remain compile-checked migration oracles without reopening the `fret-plot`
+      default dependency feature.
+    - The default `fret-plot` package gate passes with 23 tests, and the compat retained oracle
+      still compiles under `compat-retained-canvas`.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

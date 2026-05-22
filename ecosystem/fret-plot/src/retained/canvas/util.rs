@@ -3,7 +3,7 @@
 use fret_core::geometry::{Point, Px, Rect, Size};
 use fret_core::scene::Color;
 
-use super::super::style::OverlayAnchor;
+use crate::style::OverlayAnchor;
 
 pub(in crate::retained) fn contains_point(rect: Rect, p: Point) -> bool {
     p.x.0 >= rect.origin.x.0

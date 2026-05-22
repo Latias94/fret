@@ -6,7 +6,7 @@ use fret_core::ImageId;
 use fret_core::geometry::{Point, Px};
 use fret_core::scene::{Color, UvRect};
 
-use super::models::YAxis;
+use crate::models::YAxis;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlotHoverOutput {

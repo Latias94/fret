@@ -13,12 +13,13 @@ documentation.workspace = true
 default = []
 
 ui = []
+compat-retained-canvas = ["fret-ui/unstable-retained-bridge"]
 
 [dependencies]
 fret-canvas = { path = "../fret-canvas" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
-fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
+fret-ui = { path = "../../crates/fret-ui" }
 slotmap.workspace = true
 fret-ui-kit = { path = "../fret-ui-kit" }
 

@@ -31,19 +31,18 @@ use slotmap::Key;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
 
-use super::YAxis;
 use super::layers::resolve_series_color;
 use super::layers::{
     PlotCursorReadoutArgs, PlotCursorReadoutRow, PlotHitTestArgs, PlotHover, PlotLayer,
     PlotPaintArgs, PlotQuad, PlotQuadsSceneCachePolicy, SeriesMeta,
 };
 use super::layout::{PlotLayout, PlotRegion};
-use super::state::{
+use crate::models::{AreaPlotModel, LinePlotModel, YAxis};
+use crate::state::{
     PlotAxisLock, PlotAxisLocks, PlotDragOutput, PlotDragPhase, PlotHoverOutput, PlotImage,
     PlotImageLayer, PlotOutput, PlotOutputSnapshot, PlotState,
 };
-use super::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
-use super::{AreaPlotModel, LinePlotModel};
+use crate::style::{LinePlotStyle, MouseReadoutMode, SeriesTooltipMode};
 
 use crate::cartesian::{AxisScale, DataPoint, DataRect, PlotTransform, PreparedPlotTransform};
 use crate::input_map::{ModifierKey, ModifiersMask, PlotInputMap};

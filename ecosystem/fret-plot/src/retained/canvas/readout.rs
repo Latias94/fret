@@ -1,8 +1,8 @@
 //! Cursor/readout helpers.
 
 use super::super::layers::PlotCursorReadoutRow;
-use super::super::style::ReadoutSeriesPolicy;
 use crate::series::SeriesId;
+use crate::style::ReadoutSeriesPolicy;
 
 pub(super) fn apply_readout_policy(
     rows: &mut Vec<PlotCursorReadoutRow>,

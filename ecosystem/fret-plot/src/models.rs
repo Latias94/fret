@@ -894,6 +894,7 @@ pub struct CandlestickSeries {
     pub id: SeriesId,
     pub label: Arc<str>,
     pub points: Arc<[OhlcPoint]>,
+    #[cfg_attr(not(feature = "compat-retained-canvas"), allow(dead_code))]
     pub(crate) close_series: Series,
     pub y_axis: YAxis,
     /// Candle body width in data-space units (X axis).
