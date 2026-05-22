@@ -267,6 +267,14 @@ pub struct UiDebugFrameStats {
     pub layout_engine_solve_time: Duration,
     /// Count of clean-geometry root-solve skip attempts rejected during the current frame.
     pub layout_clean_geometry_solve_skip_rejections: u32,
+    /// Number of nodes visited while proving clean-geometry root-solve skips.
+    pub layout_clean_geometry_proof_nodes: u64,
+    /// Number of side-effect boundary nodes accepted while proving clean-geometry root-solve skips.
+    pub layout_clean_geometry_proof_boundaries: u64,
+    /// Number of nodes updated by clean-geometry layout propagation.
+    pub layout_clean_geometry_apply_nodes: u64,
+    /// Number of child layouts run because clean-geometry propagation stopped at that child.
+    pub layout_clean_geometry_apply_fallback_layouts: u64,
     /// First rejection reason observed for a clean-geometry root-solve skip attempt this frame.
     pub layout_clean_geometry_solve_skip_first_rejection: Option<&'static str>,
     /// First rejection detail observed for a clean-geometry root-solve skip attempt this frame.

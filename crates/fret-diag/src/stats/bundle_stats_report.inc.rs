@@ -46,6 +46,10 @@ pub(super) struct BundleStatsReport {
     sum_layout_request_build_roots_phase1_time_us: u64,
     sum_layout_request_build_roots_phase2_time_us: u64,
     sum_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    sum_layout_clean_geometry_proof_nodes: u64,
+    sum_layout_clean_geometry_proof_boundaries: u64,
+    sum_layout_clean_geometry_apply_nodes: u64,
+    sum_layout_clean_geometry_apply_fallback_layouts: u64,
     sum_layout_request_build_roots_phase2_compute_time_us: u64,
     sum_layout_request_build_roots_put_engine_time_us: u64,
     sum_layout_roots_time_us: u64,
@@ -80,6 +84,10 @@ pub(super) struct BundleStatsReport {
     max_layout_request_build_roots_phase1_time_us: u64,
     max_layout_request_build_roots_phase2_time_us: u64,
     max_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    max_layout_clean_geometry_proof_nodes: u64,
+    max_layout_clean_geometry_proof_boundaries: u64,
+    max_layout_clean_geometry_apply_nodes: u64,
+    max_layout_clean_geometry_apply_fallback_layouts: u64,
     max_layout_request_build_roots_phase2_compute_time_us: u64,
     max_layout_request_build_roots_put_engine_time_us: u64,
     max_layout_roots_time_us: u64,
@@ -155,6 +163,14 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_layout_request_build_roots_phase2_time_us: u64,
     pub(super) p50_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
     pub(super) p95_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_nodes: u64,
+    pub(super) p95_layout_clean_geometry_proof_nodes: u64,
+    pub(super) p50_layout_clean_geometry_proof_boundaries: u64,
+    pub(super) p95_layout_clean_geometry_proof_boundaries: u64,
+    pub(super) p50_layout_clean_geometry_apply_nodes: u64,
+    pub(super) p95_layout_clean_geometry_apply_nodes: u64,
+    pub(super) p50_layout_clean_geometry_apply_fallback_layouts: u64,
+    pub(super) p95_layout_clean_geometry_apply_fallback_layouts: u64,
     pub(super) p50_layout_request_build_roots_phase2_compute_time_us: u64,
     pub(super) p95_layout_request_build_roots_phase2_compute_time_us: u64,
     pub(super) p50_layout_request_build_roots_put_engine_time_us: u64,
@@ -291,6 +307,10 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_request_build_roots_phase1_time_us: u64,
     pub(super) layout_request_build_roots_phase2_time_us: u64,
     pub(super) layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
+    pub(super) layout_clean_geometry_proof_nodes: u64,
+    pub(super) layout_clean_geometry_proof_boundaries: u64,
+    pub(super) layout_clean_geometry_apply_nodes: u64,
+    pub(super) layout_clean_geometry_apply_fallback_layouts: u64,
     pub(super) layout_request_build_roots_phase2_compute_time_us: u64,
     pub(super) layout_request_build_roots_put_engine_time_us: u64,
     pub(super) layout_roots_time_us: u64,
@@ -2772,6 +2792,23 @@ impl BundleStatsReport {
                 self.max_layout_roots_flush_viewport_time_us,
             );
         }
+        if self.p95_layout_clean_geometry_proof_nodes > 0
+            || self.max_layout_clean_geometry_proof_nodes > 0
+            || self.p95_layout_clean_geometry_apply_nodes > 0
+            || self.max_layout_clean_geometry_apply_nodes > 0
+        {
+            println!(
+                "layout clean_geometry counts p95/max: proof(nodes/boundaries)={}/{} / {}/{} apply(nodes/fallback_layouts)={}/{} / {}/{}",
+                self.p95_layout_clean_geometry_proof_nodes,
+                self.p95_layout_clean_geometry_proof_boundaries,
+                self.max_layout_clean_geometry_proof_nodes,
+                self.max_layout_clean_geometry_proof_boundaries,
+                self.p95_layout_clean_geometry_apply_nodes,
+                self.p95_layout_clean_geometry_apply_fallback_layouts,
+                self.max_layout_clean_geometry_apply_nodes,
+                self.max_layout_clean_geometry_apply_fallback_layouts,
+            );
+        }
         self.print_code_editor_paint_perf_summary();
         self.print_paint_widget_hotspot_summary();
         if self.pointer_move_frames_present || self.pointer_move_frames_considered > 0 {
@@ -2871,6 +2908,17 @@ impl BundleStatsReport {
                     row.layout_roots_time_us,
                     row.layout_roots_apply_time_us,
                     row.layout_roots_flush_viewport_time_us,
+                ));
+            }
+            if row.layout_clean_geometry_proof_nodes > 0
+                || row.layout_clean_geometry_apply_nodes > 0
+            {
+                line.push_str(&format!(
+                    " layout.clean_geometry.counts(proof_nodes/proof_boundaries/apply_nodes/apply_fallback_layouts)={}/{}/{}/{}",
+                    row.layout_clean_geometry_proof_nodes,
+                    row.layout_clean_geometry_proof_boundaries,
+                    row.layout_clean_geometry_apply_nodes,
+                    row.layout_clean_geometry_apply_fallback_layouts,
                 ));
             }
             if row.renderer_encode_scene_us > 0
@@ -3273,6 +3321,21 @@ impl BundleStatsReport {
                 self.p95_layout_roots_flush_viewport_time_us,
             );
         }
+        if self.p95_layout_clean_geometry_proof_nodes > 0
+            || self.p95_layout_clean_geometry_apply_nodes > 0
+        {
+            println!(
+                "layout clean_geometry counts p50/p95: proof(nodes/boundaries)={}/{} / {}/{} apply(nodes/fallback_layouts)={}/{} / {}/{}",
+                self.p50_layout_clean_geometry_proof_nodes,
+                self.p50_layout_clean_geometry_proof_boundaries,
+                self.p95_layout_clean_geometry_proof_nodes,
+                self.p95_layout_clean_geometry_proof_boundaries,
+                self.p50_layout_clean_geometry_apply_nodes,
+                self.p50_layout_clean_geometry_apply_fallback_layouts,
+                self.p95_layout_clean_geometry_apply_nodes,
+                self.p95_layout_clean_geometry_apply_fallback_layouts,
+            );
+        }
         println!(
             "paint breakdown p50/p95 (us): input_ctx={}/{} scroll_inv={}/{} collect_roots={}/{} text_snapshot={}/{} collapse={}/{}",
             self.p50_paint_input_context_time_us,
@@ -3642,6 +3705,17 @@ impl BundleStatsReport {
                     row.layout_request_build_roots_put_engine_time_us,
                     row.layout_roots_apply_time_us,
                     row.layout_roots_flush_viewport_time_us,
+                );
+            }
+            if row.layout_clean_geometry_proof_nodes > 0
+                || row.layout_clean_geometry_apply_nodes > 0
+            {
+                println!(
+                    "    layout_clean_geometry.counts(proof_nodes/proof_boundaries/apply_nodes/apply_fallback_layouts)={}/{}/{}/{}",
+                    row.layout_clean_geometry_proof_nodes,
+                    row.layout_clean_geometry_proof_boundaries,
+                    row.layout_clean_geometry_apply_nodes,
+                    row.layout_clean_geometry_apply_fallback_layouts,
                 );
             }
             if row.paint_input_context_time_us > 0
@@ -4699,6 +4773,22 @@ impl BundleStatsReport {
             Value::from(self.sum_layout_request_build_roots_phase2_clean_geometry_proof_time_us),
         );
         sum.insert(
+            "layout_clean_geometry_proof_nodes".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_nodes),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_boundaries".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_boundaries),
+        );
+        sum.insert(
+            "layout_clean_geometry_apply_nodes".to_string(),
+            Value::from(self.sum_layout_clean_geometry_apply_nodes),
+        );
+        sum.insert(
+            "layout_clean_geometry_apply_fallback_layouts".to_string(),
+            Value::from(self.sum_layout_clean_geometry_apply_fallback_layouts),
+        );
+        sum.insert(
             "layout_request_build_roots_phase2_compute_time_us".to_string(),
             Value::from(self.sum_layout_request_build_roots_phase2_compute_time_us),
         );
@@ -4833,6 +4923,22 @@ impl BundleStatsReport {
         max.insert(
             "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
             Value::from(self.max_layout_request_build_roots_phase2_clean_geometry_proof_time_us),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_nodes".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_nodes),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_boundaries".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_boundaries),
+        );
+        max.insert(
+            "layout_clean_geometry_apply_nodes".to_string(),
+            Value::from(self.max_layout_clean_geometry_apply_nodes),
+        );
+        max.insert(
+            "layout_clean_geometry_apply_fallback_layouts".to_string(),
+            Value::from(self.max_layout_clean_geometry_apply_fallback_layouts),
         );
         max.insert(
             "layout_request_build_roots_phase2_compute_time_us".to_string(),
@@ -5114,6 +5220,34 @@ impl BundleStatsReport {
             )),
         );
         avg.insert(
+            "layout_clean_geometry_proof_nodes".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_clean_geometry_proof_nodes,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_clean_geometry_proof_boundaries".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_clean_geometry_proof_boundaries,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_clean_geometry_apply_nodes".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_clean_geometry_apply_nodes,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
+            "layout_clean_geometry_apply_fallback_layouts".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_clean_geometry_apply_fallback_layouts,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
             "layout_request_build_roots_phase2_compute_time_us".to_string(),
             Value::from(avg_us(
                 self.sum_layout_request_build_roots_phase2_compute_time_us,
@@ -5301,6 +5435,22 @@ impl BundleStatsReport {
         p50.insert(
             "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
             Value::from(self.p50_layout_request_build_roots_phase2_clean_geometry_proof_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_nodes".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_nodes),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_boundaries".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_boundaries),
+        );
+        p50.insert(
+            "layout_clean_geometry_apply_nodes".to_string(),
+            Value::from(self.p50_layout_clean_geometry_apply_nodes),
+        );
+        p50.insert(
+            "layout_clean_geometry_apply_fallback_layouts".to_string(),
+            Value::from(self.p50_layout_clean_geometry_apply_fallback_layouts),
         );
         p50.insert(
             "layout_request_build_roots_phase2_compute_time_us".to_string(),
@@ -5552,6 +5702,22 @@ impl BundleStatsReport {
         p95.insert(
             "layout_request_build_roots_phase2_clean_geometry_proof_time_us".to_string(),
             Value::from(self.p95_layout_request_build_roots_phase2_clean_geometry_proof_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_nodes".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_nodes),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_boundaries".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_boundaries),
+        );
+        p95.insert(
+            "layout_clean_geometry_apply_nodes".to_string(),
+            Value::from(self.p95_layout_clean_geometry_apply_nodes),
+        );
+        p95.insert(
+            "layout_clean_geometry_apply_fallback_layouts".to_string(),
+            Value::from(self.p95_layout_clean_geometry_apply_fallback_layouts),
         );
         p95.insert(
             "layout_request_build_roots_phase2_compute_time_us".to_string(),
@@ -6384,6 +6550,22 @@ impl BundleStatsReport {
                     Value::from(
                         row.layout_request_build_roots_phase2_clean_geometry_proof_time_us,
                     ),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_nodes".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_nodes),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_boundaries".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_boundaries),
+                );
+                obj.insert(
+                    "layout_clean_geometry_apply_nodes".to_string(),
+                    Value::from(row.layout_clean_geometry_apply_nodes),
+                );
+                obj.insert(
+                    "layout_clean_geometry_apply_fallback_layouts".to_string(),
+                    Value::from(row.layout_clean_geometry_apply_fallback_layouts),
                 );
                 obj.insert(
                     "layout_request_build_roots_phase2_compute_time_us".to_string(),

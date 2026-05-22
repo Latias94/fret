@@ -1482,6 +1482,22 @@ pub(super) fn bundle_stats_from_json_with_options(
                 })
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_clean_geometry_proof_nodes = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_nodes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_boundaries = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_boundaries"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_apply_nodes = stats
+                .and_then(|m| m.get("layout_clean_geometry_apply_nodes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_apply_fallback_layouts = stats
+                .and_then(|m| m.get("layout_clean_geometry_apply_fallback_layouts"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_request_build_roots_phase2_compute_time_us = stats
                 .and_then(|m| m.get("layout_request_build_roots_phase2_compute_time_us"))
                 .and_then(|v| v.as_u64())
@@ -1889,6 +1905,18 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.sum_layout_request_build_roots_phase2_clean_geometry_proof_time_us = out
                 .sum_layout_request_build_roots_phase2_clean_geometry_proof_time_us
                 .saturating_add(layout_request_build_roots_phase2_clean_geometry_proof_time_us);
+            out.sum_layout_clean_geometry_proof_nodes = out
+                .sum_layout_clean_geometry_proof_nodes
+                .saturating_add(layout_clean_geometry_proof_nodes);
+            out.sum_layout_clean_geometry_proof_boundaries = out
+                .sum_layout_clean_geometry_proof_boundaries
+                .saturating_add(layout_clean_geometry_proof_boundaries);
+            out.sum_layout_clean_geometry_apply_nodes = out
+                .sum_layout_clean_geometry_apply_nodes
+                .saturating_add(layout_clean_geometry_apply_nodes);
+            out.sum_layout_clean_geometry_apply_fallback_layouts = out
+                .sum_layout_clean_geometry_apply_fallback_layouts
+                .saturating_add(layout_clean_geometry_apply_fallback_layouts);
             out.sum_layout_request_build_roots_phase2_compute_time_us = out
                 .sum_layout_request_build_roots_phase2_compute_time_us
                 .saturating_add(layout_request_build_roots_phase2_compute_time_us);
@@ -2009,6 +2037,18 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_layout_request_build_roots_phase2_clean_geometry_proof_time_us = out
                 .max_layout_request_build_roots_phase2_clean_geometry_proof_time_us
                 .max(layout_request_build_roots_phase2_clean_geometry_proof_time_us);
+            out.max_layout_clean_geometry_proof_nodes = out
+                .max_layout_clean_geometry_proof_nodes
+                .max(layout_clean_geometry_proof_nodes);
+            out.max_layout_clean_geometry_proof_boundaries = out
+                .max_layout_clean_geometry_proof_boundaries
+                .max(layout_clean_geometry_proof_boundaries);
+            out.max_layout_clean_geometry_apply_nodes = out
+                .max_layout_clean_geometry_apply_nodes
+                .max(layout_clean_geometry_apply_nodes);
+            out.max_layout_clean_geometry_apply_fallback_layouts = out
+                .max_layout_clean_geometry_apply_fallback_layouts
+                .max(layout_clean_geometry_apply_fallback_layouts);
             out.max_layout_request_build_roots_phase2_compute_time_us = out
                 .max_layout_request_build_roots_phase2_compute_time_us
                 .max(layout_request_build_roots_phase2_compute_time_us);
@@ -2196,6 +2236,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_request_build_roots_phase1_time_us,
                 layout_request_build_roots_phase2_time_us,
                 layout_request_build_roots_phase2_clean_geometry_proof_time_us,
+                layout_clean_geometry_proof_nodes,
+                layout_clean_geometry_proof_boundaries,
+                layout_clean_geometry_apply_nodes,
+                layout_clean_geometry_apply_fallback_layouts,
                 layout_request_build_roots_phase2_compute_time_us,
                 layout_request_build_roots_put_engine_time_us,
                 layout_roots_time_us,
@@ -2687,6 +2731,25 @@ pub(super) fn bundle_stats_from_json_with_options(
     ) = p50_p95(
         rows.iter()
             .map(|r| r.layout_request_build_roots_phase2_clean_geometry_proof_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_nodes,
+        out.p95_layout_clean_geometry_proof_nodes,
+    ) = p50_p95(rows.iter().map(|r| r.layout_clean_geometry_proof_nodes));
+    (
+        out.p50_layout_clean_geometry_proof_boundaries,
+        out.p95_layout_clean_geometry_proof_boundaries,
+    ) = p50_p95(rows.iter().map(|r| r.layout_clean_geometry_proof_boundaries));
+    (
+        out.p50_layout_clean_geometry_apply_nodes,
+        out.p95_layout_clean_geometry_apply_nodes,
+    ) = p50_p95(rows.iter().map(|r| r.layout_clean_geometry_apply_nodes));
+    (
+        out.p50_layout_clean_geometry_apply_fallback_layouts,
+        out.p95_layout_clean_geometry_apply_fallback_layouts,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_apply_fallback_layouts),
     );
     (
         out.p50_layout_request_build_roots_phase2_compute_time_us,

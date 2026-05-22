@@ -244,6 +244,12 @@ impl<H: UiHost> UiTree<H> {
         if measured_size == Size::default() || layout_dirty_children_suppressed {
             return None;
         }
+        if self.debug_enabled {
+            self.debug_stats.layout_clean_geometry_apply_nodes = self
+                .debug_stats
+                .layout_clean_geometry_apply_nodes
+                .saturating_add(1);
+        }
         let element = self.clean_engine_geometry_propagation_supported_element(
             app,
             window,
@@ -329,6 +335,13 @@ impl<H: UiHost> UiTree<H> {
                 )
                 .is_none()
             {
+                if self.debug_enabled {
+                    self.debug_stats
+                        .layout_clean_geometry_apply_fallback_layouts = self
+                        .debug_stats
+                        .layout_clean_geometry_apply_fallback_layouts
+                        .saturating_add(1);
+                }
                 let _ = self.layout_node(
                     app,
                     services,
@@ -511,6 +524,12 @@ impl<H: UiHost> UiTree<H> {
         scale_factor: f32,
         is_root: bool,
     ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        if self.debug_enabled {
+            self.debug_stats.layout_clean_geometry_proof_nodes = self
+                .debug_stats
+                .layout_clean_geometry_proof_nodes
+                .saturating_add(1);
+        }
         if self.clean_geometry_absent_interactivity_gate_leaf(app, window, node) {
             let Some(entry) = self.nodes.get(node) else {
                 return Err(CleanGeometrySolveSkipRejection::new(
@@ -553,6 +572,12 @@ impl<H: UiHost> UiTree<H> {
                 .clean_geometry_boundary_layout_node_kind(app, window, node)
                 .is_some()
         {
+            if self.debug_enabled {
+                self.debug_stats.layout_clean_geometry_proof_boundaries = self
+                    .debug_stats
+                    .layout_clean_geometry_proof_boundaries
+                    .saturating_add(1);
+            }
             return Ok(());
         }
         let children = self
@@ -581,6 +606,12 @@ impl<H: UiHost> UiTree<H> {
                 .clean_geometry_boundary_layout_node_kind(app, window, child)
                 .is_some()
             {
+                if self.debug_enabled {
+                    self.debug_stats.layout_clean_geometry_proof_boundaries = self
+                        .debug_stats
+                        .layout_clean_geometry_proof_boundaries
+                        .saturating_add(1);
+                }
                 continue;
             }
             let child_prev_bounds =

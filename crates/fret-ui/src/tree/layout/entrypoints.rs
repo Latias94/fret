@@ -156,6 +156,11 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_engine_solves = 0;
             self.debug_stats.layout_engine_solve_time = Duration::default();
             self.debug_stats.layout_clean_geometry_solve_skip_rejections = 0;
+            self.debug_stats.layout_clean_geometry_proof_nodes = 0;
+            self.debug_stats.layout_clean_geometry_proof_boundaries = 0;
+            self.debug_stats.layout_clean_geometry_apply_nodes = 0;
+            self.debug_stats
+                .layout_clean_geometry_apply_fallback_layouts = 0;
             self.debug_stats
                 .layout_clean_geometry_solve_skip_first_rejection = None;
             self.debug_stats

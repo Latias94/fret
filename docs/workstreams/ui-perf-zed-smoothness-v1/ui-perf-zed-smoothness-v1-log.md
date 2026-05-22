@@ -16491,3 +16491,61 @@ Interpretation:
   plus root apply traversal, not engine solve or viewport-root flush.
 - The next optimization candidate is a focused clean-geometry proof/apply traversal shortcut with explicit correctness
   gates. Do not broaden the Scroll layout fast path from this evidence.
+
+## 2026-05-22 08:58:00 +08:00 (clean-geometry traversal count diagnostics)
+
+Question:
+- Is the r27 clean-geometry proof/apply timing dominated by broad node traversal, by side-effect boundaries, or by
+  fallback layout work?
+
+Change:
+- Added additive clean-geometry traversal counters to `UiDebugFrameStats`:
+  `layout_clean_geometry_proof_nodes`, `layout_clean_geometry_proof_boundaries`,
+  `layout_clean_geometry_apply_nodes`, and `layout_clean_geometry_apply_fallback_layouts`.
+- Wired the counters through `fret-bootstrap` diagnostics snapshots, `fret-diag` perf keys, JSON summaries/top rows,
+  and the default `diag stats --top` human output.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui
+cargo fmt -p fret-bootstrap
+cargo fmt -p fret-diag
+cargo check -p fret-ui --lib
+cargo check -p fret-bootstrap
+cargo check -p fret-diag
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields trace_exported_perf_key_registry_contains_core_timeline_keys registered_perf_key_units_match_names --no-fail-fast
+cargo build -p fretboard-dev
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260521-r28-clean-geometry-counts --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260521-r28-clean-geometry-counts\sessions\1779410967540-10020\1779410999120-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+git diff --check
+```
+
+Notes:
+- The previous `fret-ui-gallery` build timed out at the outer Codex command timeout while `rustc` continued in the
+  background. The process finished naturally; the binary timestamp moved to `2026-05-22 08:45:43 +08:00`, and a
+  follow-up incremental build completed successfully.
+- `cargo check` / build still report the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Evidence:
+- r28 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260521-r28-clean-geometry-counts/sessions/1779410967540-10020/1779410999120-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r28 reports p50/p95 total `96/891us`, layout `28/504us`, prepaint `33/65us`, paint `33/357us`, and
+  `layout.engine_solve=0/0`.
+- `diag stats` now reports clean-geometry counts at p95/max:
+  proof nodes/boundaries `121/3 / 121/3`; apply nodes/fallback-layouts `117/10 / 117/10`.
+- Top resize ticks:
+  - tick `217`: total/layout/paint `891/504/357us`; proof `153us` over `121` nodes and `3` boundaries; apply
+    `265us` over `117` nodes with `10` fallback child layouts.
+  - tick `214`: `821/457/315us`; proof `141us` over `121` nodes and `3` boundaries; apply `235us` over `117`
+    nodes with `10` fallback child layouts.
+  - tick `220`: `796/470/301us`; proof `145us` over `121` nodes and `3` boundaries; apply `242us` over `117`
+    nodes with `10` fallback child layouts.
+
+Interpretation:
+- This remains attribution-only. The remaining resize layout cost is now measurably a medium-width clean-geometry
+  traversal around roughly `120` nodes, with limited proof boundaries and `10` fallback child layouts per hot resize
+  frame.
+- The next candidate should optimize clean-geometry proof/apply traversal or boundary-aware application directly.
+  Do not broaden the Scroll fast path from this evidence, because Scroll self time is no longer the dominant owner.
