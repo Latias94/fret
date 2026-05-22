@@ -2,13 +2,13 @@
   "schema_version": 2,
   "meta": {
     "required_launch_features": ["gallery-ai", "gallery-chart", "gallery-dev", "gallery-web-ime-harness"],
-    "name": "UI gallery: AI transcript retained torture scroll",
-    "tags": ["ui-gallery", "ai-elements", "transcript", "retained", "virtual-list", "scroll"],
+    "name": "UI gallery: AI transcript non-retained torture scroll",
+    "tags": ["ui-gallery", "ai-elements", "transcript", "non-retained", "virtual-list", "scroll"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
       "Navigates to the AI Transcript Torture page.",
-      "Uses a smaller deterministic transcript length for a retained virtual-list scroll and append mutation gate.",
-      "Asserts the retained transcript model count before and after appending while capturing layout and bundle evidence."
+      "Uses a smaller deterministic transcript length for a non-retained virtual-list scroll and append mutation gate.",
+      "Asserts the non-retained transcript model count before and after appending while capturing layout and bundle evidence."
     ],
     "env_defaults": {
       "FRET_UI_GALLERY_AI_TRANSCRIPT_LEN": "240",

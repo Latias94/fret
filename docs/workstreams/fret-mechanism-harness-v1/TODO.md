@@ -1329,6 +1329,14 @@ date: 2026-05-12
     this policy mismatch: all three scripts passed, but the suite failed a retained-only
     non-retained-shift tail check. After rebuilding `fretboard-dev`, the suite passed 3/3 with no
     retained-tail check file.
+- [x] Add an AI transcript append-window refresh companion.
+  - Result: `ui-gallery-ai-transcript-append-window-refresh.json` starts on the non-retained AI
+    Transcript Torture page with an 8-message transcript, proves row 8 is absent before append,
+    appends 100 messages, scrolls the transcript root, and proves rows 8 and 9 materialize in the
+    final bundle. Focused runtime passed with run id `1779479217864`; bounded `diag query test-id`
+    found row 8 and row 9 once each in the focused bundle, and the refreshed
+    `ui-gallery-ai-transcript-retained` suite passed 4/4 with summary
+    `target/fret-diag-ai-transcript-retained-suite-append-window-refresh-v3/sessions/1779479378187-25176/suite.summary.json`.
 - [x] Gate screenshot-corrected Combobox RTL Long Text startup intro overlap.
   - Result:
     `ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json` starts

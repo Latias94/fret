@@ -5914,6 +5914,50 @@ Next slice recommendation:
   - result: passed after rebuilding `fretboard-dev`; 3/3 scripts; torture run id
     `1779203465969`; no `check.vlist_window_shifts_non_retained_max.json` tail file was produced.
 
+## AI Transcript Append Window Refresh Gate
+
+- invariant:
+  the AI transcript torture page must materialize appended transcript rows in the final diagnostics
+  bundle after the append mutation and a stable scroll refresh. The surface remains non-retained,
+  so this gate must not rely on retained-window reconcile tail policy.
+- finding:
+  no AI transcript mechanism defect was reproduced. The new companion gate proves row-8 and row-9
+  both appear in the final bundle after appending messages to the small transcript, then scrolling
+  the transcript root and capturing the layout/bundle pair.
+- diagnostics surface:
+  `ui-gallery-ai-transcript-append-window-refresh.json` starts on `ai_transcript_torture`, uses an
+  8-message variable-height transcript, appends 100 messages, scrolls the root, waits for
+  `ui-gallery-ai-transcript-row-8` and `ui-gallery-ai-transcript-row-9`, and captures a layout
+  sidecar plus bundle evidence.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcript-append-window-refresh.json`,
+  `tools/diag-scripts/suites/ui-gallery-ai-transcript-retained/suite.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`, and
+  `tools/diag-scripts/index.json`.
+- evidence anchors:
+  focused AI packet
+  `target/fret-diag-ai-transcript-append-window-refresh-v2/sessions/1779479206565-76328/1779479217864/ai.packet`;
+  focused pack
+  `target/fret-diag-ai-transcript-append-window-refresh-v2/sessions/1779479206565-76328/share/1779479217864.zip`;
+  suite summary
+  `target/fret-diag-ai-transcript-retained-suite-append-window-refresh-v3/sessions/1779479378187-25176/suite.summary.json`.
+- runtime proof:
+  `diag query test-id` on the focused bundle returns `ui-gallery-ai-transcript-row-8` and
+  `ui-gallery-ai-transcript-row-9` once each; `diag slice` for `ui-gallery-ai-transcript-row-8`
+  shows the row in frame 28 under `ui-gallery-ai-transcript-root`.
+- format/registry/protocol:
+  `python -m json.tool tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcript-append-window-refresh.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-ai-transcript-retained/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_ai_transcript_append_window_refresh --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `4140c0a8-8c78-4ad5-a5b2-39c42ed57bd1`.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcript-append-window-refresh.json --dir target/fret-diag-ai-transcript-append-window-refresh-v2 --session-auto --pack --ai-packet --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; run id `1779479217864`.
+- runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-ai-transcript-retained --dir target/fret-diag-ai-transcript-retained-suite-append-window-refresh-v3 --session-auto --include-triage --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed 4/4; the new append-window-refresh row run id was `1779479605022`.
+
 ## Combobox RTL Long Text Startup Intro Non-Overlap Gate
 
 - invariant:

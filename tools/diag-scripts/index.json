@@ -3480,6 +3480,35 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ai-transcript-append-window-refresh",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcript-append-window-refresh.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-ai",
+        "gallery-chart",
+        "gallery-dev",
+        "gallery-web-ime-harness"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-transcript-retained"
+      ],
+      "tags": [
+        "ai-elements",
+        "mechanism-harness",
+        "non-retained",
+        "transcript",
+        "ui-gallery",
+        "virtual-list"
+      ],
+      "target_hints": [
+        "Starts directly on the AI Transcript Torture page.",
+        "Uses a tiny initial transcript so row 8 can only exist after the append mutation.",
+        "Proves the non-retained transcript surface materializes newly appended virtual-list rows after a stable scroll refresh."
+      ]
+    },
+    {
       "id": "ui-gallery-ai-transcript-torture-scroll",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-ai-transcript-torture-scroll.json",
       "required_capabilities": [
@@ -3497,7 +3526,7 @@
       ],
       "tags": [
         "ai-elements",
-        "retained",
+        "non-retained",
         "scroll",
         "transcript",
         "ui-gallery",
@@ -3505,8 +3534,8 @@
       ],
       "target_hints": [
         "Navigates to the AI Transcript Torture page.",
-        "Uses a smaller deterministic transcript length for a retained virtual-list scroll and append mutation gate.",
-        "Asserts the retained transcript model count before and after appending while capturing layout and bundle evidence."
+        "Uses a smaller deterministic transcript length for a non-retained virtual-list scroll and append mutation gate.",
+        "Asserts the non-retained transcript model count before and after appending while capturing layout and bundle evidence."
       ]
     },
     {

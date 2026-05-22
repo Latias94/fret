@@ -800,6 +800,13 @@ fn script_v2_roundtrip_ui_gallery_ai_transcript_torture_scroll() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_ai_transcript_append_window_refresh() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcript-append-window-refresh.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_sonner_live_region_mutation() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-sonner-live-region-mutation.json"

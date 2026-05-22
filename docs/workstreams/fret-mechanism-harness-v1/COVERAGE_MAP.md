@@ -302,7 +302,13 @@ date: 2026-05-12
   on the non-retained AI transcript path by asserting a hidden message-count semantics value moves
   from `240` to `340` after append, with layout/screenshot/bundle evidence. The suite policy no
   longer applies retained vlist reconcile tail checks to this script, matching the `fret-ui-ai`
-  non-static transcript surface contract.
+  non-static transcript surface contract. The companion
+  `ui-gallery-ai-transcript-append-window-refresh.json` now starts from an 8-message transcript,
+  appends 100 messages, scrolls the transcript root, and proves newly materialized row-8/row-9 are
+  present in the final diagnostics bundle; focused evidence is anchored at
+  `target/fret-diag-ai-transcript-append-window-refresh-v2/sessions/1779479206565-76328/1779479217864/ai.packet`,
+  and the four-row suite evidence is anchored at
+  `target/fret-diag-ai-transcript-retained-suite-append-window-refresh-v3/sessions/1779479378187-25176/suite.summary.json`.
 - Structural slot hygiene update:
   Recipe-internal child classification now uses `AnyElement::component_slot` for the discovered
   shadcn structural markers: AlertAction, CardAction, CardFooter, AvatarBadge, ItemMedia, and

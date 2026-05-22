@@ -1592,6 +1592,10 @@
     {
       "name": "fret-ui-gallery-dev-fast-build-cache-key-bool",
       "command": "cargo build --profile dev-fast -p fret-ui-gallery --features gallery-dev"
+    },
+    {
+      "name": "ai-transcript-append-window-refresh-core-roundtrip",
+      "command": "cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_ai_transcript_append_window_refresh --no-fail-fast --no-capture"
     }
   ],
   "evidence": [
@@ -2076,7 +2080,12 @@
     "ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs",
     "apps/fret-ui-gallery/src/ui/snippets/resizable/notes.rs",
     "apps/fret-ui-gallery/tests/resizable_docs_surface.rs",
-    "docs/component-author-guide.md"
+    "docs/component-author-guide.md",
+    "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcript-append-window-refresh.json",
+    "tools/diag-scripts/suites/ui-gallery-ai-transcript-retained/suite.json",
+    "target/fret-diag-ai-transcript-append-window-refresh-v2/sessions/1779479206565-76328/1779479217864/ai.packet",
+    "target/fret-diag-ai-transcript-append-window-refresh-v2/sessions/1779479206565-76328/share/1779479217864.zip",
+    "target/fret-diag-ai-transcript-retained-suite-append-window-refresh-v3/sessions/1779479378187-25176/suite.summary.json"
   ],
   "adr_refs": [
     "docs/adr/0066-fret-ui-runtime-contract-surface.md",
