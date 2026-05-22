@@ -1784,3 +1784,23 @@ Next slice recommendation:
   state path is now covered; prefer a trigger/content or moving cached-source relation gate over
   adding another list row unless a fresh bundle shows stale `labelled_by`, `controls`, selection,
   disabled semantics, or invoke suppression.
+
+- [x] Add a cached Resizable Combobox relation-bounce root-boundary runtime gate.
+  - Result:
+    `ui-gallery-resizable-view-cache-moving-combobox-relation-bounce.json` now closes a cached
+    Combobox, asserts `controls`/`labelled_by` endpoints are absent while closed, moves the cached
+    source between Resizable panels, reopens, and proves the moved relation edges plus top-side
+    panel-root placement. The first full `ui-gallery-resizable` refresh exposed a real `fret-ui`
+    mechanism regression in the existing multi-viewport Combobox placement row: the overlay fell
+    back to the window outer bounds and chose `bottom`. The fix stores viewport-root bounds with
+    their direct registration owner and preserves them across ancestor/overlay-only frames while
+    still pruning when the registering owner relayouts without the root. Focused Combobox runtime
+    passed with run id `1779465182657`; the four-row `ui-gallery-resizable` suite passed with
+    summary
+    `target/fret-diag-resizable-suite-owner-fix-v1/sessions/1779465226892-77780/suite.summary.json`.
+
+Next slice recommendation:
+
+- Continue cached/root-boundary stale-state discovery outside relation edges: prefer cached overlay
+  dismissal/focus-restore, moving cached action-state/disabled metadata, or another surface where
+  visual placement can pass while stale state survives.

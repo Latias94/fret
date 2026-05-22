@@ -10601,6 +10601,35 @@
       ]
     },
     {
+      "id": "ui-gallery-resizable-view-cache-moving-combobox-relation-bounce",
+      "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-relation-bounce.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-resizable"
+      ],
+      "tags": [
+        "combobox",
+        "overlay",
+        "relation",
+        "resizable",
+        "root_boundary",
+        "semantics",
+        "shadcn",
+        "ui_gallery",
+        "view_cache"
+      ],
+      "target_hints": [
+        "Starts directly on the diagnostics-only Resizable Moving Cached Combobox fixture.",
+        "Opens the cached Combobox in the left root, proves input/listbox relation edges, closes it, then moves the same cached source to the right root and proves the overlay endpoints are gone while the closed trigger has no controls edge.",
+        "Reopens after the cross-root move and proves controls/labelled_by resolve to the freshly mounted right-root listbox rather than a stale left-root node."
+      ]
+    },
+    {
       "id": "ui-gallery-resizable-view-cache-moving-combobox-root-boundary",
       "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json",
       "required_capabilities": [

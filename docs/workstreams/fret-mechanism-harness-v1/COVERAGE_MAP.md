@@ -119,7 +119,13 @@ date: 2026-05-12
   companion: it opens a popper-positioned Select control near the bottom of the right Resizable
   panel, proves the `placed_rect` trace uses the panel-sized `outer`, flips to `top` with
   `side_offset=6`, preserves Select relation edges, and keeps the selected item state after close
-  and reopen. The latest `ui-gallery-resizable` suite now has 3/3 passing scripts with evidence.
+  and reopen. `ui-gallery-resizable-view-cache-moving-combobox-relation-bounce.json` now adds the
+  cached Combobox relation companion: it closes the popup, moves the cached source between panels,
+  proves stale `controls`/`labelled_by` endpoints are absent while closed, then reopens and proves
+  the moved relation edges plus top-side panel-root placement. The latest `ui-gallery-resizable`
+  suite now has 4/4 passing scripts with evidence, and the refresh found/fixed the
+  element-root-bounds cache ownership bug where an ancestor/overlay frame could drop a still-valid
+  Resizable panel root boundary.
 - Read-only non-list action-state update:
   `read_only_is` now lets diagnostics assert the semantics read-only flag directly. The UI Gallery
   Switch gate `ui-gallery-switch-read-only-action-state.json` proves a read-only Switch remains

@@ -1382,9 +1382,12 @@ impl<H: UiHost> UiTree<H> {
         let mut bounds_records = std::mem::take(&mut self.scratch_bounds_records);
         let mut element_root_bounds_records =
             std::mem::take(&mut self.scratch_element_root_bounds_records);
+        let mut prev_element_root_bounds_records =
+            std::mem::take(&mut self.scratch_prev_element_root_bounds_records);
 
         crate::elements::with_window_state(app, window, |st| {
             st.element_nodes_copy_into(&mut element_nodes);
+            st.element_root_bounds_copy_into(&mut prev_element_root_bounds_records);
         });
 
         bounds_records.clear();
@@ -1393,9 +1396,46 @@ impl<H: UiHost> UiTree<H> {
             if let Some(rect) = self.nodes.get(node).map(|n| n.bounds) {
                 bounds_records.push((element, rect));
             }
-            if let Some(root_bounds) = self.viewport_root_bounds_for_node(node) {
-                element_root_bounds_records.push((element, root_bounds));
+            if let Some((root, root_bounds)) = self.viewport_root_bounds_for_node(node) {
+                let owner = self.viewport_root_registration_owner(root);
+                element_root_bounds_records.push((element, root, owner, root_bounds));
             }
+        }
+
+        for &(element, root, owner, bounds) in prev_element_root_bounds_records.iter() {
+            if element_root_bounds_records
+                .iter()
+                .any(|(updated, _, _, _)| *updated == element)
+            {
+                continue;
+            }
+            let Some((_, node)) = element_nodes
+                .iter()
+                .find(|(candidate, _)| *candidate == element)
+            else {
+                continue;
+            };
+            if !self.node_exists(root)
+                || !self.node_exists(*node)
+                || !self.node_exists(owner)
+                || self
+                    .viewport_roots
+                    .iter()
+                    .any(|(current, _)| *current == root)
+            {
+                continue;
+            }
+            let owner_was_laid_out_this_frame = self.layout_performed_nodes.contains(&owner);
+            if owner_was_laid_out_this_frame {
+                continue;
+            }
+            if !self.node_is_attached_to_layer_tree(owner) {
+                continue;
+            }
+            if !self.is_descendant(root, *node) {
+                continue;
+            }
+            element_root_bounds_records.push((element, root, owner, bounds));
         }
 
         crate::elements::with_window_state(app, window, |st| {
@@ -1408,25 +1448,34 @@ impl<H: UiHost> UiTree<H> {
         element_nodes.clear();
         bounds_records.clear();
         element_root_bounds_records.clear();
+        prev_element_root_bounds_records.clear();
         self.scratch_element_nodes = element_nodes;
         self.scratch_bounds_records = bounds_records;
         self.scratch_element_root_bounds_records = element_root_bounds_records;
+        self.scratch_prev_element_root_bounds_records = prev_element_root_bounds_records;
     }
 
-    fn viewport_root_bounds_for_node(&self, mut node: NodeId) -> Option<Rect> {
+    fn viewport_root_bounds_for_node(&self, mut node: NodeId) -> Option<(NodeId, Rect)> {
         loop {
-            if let Some((_, bounds)) = self
+            if let Some((root, bounds)) = self
                 .viewport_roots()
                 .iter()
                 .rev()
                 .find(|(root, _)| *root == node)
             {
-                return Some(*bounds);
+                return Some((*root, *bounds));
             }
 
             let parent = self.nodes.get(node).and_then(|n| n.parent)?;
             node = parent;
         }
+    }
+
+    fn viewport_root_registration_owner(&self, root: NodeId) -> NodeId {
+        self.nodes
+            .get(root)
+            .and_then(|node| node.parent)
+            .unwrap_or(root)
     }
 
     fn finish_final_layout_frame(&mut self, app: &mut H) {
@@ -1519,6 +1568,7 @@ impl<H: UiHost> UiTree<H> {
     fn begin_layout_engine_frame(&mut self, app: &mut H) {
         self.layout_engine.begin_frame(app.frame_id());
         self.viewport_roots.clear();
+        self.layout_performed_nodes.clear();
     }
 
     pub(super) fn mark_layout_engine_seen_subtree_from_ui_children(

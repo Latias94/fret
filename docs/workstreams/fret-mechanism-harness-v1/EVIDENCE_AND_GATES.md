@@ -162,6 +162,42 @@ Current synthetic evidence anchors:
     passed, 66/66 tests, with Nextest run id `a49ebb69-7e9a-4b66-bc83-7f5f52d35a0e`.
   - formatting:
     `cargo fmt -p fret-ui --check` passed.
+- Element root-bounds cache owner gates:
+  `crates/fret-ui/src/declarative/tests/layout/viewport_roots.rs`
+  - proof:
+    `element_root_bounds_cache_*` covers fast-path frames, overlay-only frames, retained overlay
+    parent pointers, ancestor-only relayout while the viewport registration owner is stable, owner
+    relayout without viewport-root registration, nearest nested viewport precedence, same-element
+    movement between viewport roots, and view-cache-hit movement.
+  - first red command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui element_root_bounds_cache_survives_ancestor_layout_when_viewport_owner_is_stable --no-fail-fast --no-capture`
+  - first red result:
+    failed before the owner fix: the descendant anchor fell back to the 900x1000 window bounds
+    instead of the 336x378 Resizable-style viewport bounds.
+  - current focused command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui element_root_bounds_cache --no-fail-fast --no-capture`
+  - current focused result:
+    passed, 9/9 tests, with Nextest run id `0aff4730-a191-44fb-8ae5-ba7083497ee6`.
+- Resizable cached Combobox relation-bounce runtime gate:
+  `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-relation-bounce.json`
+  - proof:
+    starts on the moving cached Combobox Resizable page, proves the popup relation endpoints are gone
+    after close, moves the cached source across panels, then reopens and proves `controls` and
+    `labelled_by` relation edges plus top-side panel-root placement.
+  - focused protocol gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_relation_bounce --no-fail-fast`
+  - protocol result:
+    passed with Nextest run id `453ab3da-32c4-49aa-9f36-e16f77889572`.
+  - focused runtime repair proof:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-combobox-placement.json --dir target/fret-diag-resizable-multi-viewport-combobox-placement-owner-fix-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1779465182657`; AI packet:
+    `target/fret-diag-resizable-multi-viewport-combobox-placement-owner-fix-v1/sessions/1779465172267-75620/1779465182657/ai.packet`.
+  - suite command:
+    `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-resizable/suite.json --dir target/fret-diag-resizable-suite-owner-fix-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    passed 4/4; relation-bounce row run id `1779465331803`; summary:
+    `target/fret-diag-resizable-suite-owner-fix-v1/sessions/1779465226892-77780/suite.summary.json`.
 
 ## Timer Dispatch Lifecycle Gates
 

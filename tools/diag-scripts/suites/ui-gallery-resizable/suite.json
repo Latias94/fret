@@ -4,6 +4,7 @@
   "scripts": [
     "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-combobox-placement.json",
     "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-select-placement.json",
-    "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json"
+    "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json",
+    "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-relation-bounce.json"
   ]
 }
