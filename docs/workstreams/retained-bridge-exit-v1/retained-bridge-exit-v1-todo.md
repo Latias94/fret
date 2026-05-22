@@ -5476,6 +5476,31 @@ Related plan:
       the pointer/output publication path still updates a caller-owned output model when present.
     - The overlay test and the existing pointer/output test both remain green on the default
       `fret-plot` gate, and the compat retained canvas path still compiles.
+- [x] RBX-M3-252 Extend declarative line plot linked cursor readout on the managed-host path.
+  - Scope:
+    - `ecosystem/fret-plot/src/declarative.rs`
+  - Goal:
+    - Use the managed-host `PlotState` snapshot to paint the declarative line plot linked cursor
+      crosshair and linked cursor readout overlay without constructing retained `PlotCanvas`.
+    - Keep local cursor readout taking precedence when the pointer is inside the plot region.
+  - Validation:
+    - `cargo nextest run -p fret-plot line_plot_panel_paints_linked_cursor_readout_from_state_on_declarative_path`
+    - `cargo nextest run -p fret-plot`
+    - `cargo check -p fret-plot --features compat-retained-canvas`
+    - `cargo fmt --all -- --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+    - `rg -n "^(<<<<<<<|=======|>>>>>>>)" . -g '!target' -g '!repo-ref'`
+  - Evidence:
+    - `ecosystem/fret-plot/src/declarative.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-252-declarative-line-plot-linked-cursor-readout-overlay`
+  - Result:
+    - The declarative line plot now reads `PlotState.linked_cursor_x` and paints the linked cursor
+      crosshair and overlay when no local cursor is active.
+    - Local pointer hover still takes precedence over linked cursor rendering.
+    - The focused linked-cursor test, full `fret-plot` gate, compat retained check, formatting,
+      layering, catalog, conflict-marker scan, and whitespace checks all passed.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

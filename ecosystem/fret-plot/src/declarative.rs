@@ -16,13 +16,14 @@ use crate::plot::axis::{
     AxisLabelFormatter, AxisTicks, axis_ticks_scaled, log10_tick_label_or_empty,
 };
 use crate::plot::view::sanitize_data_rect_scaled;
-use crate::state::{PlotOutput, PlotOutputSnapshot};
+use crate::state::{PlotOutput, PlotOutputSnapshot, PlotState};
 use crate::style::{LinePlotStyle, MouseReadoutMode, OverlayAnchor};
 
 #[derive(Clone)]
 pub struct LinePlotPanelProps {
     pub canvas: CanvasProps,
     pub model: Model<LinePlotModel>,
+    pub state: Option<Model<PlotState>>,
     pub output: Option<Model<PlotOutput>>,
     pub style: LinePlotStyle,
     pub x_scale: AxisScale,
@@ -34,6 +35,7 @@ impl LinePlotPanelProps {
         Self {
             canvas: CanvasProps::default(),
             model,
+            state: None,
             output: None,
             style: LinePlotStyle::default(),
             x_scale: AxisScale::Linear,
@@ -43,6 +45,11 @@ impl LinePlotPanelProps {
 
     pub fn output(mut self, output: Model<PlotOutput>) -> Self {
         self.output = Some(output);
+        self
+    }
+
+    pub fn state(mut self, state: Model<PlotState>) -> Self {
+        self.state = Some(state);
         self
     }
 
@@ -70,6 +77,9 @@ pub fn line_plot_panel<H: UiHost + 'static>(
     props.canvas.layout.size.width = Length::Fill;
     props.canvas.layout.size.height = Length::Fill;
     cx.observe_model(&props.model, fret_ui::Invalidation::Paint);
+    if let Some(state) = &props.state {
+        cx.observe_model(state, fret_ui::Invalidation::Paint);
+    }
 
     let model = cx
         .read_model_ref(&props.model, fret_ui::Invalidation::Paint, Clone::clone)
@@ -81,9 +91,11 @@ pub fn line_plot_panel<H: UiHost + 'static>(
         .ok()
     });
     let output_snapshot = Rc::new(Cell::new(output_snapshot));
+    let linked_cursor_x = Rc::new(Cell::new(None::<f64>));
     let style = props.style;
     let x_scale = props.x_scale;
     let y_scale = props.y_scale;
+    let state = props.state.clone();
     let output = props.output.clone();
     let event_model = model.clone();
     let event_output = output.clone();
@@ -101,20 +113,33 @@ pub fn line_plot_panel<H: UiHost + 'static>(
             cx.layout_unplaced_children(cx.bounds());
             cx.set_hit_test_rects([cx.bounds()]);
         },
-        |cx| {
-            let bounds = cx.bounds();
-            for child in cx.children().to_vec() {
-                cx.paint_child(child, bounds);
+        {
+            let linked_cursor_x = linked_cursor_x.clone();
+            let state = state.clone();
+            move |cx| {
+                let linked_x = state
+                    .as_ref()
+                    .and_then(|state| state.read_ref(cx.app(), |state| state.linked_cursor_x).ok())
+                    .flatten()
+                    .filter(|x| x.is_finite());
+                linked_cursor_x.set(linked_x);
+
+                let bounds = cx.bounds();
+                for child in cx.children().to_vec() {
+                    cx.paint_child(child, bounds);
+                }
             }
         },
         move |cx| {
             let model = model.clone();
             let output_snapshot = output_snapshot.clone();
+            let linked_cursor_x = linked_cursor_x.clone();
             vec![cx.canvas(canvas, move |painter| {
                 paint_line_plot_panel(
                     painter,
                     &model,
                     output_snapshot.get(),
+                    linked_cursor_x.get(),
                     style,
                     x_scale,
                     y_scale,
@@ -165,6 +190,7 @@ fn paint_line_plot_panel(
     painter: &mut CanvasPainter<'_>,
     model: &LinePlotModel,
     output: Option<PlotOutputSnapshot>,
+    linked_cursor_x: Option<f64>,
     style: LinePlotStyle,
     x_scale: AxisScale,
     y_scale: AxisScale,
@@ -229,6 +255,16 @@ fn paint_line_plot_panel(
 
     paint_line_plot_legend(painter, model, plot, style);
     paint_line_plot_cursor_readout(painter, plot, output, style, x_scale, y_scale);
+    paint_line_plot_linked_cursor_readout(
+        painter,
+        plot,
+        transform.data,
+        output.and_then(|snapshot| snapshot.cursor),
+        linked_cursor_x,
+        style,
+        x_scale,
+        y_scale,
+    );
 }
 
 fn line_plot_panel_event_snapshot(
@@ -707,6 +743,129 @@ fn paint_line_plot_cursor_readout(
     let Some(rect) =
         overlay_rect_in_line_plot(plot, overlay_size, style.mouse_readout_anchor, margin)
     else {
+        return;
+    };
+    painter.scene().push(fret_core::SceneOp::Quad {
+        order: DrawOrder(12),
+        rect,
+        background: Paint::Solid(tooltip_background).into(),
+        border: Edges::all(Px(1.0)),
+        border_paint: Paint::Solid(tooltip_border).into(),
+        corner_radii: Corners::all(Px(6.0)),
+    });
+
+    let _ = painter.text(
+        text_key,
+        DrawOrder(13),
+        Point::new(
+            Px(rect.origin.x.0 + pad.0),
+            Px(rect.origin.y.0 + pad.0 + metrics.baseline.0),
+        ),
+        text,
+        text_style,
+        text_color,
+        constraints,
+        raster_scale_factor,
+    );
+}
+
+fn paint_line_plot_linked_cursor_readout(
+    painter: &mut CanvasPainter<'_>,
+    plot: Rect,
+    view_bounds: crate::cartesian::DataRect,
+    local_cursor: Option<DataPoint>,
+    linked_cursor_x: Option<f64>,
+    style: LinePlotStyle,
+    x_scale: AxisScale,
+    y_scale: AxisScale,
+) {
+    if local_cursor.is_some() {
+        return;
+    }
+    let Some(linked_x) = linked_cursor_x.filter(|x| x.is_finite()) else {
+        return;
+    };
+
+    let transform = PlotTransform {
+        viewport: plot,
+        data: view_bounds,
+        x_scale,
+        y_scale,
+    };
+    let Some(cursor_x) = transform.data_x_to_px(linked_x) else {
+        return;
+    };
+
+    let theme = painter.theme().snapshot();
+    let mut crosshair_color = style
+        .crosshair_color
+        .unwrap_or_else(|| theme.color_required("muted-foreground"));
+    crosshair_color.a = (crosshair_color.a * 0.55).clamp(0.05, 1.0);
+    push_vertical_line(
+        painter,
+        Px(cursor_x
+            .0
+            .clamp(plot.origin.x.0, plot.origin.x.0 + plot.size.width.0)
+            .round()),
+        plot.origin.y,
+        plot.size.height,
+        DrawOrder(3),
+        crosshair_color,
+    );
+
+    if style.linked_cursor_readout != MouseReadoutMode::Overlay {
+        return;
+    }
+
+    let tooltip_background = style
+        .tooltip_background
+        .unwrap_or_else(|| theme.color_required("popover"));
+    let tooltip_border = style
+        .tooltip_border
+        .unwrap_or_else(|| theme.color_required("border"));
+    let text_color = style
+        .tooltip_text_color
+        .or(style.label_color)
+        .unwrap_or_else(|| theme.color_required("popover-foreground"));
+
+    let x_span = (view_bounds.x_max - view_bounds.x_min).abs();
+    let formatter = AxisLabelFormatter::default();
+    let x_text = axis_tick_label_text(x_scale, &formatter, linked_x, x_span);
+    let text = format!("x={x_text}");
+
+    let text_style = TextStyle {
+        size: Px(12.0),
+        weight: FontWeight::NORMAL,
+        ..TextStyle::default()
+    };
+    let constraints = CanvasTextConstraints {
+        max_width: Some(Px(plot.size.width.0.max(24.0))),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+    let raster_scale_factor = painter.scale_factor();
+    let scope = painter.key_scope(&"fret-plot.declarative.linked-cursor-readout");
+    let text_key: u64 = painter.child_key(scope, &("text", text.as_str())).into();
+    let (_blob, metrics) = painter.prepare_text_with_blob(
+        text_key,
+        text.clone(),
+        text_style.clone(),
+        constraints,
+        raster_scale_factor,
+    );
+
+    let pad = Px(6.0);
+    let margin = Px(6.0);
+    let overlay_size = Size::new(
+        Px(metrics.size.width.0 + pad.0 * 2.0),
+        Px(metrics.size.height.0 + pad.0 * 2.0),
+    );
+    let Some(rect) = overlay_rect_in_line_plot(
+        plot,
+        overlay_size,
+        style.linked_cursor_readout_anchor,
+        margin,
+    ) else {
         return;
     };
     painter.scene().push(fret_core::SceneOp::Quad {
@@ -1654,6 +1813,128 @@ mod tests {
                 }
             )),
             "cursor readout painting must preserve declarative line painting"
+        );
+    }
+
+    #[test]
+    fn line_plot_panel_paints_linked_cursor_readout_from_state_on_declarative_path() {
+        let mut app = TestHost::default();
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+        let model = app
+            .models_mut()
+            .insert(LinePlotModel::from_series(vec![LineSeries::new(
+                "Series",
+                Series::from_points_sorted(
+                    vec![
+                        DataPoint { x: 0.0, y: 0.0 },
+                        DataPoint { x: 1.0, y: 1.0 },
+                        DataPoint { x: 2.0, y: 0.0 },
+                    ],
+                    true,
+                ),
+            )]));
+        let mut plot_state = PlotState::default();
+        plot_state.linked_cursor_x = Some(1.0);
+        let state = app.models_mut().insert(plot_state);
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "plot-declarative-linked-cursor-readout",
+            |cx| {
+                vec![line_plot_panel(
+                    cx,
+                    LinePlotPanelProps::new(model.clone()).state(state.clone()),
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let mut scene = Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let linked_cursor_guides = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Quad {
+                        order: DrawOrder(3),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert_eq!(
+            linked_cursor_guides, 1,
+            "linked cursor should paint one vertical guide when no local cursor is active"
+        );
+
+        assert!(
+            scene.ops().iter().any(|op| matches!(
+                op,
+                fret_core::SceneOp::Quad {
+                    order: DrawOrder(12),
+                    ..
+                }
+            )),
+            "linked cursor should paint readout overlay chrome"
+        );
+        assert!(
+            scene.ops().iter().any(|op| matches!(
+                op,
+                fret_core::SceneOp::Text {
+                    order: DrawOrder(13),
+                    ..
+                }
+            )),
+            "linked cursor should paint readout text"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Move {
+                position: Point::new(Px(169.0), Px(81.0)),
+                buttons: MouseButtons::default(),
+                modifiers: Modifiers::default(),
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        scene.clear();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        let local_cursor_guides = scene
+            .ops()
+            .iter()
+            .filter(|op| {
+                matches!(
+                    op,
+                    fret_core::SceneOp::Quad {
+                        order: DrawOrder(3),
+                        ..
+                    }
+                )
+            })
+            .count();
+        assert_eq!(
+            local_cursor_guides, 2,
+            "local cursor crosshair should take precedence over linked cursor"
         );
     }
 }

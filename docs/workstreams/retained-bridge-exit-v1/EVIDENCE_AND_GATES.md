@@ -13149,3 +13149,55 @@ Broader gates not run:
     The focused overlay test, pointer/output test, full default `fret-plot` package gate, explicit
     compat retained check, formatting, layering, catalog, conflict-marker scan, and whitespace
     checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-252 Declarative line plot linked cursor readout
+
+Claim verified:
+
+- The default declarative line plot now reads `PlotState.linked_cursor_x` and paints the linked
+  cursor crosshair/readout overlay when no local pointer cursor is active.
+- Local pointer hover still takes precedence over linked cursor rendering.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-plot line_plot_panel_paints_linked_cursor_readout_from_state_on_declarative_path`
+  - Result: passed, 1 test, 28 skipped.
+  - Scope proven: the declarative line plot paints a linked cursor guide and readout from
+    `PlotState.linked_cursor_x` when no local cursor is active, and preserves local-cursor
+    precedence when a pointer cursor exists.
+- `cargo nextest run -p fret-plot`
+  - Result: passed, 29 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: the default `fret-plot` package gate remains green after the linked-cursor
+    extension.
+- `cargo check -p fret-plot --features compat-retained-canvas`
+  - Result: passed, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: retained plot compatibility still compiles after the linked-cursor extension.
+- `cargo fmt --all -- --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the linked-cursor update.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 429 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" . -g '!target' -g '!repo-ref'`
+  - Result: no matches.
+  - Scope proven: the current worktree has no unresolved conflict markers after the user's pull.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-252` is a targeted default declarative `fret-plot` linked-cursor slice. The
+    focused linked-cursor test, full default `fret-plot` package gate, explicit compat retained
+    check, formatting, layering, catalog, conflict-marker scan, and whitespace checks cover the
+    changed surface.

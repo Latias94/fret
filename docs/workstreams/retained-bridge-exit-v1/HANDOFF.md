@@ -390,6 +390,11 @@ without requiring a caller-owned `PlotOutput` model, while `LinePlotPanelProps::
 publishes cursor snapshots for external coordination. Rich tooltip/readout rows, linked cursor
 readout, legend interactions, pan/zoom/query, overlays, and non-line layers remain future parity
 slices before retained plot source can be deleted.
+`RBX-M3-252` then moved linked cursor readout onto the default declarative line plot path as well.
+`LinePlotPanelProps::state(...)` now reads `PlotState.linked_cursor_x` and paints a linked cursor
+guide/readout overlay when no local pointer cursor is active, while local hover still takes
+precedence. Rich tooltip/readout rows, legend interactions, pan/zoom/query, overlays, and
+non-line layers remain future parity slices before retained plot source can be deleted.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining
