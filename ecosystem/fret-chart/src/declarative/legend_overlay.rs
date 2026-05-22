@@ -45,6 +45,10 @@ pub(crate) struct LegendOverlayState {
 }
 
 impl LegendOverlayState {
+    pub(crate) fn panel_rect(&self) -> Option<Rect> {
+        self.panel_rect
+    }
+
     pub(crate) fn is_pointer_in_panel(&self) -> bool {
         let in_panel = self
             .panel_rect

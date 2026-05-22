@@ -11986,3 +11986,104 @@ Broader gates not run:
     declarative chart linked-input parity slice. The demo compile gate, declarative linked-domain
     parity test, full `fret-chart` package gate, source-policy test target, formatting, layering,
     catalog, whitespace, conflict-marker, and retained-marker scans cover the changed surface.
+
+## 2026-05-22 - RBX-M3-110 ECharts multi-grid demo uses declarative panels
+
+Claim verified:
+
+- `echarts_multi_grid_demo` no longer uses retained `UniformGrid` /
+  `create_multi_grid_chart_canvas_nodes(...)` helpers.
+- The demo now stores one shared `Model<ChartEngine>` and renders one declarative chart panel per
+  grid plus one overlay-only panel through `fret_ui::declarative::render_root(...)`.
+- Declarative chart panels now cover the multi-grid capabilities needed by this demo: per-grid plot
+  viewport publication, per-grid series painting, and overlay-only legend/tooltip hit testing that
+  falls through outside the legend panel.
+- The `ManagedSurface` hit-test mask now clips both the host and full-size descendants, preventing a
+  full-size overlay child from stealing input outside host-selected hit regions.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/declarative/panel.rs`
+- `ecosystem/fret-chart/src/declarative/legend_overlay.rs`
+- `crates/fret-ui/src/declarative/host_widget.rs`
+- `crates/fret-ui/src/declarative/tests/managed_surface.rs`
+- `apps/fret-examples/src/echarts_multi_grid_demo.rs`
+- `apps/fret-examples/tests/basic_chart_demos_surface.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `git ls-files -u`
+  - Result: no output.
+  - Scope proven: the user pull left no Git-level unresolved conflict entries.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" apps/fret-examples/src/echarts_multi_grid_demo.rs apps/fret-examples/tests/basic_chart_demos_surface.rs crates/fret-ui/src/declarative/host_widget.rs crates/fret-ui/src/declarative/tests/managed_surface.rs ecosystem/fret-chart/src/declarative/legend_overlay.rs ecosystem/fret-chart/src/declarative/panel.rs docs/workstreams/retained-bridge-exit-v1`
+  - Result: no matches.
+  - Scope proven: changed code and workstream docs have no textual merge-conflict markers.
+- `rg -n "UniformGrid|create_multi_grid_chart_canvas_nodes|ChartCanvas::new_grid_view|ChartCanvas::new_overlay|ChartCanvas::create_node|create_node_retained|Rc<RefCell<ChartEngine>>|std::rc::Rc<std::cell::RefCell<ChartEngine>>" apps/fret-examples/src/echarts_multi_grid_demo.rs`
+  - Result: no matches.
+  - Scope proven: the migrated multi-grid demo source no longer contains retained multi-grid chart
+    helper authoring markers.
+- `cargo check -p fret-chart`
+  - Result: passed, with the pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+  - Scope proven: declarative chart panel mode and overlay-mask API changes compile.
+- `cargo nextest run -p fret-chart chart_canvas_panel_grid_view_publishes_grid_viewport_without_global_viewport`
+  - Result: passed, 1 test.
+  - Scope proven: a declarative grid panel writes its panel bounds to
+    `plot_viewports_by_grid[grid]` and does not overwrite the shared global viewport.
+- `cargo nextest run -p fret-chart chart_canvas_panel_grid_view_paints_only_series_for_that_grid`
+  - Result: passed, 1 test.
+  - Scope proven: multiple declarative grid panels sharing one engine paint only the marks for
+    their assigned grid.
+- `cargo nextest run -p fret-chart chart_canvas_panel_overlay_hit_test_falls_through_outside_legend_panel`
+  - Result: passed, 1 test.
+  - Scope proven: overlay-only chart panels remain interactive over the legend while falling
+    through to the underlay outside the legend panel.
+- `cargo nextest run -p fret-ui managed_surface_hit_test_mask_clips_full_size_children`
+  - Result: passed, 1 test, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: managed-surface hit-test masks clip full-size child subtrees outside the
+    host-selected rects.
+- `cargo nextest run -p fret-ui declarative::tests::managed_surface`
+  - Result: passed, 10 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: the managed-surface mask change did not regress child layout, child paint,
+    prepaint, text lifetime, focus request, event, command, availability, or measurement behavior.
+- `cargo check -p fret-demo --bin echarts_multi_grid_demo`
+  - Result: passed.
+  - Scope proven: the native multi-grid demo compiles after replacing retained chart node creation
+    with declarative grid panels and an overlay-only panel.
+- `cargo nextest run -p fret-examples --test basic_chart_demos_surface echarts_multi_grid_demo_uses_declarative_grid_panels_and_overlay`
+  - Result: passed, 1 test.
+  - Scope proven: the new source-policy gate requires declarative multi-grid panel and overlay
+    authoring markers while rejecting retained multi-grid chart helper markers.
+- `cargo nextest run -p fret-examples --test basic_chart_demos_surface`
+  - Result: passed, 4 tests.
+  - Scope proven: first-party chart demo source-policy tests for basic, stress, multi-axis, and
+    ECharts multi-grid demos pass together.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 47 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility/linking/multi-grid baselines and
+    retained chart output/linking/tooltip/accessibility oracle tests remain green after the
+    multi-grid migration.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the multi-grid demo migration and tests.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid; `fret-chart`
+    intentionally remains on the retained bridge allowlist until remaining retained chart surfaces
+    have declarative parity or are deleted.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: tracked changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-110` is a targeted first-party ECharts multi-grid demo migration plus a
+    declarative chart-panel multi-grid/overlay parity slice. The demo compile gate, targeted
+    multi-grid behavior tests, full `fret-chart` package gate, managed-surface regression gate,
+    source-policy target, formatting, layering, catalog, whitespace, conflict-marker, and
+    retained-marker scans cover the changed surface.

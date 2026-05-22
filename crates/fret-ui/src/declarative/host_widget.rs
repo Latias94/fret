@@ -724,7 +724,9 @@ impl<H: UiHost + 'static> Widget<H> for ElementHostWidget {
         if !self.hit_test_children {
             return false;
         }
-        true
+        self.managed_surface_hit_test_mask
+            .as_ref()
+            .is_none_or(|mask| mask.hit_test(_position))
     }
 
     fn focus_traversal_children(&self) -> bool {

@@ -133,3 +133,44 @@ fn chart_multi_axis_demo_uses_declarative_canvas_panel_with_linked_inputs() {
         );
     }
 }
+
+#[test]
+fn echarts_multi_grid_demo_uses_declarative_grid_panels_and_overlay() {
+    let source = compact(include_str!("../src/echarts_multi_grid_demo.rs"));
+
+    for needle in [
+        "usefret_chart::{ChartCanvasPanelProps,chart_canvas_panel};",
+        "engine:Model<ChartEngine>",
+        "spec:ChartSpec",
+        "Vec<GridId>",
+        "declarative::RenderRootContext::new(&mutstate.ui,app,services,window,bounds).render_root(\"echarts-multi-grid-demo\"",
+        "ChartCanvasPanelProps::new(spec).grid_view(grid)",
+        "ChartCanvasPanelProps::new(spec.clone()).overlay_only()",
+        "props.engine=Some(engine);",
+        "overlay_props.engine=Some(engine.clone());",
+        "chart_canvas_panel(cx,props)",
+        "chart_canvas_panel(cx,overlay_props)",
+    ] {
+        assert!(
+            source.contains(needle),
+            "echarts_multi_grid_demo should mount multi-grid charts through declarative grid panels and overlay; missing `{needle}`"
+        );
+    }
+
+    for legacy in [
+        "usefret_chart::retained::{UniformGrid,create_multi_grid_chart_canvas_nodes};",
+        "create_multi_grid_chart_canvas_nodes",
+        "UniformGrid",
+        "ChartCanvas::new_grid_view",
+        "ChartCanvas::new_overlay",
+        "ChartCanvas::create_node",
+        "create_node_retained",
+        "Rc<RefCell<ChartEngine>>",
+        "std::rc::Rc<std::cell::RefCell<ChartEngine>>",
+    ] {
+        assert!(
+            !source.contains(legacy),
+            "echarts_multi_grid_demo should not teach retained multi-grid chart helpers; unexpected `{legacy}`"
+        );
+    }
+}

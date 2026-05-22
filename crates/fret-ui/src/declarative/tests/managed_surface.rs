@@ -284,6 +284,96 @@ fn managed_surface_layout_can_limit_hit_testing_to_host_selected_rects() {
 }
 
 #[test]
+fn managed_surface_hit_test_mask_clips_full_size_children() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+    let hit_rect = Rect::new(
+        fret_core::Point::new(Px(160.0), Px(20.0)),
+        Size::new(Px(40.0), Px(30.0)),
+    );
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "managed-surface-hit-test-mask-clips-subtree",
+        move |cx| {
+            let mut root_props = crate::element::StackProps::default();
+            root_props.layout.size.width = crate::element::Length::Fill;
+            root_props.layout.size.height = crate::element::Length::Fill;
+            vec![cx.stack_props(root_props, move |cx| {
+                let mut underlay = crate::element::PointerRegionProps::default();
+                underlay.layout.size.width = crate::element::Length::Fill;
+                underlay.layout.size.height = crate::element::Length::Fill;
+                let underlay = cx.pointer_region(underlay, |_cx| Vec::new());
+
+                let mut surface = crate::element::ManagedSurfaceProps::default();
+                surface.layout.position = crate::element::PositionStyle::Absolute;
+                surface.layout.inset.left = crate::element::InsetEdge::Px(Px(0.0));
+                surface.layout.inset.top = crate::element::InsetEdge::Px(Px(0.0));
+                surface.layout.size.width = crate::element::Length::Fill;
+                surface.layout.size.height = crate::element::Length::Fill;
+                let surface = cx.managed_surface(
+                    surface,
+                    move |cx| {
+                        let bounds = cx.bounds();
+                        for child in cx.children().to_vec() {
+                            cx.layout_child(child, bounds);
+                        }
+                        cx.set_hit_test_rects([hit_rect]);
+                    },
+                    move |cx| {
+                        for child in cx.children().to_vec() {
+                            if let Some(bounds) = cx.child_bounds(child) {
+                                cx.paint_child(child, bounds);
+                            }
+                        }
+                    },
+                    |cx| {
+                        let mut child = crate::element::PointerRegionProps::default();
+                        child.layout.size.width = crate::element::Length::Fill;
+                        child.layout.size.height = crate::element::Length::Fill;
+                        vec![cx.pointer_region(child, |_cx| Vec::new())]
+                    },
+                );
+
+                vec![underlay, surface]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let stack = ui.children(root)[0];
+    let underlay = ui.children(stack)[0];
+    let surface = ui.children(stack)[1];
+    let child = ui.children(surface)[0];
+
+    assert_eq!(
+        ui.debug_hit_test(fret_core::Point::new(Px(20.0), Px(20.0)))
+            .hit,
+        Some(underlay),
+        "managed surface mask should clip full-size descendants outside the host-selected rect"
+    );
+    assert_eq!(
+        ui.debug_hit_test(fret_core::Point::new(Px(180.0), Px(30.0)))
+            .hit,
+        Some(child),
+        "managed surface full-size child should remain interactive inside the host-selected rect"
+    );
+}
+
+#[test]
 fn managed_surface_layout_focus_request_element_survives_same_frame_resolution() {
     fn render_focus_fallback_root(
         ui: &mut UiTree<TestHost>,

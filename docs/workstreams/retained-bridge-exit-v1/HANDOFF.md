@@ -286,11 +286,19 @@ second declarative chart panel output model. The demo now builds `(ChartEngine, 
 ChartLinkRouter)` pairs, stores engines as `Model<ChartEngine>`, owns `LinkedChartGroup` directly
 in window state, and renders the two charts through a declarative vertical flex root while keeping
 diagnostics snapshots and deterministic diag auto-zoom behavior.
+`RBX-M3-110` then migrated `echarts_multi_grid_demo` off retained `UniformGrid` /
+`create_multi_grid_chart_canvas_nodes(...)` helper authoring. `ChartCanvasPanelProps` now has full,
+per-grid, and overlay-only modes; per-grid panels publish `plot_viewports_by_grid` without
+overwriting the shared engine viewport and paint only series attached to that grid. The
+overlay-only panel keeps legend/tooltip tools without mark rendering, and the `ManagedSurface`
+hit-test mask now clips full-size descendants so the overlay falls through outside the visible
+legend panel. The demo stores one shared `Model<ChartEngine>` and renders one declarative panel per
+grid plus one overlay-only panel through `declarative::RenderRootContext::render_root(...)`.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
-source: retained chart interactive controls such as axes, visual-map, data-zoom, multi-grid
-surfaces, and any remaining public/demo/gallery/cookbook consumers that still rely on retained
-`ChartCanvas` behavior.
+source: retained chart interactive controls such as axes, visual-map, data-zoom, lower-level
+retained multi-grid helper APIs, and any remaining public/demo/gallery/cookbook consumers that
+still rely on retained `ChartCanvas` behavior.
 
 ## Completed Implementation
 

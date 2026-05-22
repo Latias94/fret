@@ -4876,6 +4876,48 @@ Related plan:
       and renders both charts through a declarative vertical flex root.
     - The demo source-policy gate now rejects retained chart widget authoring, retained split node
       composition, and `Rc<RefCell<ChartEngine>>` in the multi-axis demo.
+- [x] RBX-M3-110 Migrate `echarts_multi_grid_demo` off retained multi-grid helpers.
+  - Scope:
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+    - `ecosystem/fret-chart/src/declarative/legend_overlay.rs`
+    - `crates/fret-ui/src/declarative/host_widget.rs`
+    - `crates/fret-ui/src/declarative/tests/managed_surface.rs`
+    - `apps/fret-examples/src/echarts_multi_grid_demo.rs`
+    - `apps/fret-examples/tests/basic_chart_demos_surface.rs`
+  - Goal:
+    - Move the ECharts multi-grid demo from retained `UniformGrid` /
+      `create_multi_grid_chart_canvas_nodes(...)` helpers to model-backed declarative chart panels.
+    - Add enough declarative chart panel capability to preserve multi-grid rendering and overlay
+      interaction before deleting retained multi-grid chart code.
+    - Ensure overlay-only chart panels do not block input outside their visible legend panel.
+  - Validation:
+    - `cargo check -p fret-chart`
+    - `cargo nextest run -p fret-chart`
+    - `cargo nextest run -p fret-ui declarative::tests::managed_surface`
+    - `cargo check -p fret-demo --bin echarts_multi_grid_demo`
+    - `cargo nextest run -p fret-examples --test basic_chart_demos_surface`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+    - `ecosystem/fret-chart/src/declarative/legend_overlay.rs`
+    - `crates/fret-ui/src/declarative/host_widget.rs`
+    - `crates/fret-ui/src/declarative/tests/managed_surface.rs`
+    - `apps/fret-examples/src/echarts_multi_grid_demo.rs`
+    - `apps/fret-examples/tests/basic_chart_demos_surface.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-110-echarts-multi-grid-demo-uses-declarative-panels`
+  - Result:
+    - `ChartCanvasPanelProps` now supports full, per-grid, and overlay-only modes.
+    - Per-grid declarative panels publish `plot_viewports_by_grid` without overwriting the shared
+      engine's global viewport and paint only series attached to their grid.
+    - Overlay-only declarative panels keep legend/tooltip overlay tools while suppressing mark
+      rendering and use `ManagedSurface` hit-test masking so input outside the legend falls through
+      to underlying grid panels.
+    - `echarts_multi_grid_demo` now stores one shared `Model<ChartEngine>`, renders one
+      declarative panel per grid plus a top-level overlay-only panel, and no longer teaches retained
+      multi-grid chart helper authoring.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

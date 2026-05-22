@@ -21,9 +21,11 @@ use fret_runtime::Model;
 use fret_ui::action::OnKeyDown;
 use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{
-    AnyElement, CanvasProps, FocusScopeProps, Length, PointerRegionProps, SemanticsProps,
+    AnyElement, CanvasProps, FocusScopeProps, Length, ManagedSurfaceProps, PointerRegionProps,
+    SemanticsProps,
 };
 use fret_ui::{ElementContext, ElementContextAccess, UiHost};
+use std::collections::BTreeSet;
 
 use crate::a11y::ChartA11yIndex;
 use crate::input_map::{ChartInputMap, ModifierKey};
@@ -547,6 +549,44 @@ struct ChartCanvasPanelLinkedState {
     domain_windows_model_revision: Option<u64>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChartCanvasPanelMode {
+    Full,
+    GridView(delinea::GridId),
+    Overlay,
+}
+
+impl Default for ChartCanvasPanelMode {
+    fn default() -> Self {
+        Self::Full
+    }
+}
+
+impl ChartCanvasPanelMode {
+    fn grid(self) -> Option<delinea::GridId> {
+        match self {
+            Self::GridView(grid) => Some(grid),
+            Self::Full | Self::Overlay => None,
+        }
+    }
+
+    fn renders_marks(self) -> bool {
+        !matches!(self, Self::Overlay)
+    }
+
+    fn renders_overlays(self) -> bool {
+        matches!(self, Self::Full | Self::Overlay)
+    }
+
+    fn default_test_id(self) -> Option<Arc<str>> {
+        match self {
+            Self::Full => None,
+            Self::GridView(grid) => Some(Arc::from(format!("fret-chart-grid-{}", grid.0))),
+            Self::Overlay => Some(Arc::from("fret-chart-overlay")),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct ChartCanvasPanelProps {
     pub pointer_region: PointerRegionProps,
@@ -573,6 +613,7 @@ pub struct ChartCanvasPanelProps {
     pub linked_brush_model: Option<Model<Option<BrushSelectionLink2D>>>,
     pub linked_axis_pointer_model: Option<Model<Option<AxisPointerLinkAnchor>>>,
     pub linked_domain_windows_model: Option<Model<BTreeMap<LinkAxisKey, Option<DataWindow>>>>,
+    pub mode: ChartCanvasPanelMode,
 
     pub style: ChartStyle,
 }
@@ -593,6 +634,7 @@ impl ChartCanvasPanelProps {
             linked_brush_model: None,
             linked_axis_pointer_model: None,
             linked_domain_windows_model: None,
+            mode: ChartCanvasPanelMode::Full,
             style: ChartStyle::default(),
         }
     }
@@ -642,10 +684,37 @@ impl ChartCanvasPanelProps {
         self.test_id = Some(test_id.into());
         self
     }
+
+    pub fn grid_view(mut self, grid: delinea::GridId) -> Self {
+        self.mode = ChartCanvasPanelMode::GridView(grid);
+        self
+    }
+
+    pub fn overlay_only(mut self) -> Self {
+        self.mode = ChartCanvasPanelMode::Overlay;
+        self
+    }
+}
+
+fn series_is_in_panel_grid(
+    mode: ChartCanvasPanelMode,
+    model: &delinea::engine::model::ChartModel,
+    series: delinea::SeriesId,
+) -> bool {
+    let Some(grid) = mode.grid() else {
+        return true;
+    };
+    let Some(series) = model.series.get(&series) else {
+        return false;
+    };
+    model
+        .axes
+        .get(&series.x_axis)
+        .is_some_and(|axis| axis.grid == grid)
 }
 
 #[track_caller]
-pub fn chart_canvas_panel<H: UiHost>(
+pub fn chart_canvas_panel<H: UiHost + 'static>(
     cx: &mut ElementContext<'_, H>,
     mut props: ChartCanvasPanelProps,
 ) -> AnyElement {
@@ -680,6 +749,8 @@ pub fn chart_canvas_panel<H: UiHost>(
 
     // Step the engine during declarative render and cache the current marks snapshot.
     let bounds = cx.bounds;
+    let mode = props.mode;
+    let panel_grid = mode.grid();
     let mut unfinished = false;
 
     let marks_cache_slot = cx.slot_id();
@@ -697,6 +768,7 @@ pub fn chart_canvas_panel<H: UiHost>(
 
     let mut legend_series: Vec<LegendSeriesEntry> = Vec::new();
     let mut series_rank_by_id: BTreeMap<delinea::SeriesId, usize> = BTreeMap::default();
+    let mut series_visible_in_panel: BTreeSet<delinea::SeriesId> = BTreeSet::new();
     let mut axis_pointer_output: Option<delinea::engine::AxisPointerOutput> = None;
     let mut axis_pointer_labels: Vec<AxisPointerLabelOverlay> = Vec::new();
     let mut tooltip_lines: Vec<TooltipTextLine> = Vec::new();
@@ -767,14 +839,26 @@ pub fn chart_canvas_panel<H: UiHost>(
     let mut linked_inputs_changed = false;
 
     let _ = engine.update(cx.app, |engine, _cx| {
-        if engine.model().viewport != Some(bounds) {
-            let _ = engine.apply_patch(
-                ChartPatch {
-                    viewport: Some(Some(bounds)),
-                    ..ChartPatch::default()
-                },
-                PatchMode::Merge,
-            );
+        match mode {
+            ChartCanvasPanelMode::Full => {
+                if engine.model().viewport != Some(bounds) {
+                    let _ = engine.apply_patch(
+                        ChartPatch {
+                            viewport: Some(Some(bounds)),
+                            ..ChartPatch::default()
+                        },
+                        PatchMode::Merge,
+                    );
+                }
+            }
+            ChartCanvasPanelMode::GridView(grid) => {
+                if engine.model().plot_viewports_by_grid.get(&grid).copied() != Some(bounds) {
+                    let mut patch = ChartPatch::default();
+                    patch.plot_viewports_by_grid.insert(grid, Some(bounds));
+                    let _ = engine.apply_patch(patch, PatchMode::Merge);
+                }
+            }
+            ChartCanvasPanelMode::Overlay => {}
         }
 
         let mut router = ChartLinkRouter::from_model(engine.model());
@@ -911,9 +995,16 @@ pub fn chart_canvas_panel<H: UiHost>(
         }
 
         let model = engine.model();
+        series_visible_in_panel.clear();
+        for series_id in &model.series_order {
+            if series_is_in_panel_grid(mode, model, *series_id) {
+                series_visible_in_panel.insert(*series_id);
+            }
+        }
         series_rank_by_id.clear();
         legend_series = model
             .series_in_order()
+            .filter(|s| series_is_in_panel_grid(mode, model, s.id))
             .enumerate()
             .map(|(order, s)| LegendSeriesEntry {
                 id: s.id,
@@ -1301,9 +1392,6 @@ pub fn chart_canvas_panel<H: UiHost>(
         true
     });
 
-    let legend_tool = legend_overlay_tool(engine.clone(), legend_state.clone(), style);
-    let tooltip_tool = tooltip_overlay_tool(tooltip_state.clone(), style);
-
     let engine_c = engine.clone();
     let on_pinch_zoom: OnCanvasToolPinch = Arc::new(move |host, action_cx, tool_cx, pinch| {
         if !pinch.delta.is_finite() {
@@ -1370,10 +1458,17 @@ pub fn chart_canvas_panel<H: UiHost>(
         true
     });
 
-    let tools = vec![
-        legend_tool,
-        tooltip_tool,
-        CanvasToolEntry {
+    let mut tools = Vec::new();
+    if mode.renders_overlays() {
+        tools.push(legend_overlay_tool(
+            engine.clone(),
+            legend_state.clone(),
+            style,
+        ));
+        tools.push(tooltip_overlay_tool(tooltip_state.clone(), style));
+    }
+    if mode.renders_marks() {
+        tools.push(CanvasToolEntry {
             id: CanvasToolId::new(1),
             priority: 100,
             handlers: CanvasToolHandlers {
@@ -1382,32 +1477,32 @@ pub fn chart_canvas_panel<H: UiHost>(
                 on_pointer_up: Some(on_pan_up),
                 ..Default::default()
             },
-        },
-        CanvasToolEntry {
+        });
+        tools.push(CanvasToolEntry {
             id: CanvasToolId::new(2),
             priority: 50,
             handlers: CanvasToolHandlers {
                 on_wheel: Some(on_wheel_zoom),
                 ..Default::default()
             },
-        },
-        CanvasToolEntry {
+        });
+        tools.push(CanvasToolEntry {
             id: CanvasToolId::new(4),
             priority: 50,
             handlers: CanvasToolHandlers {
                 on_pinch: Some(on_pinch_zoom),
                 ..Default::default()
             },
-        },
-        CanvasToolEntry {
+        });
+        tools.push(CanvasToolEntry {
             id: CanvasToolId::new(3),
             priority: -10,
             handlers: CanvasToolHandlers {
                 on_pointer_move: Some(on_hover_move),
                 ..Default::default()
             },
-        },
-    ];
+        });
+    }
 
     let mut pan_zoom = PanZoomCanvasSurfacePanelProps::default();
     pan_zoom.pointer_region = props.pointer_region;
@@ -1424,6 +1519,7 @@ pub fn chart_canvas_panel<H: UiHost>(
     };
 
     let marks = cache;
+    let series_visible_in_panel = Arc::new(series_visible_in_panel);
     let paint = move |painter: &mut CanvasPainter<'_>, paint_cx: PanZoomCanvasPaintCx| {
         if unfinished {
             painter.request_animation_frame();
@@ -1432,7 +1528,9 @@ pub fn chart_canvas_panel<H: UiHost>(
         let bounds = painter.bounds();
 
         // Basic background.
-        if let Some(background) = style.background {
+        if mode.renders_marks()
+            && let Some(background) = style.background
+        {
             painter.scene().push(fret_core::SceneOp::Quad {
                 order: DrawOrder(style.draw_order.0.saturating_sub(1)),
                 rect: bounds,
@@ -1449,147 +1547,164 @@ pub fn chart_canvas_panel<H: UiHost>(
             let marks = &*marks;
             let arena = &marks.arena;
 
-            for node in &marks.nodes {
-                match (node.kind, &node.payload) {
-                    (MarkKind::Polyline, MarkPayloadRef::Polyline(poly)) => {
-                        let start = poly.points.start;
-                        let end = poly.points.end;
-                        if end <= start || end > arena.points.len() {
-                            continue;
-                        }
-
-                        let mut commands: Vec<PathCommand> =
-                            Vec::with_capacity((end - start).saturating_add(1));
-                        for (i, p) in arena.points[start..end].iter().enumerate() {
-                            if i == 0 {
-                                commands.push(PathCommand::MoveTo(*p));
-                            } else {
-                                commands.push(PathCommand::LineTo(*p));
-                            }
-                        }
-                        if commands.len() < 2 {
-                            continue;
-                        }
-
-                        let stroke_width = poly
-                            .stroke
-                            .as_ref()
-                            .map(|(_, s)| s.width)
-                            .unwrap_or(style.stroke_width);
-                        let stroke_color = if let Some((paint, _)) = &poly.stroke {
-                            paint_color(style, *paint)
-                        } else if let Some(series) = node.source_series {
-                            series_color(style, series)
-                        } else {
-                            style.stroke_color
-                        };
-
-                        let key = node.id.0;
-                        painter.path(
-                            key,
-                            DrawOrder(style.draw_order.0.saturating_add(node.order.0)),
-                            Point::new(Px(0.0), Px(0.0)),
-                            &commands,
-                            PathStyle::Stroke(StrokeStyle {
-                                width: stroke_width,
-                            }),
-                            stroke_color,
-                            paint_cx.raster_scale_factor,
-                        );
+            if mode.renders_marks() {
+                for node in &marks.nodes {
+                    if let Some(series_id) = node.source_series
+                        && panel_grid.is_some()
+                        && !series_visible_in_panel.contains(&series_id)
+                    {
+                        continue;
                     }
-                    (MarkKind::Rect, MarkPayloadRef::Rect(rects)) => {
-                        let start = rects.rects.start;
-                        let end = rects.rects.end;
-                        if end <= start || end > arena.rects.len() {
-                            continue;
-                        }
 
-                        let stroke_width = rects
-                            .stroke
-                            .as_ref()
-                            .map(|(_, s)| s.width)
-                            .filter(|w| w.0.is_finite() && w.0 > 0.0)
-                            .unwrap_or(Px(0.0));
-
-                        for rect in &arena.rects[start..end] {
-                            let mut background = Color::TRANSPARENT;
-                            if let Some(paint) = rects.fill {
-                                background = paint_color(style, paint);
-                            } else if let Some(series) = node.source_series {
-                                background = series_color(style, series);
+                    match (node.kind, &node.payload) {
+                        (MarkKind::Polyline, MarkPayloadRef::Polyline(poly)) => {
+                            let start = poly.points.start;
+                            let end = poly.points.end;
+                            if end <= start || end > arena.points.len() {
+                                continue;
                             }
-                            background.a *= rects.opacity_mul.unwrap_or(1.0);
 
-                            let border_color = if stroke_width.0 > 0.0 {
-                                background
+                            let mut commands: Vec<PathCommand> =
+                                Vec::with_capacity((end - start).saturating_add(1));
+                            for (i, p) in arena.points[start..end].iter().enumerate() {
+                                if i == 0 {
+                                    commands.push(PathCommand::MoveTo(*p));
+                                } else {
+                                    commands.push(PathCommand::LineTo(*p));
+                                }
+                            }
+                            if commands.len() < 2 {
+                                continue;
+                            }
+
+                            let stroke_width = poly
+                                .stroke
+                                .as_ref()
+                                .map(|(_, s)| s.width)
+                                .unwrap_or(style.stroke_width);
+                            let stroke_color = if let Some((paint, _)) = &poly.stroke {
+                                paint_color(style, *paint)
+                            } else if let Some(series) = node.source_series {
+                                series_color(style, series)
                             } else {
-                                Color::TRANSPARENT
+                                style.stroke_color
                             };
 
-                            painter.scene().push(fret_core::SceneOp::Quad {
-                                order: DrawOrder(style.draw_order.0.saturating_add(node.order.0)),
-                                rect: *rect,
-                                background: fret_core::Paint::Solid(background).into(),
-                                border: Edges::all(stroke_width),
-                                border_paint: fret_core::Paint::Solid(border_color).into(),
-                                corner_radii: Corners::all(Px(0.0)),
-                            });
+                            let key = node.id.0;
+                            painter.path(
+                                key,
+                                DrawOrder(style.draw_order.0.saturating_add(node.order.0)),
+                                Point::new(Px(0.0), Px(0.0)),
+                                &commands,
+                                PathStyle::Stroke(StrokeStyle {
+                                    width: stroke_width,
+                                }),
+                                stroke_color,
+                                paint_cx.raster_scale_factor,
+                            );
                         }
-                    }
-                    (MarkKind::Points, MarkPayloadRef::Points(points)) => {
-                        let start = points.points.start;
-                        let end = points.points.end;
-                        if end <= start || end > arena.points.len() {
-                            continue;
-                        }
-
-                        let base_point_r = style.scatter_point_radius.0.max(1.0);
-                        let stroke_width = points
-                            .stroke
-                            .as_ref()
-                            .map(|(_, s)| s.width)
-                            .filter(|w| w.0.is_finite() && w.0 > 0.0)
-                            .unwrap_or(Px(0.0));
-
-                        for p in &arena.points[start..end] {
-                            let radius_mul = points
-                                .radius_mul
-                                .filter(|v| v.is_finite() && *v > 0.0)
-                                .unwrap_or(1.0);
-                            let point_r = (base_point_r * radius_mul).max(1.0);
-
-                            let mut fill = style.stroke_color;
-                            if let Some(paint) = points.fill {
-                                fill = paint_color(style, paint);
-                                fill.a *= style.scatter_fill_alpha;
-                            } else if let Some(series) = node.source_series {
-                                fill = series_color(style, series);
-                                fill.a *= style.scatter_fill_alpha;
+                        (MarkKind::Rect, MarkPayloadRef::Rect(rects)) => {
+                            let start = rects.rects.start;
+                            let end = rects.rects.end;
+                            if end <= start || end > arena.rects.len() {
+                                continue;
                             }
-                            fill.a *= points.opacity_mul.unwrap_or(1.0);
 
-                            let border_color = if stroke_width.0 > 0.0 {
-                                fill
-                            } else {
-                                Color::TRANSPARENT
-                            };
+                            let stroke_width = rects
+                                .stroke
+                                .as_ref()
+                                .map(|(_, s)| s.width)
+                                .filter(|w| w.0.is_finite() && w.0 > 0.0)
+                                .unwrap_or(Px(0.0));
 
-                            painter.scene().push(fret_core::SceneOp::Quad {
-                                order: DrawOrder(style.draw_order.0.saturating_add(node.order.0)),
-                                rect: Rect::new(
-                                    Point::new(Px(p.x.0 - point_r), Px(p.y.0 - point_r)),
-                                    Size::new(Px(2.0 * point_r), Px(2.0 * point_r)),
-                                ),
-                                background: fret_core::Paint::Solid(fill).into(),
+                            for rect in &arena.rects[start..end] {
+                                let mut background = Color::TRANSPARENT;
+                                if let Some(paint) = rects.fill {
+                                    background = paint_color(style, paint);
+                                } else if let Some(series) = node.source_series {
+                                    background = series_color(style, series);
+                                }
+                                background.a *= rects.opacity_mul.unwrap_or(1.0);
 
-                                border: Edges::all(stroke_width),
-                                border_paint: fret_core::Paint::Solid(border_color).into(),
-                                corner_radii: Corners::all(Px(point_r)),
-                            });
+                                let border_color = if stroke_width.0 > 0.0 {
+                                    background
+                                } else {
+                                    Color::TRANSPARENT
+                                };
+
+                                painter.scene().push(fret_core::SceneOp::Quad {
+                                    order: DrawOrder(
+                                        style.draw_order.0.saturating_add(node.order.0),
+                                    ),
+                                    rect: *rect,
+                                    background: fret_core::Paint::Solid(background).into(),
+                                    border: Edges::all(stroke_width),
+                                    border_paint: fret_core::Paint::Solid(border_color).into(),
+                                    corner_radii: Corners::all(Px(0.0)),
+                                });
+                            }
                         }
+                        (MarkKind::Points, MarkPayloadRef::Points(points)) => {
+                            let start = points.points.start;
+                            let end = points.points.end;
+                            if end <= start || end > arena.points.len() {
+                                continue;
+                            }
+
+                            let base_point_r = style.scatter_point_radius.0.max(1.0);
+                            let stroke_width = points
+                                .stroke
+                                .as_ref()
+                                .map(|(_, s)| s.width)
+                                .filter(|w| w.0.is_finite() && w.0 > 0.0)
+                                .unwrap_or(Px(0.0));
+
+                            for p in &arena.points[start..end] {
+                                let radius_mul = points
+                                    .radius_mul
+                                    .filter(|v| v.is_finite() && *v > 0.0)
+                                    .unwrap_or(1.0);
+                                let point_r = (base_point_r * radius_mul).max(1.0);
+
+                                let mut fill = style.stroke_color;
+                                if let Some(paint) = points.fill {
+                                    fill = paint_color(style, paint);
+                                    fill.a *= style.scatter_fill_alpha;
+                                } else if let Some(series) = node.source_series {
+                                    fill = series_color(style, series);
+                                    fill.a *= style.scatter_fill_alpha;
+                                }
+                                fill.a *= points.opacity_mul.unwrap_or(1.0);
+
+                                let border_color = if stroke_width.0 > 0.0 {
+                                    fill
+                                } else {
+                                    Color::TRANSPARENT
+                                };
+
+                                painter.scene().push(fret_core::SceneOp::Quad {
+                                    order: DrawOrder(
+                                        style.draw_order.0.saturating_add(node.order.0),
+                                    ),
+                                    rect: Rect::new(
+                                        Point::new(Px(p.x.0 - point_r), Px(p.y.0 - point_r)),
+                                        Size::new(Px(2.0 * point_r), Px(2.0 * point_r)),
+                                    ),
+                                    background: fret_core::Paint::Solid(fill).into(),
+
+                                    border: Edges::all(stroke_width),
+                                    border_paint: fret_core::Paint::Solid(border_color).into(),
+                                    corner_radii: Corners::all(Px(point_r)),
+                                });
+                            }
+                        }
+                        _ => {}
                     }
-                    _ => {}
                 }
+            }
+
+            if !mode.renders_overlays() {
+                return;
             }
 
             let overlay_order = DrawOrder(style.draw_order.0.saturating_add(10_000));
@@ -1768,6 +1883,41 @@ pub fn chart_canvas_panel<H: UiHost>(
         cx.key_add_on_key_down_for(focus_id, on_key_down_focus.clone());
         vec![canvas_tool_router_panel(cx, router_props, tools, paint)]
     });
+    let inner = if matches!(props.mode, ChartCanvasPanelMode::Overlay) {
+        let legend_state_for_hit_test = legend_state.clone();
+        let mut surface_props = ManagedSurfaceProps::default();
+        surface_props.layout.size.width = Length::Fill;
+        surface_props.layout.size.height = Length::Fill;
+        cx.managed_surface(
+            surface_props,
+            move |cx| {
+                let bounds = cx.bounds();
+                for child in cx.children().to_vec() {
+                    let _ = cx.layout_child(child, bounds);
+                }
+                let hit_rects = legend_state_for_hit_test
+                    .lock()
+                    .ok()
+                    .and_then(|state| state.panel_rect())
+                    .into_iter();
+                cx.set_hit_test_rects(hit_rects);
+            },
+            move |cx| {
+                for child in cx.children().to_vec() {
+                    if let Some(bounds) = cx.child_bounds(child) {
+                        cx.paint_child(child, bounds);
+                    }
+                }
+            },
+            |_cx| vec![inner],
+        )
+    } else {
+        inner
+    };
+    let test_id = props
+        .test_id
+        .clone()
+        .or_else(|| props.mode.default_test_id());
 
     if props.accessibility_layer {
         let semantics_state = cx.state_for(
@@ -1778,7 +1928,7 @@ pub fn chart_canvas_panel<H: UiHost>(
         let mut semantics = SemanticsProps {
             role: SemanticsRole::Viewport,
             label: Some(Arc::from("Chart")),
-            test_id: props.test_id.clone(),
+            test_id: test_id.clone(),
             pos_in_set: semantics_state.pos_in_set,
             set_size: semantics_state.set_size,
             value: semantics_state.value,
@@ -1791,7 +1941,7 @@ pub fn chart_canvas_panel<H: UiHost>(
             cx.key_add_on_key_down_for(semantics_id, on_key_down);
             vec![inner]
         })
-    } else if let Some(test_id) = props.test_id.clone() {
+    } else if let Some(test_id) = test_id {
         inner.test_id(test_id)
     } else {
         inner
@@ -1801,7 +1951,7 @@ pub fn chart_canvas_panel<H: UiHost>(
 /// Capability-first adapter for [`chart_canvas_panel`] when the caller only owns
 /// `ElementContextAccess`.
 #[track_caller]
-pub fn chart_canvas_panel_in<'a, H: UiHost + 'a, Cx>(
+pub fn chart_canvas_panel_in<'a, H: UiHost + 'a + 'static, Cx>(
     cx: &mut Cx,
     props: ChartCanvasPanelProps,
 ) -> AnyElement
@@ -2132,6 +2282,139 @@ mod tests {
         }
     }
 
+    fn multi_grid_spec() -> (ChartSpec, DatasetId) {
+        let dataset_id = DatasetId::new(1);
+        let grid_1 = GridId::new(1);
+        let grid_2 = GridId::new(2);
+        let x_axis_1 = AxisId::new(1);
+        let y_axis_1 = AxisId::new(2);
+        let x_axis_2 = AxisId::new(3);
+        let y_axis_2 = AxisId::new(4);
+        let x_field = FieldId::new(1);
+        let y_grid_1 = FieldId::new(2);
+        let y_grid_2 = FieldId::new(3);
+
+        let spec = ChartSpec {
+            id: ChartId::new(1),
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_grid_1,
+                        column: 1,
+                    },
+                    FieldSpec {
+                        id: y_grid_2,
+                        column: 2,
+                    },
+                ],
+                ..Default::default()
+            }],
+            grids: vec![GridSpec { id: grid_1 }, GridSpec { id: grid_2 }],
+            axes: vec![
+                delinea::AxisSpec {
+                    id: x_axis_1,
+                    name: Some("X1".to_string()),
+                    kind: AxisKind::X,
+                    grid: grid_1,
+                    position: None,
+                    scale: AxisScale::Category(delinea::CategoryAxisScale {
+                        categories: vec![
+                            "A".to_string(),
+                            "B".to_string(),
+                            "C".to_string(),
+                            "D".to_string(),
+                        ],
+                    }),
+                    range: None,
+                },
+                delinea::AxisSpec {
+                    id: y_axis_1,
+                    name: Some("Y1".to_string()),
+                    kind: AxisKind::Y,
+                    grid: grid_1,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+                delinea::AxisSpec {
+                    id: x_axis_2,
+                    name: Some("X2".to_string()),
+                    kind: AxisKind::X,
+                    grid: grid_2,
+                    position: None,
+                    scale: AxisScale::Category(delinea::CategoryAxisScale {
+                        categories: vec![
+                            "A".to_string(),
+                            "B".to_string(),
+                            "C".to_string(),
+                            "D".to_string(),
+                        ],
+                    }),
+                    range: None,
+                },
+                delinea::AxisSpec {
+                    id: y_axis_2,
+                    name: Some("Y2".to_string()),
+                    kind: AxisKind::Y,
+                    grid: grid_2,
+                    position: None,
+                    scale: Default::default(),
+                    range: None,
+                },
+            ],
+            data_zoom_x: vec![],
+            data_zoom_y: vec![],
+            tooltip: None,
+            axis_pointer: Some(delinea::AxisPointerSpec::default()),
+            visual_maps: vec![],
+            series: vec![
+                SeriesSpec {
+                    id: SeriesId::new(1),
+                    name: Some("Grid 1".to_string()),
+                    kind: SeriesKind::Bar,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_grid_1,
+                        y2: None,
+                    },
+                    x_axis: x_axis_1,
+                    y_axis: y_axis_1,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                    lod: None,
+                },
+                SeriesSpec {
+                    id: SeriesId::new(2),
+                    name: Some("Grid 2".to_string()),
+                    kind: SeriesKind::Bar,
+                    dataset: dataset_id,
+                    encode: SeriesEncode {
+                        x: x_field,
+                        y: y_grid_2,
+                        y2: None,
+                    },
+                    x_axis: x_axis_2,
+                    y_axis: y_axis_2,
+                    stack: None,
+                    stack_strategy: Default::default(),
+                    bar_layout: Default::default(),
+                    area_baseline: None,
+                    lod: None,
+                },
+            ],
+        };
+        (spec, dataset_id)
+    }
+
     fn seed_line_scatter_dataset(
         engine: &mut ChartEngine,
         dataset_id: DatasetId,
@@ -2143,6 +2426,14 @@ mod tests {
         table.push_column(Column::F64(x));
         table.push_column(Column::F64(y_line));
         table.push_column(Column::F64(y_scatter));
+        engine.datasets_mut().insert(dataset_id, table);
+    }
+
+    fn seed_multi_grid_dataset(engine: &mut ChartEngine, dataset_id: DatasetId) {
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(vec![0.0, 1.0, 2.0, 3.0]));
+        table.push_column(Column::F64(vec![1.0, 2.0, 3.0, 4.0]));
+        table.push_column(Column::F64(vec![10.0, 20.0, 30.0, 40.0]));
         engine.datasets_mut().insert(dataset_id, table);
     }
 
@@ -2625,6 +2916,260 @@ mod tests {
                 .copied(),
             Some(Some(target_initial_window)),
             "target declarative chart output should not remain at its initial local Y window"
+        );
+    }
+
+    #[test]
+    fn chart_canvas_panel_grid_view_publishes_grid_viewport_without_global_viewport() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(12.0), Px(18.0)),
+            Size::new(Px(320.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+        let (spec, dataset_id, x, y) = chart_spec();
+        let grid = GridId::new(1);
+
+        let engine: Model<ChartEngine> = app
+            .models_mut()
+            .insert(ChartEngine::new(spec.clone()).expect("chart spec should be valid"));
+        app.models_mut()
+            .update(&engine, |engine| seed_dataset(engine, dataset_id, x, y))
+            .expect("chart engine model should exist");
+
+        let root = render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "chart-declarative-grid-view-panel",
+            |cx| {
+                let mut props = ChartCanvasPanelProps::new(spec.clone()).grid_view(grid);
+                props.engine = Some(engine.clone());
+                vec![chart_canvas_panel(cx, props)]
+            },
+        );
+        ui.set_root(root);
+        pump_chart_frame(&mut ui, &mut app, &mut services, bounds);
+
+        let (global_viewport, grid_viewport) = app
+            .models()
+            .read(&engine, |engine| {
+                (
+                    engine.model().viewport,
+                    engine.model().plot_viewports_by_grid.get(&grid).copied(),
+                )
+            })
+            .expect("chart engine model should exist");
+        assert_eq!(
+            grid_viewport,
+            Some(bounds),
+            "declarative grid view should publish its panel bounds as the grid plot viewport"
+        );
+        assert_eq!(
+            global_viewport, None,
+            "declarative grid view should not overwrite the shared engine's global viewport"
+        );
+    }
+
+    #[test]
+    fn chart_canvas_panel_grid_view_paints_only_series_for_that_grid() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+        let (spec, dataset_id) = multi_grid_spec();
+        let grid_1 = GridId::new(1);
+        let grid_2 = GridId::new(2);
+
+        let engine: Model<ChartEngine> = app
+            .models_mut()
+            .insert(ChartEngine::new(spec.clone()).expect("chart spec should be valid"));
+        app.models_mut()
+            .update(&engine, |engine| {
+                seed_multi_grid_dataset(engine, dataset_id)
+            })
+            .expect("chart engine model should exist");
+
+        let render_grids = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let root = render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "chart-declarative-grid-view-filter-panel",
+                |cx| {
+                    let mut column = fret_ui::element::ColumnProps::default();
+                    column.layout.size.width = Length::Fill;
+                    column.layout.size.height = Length::Fill;
+
+                    vec![cx.column(column, |cx| {
+                        let mut grid_1_props =
+                            ChartCanvasPanelProps::new(spec.clone()).grid_view(grid_1);
+                        grid_1_props.engine = Some(engine.clone());
+                        grid_1_props.pointer_region.layout.flex.grow = 1.0;
+                        grid_1_props.pointer_region.layout.flex.basis = Length::Px(Px(0.0));
+
+                        let mut grid_2_props =
+                            ChartCanvasPanelProps::new(spec.clone()).grid_view(grid_2);
+                        grid_2_props.engine = Some(engine.clone());
+                        grid_2_props.pointer_region.layout.flex.grow = 1.0;
+                        grid_2_props.pointer_region.layout.flex.basis = Length::Px(Px(0.0));
+
+                        vec![
+                            chart_canvas_panel(cx, grid_1_props),
+                            chart_canvas_panel(cx, grid_2_props),
+                        ]
+                    })]
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(app, services, bounds, 1.0);
+            let mut scene = Scene::default();
+            ui.paint_all(app, services, bounds, &mut scene, 1.0);
+            app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+            scene
+        };
+
+        let _ = render_grids(&mut ui, &mut app, &mut services);
+        let scene = render_grids(&mut ui, &mut app, &mut services);
+        let grid_1_bounds = Rect::new(
+            bounds.origin,
+            Size::new(bounds.size.width, Px(bounds.size.height.0 / 2.0)),
+        );
+        let grid_2_bounds = Rect::new(
+            Point::new(
+                bounds.origin.x,
+                Px(bounds.origin.y.0 + bounds.size.height.0 / 2.0),
+            ),
+            Size::new(bounds.size.width, Px(bounds.size.height.0 / 2.0)),
+        );
+
+        let chart_mark_quads = |panel_bounds: Rect| {
+            scene
+                .ops()
+                .iter()
+                .filter_map(|op| match op {
+                    SceneOp::Quad { rect, order, .. }
+                        if order.0 >= ChartStyle::default().draw_order.0
+                            && rect.size.width.0 > 0.0
+                            && rect.size.height.0 > 0.0
+                            && *rect != panel_bounds
+                            && panel_bounds.contains(rect.origin) =>
+                    {
+                        Some(*rect)
+                    }
+                    _ => None,
+                })
+                .collect::<Vec<_>>()
+        };
+        let grid_1_quads = chart_mark_quads(grid_1_bounds);
+        let grid_2_quads = chart_mark_quads(grid_2_bounds);
+        assert!(
+            !grid_1_quads.is_empty(),
+            "first declarative grid view should paint marks for grid 1"
+        );
+        assert!(
+            !grid_2_quads.is_empty(),
+            "second declarative grid view should paint marks for grid 2"
+        );
+        assert_ne!(
+            grid_1_quads, grid_2_quads,
+            "per-grid declarative panels should not paint the same mark set from the shared engine"
+        );
+    }
+
+    #[test]
+    fn chart_canvas_panel_overlay_hit_test_falls_through_outside_legend_panel() {
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_debug_enabled(true);
+        let window = AppWindowId::default();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+        let (spec, dataset_id, x, y) = chart_spec();
+
+        let engine: Model<ChartEngine> = app
+            .models_mut()
+            .insert(ChartEngine::new(spec.clone()).expect("chart spec should be valid"));
+        app.models_mut()
+            .update(&engine, |engine| seed_dataset(engine, dataset_id, x, y))
+            .expect("chart engine model should exist");
+
+        let render_overlay = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
+            let root = render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "chart-declarative-overlay-hit-test-panel",
+                |cx| {
+                    let mut stack = fret_ui::element::StackProps::default();
+                    stack.layout.size.width = Length::Fill;
+                    stack.layout.size.height = Length::Fill;
+
+                    vec![cx.stack_props(stack, |cx| {
+                        let mut underlay = PointerRegionProps::default();
+                        underlay.layout.size.width = Length::Fill;
+                        underlay.layout.size.height = Length::Fill;
+                        let underlay = cx
+                            .pointer_region(underlay, |_cx| Vec::new())
+                            .test_id("chart-overlay-underlay");
+
+                        let mut overlay_props = ChartCanvasPanelProps::new(spec.clone())
+                            .overlay_only()
+                            .test_id("chart-overlay-only");
+                        overlay_props.engine = Some(engine.clone());
+                        let overlay = chart_canvas_panel(cx, overlay_props);
+
+                        vec![underlay, overlay]
+                    })]
+                },
+            );
+            ui.set_root(root);
+            ui.layout_all(app, services, bounds, 1.0);
+            let mut scene = Scene::default();
+            ui.paint_all(app, services, bounds, &mut scene, 1.0);
+            app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+            root
+        };
+
+        let _ = render_overlay(&mut ui, &mut app, &mut services);
+        let root = render_overlay(&mut ui, &mut app, &mut services);
+
+        let stack = ui.children(root)[0];
+        let underlay = ui.children(stack)[0];
+        let overlay = ui.children(stack)[1];
+        let legend_hit = ui.debug_hit_test(Point::new(Px(330.0), Px(28.0))).hit;
+
+        assert_eq!(
+            ui.debug_hit_test(Point::new(Px(8.0), Px(8.0))).hit,
+            Some(underlay),
+            "overlay-only chart panel should fall through outside the legend panel"
+        );
+        assert!(
+            legend_hit.is_some_and(|node| ui.is_descendant_via_children(overlay, node)),
+            "overlay-only chart panel should remain hit-testable over the legend panel"
         );
     }
 
