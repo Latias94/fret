@@ -7,7 +7,7 @@ use fret_canvas::ui::{CanvasToolEntry, CanvasToolHandlers, CanvasToolId, PanZoom
 use fret_core::{Color, Corners, DrawOrder, Edges, Point, Px, Rect, Size};
 use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
 
-use crate::retained::ChartStyle;
+use crate::ChartStyle;
 use crate::tooltip_layout::split_tooltip_text_for_columns;
 use crate::{TooltipTextLine, TooltipTextLineKind};
 

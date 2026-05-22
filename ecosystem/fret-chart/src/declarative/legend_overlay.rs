@@ -12,7 +12,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::canvas::{CanvasPainter, CanvasTextConstraints};
 
-use crate::retained::ChartStyle;
+use crate::ChartStyle;
 
 #[derive(Debug, Clone)]
 pub(crate) struct LegendSeriesEntry {

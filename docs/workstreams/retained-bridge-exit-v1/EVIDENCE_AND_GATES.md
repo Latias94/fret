@@ -12161,3 +12161,65 @@ Broader gates not run:
     public-surface policy test, full `fret-chart` package gate, ECharts multi-grid demo compile
     gate, demo source-policy gate, formatting, layering, catalog, whitespace, and retained-marker
     scan cover the changed surface.
+
+## 2026-05-22 - RBX-M3-130 Chart style and tooltip contracts moved out of retained namespace
+
+Claim verified:
+
+- Shared chart style and tooltip contracts now live in top-level `fret-chart` modules instead of
+  retained-owned modules.
+- Declarative chart panel, overlay, and output code no longer import these shared contracts through
+  `crate::retained::*`.
+- Retained `ChartCanvas` remains as the ordinary chart behavior oracle while consuming the same
+  top-level style/tooltip contracts.
+- A `fret-chart` public-surface policy test prevents declarative shared contracts from depending
+  on retained namespace markers again.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/lib.rs`
+- `ecosystem/fret-chart/src/style.rs`
+- `ecosystem/fret-chart/src/tooltip.rs`
+- `ecosystem/fret-chart/src/retained/mod.rs`
+- `ecosystem/fret-chart/src/retained/canvas.rs`
+- `ecosystem/fret-chart/src/declarative/panel.rs`
+- `ecosystem/fret-chart/src/declarative/legend_overlay.rs`
+- `ecosystem/fret-chart/src/declarative/tooltip_overlay.rs`
+- `ecosystem/fret-chart/src/output.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `git ls-files -u`
+  - Result: no output.
+  - Scope proven: the user pull left no Git-level unresolved conflict entries before this slice.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after moving the modules and imports.
+- `cargo check -p fret-chart`
+  - Result: passed, with the pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+  - Scope proven: the top-level style/tooltip modules, declarative imports, retained imports, and
+    crate-root exports compile.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 49 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility/linking/multi-grid baselines,
+    top-level tooltip/style tests, and ordinary retained chart output/linking/tooltip/legend/
+    visual-map/slider/keyboard oracle tests remain green after the namespace move.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid; `fret-chart`
+    intentionally remains on the retained bridge allowlist for remaining retained chart surfaces.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-130` is a targeted namespace and contract-ownership move within `fret-chart`.
+    The full `fret-chart` package gate, public-surface policy test, formatting, layering, catalog,
+    and whitespace checks cover the changed surface.

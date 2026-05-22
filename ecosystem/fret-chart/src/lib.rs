@@ -11,6 +11,8 @@ pub mod input_map;
 pub mod linking;
 pub mod output;
 pub mod retained;
+pub mod style;
+pub mod tooltip;
 
 mod a11y;
 mod legend_logic;
@@ -21,6 +23,8 @@ pub use input_map::*;
 pub use linking::*;
 pub use output::*;
 pub use retained::*;
+pub use style::*;
+pub use tooltip::*;
 
 #[cfg(test)]
 mod public_surface_policy {
@@ -49,6 +53,36 @@ mod public_surface_policy {
                 !retained_canvas.contains(marker),
                 "retained ChartCanvas should not keep legacy multi-grid surface marker `{marker}`"
             );
+        }
+    }
+
+    #[test]
+    fn declarative_shared_contracts_do_not_depend_on_retained_namespace() {
+        for (name, source) in [
+            ("declarative/panel.rs", include_str!("declarative/panel.rs")),
+            (
+                "declarative/legend_overlay.rs",
+                include_str!("declarative/legend_overlay.rs"),
+            ),
+            (
+                "declarative/tooltip_overlay.rs",
+                include_str!("declarative/tooltip_overlay.rs"),
+            ),
+            ("output.rs", include_str!("output.rs")),
+        ] {
+            for marker in [
+                "crate::retained::ChartStyle",
+                "crate::retained::TooltipFormatter",
+                "crate::retained::DefaultTooltipFormatter",
+                "crate::retained::TooltipTextLine",
+                "crate::retained::tooltip",
+                "crate::retained::style",
+            ] {
+                assert!(
+                    !source.contains(marker),
+                    "{name} should import shared chart contracts from top-level modules, not retained namespace marker `{marker}`"
+                );
+            }
         }
     }
 }

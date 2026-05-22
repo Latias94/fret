@@ -32,9 +32,9 @@ use crate::output::{
     update_chart_canvas_output,
 };
 use crate::retained::ChartCanvasOutput;
-use crate::retained::style::ChartStyle;
 use crate::retained::text_cache::{KeyBuilder, TextCacheGroup};
-use crate::retained::tooltip::{DefaultTooltipFormatter, TooltipFormatter};
+use crate::style::ChartStyle;
+use crate::tooltip::{DefaultTooltipFormatter, TooltipFormatter};
 
 fn mark_path_cache_key(mark_id: delinea::ids::MarkId, variant: u8) -> u64 {
     use std::collections::hash_map::DefaultHasher;

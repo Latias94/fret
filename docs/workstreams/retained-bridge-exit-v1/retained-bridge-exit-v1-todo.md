@@ -4955,6 +4955,51 @@ Related plan:
       reintroduction.
     - The full `fret-chart` package gate still passes, including retained chart tooltip, legend,
       visual-map, slider, output/linking, keyboard, and accessibility oracle tests.
+- [x] RBX-M3-130 Move chart style/tooltip shared contracts out of the retained namespace.
+  - Scope:
+    - `ecosystem/fret-chart/src/lib.rs`
+    - `ecosystem/fret-chart/src/style.rs`
+    - `ecosystem/fret-chart/src/tooltip.rs`
+    - `ecosystem/fret-chart/src/retained/mod.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+    - `ecosystem/fret-chart/src/declarative/legend_overlay.rs`
+    - `ecosystem/fret-chart/src/declarative/tooltip_overlay.rs`
+    - `ecosystem/fret-chart/src/output.rs`
+  - Goal:
+    - Move shared chart style and tooltip contracts to top-level `fret-chart` modules so
+      declarative chart code no longer depends on `retained::*` naming for non-retained contracts.
+    - Keep retained `ChartCanvas` as the remaining behavior oracle while making it consume the same
+      top-level style/tooltip contracts.
+    - Add a source-policy test that prevents declarative shared contracts from importing these
+      contracts through the retained namespace again.
+  - Validation:
+    - `cargo fmt --check`
+    - `cargo check -p fret-chart`
+    - `cargo nextest run -p fret-chart`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-chart/src/lib.rs`
+    - `ecosystem/fret-chart/src/style.rs`
+    - `ecosystem/fret-chart/src/tooltip.rs`
+    - `ecosystem/fret-chart/src/retained/mod.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/declarative/panel.rs`
+    - `ecosystem/fret-chart/src/declarative/legend_overlay.rs`
+    - `ecosystem/fret-chart/src/declarative/tooltip_overlay.rs`
+    - `ecosystem/fret-chart/src/output.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-130-chart-style-and-tooltip-contracts-moved-out-of-retained-namespace`
+  - Result:
+    - Moved `retained/style.rs` and `retained/tooltip.rs` to top-level `style.rs` and
+      `tooltip.rs`, then exported them from the crate root.
+    - Removed the retained module ownership/re-export of `style` and `tooltip`; retained
+      `ChartCanvas` now imports those shared contracts through the top-level modules.
+    - Declarative chart panel, legend overlay, tooltip overlay, and output publication now import
+      style/tooltip contracts from top-level `fret-chart` modules instead of `crate::retained::*`.
+    - The full `fret-chart` package gate still passes, including declarative chart baselines,
+      top-level tooltip/style tests, and ordinary retained chart oracle tests.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

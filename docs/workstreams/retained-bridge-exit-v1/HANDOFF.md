@@ -301,6 +301,14 @@ branches were removed. A `fret-chart` public-surface policy test now prevents th
 multi-grid helpers from returning. The full `fret-chart` package gate still passes, including
 ordinary retained chart tooltip, legend, visual-map, slider, output/linking, keyboard, and
 accessibility oracle tests.
+`RBX-M3-130` then moved shared chart style and tooltip contracts out of the retained namespace:
+`retained/style.rs` and `retained/tooltip.rs` are now top-level `style.rs` and `tooltip.rs`, exported
+from `fret-chart`'s crate root. Declarative chart panel, legend overlay, tooltip overlay, and output
+publication now import those contracts from the top-level crate surface instead of
+`crate::retained::*`; retained `ChartCanvas` also consumes the same top-level contracts as the
+remaining behavior oracle. A public-surface policy test prevents declarative shared contracts from
+depending on retained namespace markers again. The full `fret-chart` package gate passes with 49
+tests after the move.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining

@@ -27,6 +27,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 use std::collections::BTreeSet;
 
+use crate::ChartStyle;
 use crate::a11y::ChartA11yIndex;
 use crate::input_map::{ChartInputMap, ModifierKey};
 use crate::linking::{AxisPointerLinkAnchor, BrushSelectionLink2D, ChartLinkRouter, LinkAxisKey};
@@ -34,7 +35,6 @@ use crate::output::{
     ChartCanvasOutput, chart_canvas_output_link_events_batch,
     chart_canvas_output_snapshot_for_engine, update_chart_canvas_output,
 };
-use crate::retained::ChartStyle;
 use crate::{DefaultTooltipFormatter, TooltipFormatter, TooltipTextLine};
 
 use super::legend_overlay::{LegendOverlayState, LegendSeriesEntry, legend_overlay_tool};

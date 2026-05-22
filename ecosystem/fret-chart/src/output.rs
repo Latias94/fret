@@ -4,7 +4,7 @@ use delinea::engine::window::DataWindow;
 use delinea::{BrushSelection2D, ChartEngine, LinkEvent, RowRange, SeriesId};
 
 use crate::linking::{ChartLinkRouter, LinkAxisKey};
-use crate::retained::{TooltipFormatter, TooltipTextLine};
+use crate::{TooltipFormatter, TooltipTextLine};
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct ChartCanvasOutputSnapshot {
