@@ -5188,6 +5188,40 @@ Related plan:
       hit selection, plus a public-surface policy test that prevents those pure functions from
       returning to retained `ChartCanvas`.
     - The full `fret-chart` package gate now passes with 62 tests.
+- [x] RBX-M3-180 Move chart visual-map interaction decision policy onto shared/default chart logic.
+  - Scope:
+    - `ecosystem/fret-chart/src/visual_map_logic.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+  - Goal:
+    - Remove retained-only ownership of visual-map piecewise mask/reset/shift-range decision
+      policy.
+    - Remove retained-only ownership of continuous visual-map handle-vs-pan-vs-jump drag-start
+      decision policy.
+    - Keep retained `ChartCanvas` as the current event/action oracle while making it consume
+      shared visual-map interaction decisions.
+  - Validation:
+    - `cargo nextest run -p fret-chart visual_map`
+    - `cargo check -p fret-chart`
+    - `cargo fmt --check`
+    - `cargo nextest run -p fret-chart`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-chart/src/visual_map_logic.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-180-chart-visual-map-interaction-policy-moved-to-shared-logic`
+  - Result:
+    - Added shared `visual_map_full_piece_mask`, `visual_map_current_piece_mask`,
+      `visual_map_piece_mask_after_click`, and `visual_map_continuous_drag_start`.
+    - Retained `ChartCanvas` now delegates visual-map piecewise mask toggles, reset, shift-range
+      selection, and continuous drag-start choice to shared logic.
+    - Added shared visual-map tests for piecewise toggle/range/reset and continuous handle/pan/jump
+      starts, and extended the source-policy guard so those pure decisions cannot move back into
+      retained canvas.
+    - The full `fret-chart` package gate now passes with 64 tests.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

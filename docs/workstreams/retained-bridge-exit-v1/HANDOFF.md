@@ -339,6 +339,11 @@ and value-to-y mapping into shared `visual_map_logic`. Retained `ChartCanvas` st
 paint/event/action orchestration, but it now consumes shared visual-map geometry and mapping policy.
 Shared tests cover endpoint y mapping, padded/gapped track layout, and hit selection; retained
 visual-map oracle tests remain green and the full `fret-chart` package gate now passes with 62 tests.
+`RBX-M3-180` then moved visual-map interaction decisions into shared `visual_map_logic`: piecewise
+mask reset/toggle/shift-range policy and continuous handle/pan/jump drag-start selection. Retained
+`ChartCanvas` still owns event routing, capture/invalidation/redraw, and engine action I/O, but it
+now consumes those shared decisions. Shared tests cover piecewise toggle/range/reset and continuous
+handle/pan/jump starts; the full `fret-chart` package gate now passes with 64 tests.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining

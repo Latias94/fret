@@ -188,6 +188,10 @@ mod public_surface_policy {
             "fn visual_map_domain_window(",
             "fn visual_map_y_at_value(",
             "fn visual_map_track_layouts(",
+            "fn visual_map_piece_mask_after_click(",
+            "fn visual_map_continuous_drag_start(",
+            "bucket_index_for_value",
+            "let range_mask =",
         ] {
             assert!(
                 !retained_canvas.contains(marker),
@@ -200,6 +204,9 @@ mod public_surface_policy {
             "visual_map_domain_window(",
             "visual_map_track_layouts(",
             "visual_map_y_at_value(",
+            "visual_map_current_piece_mask(",
+            "visual_map_piece_mask_after_click(",
+            "visual_map_continuous_drag_start(",
         ] {
             assert!(
                 retained_canvas.contains(marker),

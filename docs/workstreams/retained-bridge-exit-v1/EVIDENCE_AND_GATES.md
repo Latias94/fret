@@ -12573,3 +12573,60 @@ Broader gates not run:
   - Reason: `RBX-M3-170` is a targeted `fret-chart` shared-policy extraction. The direct shared
     visual-map tests, retained visual-map oracle tests, source-policy test, full `fret-chart`
     package gate, formatting, layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-180 Chart visual-map interaction policy moved to shared logic
+
+Claim verified:
+
+- Visual-map piecewise mask/reset/shift-range decision policy now lives in shared
+  `visual_map_logic` instead of retained `ChartCanvas`.
+- Continuous visual-map handle-vs-pan-vs-jump drag-start decision policy now lives in shared
+  `visual_map_logic` instead of retained `ChartCanvas`.
+- Retained `ChartCanvas` consumes the shared decisions while still owning retained event routing,
+  pointer capture, invalidation/redraw, and engine action orchestration as the current oracle.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/visual_map_logic.rs`
+- `ecosystem/fret-chart/src/retained/canvas.rs`
+- `ecosystem/fret-chart/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-chart visual_map`
+  - Result: passed, 8 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: shared visual-map piecewise toggle/range/reset policy, continuous handle/pan/jump
+    drag-start policy, retained visual-map style/y-mapping oracles, and the source-policy guard
+    pass together.
+- `cargo check -p fret-chart`
+  - Result: passed, with the pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+  - Scope proven: retained visual-map event/action paths compile after the shared interaction
+    policy extraction, with no new `fret-chart` warnings.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 64 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility/linking/multi-grid baselines,
+    shared legend/slider/visual-map/tooltip/style tests, public-surface policy tests, and ordinary
+    retained chart oracle tests remain green after moving visual-map interaction policy.
+- `cargo fmt --check`
+  - Result: passed after running `cargo fmt`.
+  - Scope proven: Rust formatting is clean after extending `visual_map_logic` and simplifying
+    retained canvas event logic.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 429 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-180` is a targeted `fret-chart` visual-map interaction policy extraction. The
+    direct shared-policy tests, retained visual-map oracle tests, source-policy test, full
+    `fret-chart` package gate, formatting, layering, catalog, and whitespace checks cover the
+    changed surface.

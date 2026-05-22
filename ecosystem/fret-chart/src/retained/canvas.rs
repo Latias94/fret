@@ -38,7 +38,9 @@ use crate::slider_logic::{
 use crate::style::ChartStyle;
 use crate::tooltip::{DefaultTooltipFormatter, TooltipFormatter};
 use crate::visual_map_logic::{
-    VisualMapTrackLayout, visual_map_domain_window, visual_map_track_layouts, visual_map_y_at_value,
+    VisualMapTrackLayout, visual_map_continuous_drag_start, visual_map_current_piece_mask,
+    visual_map_domain_window, visual_map_piece_mask_after_click, visual_map_track_layouts,
+    visual_map_y_at_value,
 };
 
 fn mark_path_cache_key(mark_id: delinea::ids::MarkId, variant: u8) -> u64 {
@@ -1857,12 +1859,6 @@ impl ChartCanvas {
         id: delinea::VisualMapId,
         vm: delinea::engine::model::VisualMapModel,
     ) -> u64 {
-        let buckets = vm.buckets.clamp(1, 64) as u32;
-        let full_mask = if buckets >= 64 {
-            u64::MAX
-        } else {
-            (1u64 << buckets) - 1
-        };
         let piece_mask = self.with_engine(|engine| {
             engine
                 .state()
@@ -1871,7 +1867,7 @@ impl ChartCanvas {
                 .copied()
                 .flatten()
         });
-        piece_mask.or(vm.initial_piece_mask).unwrap_or(full_mask) & full_mask
+        visual_map_current_piece_mask(vm, piece_mask)
     }
 
     fn reset_view_for_axes(&mut self, x_axis: delinea::AxisId, y_axis: delinea::AxisId) {
@@ -3721,16 +3717,6 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         delinea::engine::axis::data_at_y_in_rect(domain, position.y.0, track);
 
                     if vm.mode == delinea::VisualMapMode::Piecewise {
-                        let buckets = vm.buckets.clamp(1, 64) as u32;
-                        let full_mask = if buckets >= 64 {
-                            u64::MAX
-                        } else {
-                            (1u64 << buckets) - 1
-                        };
-
-                        let bucket =
-                            delinea::visual_map::bucket_index_for_value(&vm, click_value) as u32;
-                        let bit = 1u64 << bucket.min(63);
                         let current = self.current_visual_map_piece_mask(vm_id, vm);
 
                         let wants_reset = (*button == MouseButton::Right
@@ -3739,56 +3725,22 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             && !modifiers.meta
                             && !modifiers.alt_gr)
                             || (*button == MouseButton::Left && *click_count == 2);
-                        if wants_reset {
-                            self.with_engine_mut(|engine| {
-                                engine.apply_action(Action::SetVisualMapPieceMask {
-                                    visual_map: vm_id,
-                                    mask: None,
-                                });
-                            });
-                            self.visual_map_piece_anchor = None;
-                            cx.invalidate_self(Invalidation::Paint);
-                            cx.request_redraw();
-                            cx.stop_propagation();
-                            return;
-                        }
-
-                        let is_selected = ((current >> bucket) & 1) == 1;
-
-                        let mut next = current;
-                        if modifiers.shift {
-                            if let Some((anchor_vm, anchor_bucket)) = self.visual_map_piece_anchor
-                                && anchor_vm == vm_id
-                            {
-                                let lo = anchor_bucket.min(bucket);
-                                let hi = anchor_bucket.max(bucket).min(buckets.saturating_sub(1));
-                                let width = hi.saturating_sub(lo).saturating_add(1);
-                                let range_mask = if width >= 64 {
-                                    u64::MAX
-                                } else {
-                                    ((1u64 << width) - 1) << lo
-                                } & full_mask;
-
-                                if is_selected {
-                                    next &= !range_mask;
-                                } else {
-                                    next |= range_mask;
-                                }
-                            } else {
-                                next ^= bit;
-                            }
-                        } else {
-                            next ^= bit;
-                        }
-                        next &= full_mask;
-                        let mask = (next != full_mask).then_some(next);
+                        let update = visual_map_piece_mask_after_click(
+                            vm_id,
+                            vm,
+                            click_value,
+                            current,
+                            self.visual_map_piece_anchor,
+                            modifiers.shift,
+                            wants_reset,
+                        );
                         self.with_engine_mut(|engine| {
                             engine.apply_action(Action::SetVisualMapPieceMask {
                                 visual_map: vm_id,
-                                mask,
+                                mask: update.mask,
                             });
                         });
-                        self.visual_map_piece_anchor = Some((vm_id, bucket));
+                        self.visual_map_piece_anchor = update.anchor;
                         cx.invalidate_self(Invalidation::Paint);
                         cx.request_redraw();
                         cx.stop_propagation();
@@ -3797,43 +3749,27 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
 
                     let current_window = self.current_visual_map_window(vm_id, vm);
 
-                    let handle_hit_px = 8.0f32;
-                    let y_min = visual_map_y_at_value(track, domain, current_window.min);
-                    let y_max = visual_map_y_at_value(track, domain, current_window.max);
-                    let (top, bottom) = (y_max.min(y_min), y_max.max(y_min));
-
-                    let (kind, start_window) = if (position.y.0 - y_min).abs() <= handle_hit_px {
-                        (SliderDragKind::HandleMin, current_window)
-                    } else if (position.y.0 - y_max).abs() <= handle_hit_px {
-                        (SliderDragKind::HandleMax, current_window)
-                    } else if position.y.0 >= top && position.y.0 <= bottom {
-                        (SliderDragKind::Pan, current_window)
-                    } else {
-                        let center = (current_window.min + current_window.max) * 0.5;
-                        let delta = click_value - center;
-                        (
-                            SliderDragKind::Pan,
-                            slider_window_after_delta(
-                                domain,
-                                current_window,
-                                delta,
-                                SliderDragKind::Pan,
-                            ),
-                        )
-                    };
+                    let drag_start = visual_map_continuous_drag_start(
+                        track,
+                        domain,
+                        current_window,
+                        click_value,
+                        position.y.0,
+                        8.0,
+                    );
 
                     self.with_engine_mut(|engine| {
                         engine.apply_action(Action::SetVisualMapRange {
                             visual_map: vm_id,
-                            range: Some((start_window.min, start_window.max)),
+                            range: Some((drag_start.start_window.min, drag_start.start_window.max)),
                         });
                     });
                     self.visual_map_drag = Some(VisualMapDrag {
                         visual_map: vm_id,
-                        kind,
+                        kind: drag_start.kind,
                         track,
                         domain,
-                        start_window,
+                        start_window: drag_start.start_window,
                         start_value: click_value,
                     });
 
