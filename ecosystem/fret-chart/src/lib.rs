@@ -22,7 +22,6 @@ pub use declarative::*;
 pub use input_map::*;
 pub use linking::*;
 pub use output::*;
-pub use retained::*;
 pub use style::*;
 pub use tooltip::*;
 
@@ -113,6 +112,17 @@ mod public_surface_policy {
         assert!(
             !retained_canvas.contains("crate::retained::ChartCanvasOutput"),
             "retained ChartCanvas should consume top-level ChartCanvasOutput directly"
+        );
+    }
+
+    #[test]
+    fn retained_widgets_are_not_glob_reexported_from_crate_root() {
+        let root = compact(include_str!("lib.rs"));
+        let marker = ["pubuse", "retained::*;"].concat();
+
+        assert!(
+            !root.contains(&marker),
+            "retained chart widgets should require explicit fret_chart::retained imports"
         );
     }
 }

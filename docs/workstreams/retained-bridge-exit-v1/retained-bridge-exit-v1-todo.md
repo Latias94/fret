@@ -5057,6 +5057,32 @@ Related plan:
     - Deleted `retained/output.rs` and removed its retained public re-export.
     - Retained `ChartCanvas` now imports `ChartCanvasOutput` from the top-level output module.
     - The full `fret-chart` package gate now passes with 51 tests.
+- [x] RBX-M3-145 Remove retained chart widget glob re-export from the crate root.
+  - Scope:
+    - `ecosystem/fret-chart/src/lib.rs`
+  - Goal:
+    - Stop exporting retained chart widgets through the default `fret_chart::*` crate-root surface.
+    - Keep the retained module available explicitly as `fret_chart::retained` while remaining
+      retained behavior is used as an oracle.
+    - Add a public-surface policy test that prevents the crate-root retained glob re-export from
+      returning.
+  - Validation:
+    - `cargo nextest run -p fret-chart retained_widgets_are_not_glob_reexported_from_crate_root`
+    - `cargo fmt --check`
+    - `cargo check -p fret-chart`
+    - `cargo nextest run -p fret-chart`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-chart/src/lib.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-145-retained-chart-widget-crate-root-glob-re-export-removal`
+  - Result:
+    - Removed `pub use retained::*` from the crate root, so retained chart widgets require explicit
+      `fret_chart::retained` imports.
+    - The new policy test initially self-matched its marker string; after switching to a dynamic
+      marker, the intended crate-root surface check passed.
+    - The full `fret-chart` package gate now passes with 52 tests.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

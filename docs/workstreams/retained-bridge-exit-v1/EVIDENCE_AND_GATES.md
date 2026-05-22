@@ -12338,3 +12338,58 @@ Broader gates not run:
   - Reason: `RBX-M3-140` is a targeted deletion of a no-user `fret-chart` compatibility re-export.
     The consumer scan, public-surface policy test, full `fret-chart` package gate, formatting,
     layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-145 Retained chart widget crate-root glob re-export removal
+
+Claim verified:
+
+- Retained chart widgets are no longer glob re-exported from the `fret-chart` crate root.
+- Retained chart widgets remain available only through explicit `fret_chart::retained` imports
+  while retained `ChartCanvas` continues to serve as the behavior oracle.
+- A `fret-chart` public-surface policy test prevents `pub use retained::*` from returning.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `rg -n "use fret_chart::\\{[^\\n]*(ChartCanvas|ChartCanvasOutput|ChartCanvasPanel)|use fret_chart::ChartCanvas|fret_chart::ChartCanvas|ChartCanvas::" apps ecosystem crates -g '*.rs'`
+  - Result: no first-party source consumers import `ChartCanvas` from the crate root; remaining
+    ordinary consumers use declarative panels or top-level shared output contracts, while retained
+    `ChartCanvas` references are internal oracle tests or policy marker strings.
+  - Scope proven: removing the crate-root retained glob re-export does not break known first-party
+    chart consumers.
+- `cargo nextest run -p fret-chart retained_widgets_are_not_glob_reexported_from_crate_root`
+  - Result: failed first because the test's literal marker self-matched; passed after building the
+    marker dynamically and checking the actual crate-root source.
+  - Scope proven: the policy test now guards against reintroducing `pub use retained::*`.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after the crate-root export change.
+- `cargo check -p fret-chart`
+  - Result: passed, with the pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+  - Scope proven: `fret-chart` compiles without the crate-root retained glob re-export.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 52 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility/linking/multi-grid baselines,
+    top-level tooltip/style tests, public-surface policy tests, and ordinary retained chart oracle
+    tests remain green after the public-surface contraction.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 428 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-145` is a targeted `fret-chart` public-surface contraction. The first-party
+    consumer scan, public-surface policy test, full `fret-chart` package gate, formatting,
+    layering, catalog, and whitespace checks cover the changed surface.

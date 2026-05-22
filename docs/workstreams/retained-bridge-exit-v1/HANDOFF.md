@@ -318,6 +318,11 @@ is gone, `retained/mod.rs` no longer re-exports shared output contracts, and ret
 `ChartCanvas` imports top-level `ChartCanvasOutput` directly. A public-surface policy test prevents
 the retained output re-export from returning; the full `fret-chart` package gate now passes with 51
 tests.
+`RBX-M3-145` then removed the crate-root retained chart widget glob re-export. Retained chart
+widgets remain available only through explicit `fret_chart::retained` imports while they serve as
+oracles; the default `fret_chart::*` surface now favors declarative panels and shared contracts. A
+public-surface policy test prevents `pub use retained::*` from returning, and the full `fret-chart`
+package gate now passes with 52 tests.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining
