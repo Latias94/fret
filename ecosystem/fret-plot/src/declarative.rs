@@ -4,7 +4,7 @@ use fret_core::{
 use fret_runtime::Model;
 use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::{AnyElement, CanvasProps, Length};
-use fret_ui::{ElementContext, UiHost};
+use fret_ui::{ElementContext, ElementContextAccess, UiHost};
 
 use crate::cartesian::{AxisScale, PlotTransform, polyline_commands};
 use crate::models::LinePlotModel;
@@ -66,6 +66,19 @@ pub fn line_plot_panel<H: UiHost + 'static>(
     cx.canvas(props.canvas, move |painter| {
         paint_line_plot_panel(painter, &model, style, x_scale, y_scale);
     })
+}
+
+/// Capability-first adapter for [`line_plot_panel`] when the caller only owns
+/// `ElementContextAccess`.
+#[track_caller]
+pub fn line_plot_panel_in<'a, H: UiHost + 'a + 'static, Cx>(
+    cx: &mut Cx,
+    props: LinePlotPanelProps,
+) -> AnyElement
+where
+    Cx: ElementContextAccess<'a, H>,
+{
+    line_plot_panel(cx.elements(), props)
 }
 
 fn paint_line_plot_panel(

@@ -215,6 +215,7 @@ pub mod markdown_demo;
 pub mod node_graph_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod plot3d_demo;
+pub mod plot_declarative_demo;
 pub mod plot_demo;
 pub mod plot_image_demo;
 #[cfg(not(target_arch = "wasm32"))]

@@ -5303,6 +5303,42 @@ Related plan:
       default dependency feature.
     - The default `fret-plot` package gate passes with 23 tests, and the compat retained oracle
       still compiles under `compat-retained-canvas`.
+- [x] RBX-M3-210 Add a first-party declarative line plot demo while keeping retained plot demos as oracles.
+  - Scope:
+    - `ecosystem/fret-plot/src/declarative.rs`
+    - `apps/fret-examples/src/plot_declarative_demo.rs`
+    - `apps/fret-examples/src/lib.rs`
+    - `apps/fret-examples/tests/basic_plot_demos_surface.rs`
+    - `apps/fret-demo/src/main.rs`
+    - `apps/fret-demo/src/bin/plot_declarative_demo.rs`
+  - Goal:
+    - Provide an app-facing first-party plot example that uses the default declarative
+      `LinePlotPanelProps` / `line_plot_panel` surface.
+    - Keep the old retained `plot_demo` and other plot demos intact as migration oracles until
+      axes, legend, tooltip/readout, pan/zoom/box/query, and non-line layers have declarative
+      parity.
+  - Validation:
+    - `cargo nextest run -p fret-examples plot_declarative_demo_uses_default_declarative_line_plot_panel`
+    - `cargo check -p fret-demo --bin plot_declarative_demo`
+    - `cargo check -p fret-demo --bin fret-demo`
+    - `cargo check -p fret-plot`
+    - `cargo fmt --check`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-plot/src/declarative.rs`
+    - `apps/fret-examples/src/plot_declarative_demo.rs`
+    - `apps/fret-examples/tests/basic_plot_demos_surface.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-210-first-party-declarative-line-plot-demo`
+  - Result:
+    - Added `line_plot_panel_in(...)` as an `ElementContextAccess` adapter so app-facing
+      `fret::AppUi` code can consume the default declarative plot panel without spelling raw
+      `ElementContext`.
+    - Added `plot_declarative_demo` through `FretApp` with seeded `LinePlotModel` data and
+      `LinePlotPanelProps`, plus demo launcher and standalone bin entries.
+    - Added a source-policy test that requires the new declarative plot demo to use
+      `fret_plot::declarative` APIs and rejects retained plot widget authoring in that demo.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

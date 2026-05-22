@@ -7,7 +7,7 @@ fn main() -> anyhow::Result<()> {
 
     if demo == "--list" || demo == "-l" {
         eprintln!(
-            "Available demos:\n  simple-todo\n  todo_demo\n  api_workbench_lite_demo\n  query_demo\n  query_async_tokio_demo\n  hello_counter_demo\n  async_playground_demo\n  embedded_viewport_demo\n  drop_shadow_demo\n  postprocess_theme_demo\n  genui_demo\n  markdown_demo\n  liquid_glass_demo\n  custom_effect_v1_demo\n  custom_effect_v2_demo\n  custom_effect_v3_demo\n  components_gallery\n  emoji_conformance_demo\n  cjk_conformance_demo\n  chart_demo\n  chart_declarative_demo\n  chart_multi_axis_demo\n  echarts_demo\n  category_line_demo\n  horizontal_bars_demo\n  plot_demo\n  plot_image_demo\n  bars_demo\n  grouped_bars_demo\n  stacked_bars_demo\n  area_demo\n  candlestick_demo\n  error_bars_demo\n  heatmap_demo\n  histogram_demo\n  histogram2d_demo\n  shaded_demo\n  stairs_demo\n  stems_demo\n  linked_cursor_demo\n  inf_lines_demo\n  tags_demo\n  drag_demo\n  effects_demo\n  launcher_utility_window_demo\n  launcher_utility_window_materials_demo\n  window_hit_test_probe_demo"
+            "Available demos:\n  simple-todo\n  todo_demo\n  api_workbench_lite_demo\n  query_demo\n  query_async_tokio_demo\n  hello_counter_demo\n  async_playground_demo\n  embedded_viewport_demo\n  drop_shadow_demo\n  postprocess_theme_demo\n  genui_demo\n  markdown_demo\n  liquid_glass_demo\n  custom_effect_v1_demo\n  custom_effect_v2_demo\n  custom_effect_v3_demo\n  components_gallery\n  emoji_conformance_demo\n  cjk_conformance_demo\n  chart_demo\n  chart_declarative_demo\n  chart_multi_axis_demo\n  echarts_demo\n  category_line_demo\n  horizontal_bars_demo\n  plot_declarative_demo\n  plot_demo\n  plot_image_demo\n  bars_demo\n  grouped_bars_demo\n  stacked_bars_demo\n  area_demo\n  candlestick_demo\n  error_bars_demo\n  heatmap_demo\n  histogram_demo\n  histogram2d_demo\n  shaded_demo\n  stairs_demo\n  stems_demo\n  linked_cursor_demo\n  inf_lines_demo\n  tags_demo\n  drag_demo\n  effects_demo\n  launcher_utility_window_demo\n  launcher_utility_window_materials_demo\n  window_hit_test_probe_demo"
         );
         return Ok(());
     }
@@ -56,6 +56,9 @@ fn main() -> anyhow::Result<()> {
         "echarts_demo" => fret_examples::echarts_demo::run(),
         "category_line_demo" => fret_examples::category_line_demo::run(),
         "horizontal_bars_demo" => fret_examples::horizontal_bars_demo::run(),
+        "plot_declarative_demo" | "plot-declarative-demo" => {
+            fret_examples::plot_declarative_demo::run()
+        }
         "plot_demo" => fret_examples::plot_demo::run(),
         "plot_image_demo" => fret_examples::plot_image_demo::run(),
         "bars_demo" => fret_examples::bars_demo::run(),

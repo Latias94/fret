@@ -360,6 +360,11 @@ under `compat-retained-canvas`. `apps/fret-examples` now opts into that compatib
 explicitly for the old retained plot demos, keeping them as migration oracles while the crate
 default stays declarative-first. The full default `fret-plot` package gate now passes with 23
 tests.
+`RBX-M3-210` then added a first-party `plot_declarative_demo` that uses the default declarative
+`LinePlotPanelProps` / `line_plot_panel_in(...)` surface from a `FretApp` view. The old retained
+plot demos remain intact as explicit compatibility oracles until axes, legend, tooltip/readout,
+pan/zoom/box/query, overlays, and non-line layers have declarative parity. A source-policy test now
+prevents the new declarative demo from teaching retained plot widget authoring.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining

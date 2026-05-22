@@ -12762,3 +12762,75 @@ Broader gates not run:
   - Reason: `RBX-M3-200` is a targeted `fret-plot` default-surface and declarative-baseline slice.
     The default/compat `fret-plot` checks, full `fret-plot` package tests, metadata dependency
     proof, formatting, layering, catalog, and whitespace checks cover the changed surface.
+
+## 2026-05-22 - RBX-M3-210 First-party declarative line plot demo
+
+Claim verified:
+
+- A first-party `plot_declarative_demo` now teaches default declarative line plot authoring through
+  `LinePlotPanelProps` and `line_plot_panel_in(...)`.
+- The new demo does not import `fret_plot::retained`, construct `LinePlotCanvas` / `PlotCanvas`, or
+  call retained node creation APIs.
+- The existing retained plot demos remain available as explicit compatibility oracles for
+  retained-only plot behavior that has not yet moved to the declarative surface.
+
+Evidence:
+
+- `ecosystem/fret-plot/src/declarative.rs`
+- `apps/fret-examples/src/plot_declarative_demo.rs`
+- `apps/fret-examples/src/lib.rs`
+- `apps/fret-examples/tests/basic_plot_demos_surface.rs`
+- `apps/fret-demo/src/main.rs`
+- `apps/fret-demo/src/bin/plot_declarative_demo.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-examples plot_declarative_demo_uses_default_declarative_line_plot_panel`
+  - Result: failed before implementation because `apps/fret-examples/src/plot_declarative_demo.rs`
+    did not exist.
+  - Scope proven: the source-policy test started red and locked the desired first-party declarative
+    plot demo surface.
+- `cargo nextest run -p fret-examples plot_declarative_demo_uses_default_declarative_line_plot_panel`
+  - Result: passed, 1 test, 115 skipped.
+  - Scope proven: the new demo uses `fret_plot::declarative::{LinePlotPanelProps,
+    line_plot_panel_in}`, seeded `LinePlotModel` / `LineSeries`, and rejects retained plot widget
+    authoring markers.
+- `cargo check -p fret-demo --bin plot_declarative_demo`
+  - Result: passed.
+  - Scope proven: the standalone first-party declarative plot demo binary compiles through the
+    normal `fret-demo` package entry.
+- `cargo check -p fret-demo --bin fret-demo`
+  - Result: passed.
+  - Scope proven: the main demo launcher compiles with the new `plot_declarative_demo` list and
+    dispatch entry.
+- `cargo check -p fret-plot`
+  - Result: passed, with the pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+  - Scope proven: the `line_plot_panel_in(...)` adapter does not reopen retained bridge access or
+    break the default `fret-plot` package.
+
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after adding the demo and `line_plot_panel_in(...)`
+    adapter.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid after adding the
+    default declarative plot demo.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 429 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+- `rg -n "^(<<<<<<<|=======|>>>>>>>)" . -g '!target' -g '!repo-ref'`
+  - Result: no matches.
+  - Scope proven: no merge conflict markers are present in tracked or new workspace files.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-210` is a targeted first-party plot demo and source-policy slice. The demo
+    compile gate, source-policy test, default `fret-plot` check, formatting, layering, catalog,
+    conflict-marker scan, and whitespace checks cover the changed surface.
