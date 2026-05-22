@@ -5222,6 +5222,40 @@ Related plan:
       starts, and extended the source-policy guard so those pure decisions cannot move back into
       retained canvas.
     - The full `fret-chart` package gate now passes with 64 tests.
+- [x] RBX-M3-190 Move chart data-zoom slider interaction policy onto shared/default chart logic.
+  - Scope:
+    - `ecosystem/fret-chart/src/slider_logic.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+  - Goal:
+    - Remove retained-only ownership of data-zoom slider handle-vs-pan-vs-jump drag-start policy.
+    - Remove retained-only ownership of data-zoom slider drag-update projection and span-anchor
+      policy.
+    - Keep retained `ChartCanvas` as the current event/action oracle while making it consume
+      shared slider interaction decisions.
+  - Validation:
+    - `cargo nextest run -p fret-chart slider_`
+    - `cargo check -p fret-chart`
+    - `cargo fmt --check`
+    - `cargo nextest run -p fret-chart`
+    - `python3 tools/check_layering.py`
+    - `python3 tools/check_workstream_catalog.py`
+    - `git diff --check`
+  - Evidence:
+    - `ecosystem/fret-chart/src/slider_logic.rs`
+    - `ecosystem/fret-chart/src/retained/canvas.rs`
+    - `ecosystem/fret-chart/src/lib.rs`
+    - `docs/workstreams/retained-bridge-exit-v1/EVIDENCE_AND_GATES.md#2026-05-22---rbx-m3-190-chart-data-zoom-slider-interaction-policy-moved-to-shared-logic`
+  - Result:
+    - Added shared `SliderDragPermissions`, `SliderDragStart`, `SliderDragUpdate`,
+      `slider_anchor_for_drag_kind`, `slider_drag_start_at_x`, `slider_drag_start_at_y`,
+      `slider_drag_update_at_x`, and `slider_drag_update_at_y`.
+    - Retained `ChartCanvas` now delegates data-zoom slider drag-start selection, jump-to-window
+      start windows, drag update projection, and window-span anchor choice to shared logic.
+    - Added shared slider tests for x/y handle, pan, jump, lock, and drag-update behavior, and
+      extended the source-policy guard so those pure interaction decisions cannot move back into
+      retained canvas.
+    - The full `fret-chart` package gate now passes with 67 tests.
 - [ ] Convert `fret-chart` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Convert `fret-plot` retained surfaces to `Canvas`-first declarative authoring.
 - [ ] Remove `unstable-retained-bridge` from `ecosystem/fret-chart` and `ecosystem/fret-plot`.

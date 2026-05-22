@@ -6,7 +6,7 @@ use std::time::Duration;
 use delinea::FilterMode;
 use delinea::engine::EngineError;
 use delinea::engine::model::{ChartPatch, ModelError, PatchMode};
-use delinea::engine::window::{DataWindow, WindowSpanAnchor};
+use delinea::engine::window::DataWindow;
 use delinea::marks::{MarkKind, MarkPayloadRef};
 use delinea::text::{TextMeasurer, TextMetrics};
 use delinea::{Action, BrushSelection2D, ChartEngine, WorkBudget};
@@ -33,7 +33,8 @@ use crate::output::{
 };
 use crate::retained::text_cache::{KeyBuilder, TextCacheGroup};
 use crate::slider_logic::{
-    SliderDragKind, slider_norm, slider_value_at_x, slider_value_at_y, slider_window_after_delta,
+    SliderDragKind, SliderDragPermissions, slider_drag_start_at_x, slider_drag_start_at_y,
+    slider_drag_update_at_x, slider_drag_update_at_y, slider_norm, slider_window_after_delta,
 };
 use crate::style::ChartStyle;
 use crate::tooltip::{DefaultTooltipFormatter, TooltipFormatter};
@@ -3431,44 +3432,28 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     {
                         let track = drag.track;
                         let extent = drag.extent;
-                        let span = extent.span();
                         match drag.axis_kind {
                             SliderAxisKind::X => {
-                                if track.size.width.0 > 0.0 && span.is_finite() && span > 0.0 {
-                                    let x = position.x.0.clamp(
-                                        track.origin.x.0,
-                                        track.origin.x.0 + track.size.width.0,
-                                    );
-                                    let start_x = drag.start_pos.x.0.clamp(
-                                        track.origin.x.0,
-                                        track.origin.x.0 + track.size.width.0,
-                                    );
-                                    let delta_px = x - start_x;
-                                    let delta_value = (delta_px / track.size.width.0) as f64 * span;
-
-                                    let window = slider_window_after_delta(
-                                        extent,
-                                        drag.start_window,
-                                        delta_value,
-                                        drag.kind,
-                                    );
-                                    let anchor = match drag.kind {
-                                        SliderDragKind::HandleMin => WindowSpanAnchor::LockMax,
-                                        SliderDragKind::HandleMax => WindowSpanAnchor::LockMin,
-                                        SliderDragKind::Pan => WindowSpanAnchor::Center,
-                                    };
+                                if let Some(update) = slider_drag_update_at_x(
+                                    track,
+                                    extent,
+                                    drag.start_window,
+                                    drag.start_pos.x.0,
+                                    position.x.0,
+                                    drag.kind,
+                                ) {
                                     self.with_engine_mut(|engine| {
                                         engine.apply_action(Action::SetDataWindowXFromZoom {
                                             axis: drag.axis,
                                             base: drag.start_window,
-                                            window,
-                                            anchor,
+                                            window: update.window,
+                                            anchor: update.anchor,
                                         });
                                     });
 
                                     self.slider_drag = Some(DataZoomSliderDrag {
                                         start_pos: *position,
-                                        start_window: window,
+                                        start_window: update.window,
                                         ..drag
                                     });
                                     cx.invalidate_self(Invalidation::Paint);
@@ -3478,42 +3463,26 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 }
                             }
                             SliderAxisKind::Y => {
-                                if track.size.height.0 > 0.0 && span.is_finite() && span > 0.0 {
-                                    let height = track.size.height.0;
-                                    let bottom = track.origin.y.0 + height;
-
-                                    let y = position.y.0.clamp(track.origin.y.0, bottom);
-                                    let start_y =
-                                        drag.start_pos.y.0.clamp(track.origin.y.0, bottom);
-
-                                    let y_from_bottom = bottom - y;
-                                    let start_from_bottom = bottom - start_y;
-                                    let delta_px = y_from_bottom - start_from_bottom;
-                                    let delta_value = (delta_px / height) as f64 * span;
-
-                                    let window = slider_window_after_delta(
-                                        extent,
-                                        drag.start_window,
-                                        delta_value,
-                                        drag.kind,
-                                    );
-                                    let anchor = match drag.kind {
-                                        SliderDragKind::HandleMin => WindowSpanAnchor::LockMax,
-                                        SliderDragKind::HandleMax => WindowSpanAnchor::LockMin,
-                                        SliderDragKind::Pan => WindowSpanAnchor::Center,
-                                    };
+                                if let Some(update) = slider_drag_update_at_y(
+                                    track,
+                                    extent,
+                                    drag.start_window,
+                                    drag.start_pos.y.0,
+                                    position.y.0,
+                                    drag.kind,
+                                ) {
                                     self.with_engine_mut(|engine| {
                                         engine.apply_action(Action::SetDataWindowYFromZoom {
                                             axis: drag.axis,
                                             base: drag.start_window,
-                                            window,
-                                            anchor,
+                                            window: update.window,
+                                            anchor: update.anchor,
                                         });
                                     });
 
                                     self.slider_drag = Some(DataZoomSliderDrag {
                                         start_pos: *position,
-                                        start_window: window,
+                                        start_window: update.window,
                                         ..drag
                                     });
                                     cx.invalidate_self(Invalidation::Paint);
@@ -3904,9 +3873,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             }
 
                             let (locked_min, locked_max) = self.axis_constraints(axis);
-                            let can_pan = locked_min.is_none() && locked_max.is_none();
-                            let can_handle_min = locked_min.is_none();
-                            let can_handle_max = locked_max.is_none();
+                            let permissions = SliderDragPermissions {
+                                pan: locked_min.is_none() && locked_max.is_none(),
+                                handle_min: locked_min.is_none(),
+                                handle_max: locked_max.is_none(),
+                            };
 
                             if let Some(track) = self.x_slider_track_for_axis(axis)
                                 && track.contains(*position)
@@ -3914,61 +3885,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 let extent = self.compute_axis_extent_from_data(axis, true);
                                 let window = self.current_window_x_for_slider(axis, extent);
 
-                                let t0 = slider_norm(extent, window.min);
-                                let t1 = slider_norm(extent, window.max);
-                                let left = track.origin.x.0 + t0 * track.size.width.0;
-                                let right = track.origin.x.0 + t1 * track.size.width.0;
-
-                                let handle_hit_px = 7.0f32;
-                                let x = position.x.0;
-                                let kind = if (x - left).abs() <= handle_hit_px {
-                                    SliderDragKind::HandleMin
-                                } else if (x - right).abs() <= handle_hit_px {
-                                    SliderDragKind::HandleMax
-                                } else if x >= left && x <= right {
-                                    SliderDragKind::Pan
-                                } else {
-                                    // Jump: center the current span around the click and drag as pan.
-                                    SliderDragKind::Pan
-                                };
-
-                                if matches!(kind, SliderDragKind::Pan) && !can_pan {
+                                let Some(start) = slider_drag_start_at_x(
+                                    track,
+                                    extent,
+                                    window,
+                                    position.x.0,
+                                    7.0,
+                                    permissions,
+                                ) else {
                                     return;
-                                }
-                                if matches!(kind, SliderDragKind::HandleMin) && !can_handle_min {
-                                    return;
-                                }
-                                if matches!(kind, SliderDragKind::HandleMax) && !can_handle_max {
-                                    return;
-                                }
-
-                                let start_window = if matches!(kind, SliderDragKind::Pan)
-                                    && !(x >= left && x <= right)
-                                {
-                                    let click_value = slider_value_at_x(track, extent, x);
-                                    let half = 0.5 * window.span();
-                                    let start_window = DataWindow {
-                                        min: click_value - half,
-                                        max: click_value + half,
-                                    };
-                                    slider_window_after_delta(
-                                        extent,
-                                        start_window,
-                                        0.0,
-                                        SliderDragKind::Pan,
-                                    )
-                                } else {
-                                    window
                                 };
 
                                 self.slider_drag = Some(DataZoomSliderDrag {
                                     axis_kind: SliderAxisKind::X,
                                     axis,
-                                    kind,
+                                    kind: start.kind,
                                     track,
                                     extent,
                                     start_pos: *position,
-                                    start_window,
+                                    start_window: start.start_window,
                                 });
 
                                 cx.request_focus(cx.node);
@@ -3994,9 +3929,11 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             }
 
                             let (locked_min, locked_max) = self.axis_constraints(axis);
-                            let can_pan = locked_min.is_none() && locked_max.is_none();
-                            let can_handle_min = locked_min.is_none();
-                            let can_handle_max = locked_max.is_none();
+                            let permissions = SliderDragPermissions {
+                                pan: locked_min.is_none() && locked_max.is_none(),
+                                handle_min: locked_min.is_none(),
+                                handle_max: locked_max.is_none(),
+                            };
 
                             if let Some(track) = self.y_slider_track_for_axis(axis)
                                 && track.contains(*position)
@@ -4004,68 +3941,25 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                                 let extent = self.compute_axis_extent_from_data(axis, false);
                                 let window = self.current_window_y_for_slider(axis, extent);
 
-                                let t0 = slider_norm(extent, window.min);
-                                let t1 = slider_norm(extent, window.max);
-
-                                let handle_hit_px = 7.0f32;
-                                let height = track.size.height.0;
-                                let bottom = track.origin.y.0 + height;
-                                let y_from_bottom =
-                                    (bottom - position.y.0).clamp(0.0, height.max(1.0));
-
-                                let min_handle = t0 * height;
-                                let max_handle = t1 * height;
-
-                                let kind = if (y_from_bottom - min_handle).abs() <= handle_hit_px {
-                                    SliderDragKind::HandleMin
-                                } else if (y_from_bottom - max_handle).abs() <= handle_hit_px {
-                                    SliderDragKind::HandleMax
-                                } else if y_from_bottom >= min_handle && y_from_bottom <= max_handle
-                                {
-                                    SliderDragKind::Pan
-                                } else {
-                                    // Jump: center the current span around the click and drag as pan.
-                                    SliderDragKind::Pan
-                                };
-
-                                if matches!(kind, SliderDragKind::Pan) && !can_pan {
+                                let Some(start) = slider_drag_start_at_y(
+                                    track,
+                                    extent,
+                                    window,
+                                    position.y.0,
+                                    7.0,
+                                    permissions,
+                                ) else {
                                     return;
-                                }
-                                if matches!(kind, SliderDragKind::HandleMin) && !can_handle_min {
-                                    return;
-                                }
-                                if matches!(kind, SliderDragKind::HandleMax) && !can_handle_max {
-                                    return;
-                                }
-
-                                let start_window = if matches!(kind, SliderDragKind::Pan)
-                                    && !(y_from_bottom >= min_handle && y_from_bottom <= max_handle)
-                                {
-                                    let click_value =
-                                        slider_value_at_y(track, extent, position.y.0);
-                                    let half = 0.5 * window.span();
-                                    let start_window = DataWindow {
-                                        min: click_value - half,
-                                        max: click_value + half,
-                                    };
-                                    slider_window_after_delta(
-                                        extent,
-                                        start_window,
-                                        0.0,
-                                        SliderDragKind::Pan,
-                                    )
-                                } else {
-                                    window
                                 };
 
                                 self.slider_drag = Some(DataZoomSliderDrag {
                                     axis_kind: SliderAxisKind::Y,
                                     axis,
-                                    kind,
+                                    kind: start.kind,
                                     track,
                                     extent,
                                     start_pos: *position,
-                                    start_window,
+                                    start_window: start.start_window,
                                 });
 
                                 cx.request_focus(cx.node);

@@ -161,6 +161,14 @@ mod public_surface_policy {
             "fn slider_value_at(",
             "fn slider_value_at_y(",
             "fn slider_window_after_delta(",
+            "fn slider_drag_start_at_x(",
+            "fn slider_drag_start_at_y(",
+            "fn slider_drag_update_at_x(",
+            "fn slider_drag_update_at_y(",
+            "handle_hit_px = 7.0f32",
+            "let y_from_bottom =",
+            "WindowSpanAnchor::LockMax",
+            "WindowSpanAnchor::LockMin",
         ] {
             assert!(
                 !retained_canvas.contains(marker),
@@ -172,6 +180,10 @@ mod public_surface_policy {
             "use crate::slider_logic::{",
             "slider_window_after_delta(",
             "slider_norm(",
+            "slider_drag_start_at_x(",
+            "slider_drag_start_at_y(",
+            "slider_drag_update_at_x(",
+            "slider_drag_update_at_y(",
         ] {
             assert!(
                 retained_canvas.contains(marker),

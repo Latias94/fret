@@ -344,6 +344,12 @@ mask reset/toggle/shift-range policy and continuous handle/pan/jump drag-start s
 `ChartCanvas` still owns event routing, capture/invalidation/redraw, and engine action I/O, but it
 now consumes those shared decisions. Shared tests cover piecewise toggle/range/reset and continuous
 handle/pan/jump starts; the full `fret-chart` package gate now passes with 64 tests.
+`RBX-M3-190` then moved data-zoom slider interaction decisions into shared `slider_logic`: x/y
+handle-vs-pan-vs-jump drag-start selection, permission locks, jump start-window computation,
+drag-update projection, and window-span anchor choice. Retained `ChartCanvas` still owns retained
+event routing, capture/invalidation/redraw, and engine action I/O, but it now consumes the shared
+slider decisions. Shared tests cover x/y handle, pan, jump, lock, and drag-update behavior; the
+full `fret-chart` package gate now passes with 67 tests.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
 source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining

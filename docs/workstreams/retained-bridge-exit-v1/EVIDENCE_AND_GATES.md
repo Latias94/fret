@@ -12630,3 +12630,59 @@ Broader gates not run:
     direct shared-policy tests, retained visual-map oracle tests, source-policy test, full
     `fret-chart` package gate, formatting, layering, catalog, and whitespace checks cover the
     changed surface.
+
+## 2026-05-22 - RBX-M3-190 Chart data-zoom slider interaction policy moved to shared logic
+
+Claim verified:
+
+- Data-zoom slider handle-vs-pan-vs-jump drag-start policy now lives in shared `slider_logic`
+  instead of retained `ChartCanvas`.
+- Data-zoom slider drag-update projection and span-anchor policy now live in shared `slider_logic`.
+- Retained `ChartCanvas` consumes the shared decisions while still owning retained event routing,
+  pointer capture, invalidation/redraw, and engine action orchestration as the current oracle.
+
+Evidence:
+
+- `ecosystem/fret-chart/src/slider_logic.rs`
+- `ecosystem/fret-chart/src/retained/canvas.rs`
+- `ecosystem/fret-chart/src/lib.rs`
+- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+- `docs/workstreams/retained-bridge-exit-v1/HANDOFF.md`
+
+Commands:
+
+- `cargo nextest run -p fret-chart slider_`
+  - Result: passed, 7 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: shared slider x/y drag-start, handle/pan/jump, permission locks, drag-update
+    projection, window-anchor policy, retained slider window oracle, and source-policy guard pass
+    together.
+- `cargo check -p fret-chart`
+  - Result: passed, with the pre-existing `fret-ui` `current_effective_opacity` dead-code warning.
+  - Scope proven: retained data-zoom slider event/action paths compile after the shared interaction
+    policy extraction, with no new `fret-chart` warnings.
+- `cargo nextest run -p fret-chart`
+  - Result: passed, 67 tests, with the pre-existing `fret-ui` dead-code warning.
+  - Scope proven: declarative chart paint/output/accessibility/linking/multi-grid baselines,
+    shared legend/slider/visual-map/tooltip/style tests, public-surface policy tests, and ordinary
+    retained chart oracle tests remain green after moving data-zoom slider interaction policy.
+- `cargo fmt --check`
+  - Result: passed.
+  - Scope proven: Rust formatting is clean after extending `slider_logic` and simplifying retained
+    canvas event logic.
+- `python3 tools/check_layering.py`
+  - Result: passed.
+  - Scope proven: crate layering and retained bridge allowlist policy remain valid.
+- `python3 tools/check_workstream_catalog.py`
+  - Result: passed; validated 429 dedicated directories and 47 standalone markdown files.
+  - Scope proven: workstream catalog indexes remain valid after task/evidence/handoff updates.
+- `git diff --check`
+  - Result: passed.
+  - Scope proven: changed files have no whitespace errors.
+
+Broader gates not run:
+
+- `cargo nextest run --workspace`
+  - Reason: `RBX-M3-190` is a targeted `fret-chart` data-zoom slider interaction policy extraction.
+    The direct shared-policy tests, retained slider oracle test, source-policy test, full
+    `fret-chart` package gate, formatting, layering, catalog, and whitespace checks cover the
+    changed surface.
