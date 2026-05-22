@@ -128,7 +128,11 @@ date: 2026-05-12
   Resizable panel root boundary. `ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore.json`
   closes the adjacent cached-source focus-restore gap: it moves the cached Combobox across panels,
   opens the popup, presses Escape, and proves focus restores to the live moved trigger rather than a
-  stale pre-move node.
+  stale pre-move node. `ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state.json`
+  closes the same surface's action-state companion: the fixture toggles the `In Review` option to
+  disabled, uses an explicit state-sensitive cache key, moves the cached source across panels, and
+  proves the reopened item exports `disabled=true` and `invoke=false`. The latest
+  `ui-gallery-resizable` suite now has 6/6 passing scripts with evidence.
 - Read-only non-list action-state update:
   `read_only_is` now lets diagnostics assert the semantics read-only flag directly. The UI Gallery
   Switch gate `ui-gallery-switch-read-only-action-state.json` proves a read-only Switch remains

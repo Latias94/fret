@@ -10601,6 +10601,36 @@
       ]
     },
     {
+      "id": "ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state",
+      "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-resizable"
+      ],
+      "tags": [
+        "action_state",
+        "combobox",
+        "disabled",
+        "overlay",
+        "resizable",
+        "root_boundary",
+        "semantics",
+        "shadcn",
+        "ui_gallery",
+        "view_cache"
+      ],
+      "target_hints": [
+        "Starts directly on the diagnostics-only Resizable Moving Cached Combobox fixture.",
+        "Toggles the In Review option to disabled before moving the cached source across Resizable viewport roots.",
+        "Reopens after the move and proves the item semantics expose disabled=true and invoke=false rather than stale pre-toggle action metadata."
+      ]
+    },
+    {
       "id": "ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore",
       "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore.json",
       "required_capabilities": [

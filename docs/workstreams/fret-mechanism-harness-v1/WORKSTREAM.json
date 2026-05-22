@@ -3,7 +3,7 @@
   "slug": "fret-mechanism-harness-v1",
   "title": "Fret Mechanism Harness v1",
   "status": "active",
-  "updated": "2026-05-22",
+  "updated": "2026-05-23",
   "scope_kind": "execution",
   "problem": "Self-drawn UI parity work needs a mechanism-first harness that can discover layout, invalidation, hit-test, overlay, and focus defects before they appear as manual component screenshots. This lane turns controlled mechanism fixtures plus UI Gallery or focused diagnostics gates into an end-to-end defect-finding loop.",
   "authoritative_docs": [
@@ -70,6 +70,10 @@
     {
       "role": "audit",
       "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-22.md"
+    },
+    {
+      "role": "audit",
+      "path": "docs/workstreams/fret-mechanism-harness-v1/FINDINGS_2026-05-23.md"
     }
   ],
   "repro": {
@@ -1053,6 +1057,14 @@
       "command": "target/dev-fast/fretboard-dev.exe diag suite ui-gallery-resizable --dir target/fret-diag-resizable-suite-after-moving-cached-combobox-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe"
     },
     {
+      "name": "ui-gallery-resizable-moving-cached-combobox-disabled-action-state-diag",
+      "command": "target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state.json --dir target/fret-diag-resizable-moving-combobox-disabled-action-state-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
+      "name": "ui-gallery-resizable-suite-disabled-action-state",
+      "command": "target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-resizable/suite.json --dir target/fret-diag-resizable-suite-disabled-action-state-v1 --session-auto --timeout-ms 1000000 --launch -- target/dev-fast/fret-ui-gallery.exe"
+    },
+    {
       "name": "ui-kit-retained-table-pagination-keep-pinned-focused",
       "command": "cargo nextest run --cargo-profile dev-fast -p fret-ui-kit table_virtualized_retained_respects_keep_pinned_rows_false_across_pagination table_virtualized_retained_keeps_pinned_rows_true_across_pagination --no-fail-fast"
     },
@@ -1779,6 +1791,10 @@
     "crates/fret-ui/src/tree/tests/prepaint.rs",
     "apps/fret-ui-gallery/src/ui/snippets/resizable/moving_cached_combobox.rs",
     "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json",
+    "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state.json",
+    "target/fret-diag-resizable-moving-combobox-disabled-action-state-v1/sessions/1779467403958-68712/1779467419798/ai.packet",
+    "target/fret-diag-resizable-moving-combobox-disabled-action-state-v1/sessions/1779467403958-68712/share/1779467419798.zip",
+    "target/fret-diag-resizable-suite-disabled-action-state-v1/sessions/1779467543831-72756/suite.summary.json",
     "target/fret-diag-resizable-moving-cached-combobox-v6/sessions/1779027970415-65904/script.result.json",
     "target/fret-diag-resizable-moving-cached-combobox-v6/sessions/1779027970415-65904/1779027983606/ai.packet",
     "target/fret-diag-resizable-moving-cached-combobox-v6/sessions/1779027970415-65904/share/1779027983606.zip",

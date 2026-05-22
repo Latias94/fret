@@ -1819,3 +1819,21 @@ Next slice recommendation:
 - Continue cached/root-boundary stale-state discovery on moving cached action-state/disabled
   metadata or another dismissal-policy surface; relation edges and Escape focus restore are now
   covered for the moving cached Combobox fixture.
+
+- [x] Add a moving cached Combobox disabled/action-state companion.
+  - Result:
+    `ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state.json` toggles the
+    diagnostics-only `In Review` option to disabled, moves the cached Combobox source from the left
+    Resizable root to the right root, reopens the popup, and proves the moved item exports
+    `disabled=true` and `invoke=false`. The fixture now includes the disabled state in an explicit
+    cached-subtree key, which is the intended contract for state-sensitive cached contents. No new
+    defect reproduced. Focused runtime passed with run id `1779467419798`; the six-row
+    `ui-gallery-resizable` suite passed with summary
+    `target/fret-diag-resizable-suite-disabled-action-state-v1/sessions/1779467543831-72756/suite.summary.json`.
+
+Next slice recommendation:
+
+- Leave the moving cached Combobox cluster for now. Relation edges, Escape focus restore, placement,
+  and disabled action-state are covered; next prefer a different overlay family with root-boundary
+  dismissal policy after source/root movement, or an authoring/contract guard for state-sensitive
+  cached subtrees that must carry explicit cache keys.

@@ -218,6 +218,27 @@ Current synthetic evidence anchors:
   - suite result:
     passed 5/5; focus-restore row run id `1779466506265`; summary:
     `target/fret-diag-resizable-suite-focus-restore-v1/sessions/1779466397357-72132/suite.summary.json`.
+- Resizable cached Combobox disabled action-state runtime gate:
+  `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state.json`
+  - proof:
+    toggles the diagnostics-only `In Review` option to disabled, moves the cached Combobox source
+    across Resizable viewport roots, reopens the popup, and proves the moved item exports
+    `disabled=true` and `invoke=false` with the updated subtree keyed explicitly on the disabled
+    state.
+  - focused protocol gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_disabled_action_state --no-fail-fast`
+  - protocol result:
+    passed with Nextest run id `1088c679-b0ad-4e52-9a14-6d0c4bd8dc09`.
+  - focused runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state.json --dir target/fret-diag-resizable-moving-combobox-disabled-action-state-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1779467419798`; AI packet:
+    `target/fret-diag-resizable-moving-combobox-disabled-action-state-v1/sessions/1779467403958-68712/1779467419798/ai.packet`.
+  - suite command:
+    `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-resizable/suite.json --dir target/fret-diag-resizable-suite-disabled-action-state-v1 --session-auto --timeout-ms 1000000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    passed 6/6; disabled-action-state row run id `1779467737769`; summary:
+    `target/fret-diag-resizable-suite-disabled-action-state-v1/sessions/1779467543831-72756/suite.summary.json`.
 
 ## Timer Dispatch Lifecycle Gates
 
