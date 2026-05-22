@@ -16654,3 +16654,54 @@ Interpretation:
 - The next clean-geometry optimization should either reduce those fallback child layouts or specialize a proven
   side-effect boundary with focused gates. Do not target paint fingerprints, Scroll layout, or renderer text from this
   evidence.
+
+## 2026-05-22 15:31:00 +08:00 (clean-geometry fallback owner diagnostics)
+
+Question:
+- Which element kind owns the slowest side-effect-boundary fallback layout after clean-geometry pure-node application
+  has been inlined and fallback/fingerprint timing has been split?
+
+Change:
+- Added additive frame stats for the slowest clean-geometry fallback-layout owner:
+  `layout_clean_geometry_apply_fallback_layouts_top_time_us` and
+  `layout_clean_geometry_apply_fallback_layouts_top_kind`.
+- Wired both fields through `fret-bootstrap` diagnostics snapshots, `fret-diag` perf-key registration, bundle stats
+  aggregation, JSON summary buckets, and `diag stats` human output.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui -p fret-diag -p fret-bootstrap --check
+cargo check -p fret-ui --lib
+cargo check -p fret-bootstrap
+cargo check -p fret-diag
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields trace_exported_perf_key_registry_contains_core_timeline_keys registered_perf_key_units_match_names --no-fail-fast
+cargo build -p fretboard-dev
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260522-r37-fallback-owner-field --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260522-r37-fallback-owner-field\sessions\1779434829335-184884\1779434900632-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+```
+
+Notes:
+- An initial parallel `cargo build -p fretboard-dev` / `cargo build -p fret-ui-gallery --features gallery-dev`
+  exceeded the outer command timeout while the underlying cargo/rustc processes continued. The processes exited
+  naturally, and both builds were rerun serially for explicit success.
+- `cargo check` / build still report the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Evidence:
+- r37 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260522-r37-fallback-owner-field/sessions/1779434829335-184884/1779434900632-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r37 reports p50/p95 total `120/1624us`, layout `37/670us`, prepaint `40/52us`, paint `42/905us`, and
+  `layout.engine_solve=0/0`.
+- Root phase p95/max reports request-build total/take/phase1/phase2/proof/compute/put
+  `330/25/47/265/264/0/6us` and roots total/apply/flush `291/291/0us`.
+- Clean-geometry counts at p95/max are proof nodes/boundaries `124/3 / 124/3` and
+  apply nodes/fallback-layouts `118/7 / 118/7`.
+- The owner split reports `apply_us(fallback/top/fingerprint)=283/277/6 / 283/277/6 top_kind=Scroll`.
+
+Interpretation:
+- The residual clean-geometry root-apply cost is almost entirely the slowest fallback layout, and that fallback owner
+  is `Scroll` in this repro.
+- The next optimization should be a narrow `Scroll` side-effect-boundary path for clean resize, not a broad Scroll skip.
+  The gate surface must cover scroll extent, scrollbar/handle state, hit-test bounds, semantics bounds, and layout-query
+  correctness.

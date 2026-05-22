@@ -277,6 +277,10 @@ pub struct UiDebugFrameStats {
     pub layout_clean_geometry_apply_fallback_layouts: u64,
     /// Total wall time spent running fallback child layouts during clean-geometry application.
     pub layout_clean_geometry_apply_fallback_layouts_time: Duration,
+    /// Largest single fallback child-layout time during clean-geometry application.
+    pub layout_clean_geometry_apply_fallback_layouts_top_time: Duration,
+    /// Element kind attached to the largest clean-geometry fallback child layout, when known.
+    pub layout_clean_geometry_apply_fallback_layouts_top_kind: Option<&'static str>,
     /// Total wall time spent recomputing paint-geometry fingerprints during clean-geometry application.
     pub layout_clean_geometry_apply_paint_fingerprint_time: Duration,
     /// First rejection reason observed for a clean-geometry root-solve skip attempt this frame.

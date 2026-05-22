@@ -473,6 +473,17 @@ not update checked-in baselines.
       - Decision: the residual root-apply owner is side-effect-boundary fallback child layout, not paint-fingerprint
         refresh. The next clean-geometry optimization, if any, should reduce or specialize those fallback layouts with
         focused side-effect gates; do not target paint fingerprints or renderer text from this evidence.
+      - Follow-up attribution: clean-geometry apply diagnostics now also persist the slowest fallback-layout owner
+        kind as `layout_clean_geometry_apply_fallback_layouts_top_kind`, plus its time as
+        `layout_clean_geometry_apply_fallback_layouts_top_time_us`.
+      - r37 evidence:
+        `target/fret-diag/text-clean-geometry-current-20260522-r37-fallback-owner-field/sessions/1779434829335-184884/1779434900632-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+      - r37 result: p50/p95 total `120/1624us`, layout `37/670us`, paint `42/905us`, root apply p95/max
+        `291/291us`. The split reports `apply_us(fallback/top/fingerprint)=283/277/6 / 283/277/6` and
+        `top_kind=Scroll`, again with `7` fallback child layouts.
+      - Decision: the next optimization candidate should target the measured `Scroll` side-effect-boundary fallback
+        path under clean resize, with gates for scroll extent, scrollbar/handle state, hit-test bounds, semantics
+        bounds, and layout-query correctness. Do not skip Scroll broadly from this evidence.
   - Do not widen this into a renderer rewrite unless renderer prepare/encode becomes dominant in the local and
     Windows RTX4090 evidence.
 

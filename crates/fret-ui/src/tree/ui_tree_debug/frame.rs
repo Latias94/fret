@@ -125,6 +125,10 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats
             .layout_clean_geometry_apply_fallback_layouts_time = Duration::default();
         self.debug_stats
+            .layout_clean_geometry_apply_fallback_layouts_top_time = Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_apply_fallback_layouts_top_kind = None;
+        self.debug_stats
             .layout_clean_geometry_apply_paint_fingerprint_time = Duration::default();
         self.debug_stats
             .layout_clean_geometry_solve_skip_first_rejection = None;

@@ -435,6 +435,15 @@ impl<H: UiHost> UiTree<H> {
                     .layout_clean_geometry_apply_fallback_layouts
                     .saturating_add(1);
             }
+            let fallback_kind = if self.debug_enabled {
+                self.window.and_then(|window| {
+                    crate::declarative::frame::element_record_for_node(app, window, fallback.node)
+                        .map(|record| record.instance.kind_name())
+                })
+            } else {
+                None
+            };
+            let fallback_node_started = self.debug_enabled.then(Instant::now);
             let _ = self.layout_node(
                 app,
                 services,
@@ -444,6 +453,21 @@ impl<H: UiHost> UiTree<H> {
                 pass_kind,
                 overflow_ctx,
             );
+            if self.debug_enabled
+                && let Some(fallback_node_started) = fallback_node_started
+            {
+                let elapsed = fallback_node_started.elapsed();
+                if elapsed
+                    > self
+                        .debug_stats
+                        .layout_clean_geometry_apply_fallback_layouts_top_time
+                {
+                    self.debug_stats
+                        .layout_clean_geometry_apply_fallback_layouts_top_time = elapsed;
+                    self.debug_stats
+                        .layout_clean_geometry_apply_fallback_layouts_top_kind = fallback_kind;
+                }
+            }
         }
         if self.debug_enabled
             && let Some(fallback_started) = fallback_started
