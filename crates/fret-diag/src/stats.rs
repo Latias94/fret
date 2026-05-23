@@ -1187,7 +1187,7 @@ mod tests {
                         "code_editor": {
                             "torture": {
                                 "paint_perf": {
-                                    "schema_version": 12,
+                                    "schema_version": 13,
                                     "frame_seq": 7,
                                     "visible_start": 20,
                                     "visible_end": 30,
@@ -1212,6 +1212,8 @@ mod tests {
                                     "rows_scene_prepaint_skip_preedit": 0,
                                     "rows_scene_prepaint_skip_syntax_empty": 1,
                                     "rows_scene_prepaint_skip_key_mismatch": 1,
+                                    "rows_scene_prepaint_plan_cache_hits": 3,
+                                    "rows_scene_prepaint_plan_cache_rejects": 1,
                                     "rows_scene_fast_miss_no_entry": 2,
                                     "rows_scene_fast_miss_key_mismatch": 1,
                                     "rows_scene_full_miss_no_entry": 1,

@@ -17381,3 +17381,133 @@ Final evidence:
   `target/fret-diag/editor-paint-contract-validate-20260523-r59/artifact-verification.summary.json`
 - Closeout:
   `target/fret-diag/editor-paint-contract-validate-20260523-r59/editor-paint-contract-closeout.summary.json`
+
+## 2026-05-23 17:35:00 +08:00 (Overlapping-window replay-plan cache slice)
+
+Question:
+- Can the remaining `canvas-paint-replay` owner reduce repeated row-scene prepaint plan/probe/key-compare work
+  without broadening into Canvas display-list caching or renderer text residency?
+
+Change:
+- Opened `docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/`.
+- Added a `fret-code-editor` row-scene replay plan cache keyed by buffer/display/cache epochs, row geometry, content
+  width/height, text style, theme, font stack, and foreground color.
+- Reuse returns a fresh `RowSceneReplayPlan` for the current frame sequence while preserving the existing paint-time
+  `local_bounds` consumption guard.
+- Whole-cache clears and syntax-key refreshes clear the replay-plan cache; ordinary row replacement/eviction is
+  guarded by retained fragment pointer identity before reuse, which allows sliding-window overlap reuse.
+- No checked-in baselines changed.
+
+Validation:
+
+```powershell
+cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_reuses_stable_window_plan prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast
+cargo check -p fret-code-editor --tests --features syntax-rust
+cargo fmt -p fret-code-editor --check
+git diff --check
+```
+
+Result:
+- Focused tests passed.
+- `cargo check` passed with the pre-existing `fret-ui` warning for `current_effective_opacity`.
+
+Interpretation:
+- The mechanism-level gate proves the reuse path skips per-row prepaint candidate probing, cache probes, and key
+  comparisons on stable and overlapping validated windows.
+- This is local/focused evidence only. The target-machine editor-paint validation/attribution run is still required
+  before any baseline policy decision.
+
+## 2026-05-23 21:51:54 +08:00 (Replay-plan cache r61 closeout)
+
+The `docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/` lane completed target-machine validation,
+attribution, artifact verification, closeout, and refreshed stats after rebuilding `fretboard-dev`.
+
+Validation:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260523-r61-plan-cache-baseline --keep-going
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260523-r61-plan-cache-attrib --with-paint-perf --keep-going
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-attrib
+python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-attrib --out-report target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline/editor-paint-contract-closeout.summary.json
+```
+
+Evidence:
+
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline/summary.json`
+- Attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-attrib/summary.json`
+- Artifact verifier:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline/artifact-verification.summary.json`
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline/editor-paint-contract-closeout.summary.json`
+
+Plan-cache stats:
+
+- resize-jitter: frames `10`, sum `plan_cache_hits=2885`, `candidates=5`, `probe=0us`, `key_compare=0us`,
+  p95 `plan=95us`.
+- typical-autoscroll: frames `180`, sum `plan_cache_hits=51930`, `candidates=90`, `probe=0us`,
+  `key_compare=0us`, p95 `plan=62us`.
+- complex-wheel: frames `35`, sum `plan_cache_hits=0`, `candidates=10115`, `probe=2800us`,
+  `key_compare=323us`, p95 `plan=204us`.
+
+Closeout decision:
+
+- `owner=canvas-paint-replay`
+- `action=open-canvas-paint-replay-slice`
+- Baseline policy unchanged.
+
+Interpretation:
+
+- The overlapping-window plan cache is a real mechanism win for stable resize/autoscroll row windows.
+- It does not close the broader Canvas replay owner because the complex-wheel/preedit-heavy scenario still performs
+  visible per-row planning/probing work and the verified p95 attribution remains under `paint.widget` / `Canvas`.
+- Close `editor-canvas-paint-replay-plan-cache-v1`; open a new bounded follow-on only for the remaining Canvas replay
+  owner or complex-wheel/preedit path.
+
+## 2026-05-23 23:58:00 +08:00 (Preedit replay-plan cache r62 closeout)
+
+The `docs/workstreams/editor-canvas-paint-replay-preedit-plan-cache-v1/` lane closed after target-machine validation,
+attribution, artifact verification, and closeout.
+
+Validation:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260523-r62-preedit-plan-cache-baseline --keep-going
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260523-r62-preedit-plan-cache-attrib --with-paint-perf --keep-going
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-attrib
+python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-attrib --out-report target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline/editor-paint-contract-closeout.summary.json
+```
+
+Evidence:
+
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline/summary.json`
+- Attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-attrib/summary.json`
+- Artifact verifier:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline/artifact-verification.summary.json`
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline/editor-paint-contract-closeout.summary.json`
+
+Plan-cache stats:
+
+- resize-jitter: frames `10`, sum `plan_cache_hits=2885`, `candidates=5`, `probe=0us`, `key_compare=0us`,
+  p95 `plan=85us`.
+- typical-autoscroll: frames `180`, sum `plan_cache_hits=51930`, `candidates=90`, `probe=0us`,
+  `key_compare=0us`, p95 `plan=68us`.
+- complex-wheel: frames `35`, sum `plan_cache_hits=10041`, `candidates=74`, `skip_preedit=35`, `probe=7us`,
+  `key_compare=0us`, p95 `plan=64us`.
+
+Closeout decision:
+
+- `owner=canvas-paint-replay`
+- `action=open-canvas-paint-replay-slice`
+- Baseline policy unchanged.
+
+Interpretation:
+
+- The preedit-specific fix successfully removed the complex-wheel all-row prepaint probe/key-compare cost.
+- The parent owner remains Canvas replay/touch/row-paint overhead, not row-scene prepaint planning.
+- Close `editor-canvas-paint-replay-preedit-plan-cache-v1`; open a new bounded follow-on only for the remaining
+  Canvas replay owner.

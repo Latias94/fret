@@ -100,6 +100,8 @@ pub(super) struct CodeEditorState {
     pub(super) row_scene_cache: HashMap<usize, (RowSceneCacheEntry, u64)>,
     pub(super) row_scene_cache_queue: VecDeque<(usize, u64)>,
     pub(super) row_scene_cache_scene_ops_len_total: u64,
+    #[cfg(feature = "syntax")]
+    pub(super) row_scene_replay_plan_cache: Option<RowSceneReplayPlanCache>,
     pub(super) paint_frame_visible_window: Option<(usize, usize)>,
     pub(super) paint_frame_cache_min_entries: usize,
     pub(super) ime_surrounding_text_cache: Option<ImeSurroundingTextCache>,
@@ -291,10 +293,50 @@ pub(super) struct RowSceneReplayPlanEntry {
     pub(super) local_bounds: Rect,
 }
 
+#[derive(Debug, Clone)]
+pub(super) struct RowSceneReplayPlanCacheEntry {
+    pub(super) row: usize,
+    pub(super) retained: Arc<RowSceneRetainedFragment>,
+}
+
 #[derive(Debug, Default, Clone)]
 pub(super) struct RowSceneReplayPlan {
     pub(super) frame_seq: u64,
     pub(super) entries: VecDeque<RowSceneReplayPlanEntry>,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct RowSceneReplayPlanCacheKey {
+    pub(super) buffer_revision: fret_code_editor_buffer::Revision,
+    pub(super) display_wrap_cols: Option<usize>,
+    pub(super) folds_epoch: u64,
+    pub(super) inlays_epoch: u64,
+    pub(super) display_map_epoch: u64,
+    pub(super) feature_payload_epoch: u64,
+    pub(super) max_entries: usize,
+    pub(super) row_count: usize,
+    pub(super) row_height_bits: u32,
+    pub(super) row_stride_bits: u32,
+    pub(super) gap_bits: u32,
+    pub(super) scroll_margin_bits: u32,
+    pub(super) content_origin_x_bits: u32,
+    pub(super) content_width_bits: u32,
+    pub(super) content_height_bits: u32,
+    pub(super) text_style: RowSceneTextStyleKey,
+    pub(super) constraints: RowSceneTextConstraintsKey,
+    pub(super) font_stack_key: u64,
+    pub(super) scale_bits: u32,
+    pub(super) theme_revision: u64,
+    pub(super) code_font_feature_policy_rev: u64,
+    pub(super) fg: ColorKey,
+}
+
+#[cfg(feature = "syntax")]
+#[derive(Debug, Clone)]
+pub(super) struct RowSceneReplayPlanCache {
+    pub(super) key: RowSceneReplayPlanCacheKey,
+    pub(super) entries: Vec<RowSceneReplayPlanCacheEntry>,
 }
 
 impl fret_ui::tree::BoundarySceneFragmentDebug for RowSceneReplayPlan {
@@ -392,6 +434,8 @@ impl CodeEditorState {
             row_scene_cache: HashMap::new(),
             row_scene_cache_queue: VecDeque::new(),
             row_scene_cache_scene_ops_len_total: 0,
+            #[cfg(feature = "syntax")]
+            row_scene_replay_plan_cache: None,
             paint_frame_visible_window: None,
             paint_frame_cache_min_entries: 0,
             ime_surrounding_text_cache: None,
@@ -454,11 +498,19 @@ impl CodeEditorState {
         self.baseline_measure_cache = None;
     }
 
-    pub(super) fn clear_row_scene_cache(&mut self) {
+    pub(super) fn clear_row_scene_cache_storage(&mut self) {
         self.row_scene_cache_tick = 0;
         self.row_scene_cache.clear();
         self.row_scene_cache_queue.clear();
         self.row_scene_cache_scene_ops_len_total = 0;
+        #[cfg(feature = "syntax")]
+        {
+            self.row_scene_replay_plan_cache = None;
+        }
+    }
+
+    pub(super) fn clear_row_scene_cache(&mut self) {
+        self.clear_row_scene_cache_storage();
         self.cache_stats.row_scene_resets = self.cache_stats.row_scene_resets.saturating_add(1);
     }
 

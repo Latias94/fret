@@ -797,6 +797,8 @@ pub(super) struct BundleStatsCodeEditorPaintPerf {
     pub(super) rows_scene_prepaint_skip_preedit: u64,
     pub(super) rows_scene_prepaint_skip_syntax_empty: u64,
     pub(super) rows_scene_prepaint_skip_key_mismatch: u64,
+    pub(super) rows_scene_prepaint_plan_cache_hits: u64,
+    pub(super) rows_scene_prepaint_plan_cache_rejects: u64,
     pub(super) rows_scene_fast_miss_no_entry: u64,
     pub(super) rows_scene_fast_miss_key_mismatch: u64,
     pub(super) rows_scene_full_miss_no_entry: u64,
@@ -882,6 +884,8 @@ struct BundleStatsCodeEditorPaintPerfTotals {
     rows_scene_prepaint_skip_preedit: u64,
     rows_scene_prepaint_skip_syntax_empty: u64,
     rows_scene_prepaint_skip_key_mismatch: u64,
+    rows_scene_prepaint_plan_cache_hits: u64,
+    rows_scene_prepaint_plan_cache_rejects: u64,
     rows_scene_fast_miss_no_entry: u64,
     rows_scene_fast_miss_key_mismatch: u64,
     rows_scene_full_miss_no_entry: u64,
@@ -986,6 +990,12 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.rows_scene_prepaint_skip_key_mismatch = self
             .rows_scene_prepaint_skip_key_mismatch
             .saturating_add(p.rows_scene_prepaint_skip_key_mismatch);
+        self.rows_scene_prepaint_plan_cache_hits = self
+            .rows_scene_prepaint_plan_cache_hits
+            .saturating_add(p.rows_scene_prepaint_plan_cache_hits);
+        self.rows_scene_prepaint_plan_cache_rejects = self
+            .rows_scene_prepaint_plan_cache_rejects
+            .saturating_add(p.rows_scene_prepaint_plan_cache_rejects);
         self.rows_scene_fast_miss_no_entry = self
             .rows_scene_fast_miss_no_entry
             .saturating_add(p.rows_scene_fast_miss_no_entry);
@@ -1167,6 +1177,12 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.rows_scene_prepaint_skip_key_mismatch = self
             .rows_scene_prepaint_skip_key_mismatch
             .max(p.rows_scene_prepaint_skip_key_mismatch);
+        self.rows_scene_prepaint_plan_cache_hits = self
+            .rows_scene_prepaint_plan_cache_hits
+            .max(p.rows_scene_prepaint_plan_cache_hits);
+        self.rows_scene_prepaint_plan_cache_rejects = self
+            .rows_scene_prepaint_plan_cache_rejects
+            .max(p.rows_scene_prepaint_plan_cache_rejects);
         self.rows_scene_fast_miss_no_entry = self
             .rows_scene_fast_miss_no_entry
             .max(p.rows_scene_fast_miss_no_entry);
@@ -1293,6 +1309,8 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             "rows_scene_prepaint_skip_preedit": self.rows_scene_prepaint_skip_preedit,
             "rows_scene_prepaint_skip_syntax_empty": self.rows_scene_prepaint_skip_syntax_empty,
             "rows_scene_prepaint_skip_key_mismatch": self.rows_scene_prepaint_skip_key_mismatch,
+            "rows_scene_prepaint_plan_cache_hits": self.rows_scene_prepaint_plan_cache_hits,
+            "rows_scene_prepaint_plan_cache_rejects": self.rows_scene_prepaint_plan_cache_rejects,
             "rows_scene_fast_miss_no_entry": self.rows_scene_fast_miss_no_entry,
             "rows_scene_fast_miss_key_mismatch": self.rows_scene_fast_miss_key_mismatch,
             "rows_scene_full_miss_no_entry": self.rows_scene_full_miss_no_entry,
@@ -1397,6 +1415,8 @@ impl BundleStatsCodeEditorPaintPerf {
             "rows_scene_prepaint_skip_preedit": self.rows_scene_prepaint_skip_preedit,
             "rows_scene_prepaint_skip_syntax_empty": self.rows_scene_prepaint_skip_syntax_empty,
             "rows_scene_prepaint_skip_key_mismatch": self.rows_scene_prepaint_skip_key_mismatch,
+            "rows_scene_prepaint_plan_cache_hits": self.rows_scene_prepaint_plan_cache_hits,
+            "rows_scene_prepaint_plan_cache_rejects": self.rows_scene_prepaint_plan_cache_rejects,
             "rows_scene_fast_miss_no_entry": self.rows_scene_fast_miss_no_entry,
             "rows_scene_fast_miss_key_mismatch": self.rows_scene_fast_miss_key_mismatch,
             "rows_scene_full_miss_no_entry": self.rows_scene_full_miss_no_entry,
@@ -2526,7 +2546,7 @@ impl BundleStatsReport {
             p.sum.us_torture_overlay,
         );
         println!(
-            "code_editor.paint_perf sum.rows(scene_store_start/end,prepaint_candidates/no_cache/unsupported/preedit/syntax_empty/key_mismatch,fast_miss_no_entry/key_mismatch,full_miss_no_entry/key_mismatch)={}/{}, {}/{}/{}/{}/{}/{}, {}/{}, {}/{}",
+            "code_editor.paint_perf sum.rows(scene_store_start/end,prepaint_candidates/no_cache/unsupported/preedit/syntax_empty/key_mismatch,plan_cache_hit/reject,fast_miss_no_entry/key_mismatch,full_miss_no_entry/key_mismatch)={}/{}, {}/{}/{}/{}/{}/{}, {}/{}, {}/{}, {}/{}",
             p.sum.rows_scene_stored_at_visible_start,
             p.sum.rows_scene_stored_at_visible_end,
             p.sum.rows_scene_prepaint_candidates,
@@ -2535,6 +2555,8 @@ impl BundleStatsReport {
             p.sum.rows_scene_prepaint_skip_preedit,
             p.sum.rows_scene_prepaint_skip_syntax_empty,
             p.sum.rows_scene_prepaint_skip_key_mismatch,
+            p.sum.rows_scene_prepaint_plan_cache_hits,
+            p.sum.rows_scene_prepaint_plan_cache_rejects,
             p.sum.rows_scene_fast_miss_no_entry,
             p.sum.rows_scene_fast_miss_key_mismatch,
             p.sum.rows_scene_full_miss_no_entry,

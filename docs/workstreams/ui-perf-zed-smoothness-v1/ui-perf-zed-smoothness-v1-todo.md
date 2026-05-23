@@ -28,13 +28,59 @@ Conventions:
 - “Perf gate” items should land with a runnable `fretboard-dev diag perf` command and a baseline/threshold update.
 - “Fearless refactor” items should include: (1) perf evidence, (2) correctness evidence, (3) rollback plan.
 
-## Current local checkpoint (updated 2026-05-23; Windows RTX4090 closeout passed)
+## Current local checkpoint (updated 2026-05-23; r61 plan-cache closeout passed)
 
 The target-machine Windows RTX4090 editor-paint closeout has passed and selected `canvas-paint-replay` as the
-next owner. Continue baseline-neutral local work only when it has its own evidence and does not update checked-in
-baselines; the next implementation-heavy slice should open or reuse a narrow Canvas paint replay follow-on rather
-than continue treating clean-geometry micro-optimizations as the primary owner.
+next owner. The first replay-bookkeeping slice and the overlapping-window replay-plan cache slice are both closed.
+Continue baseline-neutral local work only when it has its own evidence and does not update checked-in baselines; the
+next implementation-heavy slice should target the remaining Canvas replay owner rather than continue treating
+clean-geometry micro-optimizations or the closed plan-cache lane as the primary owner.
 
+- [x] Open and land the baseline-neutral overlapping-window replay-plan cache follow-on.
+  - Lane: `docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/WORKSTREAM.json`.
+  - Result: `fret-code-editor` can reuse validated row-scene replay-plan entries for stable or overlapping visible
+    rows and skip per-row prepaint candidate probing/key comparison on retained rows.
+  - Focused gate:
+    `cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_reuses_stable_window_plan prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast`.
+  - Closeout:
+    `target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline/editor-paint-contract-closeout.summary.json`.
+  - Baseline policy: unchanged. The r61 closeout still selects `owner=canvas-paint-replay`.
+- [x] Run target-machine editor-paint validation/attribution for the replay-plan cache slice.
+  - Baseline validation:
+    `target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline/summary.json`.
+  - Attribution validation:
+    `target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-attrib/summary.json`.
+  - Plan-cache evidence from refreshed stats:
+    resize-jitter sum `plan_cache_hits=2885`, typical-autoscroll sum `plan_cache_hits=51930`, complex-wheel sum
+    `plan_cache_hits=0`.
+- [x] Open the next bounded `canvas-paint-replay` follow-on from the r61 closeout.
+  - Candidate owner shape: remaining Canvas replay cost and the complex-wheel/preedit-heavy row-scene path where
+    the plan-cache lane still reports `candidates=10115`, `probe=2800us`, and `key_compare=323us`.
+  - Guardrail: do not reopen `editor-canvas-paint-replay-plan-cache-v1` unless fresh evidence shows a cache-mechanism
+    bug.
+  - Result: opened `docs/workstreams/editor-canvas-paint-replay-preedit-plan-cache-v1/WORKSTREAM.json` for the first
+    complex-wheel/preedit-specific slice.
+- [x] Open and land the first preedit-specific replay-plan-cache follow-on.
+  - Lane: `docs/workstreams/editor-canvas-paint-replay-preedit-plan-cache-v1/WORKSTREAM.json`.
+  - Result: active preedit no longer disables the whole-frame replay-plan cache. The planner can save and reuse a
+    partial cache for non-preedit rows while the actual preedit row remains excluded.
+  - Focused gate:
+    `cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_reuses_cached_non_preedit_rows_during_preedit prepaint_row_scene_replay_plan_skips_only_inline_preedit_rows prepaint_row_scene_replay_plan_reuses_stable_window_plan --features syntax-rust --no-fail-fast`.
+  - Baseline policy: unchanged; target-machine closeout still required at this point.
+- [x] Finish target-machine attribution for the preedit-specific replay-plan-cache follow-on.
+  - Baseline passed:
+    `target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline/summary.json`.
+  - Attribution passed:
+    `target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-attrib/summary.json`.
+  - Closeout:
+    `target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline/editor-paint-contract-closeout.summary.json`.
+  - Result:
+    complex-wheel improved from r61 `plan_cache_hits=0`, `candidates=10115`, `probe=2800us`,
+    `key_compare=323us` to r62 `plan_cache_hits=10041`, `candidates=74`, `probe=7us`, `key_compare=0us`.
+    Closeout still selects `owner=canvas-paint-replay`.
+- [ ] Open the next bounded Canvas replay/touch follow-on from the r62 closeout.
+  - Candidate owner shape: remaining Canvas row paint/replay/touch overhead after row-scene prepaint probe/key-compare
+    was largely removed.
 - [x] Complete the formal Windows RTX4090 editor-paint closeout when the target machine is available.
   - Required shape: run the validation directory without `--allow-non-windows`, run the attribution directory with
     `--with-paint-perf`, then pass artifact verifier and closeout without `--allow-non-windows`.

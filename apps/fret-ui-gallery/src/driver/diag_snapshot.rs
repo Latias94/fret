@@ -392,7 +392,7 @@ fn command_registry_string_bytes_estimate(app: &App) -> serde_json::Value {
 fn code_editor_paint_perf_json(
     frame: fret_code_editor::CodeEditorPaintPerfFrame,
 ) -> serde_json::Value {
-    let mut out = serde_json::Map::with_capacity(123);
+    let mut out = serde_json::Map::with_capacity(125);
     macro_rules! insert_u64 {
         ($key:literal, $value:expr) => {
             out.insert($key.to_string(), serde_json::Value::from($value));
@@ -459,6 +459,14 @@ fn code_editor_paint_perf_json(
     insert_u64!(
         "rows_scene_prepaint_skip_key_mismatch",
         frame.rows_scene_prepaint_skip_key_mismatch
+    );
+    insert_u64!(
+        "rows_scene_prepaint_plan_cache_hits",
+        frame.rows_scene_prepaint_plan_cache_hits
+    );
+    insert_u64!(
+        "rows_scene_prepaint_plan_cache_rejects",
+        frame.rows_scene_prepaint_plan_cache_rejects
     );
     insert_u64!(
         "rows_scene_fast_miss_no_entry",

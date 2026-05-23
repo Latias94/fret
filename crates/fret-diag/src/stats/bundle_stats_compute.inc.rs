@@ -52,6 +52,12 @@ fn snapshot_code_editor_paint_perf(
         rows_scene_prepaint_skip_key_mismatch: u64_field!(
             "rows_scene_prepaint_skip_key_mismatch"
         ),
+        rows_scene_prepaint_plan_cache_hits: u64_field!(
+            "rows_scene_prepaint_plan_cache_hits"
+        ),
+        rows_scene_prepaint_plan_cache_rejects: u64_field!(
+            "rows_scene_prepaint_plan_cache_rejects"
+        ),
         rows_scene_fast_miss_no_entry: u64_field!("rows_scene_fast_miss_no_entry"),
         rows_scene_fast_miss_key_mismatch: u64_field!("rows_scene_fast_miss_key_mismatch"),
         rows_scene_full_miss_no_entry: u64_field!("rows_scene_full_miss_no_entry"),
@@ -2955,6 +2961,10 @@ pub(super) fn bundle_stats_from_json_with_options(
             rows_scene_prepaint_skip_syntax_empty: metric!(rows_scene_prepaint_skip_syntax_empty),
             rows_scene_prepaint_skip_key_mismatch: metric!(
                 rows_scene_prepaint_skip_key_mismatch
+            ),
+            rows_scene_prepaint_plan_cache_hits: metric!(rows_scene_prepaint_plan_cache_hits),
+            rows_scene_prepaint_plan_cache_rejects: metric!(
+                rows_scene_prepaint_plan_cache_rejects
             ),
             rows_scene_fast_miss_no_entry: metric!(rows_scene_fast_miss_no_entry),
             rows_scene_fast_miss_key_mismatch: metric!(rows_scene_fast_miss_key_mismatch),

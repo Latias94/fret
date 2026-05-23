@@ -267,6 +267,8 @@ pub struct CodeEditorPaintPerfFrame {
     pub rows_scene_prepaint_skip_preedit: u64,
     pub rows_scene_prepaint_skip_syntax_empty: u64,
     pub rows_scene_prepaint_skip_key_mismatch: u64,
+    pub rows_scene_prepaint_plan_cache_hits: u64,
+    pub rows_scene_prepaint_plan_cache_rejects: u64,
     pub rows_scene_fast_miss_no_entry: u64,
     pub rows_scene_fast_miss_key_mismatch: u64,
     pub rows_scene_full_miss_no_entry: u64,

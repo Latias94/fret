@@ -37,6 +37,56 @@ pub(super) fn row_scene_replay_delta(cached_origin: Point, origin: Point) -> Poi
 }
 
 #[cfg(feature = "syntax")]
+fn px_bits(value: Px) -> u32 {
+    value.0.to_bits()
+}
+
+#[cfg(feature = "syntax")]
+#[allow(clippy::too_many_arguments)]
+fn replay_plan_cache_key_for_frame(
+    st: &CodeEditorState,
+    frame: WindowedRowsPaintFrame,
+    content_bounds: Rect,
+    max_entries: usize,
+    text_style: &TextStyle,
+    fg: Color,
+    theme_revision: u64,
+    constraints: CanvasTextConstraints,
+    scale_factor: f32,
+    row_count: usize,
+    end: usize,
+) -> Option<RowSceneReplayPlanCacheKey> {
+    if frame.visible_start > end {
+        return None;
+    }
+
+    Some(RowSceneReplayPlanCacheKey {
+        buffer_revision: st.buffer.revision(),
+        display_wrap_cols: st.display_wrap_cols,
+        folds_epoch: st.folds_epoch,
+        inlays_epoch: st.inlays_epoch,
+        display_map_epoch: st.display_map_epoch,
+        feature_payload_epoch: st.feature_payloads.epoch(),
+        max_entries,
+        row_count,
+        row_height_bits: px_bits(frame.row_height),
+        row_stride_bits: px_bits(frame.row_stride),
+        gap_bits: px_bits(frame.gap),
+        scroll_margin_bits: px_bits(frame.scroll_margin),
+        content_origin_x_bits: px_bits(content_bounds.origin.x),
+        content_width_bits: px_bits(content_bounds.size.width),
+        content_height_bits: px_bits(content_bounds.size.height),
+        text_style: RowSceneTextStyleKey::from_style(text_style),
+        constraints: RowSceneTextConstraintsKey::from_constraints(constraints),
+        font_stack_key: st.font_stack_key.0,
+        scale_bits: scale_factor.max(1.0).to_bits(),
+        theme_revision,
+        code_font_feature_policy_rev: st.code_font_feature_policy_rev,
+        fg: fg.into(),
+    })
+}
+
+#[cfg(feature = "syntax")]
 pub(super) fn row_scene_cached_entry_matches_syntax(
     cached: &RowSceneCacheEntry,
     row_range: &Range<usize>,
@@ -123,6 +173,32 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
     if frame.visible_start > end {
         return plan;
     }
+    let cache_key = replay_plan_cache_key_for_frame(
+        st,
+        frame,
+        content_bounds,
+        max_entries,
+        text_style,
+        fg,
+        theme_revision,
+        constraints,
+        scale_factor,
+        row_count,
+        end,
+    );
+    let mut cached_entries_by_row = HashMap::<usize, Arc<RowSceneRetainedFragment>>::new();
+    if let Some(cache_key) = cache_key.as_ref()
+        && let Some(cached) = st.row_scene_replay_plan_cache.as_ref()
+        && cached.key == *cache_key
+    {
+        cached_entries_by_row.reserve(cached.entries.len());
+        cached_entries_by_row.extend(
+            cached
+                .entries
+                .iter()
+                .map(|entry| (entry.row, Arc::clone(&entry.retained))),
+        );
+    }
     enum ReplayCandidateProbe {
         NoCache,
         Unsupported,
@@ -141,13 +217,44 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
             break;
         }
 
+        let row_requires_preedit = row_requires_paint_time_preedit(st, row);
+
+        if !row_requires_preedit
+            && let Some(cached_retained) = cached_entries_by_row.get(&row)
+            && st
+                .row_scene_cache
+                .get(&row)
+                .is_some_and(|(current, _)| Arc::ptr_eq(&current.retained, cached_retained))
+        {
+            plan.entries.push_back(RowSceneReplayPlanEntry {
+                row,
+                retained: Arc::clone(cached_retained),
+                local_bounds: rect,
+            });
+            planned = planned.saturating_add(1);
+            if st.paint_perf_enabled {
+                st.paint_perf_frame.rows_scene_prepaint_plan_cache_hits = st
+                    .paint_perf_frame
+                    .rows_scene_prepaint_plan_cache_hits
+                    .saturating_add(1);
+            }
+            continue;
+        }
+
+        if st.paint_perf_enabled && cached_entries_by_row.contains_key(&row) {
+            st.paint_perf_frame.rows_scene_prepaint_plan_cache_rejects = st
+                .paint_perf_frame
+                .rows_scene_prepaint_plan_cache_rejects
+                .saturating_add(1);
+        }
+
         if st.paint_perf_enabled {
             st.paint_perf_frame.rows_scene_prepaint_candidates = st
                 .paint_perf_frame
                 .rows_scene_prepaint_candidates
                 .saturating_add(1);
         }
-        if row_requires_paint_time_preedit(st, row) {
+        if row_requires_preedit {
             if st.paint_perf_enabled {
                 st.paint_perf_frame.rows_scene_prepaint_skip_preedit = st
                     .paint_perf_frame
@@ -298,6 +405,21 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
             .rows_scene_prepaint_planned
             .saturating_add(planned);
     }
+    st.row_scene_replay_plan_cache = if planned > 0 {
+        cache_key.map(|key| RowSceneReplayPlanCache {
+            key,
+            entries: plan
+                .entries
+                .iter()
+                .map(|entry| RowSceneReplayPlanCacheEntry {
+                    row: entry.row,
+                    retained: Arc::clone(&entry.retained),
+                })
+                .collect(),
+        })
+    } else {
+        None
+    };
     if let Some(started) = started {
         add_paint_perf_elapsed(
             &mut st.paint_perf_frame.us_row_scene_prepaint_plan,
@@ -359,6 +481,7 @@ pub(super) fn refresh_row_scene_syntax_replay_key(
     };
     if let Some((cached, _)) = st.row_scene_cache.get_mut(&row) {
         cached.syntax_replay_key = Some(key.clone());
+        st.row_scene_replay_plan_cache = None;
     }
 }
 
@@ -672,7 +795,7 @@ pub(super) fn store_row_scene_cache(
         hosted_resources,
     });
 
-    if let Some((old, _)) = st.row_scene_cache.insert(
+    let replaced = st.row_scene_cache.insert(
         row,
         (
             RowSceneCacheEntry {
@@ -682,7 +805,8 @@ pub(super) fn store_row_scene_cache(
             },
             tick,
         ),
-    ) {
+    );
+    if let Some((old, _)) = replaced {
         st.row_scene_cache_scene_ops_len_total = st
             .row_scene_cache_scene_ops_len_total
             .saturating_sub(old.retained.ops.len() as u64);
@@ -801,7 +925,7 @@ pub(super) fn store_row_scene_cache(
         hosted_resources,
     });
 
-    if let Some((old, _)) = st.row_scene_cache.insert(
+    let replaced = st.row_scene_cache.insert(
         row,
         (
             RowSceneCacheEntry {
@@ -810,7 +934,8 @@ pub(super) fn store_row_scene_cache(
             },
             tick,
         ),
-    ) {
+    );
+    if let Some((old, _)) = replaced {
         st.row_scene_cache_scene_ops_len_total = st
             .row_scene_cache_scene_ops_len_total
             .saturating_sub(old.retained.ops.len() as u64);
