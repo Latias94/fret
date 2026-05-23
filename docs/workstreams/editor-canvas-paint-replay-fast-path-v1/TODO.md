@@ -27,7 +27,7 @@
   - Result:
     passed locally on 2026-05-24.
 
-- [ ] ECPR-FP-030: Run target-machine editor paint validation before any baseline decision.
+- [x] ECPR-FP-030: Run target-machine editor paint validation before any baseline decision.
   - Required shape:
     - `python tools/perf/diag_editor_paint_contract_validate.py --date-tag <date>-r65-row-fast-path-baseline --keep-going`
     - `cargo build -p fretboard-dev -p fret-ui-gallery --release --features fret-ui-gallery/gallery-full`
@@ -35,8 +35,12 @@
     - artifact verifier and closeout over the two directories.
   - Decision rule:
     do not change checked-in baselines unless the target-machine closeout justifies it.
+  - Result:
+    passed on 2026-05-24. The closeout kept the checked-in baseline unchanged and the verified owner
+    decision remained `owner=canvas-paint-replay`.
 
 ## Current Decision
 
-Local implementation gates passed for `ECPR-FP-010` and `ECPR-FP-020`. Commit the mechanism, then
-run `ECPR-FP-030` target-machine validation before any baseline decision.
+All tasks in this lane are complete. The fast-path implementation is closed on 2026-05-24, the
+target-machine closeout passed, and the checked-in baseline stayed unchanged. Any follow-on work on
+Canvas replay overhead should start in a new bounded lane.

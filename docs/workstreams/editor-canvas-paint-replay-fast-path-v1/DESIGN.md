@@ -1,6 +1,6 @@
 # Editor Canvas Paint Replay Fast Path v1
 
-Status: Active as of 2026-05-24.
+Status: Closed as of 2026-05-24.
 
 ## Problem
 
@@ -58,6 +58,12 @@ That gives the no-overlay planned replay path a deterministic coordinate-preserv
 without measuring the baseline, preparing row text keys, or resolving row content solely to check
 overlays. Rows touched by caret, selection, or preedit stay on the existing path because they need
 paint-time overlay composition.
+
+## Closeout
+
+Closed on 2026-05-24 after local gates, target-machine baseline validation, rebuilt attribution,
+artifact verification, and closeout. Any further Canvas replay work should move to a new bounded
+follow-on.
 
 ## Rollback
 

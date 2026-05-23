@@ -21,8 +21,9 @@ Key starting result:
 ## Local Gates
 
 ```powershell
-cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint prepaint_row_scene_replay_plan_aggregates_hosted_resources_once prepaint_row_scene_replay_plan_reuses_stable_window_plan prepaint_row_scene_replay_plan_reuses_cached_non_preedit_rows_during_preedit planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast
+cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint prepaint_row_scene_replay_plan_aggregates_hosted_resources_once prepaint_row_scene_replay_plan_reuses_stable_window_plan prepaint_row_scene_replay_plan_reuses_cached_non_preedit_rows_during_preedit planned_replay_rows_with_selection_still_paint_overlay retained_row_scene_origin_preserves_bounds_offset --features syntax-rust --no-fail-fast
 cargo check -p fret-code-editor --tests --features syntax-rust
+cargo check -p fret-code-editor --tests
 cargo fmt -p fret-code-editor --check
 python -m json.tool docs/workstreams/editor-canvas-paint-replay-fast-path-v1/WORKSTREAM.json
 python -m json.tool docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json
@@ -60,7 +61,29 @@ python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-dia
 python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib --out-report target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/editor-paint-contract-closeout.summary.json
 ```
 
+## Target-Machine Results
+
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/summary.json`
+- Attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib/summary.json`
+- Artifact verifier:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/artifact-verification.summary.json`
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/editor-paint-contract-closeout.summary.json`
+- Typical-autoscroll stats:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib/runner-logs/typical-autoscroll/stats.stdout.json`
+- Complex-wheel stats:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib/runner-logs/complex-wheel/stats.stdout.json`
+
+Key results:
+
+- typical-autoscroll: `setup_p95/sum=30/4368us`, `touch_p95/sum=57/8350us`,
+  `ops_p95/sum=70/10651us`, `row_paint_p95/sum=250/40632us`, `total_p95/sum=227/37011us`.
+- complex-wheel: `setup_p95/sum=15/442us`, `touch_p95/sum=39/983us`,
+  `ops_p95/sum=28/1005us`, `row_paint_p95/sum=327/5186us`, `total_p95/sum=313/4688us`.
+
 ## Baseline Policy
 
-This lane is allowed to reduce code-editor paint overhead, but it must not edit checked-in baselines
-until target-machine validation and closeout prove that a baseline change is justified.
+This lane is closed. It reduced code-editor paint overhead without editing checked-in baselines, and
+the target-machine closeout kept the baseline unchanged. Any follow-on work should use a new lane.

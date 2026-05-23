@@ -17658,3 +17658,51 @@ Planned first slice:
 
 Baseline policy remains unchanged. The local implementation commit must pass focused planned replay
 tests and workstream gates before any target-machine validation or baseline decision.
+
+## 2026-05-24 05:18:00 +08:00 (Planned replay fast-path closeout)
+
+Closed `docs/workstreams/editor-canvas-paint-replay-fast-path-v1/` after target-machine validation
+and closeout.
+
+Validation:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r65-row-fast-path-baseline --keep-going
+cargo build -p fretboard-dev -p fret-ui-gallery --release --features fret-ui-gallery/gallery-full
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r65-row-fast-path-attrib --with-paint-perf --keep-going
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib
+python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib --out-report target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/editor-paint-contract-closeout.summary.json
+```
+
+Evidence:
+
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/summary.json`
+- Attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib/summary.json`
+- Artifact verifier:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/artifact-verification.summary.json`
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/editor-paint-contract-closeout.summary.json`
+- Typical-autoscroll stats:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib/runner-logs/typical-autoscroll/stats.stdout.json`
+- Complex-wheel stats:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib/runner-logs/complex-wheel/stats.stdout.json`
+
+Key stats:
+
+- typical-autoscroll: `setup_p95/sum=30/4368us`, `touch_p95/sum=57/8350us`,
+  `ops_p95/sum=70/10651us`, `row_paint_p95/sum=250/40632us`, `total_p95/sum=227/37011us`.
+- complex-wheel: `setup_p95/sum=15/442us`, `touch_p95/sum=39/983us`,
+  `ops_p95/sum=28/1005us`, `row_paint_p95/sum=327/5186us`, `total_p95/sum=313/4688us`.
+
+Closeout decision:
+
+- `owner=canvas-paint-replay`
+- `action=open-canvas-paint-replay-slice`
+- Baseline policy unchanged.
+
+Interpretation:
+
+- The no-overlay planned replay fast path is closed. The next follow-on should target the remaining
+  Canvas exclusive / paint-widget overhead outside row setup, not row setup again.
