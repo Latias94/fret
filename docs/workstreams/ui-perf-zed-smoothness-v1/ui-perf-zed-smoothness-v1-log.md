@@ -17511,3 +17511,58 @@ Interpretation:
 - The parent owner remains Canvas replay/touch/row-paint overhead, not row-scene prepaint planning.
 - Close `editor-canvas-paint-replay-preedit-plan-cache-v1`; open a new bounded follow-on only for the remaining
   Canvas replay owner.
+
+## 2026-05-24 02:10:00 +08:00 (Resource-touch r63 closeout)
+
+The `docs/workstreams/editor-canvas-paint-replay-resource-touch-v1/` lane closed after focused local gates, target
+machine validation, attribution, artifact verification, and closeout.
+
+Validation:
+
+```powershell
+cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_aggregates_hosted_resources_once prepaint_row_scene_replay_plan_reuses_stable_window_plan prepaint_row_scene_replay_plan_reuses_cached_non_preedit_rows_during_preedit row_scene_replay_plan_rejects_stale_frame_and_skipped_rows --features syntax-rust --no-fail-fast
+cargo fmt -p fret-ui -p fret-code-editor --check
+cargo check -p fret-code-editor --tests --features syntax-rust
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r63-resource-touch-baseline-rerun --keep-going
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r63-resource-touch-attrib-rerun --with-paint-perf --keep-going
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-baseline-rerun --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-attrib-rerun
+python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-baseline-rerun --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-attrib-rerun --out-report target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-baseline-rerun/editor-paint-contract-closeout.summary.json
+```
+
+Evidence:
+
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-baseline-rerun/summary.json`
+- Attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-attrib-rerun/summary.json`
+- Artifact verifier:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-baseline-rerun/artifact-verification.summary.json`
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-baseline-rerun/editor-paint-contract-closeout.summary.json`
+- Closeout audit:
+  `docs/workstreams/editor-canvas-paint-replay-resource-touch-v1/CLOSEOUT_AUDIT_2026-05-24.md`
+
+One initial baseline run failed `typical-autoscroll` once with `frame_p95_total_time_us=4229us` over the effective
+`3460us` threshold. An immediate standalone rerun passed with `0` failures and worst top total `1965us`; the final
+full `baseline-rerun` directory passed and is the closeout evidence.
+
+Mechanism stats:
+
+- resize-jitter moved from r62 `touch_p95/sum=59/431us`, `row_paint_p95=404us` to r63 `44/415us`,
+  `row_paint_p95=254us`.
+- typical-autoscroll moved from r62 `touch_p95/sum=65/9109us` to r63 `58/8736us`; row paint stayed roughly flat
+  (`318us -> 327us` p95).
+- complex-wheel stayed Canvas-replay-owned: r63 reports `touch_p95/sum=63/1610us`, `row_paint_p95=335us`,
+  and `code_editor_total_p95=314us`.
+
+Closeout decision:
+
+- `owner=canvas-paint-replay`
+- `action=open-canvas-paint-replay-slice`
+- Baseline policy unchanged.
+
+Interpretation:
+
+- Resource-touch aggregation is a valid planned replay cleanup, but it does not close the parent Canvas owner.
+- The next bounded follow-on should inspect remaining Canvas replay/row-paint overhead. Do not reopen plan-cache or
+  resource-touch lanes unless fresh evidence shows a mechanism regression.

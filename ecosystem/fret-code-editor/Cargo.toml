@@ -19,6 +19,7 @@ syntax-markdown = ["syntax", "fret-syntax/lang-md"]
 
 [dev-dependencies]
 fret-app = { path = "../../crates/fret-app" }
+slotmap.workspace = true
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }

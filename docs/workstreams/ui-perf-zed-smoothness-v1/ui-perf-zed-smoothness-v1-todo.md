@@ -28,13 +28,13 @@ Conventions:
 - “Perf gate” items should land with a runnable `fretboard-dev diag perf` command and a baseline/threshold update.
 - “Fearless refactor” items should include: (1) perf evidence, (2) correctness evidence, (3) rollback plan.
 
-## Current local checkpoint (updated 2026-05-23; r61 plan-cache closeout passed)
+## Current local checkpoint (updated 2026-05-24; r62 closeout passed, r63 resource-touch active)
 
 The target-machine Windows RTX4090 editor-paint closeout has passed and selected `canvas-paint-replay` as the
 next owner. The first replay-bookkeeping slice and the overlapping-window replay-plan cache slice are both closed.
 Continue baseline-neutral local work only when it has its own evidence and does not update checked-in baselines; the
 next implementation-heavy slice should target the remaining Canvas replay owner rather than continue treating
-clean-geometry micro-optimizations or the closed plan-cache lane as the primary owner.
+clean-geometry micro-optimizations or the closed plan-cache lanes as the primary owner.
 
 - [x] Open and land the baseline-neutral overlapping-window replay-plan cache follow-on.
   - Lane: `docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/WORKSTREAM.json`.
@@ -78,9 +78,26 @@ clean-geometry micro-optimizations or the closed plan-cache lane as the primary 
     complex-wheel improved from r61 `plan_cache_hits=0`, `candidates=10115`, `probe=2800us`,
     `key_compare=323us` to r62 `plan_cache_hits=10041`, `candidates=74`, `probe=7us`, `key_compare=0us`.
     Closeout still selects `owner=canvas-paint-replay`.
-- [ ] Open the next bounded Canvas replay/touch follow-on from the r62 closeout.
+- [x] Open the next bounded Canvas replay/touch follow-on from the r62 closeout.
   - Candidate owner shape: remaining Canvas row paint/replay/touch overhead after row-scene prepaint probe/key-compare
     was largely removed.
+  - Lane: `docs/workstreams/editor-canvas-paint-replay-resource-touch-v1/WORKSTREAM.json`.
+  - First slice: ECPR-RT-010 aggregates planned replay hosted-resource touches so `paint_row` touches the plan's
+    retained resources once when the first matching planned row is actually replayed, while per-row scene replay,
+    overlay handling, and row geom behavior stay unchanged.
+  - Local gate so far:
+    `cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_aggregates_hosted_resources_once prepaint_row_scene_replay_plan_reuses_stable_window_plan prepaint_row_scene_replay_plan_reuses_cached_non_preedit_rows_during_preedit row_scene_replay_plan_rejects_stale_frame_and_skipped_rows --features syntax-rust --no-fail-fast`.
+  - Local compile/format/catalog gates passed on 2026-05-24.
+  - Target-machine closeout:
+    `target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-baseline-rerun/editor-paint-contract-closeout.summary.json`.
+  - Result:
+    r63 closeout still selects `owner=canvas-paint-replay`. The slice remains useful as a planned replay touch
+    cleanup, but it does not close the parent owner.
+  - Baseline policy: unchanged.
+- [ ] Open the next bounded Canvas replay/row-paint follow-on from the r63 closeout.
+  - Candidate owner shape: `complex-wheel` still reports `paint_widget_p95=516us`, `canvas_exclusive_p95=370us`,
+    `code_editor_total_p95=314us`, and row-scene replay/WindowedRows paint still dominates over renderer text.
+  - Guardrail: do not reopen plan-cache or resource-touch lanes unless fresh evidence shows a mechanism regression.
 - [x] Complete the formal Windows RTX4090 editor-paint closeout when the target machine is available.
   - Required shape: run the validation directory without `--allow-non-windows`, run the attribution directory with
     `--with-paint-perf`, then pass artifact verifier and closeout without `--allow-non-windows`.

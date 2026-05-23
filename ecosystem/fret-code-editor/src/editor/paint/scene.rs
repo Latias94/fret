@@ -135,6 +135,8 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
     RowSceneReplayPlan {
         frame_seq: st.paint_perf_frame.frame_seq,
         entries: VecDeque::new(),
+        hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
+        hosted_resources_touched: false,
     }
 }
 
@@ -155,6 +157,8 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
     let mut plan = RowSceneReplayPlan {
         frame_seq,
         entries: VecDeque::new(),
+        hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
+        hosted_resources_touched: false,
     };
 
     ensure_row_scene_cache_fresh(st);
@@ -231,6 +235,8 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
                 retained: Arc::clone(cached_retained),
                 local_bounds: rect,
             });
+            plan.hosted_resources
+                .extend_resources(&cached_retained.hosted_resources);
             planned = planned.saturating_add(1);
             if st.paint_perf_enabled {
                 st.paint_perf_frame.rows_scene_prepaint_plan_cache_hits = st
@@ -384,9 +390,11 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
 
         plan.entries.push_back(RowSceneReplayPlanEntry {
             row,
-            retained,
+            retained: Arc::clone(&retained),
             local_bounds: rect,
         });
+        plan.hosted_resources
+            .extend_resources(&retained.hosted_resources);
         planned = planned.saturating_add(1);
         st.cache_stats.row_scene_fast_hits = st.cache_stats.row_scene_fast_hits.saturating_add(1);
         st.cache_stats.row_scene_get_calls = st.cache_stats.row_scene_get_calls.saturating_add(1);
@@ -434,18 +442,33 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
 pub(super) fn replay_row_scene_plan_entry(
     painter: &mut fret_ui::canvas::CanvasPainter<'_>,
     st: &mut CodeEditorState,
+    plan_hosted_resources: Option<&fret_ui::canvas::CanvasHostedResources>,
     entry: &RowSceneReplayPlanEntry,
     origin: Point,
 ) {
     let replay_delta = row_scene_replay_delta(entry.retained.origin, origin);
-    let touch_started = st.paint_perf_enabled.then(Instant::now);
-    painter.touch_hosted_resources(&entry.retained.hosted_resources);
-    if let Some(started) = touch_started {
-        add_paint_perf_elapsed(
-            &mut st.paint_perf_frame.us_row_scene_replay_touch,
-            &mut st.paint_perf_frame.ns_row_scene_replay_touch,
-            started,
-        );
+    if let Some(resources) = plan_hosted_resources
+        && !resources.is_empty()
+    {
+        let touch_started = st.paint_perf_enabled.then(Instant::now);
+        painter.touch_hosted_resources(resources);
+        if let Some(started) = touch_started {
+            add_paint_perf_elapsed(
+                &mut st.paint_perf_frame.us_row_scene_replay_touch,
+                &mut st.paint_perf_frame.ns_row_scene_replay_touch,
+                started,
+            );
+        }
+    } else {
+        let touch_started = st.paint_perf_enabled.then(Instant::now);
+        painter.touch_hosted_resources(&entry.retained.hosted_resources);
+        if let Some(started) = touch_started {
+            add_paint_perf_elapsed(
+                &mut st.paint_perf_frame.us_row_scene_replay_touch,
+                &mut st.paint_perf_frame.ns_row_scene_replay_touch,
+                started,
+            );
+        }
     }
     let replay_started = st.paint_perf_enabled.then(Instant::now);
     painter.scene().replay_ops_translated_with_text_blob_ids(

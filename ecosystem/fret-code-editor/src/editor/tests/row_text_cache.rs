@@ -2,6 +2,11 @@ use super::*;
 #[cfg(feature = "syntax-rust")]
 use crate::editor::syntax::ensure_syntax_row_cache_fresh;
 
+#[cfg(test)]
+fn test_text_blob_id(raw: u64) -> fret_core::TextBlobId {
+    fret_core::TextBlobId::from(slotmap::KeyData::from_ffi(raw))
+}
+
 #[test]
 fn cached_row_text_hits_and_reuses_arc_for_repeated_calls() {
     let handle = CodeEditorHandle::new("hello\nworld");
@@ -211,6 +216,8 @@ fn row_scene_replay_plan_rejects_stale_frame_and_skipped_rows() {
     let mut stale = RowSceneReplayPlan {
         frame_seq: 7,
         entries: std::collections::VecDeque::from([entry0.clone()]),
+        hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
+        hosted_resources_touched: false,
     };
     let (entry, rejected, reason) = paint::take_row_scene_replay_plan_entry(Some(&mut stale), 8, 0);
     assert!(entry.is_none());
@@ -221,6 +228,8 @@ fn row_scene_replay_plan_rejects_stale_frame_and_skipped_rows() {
     let mut advanced = RowSceneReplayPlan {
         frame_seq: 9,
         entries: std::collections::VecDeque::from([entry0, entry2]),
+        hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
+        hosted_resources_touched: false,
     };
     let (entry, rejected, reason) =
         paint::take_row_scene_replay_plan_entry(Some(&mut advanced), 9, 1);
@@ -233,6 +242,144 @@ fn row_scene_replay_plan_rejects_stale_frame_and_skipped_rows() {
     assert_eq!(entry.as_ref().map(|entry| entry.row), Some(2));
     assert_eq!(rejected, 0);
     assert_eq!(reason, None);
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn prepaint_row_scene_replay_plan_aggregates_hosted_resources_once() {
+    let handle = CodeEditorHandle::new("row0\nrow1\n");
+    let mut st = handle.state.borrow_mut();
+    st.paint_perf_enabled = true;
+
+    let fg = Color {
+        r: 0.2,
+        g: 0.8,
+        b: 0.3,
+        a: 1.0,
+    };
+    let text_style = TextStyle {
+        size: Px(14.0),
+        ..TextStyle::default()
+    };
+    let constraints = CanvasTextConstraints {
+        max_width: Some(Px(4096.0)),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+    let frame = WindowedRowsPaintFrame {
+        viewport_height: Px(32.0),
+        offset_y: Px(0.0),
+        row_height: Px(16.0),
+        row_stride: Px(16.0),
+        gap: Px(0.0),
+        scroll_margin: Px(0.0),
+        visible_start: 0,
+        visible_end: 1,
+    };
+    let content_bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(32.0)));
+
+    for row in 0usize..=1 {
+        let text = Arc::<str>::from(format!("row{row}"));
+        let range = row..row.saturating_add(1);
+        let content = Arc::new(RowContentSnapshot {
+            text: Arc::clone(&text),
+            range: range.clone(),
+            fold_map: None,
+            preedit_range: None,
+            row_spans: Arc::from([]),
+        });
+        let row_geom_key = geom::RowGeomKey::for_plain(
+            &text,
+            &text_style,
+            (
+                constraints.max_width,
+                constraints.wrap,
+                constraints.overflow,
+                fret_core::TextAlign::Start,
+                1.0,
+            ),
+            st.font_stack_key,
+        );
+        let rect = frame
+            .row_rect(content_bounds, row)
+            .expect("test row should be visible");
+        let text_blob = test_text_blob_id((row + 1) as u64);
+        let ops = Arc::<[SceneOp]>::from(vec![SceneOp::Text {
+            order: DrawOrder(2),
+            origin: rect.origin,
+            text: text_blob,
+            paint: fret_core::Paint::Solid(fg).into(),
+            outline: None,
+            shadow: None,
+        }]);
+        let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(ops.as_ref());
+        st.row_scene_cache.insert(
+            row,
+            (
+                RowSceneCacheEntry {
+                    key: RowSceneKey::plain(row_geom_key.clone(), fg),
+                    retained: Arc::new(RowSceneRetainedFragment {
+                        content,
+                        origin: rect.origin,
+                        geom: RowGeom {
+                            row_range: range,
+                            key: row_geom_key,
+                            caret_stops: Vec::new(),
+                            fold_map: None,
+                            caret_rect_top: None,
+                            caret_rect_height: None,
+                            has_preedit: false,
+                            preedit: None,
+                        },
+                        is_rich: false,
+                        ops,
+                        hosted_resources,
+                    }),
+                    syntax_replay_key: None,
+                },
+                row as u64 + 1,
+            ),
+        );
+    }
+
+    st.begin_paint_frame(frame);
+    let mut plan = paint::prepaint_row_scene_replay_plan_for_frame(
+        &mut st,
+        frame,
+        content_bounds,
+        Px(8.0),
+        64,
+        &text_style,
+        fg,
+        0,
+        1.0,
+    );
+
+    assert_eq!(plan.entries.len(), 2);
+    assert_eq!(
+        plan.hosted_resources.text_blob_ids(),
+        &[test_text_blob_id(1), test_text_blob_id(2)],
+        "planned replay should aggregate retained row text blobs once per plan"
+    );
+
+    let (_entry0, _rejected0, _reason0) =
+        paint::take_row_scene_replay_plan_entry(Some(&mut plan), st.paint_perf_frame.frame_seq, 0);
+    let first_resources = paint::take_row_scene_replay_plan_hosted_resources_once(Some(&mut plan));
+    assert_eq!(
+        first_resources
+            .as_ref()
+            .map(|resources| resources.text_blob_ids()),
+        Some(&[test_text_blob_id(1), test_text_blob_id(2)][..]),
+        "the first actual planned replay should carry the aggregate hosted resources"
+    );
+
+    let (_entry1, _rejected1, _reason1) =
+        paint::take_row_scene_replay_plan_entry(Some(&mut plan), st.paint_perf_frame.frame_seq, 1);
+    let second_resources = paint::take_row_scene_replay_plan_hosted_resources_once(Some(&mut plan));
+    assert!(
+        second_resources.is_none(),
+        "later plan entries should not touch plan resources again"
+    );
 }
 
 #[test]

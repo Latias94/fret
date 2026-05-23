@@ -303,6 +303,8 @@ pub(super) struct RowSceneReplayPlanCacheEntry {
 pub(super) struct RowSceneReplayPlan {
     pub(super) frame_seq: u64,
     pub(super) entries: VecDeque<RowSceneReplayPlanEntry>,
+    pub(super) hosted_resources: fret_ui::canvas::CanvasHostedResources,
+    pub(super) hosted_resources_touched: bool,
 }
 
 #[cfg(feature = "syntax")]

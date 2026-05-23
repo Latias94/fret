@@ -190,6 +190,7 @@ pub(super) fn take_row_scene_replay_plan_entry(
     if plan.frame_seq != frame_seq {
         let rejected = plan.entries.len();
         plan.entries.clear();
+        plan.hosted_resources_touched = false;
         return (None, rejected, Some("frame_seq_mismatch"));
     }
 
@@ -208,6 +209,17 @@ pub(super) fn take_row_scene_replay_plan_entry(
         rejected,
         (rejected > 0).then_some("row_advanced_past_entry"),
     )
+}
+
+pub(super) fn take_row_scene_replay_plan_hosted_resources_once(
+    plan: Option<&mut RowSceneReplayPlan>,
+) -> Option<fret_ui::canvas::CanvasHostedResources> {
+    let plan = plan?;
+    if plan.hosted_resources_touched || plan.hosted_resources.is_empty() {
+        return None;
+    }
+    plan.hosted_resources_touched = true;
+    Some(plan.hosted_resources.clone())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -694,7 +706,16 @@ pub(super) fn paint_row(
             row_scene_replayed = true;
             drew_rich = entry.retained.is_rich;
             row_preedit = entry.retained.geom.preedit;
-            scene::replay_row_scene_plan_entry(painter, st, entry, origin);
+            let replay_plan_hosted_resources = take_row_scene_replay_plan_hosted_resources_once(
+                painter.scene_fragment_mut::<RowSceneReplayPlan>(),
+            );
+            scene::replay_row_scene_plan_entry(
+                painter,
+                st,
+                replay_plan_hosted_resources.as_ref(),
+                entry,
+                origin,
+            );
         }
     }
 
