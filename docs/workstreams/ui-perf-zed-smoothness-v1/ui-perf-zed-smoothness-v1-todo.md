@@ -94,9 +94,12 @@ clean-geometry micro-optimizations or the closed plan-cache lanes as the primary
     r63 closeout still selects `owner=canvas-paint-replay`. The slice remains useful as a planned replay touch
     cleanup, but it does not close the parent owner.
   - Baseline policy: unchanged.
-- [ ] Open the next bounded Canvas replay/row-paint follow-on from the r63 closeout.
+- [x] Open the next bounded Canvas replay/row-paint follow-on from the r63 closeout.
   - Candidate owner shape: `complex-wheel` still reports `paint_widget_p95=516us`, `canvas_exclusive_p95=370us`,
     `code_editor_total_p95=314us`, and row-scene replay/WindowedRows paint still dominates over renderer text.
+  - Lane: `docs/workstreams/editor-canvas-paint-replay-row-setup-v1/WORKSTREAM.json`.
+  - First slice: ECPR-RS-010 adds diagnostics-only `us/ns_row_scene_replay_setup` so the remaining row-paint
+    overhead can be attributed before the next optimization.
   - Guardrail: do not reopen plan-cache or resource-touch lanes unless fresh evidence shows a mechanism regression.
 - [x] Complete the formal Windows RTX4090 editor-paint closeout when the target machine is available.
   - Required shape: run the validation directory without `--allow-non-windows`, run the attribution directory with

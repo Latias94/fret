@@ -550,6 +550,7 @@ pub(super) fn paint_row(
         st.paint_perf_frame.rows_painted = st.paint_perf_frame.rows_painted.saturating_add(1);
     }
 
+    let replay_setup_started = perf_enabled.then(Instant::now);
     let (replay_plan_entry, rejected_entries, reject_reason) = take_row_scene_replay_plan_entry(
         painter.scene_fragment_mut::<RowSceneReplayPlan>(),
         st.paint_perf_frame.frame_seq,
@@ -709,6 +710,13 @@ pub(super) fn paint_row(
             let replay_plan_hosted_resources = take_row_scene_replay_plan_hosted_resources_once(
                 painter.scene_fragment_mut::<RowSceneReplayPlan>(),
             );
+            if let Some(started) = replay_setup_started {
+                add_paint_perf_elapsed(
+                    &mut st.paint_perf_frame.us_row_scene_replay_setup,
+                    &mut st.paint_perf_frame.ns_row_scene_replay_setup,
+                    started,
+                );
+            }
             scene::replay_row_scene_plan_entry(
                 painter,
                 st,

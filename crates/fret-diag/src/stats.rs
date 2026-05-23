@@ -1187,7 +1187,7 @@ mod tests {
                         "code_editor": {
                             "torture": {
                                 "paint_perf": {
-                                    "schema_version": 13,
+                                    "schema_version": 14,
                                     "frame_seq": 7,
                                     "visible_start": 20,
                                     "visible_end": 30,
@@ -1236,6 +1236,8 @@ mod tests {
                                     "us_row_scene_fast_key_compare": 2,
                                     "ns_row_scene_fast_key_compare": 2900,
                                     "us_row_scene_full_key_compare": 1,
+                                    "us_row_scene_replay_setup": 21,
+                                    "ns_row_scene_replay_setup": 21300,
                                     "us_row_scene_replay_touch": 5,
                                     "us_row_scene_replay_ops": 25,
                                     "us_row_scene_prepaint_plan": 7,
@@ -1307,6 +1309,7 @@ mod tests {
         assert_eq!(perf.rows_scene_full_miss_key_mismatch, 1);
         assert_eq!(perf.quads_selection, 4);
         assert_eq!(perf.quads_caret, 1);
+        assert_eq!(perf.us_row_scene_replay_setup, 21);
         assert_eq!(perf.us_row_scene_replay_ops, 25);
         assert_eq!(perf.us_row_scene_prepaint_plan, 7);
         assert_eq!(perf.us_row_scene_prepaint_probe, 4);
@@ -1373,6 +1376,11 @@ mod tests {
             Some(6)
         );
         assert_eq!(
+            json.pointer("/code_editor_paint_perf/sum/us_row_scene_replay_setup")
+                .and_then(|v| v.as_u64()),
+            Some(21)
+        );
+        assert_eq!(
             json.pointer("/code_editor_paint_perf/sum/us_row_content_resolve")
                 .and_then(|v| v.as_u64()),
             Some(45)
@@ -1381,6 +1389,11 @@ mod tests {
             json.pointer("/code_editor_paint_perf/p95/us_row_scene_replay_ops")
                 .and_then(|v| v.as_u64()),
             Some(25)
+        );
+        assert_eq!(
+            json.pointer("/code_editor_paint_perf/p95/us_row_scene_replay_setup")
+                .and_then(|v| v.as_u64()),
+            Some(21)
         );
         assert_eq!(
             json.pointer("/code_editor_paint_perf/p95/us_row_geom_key")
@@ -1426,6 +1439,11 @@ mod tests {
             json.pointer("/top/0/code_editor_paint_perf/us_row_scene_prepaint_key_compare")
                 .and_then(|v| v.as_u64()),
             Some(6)
+        );
+        assert_eq!(
+            json.pointer("/top/0/code_editor_paint_perf/us_row_scene_replay_setup")
+                .and_then(|v| v.as_u64()),
+            Some(21)
         );
         assert_eq!(
             json.pointer("/top/0/code_editor_paint_perf/row_scene_ops_stored")

@@ -399,7 +399,7 @@ fn code_editor_paint_perf_json(
         };
     }
 
-    insert_u64!("schema_version", 13);
+    insert_u64!("schema_version", 14);
     insert_u64!("frame_seq", frame.frame_seq);
     insert_u64!("visible_start", frame.visible_start);
     insert_u64!("visible_end", frame.visible_end);
@@ -505,6 +505,10 @@ fn code_editor_paint_perf_json(
         "us_row_scene_full_key_compare",
         frame.us_row_scene_full_key_compare
     );
+    insert_u64!(
+        "us_row_scene_replay_setup",
+        frame.us_row_scene_replay_setup
+    );
     insert_u64!("us_row_scene_replay_touch", frame.us_row_scene_replay_touch);
     insert_u64!("us_row_scene_replay_ops", frame.us_row_scene_replay_ops);
     insert_u64!(
@@ -592,6 +596,10 @@ fn code_editor_paint_perf_json(
     insert_u64!(
         "ns_row_scene_full_key_compare",
         frame.ns_row_scene_full_key_compare
+    );
+    insert_u64!(
+        "ns_row_scene_replay_setup",
+        frame.ns_row_scene_replay_setup
     );
     insert_u64!("ns_row_scene_replay_touch", frame.ns_row_scene_replay_touch);
     insert_u64!("ns_row_scene_replay_ops", frame.ns_row_scene_replay_ops);

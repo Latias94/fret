@@ -93,6 +93,10 @@ fn snapshot_code_editor_paint_perf(
             "us_row_scene_full_key_compare",
             "ns_row_scene_full_key_compare"
         ),
+        us_row_scene_replay_setup: us_field!(
+            "us_row_scene_replay_setup",
+            "ns_row_scene_replay_setup"
+        ),
         us_row_scene_replay_touch: us_field!(
             "us_row_scene_replay_touch",
             "ns_row_scene_replay_touch"
@@ -2986,6 +2990,7 @@ pub(super) fn bundle_stats_from_json_with_options(
             us_row_scene_full_probe: metric!(us_row_scene_full_probe),
             us_row_scene_fast_key_compare: metric!(us_row_scene_fast_key_compare),
             us_row_scene_full_key_compare: metric!(us_row_scene_full_key_compare),
+            us_row_scene_replay_setup: metric!(us_row_scene_replay_setup),
             us_row_scene_replay_touch: metric!(us_row_scene_replay_touch),
             us_row_scene_replay_ops: metric!(us_row_scene_replay_ops),
             us_row_scene_prepaint_plan: metric!(us_row_scene_prepaint_plan),

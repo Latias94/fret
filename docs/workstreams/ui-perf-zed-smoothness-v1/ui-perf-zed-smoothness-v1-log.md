@@ -17566,3 +17566,30 @@ Interpretation:
 - Resource-touch aggregation is a valid planned replay cleanup, but it does not close the parent Canvas owner.
 - The next bounded follow-on should inspect remaining Canvas replay/row-paint overhead. Do not reopen plan-cache or
   resource-touch lanes unless fresh evidence shows a mechanism regression.
+
+## 2026-05-24 03:05:00 +08:00 (Row setup attribution lane opened)
+
+Opened `docs/workstreams/editor-canvas-paint-replay-row-setup-v1/` from the r63 closeout. The first
+slice is diagnostics-only: add `us_row_scene_replay_setup` / `ns_row_scene_replay_setup` to the
+code-editor paint perf frame, gallery app snapshot schema `14`, and `fret-diag stats` extraction,
+aggregation, percentile JSON, and human output.
+
+Local validation passed so far:
+
+```powershell
+cargo nextest run -p fret-diag bundle_stats_extracts_code_editor_paint_perf_from_app_snapshot --no-fail-fast
+cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint prepaint_row_scene_replay_plan_aggregates_hosted_resources_once prepaint_row_scene_replay_plan_reuses_stable_window_plan prepaint_row_scene_replay_plan_reuses_cached_non_preedit_rows_during_preedit planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast
+cargo check -p fret-code-editor --tests --features syntax-rust
+cargo check -p fret-diag --tests
+cargo fmt -p fret-code-editor -p fret-diag -p fret-ui-gallery --check
+python -m json.tool docs/workstreams/editor-canvas-paint-replay-row-setup-v1/WORKSTREAM.json
+python -m json.tool docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Decision:
+
+- Baseline policy remains unchanged.
+- Run the full local gate set, then target-machine attribution with paint perf before selecting the
+  next implementation owner.

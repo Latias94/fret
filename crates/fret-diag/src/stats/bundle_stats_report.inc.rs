@@ -819,6 +819,7 @@ pub(super) struct BundleStatsCodeEditorPaintPerf {
     pub(super) us_row_scene_full_probe: u64,
     pub(super) us_row_scene_fast_key_compare: u64,
     pub(super) us_row_scene_full_key_compare: u64,
+    pub(super) us_row_scene_replay_setup: u64,
     pub(super) us_row_scene_replay_touch: u64,
     pub(super) us_row_scene_replay_ops: u64,
     pub(super) us_row_scene_prepaint_plan: u64,
@@ -906,6 +907,7 @@ struct BundleStatsCodeEditorPaintPerfTotals {
     us_row_scene_full_probe: u64,
     us_row_scene_fast_key_compare: u64,
     us_row_scene_full_key_compare: u64,
+    us_row_scene_replay_setup: u64,
     us_row_scene_replay_touch: u64,
     us_row_scene_replay_ops: u64,
     us_row_scene_prepaint_plan: u64,
@@ -1042,6 +1044,9 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.us_row_scene_full_key_compare = self
             .us_row_scene_full_key_compare
             .saturating_add(p.us_row_scene_full_key_compare);
+        self.us_row_scene_replay_setup = self
+            .us_row_scene_replay_setup
+            .saturating_add(p.us_row_scene_replay_setup);
         self.us_row_scene_replay_touch = self
             .us_row_scene_replay_touch
             .saturating_add(p.us_row_scene_replay_touch);
@@ -1223,6 +1228,9 @@ impl BundleStatsCodeEditorPaintPerfTotals {
         self.us_row_scene_full_key_compare = self
             .us_row_scene_full_key_compare
             .max(p.us_row_scene_full_key_compare);
+        self.us_row_scene_replay_setup = self
+            .us_row_scene_replay_setup
+            .max(p.us_row_scene_replay_setup);
         self.us_row_scene_replay_touch = self
             .us_row_scene_replay_touch
             .max(p.us_row_scene_replay_touch);
@@ -1331,6 +1339,7 @@ impl BundleStatsCodeEditorPaintPerfTotals {
             "us_row_scene_full_probe": self.us_row_scene_full_probe,
             "us_row_scene_fast_key_compare": self.us_row_scene_fast_key_compare,
             "us_row_scene_full_key_compare": self.us_row_scene_full_key_compare,
+            "us_row_scene_replay_setup": self.us_row_scene_replay_setup,
             "us_row_scene_replay_touch": self.us_row_scene_replay_touch,
             "us_row_scene_replay_ops": self.us_row_scene_replay_ops,
             "us_row_scene_prepaint_plan": self.us_row_scene_prepaint_plan,
@@ -1437,6 +1446,7 @@ impl BundleStatsCodeEditorPaintPerf {
             "us_row_scene_full_probe": self.us_row_scene_full_probe,
             "us_row_scene_fast_key_compare": self.us_row_scene_fast_key_compare,
             "us_row_scene_full_key_compare": self.us_row_scene_full_key_compare,
+            "us_row_scene_replay_setup": self.us_row_scene_replay_setup,
             "us_row_scene_replay_touch": self.us_row_scene_replay_touch,
             "us_row_scene_replay_ops": self.us_row_scene_replay_ops,
             "us_row_scene_prepaint_plan": self.us_row_scene_prepaint_plan,
@@ -2510,11 +2520,12 @@ impl BundleStatsReport {
             p.sum.us_row_scene_full_path,
         );
         println!(
-            "code_editor.paint_perf sum.us(total/prepaint_plan/prepaint_probe/prepaint_key_compare/replay_touch/replay_ops/capture_ops/store/prepaint_edge_store/fast_probe/full_probe/geom_cache/geom_resolve/overlay/frame_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            "code_editor.paint_perf sum.us(total/prepaint_plan/prepaint_probe/prepaint_key_compare/replay_setup/replay_touch/replay_ops/capture_ops/store/prepaint_edge_store/fast_probe/full_probe/geom_cache/geom_resolve/overlay/frame_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
             p.sum.us_total,
             p.sum.us_row_scene_prepaint_plan,
             p.sum.us_row_scene_prepaint_probe,
             p.sum.us_row_scene_prepaint_key_compare,
+            p.sum.us_row_scene_replay_setup,
             p.sum.us_row_scene_replay_touch,
             p.sum.us_row_scene_replay_ops,
             p.sum.us_row_scene_capture_ops,
@@ -2563,7 +2574,7 @@ impl BundleStatsReport {
             p.sum.rows_scene_full_miss_key_mismatch,
         );
         println!(
-            "code_editor.paint_perf p50/p95.us(total/prepaint_plan/prepaint_probe/prepaint_key_compare/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path/surface_total/surface_non_row/surface_row_callback_gap/torture_autoscroll/torture_overlay)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
+            "code_editor.paint_perf p50/p95.us(total/prepaint_plan/prepaint_probe/prepaint_key_compare/replay_setup/replay_touch/replay_ops/content/row_text/geom_key/scene_key/rich_cmp/fast_key_cmp/text/fast_path/surface_total/surface_non_row/surface_row_callback_gap/torture_autoscroll/torture_overlay)={}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}, {}/{}",
             p.p50.us_total,
             p.p95.us_total,
             p.p50.us_row_scene_prepaint_plan,
@@ -2572,6 +2583,12 @@ impl BundleStatsReport {
             p.p95.us_row_scene_prepaint_probe,
             p.p50.us_row_scene_prepaint_key_compare,
             p.p95.us_row_scene_prepaint_key_compare,
+            p.p50.us_row_scene_replay_setup,
+            p.p95.us_row_scene_replay_setup,
+            p.p50.us_row_scene_replay_touch,
+            p.p95.us_row_scene_replay_touch,
+            p.p50.us_row_scene_replay_ops,
+            p.p95.us_row_scene_replay_ops,
             p.p50.us_row_content_resolve,
             p.p95.us_row_content_resolve,
             p.p50.us_row_text,
@@ -2714,7 +2731,7 @@ impl BundleStatsReport {
             p.quads_caret,
         );
         println!(
-            "    code_editor.paint_perf.us(total/prepaint_plan/prepaint_probe/prepaint_key_compare/content/row_text/text/rich/geom_key/scene_key/rich_cmp/fast_key_cmp/full_key_cmp/replay_touch/replay_ops/capture_ops/store/prepaint_edge_store/fast_probe/full_probe/fast_path/full_path/syntax_spans/geom_cache/geom_resolve/overlay/frame_overlay/torture_autoscroll/torture_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+            "    code_editor.paint_perf.us(total/prepaint_plan/prepaint_probe/prepaint_key_compare/content/row_text/text/rich/geom_key/scene_key/rich_cmp/fast_key_cmp/full_key_cmp/replay_setup/replay_touch/replay_ops/capture_ops/store/prepaint_edge_store/fast_probe/full_probe/fast_path/full_path/syntax_spans/geom_cache/geom_resolve/overlay/frame_overlay/torture_autoscroll/torture_overlay)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
             p.us_total,
             p.us_row_scene_prepaint_plan,
             p.us_row_scene_prepaint_probe,
@@ -2728,6 +2745,7 @@ impl BundleStatsReport {
             p.us_row_rich_cache_compare,
             p.us_row_scene_fast_key_compare,
             p.us_row_scene_full_key_compare,
+            p.us_row_scene_replay_setup,
             p.us_row_scene_replay_touch,
             p.us_row_scene_replay_ops,
             p.us_row_scene_capture_ops,

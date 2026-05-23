@@ -538,6 +538,10 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
         perf.rows_scene_prepaint_plan_used, perf.rows_scene_prepaint_planned,
         "paint should consume the prepaint replay plan for each planned row"
     );
+    assert!(
+        perf.ns_row_scene_replay_setup > 0,
+        "planned replay rows should record replay setup attribution"
+    );
     assert_eq!(
         perf.us_row_text, 0,
         "paint should not redo row text work for planned rows"
