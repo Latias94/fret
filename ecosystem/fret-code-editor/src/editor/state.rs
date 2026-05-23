@@ -271,11 +271,21 @@ impl RowSceneKey {
 #[derive(Debug, Clone)]
 pub(super) struct RowSceneRetainedFragment {
     pub(super) content: Arc<RowContentSnapshot>,
+    pub(super) local_bounds: Rect,
     pub(super) origin: Point,
     pub(super) geom: geom::RowGeom,
     pub(super) is_rich: bool,
     pub(super) ops: Arc<[SceneOp]>,
     pub(super) hosted_resources: fret_ui::canvas::CanvasHostedResources,
+}
+
+impl RowSceneRetainedFragment {
+    pub(super) fn origin_for_local_bounds(&self, local_bounds: Rect) -> Point {
+        Point::new(
+            Px(local_bounds.origin.x.0 + (self.origin.x.0 - self.local_bounds.origin.x.0)),
+            Px(local_bounds.origin.y.0 + (self.origin.y.0 - self.local_bounds.origin.y.0)),
+        )
+    }
 }
 
 #[derive(Debug, Clone)]

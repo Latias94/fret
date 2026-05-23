@@ -175,6 +175,10 @@ fn test_retained_row_scene_fragment(row: usize) -> Arc<RowSceneRetainedFragment>
         ),
         fret_runtime::TextFontStackKey::default(),
     );
+    let local_bounds = Rect::new(
+        Point::new(Px(0.0), Px(row as f32 * 16.0)),
+        Size::new(Px(80.0), Px(16.0)),
+    );
     Arc::new(RowSceneRetainedFragment {
         content: Arc::new(RowContentSnapshot {
             text,
@@ -183,7 +187,8 @@ fn test_retained_row_scene_fragment(row: usize) -> Arc<RowSceneRetainedFragment>
             preedit_range: None,
             row_spans: Arc::from([]),
         }),
-        origin: Point::new(Px(0.0), Px(row as f32 * 16.0)),
+        local_bounds,
+        origin: local_bounds.origin,
         geom: RowGeom {
             row_range: row..row.saturating_add(1),
             key: row_geom_key,
@@ -198,6 +203,59 @@ fn test_retained_row_scene_fragment(row: usize) -> Arc<RowSceneRetainedFragment>
         ops: Arc::from(Vec::<SceneOp>::new()),
         hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
     })
+}
+
+#[test]
+fn retained_row_scene_origin_preserves_bounds_offset() {
+    let retained = RowSceneRetainedFragment {
+        content: Arc::new(RowContentSnapshot {
+            text: Arc::<str>::from("x"),
+            range: 0..1,
+            fold_map: None,
+            preedit_range: None,
+            row_spans: Arc::from([]),
+        }),
+        local_bounds: Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(80.0), Px(16.0)),
+        ),
+        origin: Point::new(Px(14.0), Px(31.0)),
+        geom: RowGeom {
+            row_range: 0..1,
+            key: geom::RowGeomKey::for_plain(
+                &Arc::<str>::from("x"),
+                &TextStyle {
+                    font: FontId::monospace(),
+                    size: Px(14.0),
+                    ..Default::default()
+                },
+                (
+                    Some(Px(80.0)),
+                    TextWrap::None,
+                    TextOverflow::Clip,
+                    fret_core::TextAlign::Start,
+                    1.0,
+                ),
+                fret_runtime::TextFontStackKey::default(),
+            ),
+            caret_stops: Vec::new(),
+            fold_map: None,
+            caret_rect_top: None,
+            caret_rect_height: None,
+            has_preedit: false,
+            preedit: None,
+        },
+        is_rich: false,
+        ops: Arc::from(Vec::<SceneOp>::new()),
+        hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
+    };
+
+    let next = retained.origin_for_local_bounds(Rect::new(
+        Point::new(Px(30.0), Px(100.0)),
+        Size::new(Px(80.0), Px(16.0)),
+    ));
+
+    assert_eq!(next, Point::new(Px(34.0), Px(111.0)));
 }
 
 #[test]
@@ -320,6 +378,7 @@ fn prepaint_row_scene_replay_plan_aggregates_hosted_resources_once() {
                     key: RowSceneKey::plain(row_geom_key.clone(), fg),
                     retained: Arc::new(RowSceneRetainedFragment {
                         content,
+                        local_bounds: rect,
                         origin: rect.origin,
                         geom: RowGeom {
                             row_range: range,
@@ -503,6 +562,7 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
                     .saturating_sub(old.retained.ops.len() as u64);
             }
         }
+        st.baseline_measure_cache = None;
     }
     let before = handle.cache_stats();
     let _ = render_code_editor_frame(
@@ -541,6 +601,10 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
     assert!(
         perf.ns_row_scene_replay_setup > 0,
         "planned replay rows should record replay setup attribution"
+    );
+    assert_eq!(
+        perf.us_baseline_measure, 0,
+        "no-overlay planned replay rows should not remeasure the text baseline even if the cache is cold"
     );
     assert_eq!(
         perf.us_row_text, 0,
@@ -682,6 +746,7 @@ fn prepaint_row_scene_replay_plan_reuses_stable_window_plan() {
                     key: row_scene_key,
                     retained: Arc::new(RowSceneRetainedFragment {
                         content,
+                        local_bounds: rect,
                         origin: rect.origin,
                         geom: RowGeom {
                             row_range: range,
@@ -1059,6 +1124,7 @@ fn prepaint_row_scene_replay_plan_reuses_cached_non_preedit_rows_during_preedit(
                     key: row_scene_key,
                     retained: Arc::new(RowSceneRetainedFragment {
                         content,
+                        local_bounds: rect,
                         origin: rect.origin,
                         geom: RowGeom {
                             row_range: range,
@@ -1287,6 +1353,7 @@ fn prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context() {
                 key: row_scene_key,
                 retained: Arc::new(RowSceneRetainedFragment {
                     content,
+                    local_bounds: content_bounds,
                     origin: content_bounds.origin,
                     geom,
                     is_rich: true,
@@ -1411,6 +1478,7 @@ fn prepaint_row_scene_replay_plan_rejects_plain_rows_when_fg_changes() {
                 key: row_scene_key,
                 retained: Arc::new(RowSceneRetainedFragment {
                     content,
+                    local_bounds: content_bounds,
                     origin: content_bounds.origin,
                     geom: RowGeom {
                         row_range,

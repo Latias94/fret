@@ -790,6 +790,7 @@ pub(super) fn store_row_scene_cache(
     row: usize,
     key: RowSceneKey,
     content: Arc<RowContentSnapshot>,
+    local_bounds: Rect,
     origin: fret_core::Point,
     geom: RowGeom,
     is_rich: bool,
@@ -811,6 +812,7 @@ pub(super) fn store_row_scene_cache(
     let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(ops.as_ref());
     let retained = Arc::new(RowSceneRetainedFragment {
         content,
+        local_bounds,
         origin,
         geom,
         is_rich,
@@ -922,6 +924,7 @@ pub(super) fn store_row_scene_cache(
     row: usize,
     key: RowSceneKey,
     content: Arc<RowContentSnapshot>,
+    local_bounds: Rect,
     origin: fret_core::Point,
     geom: RowGeom,
     is_rich: bool,
@@ -941,6 +944,7 @@ pub(super) fn store_row_scene_cache(
     let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(ops.as_ref());
     let retained = Arc::new(RowSceneRetainedFragment {
         content,
+        local_bounds,
         origin,
         geom,
         is_rich,

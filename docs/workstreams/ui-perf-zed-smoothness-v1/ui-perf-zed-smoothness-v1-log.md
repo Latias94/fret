@@ -17642,3 +17642,19 @@ Interpretation:
 - Setup is material but belongs to the same remaining replay overhead cluster as touch and ops.
 - The next follow-on should be an implementation lane for planned row replay overhead, not another
   diagnostics-only lane.
+
+## 2026-05-24 04:30:00 +08:00 (Planned replay fast-path lane opened)
+
+Opened `docs/workstreams/editor-canvas-paint-replay-fast-path-v1/` as the implementation follow-on
+from the r64 row-setup attribution closeout.
+
+Planned first slice:
+
+- Keep captured row bounds in `RowSceneRetainedFragment`.
+- For a matching planned replay row with no caret/selection overlay, derive the replay target
+  origin by preserving the retained origin-to-bounds offset against the current row rect.
+- Replay and return before the general row text baseline/key/constraint setup.
+- Keep overlay-touched and preedit rows on the existing paint-time path.
+
+Baseline policy remains unchanged. The local implementation commit must pass focused planned replay
+tests and workstream gates before any target-machine validation or baseline decision.
