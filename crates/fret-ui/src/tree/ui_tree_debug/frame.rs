@@ -119,6 +119,48 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.layout_clean_geometry_solve_skip_rejections = 0;
         self.debug_stats.layout_clean_geometry_proof_nodes = 0;
         self.debug_stats.layout_clean_geometry_proof_boundaries = 0;
+        self.debug_stats
+            .layout_clean_geometry_proof_leaf_shortcut_time = Duration::default();
+        self.debug_stats.layout_clean_geometry_proof_node_state_time = Duration::default();
+        self.debug_stats.layout_clean_geometry_proof_contract_time = Duration::default();
+        self.debug_stats.layout_clean_geometry_proof_record_time = Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_proof_contract_eval_time = Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_proof_child_bounds_time = Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_proof_child_bounds_origin_only_time = Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_proof_child_bounds_preserve_local_origins_time =
+            Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time =
+            Duration::default();
+        self.debug_stats.layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time =
+            Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time =
+            Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time =
+            Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time =
+            Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time =
+            Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_proof_child_bounds_container_px_insets_time =
+            Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time =
+            Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_proof_text_metrics_time = Duration::default();
+        self.debug_stats
+            .layout_clean_geometry_proof_child_prev_bounds_time = Duration::default();
+        self.debug_stats.layout_clean_geometry_proof_emit_time = Duration::default();
         self.debug_stats.layout_clean_geometry_apply_nodes = 0;
         self.debug_stats
             .layout_clean_geometry_apply_fallback_layouts = 0;
@@ -128,6 +170,8 @@ impl<H: UiHost> UiTree<H> {
             .layout_clean_geometry_apply_fallback_layouts_top_time = Duration::default();
         self.debug_stats
             .layout_clean_geometry_apply_fallback_layouts_top_kind = None;
+        self.debug_stats
+            .layout_clean_geometry_scroll_side_effect_fast_paths = 0;
         self.debug_stats
             .layout_clean_geometry_apply_paint_fingerprint_time = Duration::default();
         self.debug_stats

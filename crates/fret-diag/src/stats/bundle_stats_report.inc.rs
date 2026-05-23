@@ -48,10 +48,30 @@ pub(super) struct BundleStatsReport {
     sum_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
     sum_layout_clean_geometry_proof_nodes: u64,
     sum_layout_clean_geometry_proof_boundaries: u64,
+    sum_layout_clean_geometry_proof_leaf_shortcut_time_us: u64,
+    sum_layout_clean_geometry_proof_node_state_time_us: u64,
+    sum_layout_clean_geometry_proof_contract_time_us: u64,
+    sum_layout_clean_geometry_proof_record_time_us: u64,
+    sum_layout_clean_geometry_proof_contract_eval_time_us: u64,
+    sum_layout_clean_geometry_proof_child_bounds_time_us: u64,
+    sum_layout_clean_geometry_proof_child_bounds_origin_only_time_us: u64,
+    sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us: u64,
+    sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us: u64,
+    sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us: u64,
+    sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us: u64,
+    sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us: u64,
+    sum_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us: u64,
+    sum_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us: u64,
+    sum_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us: u64,
+    sum_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us: u64,
+    sum_layout_clean_geometry_proof_text_metrics_time_us: u64,
+    sum_layout_clean_geometry_proof_child_prev_bounds_time_us: u64,
+    sum_layout_clean_geometry_proof_emit_time_us: u64,
     sum_layout_clean_geometry_apply_nodes: u64,
     sum_layout_clean_geometry_apply_fallback_layouts: u64,
     sum_layout_clean_geometry_apply_fallback_layouts_time_us: u64,
     sum_layout_clean_geometry_apply_fallback_layouts_top_time_us: u64,
+    sum_layout_clean_geometry_scroll_side_effect_fast_paths: u64,
     sum_layout_clean_geometry_apply_paint_fingerprint_time_us: u64,
     sum_layout_request_build_roots_phase2_compute_time_us: u64,
     sum_layout_request_build_roots_put_engine_time_us: u64,
@@ -89,11 +109,31 @@ pub(super) struct BundleStatsReport {
     max_layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
     max_layout_clean_geometry_proof_nodes: u64,
     max_layout_clean_geometry_proof_boundaries: u64,
+    max_layout_clean_geometry_proof_leaf_shortcut_time_us: u64,
+    max_layout_clean_geometry_proof_node_state_time_us: u64,
+    max_layout_clean_geometry_proof_contract_time_us: u64,
+    max_layout_clean_geometry_proof_record_time_us: u64,
+    max_layout_clean_geometry_proof_contract_eval_time_us: u64,
+    max_layout_clean_geometry_proof_child_bounds_time_us: u64,
+    max_layout_clean_geometry_proof_child_bounds_origin_only_time_us: u64,
+    max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us: u64,
+    max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us: u64,
+    max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us: u64,
+    max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us: u64,
+    max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us: u64,
+    max_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us: u64,
+    max_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us: u64,
+    max_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us: u64,
+    max_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us: u64,
+    max_layout_clean_geometry_proof_text_metrics_time_us: u64,
+    max_layout_clean_geometry_proof_child_prev_bounds_time_us: u64,
+    max_layout_clean_geometry_proof_emit_time_us: u64,
     max_layout_clean_geometry_apply_nodes: u64,
     max_layout_clean_geometry_apply_fallback_layouts: u64,
     max_layout_clean_geometry_apply_fallback_layouts_time_us: u64,
     max_layout_clean_geometry_apply_fallback_layouts_top_time_us: u64,
     max_layout_clean_geometry_apply_fallback_layouts_top_kind: Option<String>,
+    max_layout_clean_geometry_scroll_side_effect_fast_paths: u64,
     max_layout_clean_geometry_apply_paint_fingerprint_time_us: u64,
     max_layout_request_build_roots_phase2_compute_time_us: u64,
     max_layout_request_build_roots_put_engine_time_us: u64,
@@ -174,6 +214,44 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_layout_clean_geometry_proof_nodes: u64,
     pub(super) p50_layout_clean_geometry_proof_boundaries: u64,
     pub(super) p95_layout_clean_geometry_proof_boundaries: u64,
+    pub(super) p50_layout_clean_geometry_proof_leaf_shortcut_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_leaf_shortcut_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_node_state_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_node_state_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_contract_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_contract_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_record_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_record_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_contract_eval_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_contract_eval_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_child_bounds_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_child_bounds_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_child_bounds_origin_only_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_child_bounds_origin_only_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_text_metrics_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_text_metrics_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_child_prev_bounds_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_child_prev_bounds_time_us: u64,
+    pub(super) p50_layout_clean_geometry_proof_emit_time_us: u64,
+    pub(super) p95_layout_clean_geometry_proof_emit_time_us: u64,
     pub(super) p50_layout_clean_geometry_apply_nodes: u64,
     pub(super) p95_layout_clean_geometry_apply_nodes: u64,
     pub(super) p50_layout_clean_geometry_apply_fallback_layouts: u64,
@@ -182,6 +260,8 @@ pub(super) struct BundleStatsReport {
     pub(super) p95_layout_clean_geometry_apply_fallback_layouts_time_us: u64,
     pub(super) p50_layout_clean_geometry_apply_fallback_layouts_top_time_us: u64,
     pub(super) p95_layout_clean_geometry_apply_fallback_layouts_top_time_us: u64,
+    pub(super) p50_layout_clean_geometry_scroll_side_effect_fast_paths: u64,
+    pub(super) p95_layout_clean_geometry_scroll_side_effect_fast_paths: u64,
     pub(super) p50_layout_clean_geometry_apply_paint_fingerprint_time_us: u64,
     pub(super) p95_layout_clean_geometry_apply_paint_fingerprint_time_us: u64,
     pub(super) p50_layout_request_build_roots_phase2_compute_time_us: u64,
@@ -322,11 +402,31 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) layout_request_build_roots_phase2_clean_geometry_proof_time_us: u64,
     pub(super) layout_clean_geometry_proof_nodes: u64,
     pub(super) layout_clean_geometry_proof_boundaries: u64,
+    pub(super) layout_clean_geometry_proof_leaf_shortcut_time_us: u64,
+    pub(super) layout_clean_geometry_proof_node_state_time_us: u64,
+    pub(super) layout_clean_geometry_proof_contract_time_us: u64,
+    pub(super) layout_clean_geometry_proof_record_time_us: u64,
+    pub(super) layout_clean_geometry_proof_contract_eval_time_us: u64,
+    pub(super) layout_clean_geometry_proof_child_bounds_time_us: u64,
+    pub(super) layout_clean_geometry_proof_child_bounds_origin_only_time_us: u64,
+    pub(super) layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us: u64,
+    pub(super) layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us: u64,
+    pub(super) layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us: u64,
+    pub(super) layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us: u64,
+    pub(super) layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us: u64,
+    pub(super) layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us: u64,
+    pub(super) layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us: u64,
+    pub(super) layout_clean_geometry_proof_child_bounds_container_px_insets_time_us: u64,
+    pub(super) layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us: u64,
+    pub(super) layout_clean_geometry_proof_text_metrics_time_us: u64,
+    pub(super) layout_clean_geometry_proof_child_prev_bounds_time_us: u64,
+    pub(super) layout_clean_geometry_proof_emit_time_us: u64,
     pub(super) layout_clean_geometry_apply_nodes: u64,
     pub(super) layout_clean_geometry_apply_fallback_layouts: u64,
     pub(super) layout_clean_geometry_apply_fallback_layouts_time_us: u64,
     pub(super) layout_clean_geometry_apply_fallback_layouts_top_time_us: u64,
     pub(super) layout_clean_geometry_apply_fallback_layouts_top_kind: Option<String>,
+    pub(super) layout_clean_geometry_scroll_side_effect_fast_paths: u64,
     pub(super) layout_clean_geometry_apply_paint_fingerprint_time_us: u64,
     pub(super) layout_request_build_roots_phase2_compute_time_us: u64,
     pub(super) layout_request_build_roots_put_engine_time_us: u64,
@@ -2815,15 +2915,35 @@ impl BundleStatsReport {
             || self.max_layout_clean_geometry_apply_nodes > 0
         {
             println!(
-                "layout clean_geometry counts p95/max: proof(nodes/boundaries)={}/{} / {}/{} apply(nodes/fallback_layouts)={}/{} / {}/{} apply_us(fallback/top/fingerprint)={}/{}/{} / {}/{}/{} top_kind={}",
+                "layout clean_geometry counts p95/max: proof(nodes/boundaries)={}/{} / {}/{} proof_us(leaf/node_state/contract_total/record/contract_eval/child_bounds/text_metrics/child_prev/emit)={}/{}/{}/{}/{}/{}/{}/{}/{} / {}/{}/{}/{}/{}/{}/{}/{}/{} apply(nodes/fallback_layouts/scroll_fast_paths)={}/{}/{} / {}/{}/{} apply_us(fallback/top/fingerprint)={}/{}/{} / {}/{}/{} top_kind={}",
                 self.p95_layout_clean_geometry_proof_nodes,
                 self.p95_layout_clean_geometry_proof_boundaries,
                 self.max_layout_clean_geometry_proof_nodes,
                 self.max_layout_clean_geometry_proof_boundaries,
+                self.p95_layout_clean_geometry_proof_leaf_shortcut_time_us,
+                self.p95_layout_clean_geometry_proof_node_state_time_us,
+                self.p95_layout_clean_geometry_proof_contract_time_us,
+                self.p95_layout_clean_geometry_proof_record_time_us,
+                self.p95_layout_clean_geometry_proof_contract_eval_time_us,
+                self.p95_layout_clean_geometry_proof_child_bounds_time_us,
+                self.p95_layout_clean_geometry_proof_text_metrics_time_us,
+                self.p95_layout_clean_geometry_proof_child_prev_bounds_time_us,
+                self.p95_layout_clean_geometry_proof_emit_time_us,
+                self.max_layout_clean_geometry_proof_leaf_shortcut_time_us,
+                self.max_layout_clean_geometry_proof_node_state_time_us,
+                self.max_layout_clean_geometry_proof_contract_time_us,
+                self.max_layout_clean_geometry_proof_record_time_us,
+                self.max_layout_clean_geometry_proof_contract_eval_time_us,
+                self.max_layout_clean_geometry_proof_child_bounds_time_us,
+                self.max_layout_clean_geometry_proof_text_metrics_time_us,
+                self.max_layout_clean_geometry_proof_child_prev_bounds_time_us,
+                self.max_layout_clean_geometry_proof_emit_time_us,
                 self.p95_layout_clean_geometry_apply_nodes,
                 self.p95_layout_clean_geometry_apply_fallback_layouts,
+                self.p95_layout_clean_geometry_scroll_side_effect_fast_paths,
                 self.max_layout_clean_geometry_apply_nodes,
                 self.max_layout_clean_geometry_apply_fallback_layouts,
+                self.max_layout_clean_geometry_scroll_side_effect_fast_paths,
                 self.p95_layout_clean_geometry_apply_fallback_layouts_time_us,
                 self.p95_layout_clean_geometry_apply_fallback_layouts_top_time_us,
                 self.p95_layout_clean_geometry_apply_paint_fingerprint_time_us,
@@ -2940,11 +3060,21 @@ impl BundleStatsReport {
                 || row.layout_clean_geometry_apply_nodes > 0
             {
                 line.push_str(&format!(
-                    " layout.clean_geometry.counts(proof_nodes/proof_boundaries/apply_nodes/apply_fallback_layouts)={}/{}/{}/{} apply_us(fallback/top/fingerprint)={}/{}/{} top_kind={}",
+                    " layout.clean_geometry.counts(proof_nodes/proof_boundaries/apply_nodes/apply_fallback_layouts/scroll_fast_paths)={}/{}/{}/{}/{} proof_us(leaf/node_state/contract_total/record/contract_eval/child_bounds/text_metrics/child_prev/emit)={}/{}/{}/{}/{}/{}/{}/{}/{} apply_us(fallback/top/fingerprint)={}/{}/{} top_kind={}",
                     row.layout_clean_geometry_proof_nodes,
                     row.layout_clean_geometry_proof_boundaries,
                     row.layout_clean_geometry_apply_nodes,
                     row.layout_clean_geometry_apply_fallback_layouts,
+                    row.layout_clean_geometry_scroll_side_effect_fast_paths,
+                    row.layout_clean_geometry_proof_leaf_shortcut_time_us,
+                    row.layout_clean_geometry_proof_node_state_time_us,
+                    row.layout_clean_geometry_proof_contract_time_us,
+                    row.layout_clean_geometry_proof_record_time_us,
+                    row.layout_clean_geometry_proof_contract_eval_time_us,
+                    row.layout_clean_geometry_proof_child_bounds_time_us,
+                    row.layout_clean_geometry_proof_text_metrics_time_us,
+                    row.layout_clean_geometry_proof_child_prev_bounds_time_us,
+                    row.layout_clean_geometry_proof_emit_time_us,
                     row.layout_clean_geometry_apply_fallback_layouts_time_us,
                     row.layout_clean_geometry_apply_fallback_layouts_top_time_us,
                     row.layout_clean_geometry_apply_paint_fingerprint_time_us,
@@ -3357,15 +3487,17 @@ impl BundleStatsReport {
             || self.p95_layout_clean_geometry_apply_nodes > 0
         {
             println!(
-                "layout clean_geometry counts p50/p95: proof(nodes/boundaries)={}/{} / {}/{} apply(nodes/fallback_layouts)={}/{} / {}/{}",
+                "layout clean_geometry counts p50/p95: proof(nodes/boundaries)={}/{} / {}/{} apply(nodes/fallback_layouts/scroll_fast_paths)={}/{}/{} / {}/{}/{}",
                 self.p50_layout_clean_geometry_proof_nodes,
                 self.p50_layout_clean_geometry_proof_boundaries,
                 self.p95_layout_clean_geometry_proof_nodes,
                 self.p95_layout_clean_geometry_proof_boundaries,
                 self.p50_layout_clean_geometry_apply_nodes,
                 self.p50_layout_clean_geometry_apply_fallback_layouts,
+                self.p50_layout_clean_geometry_scroll_side_effect_fast_paths,
                 self.p95_layout_clean_geometry_apply_nodes,
                 self.p95_layout_clean_geometry_apply_fallback_layouts,
+                self.p95_layout_clean_geometry_scroll_side_effect_fast_paths,
             );
         }
         println!(
@@ -3743,17 +3875,40 @@ impl BundleStatsReport {
                 || row.layout_clean_geometry_apply_nodes > 0
             {
                 println!(
-                    "    layout_clean_geometry.counts(proof_nodes/proof_boundaries/apply_nodes/apply_fallback_layouts)={}/{}/{}/{} apply_us(fallback/top/fingerprint)={}/{}/{} top_kind={}",
+                    "    layout_clean_geometry.counts(proof_nodes/proof_boundaries/apply_nodes/apply_fallback_layouts/scroll_fast_paths)={}/{}/{}/{}/{} proof_us(leaf/node_state/contract_total/record/contract_eval/child_bounds/text_metrics/child_prev/emit)={}/{}/{}/{}/{}/{}/{}/{}/{} apply_us(fallback/top/fingerprint)={}/{}/{} top_kind={}",
                     row.layout_clean_geometry_proof_nodes,
                     row.layout_clean_geometry_proof_boundaries,
                     row.layout_clean_geometry_apply_nodes,
                     row.layout_clean_geometry_apply_fallback_layouts,
+                    row.layout_clean_geometry_scroll_side_effect_fast_paths,
+                    row.layout_clean_geometry_proof_leaf_shortcut_time_us,
+                    row.layout_clean_geometry_proof_node_state_time_us,
+                    row.layout_clean_geometry_proof_contract_time_us,
+                    row.layout_clean_geometry_proof_record_time_us,
+                    row.layout_clean_geometry_proof_contract_eval_time_us,
+                    row.layout_clean_geometry_proof_child_bounds_time_us,
+                    row.layout_clean_geometry_proof_text_metrics_time_us,
+                    row.layout_clean_geometry_proof_child_prev_bounds_time_us,
+                    row.layout_clean_geometry_proof_emit_time_us,
                     row.layout_clean_geometry_apply_fallback_layouts_time_us,
                     row.layout_clean_geometry_apply_fallback_layouts_top_time_us,
                     row.layout_clean_geometry_apply_paint_fingerprint_time_us,
                     row.layout_clean_geometry_apply_fallback_layouts_top_kind
                         .as_deref()
                         .unwrap_or("?"),
+                );
+                println!(
+                    "    layout_clean_geometry.child_bounds_us(origin_only/preserve/style_lookup/prev_bounds_lookup/absolute/relative/vertical/horizontal/container/grid)={}/{}/{}/{}/{}/{}/{}/{}/{}/{}",
+                    row.layout_clean_geometry_proof_child_bounds_origin_only_time_us,
+                    row.layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us,
+                    row.layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us,
+                    row.layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us,
+                    row.layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us,
+                    row.layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us,
+                    row.layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us,
+                    row.layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us,
+                    row.layout_clean_geometry_proof_child_bounds_container_px_insets_time_us,
+                    row.layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us,
                 );
             }
             if row.paint_input_context_time_us > 0
@@ -4819,6 +4974,99 @@ impl BundleStatsReport {
             Value::from(self.sum_layout_clean_geometry_proof_boundaries),
         );
         sum.insert(
+            "layout_clean_geometry_proof_leaf_shortcut_time_us".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_leaf_shortcut_time_us),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_node_state_time_us".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_node_state_time_us),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_contract_time_us".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_contract_time_us),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_record_time_us".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_record_time_us),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_contract_eval_time_us".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_contract_eval_time_us),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_child_bounds_time_us".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_child_bounds_time_us),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_child_bounds_origin_only_time_us".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_child_bounds_origin_only_time_us),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us".to_string(),
+            Value::from(
+                self.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us,
+            ),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us".to_string(),
+            Value::from(
+                self.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us,
+            ),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us".to_string(),
+            Value::from(
+                self.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us,
+            ),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us".to_string(),
+            Value::from(
+                self.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us,
+            ),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us".to_string(),
+            Value::from(
+                self.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us,
+            ),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us".to_string(),
+            Value::from(
+                self.sum_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us,
+            ),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us".to_string(),
+            Value::from(
+                self.sum_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us,
+            ),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_child_bounds_container_px_insets_time_us".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us"
+                .to_string(),
+            Value::from(
+                self.sum_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us,
+            ),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_text_metrics_time_us".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_text_metrics_time_us),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_child_prev_bounds_time_us".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_child_prev_bounds_time_us),
+        );
+        sum.insert(
+            "layout_clean_geometry_proof_emit_time_us".to_string(),
+            Value::from(self.sum_layout_clean_geometry_proof_emit_time_us),
+        );
+        sum.insert(
             "layout_clean_geometry_apply_nodes".to_string(),
             Value::from(self.sum_layout_clean_geometry_apply_nodes),
         );
@@ -4833,6 +5081,10 @@ impl BundleStatsReport {
         sum.insert(
             "layout_clean_geometry_apply_fallback_layouts_top_time_us".to_string(),
             Value::from(self.sum_layout_clean_geometry_apply_fallback_layouts_top_time_us),
+        );
+        sum.insert(
+            "layout_clean_geometry_scroll_side_effect_fast_paths".to_string(),
+            Value::from(self.sum_layout_clean_geometry_scroll_side_effect_fast_paths),
         );
         sum.insert(
             "layout_clean_geometry_apply_paint_fingerprint_time_us".to_string(),
@@ -4983,6 +5235,99 @@ impl BundleStatsReport {
             Value::from(self.max_layout_clean_geometry_proof_boundaries),
         );
         max.insert(
+            "layout_clean_geometry_proof_leaf_shortcut_time_us".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_leaf_shortcut_time_us),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_node_state_time_us".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_node_state_time_us),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_contract_time_us".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_contract_time_us),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_record_time_us".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_record_time_us),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_contract_eval_time_us".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_contract_eval_time_us),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_child_bounds_time_us".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_child_bounds_time_us),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_child_bounds_origin_only_time_us".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_child_bounds_origin_only_time_us),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us".to_string(),
+            Value::from(
+                self.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us,
+            ),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us".to_string(),
+            Value::from(
+                self.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us,
+            ),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us".to_string(),
+            Value::from(
+                self.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us,
+            ),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us".to_string(),
+            Value::from(
+                self.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us,
+            ),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us".to_string(),
+            Value::from(
+                self.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us,
+            ),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us".to_string(),
+            Value::from(
+                self.max_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us,
+            ),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us".to_string(),
+            Value::from(
+                self.max_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us,
+            ),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_child_bounds_container_px_insets_time_us".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us"
+                .to_string(),
+            Value::from(
+                self.max_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us,
+            ),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_text_metrics_time_us".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_text_metrics_time_us),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_child_prev_bounds_time_us".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_child_prev_bounds_time_us),
+        );
+        max.insert(
+            "layout_clean_geometry_proof_emit_time_us".to_string(),
+            Value::from(self.max_layout_clean_geometry_proof_emit_time_us),
+        );
+        max.insert(
             "layout_clean_geometry_apply_nodes".to_string(),
             Value::from(self.max_layout_clean_geometry_apply_nodes),
         );
@@ -5004,6 +5349,10 @@ impl BundleStatsReport {
                 .clone()
                 .map(Value::from)
                 .unwrap_or(Value::Null),
+        );
+        max.insert(
+            "layout_clean_geometry_scroll_side_effect_fast_paths".to_string(),
+            Value::from(self.max_layout_clean_geometry_scroll_side_effect_fast_paths),
         );
         max.insert(
             "layout_clean_geometry_apply_paint_fingerprint_time_us".to_string(),
@@ -5331,6 +5680,13 @@ impl BundleStatsReport {
             )),
         );
         avg.insert(
+            "layout_clean_geometry_scroll_side_effect_fast_paths".to_string(),
+            Value::from(avg_us(
+                self.sum_layout_clean_geometry_scroll_side_effect_fast_paths,
+                self.snapshots_considered,
+            )),
+        );
+        avg.insert(
             "layout_clean_geometry_apply_paint_fingerprint_time_us".to_string(),
             Value::from(avg_us(
                 self.sum_layout_clean_geometry_apply_paint_fingerprint_time_us,
@@ -5535,6 +5891,99 @@ impl BundleStatsReport {
             Value::from(self.p50_layout_clean_geometry_proof_boundaries),
         );
         p50.insert(
+            "layout_clean_geometry_proof_leaf_shortcut_time_us".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_leaf_shortcut_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_node_state_time_us".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_node_state_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_contract_time_us".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_contract_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_record_time_us".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_record_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_contract_eval_time_us".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_contract_eval_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_child_bounds_time_us".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_child_bounds_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_child_bounds_origin_only_time_us".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_child_bounds_origin_only_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us".to_string(),
+            Value::from(
+                self.p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us,
+            ),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us".to_string(),
+            Value::from(
+                self.p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us,
+            ),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us".to_string(),
+            Value::from(
+                self.p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us,
+            ),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us".to_string(),
+            Value::from(
+                self.p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us,
+            ),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us".to_string(),
+            Value::from(
+                self.p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us,
+            ),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us".to_string(),
+            Value::from(
+                self.p50_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us,
+            ),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us".to_string(),
+            Value::from(
+                self.p50_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us,
+            ),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_child_bounds_container_px_insets_time_us".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us"
+                .to_string(),
+            Value::from(
+                self.p50_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us,
+            ),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_text_metrics_time_us".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_text_metrics_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_child_prev_bounds_time_us".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_child_prev_bounds_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_proof_emit_time_us".to_string(),
+            Value::from(self.p50_layout_clean_geometry_proof_emit_time_us),
+        );
+        p50.insert(
             "layout_clean_geometry_apply_nodes".to_string(),
             Value::from(self.p50_layout_clean_geometry_apply_nodes),
         );
@@ -5549,6 +5998,10 @@ impl BundleStatsReport {
         p50.insert(
             "layout_clean_geometry_apply_fallback_layouts_top_time_us".to_string(),
             Value::from(self.p50_layout_clean_geometry_apply_fallback_layouts_top_time_us),
+        );
+        p50.insert(
+            "layout_clean_geometry_scroll_side_effect_fast_paths".to_string(),
+            Value::from(self.p50_layout_clean_geometry_scroll_side_effect_fast_paths),
         );
         p50.insert(
             "layout_clean_geometry_apply_paint_fingerprint_time_us".to_string(),
@@ -5814,6 +6267,99 @@ impl BundleStatsReport {
             Value::from(self.p95_layout_clean_geometry_proof_boundaries),
         );
         p95.insert(
+            "layout_clean_geometry_proof_leaf_shortcut_time_us".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_leaf_shortcut_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_node_state_time_us".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_node_state_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_contract_time_us".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_contract_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_record_time_us".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_record_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_contract_eval_time_us".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_contract_eval_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_child_bounds_time_us".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_child_bounds_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_child_bounds_origin_only_time_us".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_child_bounds_origin_only_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us".to_string(),
+            Value::from(
+                self.p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us,
+            ),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us".to_string(),
+            Value::from(
+                self.p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us,
+            ),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us".to_string(),
+            Value::from(
+                self.p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us,
+            ),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us".to_string(),
+            Value::from(
+                self.p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us,
+            ),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us".to_string(),
+            Value::from(
+                self.p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us,
+            ),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us".to_string(),
+            Value::from(
+                self.p95_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us,
+            ),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us".to_string(),
+            Value::from(
+                self.p95_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us,
+            ),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_child_bounds_container_px_insets_time_us".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us"
+                .to_string(),
+            Value::from(
+                self.p95_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us,
+            ),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_text_metrics_time_us".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_text_metrics_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_child_prev_bounds_time_us".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_child_prev_bounds_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_proof_emit_time_us".to_string(),
+            Value::from(self.p95_layout_clean_geometry_proof_emit_time_us),
+        );
+        p95.insert(
             "layout_clean_geometry_apply_nodes".to_string(),
             Value::from(self.p95_layout_clean_geometry_apply_nodes),
         );
@@ -5828,6 +6374,10 @@ impl BundleStatsReport {
         p95.insert(
             "layout_clean_geometry_apply_fallback_layouts_top_time_us".to_string(),
             Value::from(self.p95_layout_clean_geometry_apply_fallback_layouts_top_time_us),
+        );
+        p95.insert(
+            "layout_clean_geometry_scroll_side_effect_fast_paths".to_string(),
+            Value::from(self.p95_layout_clean_geometry_scroll_side_effect_fast_paths),
         );
         p95.insert(
             "layout_clean_geometry_apply_paint_fingerprint_time_us".to_string(),
@@ -6674,6 +7224,107 @@ impl BundleStatsReport {
                     Value::from(row.layout_clean_geometry_proof_boundaries),
                 );
                 obj.insert(
+                    "layout_clean_geometry_proof_leaf_shortcut_time_us".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_leaf_shortcut_time_us),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_node_state_time_us".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_node_state_time_us),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_contract_time_us".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_contract_time_us),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_record_time_us".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_record_time_us),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_contract_eval_time_us".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_contract_eval_time_us),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_child_bounds_time_us".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_child_bounds_time_us),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_child_bounds_origin_only_time_us".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_child_bounds_origin_only_time_us),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us"
+                        .to_string(),
+                    Value::from(
+                        row.layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us,
+                    ),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us"
+                        .to_string(),
+                    Value::from(
+                        row.layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us,
+                    ),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us"
+                        .to_string(),
+                    Value::from(
+                        row.layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us,
+                    ),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us"
+                        .to_string(),
+                    Value::from(
+                        row.layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us,
+                    ),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us"
+                        .to_string(),
+                    Value::from(
+                        row.layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us,
+                    ),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us"
+                        .to_string(),
+                    Value::from(
+                        row.layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us,
+                    ),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us"
+                        .to_string(),
+                    Value::from(
+                        row.layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us,
+                    ),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_child_bounds_container_px_insets_time_us"
+                        .to_string(),
+                    Value::from(row.layout_clean_geometry_proof_child_bounds_container_px_insets_time_us),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us"
+                        .to_string(),
+                    Value::from(
+                        row.layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us,
+                    ),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_text_metrics_time_us".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_text_metrics_time_us),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_child_prev_bounds_time_us".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_child_prev_bounds_time_us),
+                );
+                obj.insert(
+                    "layout_clean_geometry_proof_emit_time_us".to_string(),
+                    Value::from(row.layout_clean_geometry_proof_emit_time_us),
+                );
+                obj.insert(
                     "layout_clean_geometry_apply_nodes".to_string(),
                     Value::from(row.layout_clean_geometry_apply_nodes),
                 );
@@ -6695,6 +7346,10 @@ impl BundleStatsReport {
                         .clone()
                         .map(Value::from)
                         .unwrap_or(Value::Null),
+                );
+                obj.insert(
+                    "layout_clean_geometry_scroll_side_effect_fast_paths".to_string(),
+                    Value::from(row.layout_clean_geometry_scroll_side_effect_fast_paths),
                 );
                 obj.insert(
                     "layout_clean_geometry_apply_paint_fingerprint_time_us".to_string(),

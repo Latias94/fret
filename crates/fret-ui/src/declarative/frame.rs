@@ -187,13 +187,10 @@ pub(crate) fn element_record_for_node<H: UiHost>(
     window: AppWindowId,
     node: NodeId,
 ) -> Option<ElementRecord> {
-    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
-        frame
-            .windows
-            .get(&window)
-            .and_then(|w| w.instances.get(node))
-            .cloned()
-    })
+    app.global::<ElementFrame>()
+        .and_then(|frame| frame.windows.get(&window))
+        .and_then(|w| w.instances.get(node))
+        .cloned()
 }
 
 pub(crate) fn with_element_record_for_node<H: UiHost, R>(
@@ -202,13 +199,10 @@ pub(crate) fn with_element_record_for_node<H: UiHost, R>(
     node: NodeId,
     f: impl FnOnce(&ElementRecord) -> R,
 ) -> Option<R> {
-    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
-        frame
-            .windows
-            .get(&window)
-            .and_then(|w| w.instances.get(node))
-            .map(f)
-    })
+    app.global::<ElementFrame>()
+        .and_then(|frame| frame.windows.get(&window))
+        .and_then(|w| w.instances.get(node))
+        .map(f)
 }
 
 pub(crate) fn inherited_text_style_for_node<H: UiHost>(

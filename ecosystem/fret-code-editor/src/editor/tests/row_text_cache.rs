@@ -759,6 +759,120 @@ fn prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context() {
 
 #[cfg(feature = "syntax-rust")]
 #[test]
+fn prepaint_row_scene_replay_plan_rejects_plain_rows_when_fg_changes() {
+    let handle = CodeEditorHandle::new("plain\n");
+    handle.state.borrow_mut().paint_perf_enabled = true;
+
+    let mut st = handle.state.borrow_mut();
+    ensure_syntax_row_cache_fresh(&mut st);
+    st.sync_row_scene_cache_epoch();
+
+    let old_fg = Color {
+        r: 0.2,
+        g: 0.3,
+        b: 0.4,
+        a: 1.0,
+    };
+    let new_fg = Color {
+        r: 0.8,
+        g: 0.3,
+        b: 0.4,
+        a: 1.0,
+    };
+    let text_style = TextStyle {
+        font: FontId::monospace(),
+        size: Px(14.0),
+        ..Default::default()
+    };
+    let content_bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(640.0), Px(16.0)));
+    let constraints = CanvasTextConstraints {
+        max_width: Some(Px(4096.0)),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+    let line = Arc::<str>::from("plain");
+    let row_range = 0..line.len();
+    let content = Arc::new(RowContentSnapshot {
+        text: Arc::clone(&line),
+        range: row_range.clone(),
+        fold_map: None,
+        preedit_range: None,
+        row_spans: Arc::from([]),
+    });
+    let row_geom_key = geom::RowGeomKey::for_plain(
+        &line,
+        &text_style,
+        (
+            constraints.max_width,
+            constraints.wrap,
+            constraints.overflow,
+            fret_core::TextAlign::Start,
+            1.0,
+        ),
+        st.font_stack_key,
+    );
+    let row_scene_key = RowSceneKey::plain(row_geom_key.clone(), old_fg);
+    st.row_scene_cache.insert(
+        0,
+        (
+            RowSceneCacheEntry {
+                key: row_scene_key,
+                retained: Arc::new(RowSceneRetainedFragment {
+                    content,
+                    origin: content_bounds.origin,
+                    geom: RowGeom {
+                        row_range,
+                        key: row_geom_key,
+                        caret_stops: Vec::new(),
+                        fold_map: None,
+                        caret_rect_top: None,
+                        caret_rect_height: None,
+                        has_preedit: false,
+                        preedit: None,
+                    },
+                    is_rich: false,
+                    ops: Arc::from(Vec::<SceneOp>::new()),
+                    hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
+                }),
+                syntax_replay_key: None,
+            },
+            1,
+        ),
+    );
+    st.row_scene_cache_tick = 1;
+
+    let frame = WindowedRowsPaintFrame {
+        viewport_height: Px(16.0),
+        offset_y: Px(0.0),
+        row_height: Px(16.0),
+        row_stride: Px(16.0),
+        gap: Px(0.0),
+        scroll_margin: Px(0.0),
+        visible_start: 0,
+        visible_end: 0,
+    };
+    st.begin_paint_frame(frame);
+    let plan = paint::prepaint_row_scene_replay_plan_for_frame(
+        &mut st,
+        frame,
+        content_bounds,
+        Px(8.0),
+        64,
+        &text_style,
+        new_fg,
+        0,
+        1.0,
+    );
+
+    assert!(plan.entries.is_empty());
+    assert_eq!(st.paint_perf_frame.rows_scene_prepaint_candidates, 1);
+    assert_eq!(st.paint_perf_frame.rows_scene_prepaint_planned, 0);
+    assert_eq!(st.paint_perf_frame.rows_scene_prepaint_skip_key_mismatch, 1);
+    assert_eq!(st.cache_stats.row_scene_fast_misses, 1);
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
 fn prepaint_row_scene_replay_plan_handles_plain_cached_rows() {
     let handle = CodeEditorHandle::new("    \n".repeat(256));
     handle.set_language(Some(Arc::<str>::from("rust")));

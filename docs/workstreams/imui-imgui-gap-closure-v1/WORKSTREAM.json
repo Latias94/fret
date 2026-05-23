@@ -179,7 +179,7 @@
     },
     {
       "name": "imui section chrome label text semantics",
-      "command": "cargo nextest run -p fret-ui-kit --features imui --lib chrome_title_text_uses_medium_fill_width_single_line_truncation section_chrome_label_text_uses_single_line_truncation chrome_glyph_text_uses_fixed_slot_single_line_clip disclosure_indicator_uses_shared_chrome_glyph_text_role --no-fail-fast"
+      "command": "cargo nextest run -p fret-ui-kit --features imui --lib chrome_title_text_fills_width_without_main_axis_growth section_chrome_label_text_uses_single_line_truncation chrome_glyph_text_uses_fixed_slot_single_line_clip disclosure_indicator_uses_shared_chrome_glyph_text_role --no-fail-fast"
     },
     {
       "name": "editor input value text semantics",

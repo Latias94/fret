@@ -1240,6 +1240,11 @@ Readiness order for the next locally testable review slices:
    Current review: `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`. The useful comparison axis is
    Zed-style attribution and reuse discipline plus egui-style integration/repaint clarity; do not
    treat egui's full-layout-every-frame model as an IMUI architecture target.
+   2026-05-23 refresh: the Windows RTX4090 editor-paint closeout and the closed
+   `editor-canvas-paint-replay-slice-v1` follow-on keep the current performance owner in
+   editor paint / row-scene replay bookkeeping, not in `fret-imui`. r59 target-machine closeout
+   passed without a checked-in baseline change, so Dear ImGui-class smoothness pressure remains a
+   dedicated perf/editor owner-lane concern.
 
 These slices should stay Windows/Web-verifiable first; Linux-specific validation is not a gate for
 opening the slice.

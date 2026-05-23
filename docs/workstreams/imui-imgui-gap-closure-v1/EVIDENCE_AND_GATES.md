@@ -476,7 +476,7 @@ Run evidence:
   floating titles keep fill, grow, shrink, `min-width: 0`, and ellipsis behavior; non-resizable
   titles reuse `text_section_chrome_label(...)` instead of local `TextProps`. Gate: `cargo nextest
   run -p fret-ui-kit --features imui --lib
-  chrome_title_text_uses_medium_fill_width_single_line_truncation
+  chrome_title_text_fills_width_without_main_axis_growth
   section_chrome_label_text_uses_single_line_truncation --no-fail-fast`.
 - 2026-05-17: introduced `text_chrome_glyph(...)` as the shared compact fixed-slot chrome glyph
   role and routed disclosure/tree indicators through it. Indicator glyphs now stay single-line and
@@ -755,7 +755,7 @@ Run evidence:
   `ui::raw_text(...).wrap(None).overflow(Clip)` typography policy. Custom title children still use
   the component-owned inherited title refinement because the upstream surface is children-first.
   Gates: `cargo nextest run -p fret-ui-kit --lib
-  chrome_title_text_uses_medium_fill_width_single_line_truncation
+  chrome_title_text_fills_width_without_main_axis_growth
   section_chrome_label_text_uses_single_line_truncation --no-fail-fast`, `cargo nextest run -p
   fret-ui-ai environment_variables_title_text_uses_chrome_title_text_role
   environment_variables_title_children_scope_inherited_typography
@@ -1392,6 +1392,16 @@ Run evidence:
 - The review keeps perf work in `diag-perf-attribution-v1`, `ui-perf-zed-smoothness-v1`, and the
   product-chain docking perf gate. It explicitly rejects turning egui's full-layout-every-frame
   model or Dear ImGui's widget breadth into a `fret-imui` runtime/API widening target.
+- 2026-05-23: `docs/workstreams/editor-canvas-paint-replay-slice-v1/` closed after the r59 Windows
+  RTX4090 target-machine pass. Evidence:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r59/summary.json`,
+  `target/fret-diag/editor-paint-contract-validate-20260523-r59-attrib/summary.json`,
+  `target/fret-diag/editor-paint-contract-validate-20260523-r59/artifact-verification.summary.json`,
+  and
+  `target/fret-diag/editor-paint-contract-validate-20260523-r59/editor-paint-contract-closeout.summary.json`.
+  The closeout retained `owner=canvas-paint-replay`, kept checked-in baselines unchanged, and
+  confirms that current smoothness pressure belongs to editor paint / perf owner lanes rather than
+  `fret-imui` helper growth.
 
 ## P3 Product Chain Gate
 

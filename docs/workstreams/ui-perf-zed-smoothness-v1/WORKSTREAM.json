@@ -3,7 +3,7 @@
   "slug": "ui-perf-zed-smoothness-v1",
   "title": "UI Performance Zed Smoothness v1",
   "status": "active",
-  "updated": "2026-05-22",
+  "updated": "2026-05-23",
   "scope_kind": "execution",
   "problem": "Establish and maintain Fret's editor-grade UI performance and architecture closure against Zed/GPUI and egui by keeping real editor scenarios such as scroll, input, resize, text, rendering, caching, and view reuse under repeatable p50/p95/max and renderer payload contracts. Core contracts, resource semantics, and redundant code cleanup should be fixed before broad optimization, and fearless refactors should proceed only when measured evidence proves the hot path.",
   "authoritative_docs": [
@@ -126,6 +126,7 @@
     "docs/workstreams/ui-perf-zed-smoothness-v1/GOAL_AUDIT_2026-05-16.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md",
     "docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md",
+    "docs/workstreams/editor-canvas-paint-replay-slice-v1/WORKSTREAM.json",
     "docs/workstreams/code-editor-prepaint-planner-cost-v1/CLOSEOUT_AUDIT_2026-05-16.md",
     "docs/workstreams/code-editor-row-fragment-replay-contract-v1/WORKSTREAM.json",
     "docs/workstreams/perf-baselines/README.md",
@@ -202,6 +203,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Current formal closeout action is target-machine Editor Canvas paint validation on Windows RTX4090 with tools/perf/diag_editor_paint_contract_validate.py, first without --with-paint-perf for the failures=[] artifact and then with --with-paint-perf for attribution stats. When this target-machine artifact is deliberately deferred, continue the local TODO queue in ui-perf-zed-smoothness-v1-todo.md with baseline-neutral evidence only. Local independent optimization slices may continue when they have their own evidence, but they are not substitutes for this closeout and must not drive checked-in baseline changes unless the Windows RTX4090 artifacts justify it. Split narrow follow-ons only for implementation-heavy rewrites, Linux profile adoption, or code-editor feature closure when the audit or contract matrix identifies a concrete hotspot or missing environment profile. Do not mark the broader performance goal complete while ui-perf-contract-audit.md still says the goal is active or while Linux and other environment-specific baselines remain missing."
+    "notes": "The target-machine Windows RTX4090 editor-paint closeout for 20260523-r58 passed validation, attribution, artifact verification, and closeout. The verified owner decision is owner=canvas-paint-replay, action=open-canvas-paint-replay-slice, with paint.widget / Canvas as the dominant attribution owner. Continue from ui-perf-zed-smoothness-v1-todo.md by opening or reusing a narrow Canvas paint replay follow-on; do not reopen closed historical Canvas attribution lanes unless fresh evidence explicitly makes them the right scope. Local independent optimization slices may continue when they have their own evidence, but they must not drive checked-in baseline changes unless the Windows RTX4090 artifacts justify it. Split narrow follow-ons only for implementation-heavy rewrites, Linux profile adoption, or code-editor feature closure when the audit or contract matrix identifies a concrete hotspot or missing environment profile. Do not mark the broader performance goal complete while ui-perf-contract-audit.md still says the goal is active or while Linux and other environment-specific baselines remain missing."
   }
 }

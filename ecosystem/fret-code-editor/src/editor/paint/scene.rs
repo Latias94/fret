@@ -128,9 +128,13 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
         Unsupported,
         Preedit,
         KeyMismatch,
-        Hit(Arc<RowSceneRetainedFragment>),
+        Hit {
+            retained: Arc<RowSceneRetainedFragment>,
+            tick: u64,
+        },
     }
 
+    let plain_paint_key = RowScenePaintKey::Plain { fg: fg.into() };
     let mut planned = 0u64;
     for (row, rect) in frame.row_rects(content_bounds) {
         if row > end {
@@ -152,9 +156,9 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
             }
             continue;
         }
-        let probe_started = st.paint_perf_enabled.then(Instant::now);
-        let probe = match st.row_scene_cache.get(&row) {
-            Some((cached, _)) => {
+        let mut probe_started = st.paint_perf_enabled.then(Instant::now);
+        let probe = match st.row_scene_cache.get_mut(&row) {
+            Some((cached, last_used)) => {
                 let content = &cached.retained.content;
                 if cached.syntax_replay_key.is_none()
                     && !matches!(cached.key.paint_key, RowScenePaintKey::Plain { .. })
@@ -176,8 +180,7 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
                             fg,
                         )
                     } else {
-                        let expected = RowSceneKey::plain(cached.key.row_geom_key.clone(), fg);
-                        cached.key == expected
+                        cached.key.paint_key == plain_paint_key
                     };
                     if let Some(started) = key_compare_started {
                         add_paint_perf_elapsed(
@@ -188,7 +191,20 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
                     }
 
                     if matches {
-                        ReplayCandidateProbe::Hit(Arc::clone(&cached.retained))
+                        if let Some(started) = probe_started.take() {
+                            add_paint_perf_elapsed(
+                                &mut st.paint_perf_frame.us_row_scene_prepaint_probe,
+                                &mut st.paint_perf_frame.ns_row_scene_prepaint_probe,
+                                started,
+                            );
+                        }
+                        st.row_scene_cache_tick = st.row_scene_cache_tick.saturating_add(1);
+                        let tick = st.row_scene_cache_tick;
+                        *last_used = tick;
+                        ReplayCandidateProbe::Hit {
+                            retained: Arc::clone(&cached.retained),
+                            tick,
+                        }
                     } else {
                         ReplayCandidateProbe::KeyMismatch
                     }
@@ -204,11 +220,14 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
             );
         }
 
-        let retained = match probe {
-            ReplayCandidateProbe::Hit(candidate) => {
+        let (retained, tick) = match probe {
+            ReplayCandidateProbe::Hit {
+                retained: candidate,
+                tick,
+            } => {
                 st.cache_stats.row_scene_fast_get_calls =
                     st.cache_stats.row_scene_fast_get_calls.saturating_add(1);
-                candidate
+                (candidate, tick)
             }
             ReplayCandidateProbe::NoCache => {
                 if st.paint_perf_enabled {
@@ -254,11 +273,6 @@ pub(super) fn replay_row_scene_plan_candidates_for_frame(
             }
         };
 
-        st.row_scene_cache_tick = st.row_scene_cache_tick.saturating_add(1);
-        let tick = st.row_scene_cache_tick;
-        if let Some((_, last_used)) = st.row_scene_cache.get_mut(&row) {
-            *last_used = tick;
-        }
         st.row_scene_cache_queue.push_back((row, tick));
 
         plan.entries.push_back(RowSceneReplayPlanEntry {

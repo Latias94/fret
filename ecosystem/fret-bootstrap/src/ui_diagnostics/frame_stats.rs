@@ -51,6 +51,44 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub layout_clean_geometry_proof_boundaries: u64,
     #[serde(default)]
+    pub layout_clean_geometry_proof_leaf_shortcut_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_node_state_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_contract_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_record_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_contract_eval_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_child_bounds_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_child_bounds_origin_only_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_child_bounds_container_px_insets_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_text_metrics_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_child_prev_bounds_time_us: u64,
+    #[serde(default)]
+    pub layout_clean_geometry_proof_emit_time_us: u64,
+    #[serde(default)]
     pub layout_clean_geometry_apply_nodes: u64,
     #[serde(default)]
     pub layout_clean_geometry_apply_fallback_layouts: u64,
@@ -60,6 +98,8 @@ pub struct UiFrameStatsV1 {
     pub layout_clean_geometry_apply_fallback_layouts_top_time_us: u64,
     #[serde(default)]
     pub layout_clean_geometry_apply_fallback_layouts_top_kind: Option<String>,
+    #[serde(default)]
+    pub layout_clean_geometry_scroll_side_effect_fast_paths: u64,
     #[serde(default)]
     pub layout_clean_geometry_apply_paint_fingerprint_time_us: u64,
     #[serde(default)]
@@ -890,6 +930,63 @@ impl UiFrameStatsV1 {
             layout_clean_geometry_proof_nodes: stats.layout_clean_geometry_proof_nodes,
             layout_clean_geometry_proof_boundaries: stats
                 .layout_clean_geometry_proof_boundaries,
+            layout_clean_geometry_proof_leaf_shortcut_time_us: stats
+                .layout_clean_geometry_proof_leaf_shortcut_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_node_state_time_us: stats
+                .layout_clean_geometry_proof_node_state_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_contract_time_us: stats
+                .layout_clean_geometry_proof_contract_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_record_time_us: stats
+                .layout_clean_geometry_proof_record_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_contract_eval_time_us: stats
+                .layout_clean_geometry_proof_contract_eval_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_child_bounds_time_us: stats
+                .layout_clean_geometry_proof_child_bounds_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_child_bounds_origin_only_time_us: stats
+                .layout_clean_geometry_proof_child_bounds_origin_only_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us: stats
+                .layout_clean_geometry_proof_child_bounds_preserve_local_origins_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us: stats
+                .layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us: stats
+                .layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us: stats
+                .layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us: stats
+                .layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us: stats
+                .layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us: stats
+                .layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_child_bounds_container_px_insets_time_us: stats
+                .layout_clean_geometry_proof_child_bounds_container_px_insets_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us: stats
+                .layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_text_metrics_time_us: stats
+                .layout_clean_geometry_proof_text_metrics_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_child_prev_bounds_time_us: stats
+                .layout_clean_geometry_proof_child_prev_bounds_time
+                .as_micros() as u64,
+            layout_clean_geometry_proof_emit_time_us: stats
+                .layout_clean_geometry_proof_emit_time
+                .as_micros() as u64,
             layout_clean_geometry_apply_nodes: stats.layout_clean_geometry_apply_nodes,
             layout_clean_geometry_apply_fallback_layouts: stats
                 .layout_clean_geometry_apply_fallback_layouts,
@@ -902,6 +999,8 @@ impl UiFrameStatsV1 {
             layout_clean_geometry_apply_fallback_layouts_top_kind: stats
                 .layout_clean_geometry_apply_fallback_layouts_top_kind
                 .map(str::to_owned),
+            layout_clean_geometry_scroll_side_effect_fast_paths: stats
+                .layout_clean_geometry_scroll_side_effect_fast_paths,
             layout_clean_geometry_apply_paint_fingerprint_time_us: stats
                 .layout_clean_geometry_apply_paint_fingerprint_time
                 .as_micros() as u64,

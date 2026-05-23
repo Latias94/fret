@@ -1086,3 +1086,8 @@ Exit criteria:
   `diag-perf-attribution-v1`, `ui-perf-zed-smoothness-v1`, and the product-chain docking perf gate;
   do not use Dear ImGui/egui performance pressure as a reason to widen `fret-imui` or start a
   broad widget/API backlog.
+  2026-05-23 performance refresh result: `editor-canvas-paint-replay-slice-v1` is now closed after
+  the r59 Windows RTX4090 target-machine validation, attribution validation, artifact verification,
+  and closeout. The retained owner is `canvas-paint-replay`, checked-in baselines stay unchanged,
+  and the lesson remains an editor-paint/perf-lane owner split rather than an IMUI runtime/API
+  widening.

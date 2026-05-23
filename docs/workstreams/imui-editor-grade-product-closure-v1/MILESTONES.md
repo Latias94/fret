@@ -547,6 +547,13 @@ Current status:
   resource. Safe workflow reruns stay GUI-owned because they require the current selected session
   and current token.
   This improves first-open AI/tooling continuity without closing broader DevTools GUI maturity.
+- 2026-05-23 editor Canvas paint replay closeout:
+  `docs/workstreams/editor-canvas-paint-replay-slice-v1/` is now closed after the r59 Windows
+  RTX4090 baseline validation, attribution validation, artifact verification, and closeout. The
+  slice kept checked-in baselines unchanged and retained `canvas-paint-replay` as the verified
+  owner, so this is perf-lane progress rather than `fret-imui` runtime/API growth. Broad
+  editor-grade smoothness attribution remains open outside this umbrella until the dedicated perf
+  lanes close or hand off their remaining owners.
 - P3 remains the active global parity lane when real backend/runner acceptance is available, while
   the latest non-multi-window local follow-on is now closed in
   `docs/workstreams/imui-collection-second-proof-surface-v1/` after command-package closeout.
@@ -576,6 +583,8 @@ Current status:
 - In progress as a maintenance/status umbrella.
 - The 2026-05-15 goal-completion audit keeps the lane explicitly not complete after the latest
   product-chain discovery, Wayland source/admission/policy-skip, and perf-threshold refreshes.
+- The 2026-05-23 Canvas replay closeout adds fresh perf owner-lane progress, but does not close the
+  broader editor-grade objective or justify moving smoothness work into `fret-imui`.
 - The lane should close only after real-host Wayland hand-feel, DevTools GUI productization, and
   broader perf attribution/smoothness are resolved or explicitly handed off with fresh owner-lane
   closeout evidence.

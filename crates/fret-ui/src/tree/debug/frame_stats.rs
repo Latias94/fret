@@ -271,6 +271,47 @@ pub struct UiDebugFrameStats {
     pub layout_clean_geometry_proof_nodes: u64,
     /// Number of side-effect boundary nodes accepted while proving clean-geometry root-solve skips.
     pub layout_clean_geometry_proof_boundaries: u64,
+    /// Time spent checking clean-geometry leaf shortcuts before normal contract proof.
+    pub layout_clean_geometry_proof_leaf_shortcut_time: Duration,
+    /// Time spent reading node state and validating clean node status while building clean-geometry apply plans.
+    pub layout_clean_geometry_proof_node_state_time: Duration,
+    /// Time spent resolving element records and evaluating clean-geometry contracts while building clean-geometry apply plans.
+    pub layout_clean_geometry_proof_contract_time: Duration,
+    /// Time spent resolving/cloning element records while building clean-geometry apply plans.
+    pub layout_clean_geometry_proof_record_time: Duration,
+    /// Time spent evaluating clean-geometry contracts after element records are available.
+    pub layout_clean_geometry_proof_contract_eval_time: Duration,
+    /// Time spent deriving child bounds while building clean-geometry apply plans.
+    pub layout_clean_geometry_proof_child_bounds_time: Duration,
+    /// Time spent deriving origin-only child bounds while building clean-geometry apply plans.
+    pub layout_clean_geometry_proof_child_bounds_origin_only_time: Duration,
+    /// Time spent deriving PreserveLocalOrigins child bounds while building clean-geometry apply plans.
+    pub layout_clean_geometry_proof_child_bounds_preserve_local_origins_time: Duration,
+    /// Time spent looking up styles for PreserveLocalOrigins child bounds.
+    pub layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time: Duration,
+    /// Time spent reading previous bounds for PreserveLocalOrigins child bounds.
+    pub layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time:
+        Duration,
+    /// Time spent handling absolute-position PreserveLocalOrigins children.
+    pub layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time:
+        Duration,
+    /// Time spent handling non-absolute PreserveLocalOrigins children.
+    pub layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time:
+        Duration,
+    /// Time spent deriving VerticalNoWrapFlex child bounds while building clean-geometry apply plans.
+    pub layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time: Duration,
+    /// Time spent deriving HorizontalFixedFlex child bounds while building clean-geometry apply plans.
+    pub layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time: Duration,
+    /// Time spent deriving ContainerPxInsets child bounds while building clean-geometry apply plans.
+    pub layout_clean_geometry_proof_child_bounds_container_px_insets_time: Duration,
+    /// Time spent deriving SingleColumnAutoRowsGrid child bounds while building clean-geometry apply plans.
+    pub layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time: Duration,
+    /// Time spent validating cached text metrics while building clean-geometry apply plans.
+    pub layout_clean_geometry_proof_text_metrics_time: Duration,
+    /// Time spent reading previous child bounds before recursive clean-geometry proof.
+    pub layout_clean_geometry_proof_child_prev_bounds_time: Duration,
+    /// Time spent emitting clean-geometry apply-plan records and direct node geometry updates.
+    pub layout_clean_geometry_proof_emit_time: Duration,
     /// Number of nodes updated by clean-geometry layout propagation.
     pub layout_clean_geometry_apply_nodes: u64,
     /// Number of child layouts run because clean-geometry propagation stopped at that child.
@@ -281,6 +322,8 @@ pub struct UiDebugFrameStats {
     pub layout_clean_geometry_apply_fallback_layouts_top_time: Duration,
     /// Element kind attached to the largest clean-geometry fallback child layout, when known.
     pub layout_clean_geometry_apply_fallback_layouts_top_kind: Option<&'static str>,
+    /// Scroll side-effect fallbacks satisfied without walking clean child subtrees.
+    pub layout_clean_geometry_scroll_side_effect_fast_paths: u64,
     /// Total wall time spent recomputing paint-geometry fingerprints during clean-geometry application.
     pub layout_clean_geometry_apply_paint_fingerprint_time: Duration,
     /// First rejection reason observed for a clean-geometry root-solve skip attempt this frame.

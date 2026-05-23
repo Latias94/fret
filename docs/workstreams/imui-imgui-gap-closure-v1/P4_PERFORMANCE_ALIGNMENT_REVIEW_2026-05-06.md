@@ -1,7 +1,7 @@
 # P4 Performance Alignment Review - 2026-05-06
 
 Status: review note; no new implementation lane opened from this note
-Last updated: 2026-05-06
+Last updated: 2026-05-23
 
 ## Purpose
 
@@ -40,6 +40,9 @@ Fret anchors:
 
 - `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1.md`
 - `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-todo.md`
+- `docs/workstreams/ui-perf-zed-smoothness-v1/ui-perf-zed-smoothness-v1-log.md`
+- `docs/workstreams/editor-canvas-paint-replay-slice-v1/CLOSEOUT_AUDIT_2026-05-23.md`
+- `docs/workstreams/editor-canvas-paint-replay-slice-v1/EVIDENCE_AND_GATES.md`
 - `docs/workstreams/diag-perf-attribution-v1/diag-perf-attribution-v1.md`
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/frame_stats.rs`
 - `crates/fret-diag/src/stats.rs`
@@ -219,6 +222,22 @@ missing a whole architecture class.
 
 Fret's performance gap to egui is mostly that it is intentionally a different kind of system.
 The useful part of egui is the integration and repaint contract, not the layout model.
+
+## 2026-05-23 status refresh
+
+The Windows RTX4090 editor-paint closeout and the closed
+`editor-canvas-paint-replay-slice-v1` follow-on refine the current performance owner split:
+
+- The formal `20260523-r58` editor-paint closeout selected `canvas-paint-replay` as the verified
+  owner, with `paint.widget / Canvas` still dominating the attribution read.
+- The bounded `20260523-r59` replay-bookkeeping slice landed in
+  `ecosystem/fret-code-editor/src/editor/paint/scene.rs` and then closed with target-machine
+  validation, attribution validation, artifact verification, and closeout all passing.
+- The slice intentionally kept checked-in baselines unchanged and did not justify a `fret-imui`
+  helper, widget, or runtime expansion.
+- The follow-up learning is architectural: keep row-scene replay, editor paint, and broader
+  smoothness work inside dedicated perf/editor owner lanes; use IMUI evidence only to keep product
+  proof surfaces realistic.
 
 So the right next move is:
 

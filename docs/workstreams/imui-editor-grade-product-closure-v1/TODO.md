@@ -309,6 +309,12 @@ reopen.
       Windows and Linux/X11 sidecars, but real-host Wayland compositor acceptance, DevTools GUI
       productization, and broader perf attribution/smoothness remain owner-lane work, not
       `fret-imui` or runtime widening.
+      2026-05-23 refresh: the Windows RTX4090 editor-paint closeout and the closed
+      `editor-canvas-paint-replay-slice-v1` follow-on reduce one concrete perf owner
+      (`canvas-paint-replay`) without changing baselines or moving smoothness pressure into
+      `fret-imui`. The umbrella remains not complete because real-host Wayland hand-feel,
+      broader DevTools GUI productization, and broader perf/smoothness attribution still need their
+      owner-lane evidence.
 - [x] Keep pure teaching-surface cleanup out of this umbrella unless it becomes the dominant
       remaining P0 pressure.
       Result: the remaining P0 backlog no longer reads as teaching-surface cleanup first, so no
