@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "editor-canvas-paint-replay-row-setup-v1",
   "title": "Editor Canvas Paint Replay Row Setup v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-24",
   "scope_kind": "execution",
   "follow_on_of": "ui-perf-zed-smoothness-v1",
@@ -41,9 +41,10 @@
       "cargo check -p fret-code-editor --tests --features syntax-rust",
       "cargo check -p fret-diag --tests",
       "python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r64-row-setup-baseline --keep-going",
-      "python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r64-row-setup-attrib --with-paint-perf --keep-going",
-      "python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib",
-      "python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib --out-report target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/editor-paint-contract-closeout.summary.json"
+      "cargo build -p fretboard-dev -p fret-ui-gallery --release --features fret-ui-gallery/gallery-full",
+      "python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r64-row-setup-attrib-rebuilt --with-paint-perf --keep-going",
+      "python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt",
+      "python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt --out-report target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/editor-paint-contract-closeout.summary.json"
     ]
   },
   "gates": [
@@ -93,9 +94,14 @@
     "apps/fret-ui-gallery/src/driver/diag_snapshot.rs",
     "crates/fret-diag/src/stats.rs",
     "crates/fret-diag/src/stats/bundle_stats_compute.inc.rs",
-    "crates/fret-diag/src/stats/bundle_stats_report.inc.rs"
-    ,
-    "ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs"
+    "crates/fret-diag/src/stats/bundle_stats_report.inc.rs",
+    "ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs",
+    "target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/summary.json",
+    "target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt/summary.json",
+    "target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/artifact-verification.summary.json",
+    "target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/editor-paint-contract-closeout.summary.json",
+    "target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt/runner-logs/typical-autoscroll/stats.stdout.json",
+    "target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt/runner-logs/complex-wheel/stats.stdout.json"
   ],
   "adr_refs": [
     "docs/adr/0161-canvas-cache-policy-and-hosted-resource-caches.md",
@@ -103,7 +109,7 @@
     "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Local diagnostics gates passed on 2026-05-24. Run target-machine attribution before selecting the next implementation owner. Do not change checked-in baselines from this diagnostics-only slice."
+    "default_action": "closed",
+    "notes": "Closed after local gates, target-machine baseline validation, rebuilt attribution validation, artifact verification, and closeout passed on 2026-05-24. The closeout still selects owner=canvas-paint-replay, so continue in a new bounded implementation follow-on. Do not change checked-in baselines from this diagnostics-only slice."
   }
 }

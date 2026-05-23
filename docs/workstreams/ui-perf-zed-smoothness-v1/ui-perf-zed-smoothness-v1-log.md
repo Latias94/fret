@@ -17593,3 +17593,52 @@ Decision:
 - Baseline policy remains unchanged.
 - Run the full local gate set, then target-machine attribution with paint perf before selecting the
   next implementation owner.
+
+## 2026-05-24 04:10:00 +08:00 (Row setup attribution closeout)
+
+Closed `docs/workstreams/editor-canvas-paint-replay-row-setup-v1/` after target-machine validation
+and rebuilt attribution.
+
+Validation:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r64-row-setup-baseline --keep-going
+cargo build -p fretboard-dev -p fret-ui-gallery --release --features fret-ui-gallery/gallery-full
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r64-row-setup-attrib-rebuilt --with-paint-perf --keep-going
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt
+python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt --out-report target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/editor-paint-contract-closeout.summary.json
+```
+
+Evidence:
+
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/summary.json`
+- Rebuilt attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt/summary.json`
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/editor-paint-contract-closeout.summary.json`
+- Closeout audit:
+  `docs/workstreams/editor-canvas-paint-replay-row-setup-v1/CLOSEOUT_AUDIT_2026-05-24.md`
+
+The first attribution run with tag `20260524-r64-row-setup-attrib` used an older
+`target/release/fretboard-dev.exe` from 2026-05-23, so it did not contain the new schema `14`
+counter. The final evidence uses the rebuilt attribution directory.
+
+Key stats:
+
+- typical-autoscroll: `setup_p95/sum=62/9418us`, `touch_p95/sum=57/7798us`,
+  `ops_p95/sum=83/12960us`, `row_paint_p95/sum=295/47555us`.
+- complex-wheel: `setup_p95/sum=44/1280us`, `touch_p95/sum=53/1516us`,
+  `ops_p95/sum=45/1194us`, `row_paint_p95/sum=272/7531us`.
+
+Closeout decision:
+
+- `owner=canvas-paint-replay`
+- `action=open-canvas-paint-replay-slice`
+- Baseline policy unchanged.
+
+Interpretation:
+
+- Setup is material but belongs to the same remaining replay overhead cluster as touch and ops.
+- The next follow-on should be an implementation lane for planned row replay overhead, not another
+  diagnostics-only lane.

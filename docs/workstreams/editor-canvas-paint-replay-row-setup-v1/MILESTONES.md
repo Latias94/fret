@@ -50,7 +50,7 @@ Evidence:
 
 ## M3 - Target-Machine Attribution
 
-Status: pending.
+Status: complete.
 
 Exit criteria:
 
@@ -58,3 +58,19 @@ Exit criteria:
 - Attribution validation with paint perf passes.
 - Artifact verifier passes.
 - Closeout names the next owner with the new replay setup metric included in the evidence.
+
+Evidence:
+
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/summary.json`
+- Rebuilt attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt/summary.json`
+- Artifact verifier:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/artifact-verification.summary.json`
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/editor-paint-contract-closeout.summary.json`
+
+Result:
+
+- Closeout still selects `owner=canvas-paint-replay`.
+- Checked-in baseline policy remains unchanged.

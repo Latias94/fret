@@ -1,5 +1,9 @@
 # Editor Canvas Paint Replay Row Setup v1
 
+Status: Closed on 2026-05-24 after target-machine validation and attribution. This lane added
+diagnostics-only planned replay setup attribution; remaining optimization work is split to a new
+bounded Canvas replay follow-on.
+
 ## Problem
 
 The r63 resource-touch closeout kept the parent `ui-perf-zed-smoothness-v1` owner at

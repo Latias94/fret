@@ -30,11 +30,23 @@
   - Result:
     passed on 2026-05-24.
 
-- [ ] ECPR-RS-030: Run target-machine attribution before optimizing.
+- [x] ECPR-RS-030: Run target-machine attribution before optimizing.
   - Required shape:
     - `python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r64-row-setup-baseline --keep-going`
-    - `python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r64-row-setup-attrib --with-paint-perf --keep-going`
+    - `python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r64-row-setup-attrib-rebuilt --with-paint-perf --keep-going`
     - artifact verifier and closeout over the two directories.
+  - Result:
+    passed on 2026-05-24 after rebuilding `target/release/fretboard-dev.exe` and the release
+    gallery so the target-machine attribution bundle included the new schema `14` counter.
+  - Evidence:
+    - Baseline validation:
+      `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/summary.json`
+    - Rebuilt attribution validation:
+      `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt/summary.json`
+    - Artifact verifier:
+      `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/artifact-verification.summary.json`
+    - Closeout:
+      `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/editor-paint-contract-closeout.summary.json`
   - Decision rule:
     this diagnostics slice should not change checked-in baselines. Use the target-machine
     attribution to decide whether the next implementation slice attacks row setup, replay ops,
@@ -42,5 +54,7 @@
 
 ## Current Decision
 
-Active. The local diagnostics slice is implemented and locally gated. Next, run target-machine
-attribution before selecting the next optimization.
+Closed. The diagnostics slice is implemented, locally gated, and target-machine verified. The
+closeout still selects `owner=canvas-paint-replay`; the next implementation work should start in a
+new bounded follow-on for row replay setup/ops/touch together rather than keeping this diagnostics
+lane open.

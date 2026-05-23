@@ -52,14 +52,39 @@ Local evidence:
 
 ```powershell
 python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r64-row-setup-baseline --keep-going
-python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r64-row-setup-attrib --with-paint-perf --keep-going
-python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib
-python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib --out-report target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/editor-paint-contract-closeout.summary.json
+cargo build -p fretboard-dev -p fret-ui-gallery --release --features fret-ui-gallery/gallery-full
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r64-row-setup-attrib-rebuilt --with-paint-perf --keep-going
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt
+python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt --out-report target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/editor-paint-contract-closeout.summary.json
 ```
 
 Target-machine evidence:
 
-- Pending.
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/summary.json`
+  passed on 2026-05-24.
+- Rebuilt attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt/summary.json`
+  passed on 2026-05-24.
+- Artifact verifier:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/artifact-verification.summary.json`
+  passed on 2026-05-24.
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/editor-paint-contract-closeout.summary.json`
+  passed on 2026-05-24.
+
+Note: the first attribution run with tag `20260524-r64-row-setup-attrib` used an older
+`target/release/fretboard-dev.exe` from 2026-05-23 and did not include the new schema `14` counter.
+The final evidence uses `20260524-r64-row-setup-attrib-rebuilt`, after rebuilding release
+`fretboard-dev` and `fret-ui-gallery`.
+
+Key attribution result:
+
+- typical-autoscroll: `setup_p95/sum=62/9418us`, `touch_p95/sum=57/7798us`,
+  `ops_p95/sum=83/12960us`, `row_paint_p95/sum=295/47555us`.
+- complex-wheel: `setup_p95/sum=44/1280us`, `touch_p95/sum=53/1516us`,
+  `ops_p95/sum=45/1194us`, `row_paint_p95/sum=272/7531us`.
+- Closeout still selects `owner=canvas-paint-replay`; no checked-in baseline changes.
 
 ## Baseline Policy
 

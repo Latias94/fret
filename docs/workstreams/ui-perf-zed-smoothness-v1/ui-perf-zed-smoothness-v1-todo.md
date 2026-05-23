@@ -100,7 +100,17 @@ clean-geometry micro-optimizations or the closed plan-cache lanes as the primary
   - Lane: `docs/workstreams/editor-canvas-paint-replay-row-setup-v1/WORKSTREAM.json`.
   - First slice: ECPR-RS-010 adds diagnostics-only `us/ns_row_scene_replay_setup` so the remaining row-paint
     overhead can be attributed before the next optimization.
+  - Target-machine closeout:
+    `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/editor-paint-contract-closeout.summary.json`.
+  - Result:
+    diagnostics lane closed after rebuilt attribution. Typical-autoscroll reports
+    `setup_p95/sum=62/9418us`, complex-wheel reports `44/1280us`, and closeout still selects
+    `owner=canvas-paint-replay`.
   - Guardrail: do not reopen plan-cache or resource-touch lanes unless fresh evidence shows a mechanism regression.
+- [ ] Open the next bounded Canvas replay implementation follow-on from the r64 closeout.
+  - Candidate owner shape: remaining planned row replay setup/touch/ops cluster. Treat these as one row replay
+    overhead owner rather than chasing a single sub-counter in isolation.
+  - Guardrail: no checked-in baseline changes without target-machine closeout artifacts.
 - [x] Complete the formal Windows RTX4090 editor-paint closeout when the target machine is available.
   - Required shape: run the validation directory without `--allow-non-windows`, run the attribution directory with
     `--with-paint-perf`, then pass artifact verifier and closeout without `--allow-non-windows`.
