@@ -48,6 +48,44 @@ fn basic_chart_demos_use_declarative_canvas_panel() {
 }
 
 #[test]
+fn bars_demo_uses_declarative_canvas_panel() {
+    let source = compact(include_str!("../src/bars_demo.rs"));
+
+    for needle in [
+        "usefret_chart::{ChartCanvasOutput,ChartCanvasPanelProps,chart_canvas_panel};",
+        "usefret_ui::{UiTree,declarative};",
+        "ChartEngine",
+        "ChartSpec",
+        "SeriesKind::Bar",
+        "ChartCanvasOutput::default()",
+        "declarative::render_root(",
+        "ChartCanvasPanelProps::new(spec).output_model(output)",
+        "props.engine=Some(engine);",
+        "vec![chart_canvas_panel(cx,props)]",
+    ] {
+        assert!(
+            source.contains(needle),
+            "bars_demo should render charts through the declarative chart panel; missing `{needle}`"
+        );
+    }
+
+    for legacy in [
+        "usefret_plot::retained::",
+        "fret_plot::retained::",
+        "BarsPlotCanvas",
+        "BarsPlotModel",
+        "PlotOutput",
+        "PlotState",
+        "create_node_retained(",
+    ] {
+        assert!(
+            !source.contains(legacy),
+            "bars_demo should not teach retained plot authoring; unexpected `{legacy}`"
+        );
+    }
+}
+
+#[test]
 fn chart_stress_demo_uses_declarative_canvas_panel() {
     let source = compact(include_str!("../src/chart_stress_demo.rs"));
 

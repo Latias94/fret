@@ -5,12 +5,12 @@ use fret_core::{AppWindowId, Event};
 use fret_launch::{
     FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
-use fret_plot::retained::{
-    CandlestickPlotCanvas, CandlestickPlotModel, CandlestickSeries, LinePlotStyle, OhlcPoint,
-    PlotOutput, PlotState,
-};
+use fret_plot::declarative::{CandlestickPlotPanelProps, candlestick_plot_panel_in};
+use fret_plot::models::{CandlestickPlotModel, CandlestickSeries, OhlcPoint};
+use fret_plot::state::{PlotOutput, PlotState};
+use fret_plot::style::LinePlotStyle;
 use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
+use fret_ui::{UiTree, declarative};
 use std::sync::Arc;
 
 struct CandlestickDemoWindowState {
@@ -154,18 +154,31 @@ fn render(
         scene,
     } = context;
 
-    let root = state.root.get_or_insert_with(|| {
-        let style = LinePlotStyle::default();
-        let canvas = CandlestickPlotCanvas::new(state.plot.clone())
-            .style(style)
-            .state(state.plot_state.clone())
-            .output(state.plot_output.clone());
-        let node = CandlestickPlotCanvas::create_node(&mut state.ui, canvas);
+    if state.root.is_none() {
+        let node =
+            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                .render_root("candlestick-demo", {
+                    let plot = state.plot.clone();
+                    let plot_state = state.plot_state.clone();
+                    let plot_output = state.plot_output.clone();
+                    move |cx| {
+                        let style = LinePlotStyle::default();
+                        let props = CandlestickPlotPanelProps::new(plot.clone())
+                            .style(style)
+                            .state(plot_state.clone())
+                            .output(plot_output.clone());
+                        vec![candlestick_plot_panel_in(cx, props)]
+                    }
+                });
         state.ui.set_root(node);
-        node
-    });
+        state.ui.set_focus(Some(node));
+        state.ui.publish_window_runtime_snapshots(app);
+        state.root = Some(node);
+    }
 
-    state.ui.set_root(*root);
+    if let Some(root) = state.root {
+        state.ui.set_root(root);
+    }
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
 
