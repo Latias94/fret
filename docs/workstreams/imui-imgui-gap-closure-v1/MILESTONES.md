@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-21
+Last updated: 2026-05-24
 
 ## M0 - Current Source Baseline
 
@@ -1091,3 +1091,28 @@ Exit criteria:
   and closeout. The retained owner is `canvas-paint-replay`, checked-in baselines stay unchanged,
   and the lesson remains an editor-paint/perf-lane owner split rather than an IMUI runtime/API
   widening.
+
+## M5 - Fearless Refactor Execution
+
+Exit criteria:
+
+- The first internal owner split lands without changing the public IMUI surface.
+- Floating-window behavior stays covered by focused smoke tests and source gates.
+- The next cleanup slice is chosen from fresh evidence, not stale parity notes.
+
+2026-05-24 title-bar owner split result: the floating-window title-row / close-button composition
+now lives in `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs`, leaving
+`floating_window_on_area.rs` as the shell that frames the chrome, content, and resize stack.
+The public IMUI surface stayed stable, and the existing floating smoke + source gates were reused
+to validate the split.
+
+2026-05-24 content/blocker owner split result: the floating-window content scroll/focus wrapper
+now lives in `ecosystem/fret-ui-kit/src/imui/floating_window_content.rs`, and the input-blocking
+overlay moved to `ecosystem/fret-ui-kit/src/imui/floating_window_blocker.rs`. The main
+`floating_window_on_area.rs` shell now just wires title, content, blocker, and resize stack
+together, with the public IMUI surface still unchanged.
+
+2026-05-24 resize-stack owner split result: `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs`
+now owns the body/blocker/resize-handle stack assembly through an internal
+`resize_stack_element(...)` helper. `floating_window_on_area.rs` now only passes the clipped body,
+blocker, resize flags, activation policy, and handle test ids into the resize owner.

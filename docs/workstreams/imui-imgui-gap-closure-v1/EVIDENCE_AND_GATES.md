@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-21
+Last updated: 2026-05-24
 
 ## Evidence Anchors
 
@@ -3940,6 +3940,69 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
+
+## P5 Fearless Refactor Execution
+
+- Internal owner split landed for floating-window resize/chrome orchestration:
+  `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` now owns the resize-handle
+  interaction logic, while `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` keeps the
+  high-level render flow.
+- The public IMUI surface did not change during the split.
+- Validation passed:
+  - `cargo test -p fret-ui-kit --features imui --lib floating_window_close_glyph_uses_shared_chrome_glyph_text_role`
+  - `cargo nextest run -p fret-imui floating --no-fail-fast`
+  - `cargo check -p fret-ui-kit --features imui --lib`
+  - `python tools/gate_imui_workstream_source.py`
+  - `python tools/gate_imui_facade_teaching_source.py`
+  - `python tools/check_workstream_catalog.py`
+  - `git diff --check`
+- Notes:
+  - `cargo check` still reports the pre-existing `fret-ui` dead-code warning for
+    `current_effective_opacity`; this lane did not change that code.
+
+- 2026-05-24 title-bar owner split:
+  `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` now owns the floating-window
+  title-row and close-button orchestration, while `floating_window_on_area.rs` keeps the shell,
+  content, and resize stack. The split keeps the public IMUI surface unchanged and keeps the close
+  glyph on the shared chrome-glyph text role.
+  Validation passed:
+  - `cargo test -p fret-ui-kit --features imui --lib floating_window_close_glyph_uses_shared_chrome_glyph_text_role`
+  - `cargo nextest run -p fret-imui floating --no-fail-fast`
+  - `cargo check -p fret-ui-kit --features imui --lib`
+  - `python tools/gate_imui_workstream_source.py`
+  - `python tools/gate_imui_facade_teaching_source.py`
+  - `python tools/check_workstream_catalog.py`
+  - `git diff --check`
+
+- 2026-05-24 content/blocker owner split:
+  `ecosystem/fret-ui-kit/src/imui/floating_window_content.rs` now owns the content
+  scroll/focus wrapper, and `ecosystem/fret-ui-kit/src/imui/floating_window_blocker.rs` now owns
+  the input-blocking overlay. `floating_window_on_area.rs` keeps only the shell that wires title,
+  content, blocker, and resize stack together, and the public IMUI surface stayed unchanged.
+  Validation passed:
+  - `cargo test -p fret-ui-kit --features imui --lib floating_window_close_glyph_uses_shared_chrome_glyph_text_role`
+  - `cargo nextest run -p fret-imui floating --no-fail-fast`
+  - `cargo check -p fret-ui-kit --features imui --lib`
+  - `python tools/gate_imui_workstream_source.py`
+  - `python tools/gate_imui_facade_teaching_source.py`
+  - `python tools/check_workstream_catalog.py`
+  - `git diff --check`
+
+- 2026-05-24 resize-stack owner split:
+  `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` now owns the
+  body/blocker/resize-handle stack assembly through `resize_stack_element(...)` and the internal
+  `FloatingWindowResizeHandleTestIds` bundle. `floating_window_on_area.rs` no longer enumerates
+  resize handles directly; it passes the clipped body, blocker, resize flags, activation policy,
+  and handle test ids into the resize owner.
+  Validation passed:
+  - `cargo fmt -p fret-ui-kit --check`
+  - `cargo test -p fret-ui-kit --features imui --lib floating_window_close_glyph_uses_shared_chrome_glyph_text_role`
+  - `cargo nextest run -p fret-imui floating --no-fail-fast`
+  - `cargo check -p fret-ui-kit --features imui --lib`
+  - `python tools/gate_imui_workstream_source.py`
+  - `python tools/gate_imui_facade_teaching_source.py`
+  - `python tools/check_workstream_catalog.py`
+  - `git diff --check`
 
 2026-05-19 shadcn ItemTitle role-preservation slice:
 

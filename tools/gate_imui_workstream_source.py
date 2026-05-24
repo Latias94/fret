@@ -391,7 +391,7 @@ def main() -> None:
             required=[
                 '"slug": "imui-imgui-gap-closure-v1"',
                 '"status": "active"',
-                '"updated": "2026-05-21"',
+                '"updated": "2026-05-24"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLEANUP_AUDIT_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P1_CLOSEOUT_AUDIT_2026-05-06.md"',
                 '"path": "docs/workstreams/imui-imgui-gap-closure-v1/P3_TEXT_ROLE_MATRIX_2026-05-17.md"',
@@ -3322,18 +3322,72 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs"),
             required=[
-                "crate::declarative::text::text_chrome_title(cx, title.clone())",
-                "crate::declarative::text::text_section_chrome_label(",
-                "fn floating_window_close_glyph_text",
-                "crate::declarative::text::text_chrome_glyph(cx, Arc::<str>::from(\"\\u{00D7}\"))",
-                "floating_window_close_glyph_uses_shared_chrome_glyph_text_role",
+                "super::floating_window_title_bar::floating_window_title_bar_row(",
+                "super::floating_window_content::floating_window_content_element(",
+                "super::floating_window_blocker::floating_window_blocker_element(",
+                "super::floating_window_resize::resize_stack_element(",
             ],
             forbidden=[
+                "crate::declarative::text::text_chrome_title(cx, title.clone())",
+                "crate::declarative::text::text_section_chrome_label(",
+                "super::floating_window_resize::resize_handle_element(",
+                "let mut stacked: Vec<AnyElement>",
                 "vec![cx.text(\"\\u{00D7}\")]",
                 "TextProps::new(title.clone())",
                 "props.wrap = fret_core::TextWrap::None;",
                 "props.overflow = fret_core::TextOverflow::Ellipsis;",
             ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/floating_window_content.rs"),
+            required=[
+                "pub(super) fn floating_window_content_element",
+            ],
+            forbidden=[
+                "pub(super) fn floating_window_blocker_element",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/floating_window_blocker.rs"),
+            required=[
+                "pub(super) fn floating_window_blocker_element",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs"),
+            required=[
+                "pub(super) struct FloatingWindowResizeHandleTestIds",
+                "pub(super) fn resize_stack_element",
+                "pub(super) fn resize_handle_element",
+            ],
+            forbidden=[],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs"),
+            required=[
+                "pub(super) fn floating_window_title_bar_row",
+                "crate::declarative::text::text_chrome_title(cx, title.clone())",
+                "crate::declarative::text::text_section_chrome_label(cx, title.clone())",
+                "pub(super) fn floating_window_close_glyph_text",
+                "crate::declarative::text::text_chrome_glyph(cx, Arc::<str>::from(\"\\u{00D7}\"))",
+                "floating_window_close_glyph_uses_shared_chrome_glyph_text_role",
+            ],
+            forbidden=[
+                "TextProps::new(title.clone())",
+                "props.wrap = fret_core::TextWrap::None;",
+                "props.overflow = fret_core::TextOverflow::Ellipsis;",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui.rs"),
+            required=[
+                "mod floating_window_blocker;",
+                "mod floating_window_content;",
+                "mod floating_window_resize;",
+                "mod floating_window_title_bar;",
+            ],
+            forbidden=[],
         ),
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs"),
