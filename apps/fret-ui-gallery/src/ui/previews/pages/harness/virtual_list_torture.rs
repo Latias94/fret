@@ -13,6 +13,11 @@ where
     fret_ui_kit::declarative::text::text_list_row_label(cx, text)
 }
 
+fn with_alpha(mut color: CoreColor, alpha: f32) -> CoreColor {
+    color.a = alpha;
+    color
+}
+
 fn virtual_list_row_detail_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
 where
     T: Into<Arc<str>>,
@@ -35,6 +40,16 @@ fn virtual_list_row_semantics(index: usize, len: usize) -> SemanticsDecoration {
     }
 
     decoration
+}
+
+fn virtual_list_selected_row_semantics(
+    index: usize,
+    len: usize,
+    selected: bool,
+) -> SemanticsDecoration {
+    virtual_list_row_semantics(index, len)
+        .selected(selected)
+        .invokable(true)
 }
 
 pub(in crate::ui) fn preview_virtual_list_torture(
@@ -437,31 +452,56 @@ pub(in crate::ui) fn preview_virtual_list_torture(
                                 .into_element(cx)
                         };
 
+                        let border_color = is_editing
+                            .then(|| theme.color_token("ring"))
+                            .unwrap_or_else(|| with_alpha(theme.color_token("border"), 0.55));
+                        let mut chrome = ChromeRefinement::default()
+                            .bg(ColorRef::Color(background))
+                            .border_1()
+                            .border_color(ColorRef::Color(border_color))
+                            .p(Space::N2);
+                        if is_editing {
+                            chrome = chrome.text_color(ColorRef::Token {
+                                key: "accent-foreground",
+                                fallback: fret_ui_kit::ColorFallback::ThemeTextPrimary,
+                            });
+                        }
+
                         let mut container_props = decl_style::container_props(
                             &theme,
-                            ChromeRefinement::default()
-                                .bg(ColorRef::Color(background))
-                                .p(Space::N2),
+                            chrome,
                             LayoutRefinement::default().w_full().h_px(height_hint),
                         );
                         container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-                        cx.container(container_props, |cx| {
+                        let row = cx.container(container_props, |cx| {
                             [ui::h_flex(|_cx| [row_label, right])
                                 .layout(LayoutRefinement::default().w_full().h_full())
                                 .gap(Space::N2)
                                 .items_center()
                                 .into_element(cx)]
-                        })
-                        .attach_semantics(virtual_list_row_semantics(index, len))
+                        });
+
+                        row.attach_semantics(virtual_list_selected_row_semantics(
+                            index, len, is_editing,
+                        ))
                     };
 
                     if row_cache {
+                        let selected_for_key =
+                            cx.app.models().get_copied(&edit_row).unwrap_or_default()
+                                == Some(index_u64);
                         cx.cached_subtree_with(
                             CachedSubtreeProps::default()
                                 .contain_layout_when_bounds_known(true)
-                                .cache_key(index_u64),
-                            |cx| [row(cx)],
+                                .cache_key(fret_ui::cache_key::mix(
+                                    index_u64,
+                                    u64::from(selected_for_key),
+                                )),
+                            |cx| {
+                                let row = row(cx);
+                                [row]
+                            },
                         )
                     } else {
                         row(cx)

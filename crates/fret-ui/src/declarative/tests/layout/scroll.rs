@@ -1957,29 +1957,6 @@ fn scroll_translation_does_not_force_layout_engine_solves() {
 
 #[test]
 fn clean_parent_geometry_skip_still_runs_scroll_layout_side_effects() {
-    struct PrecomputeThenResize {
-        child: NodeId,
-        rect_a: Rect,
-        rect_b: Rect,
-        calls: u32,
-    }
-
-    impl<H: UiHost> Widget<H> for PrecomputeThenResize {
-        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
-            let rect = if self.calls == 0 {
-                cx.solve_barrier_child_root(self.child, self.rect_a);
-                self.rect_a
-            } else {
-                cx.solve_barrier_child_root_if_needed(self.child, self.rect_b);
-                self.rect_b
-            };
-            self.calls = self.calls.saturating_add(1);
-
-            let _ = cx.layout_in(self.child, rect);
-            cx.available
-        }
-    }
-
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
     let window = AppWindowId::default();
@@ -1996,8 +1973,9 @@ fn clean_parent_geometry_skip_still_runs_scroll_layout_side_effects() {
     );
     let mut text = FakeTextService::default();
     let scroll_handle = crate::scroll::ScrollHandle::default();
+    let scroll_element = Arc::new(std::sync::Mutex::new(None));
 
-    let child = render_root(
+    let root = render_root(
         &mut ui,
         &mut app,
         &mut text,
@@ -2015,50 +1993,131 @@ fn clean_parent_geometry_skip_still_runs_scroll_layout_side_effects() {
                     layout: stack_layout,
                 },
                 |cx| {
-                    let mut scroll_layout = crate::element::LayoutStyle::default();
+                    let scroll_element = scroll_element.clone();
+                    let mut scroll_layout = crate::element::ScrollProps::default().layout;
                     scroll_layout.size.width = Length::Fill;
                     scroll_layout.size.height = Length::Fill;
-                    vec![cx.scroll(
+                    let scroll = cx.scroll(
                         crate::element::ScrollProps {
                             layout: scroll_layout,
                             scroll_handle: Some(scroll_handle.clone()),
                             ..Default::default()
                         },
-                        |_cx| Vec::<AnyElement>::new(),
-                    )]
+                        |cx| {
+                            let mut canvas = crate::element::CanvasProps::default();
+                            canvas.layout.size.width = Length::Fill;
+                            canvas.layout.size.height = Length::Px(Px(160.0));
+                            vec![
+                                cx.canvas(canvas, |_painter| {})
+                                    .test_id("clean-scroll-hit-target"),
+                            ]
+                        },
+                    );
+                    *scroll_element.lock().unwrap() = Some(scroll.id);
+                    vec![scroll.test_id("clean-scroll-viewport")]
                 },
             )]
         },
     );
-
-    let rect_a = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(180.0), Px(80.0)));
-    let rect_b = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(184.0), Px(80.0)));
-
-    let parent = ui.create_node(PrecomputeThenResize {
-        child,
-        rect_a,
-        rect_b,
-        calls: 0,
-    });
-    ui.set_children(parent, vec![child]);
-    ui.set_root(parent);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
 
     ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
-    assert_eq!(scroll_handle.viewport_size(), rect_a.size);
+    assert_eq!(scroll_handle.viewport_size(), bounds_a.size);
+    assert_eq!(scroll_handle.content_size().height, Px(160.0));
+    scroll_handle.set_offset(Point::new(Px(0.0), Px(32.0)));
 
     app.advance_frame();
-    ui.invalidate(parent, Invalidation::Layout);
+    ui.request_semantics_snapshot();
     ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
 
     assert_eq!(
         ui.debug_stats().layout_engine_solves,
         0,
-        "clean parent geometry should skip the parent root solve"
+        "clean root geometry should skip the root solve"
     );
     assert_eq!(
         scroll_handle.viewport_size(),
-        rect_b.size,
+        bounds_b.size,
         "Scroll layout must still run and publish the resized viewport"
+    );
+    assert_eq!(
+        scroll_handle.content_size().height,
+        Px(160.0),
+        "clean parent geometry should preserve the known scroll content extent"
+    );
+    assert_eq!(
+        scroll_handle.offset().y,
+        Px(32.0),
+        "clean parent geometry should keep an in-range scroll offset"
+    );
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_apply_fallback_layouts_top_kind,
+        Some("Scroll"),
+        "the clean geometry fallback should still attribute the side-effect boundary to Scroll"
+    );
+
+    assert_eq!(
+        ui.debug_stats()
+            .layout_clean_geometry_scroll_side_effect_fast_paths,
+        1,
+        "Scroll clean-geometry side effects should bypass clean child subtree layout"
+    );
+
+    let scroll_element = scroll_element
+        .lock()
+        .unwrap()
+        .expect("scroll element should be recorded");
+    let scroll_bounds =
+        crate::elements::current_bounds_for_element(&mut app, window, scroll_element)
+            .expect("scroll element bounds");
+    assert_eq!(
+        scroll_bounds, bounds_b,
+        "Scroll element bounds must be refreshed for layout-query consumers"
+    );
+
+    let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+    let scroll_semantics = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("clean-scroll-viewport"))
+        .expect("scroll semantics node");
+    assert_eq!(
+        scroll_semantics.bounds, bounds_b,
+        "Scroll semantics bounds must follow the resized viewport"
+    );
+    assert_eq!(
+        scroll_semantics.extra.scroll.y,
+        Some(32.0),
+        "Scroll semantics should expose the preserved offset"
+    );
+    assert_eq!(
+        scroll_semantics.extra.scroll.y_max,
+        Some(40.0),
+        "Scroll semantics should expose the updated max offset from content minus viewport"
+    );
+
+    let hit_point = Point::new(Px(8.0), Px(8.0));
+    let inside_hit = ui
+        .debug_hit_test(hit_point)
+        .hit
+        .expect("hit testing should find scroll content inside the resized viewport");
+    assert!(
+        ui.debug_node_path(inside_hit)
+            .contains(&scroll_semantics.id),
+        "hit testing should route through the resized Scroll viewport; hit={inside_hit:?}"
+    );
+    assert_ne!(
+        inside_hit, scroll_semantics.id,
+        "hit testing should continue past the Scroll viewport to child content"
+    );
+
+    let below_viewport_hit = ui.debug_hit_test(Point::new(Px(8.0), Px(121.0))).hit;
+    assert_ne!(
+        below_viewport_hit,
+        Some(inside_hit),
+        "hit testing should clip the translated child content to the resized Scroll viewport"
     );
 }
 

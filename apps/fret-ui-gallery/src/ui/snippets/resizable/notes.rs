@@ -24,6 +24,9 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     "Default-style ownership follows upstream: `ResizablePanelGroup` owns `w-full h-full` and handle chrome, while border/rounded demo shells remain caller-owned.",
                 ).into_element(cx),
                 shadcn::raw::typography::muted(
+                    "State-sensitive cached fixture content must make render inputs explicit in `CachedSubtreeProps`: the moving cached Combobox uses `cache_key_bool(review_disabled_now)` so disabled/action-state metadata cannot be replayed stale after the source moves roots.",
+                ).into_element(cx),
+                shadcn::raw::typography::muted(
                     "No extra generic children API is planned unless a real authoring cliff appears: `resizable_panel_group(cx, model, |cx| ..)` plus typed `ResizableEntry` ordering already preserve the source-aligned composition lane without hiding handle/panel structure.",
                 ).into_element(cx),
             ]

@@ -874,6 +874,107 @@ fn clean_engine_solved_size_delta_propagates_geometry_without_relayouting_struct
 }
 
 #[test]
+fn clean_geometry_window_root_resize_consumes_apply_plan_without_root_layout() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds_a = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(320.0), Px(180.0)),
+    );
+    let bounds_b = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(324.0), Px(180.0)),
+    );
+    let mut text = FakeTextService::default();
+    let first_row_id = Arc::new(std::sync::Mutex::new(None));
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds_a,
+        "clean-geometry-window-root-apply-plan",
+        |cx| {
+            let flex = crate::element::FlexProps {
+                direction: fret_core::Axis::Vertical,
+                gap: Px(1.0).into(),
+                layout: crate::element::LayoutStyle {
+                    size: crate::element::SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Fill,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            };
+            let first_row_id = first_row_id.clone();
+            vec![cx.flex(flex, |cx| {
+                (0..8)
+                    .map(|idx| {
+                        let first_row_id = first_row_id.clone();
+                        let mut props = crate::element::ContainerProps::default();
+                        props.layout.size.width = Length::Fill;
+                        props.layout.size.height = Length::Px(Px(8.0));
+                        let row = cx.container(props, |_cx| Vec::<AnyElement>::new());
+                        if idx == 0 {
+                            *first_row_id.lock().unwrap() = Some(row.id);
+                        }
+                        row
+                    })
+                    .collect::<Vec<_>>()
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds_a, 1.0);
+    assert!(
+        ui.debug_stats().layout_engine_solves > 0,
+        "initial mount should solve the root layout"
+    );
+
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut text, bounds_b, 1.0);
+
+    assert_eq!(
+        ui.debug_stats().layout_engine_solves,
+        0,
+        "clean window-root width-only resize should not solve the engine"
+    );
+    assert_eq!(
+        ui.debug_stats().layout_nodes_performed,
+        0,
+        "clean window-root apply plan should avoid re-running root/widget layout"
+    );
+    assert!(
+        ui.debug_stats().layout_clean_geometry_proof_nodes > 0,
+        "window-root resize should prove the clean-geometry subtree"
+    );
+    assert!(
+        ui.debug_stats().layout_clean_geometry_apply_nodes > 0,
+        "window-root resize should consume the clean-geometry apply plan"
+    );
+
+    let flex_node = ui.children(root)[0];
+    let flex_bounds = ui.debug_node_bounds(flex_node).expect("flex bounds");
+    assert!((flex_bounds.size.width.0 - bounds_b.size.width.0).abs() < 0.01);
+
+    let first_row_id = first_row_id
+        .lock()
+        .unwrap()
+        .expect("first row id should be recorded");
+    let first_row_bounds =
+        crate::elements::current_bounds_for_element(&mut app, window, first_row_id)
+            .expect("first row element bounds");
+    assert!((first_row_bounds.size.width.0 - bounds_b.size.width.0).abs() < 0.01);
+}
+
+#[test]
 fn clean_geometry_small_resize_skips_barrier_root_engine_solve() {
     struct PrecomputeThenResize {
         child: NodeId,

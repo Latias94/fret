@@ -13,10 +13,10 @@ use std::sync::Arc;
 
 const TEST_ID_PREFIX: &str = "ui-gallery-resizable-view-cache-moving-combobox";
 
-fn deployment_items() -> Vec<shadcn::ComboboxItem> {
+fn deployment_items(review_disabled: bool) -> Vec<shadcn::ComboboxItem> {
     vec![
         shadcn::ComboboxItem::new("draft", "Draft"),
-        shadcn::ComboboxItem::new("review", "In Review"),
+        shadcn::ComboboxItem::new("review", "In Review").disabled(review_disabled),
         shadcn::ComboboxItem::new("staged", "Staged"),
         shadcn::ComboboxItem::new("release", "Release Ready"),
     ]
@@ -48,6 +48,8 @@ fn controls<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     place_right: Model<bool>,
     place_right_now: bool,
+    review_disabled: Model<bool>,
+    review_disabled_now: bool,
 ) -> AnyElement {
     let target_label = if place_right_now {
         "Move source left"
@@ -69,7 +71,30 @@ fn controls<H: UiHost>(
         .test_id(format!("{TEST_ID_PREFIX}-move-source"))
         .into_element(cx);
 
-    ui::h_flex(|_cx| vec![status, toggle])
+    let review_state = if review_disabled_now {
+        "disabled"
+    } else {
+        "enabled"
+    };
+    let review_status = cx
+        .text(format!("review item: {review_state}"))
+        .attach_semantics(state_value(
+            review_state,
+            format!("{TEST_ID_PREFIX}-review-disabled-state"),
+        ));
+    let review_toggle_label = if review_disabled_now {
+        "Enable Review item"
+    } else {
+        "Disable Review item"
+    };
+    let review_toggle = shadcn::Button::new(review_toggle_label)
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Sm)
+        .toggle_model(review_disabled)
+        .test_id(format!("{TEST_ID_PREFIX}-toggle-review-disabled"))
+        .into_element(cx);
+
+    ui::h_flex(|_cx| vec![status, toggle, review_status, review_toggle])
         .gap(Space::N2)
         .items_center()
         .wrap()
@@ -83,6 +108,7 @@ fn cached_combobox_source<H: UiHost>(
     value: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Model<String>,
+    review_disabled_now: bool,
 ) -> AnyElement {
     let cache_layout = decl_style::layout_style(
         cx.theme(),
@@ -90,7 +116,10 @@ fn cached_combobox_source<H: UiHost>(
     );
 
     cx.cached_subtree_with(
-        CachedSubtreeProps::default().layout(cache_layout),
+        CachedSubtreeProps::default()
+            .layout(cache_layout)
+            .cache_key(0x7a59_d111_6a1d_c0de)
+            .cache_key_bool(review_disabled_now),
         move |cx| {
             let header = ui::h_flex(|cx| {
                 vec![
@@ -134,7 +163,9 @@ fn cached_combobox_source<H: UiHost>(
                             "No status found.",
                         )),
                         shadcn::ComboboxContentPart::list(
-                            shadcn::ComboboxList::new().items(deployment_items()),
+                            shadcn::ComboboxList::new().items(deployment_items(
+                                review_disabled_now,
+                            )),
                         ),
                     ])
                     .width_px(Px(260.0))
@@ -224,14 +255,33 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         "ui-gallery-resizable-view-cache-moving-combobox-query",
         String::new,
     );
+    let review_disabled = cx.local_model_keyed(
+        "ui-gallery-resizable-view-cache-moving-combobox-review-disabled",
+        || false,
+    );
 
     let place_right_now = cx
         .get_model_copied(&place_right, Invalidation::Layout)
         .unwrap_or(false);
-    let controls = controls(cx, place_right.clone(), place_right_now);
+    let review_disabled_now = cx
+        .get_model_copied(&review_disabled, Invalidation::Layout)
+        .unwrap_or(false);
+    let controls = controls(
+        cx,
+        place_right.clone(),
+        place_right_now,
+        review_disabled.clone(),
+        review_disabled_now,
+    );
 
     let group = shadcn::resizable_panel_group(cx, fractions, move |cx| {
-        let source = cached_combobox_source(cx, value.clone(), open.clone(), query.clone());
+        let source = cached_combobox_source(
+            cx,
+            value.clone(),
+            open.clone(),
+            query.clone(),
+            review_disabled_now,
+        );
         let (left, right) = if place_right_now {
             (parking_panel(cx, "left"), source_panel(cx, "right", source))
         } else {

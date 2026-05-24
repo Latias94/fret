@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "slug": "editor-canvas-paint-replay-canvas-exclusive-v1",
+  "title": "Editor Canvas Paint Replay Canvas Exclusive v1",
+  "status": "active",
+  "updated": "2026-05-24",
+  "scope_kind": "execution",
+  "follow_on_of": "editor-canvas-paint-replay-fast-path-v1",
+  "problem": "After the r65 fast-path closeout, the parent owner still remains canvas-paint-replay. The remaining evidence points at Canvas exclusive and paint.widget overhead outside row setup, so this lane attributes and reduces that residual without reopening the closed row-setup or no-overlay fast-path slices.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/HANDOFF.md"
+    },
+    {
+      "role": "parent",
+      "path": "docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json"
+    }
+  ],
+  "repro": {
+    "summary": "Use the `paint.canvas_on_paint` split to compare generic widget traversal, Canvas callback work, and code-editor replay bookkeeping before any baseline decision, then rerun target-machine editor-paint validation.",
+    "commands": [
+      "rg -n \"debug_paint_widget_exclusive|debug_paint_widget_hotspots|CanvasPainter|on_paint\" crates/fret-ui ecosystem/fret-code-editor -g \"*.rs\"",
+      "cargo check -p fret-ui --tests",
+      "cargo check -p fret-code-editor --tests --features syntax-rust",
+      "python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r66-canvas-exclusive-baseline --keep-going",
+      "cargo build -p fretboard-dev -p fret-ui-gallery --release --features fret-ui-gallery/gallery-full",
+      "python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r66-canvas-exclusive-attrib --with-paint-perf --keep-going"
+    ]
+  },
+  "gates": [
+    {
+      "name": "source-audit",
+      "command": "rg -n \"debug_paint_widget_exclusive|debug_paint_widget_hotspots|CanvasPainter|on_paint\" crates/fret-ui ecosystem/fret-code-editor -g \"*.rs\""
+    },
+    {
+      "name": "code-editor-tests-check",
+      "command": "cargo check -p fret-code-editor --tests --features syntax-rust"
+    },
+    {
+      "name": "fret-ui-tests-check",
+      "command": "cargo check -p fret-ui --tests"
+    },
+    {
+      "name": "workstream-json-valid",
+      "command": "python -m json.tool docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "parent-workstream-json-valid",
+      "command": "python -m json.tool docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-check",
+      "command": "git diff --check"
+    },
+    {
+      "name": "target-machine-baseline-validate",
+      "command": "python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r66-canvas-exclusive-baseline --keep-going"
+    },
+    {
+      "name": "target-machine-attribution-validate",
+      "command": "python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r66-canvas-exclusive-attrib --with-paint-perf --keep-going"
+    },
+    {
+      "name": "target-machine-artifacts-verify",
+      "command": "python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260524-r66-canvas-exclusive-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r66-canvas-exclusive-attrib"
+    },
+    {
+      "name": "target-machine-closeout",
+      "command": "python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260524-r66-canvas-exclusive-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r66-canvas-exclusive-attrib --out-report target/fret-diag/editor-paint-contract-validate-20260524-r66-canvas-exclusive-baseline/editor-paint-contract-closeout.summary.json"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/CLOSEOUT_AUDIT_2026-05-24.md",
+    "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/SOURCE_AUDIT_2026-05-24.md",
+    "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/TODO.md",
+    "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/HANDOFF.md",
+    "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/EVIDENCE_AND_GATES.md",
+    "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/MILESTONES.md",
+    "target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/summary.json",
+    "target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib/summary.json",
+    "target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/editor-paint-contract-closeout.summary.json",
+    "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/WORKSTREAM.json",
+    "crates/fret-ui/src/declarative/host_widget/paint.rs",
+    "crates/fret-ui/src/tree/debug/frame_stats.rs",
+    "crates/fret-ui/src/tree/paint/entry.rs",
+    "crates/fret-ui/src/tree/ui_tree_debug/paint.rs",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/frame_stats.rs",
+    "crates/fret-diag/src/perf_keys.rs",
+    "crates/fret-ui/src/tree/paint/node.rs",
+    "crates/fret-ui/src/canvas.rs",
+    "ecosystem/fret-code-editor/src/editor/mod.rs",
+    "ecosystem/fret-code-editor/src/editor/paint/mod.rs",
+    "ecosystem/fret-code-editor/src/editor/paint/scene.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0161-canvas-cache-policy-and-hosted-resource-caches.md",
+    "docs/adr/0143-text-layout-cache-boundary-and-glyph-residency.md",
+    "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "The r65 fast-path lane is closed, and the remaining owner is being split with `paint.canvas_on_paint`; keep this lane bounded until the residual boundary is proven."
+  }
+}

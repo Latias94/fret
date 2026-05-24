@@ -2,6 +2,11 @@
   "schema_version": 2,
   "meta": {
     "required_launch_features": ["gallery-dev"],
+    "tags": ["ui-gallery", "table", "retained", "row-pinning", "semantics", "action-state"],
+    "target_hints": [
+      "Starts directly on the retained Table Torture page.",
+      "Pins selected row 0, advances to page 2, and proves the pinned retained row keeps fresh selected/invoke semantics."
+    ],
     "env_defaults": {
       "FRET_UI_GALLERY_START_PAGE": "table_retained_torture",
       "FRET_UI_GALLERY_TABLE_RETAINED_PAGE_SIZE": "10"
@@ -26,6 +31,24 @@
       "timeout_frames": 240
     },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0" },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-pin-top" } },
 
     {
@@ -53,6 +76,23 @@
     {
       "type": "assert",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0" } }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0" },
+        "selected": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-table-retained-row-0" },
+        "action": "invoke",
+        "enabled": true
+      }
     },
 
     { "type": "capture_bundle", "label": "ui-gallery-table-retained-row-pinning-keep-pinned-true" }

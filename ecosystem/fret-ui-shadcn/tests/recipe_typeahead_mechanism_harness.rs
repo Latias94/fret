@@ -5,7 +5,7 @@ use fret_core::{AppWindowId, FrameId, KeyCode, Point, Px, Rect, Size as CoreSize
 use fret_mechanism_harness::{
     MechanismCase, MechanismHarness, MechanismSuite, ObservedTree, ScenarioObserveError,
 };
-use fret_runtime::Model;
+use fret_runtime::{Model, TickId};
 use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
@@ -19,7 +19,7 @@ use fake_services::FakeServices;
 
 #[path = "support/input_events.rs"]
 mod input_events;
-use input_events::{click_at, dispatch_key_press};
+use input_events::{click_at, dispatch_key_press, right_click_at};
 
 #[path = "support/timers.rs"]
 mod timers;
@@ -33,16 +33,39 @@ const RECIPE_TYPEAHEAD_CASES: &str = include_str!(concat!(
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum RecipeTypeaheadScenario {
-    SelectTriggerTypeahead { key: TypeaheadKey },
-    DropdownMenuOpenTypeahead { key: TypeaheadKey },
-    MenubarOpenTypeahead { key: TypeaheadKey },
+    SelectTriggerTypeahead {
+        key: TypeaheadKey,
+    },
+    DropdownMenuOpenTypeahead {
+        key: TypeaheadKey,
+    },
+    MenubarOpenTypeahead {
+        key: TypeaheadKey,
+    },
+    ContextMenuOpenTypeahead {
+        key: TypeaheadKey,
+    },
+    ContextMenuOpenNoMatch {
+        key: TypeaheadKey,
+    },
+    ContextMenuOpenBufferTimeout {
+        stale_key: TypeaheadKey,
+        match_key: TypeaheadKey,
+        timeout_ticks: u64,
+        advance_ticks: u64,
+    },
+    ContextMenuSubmenuOpenTypeahead {
+        key: TypeaheadKey,
+    },
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum TypeaheadKey {
     KeyB,
+    KeyN,
     KeyO,
+    KeyR,
     KeyX,
 }
 
@@ -70,6 +93,26 @@ fn observe_case(
         }
         RecipeTypeaheadScenario::MenubarOpenTypeahead { key } => {
             observe_menubar_open_typeahead(key)
+        }
+        RecipeTypeaheadScenario::ContextMenuOpenTypeahead { key } => {
+            observe_context_menu_open_typeahead(key)
+        }
+        RecipeTypeaheadScenario::ContextMenuOpenNoMatch { key } => {
+            observe_context_menu_open_no_match(key)
+        }
+        RecipeTypeaheadScenario::ContextMenuOpenBufferTimeout {
+            stale_key,
+            match_key,
+            timeout_ticks,
+            advance_ticks,
+        } => observe_context_menu_open_buffer_timeout(
+            stale_key,
+            match_key,
+            timeout_ticks,
+            advance_ticks,
+        ),
+        RecipeTypeaheadScenario::ContextMenuSubmenuOpenTypeahead { key } => {
+            observe_context_menu_submenu_open_typeahead(key)
         }
     }
 }
@@ -247,6 +290,281 @@ fn observe_menubar_open_typeahead(key: TypeaheadKey) -> Result<ObservedTree, Sce
     Ok(ObservedTree::from_semantics_snapshot(&snapshot, bounds))
 }
 
+fn observe_context_menu_open_typeahead(
+    key: TypeaheadKey,
+) -> Result<ObservedTree, ScenarioObserveError> {
+    let (mut ui, mut app, mut services, window, bounds, open) =
+        context_menu_open_on_back(/* timeout_ticks */ 30)?;
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, key.key_code());
+    render_context_menu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        30,
+    );
+
+    observed_with_open_metric(
+        &ui,
+        &app,
+        &open,
+        bounds,
+        "missing final context-menu typeahead snapshot",
+    )
+}
+
+fn observe_context_menu_open_no_match(
+    key: TypeaheadKey,
+) -> Result<ObservedTree, ScenarioObserveError> {
+    let (mut ui, mut app, mut services, window, bounds, open) =
+        context_menu_open_on_back(/* timeout_ticks */ 30)?;
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, key.key_code());
+    render_context_menu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        30,
+    );
+
+    observed_with_open_metric(
+        &ui,
+        &app,
+        &open,
+        bounds,
+        "missing final context-menu no-match typeahead snapshot",
+    )
+}
+
+fn observe_context_menu_open_buffer_timeout(
+    stale_key: TypeaheadKey,
+    match_key: TypeaheadKey,
+    timeout_ticks: u64,
+    advance_ticks: u64,
+) -> Result<ObservedTree, ScenarioObserveError> {
+    let (mut ui, mut app, mut services, window, bounds, open) =
+        context_menu_open_on_back(timeout_ticks)?;
+
+    app.set_tick_id(TickId(0));
+    dispatch_key_press(&mut ui, &mut app, &mut services, stale_key.key_code());
+    render_context_menu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        timeout_ticks,
+    );
+
+    app.set_tick_id(TickId(advance_ticks));
+    dispatch_key_press(&mut ui, &mut app, &mut services, match_key.key_code());
+    render_context_menu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        timeout_ticks,
+    );
+
+    observed_with_open_metric(
+        &ui,
+        &app,
+        &open,
+        bounds,
+        "missing final context-menu buffer-timeout typeahead snapshot",
+    )
+}
+
+fn observe_context_menu_submenu_open_typeahead(
+    key: TypeaheadKey,
+) -> Result<ObservedTree, ScenarioObserveError> {
+    let (mut ui, mut app, mut services, window, bounds, open) =
+        context_menu_submenu_open_on_save_page(/* timeout_ticks */ 30)?;
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, key.key_code());
+    render_context_menu_submenu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        30,
+    );
+
+    observed_with_open_metric(
+        &ui,
+        &app,
+        &open,
+        bounds,
+        "missing final context-menu submenu typeahead snapshot",
+    )
+}
+
+fn context_menu_open_on_back(
+    timeout_ticks: u64,
+) -> Result<
+    (
+        UiTree<App>,
+        App,
+        FakeServices,
+        AppWindowId,
+        Rect,
+        Model<bool>,
+    ),
+    ScenarioObserveError,
+> {
+    let window = AppWindowId::default();
+    let bounds = default_bounds();
+    let mut app = themed_app();
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    render_context_menu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        timeout_ticks,
+    );
+    right_click_trigger(&mut ui, &mut app, &mut services, "context-menu-trigger")?;
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+    render_context_menu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        timeout_ticks,
+    );
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+    render_context_menu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        timeout_ticks,
+    );
+
+    Ok((ui, app, services, window, bounds, open))
+}
+
+fn context_menu_submenu_open_on_save_page(
+    timeout_ticks: u64,
+) -> Result<
+    (
+        UiTree<App>,
+        App,
+        FakeServices,
+        AppWindowId,
+        Rect,
+        Model<bool>,
+    ),
+    ScenarioObserveError,
+> {
+    let window = AppWindowId::default();
+    let bounds = default_bounds();
+    let mut app = themed_app();
+    let open: Model<bool> = app.models_mut().insert(false);
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    render_context_menu_submenu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        timeout_ticks,
+    );
+    right_click_trigger(
+        &mut ui,
+        &mut app,
+        &mut services,
+        "context-menu-submenu-trigger",
+    )?;
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+    render_context_menu_submenu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        timeout_ticks,
+    );
+
+    for _ in 0..3 {
+        dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+        render_context_menu_submenu_typeahead_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            open.clone(),
+            timeout_ticks,
+        );
+    }
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowRight);
+    render_context_menu_submenu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        timeout_ticks,
+    );
+    flush_timers(&mut ui, &mut app, &mut services, &mut timers);
+    render_context_menu_submenu_typeahead_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        open.clone(),
+        timeout_ticks,
+    );
+
+    Ok((ui, app, services, window, bounds, open))
+}
+
 fn render_select_typeahead_frame(
     ui: &mut UiTree<App>,
     app: &mut App,
@@ -375,6 +693,167 @@ fn render_menubar_typeahead_frame(
     );
 }
 
+fn render_context_menu_typeahead_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    request_semantics: bool,
+    open: Model<bool>,
+    timeout_ticks: u64,
+) {
+    render_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "mechanism-recipe-typeahead-context-menu",
+        request_semantics,
+        move |cx| {
+            vec![
+                shadcn::ContextMenu::from_open(open)
+                    .content_test_id("context-menu-content")
+                    .typeahead_timeout_ticks(timeout_ticks)
+                    .into_element(
+                        cx,
+                        |cx| {
+                            shadcn::Button::new("Right click")
+                                .test_id("context-menu-trigger")
+                                .into_element(cx)
+                        },
+                        |_cx| {
+                            vec![shadcn::ContextMenuEntry::Group(
+                                shadcn::ContextMenuGroup::new(vec![
+                                    shadcn::ContextMenuEntry::Item(
+                                        shadcn::ContextMenuItem::new("Back")
+                                            .test_id("context-menu-item-back"),
+                                    ),
+                                    shadcn::ContextMenuEntry::Item(
+                                        shadcn::ContextMenuItem::new("Forward")
+                                            .test_id("context-menu-item-forward"),
+                                    ),
+                                    shadcn::ContextMenuEntry::Item(
+                                        shadcn::ContextMenuItem::new("Reload")
+                                            .test_id("context-menu-item-reload"),
+                                    ),
+                                ]),
+                            )]
+                        },
+                    ),
+            ]
+        },
+    );
+}
+
+fn render_context_menu_submenu_typeahead_frame(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    request_semantics: bool,
+    open: Model<bool>,
+    timeout_ticks: u64,
+) {
+    render_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        "mechanism-recipe-typeahead-context-menu-submenu",
+        request_semantics,
+        move |cx| {
+            vec![
+                shadcn::ContextMenu::from_open(open)
+                    .content_test_id("context-menu-submenu-content")
+                    .typeahead_timeout_ticks(timeout_ticks)
+                    .into_element(
+                        cx,
+                        |cx| {
+                            shadcn::Button::new("Right click")
+                                .test_id("context-menu-submenu-trigger")
+                                .into_element(cx)
+                        },
+                        |_cx| {
+                            vec![
+                                shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(
+                                    vec![
+                                        shadcn::ContextMenuEntry::Item(
+                                            shadcn::ContextMenuItem::new("Copy")
+                                                .test_id("context-menu-submenu-item-copy"),
+                                        ),
+                                        shadcn::ContextMenuEntry::Item(
+                                            shadcn::ContextMenuItem::new("Cut")
+                                                .test_id("context-menu-submenu-item-cut"),
+                                        ),
+                                    ],
+                                )),
+                                shadcn::ContextMenuSub::new(
+                                    shadcn::ContextMenuSubTrigger::new("More Tools").refine(
+                                        |item| item.test_id("context-menu-submenu-more-tools"),
+                                    ),
+                                    shadcn::ContextMenuSubContent::new([
+                                        shadcn::ContextMenuEntry::Group(
+                                            shadcn::ContextMenuGroup::new(vec![
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new("Save Page...")
+                                                        .test_id(
+                                                            "context-menu-submenu-item-save-page",
+                                                        ),
+                                                ),
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new(
+                                                        "Create Shortcut...",
+                                                    )
+                                                    .test_id(
+                                                        "context-menu-submenu-item-create-shortcut",
+                                                    ),
+                                                ),
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new("Name Window...")
+                                                        .test_id(
+                                                            "context-menu-submenu-item-name-window",
+                                                        ),
+                                                ),
+                                            ]),
+                                        ),
+                                        shadcn::ContextMenuEntry::Separator,
+                                        shadcn::ContextMenuEntry::Group(
+                                            shadcn::ContextMenuGroup::new(vec![
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new(
+                                                        "Developer Tools",
+                                                    )
+                                                    .test_id(
+                                                        "context-menu-submenu-item-developer-tools",
+                                                    ),
+                                                ),
+                                            ]),
+                                        ),
+                                        shadcn::ContextMenuEntry::Separator,
+                                        shadcn::ContextMenuEntry::Group(
+                                            shadcn::ContextMenuGroup::new(vec![
+                                                shadcn::ContextMenuEntry::Item(
+                                                    shadcn::ContextMenuItem::new("Delete").test_id(
+                                                        "context-menu-submenu-item-delete",
+                                                    ),
+                                                ),
+                                            ]),
+                                        ),
+                                    ]),
+                                )
+                                .into_entry(),
+                            ]
+                        },
+                    ),
+            ]
+        },
+    );
+}
+
 fn render_frame(
     ui: &mut UiTree<App>,
     app: &mut App,
@@ -406,6 +885,40 @@ fn click_trigger(
     let point = point_for_test_id(ui, test_id)?;
     click_at(ui, app, services, point);
     Ok(())
+}
+
+fn right_click_trigger(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    test_id: &str,
+) -> Result<(), ScenarioObserveError> {
+    let point = point_for_test_id(ui, test_id)?;
+    right_click_at(ui, app, services, point);
+    Ok(())
+}
+
+fn observed_with_open_metric(
+    ui: &UiTree<App>,
+    app: &App,
+    open: &Model<bool>,
+    bounds: Rect,
+    missing_message: &'static str,
+) -> Result<ObservedTree, ScenarioObserveError> {
+    let snapshot = ui
+        .semantics_snapshot()
+        .cloned()
+        .ok_or_else(|| ScenarioObserveError::new(missing_message))?;
+    let mut observed = ObservedTree::from_semantics_snapshot(&snapshot, bounds);
+    observed.set_metric(
+        "recipe.open",
+        if app.models().get_copied(open) == Some(true) {
+            1.0
+        } else {
+            0.0
+        },
+    );
+    Ok(observed)
 }
 
 fn flush_timers(
@@ -473,7 +986,9 @@ impl TypeaheadKey {
     fn key_code(self) -> KeyCode {
         match self {
             Self::KeyB => KeyCode::KeyB,
+            Self::KeyN => KeyCode::KeyN,
             Self::KeyO => KeyCode::KeyO,
+            Self::KeyR => KeyCode::KeyR,
             Self::KeyX => KeyCode::KeyX,
         }
     }

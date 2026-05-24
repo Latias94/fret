@@ -272,6 +272,36 @@ impl<H: UiHost> UiTree<H> {
         self.interactive_resize_active
     }
 
+    pub(crate) fn clean_geometry_scroll_side_effect_fallback_active_for(
+        &self,
+        node: NodeId,
+    ) -> bool {
+        self.clean_geometry_scroll_side_effect_fallback_nodes
+            .last()
+            .copied()
+            == Some(node)
+    }
+
+    pub(crate) fn debug_record_clean_geometry_scroll_side_effect_fast_path(&mut self) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats
+            .layout_clean_geometry_scroll_side_effect_fast_paths = self
+            .debug_stats
+            .layout_clean_geometry_scroll_side_effect_fast_paths
+            .saturating_add(1);
+    }
+
+    pub(crate) fn push_clean_geometry_scroll_side_effect_fallback(&mut self, node: NodeId) {
+        self.clean_geometry_scroll_side_effect_fallback_nodes
+            .push(node);
+    }
+
+    pub(crate) fn pop_clean_geometry_scroll_side_effect_fallback(&mut self) {
+        self.clean_geometry_scroll_side_effect_fallback_nodes.pop();
+    }
+
     pub(crate) fn interactive_resize_requires_full_rebuild(&self) -> bool {
         self.interactive_resize_needs_full_rebuild && !self.interactive_resize_active
     }

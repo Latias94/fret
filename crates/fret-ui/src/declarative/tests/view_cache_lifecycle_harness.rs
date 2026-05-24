@@ -9,6 +9,9 @@ use serde::Deserialize;
 
 use super::*;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct ProviderCacheProbeDirection(u8);
+
 const VIEW_CACHE_LIFECYCLE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/src/declarative/tests/fixtures/view_cache_lifecycle_v1.json"
@@ -29,6 +32,10 @@ struct ViewCacheLifecycleFixture {
     #[serde(default)]
     dependency: CacheDependency,
     #[serde(default)]
+    provider_values: Vec<u8>,
+    #[serde(default)]
+    provider_cache_key: ProviderCacheKeyFixture,
+    #[serde(default)]
     update_after_frame: Option<usize>,
     #[serde(default)]
     update_model: ModelUpdateTarget,
@@ -48,6 +55,15 @@ enum CacheDependency {
     #[default]
     None,
     ObservedModel,
+    ProviderState,
+}
+
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum ProviderCacheKeyFixture {
+    #[default]
+    Constant,
+    ProviderValue,
 }
 
 #[derive(Debug, Clone, Copy, Default, Deserialize)]
@@ -132,13 +148,25 @@ fn observe_view_cache_lifecycle(
     let renders = Arc::new(AtomicUsize::new(0));
     let leaf_id = Arc::new(Mutex::new(None::<crate::elements::GlobalElementId>));
     let observed_values = Arc::new(Mutex::new(Vec::<i64>::new()));
+    let observed_provider_values = Arc::new(Mutex::new(Vec::<i64>::new()));
     let mut stats = CacheStatsAccumulator::default();
 
     for frame in 0..scenario.frames {
-        let cache_key = scenario.cache_keys.get(frame).copied().unwrap_or(1);
+        let provider_value = scenario
+            .provider_values
+            .get(frame)
+            .copied()
+            .unwrap_or_default();
+        let cache_key = match scenario.provider_cache_key {
+            ProviderCacheKeyFixture::Constant => {
+                scenario.cache_keys.get(frame).copied().unwrap_or(1)
+            }
+            ProviderCacheKeyFixture::ProviderValue => u64::from(provider_value) + 1,
+        };
         let renders_for_frame = Arc::clone(&renders);
         let leaf_id_for_frame = Arc::clone(&leaf_id);
         let observed_values_for_frame = Arc::clone(&observed_values);
+        let observed_provider_values_for_frame = Arc::clone(&observed_provider_values);
         let observed_model_for_frame = observed_model.clone();
         let dependency = scenario.dependency;
         let request_animation_frame = scenario.request_animation_frame;
@@ -163,45 +191,67 @@ fn observe_view_cache_lifecycle(
                     props = props.contain_layout_when_bounds_known(true);
                 }
 
-                vec![cx.view_cache(props, move |cx| {
-                    renders_for_frame.fetch_add(1, Ordering::SeqCst);
-                    if request_animation_frame {
-                        cx.request_animation_frame();
-                    }
-
-                    let label = match dependency {
-                        CacheDependency::None => "leaf".to_string(),
-                        CacheDependency::ObservedModel => {
-                            cx.observe_model(&observed_model_for_frame, Invalidation::Layout);
-                            let value = cx
-                                .app
-                                .models()
-                                .get_copied(&observed_model_for_frame)
-                                .unwrap_or_default();
-                            observed_values_for_frame
-                                .lock()
-                                .expect("observed model values")
-                                .push(value as i64);
-                            format!("Value {value}")
+                let build_cache = move |cx: &mut ElementContext<'_, TestHost>| {
+                    cx.view_cache(props, move |cx| {
+                        renders_for_frame.fetch_add(1, Ordering::SeqCst);
+                        if request_animation_frame {
+                            cx.request_animation_frame();
                         }
-                    };
 
-                    let leaf = cx.text(label);
-                    if preserve_state {
-                        *leaf_id_for_frame.lock().expect("leaf id") = Some(leaf.id);
-                        cx.state_for(
-                            leaf.id,
-                            || 0u32,
-                            |value| {
-                                if *value == 0 {
-                                    *value = 123;
-                                }
-                            },
-                        );
-                    }
+                        let label = match dependency {
+                            CacheDependency::None => "leaf".to_string(),
+                            CacheDependency::ObservedModel => {
+                                cx.observe_model(&observed_model_for_frame, Invalidation::Layout);
+                                let value = cx
+                                    .app
+                                    .models()
+                                    .get_copied(&observed_model_for_frame)
+                                    .unwrap_or_default();
+                                observed_values_for_frame
+                                    .lock()
+                                    .expect("observed model values")
+                                    .push(value as i64);
+                                format!("Value {value}")
+                            }
+                            CacheDependency::ProviderState => {
+                                let value = cx
+                                    .provided::<ProviderCacheProbeDirection>()
+                                    .copied()
+                                    .expect("provider state should be visible inside cache")
+                                    .0;
+                                observed_provider_values_for_frame
+                                    .lock()
+                                    .expect("observed provider values")
+                                    .push(value as i64);
+                                format!("Provider {value}")
+                            }
+                        };
 
-                    vec![leaf]
-                })]
+                        let leaf = cx.text(label);
+                        if preserve_state {
+                            *leaf_id_for_frame.lock().expect("leaf id") = Some(leaf.id);
+                            cx.state_for(
+                                leaf.id,
+                                || 0u32,
+                                |value| {
+                                    if *value == 0 {
+                                        *value = 123;
+                                    }
+                                },
+                            );
+                        }
+
+                        vec![leaf]
+                    })
+                };
+
+                match dependency {
+                    CacheDependency::ProviderState => cx
+                        .provide(ProviderCacheProbeDirection(provider_value), |cx| {
+                            vec![build_cache(cx)]
+                        }),
+                    CacheDependency::None | CacheDependency::ObservedModel => vec![build_cache(cx)],
+                }
             },
         );
 
@@ -238,6 +288,15 @@ fn observe_view_cache_lifecycle(
     observed.set_metric(
         "observed.model_unique_values",
         unique_i64_count(&values) as f32,
+    );
+
+    let provider_values = observed_provider_values
+        .lock()
+        .expect("observed provider values");
+    observed.set_metric("observed.provider_values", provider_values.len() as f32);
+    observed.set_metric(
+        "observed.provider_unique_values",
+        unique_i64_count(&provider_values) as f32,
     );
 
     let state_value = match *leaf_id.lock().expect("leaf id") {

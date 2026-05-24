@@ -2,6 +2,9 @@ use super::*;
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct ProviderCacheProbeDirection(u8);
+
 #[test]
 fn view_cache_boundary_hints_drive_boundary_layout_dependency() {
     let mut app = TestHost::new();
@@ -520,6 +523,153 @@ fn view_cache_gates_reuse_on_explicit_cache_key() {
         renders.load(Ordering::SeqCst),
         2,
         "expected cache_key mismatch to force re-running the view-cache child render closure"
+    );
+}
+
+#[test]
+fn view_cache_explicit_cache_key_tracks_provider_state_changes() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+    let mut scene = Scene::default();
+
+    let renders = Arc::new(AtomicUsize::new(0));
+    let observed_values = Arc::new(std::sync::Mutex::new(Vec::<u8>::new()));
+
+    for frame in 0..4 {
+        let direction = if frame < 2 {
+            ProviderCacheProbeDirection(0)
+        } else {
+            ProviderCacheProbeDirection(1)
+        };
+        let cache_key = u64::from(direction.0) + 1;
+        let renders_for_closure = Arc::clone(&renders);
+        let observed_values_for_closure = Arc::clone(&observed_values);
+
+        let _root_node = render_root_for_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "view-cache-provider-keyed",
+            move |cx| {
+                cx.provide(direction, move |cx| {
+                    vec![cx.view_cache(
+                        crate::element::ViewCacheProps {
+                            cache_key,
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            renders_for_closure.fetch_add(1, Ordering::SeqCst);
+                            let observed = cx
+                                .provided::<ProviderCacheProbeDirection>()
+                                .copied()
+                                .expect("provider state should be visible inside cache");
+                            observed_values_for_closure
+                                .lock()
+                                .expect("observed values")
+                                .push(observed.0);
+                            vec![cx.text(format!("dir={}", observed.0))]
+                        },
+                    )]
+                })
+            },
+        );
+
+        layout_frame(&mut ui, &mut app, &mut services, bounds);
+        paint_frame(&mut ui, &mut app, &mut services, bounds, &mut scene);
+        app.advance_frame();
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        2,
+        "provider-sensitive cached subtrees should reuse while the provider value is stable and rebuild when the explicit cache key changes"
+    );
+    assert_eq!(
+        *observed_values.lock().expect("observed values"),
+        vec![0, 1],
+        "the rebuilt cached subtree must observe the changed provider value instead of replaying stale inherited state"
+    );
+}
+
+#[test]
+fn view_cache_provider_state_changes_without_cache_key_keep_reusing_documented_contract() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_view_cache_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(240.0), Px(120.0)),
+    );
+    let mut services = FakeTextService::default();
+    let mut scene = Scene::default();
+
+    let renders = Arc::new(AtomicUsize::new(0));
+    let observed_values = Arc::new(std::sync::Mutex::new(Vec::<u8>::new()));
+
+    for frame in 0..4 {
+        let direction = if frame < 2 {
+            ProviderCacheProbeDirection(0)
+        } else {
+            ProviderCacheProbeDirection(1)
+        };
+        let renders_for_closure = Arc::clone(&renders);
+        let observed_values_for_closure = Arc::clone(&observed_values);
+
+        let _root_node = render_root_for_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "view-cache-provider-unkeyed",
+            move |cx| {
+                cx.provide(direction, move |cx| {
+                    vec![
+                        cx.view_cache(crate::element::ViewCacheProps::default(), move |cx| {
+                            renders_for_closure.fetch_add(1, Ordering::SeqCst);
+                            let observed = cx
+                                .provided::<ProviderCacheProbeDirection>()
+                                .copied()
+                                .expect("provider state should be visible inside cache");
+                            observed_values_for_closure
+                                .lock()
+                                .expect("observed values")
+                                .push(observed.0);
+                            vec![cx.text(format!("dir={}", observed.0))]
+                        }),
+                    ]
+                })
+            },
+        );
+
+        layout_frame(&mut ui, &mut app, &mut services, bounds);
+        paint_frame(&mut ui, &mut app, &mut services, bounds, &mut scene);
+        app.advance_frame();
+    }
+
+    assert_eq!(
+        renders.load(Ordering::SeqCst),
+        1,
+        "provider state is not an implicit view-cache dependency; direction-sensitive recipe layers must include provider state in ViewCacheProps::cache_key"
+    );
+    assert_eq!(
+        *observed_values.lock().expect("observed values"),
+        vec![0],
+        "an unkeyed cache intentionally replays the previously-rendered provider-sensitive subtree"
     );
 }
 

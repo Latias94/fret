@@ -403,6 +403,521 @@ fn viewport_root_bounds_for_descendant_elements_track_the_panel_bounds() {
 }
 
 #[test]
+fn element_root_bounds_cache_survives_fast_path_frames() {
+    use crate::GlobalElementId;
+    use crate::elements::NodeEntry;
+    use fret_runtime::FrameId;
+
+    struct RegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    struct FillAvailable;
+
+    impl<H: UiHost> Widget<H> for FillAvailable {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let window_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(900.0), Px(1000.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(514.0), Px(468.0)),
+        Size::new(Px(336.0), Px(378.0)),
+    );
+
+    let owner_element = GlobalElementId(0xC0A11CE);
+    let anchor_element = GlobalElementId(0xC0FFEE);
+
+    let anchor_node = ui.create_node(FillAvailable);
+    let root_node = ui.create_node(RegistersViewportRoot {
+        viewport,
+        child: anchor_node,
+    });
+    ui.set_node_element(root_node, Some(owner_element));
+    ui.set_node_element(anchor_node, Some(anchor_element));
+    ui.set_children(root_node, vec![anchor_node]);
+    ui.set_root(root_node);
+
+    crate::elements::with_window_state(&mut app, window, |window_state| {
+        window_state.set_node_entry(
+            owner_element,
+            NodeEntry {
+                node: root_node,
+                last_seen_frame: FrameId(1),
+                root: owner_element,
+            },
+        );
+        window_state.set_node_entry(
+            anchor_element,
+            NodeEntry {
+                node: anchor_node,
+                last_seen_frame: FrameId(1),
+                root: owner_element,
+            },
+        );
+        window_state.set_root_bounds(owner_element, window_bounds);
+    });
+
+    let mut text = FakeTextService::default();
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let initial = crate::elements::root_bounds_for_element(&mut app, window, anchor_element)
+        .expect("expected initial viewport root bounds");
+    assert_eq!(initial, viewport);
+
+    app.advance_frame();
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    assert!(
+        ui.debug_stats().layout_fast_path_taken,
+        "expected second stable frame to take the fast path"
+    );
+    let after_fast_path =
+        crate::elements::root_bounds_for_element(&mut app, window, anchor_element)
+            .expect("expected viewport root bounds after fast path frame");
+    assert_eq!(after_fast_path, viewport);
+}
+
+#[test]
+fn element_root_bounds_cache_survives_overlay_only_layout_frames() {
+    use crate::GlobalElementId;
+    use crate::elements::NodeEntry;
+    use fret_runtime::FrameId;
+
+    struct RegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    struct FillAvailable;
+
+    impl<H: UiHost> Widget<H> for FillAvailable {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let window_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(900.0), Px(1000.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(514.0), Px(468.0)),
+        Size::new(Px(336.0), Px(378.0)),
+    );
+
+    let owner_element = GlobalElementId(0xB0A11CE);
+    let anchor_element = GlobalElementId(0xB0FFEE);
+
+    let anchor_node = ui.create_node(FillAvailable);
+    let root_node = ui.create_node(RegistersViewportRoot {
+        viewport,
+        child: anchor_node,
+    });
+    ui.set_node_element(root_node, Some(owner_element));
+    ui.set_node_element(anchor_node, Some(anchor_element));
+    ui.set_children(root_node, vec![anchor_node]);
+    ui.set_root(root_node);
+
+    crate::elements::with_window_state(&mut app, window, |window_state| {
+        window_state.set_node_entry(
+            owner_element,
+            NodeEntry {
+                node: root_node,
+                last_seen_frame: FrameId(1),
+                root: owner_element,
+            },
+        );
+        window_state.set_node_entry(
+            anchor_element,
+            NodeEntry {
+                node: anchor_node,
+                last_seen_frame: FrameId(1),
+                root: owner_element,
+            },
+        );
+        window_state.set_root_bounds(owner_element, window_bounds);
+    });
+
+    let mut text = FakeTextService::default();
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let initial = crate::elements::root_bounds_for_element(&mut app, window, anchor_element)
+        .expect("expected initial viewport root bounds");
+    assert_eq!(initial, viewport);
+
+    app.advance_frame();
+    let overlay = ui.create_node(FillAvailable);
+    ui.push_overlay_root(overlay, false);
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let after_overlay_layout =
+        crate::elements::root_bounds_for_element(&mut app, window, anchor_element)
+            .expect("expected viewport root bounds after overlay-only layout frame");
+    assert_eq!(after_overlay_layout, viewport);
+}
+
+#[test]
+fn element_root_bounds_cache_survives_overlay_layer_frames_with_retained_parent_pointer() {
+    use crate::GlobalElementId;
+    use crate::elements::NodeEntry;
+    use fret_runtime::FrameId;
+
+    struct RegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    struct FillAvailable;
+
+    impl<H: UiHost> Widget<H> for FillAvailable {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let window_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(900.0), Px(1000.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(514.0), Px(468.0)),
+        Size::new(Px(336.0), Px(378.0)),
+    );
+
+    let owner_element = GlobalElementId(0xE0A11CE);
+    let anchor_element = GlobalElementId(0xE0FFEE);
+
+    let anchor_node = ui.create_node(FillAvailable);
+    let root_node = ui.create_node(RegistersViewportRoot {
+        viewport,
+        child: anchor_node,
+    });
+    ui.set_node_element(root_node, Some(owner_element));
+    ui.set_node_element(anchor_node, Some(anchor_element));
+    ui.set_children(root_node, vec![anchor_node]);
+    ui.set_root(root_node);
+
+    crate::elements::with_window_state(&mut app, window, |window_state| {
+        window_state.set_node_entry(
+            owner_element,
+            NodeEntry {
+                node: root_node,
+                last_seen_frame: FrameId(1),
+                root: owner_element,
+            },
+        );
+        window_state.set_node_entry(
+            anchor_element,
+            NodeEntry {
+                node: anchor_node,
+                last_seen_frame: FrameId(1),
+                root: owner_element,
+            },
+        );
+        window_state.set_root_bounds(owner_element, window_bounds);
+    });
+
+    let mut text = FakeTextService::default();
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let initial = crate::elements::root_bounds_for_element(&mut app, window, anchor_element)
+        .expect("expected initial viewport root bounds");
+    assert_eq!(initial, viewport);
+
+    app.advance_frame();
+    let overlay = ui.create_node(FillAvailable);
+    ui.push_overlay_root(overlay, false);
+    ui.test_set_node_parent(overlay, Some(root_node));
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let after_overlay_layout =
+        crate::elements::root_bounds_for_element(&mut app, window, anchor_element).expect(
+            "expected viewport root bounds after overlay-layer layout with retained parent pointer",
+        );
+    assert_eq!(after_overlay_layout, viewport);
+}
+
+#[test]
+fn element_root_bounds_cache_survives_ancestor_layout_when_viewport_owner_is_stable() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    use crate::GlobalElementId;
+    use crate::elements::NodeEntry;
+    use fret_runtime::FrameId;
+
+    struct AncestorMaybeLayoutsViewportOwner {
+        layout_viewport_owner: Arc<AtomicBool>,
+        viewport_owner: NodeId,
+        sibling: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for AncestorMaybeLayoutsViewportOwner {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            if self.layout_viewport_owner.load(Ordering::Relaxed) {
+                let _ = cx.layout(self.viewport_owner, cx.available);
+            }
+            let _ = cx.layout(self.sibling, cx.available);
+            cx.available
+        }
+    }
+
+    struct RegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+    }
+
+    impl<H: UiHost> Widget<H> for RegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let _ = cx.layout_viewport_root(self.child, self.viewport);
+            cx.available
+        }
+    }
+
+    struct FillAvailable;
+
+    impl<H: UiHost> Widget<H> for FillAvailable {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let window_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(900.0), Px(1000.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(514.0), Px(468.0)),
+        Size::new(Px(336.0), Px(378.0)),
+    );
+
+    let ancestor_element = GlobalElementId(0xF0A11CE);
+    let viewport_owner_element = GlobalElementId(0xF0B0A7);
+    let anchor_element = GlobalElementId(0xF0FFEE);
+    let sibling_element = GlobalElementId(0xF01B1E);
+
+    let layout_viewport_owner = Arc::new(AtomicBool::new(true));
+    let anchor_node = ui.create_node(FillAvailable);
+    let viewport_owner_node = ui.create_node(RegistersViewportRoot {
+        viewport,
+        child: anchor_node,
+    });
+    let sibling_node = ui.create_node(FillAvailable);
+    let ancestor_node = ui.create_node(AncestorMaybeLayoutsViewportOwner {
+        layout_viewport_owner: layout_viewport_owner.clone(),
+        viewport_owner: viewport_owner_node,
+        sibling: sibling_node,
+    });
+
+    ui.set_node_element(ancestor_node, Some(ancestor_element));
+    ui.set_node_element(viewport_owner_node, Some(viewport_owner_element));
+    ui.set_node_element(anchor_node, Some(anchor_element));
+    ui.set_node_element(sibling_node, Some(sibling_element));
+    ui.set_children(viewport_owner_node, vec![anchor_node]);
+    ui.set_children(ancestor_node, vec![viewport_owner_node, sibling_node]);
+    ui.set_root(ancestor_node);
+
+    crate::elements::with_window_state(&mut app, window, |window_state| {
+        window_state.set_node_entry(
+            ancestor_element,
+            NodeEntry {
+                node: ancestor_node,
+                last_seen_frame: FrameId(1),
+                root: ancestor_element,
+            },
+        );
+        window_state.set_node_entry(
+            viewport_owner_element,
+            NodeEntry {
+                node: viewport_owner_node,
+                last_seen_frame: FrameId(1),
+                root: ancestor_element,
+            },
+        );
+        window_state.set_node_entry(
+            anchor_element,
+            NodeEntry {
+                node: anchor_node,
+                last_seen_frame: FrameId(1),
+                root: ancestor_element,
+            },
+        );
+        window_state.set_node_entry(
+            sibling_element,
+            NodeEntry {
+                node: sibling_node,
+                last_seen_frame: FrameId(1),
+                root: ancestor_element,
+            },
+        );
+        window_state.set_root_bounds(ancestor_element, window_bounds);
+    });
+
+    let mut text = FakeTextService::default();
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let initial = crate::elements::root_bounds_for_element(&mut app, window, anchor_element)
+        .expect("expected initial viewport root bounds");
+    assert_eq!(initial, viewport);
+
+    layout_viewport_owner.store(false, Ordering::Relaxed);
+    ui.invalidate(ancestor_node, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let after_ancestor_layout =
+        crate::elements::root_bounds_for_element(&mut app, window, anchor_element)
+            .expect("expected viewport root bounds after ancestor-only layout frame");
+    assert_eq!(after_ancestor_layout, viewport);
+}
+
+#[test]
+fn element_root_bounds_cache_prunes_when_owner_relayouts_without_viewport_root() {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    use crate::GlobalElementId;
+    use crate::elements::NodeEntry;
+    use fret_runtime::FrameId;
+
+    struct MaybeRegistersViewportRoot {
+        viewport: Rect,
+        child: NodeId,
+        enabled: Arc<AtomicBool>,
+    }
+
+    impl<H: UiHost> Widget<H> for MaybeRegistersViewportRoot {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            if self.enabled.load(Ordering::Relaxed) {
+                let _ = cx.layout_viewport_root(self.child, self.viewport);
+            } else {
+                let _ = cx.layout(self.child, cx.available);
+            }
+            cx.available
+        }
+    }
+
+    struct FillAvailable;
+
+    impl<H: UiHost> Widget<H> for FillAvailable {
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let window_bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(900.0), Px(1000.0)),
+    );
+    let viewport = Rect::new(
+        fret_core::Point::new(Px(514.0), Px(468.0)),
+        Size::new(Px(336.0), Px(378.0)),
+    );
+
+    let owner_element = GlobalElementId(0xD0A11CE);
+    let anchor_element = GlobalElementId(0xD0FFEE);
+
+    let viewport_enabled = Arc::new(AtomicBool::new(true));
+    let anchor_node = ui.create_node(FillAvailable);
+    let root_node = ui.create_node(MaybeRegistersViewportRoot {
+        viewport,
+        child: anchor_node,
+        enabled: viewport_enabled.clone(),
+    });
+    ui.set_node_element(root_node, Some(owner_element));
+    ui.set_node_element(anchor_node, Some(anchor_element));
+    ui.set_children(root_node, vec![anchor_node]);
+    ui.set_root(root_node);
+
+    crate::elements::with_window_state(&mut app, window, |window_state| {
+        window_state.set_node_entry(
+            owner_element,
+            NodeEntry {
+                node: root_node,
+                last_seen_frame: FrameId(1),
+                root: owner_element,
+            },
+        );
+        window_state.set_node_entry(
+            anchor_element,
+            NodeEntry {
+                node: anchor_node,
+                last_seen_frame: FrameId(1),
+                root: owner_element,
+            },
+        );
+        window_state.set_root_bounds(owner_element, window_bounds);
+    });
+
+    let mut text = FakeTextService::default();
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let initial = crate::elements::root_bounds_for_element(&mut app, window, anchor_element)
+        .expect("expected initial viewport root bounds");
+    assert_eq!(initial, viewport);
+
+    viewport_enabled.store(false, Ordering::Relaxed);
+    ui.invalidate(root_node, Invalidation::Layout);
+    ui.layout_all(&mut app, &mut text, window_bounds, 1.0);
+
+    let after_owner_relayout =
+        crate::elements::root_bounds_for_element(&mut app, window, anchor_element)
+            .expect("expected fallback owner root bounds after viewport root is removed");
+    assert_eq!(after_owner_relayout, window_bounds);
+}
+
+#[test]
 fn element_root_bounds_cache_uses_nearest_viewport_when_owner_root_differs() {
     use crate::GlobalElementId;
     use crate::elements::NodeEntry;

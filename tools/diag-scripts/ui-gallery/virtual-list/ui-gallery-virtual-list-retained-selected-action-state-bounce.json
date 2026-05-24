@@ -1,0 +1,288 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-virtual-list-retained-selected-action-state-bounce",
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "tags": [
+      "ui_gallery",
+      "scroll",
+      "virtual_list",
+      "semantics",
+      "selected_state",
+      "action_state",
+      "retained",
+      "view_cache",
+      "mechanism_harness",
+      "feature:gallery-dev"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "virtual_list_torture",
+      "FRET_UI_GALLERY_VLIST_KEEP_ALIVE": "64",
+      "FRET_UI_GALLERY_VLIST_ROW_CACHE": "1"
+    },
+    "target_hints": [
+      "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+      "The gate enables retained keep-alive plus row cache to exercise cached selected/action metadata.",
+      "A selected row is detached, the selection model is cleared while it is off-window, and the row must reattach unselected with invoke still available."
+    ]
+  },
+  "steps": [
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "type": "press_key",
+      "key": "escape"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "set_window_inner_size",
+      "width_px": 1280.0,
+      "height_px": 720.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 20
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-virtual-list-torture"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "visible_in_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-2-label"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_semantics_scroll_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport-virtual_list_torture"
+      },
+      "field": "y",
+      "max_delta": 0.25,
+      "stable_frames": 8,
+      "timeout_frames": 300
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-2"
+        },
+        "selected": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-2"
+        },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-virtual-list-row-2-label.chrome"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-2"
+        },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-editing"
+        },
+        "text": "editing_row=2"
+      }
+    },
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-virtual-list-root"
+      },
+      "delta_x": 0.0,
+      "delta_y": -720.0,
+      "pointer_kind": "touch"
+    },
+    {
+      "type": "wait_semantics_scroll_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport-virtual_list_torture"
+      },
+      "field": "y",
+      "max_delta": 0.25,
+      "stable_frames": 4,
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-25"
+        },
+        "pos_in_set": 26
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-2"
+        }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "retained_virtual_list_reconciles_matching_ge",
+        "min": 1,
+        "reconcile_kind": "escape",
+        "kept_alive_items_min": 1,
+        "detached_items_min": 1
+      }
+    },
+    {
+      "type": "ensure_visible",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-virtual-list-clear-edit-button.chrome"
+      },
+      "padding_px": 4.0,
+      "within_window": true,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-virtual-list-clear-edit-button.chrome"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-editing"
+        },
+        "text": "editing_row=<none>"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-virtual-list-root"
+      },
+      "delta_x": 0.0,
+      "delta_y": 720.0,
+      "pointer_kind": "touch"
+    },
+    {
+      "type": "wait_semantics_scroll_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport-virtual_list_torture"
+      },
+      "field": "y",
+      "max_delta": 0.25,
+      "stable_frames": 4,
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-2"
+        },
+        "pos_in_set": 3
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-2"
+        },
+        "selected": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-virtual-list-row-2"
+        },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-virtual-list-retained-selected-action-state-bounce"
+    }
+  ]
+}

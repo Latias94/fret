@@ -190,6 +190,7 @@ pub(super) fn take_row_scene_replay_plan_entry(
     if plan.frame_seq != frame_seq {
         let rejected = plan.entries.len();
         plan.entries.clear();
+        plan.hosted_resources_touched = false;
         return (None, rejected, Some("frame_seq_mismatch"));
     }
 
@@ -208,6 +209,17 @@ pub(super) fn take_row_scene_replay_plan_entry(
         rejected,
         (rejected > 0).then_some("row_advanced_past_entry"),
     )
+}
+
+pub(super) fn take_row_scene_replay_plan_hosted_resources_once(
+    plan: Option<&mut RowSceneReplayPlan>,
+) -> Option<fret_ui::canvas::CanvasHostedResources> {
+    let plan = plan?;
+    if plan.hosted_resources_touched || plan.hosted_resources.is_empty() {
+        return None;
+    }
+    plan.hosted_resources_touched = true;
+    Some(plan.hosted_resources.clone())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -494,6 +506,7 @@ pub(super) fn prebuild_edge_row_scene_fragment_for_frame(
         row,
         row_scene_key,
         Arc::clone(&row_content),
+        rect,
         origin,
         geom.clone(),
         row_scene_is_rich,
@@ -538,6 +551,7 @@ pub(super) fn paint_row(
         st.paint_perf_frame.rows_painted = st.paint_perf_frame.rows_painted.saturating_add(1);
     }
 
+    let mut replay_setup_started = perf_enabled.then(Instant::now);
     let (replay_plan_entry, rejected_entries, reject_reason) = take_row_scene_replay_plan_entry(
         painter.scene_fragment_mut::<RowSceneReplayPlan>(),
         st.paint_perf_frame.frame_seq,
@@ -554,6 +568,57 @@ pub(super) fn paint_row(
         .is_some_and(|entry| entry.local_bounds == rect);
     if replay_plan_entry_matches_rect {
         painter.record_scene_fragment_used_entries(1);
+    }
+    if replay_plan_entry.is_some() && !replay_plan_entry_matches_rect {
+        painter.record_scene_fragment_rejected_entries(1, "rect_mismatch");
+    }
+
+    let overlay = st.paint_frame_overlay;
+    if let Some(entry) = replay_plan_entry.as_ref()
+        && replay_plan_entry_matches_rect
+        && !overlay.touches_row(row, &entry.retained.content.range)
+    {
+        let replay_plan_hosted_resources = take_row_scene_replay_plan_hosted_resources_once(
+            painter.scene_fragment_mut::<RowSceneReplayPlan>(),
+        );
+        if let Some(started) = replay_setup_started.take() {
+            add_paint_perf_elapsed(
+                &mut st.paint_perf_frame.us_row_scene_replay_setup,
+                &mut st.paint_perf_frame.ns_row_scene_replay_setup,
+                started,
+            );
+        }
+        scene::replay_row_scene_plan_entry(
+            painter,
+            st,
+            replay_plan_hosted_resources.as_ref(),
+            entry,
+            entry.retained.origin_for_local_bounds(rect),
+        );
+
+        let geom_for_cache =
+            (!st.row_geom_cache.contains_key(&row)).then(|| entry.retained.geom.clone());
+        geom_cache::store_row_geom_cache(
+            st,
+            row,
+            geom_for_cache,
+            text_cache_max_entries,
+            perf_enabled,
+        );
+        if perf_enabled {
+            st.paint_perf_frame.rows_drew_rich = st
+                .paint_perf_frame
+                .rows_drew_rich
+                .saturating_add(entry.retained.is_rich as u64);
+            if let Some(row_started) = row_started {
+                add_paint_perf_elapsed(
+                    &mut st.paint_perf_frame.us_total,
+                    &mut st.paint_perf_frame.ns_total,
+                    row_started,
+                );
+            }
+        }
+        return;
     }
 
     let row_content = if let Some(entry) = replay_plan_entry
@@ -579,9 +644,6 @@ pub(super) fn paint_row(
         cached_row_content_snapshot(st, row, text_cache_max_entries)
     };
     let row_range = row_content.range.clone();
-    if replay_plan_entry.is_some() && !replay_plan_entry_matches_rect {
-        painter.record_scene_fragment_rejected_entries(1, "rect_mismatch");
-    }
     // Rows do not emit an inert transparent background quad here.
     // Hit-testing already lives in the surrounding PointerRegion.
     //
@@ -678,7 +740,6 @@ pub(super) fn paint_row(
     let mut row_scene_syntax_replay_key = None::<RowSceneSyntaxReplayKey>;
     let mut fresh_geom = None::<RowGeom>;
     let row_scene_ops_start = painter.scene().ops_len();
-    let overlay = st.paint_frame_overlay;
     let can_return_after_planned_replay =
         replay_plan_entry_matches_rect && !overlay.touches_row(row, &row_range);
     let compose_inline_preedit = st.compose_inline_preedit
@@ -694,7 +755,23 @@ pub(super) fn paint_row(
             row_scene_replayed = true;
             drew_rich = entry.retained.is_rich;
             row_preedit = entry.retained.geom.preedit;
-            scene::replay_row_scene_plan_entry(painter, st, entry, origin);
+            let replay_plan_hosted_resources = take_row_scene_replay_plan_hosted_resources_once(
+                painter.scene_fragment_mut::<RowSceneReplayPlan>(),
+            );
+            if let Some(started) = replay_setup_started.take() {
+                add_paint_perf_elapsed(
+                    &mut st.paint_perf_frame.us_row_scene_replay_setup,
+                    &mut st.paint_perf_frame.ns_row_scene_replay_setup,
+                    started,
+                );
+            }
+            scene::replay_row_scene_plan_entry(
+                painter,
+                st,
+                replay_plan_hosted_resources.as_ref(),
+                entry,
+                origin,
+            );
         }
     }
 
@@ -1886,6 +1963,7 @@ pub(super) fn paint_row(
             row,
             row_scene_key,
             row_content.clone(),
+            rect,
             origin,
             geom,
             is_rich,
@@ -1902,6 +1980,7 @@ pub(super) fn paint_row(
             row,
             row_scene_key,
             row_content.clone(),
+            rect,
             origin,
             geom,
             is_rich,

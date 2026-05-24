@@ -61,6 +61,13 @@ impl CachedSubtreeProps {
         self
     }
 
+    /// Include a boolean render input in this cached subtree's explicit cache key.
+    pub fn cache_key_bool(mut self, value: bool) -> Self {
+        self.cache_key =
+            fret_ui::cache_key::mix(self.cache_key, fret_ui::cache_key::bool_key(value));
+        self
+    }
+
     pub fn cache_key_text_style(mut self, style: &TextStyle) -> Self {
         self.cache_key =
             fret_ui::cache_key::mix(self.cache_key, fret_ui::cache_key::text_style_key(style));
@@ -115,5 +122,20 @@ mod tests {
         let props = CachedSubtreeProps::default().contain_layout_when_bounds_known(true);
 
         assert!(props.boundary_hints.contain_layout_when_bounds_known);
+    }
+
+    #[test]
+    fn cached_subtree_props_bool_key_tracks_state_sensitive_cached_content() {
+        let base = CachedSubtreeProps::default().cache_key(0x7a59_d111_6a1d_c0de);
+
+        assert_eq!(
+            base.cache_key_bool(true).cache_key,
+            base.cache_key_bool(true).cache_key
+        );
+        assert_ne!(
+            base.cache_key_bool(false).cache_key,
+            base.cache_key_bool(true).cache_key,
+            "state-sensitive cached subtrees must make boolean render inputs explicit"
+        );
     }
 }

@@ -3499,6 +3499,35 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-ai-transcript-append-window-refresh",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcript-append-window-refresh.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-ai",
+        "gallery-chart",
+        "gallery-dev",
+        "gallery-web-ime-harness"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-transcript-retained"
+      ],
+      "tags": [
+        "ai-elements",
+        "mechanism-harness",
+        "non-retained",
+        "transcript",
+        "ui-gallery",
+        "virtual-list"
+      ],
+      "target_hints": [
+        "Starts directly on the AI Transcript Torture page.",
+        "Uses a tiny initial transcript so row 8 can only exist after the append mutation.",
+        "Proves the non-retained transcript surface materializes newly appended virtual-list rows after a stable scroll refresh."
+      ]
+    },
+    {
       "id": "ui-gallery-ai-transcript-torture-scroll",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-ai-transcript-torture-scroll.json",
       "required_capabilities": [
@@ -3516,7 +3545,7 @@
       ],
       "tags": [
         "ai-elements",
-        "retained",
+        "non-retained",
         "scroll",
         "transcript",
         "ui-gallery",
@@ -3524,8 +3553,8 @@
       ],
       "target_hints": [
         "Navigates to the AI Transcript Torture page.",
-        "Uses a smaller deterministic transcript length for a retained virtual-list scroll and append mutation gate.",
-        "Asserts the retained transcript model count before and after appending while capturing layout and bundle evidence."
+        "Uses a smaller deterministic transcript length for a non-retained virtual-list scroll and append mutation gate.",
+        "Asserts the non-retained transcript model count before and after appending while capturing layout and bundle evidence."
       ]
     },
     {
@@ -7325,6 +7354,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-context-menu-basic-typeahead-reload",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-typeahead-reload.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-context-menu"
+      ],
+      "tags": [
+        "context_menu",
+        "keyboard",
+        "regression_pack",
+        "roving_focus",
+        "shadcn",
+        "typeahead",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Context Menu Basic section with the global status bar visible.",
+        "Opens the ContextMenu by right click, enters the menu with ArrowDown, then uses printable-key typeahead to focus Reload.",
+        "Activates Reload with Enter and proves the command dispatches while the menu closes."
+      ]
+    },
+    {
       "id": "ui-gallery-context-menu-disabled-item-action-state",
       "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-disabled-item-action-state.json",
       "required_capabilities": [
@@ -7478,6 +7532,33 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-context-menu-submenu-typeahead-name-window",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-context-menu"
+      ],
+      "tags": [
+        "context_menu",
+        "keyboard",
+        "regression_pack",
+        "roving_focus",
+        "shadcn",
+        "submenu",
+        "typeahead",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Context Menu Submenu section with the global status bar visible.",
+        "Opens the root ContextMenu by right click, navigates to More Tools, opens the submenu with ArrowRight, then uses printable-key typeahead to focus Name Window.",
+        "Activates Name Window with Enter and proves the submenu command dispatches while the menu closes."
+      ]
     },
     {
       "id": "ui-gallery-control-chrome-button-group-text-w-fit",
@@ -8270,6 +8351,29 @@
       ]
     },
     {
+      "id": "ui-gallery-direction-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/direction/ui-gallery-direction-docs-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-direction"
+      ],
+      "tags": [
+        "direction",
+        "docs",
+        "provider",
+        "rtl",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the Direction page via the left nav search.",
+        "Verify the docs surface exposes the page root plus the `useDirection` and `Composable Children (Fret)` sections."
+      ]
+    },
+    {
       "id": "ui-gallery-drawer-docs-smoke",
       "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-docs-smoke.json",
       "required_capabilities": [
@@ -8785,6 +8889,33 @@
         "Navigates to the gallery-dev HitTestOnly Paint-Cache Probe page.",
         "Sweeps pointer movement over a stable cached canvas and gates hit-test-only paint-cache replay plus hit-test path-cache counters.",
         "Disables the hit-test bounds tree so the runtime oracle deterministically exercises the path-cache fast path."
+      ]
+    },
+    {
+      "id": "ui-gallery-hit-test-only-stale-path-cover-move",
+      "path": "tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-stale-path-cover-move.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
+      "suite_memberships": [
+        "ui-gallery-hit-test-only-paint-cache"
+      ],
+      "tags": [
+        "hit_test",
+        "hit_test_only",
+        "mechanism_harness",
+        "path_cache",
+        "runtime",
+        "stale_path",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the gallery-dev HitTestOnly Paint-Cache Probe page.",
+        "Sweeps pointer movement over a lower target that moves a higher-z cover over itself from inside the first move handler.",
+        "Disables the hit-test bounds tree so the runtime oracle deterministically exercises cached-path reject and fallback counters."
       ]
     },
     {
@@ -10570,6 +10701,93 @@
       ]
     },
     {
+      "id": "ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state",
+      "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-resizable"
+      ],
+      "tags": [
+        "action_state",
+        "combobox",
+        "disabled",
+        "overlay",
+        "resizable",
+        "root_boundary",
+        "semantics",
+        "shadcn",
+        "ui_gallery",
+        "view_cache"
+      ],
+      "target_hints": [
+        "Starts directly on the diagnostics-only Resizable Moving Cached Combobox fixture.",
+        "Toggles the In Review option to disabled before moving the cached source across Resizable viewport roots.",
+        "Reopens after the move and proves the item semantics expose disabled=true and invoke=false rather than stale pre-toggle action metadata."
+      ]
+    },
+    {
+      "id": "ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-resizable"
+      ],
+      "tags": [
+        "combobox",
+        "focus_restore",
+        "overlay",
+        "resizable",
+        "root_boundary",
+        "shadcn",
+        "ui_gallery",
+        "view_cache"
+      ],
+      "target_hints": [
+        "Starts directly on the diagnostics-only Resizable Moving Cached Combobox fixture.",
+        "Moves the cached Combobox source across Resizable viewport roots before opening the popup.",
+        "Presses Escape after the move and proves focus restores to the live moved trigger rather than a stale pre-move trigger node."
+      ]
+    },
+    {
+      "id": "ui-gallery-resizable-view-cache-moving-combobox-relation-bounce",
+      "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-relation-bounce.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-resizable"
+      ],
+      "tags": [
+        "combobox",
+        "overlay",
+        "relation",
+        "resizable",
+        "root_boundary",
+        "semantics",
+        "shadcn",
+        "ui_gallery",
+        "view_cache"
+      ],
+      "target_hints": [
+        "Starts directly on the diagnostics-only Resizable Moving Cached Combobox fixture.",
+        "Opens the cached Combobox in the left root, proves input/listbox relation edges, closes it, then moves the same cached source to the right root and proves the overlay endpoints are gone while the closed trigger has no controls edge.",
+        "Reopens after the cross-root move and proves controls/labelled_by resolve to the freshly mounted right-root listbox rather than a stale left-root node."
+      ]
+    },
+    {
       "id": "ui-gallery-resizable-view-cache-moving-combobox-root-boundary",
       "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json",
       "required_capabilities": [
@@ -10595,6 +10813,36 @@
         "Starts directly on the diagnostics-only Resizable Moving Cached Combobox fixture.",
         "Moves one cached Combobox source from the left Resizable panel viewport root to the right panel before opening the overlay.",
         "Asserts the moved trigger and anchored content use the new right-panel root boundary, including the shadcn sideOffset=6 collision flip."
+      ]
+    },
+    {
+      "id": "ui-gallery-resizable-view-cache-moving-popover-outside-press",
+      "path": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-popover-outside-press.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-resizable"
+      ],
+      "tags": [
+        "click_through",
+        "dismissal",
+        "outside_press",
+        "overlay",
+        "popover",
+        "resizable",
+        "root_boundary",
+        "shadcn",
+        "ui_gallery",
+        "view_cache"
+      ],
+      "target_hints": [
+        "Starts directly on the diagnostics-only Resizable Moving Cached Popover fixture.",
+        "Opens and closes the cached Popover in the left root, moves the same cached source to the right root, then reopens.",
+        "Clicks the opposite-panel underlay and proves the outside press both dismisses the moved Popover and activates the underlay button."
       ]
     },
     {
@@ -11755,8 +12003,18 @@
         "ui-gallery-table-retained",
         "ui-gallery-table-retained-measured"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "action-state",
+        "retained",
+        "row-pinning",
+        "semantics",
+        "table",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the retained Table Torture page.",
+        "Pins selected row 0, advances to page 2, and proves the pinned retained row keeps fresh selected/invoke semantics."
+      ]
     },
     {
       "id": "ui-gallery-table-retained-sort-desc",
@@ -12442,6 +12700,34 @@
         "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
         "The retained virtual-list path is the default; do not set FRET_UI_GALLERY_VLIST_RETAINED=0 for this gate.",
         "The gate asserts ListItem collection metadata before scrolling, after a retained window-boundary scroll, and after bouncing back to the top."
+      ]
+    },
+    {
+      "id": "ui-gallery-virtual-list-retained-selected-action-state-bounce",
+      "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-selected-action-state-bounce.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-vlist-retained-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "feature:gallery-dev",
+        "mechanism_harness",
+        "retained",
+        "scroll",
+        "selected_state",
+        "semantics",
+        "ui_gallery",
+        "view_cache",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Virtual List Torture page is dev-only.",
+        "The gate enables retained keep-alive plus row cache to exercise cached selected/action metadata.",
+        "A selected row is detached, the selection model is cleared while it is off-window, and the row must reattach unselected with invoke still available."
       ]
     },
     {

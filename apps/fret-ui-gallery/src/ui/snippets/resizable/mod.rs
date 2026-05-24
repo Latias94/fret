@@ -2,6 +2,7 @@ pub mod adaptive_panel;
 pub mod demo;
 pub mod handle;
 pub mod moving_cached_combobox;
+pub mod moving_cached_popover;
 pub mod multi_viewport_combobox;
 pub mod multi_viewport_select;
 pub mod notes;

@@ -814,7 +814,7 @@ pub struct WindowElementState {
     authoring_identities_current_frame: HashSet<GlobalElementId>,
     nodes: HashMap<GlobalElementId, NodeEntry>,
     root_bounds: HashMap<GlobalElementId, Rect>,
-    element_root_bounds: HashMap<GlobalElementId, Rect>,
+    element_root_bounds: HashMap<GlobalElementId, ElementRootBounds>,
     prev_bounds: HashMap<GlobalElementId, Rect>,
     cur_bounds: HashMap<GlobalElementId, Rect>,
     prev_visual_bounds: HashMap<GlobalElementId, Rect>,
@@ -870,6 +870,13 @@ pub(crate) struct NodeEntry {
     pub node: NodeId,
     pub last_seen_frame: FrameId,
     pub root: GlobalElementId,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ElementRootBounds {
+    pub root: NodeId,
+    pub owner: NodeId,
+    pub bounds: Rect,
 }
 
 #[cfg(feature = "diagnostics")]
@@ -2087,14 +2094,42 @@ impl WindowElementState {
 
     pub(crate) fn replace_element_root_bounds(
         &mut self,
-        entries: impl IntoIterator<Item = (GlobalElementId, Rect)>,
+        entries: impl IntoIterator<Item = (GlobalElementId, NodeId, NodeId, Rect)>,
     ) {
         self.element_root_bounds.clear();
-        self.element_root_bounds.extend(entries);
+        self.element_root_bounds.extend(entries.into_iter().map(
+            |(element, root, owner, bounds)| {
+                (
+                    element,
+                    ElementRootBounds {
+                        root,
+                        owner,
+                        bounds,
+                    },
+                )
+            },
+        ));
     }
 
     pub(crate) fn element_root_bounds(&self, element: GlobalElementId) -> Option<Rect> {
-        self.element_root_bounds.get(&element).copied()
+        self.element_root_bounds
+            .get(&element)
+            .map(|entry| entry.bounds)
+    }
+
+    pub(crate) fn element_root_bounds_copy_into(
+        &self,
+        out: &mut Vec<(GlobalElementId, NodeId, NodeId, Rect)>,
+    ) {
+        out.clear();
+        if out.capacity() < self.element_root_bounds.len() {
+            out.reserve(self.element_root_bounds.len() - out.capacity());
+        }
+        out.extend(
+            self.element_root_bounds
+                .iter()
+                .map(|(&element, entry)| (element, entry.root, entry.owner, entry.bounds)),
+        );
     }
 
     pub(crate) fn record_bounds(&mut self, element: GlobalElementId, bounds: Rect) {
