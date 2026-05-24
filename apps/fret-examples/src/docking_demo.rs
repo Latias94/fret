@@ -16,8 +16,9 @@ use fret_launch::{
     WinitWindowContext,
 };
 use fret_runtime::PlatformCapabilities;
-use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length};
-use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
+use fret_ui::element::{
+    AnyElement, ContainerProps, InsetEdge, LayoutStyle, Length, PositionStyle, SemanticsProps,
+};
 use fret_ui::{ElementContext, Theme, UiTree};
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::ui;
@@ -45,6 +46,54 @@ fn docking_demo_readout_text<H: fret_ui::UiHost>(
     decl_text::text_control_readout(cx, text)
 }
 
+fn docking_demo_absolute_layout(bounds: Rect, rect: Rect) -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.position = PositionStyle::Absolute;
+    layout.inset.left = InsetEdge::Px(Px(rect.origin.x.0 - bounds.origin.x.0));
+    layout.inset.top = InsetEdge::Px(Px(rect.origin.y.0 - bounds.origin.y.0));
+    layout.size.width = Length::Px(rect.size.width);
+    layout.size.height = Length::Px(rect.size.height);
+    layout
+}
+
+fn docking_demo_diagnostic_anchor<H: fret_ui::UiHost>(
+    cx: &mut fret_ui::ElementContext<'_, H>,
+    bounds: Rect,
+    rect: Rect,
+    test_id: &'static str,
+) -> AnyElement {
+    cx.keyed(test_id, |cx| {
+        cx.semantics(
+            SemanticsProps {
+                layout: docking_demo_absolute_layout(bounds, rect),
+                role: fret_core::SemanticsRole::Group,
+                test_id: Some(Arc::from(test_id)),
+                ..Default::default()
+            },
+            |_cx| Vec::<AnyElement>::new(),
+        )
+    })
+}
+
+fn docking_demo_tab_anchor_rects(bounds: Rect) -> (Rect, Rect) {
+    // Keep the scripted drag anchors inside the *tab* rect even when tabs use natural widths.
+    let mid_x = bounds.origin.x.0 + bounds.size.width.0 * 0.5;
+    let pad_x = 48.0_f32.min((bounds.size.width.0 * 0.25).max(0.0));
+    let x_l = bounds.origin.x.0 + pad_x;
+    let x_r = mid_x + pad_x;
+    let y = bounds.origin.y.0 + (DOCKING_DEMO_TAB_BAR_H.0 * 0.5);
+
+    let half = DOCKING_DEMO_DRAG_ANCHOR_SIZE.0 * 0.5;
+    let rect = |x: f32| {
+        Rect::new(
+            fret_core::Point::new(Px((x - half).max(bounds.origin.x.0)), Px(y - half)),
+            fret_core::Size::new(DOCKING_DEMO_DRAG_ANCHOR_SIZE, DOCKING_DEMO_DRAG_ANCHOR_SIZE),
+        )
+    };
+
+    (rect(x_l), rect(x_r))
+}
+
 #[derive(Debug, Default)]
 struct DockingDemoDevStateIncoming {
     layout: Option<fret_core::DockLayout>,
@@ -55,68 +104,6 @@ struct DockingDemoDevStateModels {
     main_window: Option<AppWindowId>,
 }
 
-struct DockingDemoDragAnchor {
-    test_id: &'static str,
-}
-
-impl DockingDemoDragAnchor {
-    fn new(test_id: &'static str) -> Self {
-        Self { test_id }
-    }
-}
-
-impl<H: fret_ui::UiHost> Widget<H> for DockingDemoDragAnchor {
-    fn hit_test(&self, _bounds: Rect, _position: fret_core::Point) -> bool {
-        false
-    }
-
-    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
-        cx.set_role(fret_core::SemanticsRole::Group);
-        cx.set_test_id(self.test_id);
-    }
-}
-
-struct DockingDemoHarnessRoot {
-    dock_space: fret_core::NodeId,
-    left_anchor: fret_core::NodeId,
-    right_anchor: fret_core::NodeId,
-}
-
-impl<H: fret_ui::UiHost> Widget<H> for DockingDemoHarnessRoot {
-    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> fret_core::Size {
-        let bounds = cx.bounds;
-
-        let _ = cx.layout_in(self.dock_space, bounds);
-
-        // Keep the scripted drag anchors inside the *tab* rect even when tabs use natural widths.
-        let mid_x = bounds.origin.x.0 + bounds.size.width.0 * 0.5;
-        let pad_x = 48.0_f32.min((bounds.size.width.0 * 0.25).max(0.0));
-        let x_l = bounds.origin.x.0 + pad_x;
-        let x_r = mid_x + pad_x;
-        let y = bounds.origin.y.0 + (DOCKING_DEMO_TAB_BAR_H.0 * 0.5);
-
-        let half = DOCKING_DEMO_DRAG_ANCHOR_SIZE.0 * 0.5;
-        let rect = |x: f32| {
-            Rect::new(
-                fret_core::Point::new(Px((x - half).max(bounds.origin.x.0)), Px(y - half)),
-                fret_core::Size::new(DOCKING_DEMO_DRAG_ANCHOR_SIZE, DOCKING_DEMO_DRAG_ANCHOR_SIZE),
-            )
-        };
-
-        let _ = cx.layout_in(self.left_anchor, rect(x_l));
-        let _ = cx.layout_in(self.right_anchor, rect(x_r));
-
-        cx.available
-    }
-
-    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        if let Some(bounds) = cx.child_bounds(self.dock_space) {
-            cx.paint(self.dock_space, bounds);
-        } else {
-            cx.paint(self.dock_space, cx.bounds);
-        }
-    }
-}
 struct DemoDockPanelRegistry;
 
 impl DemoDockPanelRegistry {
@@ -262,10 +249,7 @@ impl DockViewportOverlayHooks for DemoViewportOverlayHooks {
 
 pub struct DockingDemoWindowState {
     ui: UiTree<App>,
-    root: Option<fret_core::NodeId>,
     dock_space: Option<fret_core::NodeId>,
-    left_anchor: Option<fret_core::NodeId>,
-    right_anchor: Option<fret_core::NodeId>,
 }
 
 #[derive(Default)]
@@ -282,10 +266,7 @@ impl DockingDemoDriver {
         ui.set_debug_enabled(std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()));
         DockingDemoWindowState {
             ui,
-            root: None,
             dock_space: None,
-            left_anchor: None,
-            right_anchor: None,
         }
     }
 
@@ -353,45 +334,33 @@ impl DockingDemoDriver {
             window,
             bounds,
             "dock-demo-dock-space",
-            |cx| {
-                vec![fret_docking::dock_space_element_from_registry(
+            move |cx| {
+                let (left_anchor, right_anchor) = docking_demo_tab_anchor_rects(bounds);
+                let mut children = Vec::with_capacity(3);
+                children.push(fret_docking::dock_space_element_from_registry(
                     cx,
                     window,
                     DockSpaceElementOptions {
                         test_id: Some("dock-demo-dock-space"),
                         ..Default::default()
                     },
-                )]
+                ));
+                children.push(docking_demo_diagnostic_anchor(
+                    cx,
+                    bounds,
+                    left_anchor,
+                    "dock-demo-tab-drag-anchor-left",
+                ));
+                children.push(docking_demo_diagnostic_anchor(
+                    cx,
+                    bounds,
+                    right_anchor,
+                    "dock-demo-tab-drag-anchor-right",
+                ));
+                children
             },
         );
         state.dock_space = Some(dock_space);
-
-        if state.root.is_none() {
-            let left_anchor = state
-                .ui
-                .create_node_retained(DockingDemoDragAnchor::new("dock-demo-tab-drag-anchor-left"));
-            let right_anchor = state.ui.create_node_retained(DockingDemoDragAnchor::new(
-                "dock-demo-tab-drag-anchor-right",
-            ));
-            let root = state.ui.create_node_retained(DockingDemoHarnessRoot {
-                dock_space,
-                left_anchor,
-                right_anchor,
-            });
-            state
-                .ui
-                .set_children(root, vec![dock_space, left_anchor, right_anchor]);
-            state.ui.set_root(root);
-            state.root = Some(root);
-            state.left_anchor = Some(left_anchor);
-            state.right_anchor = Some(right_anchor);
-        } else if let (Some(root), Some(left_anchor), Some(right_anchor)) =
-            (state.root, state.left_anchor, state.right_anchor)
-        {
-            state
-                .ui
-                .set_children(root, vec![dock_space, left_anchor, right_anchor]);
-        }
 
         // When view caching is active, explicitly mark the dock space as a cache root so paint
         // caching + prepaint hooks are exercised in the same mode as UI Gallery shell caching.
@@ -430,10 +399,7 @@ fn hot_reload_window(
         state,
     } = context;
     crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-    state.root = None;
     state.dock_space = None;
-    state.left_anchor = None;
-    state.right_anchor = None;
 }
 
 fn handle_model_changes(

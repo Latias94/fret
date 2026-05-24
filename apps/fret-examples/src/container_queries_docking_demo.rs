@@ -12,9 +12,9 @@ use fret_launch::{
 };
 use fret_runtime::PlatformCapabilities;
 use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutQueryRegionProps, LayoutStyle, Length, SemanticsDecoration,
+    AnyElement, ContainerProps, InsetEdge, LayoutQueryRegionProps, LayoutStyle, Length,
+    PositionStyle, SemanticsDecoration, SemanticsProps,
 };
-use fret_ui::retained_bridge::{LayoutCx, PaintCx, SemanticsCx, UiTreeRetainedExt as _, Widget};
 use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
 use fret_ui_shadcn::facade as shadcn;
 use std::sync::Arc;
@@ -36,58 +36,45 @@ fn container_query_docking_placeholder_text<H: fret_ui::UiHost>(
     fret_ui_kit::declarative::text::text_button_label(cx, text)
 }
 
-struct SplitDragAnchor {
+fn container_query_docking_absolute_layout(bounds: Rect, rect: Rect) -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.position = PositionStyle::Absolute;
+    layout.inset.left = InsetEdge::Px(Px(rect.origin.x.0 - bounds.origin.x.0));
+    layout.inset.top = InsetEdge::Px(Px(rect.origin.y.0 - bounds.origin.y.0));
+    layout.size.width = Length::Px(rect.size.width);
+    layout.size.height = Length::Px(rect.size.height);
+    layout
+}
+
+fn container_query_docking_split_anchor_rect(bounds: Rect) -> Rect {
+    // Position an input-transparent anchor over the initial split handle. Scripted drags can
+    // target this anchor deterministically without needing docking internals to expose test ids
+    // for split handles.
+    let x = bounds.origin.x.0 + bounds.size.width.0 * INITIAL_SPLIT_FRACTION_LEFT;
+    let x0 = x - (SPLIT_ANCHOR_W.0 * 0.5);
+    Rect::new(
+        fret_core::Point::new(Px(x0), bounds.origin.y),
+        fret_core::Size::new(SPLIT_ANCHOR_W, bounds.size.height),
+    )
+}
+
+fn container_query_docking_diagnostic_anchor<H: fret_ui::UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    bounds: Rect,
+    rect: Rect,
     test_id: &'static str,
-}
-
-impl SplitDragAnchor {
-    fn new(test_id: &'static str) -> Self {
-        Self { test_id }
-    }
-}
-
-impl<H: fret_ui::UiHost> Widget<H> for SplitDragAnchor {
-    fn hit_test(&self, _bounds: Rect, _position: fret_core::Point) -> bool {
-        false
-    }
-
-    fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
-        cx.set_role(fret_core::SemanticsRole::Group);
-        cx.set_test_id(self.test_id);
-    }
-}
-
-struct ContainerQueriesDockingHarnessRoot {
-    dock_space: fret_core::NodeId,
-    split_anchor: fret_core::NodeId,
-}
-
-impl<H: fret_ui::UiHost> Widget<H> for ContainerQueriesDockingHarnessRoot {
-    fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> fret_core::Size {
-        let bounds = cx.bounds;
-        let _ = cx.layout_in(self.dock_space, bounds);
-
-        // Position an input-transparent anchor over the initial split handle. Scripted drags
-        // can target this anchor deterministically without needing docking internals to expose
-        // test ids for split handles.
-        let x = bounds.origin.x.0 + bounds.size.width.0 * INITIAL_SPLIT_FRACTION_LEFT;
-        let x0 = x - (SPLIT_ANCHOR_W.0 * 0.5);
-        let anchor_rect = Rect::new(
-            fret_core::Point::new(Px(x0), bounds.origin.y),
-            fret_core::Size::new(SPLIT_ANCHOR_W, bounds.size.height),
-        );
-        let _ = cx.layout_in(self.split_anchor, anchor_rect);
-
-        cx.available
-    }
-
-    fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
-        if let Some(bounds) = cx.child_bounds(self.dock_space) {
-            cx.paint(self.dock_space, bounds);
-        } else {
-            cx.paint(self.dock_space, cx.bounds);
-        }
-    }
+) -> AnyElement {
+    cx.keyed(test_id, |cx| {
+        cx.semantics(
+            SemanticsProps {
+                layout: container_query_docking_absolute_layout(bounds, rect),
+                role: fret_core::SemanticsRole::Group,
+                test_id: Some(Arc::from(test_id)),
+                ..Default::default()
+            },
+            |_cx| Vec::<AnyElement>::new(),
+        )
+    })
 }
 
 struct DemoDockPanelRegistry;
@@ -232,9 +219,7 @@ impl DockPanelElementRegistry<App> for DemoDockPanelRegistry {
 
 pub struct ContainerQueriesDockingDemoWindowState {
     ui: UiTree<App>,
-    root: Option<fret_core::NodeId>,
     dock_space: Option<fret_core::NodeId>,
-    split_anchor: Option<fret_core::NodeId>,
 }
 
 #[derive(Default)]
@@ -250,9 +235,7 @@ impl ContainerQueriesDockingDemoDriver {
         ui.set_debug_enabled(std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()));
         ContainerQueriesDockingDemoWindowState {
             ui,
-            root: None,
             dock_space: None,
-            split_anchor: None,
         }
     }
 
@@ -311,36 +294,27 @@ impl ContainerQueriesDockingDemoDriver {
             window,
             bounds,
             "cq-dock-demo-dock-space",
-            |cx| {
-                vec![fret_docking::dock_space_element_from_registry(
+            move |cx| {
+                let split_anchor = container_query_docking_split_anchor_rect(bounds);
+                let mut children = Vec::with_capacity(2);
+                children.push(fret_docking::dock_space_element_from_registry(
                     cx,
                     window,
                     DockSpaceElementOptions {
                         test_id: Some("cq-dock-demo-dock-space"),
                         ..Default::default()
                     },
-                )]
+                ));
+                children.push(container_query_docking_diagnostic_anchor(
+                    cx,
+                    bounds,
+                    split_anchor,
+                    "cq-dock-demo-split-anchor",
+                ));
+                children
             },
         );
         state.dock_space = Some(dock_space);
-
-        if state.root.is_none() {
-            let split_anchor = state
-                .ui
-                .create_node_retained(SplitDragAnchor::new("cq-dock-demo-split-anchor"));
-            let root = state
-                .ui
-                .create_node_retained(ContainerQueriesDockingHarnessRoot {
-                    dock_space,
-                    split_anchor,
-                });
-            state.ui.set_children(root, vec![dock_space, split_anchor]);
-            state.ui.set_root(root);
-            state.root = Some(root);
-            state.split_anchor = Some(split_anchor);
-        } else if let (Some(root), Some(split_anchor)) = (state.root, state.split_anchor) {
-            state.ui.set_children(root, vec![dock_space, split_anchor]);
-        }
 
         if state.ui.view_cache_enabled() {
             state
@@ -373,9 +347,7 @@ fn hot_reload_window(
         state,
     } = context;
     crate::hotpatch::reset_ui_tree(app, window, &mut state.ui);
-    state.root = None;
     state.dock_space = None;
-    state.split_anchor = None;
 }
 
 fn handle_model_changes(
