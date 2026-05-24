@@ -13,7 +13,9 @@ documentation.workspace = true
 default = []
 
 ui = []
-compat-retained-canvas = ["fret-ui/unstable-retained-bridge"]
+# Legacy no-op feature kept temporarily for downstream transition. The retained plot bridge
+# source was deleted after quarantine and no longer enables the unstable retained bridge feature.
+compat-retained-canvas = []
 
 [dependencies]
 fret-canvas = { path = "../fret-canvas" }

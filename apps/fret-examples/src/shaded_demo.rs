@@ -7,13 +7,14 @@ use fret_launch::{
     WinitRunnerConfig,
 };
 use fret_plot::cartesian::DataPoint;
-use fret_plot::plot::axis::{AxisLabelFormat, TimeAxisFormat, TimeAxisPresentation};
-use fret_plot::retained::{
-    LinePlotStyle, PlotOutput, PlotState, ShadedPlotCanvas, ShadedPlotModel, ShadedSeries,
-};
+use fret_plot::declarative::{ShadedPlotPanelProps, shaded_plot_panel_in};
+use fret_plot::models::{ShadedPlotModel, ShadedSeries};
+use fret_plot::plot::axis::{AxisLabelFormatter, TimeAxisFormat, TimeAxisPresentation};
 use fret_plot::series::Series;
+use fret_plot::state::{PlotOutput, PlotState};
+use fret_plot::style::LinePlotStyle;
 use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
+use fret_ui::{UiTree, declarative};
 
 pub struct ShadedDemoWindowState {
     ui: UiTree<App>,
@@ -160,22 +161,35 @@ fn render(_driver: &mut ShadedDemoDriver, context: WinitRenderContext<'_, Shaded
         scene,
     } = context;
 
-    let root = state.root.get_or_insert_with(|| {
-        let style = LinePlotStyle::default();
-        let canvas = ShadedPlotCanvas::new(state.plot.clone())
-            .style(style)
-            .x_axis_format(AxisLabelFormat::TimeSeconds(TimeAxisFormat {
-                base_seconds: 1_700_000_000.0,
-                presentation: TimeAxisPresentation::UnixUtc,
-            }))
-            .state(state.plot_state.clone())
-            .output(state.plot_output.clone());
-        let node = ShadedPlotCanvas::create_node(&mut state.ui, canvas);
+    if state.root.is_none() {
+        let node =
+            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                .render_root("shaded-demo", {
+                    let plot = state.plot.clone();
+                    let plot_state = state.plot_state.clone();
+                    let plot_output = state.plot_output.clone();
+                    move |cx| {
+                        let style = LinePlotStyle::default();
+                        let props = ShadedPlotPanelProps::new(plot.clone())
+                            .style(style)
+                            .x_axis_labels(AxisLabelFormatter::time_seconds(TimeAxisFormat {
+                                base_seconds: 1_700_000_000.0,
+                                presentation: TimeAxisPresentation::UnixUtc,
+                            }))
+                            .state(plot_state.clone())
+                            .output(plot_output.clone());
+                        vec![shaded_plot_panel_in(cx, props)]
+                    }
+                });
         state.ui.set_root(node);
-        node
-    });
+        state.ui.set_focus(Some(node));
+        state.ui.publish_window_runtime_snapshots(app);
+        state.root = Some(node);
+    }
 
-    state.ui.set_root(*root);
+    if let Some(root) = state.root {
+        state.ui.set_root(root);
+    }
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
 
@@ -250,16 +264,9 @@ pub fn run() -> anyhow::Result<()> {
     let app = build_app();
     let config = build_runner_config();
 
-    crate::run_native_with_fn_driver_with_hooks(
-        config,
-        app,
-        ShadedDemoDriver::default(),
-        create_window_state,
-        handle_event,
-        render,
-        configure_fn_driver_hooks,
-    )
-    .context("run shaded_demo app")
+    let driver = build_fn_driver();
+
+    crate::run_native_with_compat_driver(config, app, driver).context("run shaded_demo app")
 }
 
 #[cfg(target_arch = "wasm32")]

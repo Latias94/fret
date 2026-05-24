@@ -333,6 +333,40 @@ pub fn clamp_view_to_data_scaled(
     sanitize_data_rect_scaled(out, x_scale, y_scale)
 }
 
+pub(crate) fn apply_axis_locks(
+    view_before: DataRect,
+    mut next: DataRect,
+    lock_x: bool,
+    lock_y: bool,
+) -> DataRect {
+    if lock_x {
+        next.x_min = view_before.x_min;
+        next.x_max = view_before.x_max;
+    }
+    if lock_y {
+        next.y_min = view_before.y_min;
+        next.y_max = view_before.y_max;
+    }
+    next
+}
+
+pub(crate) fn all_visible_axes_zoom_locked(
+    show_y2_axis: bool,
+    show_y3_axis: bool,
+    show_y4_axis: bool,
+    lock_x_zoom: bool,
+    lock_y1_zoom: bool,
+    lock_y2_zoom: bool,
+    lock_y3_zoom: bool,
+    lock_y4_zoom: bool,
+) -> bool {
+    lock_x_zoom
+        && lock_y1_zoom
+        && (!show_y2_axis || lock_y2_zoom)
+        && (!show_y3_axis || lock_y3_zoom)
+        && (!show_y4_axis || lock_y4_zoom)
+}
+
 pub fn pan_view_by_px(view: DataRect, viewport: Size, dx_px: f32, dy_px: f32) -> Option<DataRect> {
     let view = sanitize_data_rect(view);
 
@@ -688,4 +722,58 @@ pub fn local_from_absolute(plot_origin: Point, position: Point) -> Point {
         Px(position.x.0 - plot_origin.x.0),
         Px(position.y.0 - plot_origin.y.0),
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn apply_axis_locks_preserves_only_locked_axes() {
+        let before = DataRect {
+            x_min: 1.0,
+            x_max: 4.0,
+            y_min: 2.0,
+            y_max: 8.0,
+        };
+        let next = DataRect {
+            x_min: -5.0,
+            x_max: 7.0,
+            y_min: -3.0,
+            y_max: 9.0,
+        };
+
+        assert_eq!(
+            apply_axis_locks(before, next, true, false),
+            DataRect {
+                x_min: before.x_min,
+                x_max: before.x_max,
+                y_min: next.y_min,
+                y_max: next.y_max,
+            }
+        );
+        assert_eq!(
+            apply_axis_locks(before, next, false, true),
+            DataRect {
+                x_min: next.x_min,
+                x_max: next.x_max,
+                y_min: before.y_min,
+                y_max: before.y_max,
+            }
+        );
+    }
+
+    #[test]
+    fn all_visible_axes_zoom_locked_ignores_hidden_axes() {
+        assert!(all_visible_axes_zoom_locked(
+            false, false, false, true, true, false, false, false,
+        ));
+    }
+
+    #[test]
+    fn all_visible_axes_zoom_locked_requires_visible_axes_locked() {
+        assert!(!all_visible_axes_zoom_locked(
+            true, false, false, true, true, false, true, true,
+        ));
+    }
 }

@@ -7,13 +7,15 @@ use fret_launch::{
     WinitRunnerConfig,
 };
 use fret_plot::cartesian::DataRect;
-use fret_plot::retained::{
-    DragLineX, DragLineY, DragPoint, DragRect, LinePlotCanvas, LinePlotModel, LinePlotStyle,
-    LineSeries, PlotDragOutput, PlotOutput, PlotOverlays, PlotState, SeriesTooltipMode, YAxis,
-};
+use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+use fret_plot::models::{LinePlotModel, LineSeries, YAxis};
 use fret_plot::series::Series;
+use fret_plot::state::{
+    DragLineX, DragLineY, DragPoint, DragRect, PlotDragOutput, PlotOutput, PlotOverlays, PlotState,
+};
+use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
 use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
+use fret_ui::{UiTree, declarative};
 
 pub struct DragDemoWindowState {
     ui: UiTree<App>,
@@ -179,7 +181,8 @@ fn handle_event(
 
             if matches!(
                 event,
-                Event::Pointer(fret_core::PointerEvent::Move { .. })
+                Event::Pointer(fret_core::PointerEvent::Down { .. })
+                    | Event::Pointer(fret_core::PointerEvent::Move { .. })
                     | Event::Pointer(fret_core::PointerEvent::Up { .. })
             ) {
                 let output = state
@@ -211,21 +214,24 @@ fn render(_driver: &mut DragDemoDriver, context: WinitRenderContext<'_, DragDemo
         scene,
     } = context;
 
-    let root = state.root.get_or_insert_with(|| {
-        let style = LinePlotStyle {
-            series_tooltip: SeriesTooltipMode::NearestAtCursor,
-            ..Default::default()
-        };
-        let canvas = LinePlotCanvas::new(state.plot.clone())
-            .style(style)
-            .state(state.plot_state.clone())
-            .output(state.plot_output.clone());
-        let node = LinePlotCanvas::create_node(&mut state.ui, canvas);
-        state.ui.set_root(node);
-        node
-    });
+    let plot = state.plot.clone();
+    let plot_state = state.plot_state.clone();
+    let plot_output = state.plot_output.clone();
+    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+        .render_root("drag-demo", move |cx| {
+            let style = LinePlotStyle {
+                series_tooltip: SeriesTooltipMode::NearestAtCursor,
+                ..Default::default()
+            };
+            let props = LinePlotPanelProps::new(plot.clone())
+                .style(style)
+                .state(plot_state.clone())
+                .output(plot_output.clone());
+            vec![line_plot_panel_in(cx, props)]
+        });
 
-    state.ui.set_root(*root);
+    state.root = Some(root);
+    state.ui.set_root(root);
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
 

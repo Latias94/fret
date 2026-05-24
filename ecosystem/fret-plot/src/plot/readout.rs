@@ -27,8 +27,31 @@ pub struct PlotCursorReadoutArgs<'a> {
     pub hidden: &'a HashSet<SeriesId>,
 }
 
+#[derive(Clone)]
+pub struct PlotCursorReadoutSeries<'a> {
+    pub id: SeriesId,
+    pub label: Arc<str>,
+    pub y_axis: YAxis,
+    pub data: &'a dyn SeriesData,
+}
+
 pub fn line_plot_cursor_readout(
     model: &LinePlotModel,
+    args: PlotCursorReadoutArgs<'_>,
+) -> Vec<PlotCursorReadoutRow> {
+    plot_cursor_readout(
+        model.series.iter().map(|series| PlotCursorReadoutSeries {
+            id: series.id,
+            label: series.label.clone(),
+            y_axis: series.y_axis,
+            data: &*series.data,
+        }),
+        args,
+    )
+}
+
+pub fn plot_cursor_readout<'a>(
+    series: impl IntoIterator<Item = PlotCursorReadoutSeries<'a>>,
     args: PlotCursorReadoutArgs<'_>,
 ) -> Vec<PlotCursorReadoutRow> {
     let PlotCursorReadoutArgs {
@@ -56,14 +79,14 @@ pub fn line_plot_cursor_readout(
     let budget = device_point_budget(transform, scale_factor);
 
     let mut out: Vec<PlotCursorReadoutRow> = Vec::new();
-    for series in &model.series {
+    for series in series {
         if hidden.contains(&series.id) {
             continue;
         }
-        let y = cursor_readout_y_at_x(&*series.data, x, view_x.clone(), budget);
+        let y = cursor_readout_y_at_x(series.data, x, view_x.clone(), budget);
         out.push(PlotCursorReadoutRow {
             series_id: series.id,
-            label: series.label.clone(),
+            label: series.label,
             y_axis: series.y_axis,
             y,
         });

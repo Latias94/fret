@@ -14,6 +14,7 @@ pub(crate) fn metric(theme: &Theme, key: &'static str, compat_key: &'static str)
         .or_else(|| theme.metric_by_key(compat_key))
 }
 
+#[cfg(feature = "compat-retained-canvas")]
 pub(crate) fn resolve_series_palette(theme: &Theme, base: [Color; 10]) -> [Color; 10] {
     const FRETPLOT_KEYS: [&str; 10] = [
         "fret.plot.palette.0",

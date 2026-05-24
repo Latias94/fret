@@ -6,11 +6,13 @@ use fret_launch::{
     WinitRunnerConfig, WinitWindowContext,
 };
 use fret_plot::cartesian::{DataPoint, DataRect};
-use fret_plot::retained::{LinePlotCanvas, LinePlotModel, LinePlotStyle, LineSeries};
+use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+use fret_plot::models::{LinePlotModel, LineSeries};
 use fret_plot::series::Series;
+use fret_plot::style::LinePlotStyle;
 use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
+use fret_ui::{UiTree, declarative};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -345,15 +347,16 @@ fn render(driver: &mut PlotStressDriver, context: WinitRenderContext<'_, PlotStr
         state.last_report = Some(Instant::now());
     }
 
-    let root = state.root.get_or_insert_with(|| {
-        let style = LinePlotStyle::default();
-        let canvas = LinePlotCanvas::new(state.plot.clone()).style(style);
-        let node = LinePlotCanvas::create_node(&mut state.ui, canvas);
-        state.ui.set_root(node);
-        node
-    });
+    let plot = state.plot.clone();
+    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+        .render_root("plot-stress-demo", move |cx| {
+            let style = LinePlotStyle::default();
+            let props = LinePlotPanelProps::new(plot.clone()).style(style);
+            vec![line_plot_panel_in(cx, props)]
+        });
 
-    state.ui.set_root(*root);
+    state.root = Some(root);
+    state.ui.set_root(root);
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
 
