@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-05-24
+Catalog updated: 2026-05-25
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 436
+- Dedicated directories: 443
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -1996,6 +1996,7 @@ Rule:
 - `docs/workstreams/editor-text-pipeline-v1/` — first 2026-02-14, latest 2026-03-03, 3 markdown docs
 - `docs/workstreams/environment-queries-v1/` — first 2026-02-09, latest 2026-03-12, 6 markdown docs
 - `docs/workstreams/example-suite-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-12, 9 markdown docs
+- `docs/workstreams/fearless-architecture-convergence-v1/` — first n/a, latest n/a, 5 markdown docs (active coordinator lane for the six architecture cuts: retained public surface exit, node low-level adapter, kit taxonomy, overlay/focus/dismissal oracle, Frame Pipeline v2 follow-on, and launch root-surface convergence; includes `WORKSTREAM.json`)
 - `docs/workstreams/external-texture-imports-v1/` — first 2026-02-13, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/external-texture-imports-v2-zero-low-copy/` — first 2026-02-16, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/executor-backed-mutation-surface-v1/` — first n/a, latest n/a, 8 markdown docs (closed narrow closeout lane for the default app-facing async submit/mutation split on `fret-mutation` + `fret`; keeps `fret-query` read-only and records why GenUI/Sonner executor-backed side flows stay recipe/app-owned exceptions)
@@ -2014,12 +2015,15 @@ Rule:
 - `docs/workstreams/fret-examples-build-latency-v1/` — first 2026-04-29, latest 2026-05-01, 67 markdown docs (maintenance lane for keeping examples source-policy gates out of the monolithic `fret-examples` test binary and preserving measured demo fast paths; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-interaction-kernel-v1/` — first 2026-02-10, latest 2026-03-09, 3 markdown docs
 - `docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/` — first 2026-03-06, latest 2026-03-12, 7 markdown docs
+- `docs/workstreams/fret-launch-root-surface-convergence-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on for keeping launch root surfaces and examples converged on `FnDriver` while treating direct `WinitAppDriver` usage as an explicit compatibility exception; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/` — first 2026-03-13, latest 2026-04-26, 5 markdown docs (maintenance lane for launch runner scheduling semantics and first-frame bootstrap evidence; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-mechanism-harness-v1/` — first 2026-05-11, latest 2026-05-11, 6 markdown docs (active mechanism-first harness lane for self-drawn UI layout/invalidation coverage, UI Gallery diag gates, findings evidence, and next-slice selection)
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-06, 3 markdown docs
+- `docs/workstreams/fret-node-low-level-adapter-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on for replacing the remaining retained node graph canvas/editor island with a named low-level canvas/viewport adapter; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-style-skinning-v1/` — first 2026-02-27, latest 2026-03-01, 7 markdown docs
 - `docs/workstreams/fret-node-style-skinning-v2/` — first 2026-03-01, latest 2026-03-01, 3 markdown docs
 - `docs/workstreams/fret-node-style-skinning-v3/` — first 2026-03-02, latest 2026-03-02, 6 markdown docs
+- `docs/workstreams/fret-ui-kit-taxonomy-boundaries-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on for making `fret-ui-kit` owner categories explicit across style, headless engines, primitives, declarative adapters, IMUI helpers, and recipes; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-ui-layout-architecture-audit-v1/` — first n/a, latest n/a, 8 markdown docs (closed audit lane that kept the current clean-geometry model, extracted proof helpers to `tree/layout/clean_geometry.rs`, and split retained layout orchestration follow-on work; includes `WORKSTREAM.json`)
 - `docs/workstreams/genui-json-render-v1/` — first 2026-02-14, latest 2026-03-02, 3 markdown docs
 - `docs/workstreams/generated-icon-presentation-defaults-v1/` — first n/a, latest n/a, 8 markdown docs (closed closeout record for explicit versioned `OriginalColors` vs `Mask` defaults in generated/imported icon packs without reopening acquisition or runtime icon contracts)
@@ -2245,6 +2249,7 @@ Rule:
 - `docs/workstreams/resource-loading-release-readiness-fearless-refactor-v1/` — first n/a, latest n/a, 3 markdown docs
 - `docs/workstreams/retained-bridge-exit-v1/` — first 2026-02-07, latest 2026-02-08, 2 markdown docs
 - `docs/workstreams/retained-layout-orchestration-v1/` — first n/a, latest n/a, 7 markdown docs (closed retained layout orchestration follow-on that landed the `Semantics` clean-geometry propagation fast path and split remaining `Pressable`/`Scroll`/`ViewCache` owners to future narrower lanes; includes `WORKSTREAM.json`)
+- `docs/workstreams/retained-public-surface-exit-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on to retained bridge exit that gates retained widget authoring root exports behind `fret-ui/compat-retained-widgets` while keeping `fret-node/compat-retained-canvas` explicit; includes `WORKSTREAM.json`)
 - `docs/workstreams/router-tanstack-parity-v1/` — first 2026-02-07, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/router-ui-v1/` — first 2026-02-08, latest 2026-03-12, 2 markdown docs
 - `docs/workstreams/router-v1/` — first 2026-02-06, latest 2026-03-11, 2 markdown docs
@@ -2299,12 +2304,14 @@ Rule:
 - `docs/workstreams/ui-editor-v1/` — first 2026-02-14, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-03, 8 markdown docs
 - `docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/` — first n/a, latest n/a, 19 markdown docs (active Frame Pipeline v2 execution-model refactor lane; includes `WORKSTREAM.json`, `PROGRESS.md`, and M4C boundary-hint API evidence)
+- `docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/` — first n/a, latest n/a, 5 markdown docs (active narrow follow-on for proving one additional Frame Pipeline v2 phase-contract surface without reopening the closed broad lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/ui-gallery-code-editor-canvas-paint-tail-attribution-v1/` — first n/a, latest n/a, 8 markdown docs (closed attribution lane; CPT-030/CPT-040 evidence shows the code-editor `Canvas` paint tail was caused by `fret-ui` positioned-container final sizing giving the inner windowed scroll a full-content viewport; includes `WORKSTREAM.json`)
 - `docs/workstreams/ui-gallery-fearless-refactor/` — first 2026-03-01, latest 2026-03-11, 7 markdown docs
 - `docs/workstreams/ui-gallery-view-cache-web-perf-stabilization-v1/` — first 2026-02-23, latest 2026-03-10, 3 markdown docs
 - `docs/workstreams/ui-gallery-visual-parity/` — first 2026-02-01, latest 2026-02-24, 2 markdown docs
 - `docs/workstreams/ui-launch-modularization-v1/` — first 2026-02-12, latest 2026-03-09, 3 markdown docs
 - `docs/workstreams/ui-memory-footprint-closure-v1/` — first 2026-03-04, latest 2026-03-10, 17 markdown docs
+- `docs/workstreams/ui-overlay-focus-dismissal-oracle-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on for a reusable overlay dismissal, focus restore, modal barrier, and nested focus-scope policy oracle; includes `WORKSTREAM.json`)
 - `docs/workstreams/ui-perf-paint-pass-breakdown-v1/` — first 2026-02-05, latest 2026-02-05, 2 markdown docs
 - `docs/workstreams/ui-perf-windows-rtx4090-smoothness-v1/` — first 2026-02-12, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/ui-perf-zed-smoothness-v1/` — first 2026-02-02, latest 2026-05-12, 6 markdown docs (active editor-grade performance contract lane; includes `WORKSTREAM.json`)

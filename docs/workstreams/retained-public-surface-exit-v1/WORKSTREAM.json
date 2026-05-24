@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "slug": "retained-public-surface-exit-v1",
+  "title": "Retained Public Surface Exit v1",
+  "status": "active",
+  "updated": "2026-05-25",
+  "scope_kind": "execution",
+  "follow_on_of": "retained-bridge-exit-v1",
+  "problem": "Make retained widget authoring explicit compatibility surface instead of the default `fret-ui` public authoring model, while keeping the remaining `fret-node` retained canvas island compiling behind its migration feature.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/retained-public-surface-exit-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/retained-public-surface-exit-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/retained-public-surface-exit-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/retained-public-surface-exit-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/retained-public-surface-exit-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Feature-gate retained widget authoring exports and prove the node compatibility island still compiles only when it opts into the compatibility feature.",
+    "commands": [
+      "cargo test -p fret-ui retained_widget_authoring_exports_are_compat_feature_gated",
+      "cargo check -p fret-node --features compat-retained-canvas"
+    ]
+  },
+  "gates": [
+    {
+      "name": "fret-ui-retained-export-policy",
+      "command": "cargo test -p fret-ui retained_widget_authoring_exports_are_compat_feature_gated"
+    },
+    {
+      "name": "fret-ui-default-check",
+      "command": "cargo check -p fret-ui"
+    },
+    {
+      "name": "fret-node-compat-retained-canvas-check",
+      "command": "cargo check -p fret-node --features compat-retained-canvas"
+    },
+    {
+      "name": "layering",
+      "command": "python3 tools/check_layering.py"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
+    "crates/fret-ui/src/lib.rs",
+    "ecosystem/fret-node/Cargo.toml",
+    "ecosystem/fret-node/src/lib.rs",
+    "docs/workstreams/retained-public-surface-exit-v1/EVIDENCE_AND_GATES.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue until the default root retained authoring exports are gated and follow-on adapter work has a named owner lane."
+  }
+}

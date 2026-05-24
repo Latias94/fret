@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "slug": "fret-launch-root-surface-convergence-v1",
+  "title": "Fret Launch Root Surface Convergence v1",
+  "status": "active",
+  "updated": "2026-05-25",
+  "scope_kind": "execution",
+  "follow_on_of": "fret-launch-app-surface-fearless-refactor-v1",
+  "problem": "Keep the launch root surface and examples converged on `FnDriver` as the preferred advanced route while treating direct `WinitAppDriver` usage as an explicit compatibility exception.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-launch-root-surface-convergence-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-launch-root-surface-convergence-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-launch-root-surface-convergence-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/fret-launch-root-surface-convergence-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/fret-launch-root-surface-convergence-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Run existing launch posture gates before changing root exports or examples.",
+    "commands": [
+      "python3 tools/gate_winit_driver_example_hook_coverage.py",
+      "python3 tools/gate_fn_driver_example_naming.py",
+      "python3 tools/gate_fret_launch_surface_contract.py"
+    ]
+  },
+  "gates": [
+    {
+      "name": "winit-driver-example-hook-coverage",
+      "command": "python3 tools/gate_winit_driver_example_hook_coverage.py"
+    },
+    {
+      "name": "fn-driver-example-naming",
+      "command": "python3 tools/gate_fn_driver_example_naming.py"
+    },
+    {
+      "name": "fret-launch-surface-contract",
+      "command": "python3 tools/gate_fret_launch_surface_contract.py"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/FINAL_STATUS.md",
+    "docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/EXPORT_INVENTORY.md",
+    "docs/workstreams/fret-launch-app-surface-fearless-refactor-v1/SURFACE_AUDIT.md",
+    "crates/fret-launch/src/",
+    "ecosystem/fret/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0109-user-facing-crate-surfaces-and-golden-path.md",
+    "docs/adr/0328-product-language-and-ecosystem-positioning.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue gate-first. Do not widen launch APIs before a surface inventory proves the gap."
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "slug": "ui-overlay-focus-dismissal-oracle-v1",
+  "title": "UI Overlay Focus Dismissal Oracle v1",
+  "status": "active",
+  "updated": "2026-05-25",
+  "scope_kind": "execution",
+  "follow_on_of": "ui-focus-overlay-fearless-refactor-v1",
+  "problem": "Create a reusable policy oracle for overlay dismissal, focus restore, modal barriers, and nested focus scopes so Radix/Base UI behavior does not drift across recipes and diagnostics scripts.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/ui-overlay-focus-dismissal-oracle-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-overlay-focus-dismissal-oracle-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-overlay-focus-dismissal-oracle-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/ui-overlay-focus-dismissal-oracle-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/ui-overlay-focus-dismissal-oracle-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from existing overlay/focus tests and turn one behavior family into a fixture-backed oracle.",
+    "commands": [
+      "cargo test -p fret-ui outside_press",
+      "cargo test -p fret-ui focus_scope"
+    ]
+  },
+  "gates": [
+    {
+      "name": "outside-press",
+      "command": "cargo test -p fret-ui outside_press"
+    },
+    {
+      "name": "focus-scope",
+      "command": "cargo test -p fret-ui focus_scope"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/ui-focus-overlay-fearless-refactor-v1/README.md",
+    "crates/fret-ui/src/tree/tests/outside_press.rs",
+    "crates/fret-ui/src/declarative/tests/interactions/dismissible.rs",
+    "tools/diag-scripts/ui-gallery/overlay/"
+  ],
+  "adr_refs": [
+    "docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md",
+    "docs/adr/0068-focus-traversal-and-focus-scopes.md",
+    "docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue above runtime mechanisms. The oracle should validate policy outcomes without moving policy into `crates/fret-ui`."
+  }
+}

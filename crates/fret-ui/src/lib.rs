@@ -90,13 +90,50 @@ pub use tree::{
     OverlayRootOptions, PaintCachePolicy, UiDebugFrameStats, UiDebugHitTest,
     UiDebugHoverDeclarativeInvalidationHotspot, UiDebugLayerInfo, UiLayerId, UiTree,
 };
-pub use widget::CommandAvailability;
-pub use widget::CommandAvailabilityCx;
-pub use widget::CommandCx;
-pub use widget::EventCx;
-pub use widget::Invalidation;
-pub use widget::LayoutCx;
-pub use widget::PaintCx;
-pub use widget::PrepaintCx;
-pub use widget::SemanticsCx;
-pub use widget::Widget;
+pub use widget::{CommandAvailability, Invalidation};
+/// Compatibility-only retained widget authoring surface.
+///
+/// Retained widgets remain an internal runtime mechanism for `fret-ui`. External crates that still
+/// host a legacy retained implementation must opt into `compat-retained-widgets`; default
+/// ecosystem authoring should use declarative elements instead.
+#[cfg(any(test, feature = "compat-retained-widgets"))]
+pub use widget::{
+    CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx, PrepaintCx, SemanticsCx, Widget,
+};
+
+#[cfg(test)]
+mod public_surface_policy_tests {
+    const LIB_RS: &str = include_str!("lib.rs");
+
+    fn public_surface_before_tests() -> &'static str {
+        LIB_RS
+            .split("#[cfg(test)]\nmod public_surface_policy_tests")
+            .next()
+            .unwrap_or(LIB_RS)
+    }
+
+    #[test]
+    fn retained_widget_authoring_exports_are_compat_feature_gated() {
+        let public_surface = public_surface_before_tests();
+        assert!(public_surface.contains("pub use widget::{CommandAvailability, Invalidation};"));
+        assert!(public_surface.contains(
+            "#[cfg(any(test, feature = \"compat-retained-widgets\"))]\npub use widget::{\n    CommandAvailabilityCx, CommandCx, EventCx, LayoutCx, PaintCx, PrepaintCx, SemanticsCx, Widget,\n};"
+        ));
+
+        for forbidden in [
+            "pub use widget::CommandAvailabilityCx;",
+            "pub use widget::CommandCx;",
+            "pub use widget::EventCx;",
+            "pub use widget::LayoutCx;",
+            "pub use widget::PaintCx;",
+            "pub use widget::PrepaintCx;",
+            "pub use widget::SemanticsCx;",
+            "pub use widget::Widget;",
+        ] {
+            assert!(
+                !public_surface.contains(forbidden),
+                "retained widget authoring export must stay behind compat-retained-widgets: {forbidden}"
+            );
+        }
+    }
+}

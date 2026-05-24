@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "slug": "ui-frame-pipeline-v2-phase-contract-followon-v1",
+  "title": "UI Frame Pipeline v2 Phase Contract Follow-On v1",
+  "status": "active",
+  "updated": "2026-05-25",
+  "scope_kind": "execution",
+  "follow_on_of": "ui-frame-pipeline-v2-fearless-refactor-v1",
+  "problem": "Extend the accepted Frame Pipeline v2 contract with one narrow proof that build, layout, prepaint, paint, and commit responsibilities remain explicit outside the original closeout surfaces.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/ui-frame-pipeline-v2-phase-contract-followon-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Pick one non-code-editor proof surface and add a phase-contract diagnostic or test gate.",
+    "commands": [
+      "cargo test -p fret-ui view_boundary",
+      "cargo test -p fret-ui paint_cache"
+    ]
+  },
+  "gates": [
+    {
+      "name": "view-boundary",
+      "command": "cargo test -p fret-ui view_boundary"
+    },
+    {
+      "name": "paint-cache",
+      "command": "cargo test -p fret-ui paint_cache"
+    }
+  ],
+  "evidence": [
+    "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md",
+    "docs/workstreams/ui-frame-pipeline-v2-fearless-refactor-v1/FINAL_CLOSEOUT_AUDIT_2026-05-14.md",
+    "crates/fret-ui/src/frame_pipeline/",
+    "crates/fret-ui/src/tree/"
+  ],
+  "adr_refs": [
+    "docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue as a narrow follow-on. Do not reopen the closed global Frame Pipeline v2 lane."
+  }
+}

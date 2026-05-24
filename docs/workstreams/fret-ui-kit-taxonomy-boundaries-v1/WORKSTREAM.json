@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "slug": "fret-ui-kit-taxonomy-boundaries-v1",
+  "title": "Fret UI Kit Taxonomy Boundaries v1",
+  "status": "active",
+  "updated": "2026-05-25",
+  "scope_kind": "execution",
+  "follow_on_of": "imui-kit-owner-split-v1",
+  "problem": "Make `fret-ui-kit` owner categories explicit so style, headless engines, primitives, declarative adapters, IMUI helpers, and recipes do not trade policy/mechanism responsibilities by accident.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-ui-kit-taxonomy-boundaries-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-ui-kit-taxonomy-boundaries-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-ui-kit-taxonomy-boundaries-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/fret-ui-kit-taxonomy-boundaries-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/fret-ui-kit-taxonomy-boundaries-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Audit kit modules by owner category, then move one confused owner without widening runtime contracts.",
+    "commands": [
+      "cargo check -p fret-ui-kit --features imui",
+      "python3 tools/gate_imui_workstream_source.py"
+    ]
+  },
+  "gates": [
+    {
+      "name": "kit-imui-check",
+      "command": "cargo check -p fret-ui-kit --features imui"
+    },
+    {
+      "name": "imui-workstream-source",
+      "command": "python3 tools/gate_imui_workstream_source.py"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/fret-ui-kit-taxonomy-boundaries-v1/DESIGN.md",
+    "docs/shadcn-declarative-progress.md",
+    "ecosystem/fret-ui-kit/src/"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0154-ecosystem-crate-taxonomy-glue-and-ui-kit-split-v1.md",
+    "docs/adr/0330-retained-runtime-internal-and-compat-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue with audit-first owner moves. Public API widening needs a separate proof."
+  }
+}

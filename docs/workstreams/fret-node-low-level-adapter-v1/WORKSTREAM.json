@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "slug": "fret-node-low-level-adapter-v1",
+  "title": "Fret Node Low-Level Adapter v1",
+  "status": "active",
+  "updated": "2026-05-25",
+  "scope_kind": "execution",
+  "follow_on_of": "fret-node-declarative-fearless-refactor-v1",
+  "problem": "Replace the remaining retained node graph canvas/editor island with a named low-level canvas/viewport adapter so `fret-node` no longer depends on retained widget authoring as its implementation escape hatch.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-node-low-level-adapter-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-low-level-adapter-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-low-level-adapter-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/fret-node-low-level-adapter-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/fret-node-low-level-adapter-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Start from the compatibility island and prove default node graph UI remains declarative while retained canvas still compiles only through the explicit compat feature.",
+    "commands": [
+      "cargo check -p fret-node",
+      "cargo check -p fret-node --features compat-retained-canvas"
+    ]
+  },
+  "gates": [
+    {
+      "name": "node-default-check",
+      "command": "cargo check -p fret-node"
+    },
+    {
+      "name": "node-retained-compat-check",
+      "command": "cargo check -p fret-node --features compat-retained-canvas"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/fret-node-low-level-adapter-v1/DESIGN.md",
+    "docs/workstreams/retained-public-surface-exit-v1/DESIGN.md",
+    "ecosystem/fret-node/Cargo.toml",
+    "ecosystem/fret-node/src/ui/canvas/widget.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
+    "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md",
+    "docs/adr/0320-node-graph-geometry-style-surface-v1.md",
+    "docs/adr/0321-node-graph-per-entity-geometry-overrides-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue with one adapter seam at a time. Do not broaden this lane into a full node graph product rewrite."
+  }
+}

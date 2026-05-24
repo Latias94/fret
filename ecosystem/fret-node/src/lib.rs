@@ -607,7 +607,9 @@ mod surface_policy_tests {
         assert!(!CARGO_TOML.contains("\nimui = ["));
         assert!(!CARGO_TOML.contains("fret-authoring"));
         assert!(!CARGO_TOML.contains("compat-retained-bridge"));
-        assert!(CARGO_TOML.contains("compat-retained-canvas = [\"fret-ui\"]"));
+        assert!(CARGO_TOML.contains(
+            "compat-retained-canvas = [\"fret-ui\", \"fret-ui/compat-retained-widgets\"]"
+        ));
         assert!(
             !CARGO_TOML.contains("fret-ui/unstable-retained-bridge"),
             "fret-node compat-retained-canvas must no longer enable the deleted fret-ui bridge"
@@ -2790,7 +2792,7 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn retained_canvas_widget_trait_stays_on_stable_widget_export() {
+    fn retained_canvas_widget_trait_stays_on_feature_gated_widget_export() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let ui_root = manifest_dir.join("src/ui");
         let mut files = Vec::new();
@@ -2807,13 +2809,13 @@ mod surface_policy_tests {
 
         assert!(
             offenders.is_empty(),
-            "widget trait imports must use the stable fret_ui::Widget export, not the compat facade:\n{}",
+            "widget trait imports must use the feature-gated fret_ui::Widget export, not the deleted compat facade:\n{}",
             offenders.join("\n")
         );
     }
 
     #[test]
-    fn retained_canvas_command_contexts_stay_on_stable_command_export() {
+    fn retained_canvas_command_contexts_stay_on_feature_gated_command_export() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let ui_root = manifest_dir.join("src/ui");
         let mut files = Vec::new();
@@ -2830,13 +2832,13 @@ mod surface_policy_tests {
 
         assert!(
             offenders.is_empty(),
-            "command ctx imports must use the stable fret_ui::CommandCx export, not the compat facade:\n{}",
+            "command ctx imports must use the feature-gated fret_ui::CommandCx export, not the deleted compat facade:\n{}",
             offenders.join("\n")
         );
     }
 
     #[test]
-    fn retained_canvas_event_contexts_stay_on_stable_event_export() {
+    fn retained_canvas_event_contexts_stay_on_feature_gated_event_export() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let ui_root = manifest_dir.join("src/ui");
         let mut files = Vec::new();
@@ -2853,13 +2855,13 @@ mod surface_policy_tests {
 
         assert!(
             offenders.is_empty(),
-            "event ctx imports must use the stable fret_ui::EventCx export, not the compat facade:\n{}",
+            "event ctx imports must use the feature-gated fret_ui::EventCx export, not the deleted compat facade:\n{}",
             offenders.join("\n")
         );
     }
 
     #[test]
-    fn retained_canvas_layout_contexts_stay_on_stable_layout_export() {
+    fn retained_canvas_layout_contexts_stay_on_feature_gated_layout_export() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let ui_root = manifest_dir.join("src/ui");
         let mut files = Vec::new();
@@ -2876,13 +2878,13 @@ mod surface_policy_tests {
 
         assert!(
             offenders.is_empty(),
-            "layout ctx imports must use the stable fret_ui::LayoutCx export, not the compat facade:\n{}",
+            "layout ctx imports must use the feature-gated fret_ui::LayoutCx export, not the deleted compat facade:\n{}",
             offenders.join("\n")
         );
     }
 
     #[test]
-    fn retained_canvas_paint_contexts_stay_on_stable_paint_export() {
+    fn retained_canvas_paint_contexts_stay_on_feature_gated_paint_export() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let ui_root = manifest_dir.join("src/ui");
         let mut files = Vec::new();
@@ -2899,13 +2901,13 @@ mod surface_policy_tests {
 
         assert!(
             offenders.is_empty(),
-            "paint ctx imports must use the stable fret_ui::PaintCx export, not the compat facade:\n{}",
+            "paint ctx imports must use the feature-gated fret_ui::PaintCx export, not the deleted compat facade:\n{}",
             offenders.join("\n")
         );
     }
 
     #[test]
-    fn retained_canvas_frame_contexts_stay_on_stable_frame_export() {
+    fn retained_canvas_frame_contexts_stay_on_feature_gated_frame_export() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let ui_root = manifest_dir.join("src/ui");
         let mut files = Vec::new();
@@ -2922,7 +2924,7 @@ mod surface_policy_tests {
 
         assert!(
             offenders.is_empty(),
-            "frame ctx imports must use the stable fret_ui::PrepaintCx / fret_ui::SemanticsCx exports, not the compat facade:\n{}",
+            "frame ctx imports must use the feature-gated fret_ui::PrepaintCx / fret_ui::SemanticsCx exports, not the deleted compat facade:\n{}",
             offenders.join("\n")
         );
     }
