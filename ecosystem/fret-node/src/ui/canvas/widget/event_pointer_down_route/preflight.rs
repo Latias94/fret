@@ -1,8 +1,24 @@
 use super::*;
 
+pub(in super::super) trait PointerDownPreflightCx<H: UiHost>:
+    searcher_activation::SearcherPointerDownCx<H>
+    + pointer_down_close_button_cx::PointerDownCloseButtonCx<H>
+    + pointer_down_double_click_cx::PointerDownDoubleClickCx<H>
+{
+}
+
+impl<H, T> PointerDownPreflightCx<H> for T
+where
+    H: UiHost,
+    T: searcher_activation::SearcherPointerDownCx<H>
+        + pointer_down_close_button_cx::PointerDownCloseButtonCx<H>
+        + pointer_down_double_click_cx::PointerDownDoubleClickCx<H>,
+{
+}
+
 pub(super) fn handle_pointer_down_preflight<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl PointerDownPreflightCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     button: MouseButton,

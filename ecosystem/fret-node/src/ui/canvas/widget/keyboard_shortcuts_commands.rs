@@ -1,7 +1,7 @@
 use super::*;
 
-pub(super) fn handle_modifier_shortcuts<H: UiHost>(
-    cx: &mut EventCx<'_, H>,
+pub(super) fn handle_modifier_shortcuts(
+    cx: &mut impl super::keyboard_shortcuts::KeyboardShortcutCommandSink,
     snapshot: &ViewSnapshot,
     key: fret_core::KeyCode,
     modifiers: fret_core::Modifiers,
@@ -15,20 +15,20 @@ pub(super) fn handle_modifier_shortcuts<H: UiHost>(
         key,
         modifiers,
     ) {
-        super::keyboard_shortcuts::dispatch_command(cx, command);
+        cx.dispatch_keyboard_command(command);
         return true;
     }
 
     let Some(command) = super::keyboard_shortcuts_map::modifier_command(key, modifiers) else {
         return false;
     };
-    super::keyboard_shortcuts::dispatch_command(cx, command);
+    cx.dispatch_keyboard_command(command);
     true
 }
 
-pub(super) fn handle_tab_navigation<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_tab_navigation<M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::keyboard_shortcuts::KeyboardShortcutCommandSink,
     snapshot: &ViewSnapshot,
     key: fret_core::KeyCode,
     modifiers: fret_core::Modifiers,
@@ -46,12 +46,12 @@ pub(super) fn handle_tab_navigation<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 
     let command = super::keyboard_shortcuts_map::plain_tab_focus_command(modifiers);
-    super::keyboard_shortcuts::dispatch_command(cx, command);
+    cx.dispatch_keyboard_command(command);
     true
 }
 
-pub(super) fn handle_arrow_nudging<H: UiHost>(
-    cx: &mut EventCx<'_, H>,
+pub(super) fn handle_arrow_nudging(
+    cx: &mut impl super::keyboard_shortcuts::KeyboardShortcutCommandSink,
     snapshot: &ViewSnapshot,
     key: fret_core::KeyCode,
     modifiers: fret_core::Modifiers,
@@ -71,12 +71,12 @@ pub(super) fn handle_arrow_nudging<H: UiHost>(
     let Some(command) = super::keyboard_shortcuts_map::arrow_nudge_command(key, modifiers) else {
         return true;
     };
-    super::keyboard_shortcuts::dispatch_command(cx, command);
+    cx.dispatch_keyboard_command(command);
     true
 }
 
-pub(super) fn handle_delete_shortcut<H: UiHost>(
-    cx: &mut EventCx<'_, H>,
+pub(super) fn handle_delete_shortcut(
+    cx: &mut impl super::keyboard_shortcuts::KeyboardShortcutCommandSink,
     snapshot: &ViewSnapshot,
     key: fret_core::KeyCode,
 ) -> bool {
@@ -87,6 +87,6 @@ pub(super) fn handle_delete_shortcut<H: UiHost>(
         return false;
     }
 
-    super::keyboard_shortcuts::dispatch_command(cx, CMD_NODE_GRAPH_DELETE_SELECTION);
+    cx.dispatch_keyboard_command(CMD_NODE_GRAPH_DELETE_SELECTION);
     true
 }

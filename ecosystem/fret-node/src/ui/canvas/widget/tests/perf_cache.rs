@@ -11,7 +11,7 @@ use fret_runtime::ModelId;
 use fret_ui::Invalidation;
 use fret_ui::LayoutOverflowContext;
 use fret_ui::UiTree;
-use fret_ui::retained_bridge::Widget as _;
+use fret_ui::Widget as _;
 
 use crate::core::{
     CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
@@ -575,7 +575,7 @@ fn paint_once(
     let mut observe_model = |_id: ModelId, _inv: Invalidation| {};
     let mut observe_global = |_id: TypeId, _inv: Invalidation| {};
 
-    let mut cx = fret_ui::retained_bridge::PaintCx::new(
+    let mut cx = fret_ui::PaintCx::new(
         host,
         tree,
         UiNodeId::default(),
@@ -606,7 +606,7 @@ fn layout_once(
     let mut observe_model = |_id: ModelId, _inv: Invalidation| {};
     let mut observe_global = |_id: TypeId, _inv: Invalidation| {};
 
-    let mut cx = fret_ui::retained_bridge::LayoutCx {
+    let mut cx = fret_ui::LayoutCx {
         app: host,
         tree,
         node: UiNodeId::default(),

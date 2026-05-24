@@ -4,6 +4,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn handle_pointer_wheel<H: UiHost, Cx>(
         &mut self,
         cx: &mut Cx,
+        platform: fret_runtime::Platform,
         snapshot: &ViewSnapshot,
         position: Point,
         delta: Point,
@@ -16,7 +17,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             self, snapshot, modifiers,
         );
         super::event_pointer_wheel_route::route_pointer_wheel(
-            self, cx, snapshot, position, delta, modifiers, zoom,
+            self, cx, platform, snapshot, position, delta, modifiers, zoom,
         );
     }
 

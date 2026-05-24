@@ -1,13 +1,14 @@
 use fret_core::Point;
 use fret_ui::UiHost;
 
+use super::super::{LeftClickCx, capture_pointer_and_invalidate_paint};
 use crate::core::{CanvasRect, GroupId};
 use crate::ui::canvas::state::{PendingGroupDrag, PendingGroupResize};
 use crate::ui::canvas::widget::*;
 
 pub(super) fn begin_group_resize<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     position: Point,
     group: GroupId,
     rect: CanvasRect,
@@ -23,7 +24,7 @@ pub(super) fn begin_group_resize<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn begin_group_drag<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     position: Point,
     group: GroupId,
     rect: CanvasRect,
@@ -39,7 +40,6 @@ pub(super) fn begin_group_drag<H: UiHost, M: NodeGraphCanvasMiddleware>(
     finish_group_pointer_down(cx);
 }
 
-fn finish_group_pointer_down<H: UiHost>(cx: &mut fret_ui::retained_bridge::EventCx<'_, H>) {
-    cx.capture_pointer(cx.node);
-    super::super::super::paint_invalidation::invalidate_paint(cx);
+fn finish_group_pointer_down<H: UiHost>(cx: &mut impl LeftClickCx<H>) {
+    capture_pointer_and_invalidate_paint(cx);
 }

@@ -1,25 +1,31 @@
 use fret_core::{Point, Rect};
 use fret_ui::UiHost;
 
+use super::super::super::{LeftClickCx, capture_pointer_and_invalidate_paint};
 use crate::core::{CanvasSize, NodeId as GraphNodeId};
 use crate::ui::canvas::state::{NodeResizeHandle, PendingNodeResize};
-use crate::ui::canvas::widget::{
-    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, paint_invalidation::invalidate_paint,
-};
+use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 pub(super) fn arm_pending_node_resize<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     node: GraphNodeId,
     rect: Rect,
     handle: NodeResizeHandle,
     position: Point,
     zoom: f32,
 ) {
-    let pending = pending_node_resize_from_hit(canvas, cx.app, node, rect, handle, position, zoom);
+    let pending = pending_node_resize_from_hit(
+        canvas,
+        cx.left_click_host(),
+        node,
+        rect,
+        handle,
+        position,
+        zoom,
+    );
     canvas.interaction.pending_node_resize = Some(pending);
-    cx.capture_pointer(cx.node);
-    invalidate_paint(cx);
+    capture_pointer_and_invalidate_paint(cx);
 }
 
 fn pending_node_resize_from_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(

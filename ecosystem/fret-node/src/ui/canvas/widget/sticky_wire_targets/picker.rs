@@ -1,11 +1,12 @@
 use fret_core::{AppWindowId, Point};
 use fret_ui::UiHost;
 
+use super::super::widget_tail::{PointerCaptureReleaseCx, WidgetHandledCx};
 use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::core::CanvasPoint;
 
-pub(super) trait StickyWireTargetPickerCx<H>:
-    super::super::widget_tail::WidgetHandledCx<H>
+pub(in super::super) trait StickyWireTargetPickerCx<H>:
+    PointerCaptureReleaseCx<H> + WidgetHandledCx<H>
 {
     fn host(&mut self) -> &mut H;
     fn window(&self) -> Option<AppWindowId>;
@@ -43,7 +44,7 @@ fn finish_sticky_wire_target_picker<H>(
 #[cfg(test)]
 mod tests {
     use super::super::super::widget_tail::{
-        WidgetHandledCx, WidgetPaintInvalidationCx, WidgetRedrawCx,
+        PointerCaptureReleaseCx, WidgetHandledCx, WidgetPaintInvalidationCx, WidgetRedrawCx,
     };
     use super::*;
 
@@ -54,6 +55,7 @@ mod tests {
     struct StubCx {
         host: StubHost,
         window: Option<fret_core::AppWindowId>,
+        released: bool,
         stopped: bool,
         redraws: usize,
         paint_invalidations: usize,
@@ -77,6 +79,12 @@ mod tests {
         }
     }
 
+    impl PointerCaptureReleaseCx<StubHost> for StubCx {
+        fn release_pointer_capture(&mut self) {
+            self.released = true;
+        }
+    }
+
     impl StickyWireTargetPickerCx<StubHost> for StubCx {
         fn host(&mut self) -> &mut StubHost {
             &mut self.host
@@ -93,6 +101,7 @@ mod tests {
 
         finish_sticky_wire_target_picker(&mut cx);
 
+        assert!(!cx.released);
         assert!(cx.stopped);
         assert_eq!(cx.redraws, 1);
         assert_eq!(cx.paint_invalidations, 1);

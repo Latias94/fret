@@ -34,11 +34,11 @@ ui = ["fret-ui"]
 # Enables integration helpers for `crates/fret-ui` (canvas widget, action hooks, styling surfaces).
 fret-ui = ["dep:fret-ui", "dep:fret-runtime", "dep:fret-canvas", "dep:fret-ui-kit"]
 
-# Compatibility: opt into retained-bridge-backed UI surfaces.
+# Compatibility: opt into the legacy retained canvas implementation island.
 #
-# This is intentionally not part of the default feature set; the long-term direction is
-# declarative-first authoring with retained kept as a tightly scoped, delete-planned escape hatch.
-compat-retained-canvas = ["fret-ui", "fret-ui/unstable-retained-bridge"]
+# This is intentionally not part of the default feature set. It no longer enables the deleted
+# fret-ui retained bridge; the remaining code consumes stable fret-ui widget/context exports.
+compat-retained-canvas = ["fret-ui"]
 
 # Opt into the `rstar` spatial index backend for large graphs.
 canvas-rstar = ["fret-ui", "fret-canvas/rstar"]

@@ -23,7 +23,7 @@ use crate::ui::canvas::state::{
     PendingWireDrag, WireDragKind,
 };
 use crate::ui::canvas::state::{GroupResize, NodeDrag, NodeResize, NodeResizeHandle};
-use fret_ui::{Invalidation, retained_bridge::Widget as _};
+use fret_ui::{Invalidation, Widget as _};
 
 fn make_test_graph_edge_reconnect() -> (Graph, EdgeId, PortId, PortId) {
     let mut graph = Graph::new(GraphId::new());

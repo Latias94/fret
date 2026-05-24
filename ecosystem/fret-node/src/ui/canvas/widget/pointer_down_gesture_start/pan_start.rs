@@ -2,7 +2,7 @@ use crate::ui::canvas::widget::*;
 
 pub(super) fn handle_pan_start_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::PointerDownStartCx<H, M>,
     snapshot: &ViewSnapshot,
     position: Point,
     button: MouseButton,

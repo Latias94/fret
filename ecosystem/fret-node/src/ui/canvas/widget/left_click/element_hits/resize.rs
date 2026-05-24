@@ -3,13 +3,14 @@ mod state;
 use fret_core::{Point, Rect};
 use fret_ui::UiHost;
 
+use super::super::LeftClickCx;
 use crate::core::NodeId as GraphNodeId;
 use crate::ui::canvas::state::{NodeResizeHandle, ViewSnapshot};
 use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 pub(super) fn handle_resize_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     node: GraphNodeId,
@@ -20,7 +21,7 @@ pub(super) fn handle_resize_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     super::super::super::press_session::prepare_for_resize_hit(&mut canvas.interaction);
 
     if snapshot.interaction.elements_selectable {
-        canvas.update_view_state(cx.app, |s| {
+        canvas.update_view_state(cx.left_click_host(), |s| {
             super::super::node_selection::apply_node_hit_selection(s, node)
         });
     }

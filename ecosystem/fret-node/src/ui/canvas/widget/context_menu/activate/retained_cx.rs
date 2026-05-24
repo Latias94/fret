@@ -1,4 +1,4 @@
-use fret_ui::{UiHost, retained_bridge::EventCx};
+use fret_ui::{EventCx, UiHost};
 
 use crate::core::GroupId;
 use crate::ui::canvas::widget::*;

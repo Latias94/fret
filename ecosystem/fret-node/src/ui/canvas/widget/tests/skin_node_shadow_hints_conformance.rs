@@ -5,7 +5,7 @@ use fret_core::{
     Color, EffectMode, EffectQuality, EffectStep, Point, Px, Rect, Scene, SceneOp, Size,
     Transform2D,
 };
-use fret_ui::retained_bridge::Widget as _;
+use fret_ui::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::ui::{
@@ -27,7 +27,7 @@ fn paint_once(
     let mut observe_model = |_id, _inv: Invalidation| {};
     let mut observe_global = |_id, _inv: Invalidation| {};
 
-    let mut cx = fret_ui::retained_bridge::PaintCx::new(
+    let mut cx = fret_ui::PaintCx::new(
         host,
         tree,
         fret_core::NodeId::default(),

@@ -9,7 +9,7 @@ use crate::ui::canvas::state::ViewSnapshot;
 
 pub(super) fn handle_sticky_wire_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl super::sticky_wire_targets::StickyWireTargetPickerCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     button: MouseButton,
@@ -26,7 +26,7 @@ pub(super) fn handle_sticky_wire_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
     };
 
     let (geom, index, target) =
-        target::sticky_wire_target(canvas, cx.app, snapshot, position, zoom);
+        target::sticky_wire_target(canvas, cx.host(), snapshot, position, zoom);
 
     if let Some(target_port) = target {
         if super::sticky_wire_connect::handle_sticky_wire_connect_target(

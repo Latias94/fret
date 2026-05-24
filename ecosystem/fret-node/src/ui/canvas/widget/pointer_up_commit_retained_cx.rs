@@ -1,6 +1,6 @@
 use fret_core::AppWindowId;
+use fret_ui::EventCx;
 use fret_ui::UiHost;
-use fret_ui::retained_bridge::EventCx;
 
 use super::pointer_up_commit_cx::PointerUpCommitCx;
 

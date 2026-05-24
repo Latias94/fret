@@ -1,5 +1,5 @@
 use fret_runtime::CommandId;
-use fret_ui::retained_bridge::Widget as _;
+use fret_ui::Widget as _;
 
 use crate::core::{CanvasPoint, CanvasSize};
 use crate::ui::commands::{

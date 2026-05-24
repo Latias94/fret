@@ -1,6 +1,6 @@
 use fret_core::Rect;
+use fret_ui::EventCx;
 use fret_ui::UiHost;
-use fret_ui::retained_bridge::EventCx;
 
 use super::group_preview_move_cx::GroupPreviewMoveCx;
 

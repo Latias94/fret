@@ -1,15 +1,14 @@
 use fret_core::{Modifiers, Point};
 use fret_ui::UiHost;
 
+use super::super::super::{LeftClickCx, capture_pointer_and_invalidate_paint};
 use crate::core::EdgeId;
 use crate::ui::canvas::state::{EdgeDrag, PendingEdgeInsertDrag};
-use crate::ui::canvas::widget::{
-    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, paint_invalidation::invalidate_paint,
-};
+use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 pub(super) fn arm_edge_hit_drag<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     edge_insert_on_alt_drag: bool,
     modifiers: Modifiers,
     edge: EdgeId,
@@ -30,8 +29,7 @@ pub(super) fn arm_edge_hit_drag<H: UiHost, M: NodeGraphCanvasMiddleware>(
             start_pos: position,
         });
     }
-    cx.capture_pointer(cx.node);
-    invalidate_paint(cx);
+    capture_pointer_and_invalidate_paint(cx);
 }
 
 fn should_arm_pending_edge_insert_drag(

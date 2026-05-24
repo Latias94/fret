@@ -2,15 +2,15 @@ use crate::ui::canvas::widget::*;
 
 pub(super) fn edge_double_click_target<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl pointer_down_double_click_cx::PointerDownDoubleClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
 ) -> Option<EdgeId> {
-    let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
+    let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
     canvas
         .graph
-        .read_ref(cx.app, |graph| {
+        .read_ref(cx.host(), |graph| {
             let mut scratch = HitTestScratch::default();
             let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
 

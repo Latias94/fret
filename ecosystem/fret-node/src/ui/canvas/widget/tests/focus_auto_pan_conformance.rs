@@ -1,7 +1,7 @@
 use fret_runtime::CommandId;
 
 use fret_core::{Point, Px, Rect, Size};
-use fret_ui::retained_bridge::Widget as _;
+use fret_ui::Widget as _;
 
 use crate::core::CanvasPoint;
 

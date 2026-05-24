@@ -190,6 +190,11 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_commit/resize/group.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_COMMIT_RESIZE_NODE_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_commit/resize/node.rs");
+    const UI_CANVAS_WIDGET_STICKY_WIRE_RS: &str = include_str!("ui/canvas/widget/sticky_wire.rs");
+    const UI_CANVAS_WIDGET_STICKY_WIRE_CONNECT_RS: &str =
+        include_str!("ui/canvas/widget/sticky_wire_connect.rs");
+    const UI_CANVAS_WIDGET_WIRE_DRAG_HELPERS_RS: &str =
+        include_str!("ui/canvas/widget/wire_drag_helpers.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_CONNECT_FINISH_RS: &str =
         include_str!("ui/canvas/widget/sticky_wire_connect/finish.rs");
     const UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_DRAG_TAIL_RS: &str =
@@ -202,6 +207,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/edge_insert_drag/pending/activate.rs");
     const UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_PRELUDE_RS: &str =
         include_str!("ui/canvas/widget/edge_insert_drag/prelude.rs");
+    const UI_CANVAS_WIDGET_EDGE_INSERT_PRELUDE_RS: &str =
+        include_str!("ui/canvas/widget/edge_insert/prelude.rs");
+    const UI_CANVAS_WIDGET_EDGE_INSERT_INSERT_RS: &str =
+        include_str!("ui/canvas/widget/edge_insert/insert.rs");
+    const UI_CANVAS_WIDGET_EDGE_INSERT_CONTEXT_MENU_RS: &str =
+        include_str!("ui/canvas/widget/edge_insert/context_menu.rs");
     const UI_CANVAS_WIDGET_INSERT_NODE_DRAG_RS: &str =
         include_str!("ui/canvas/widget/insert_node_drag/mod.rs");
     const UI_CANVAS_WIDGET_INSERT_NODE_DRAG_PENDING_RS: &str =
@@ -224,6 +235,15 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/event_pointer_up/dispatch.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_UP_RS: &str =
         include_str!("ui/canvas/widget/event_router_pointer_button/up.rs");
+    const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_MOVE_RS: &str =
+        include_str!("ui/canvas/widget/event_router_pointer_button/move_event.rs");
+    const UI_CANVAS_WIDGET_EVENT_ROUTER_RS: &str = include_str!("ui/canvas/widget/event_router.rs");
+    const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_RS: &str =
+        include_str!("ui/canvas/widget/event_router_pointer.rs");
+    const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_RS: &str =
+        include_str!("ui/canvas/widget/event_router_pointer_button.rs");
+    const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_DOWN_RS: &str =
+        include_str!("ui/canvas/widget/event_router_pointer_button/down.rs");
     const UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_RS: &str =
         include_str!("ui/canvas/widget/event_pointer_move.rs");
     const UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_RELEASE_RS: &str =
@@ -256,6 +276,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/event_pointer_wheel.rs");
     const UI_CANVAS_WIDGET_EVENT_POINTER_WHEEL_ROUTE_RS: &str =
         include_str!("ui/canvas/widget/event_pointer_wheel_route.rs");
+    const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_WHEEL_RS: &str =
+        include_str!("ui/canvas/widget/event_router_pointer_wheel.rs");
+    const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_WHEEL_CX_RS: &str =
+        include_str!("ui/canvas/widget/event_router_pointer_wheel_cx.rs");
     const UI_CANVAS_WIDGET_POINTER_WHEEL_CX_RS: &str =
         include_str!("ui/canvas/widget/pointer_wheel_cx.rs");
     const UI_CANVAS_WIDGET_POINTER_WHEEL_MOTION_RS: &str =
@@ -307,6 +331,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/hover_move_cx.rs");
     const UI_CANVAS_WIDGET_CANCEL_CLEANUP_RS: &str =
         include_str!("ui/canvas/widget/cancel_cleanup.rs");
+    const UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_RS: &str =
+        include_str!("ui/canvas/widget/sticky_wire_targets.rs");
     const UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_PICKER_RS: &str =
         include_str!("ui/canvas/widget/sticky_wire_targets/picker.rs");
     const UI_CANVAS_WIDGET_GROUP_DRAG_RS: &str = include_str!("ui/canvas/widget/group_drag.rs");
@@ -317,6 +343,34 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/group_resize/tail.rs");
     const UI_CANVAS_WIDGET_GROUP_PREVIEW_MOVE_CX_RS: &str =
         include_str!("ui/canvas/widget/group_preview_move_cx.rs");
+    const UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS: &str =
+        include_str!("ui/canvas/widget/keyboard_shortcuts.rs");
+    const UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/keyboard_shortcuts_retained_cx.rs");
+    const UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_COMMANDS_RS: &str =
+        include_str!("ui/canvas/widget/keyboard_shortcuts_commands.rs");
+    const UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_OVERLAY_RS: &str =
+        include_str!("ui/canvas/widget/keyboard_shortcuts_overlay.rs");
+    const UI_CANVAS_WIDGET_EVENT_KEYBOARD_ROUTE_RS: &str =
+        include_str!("ui/canvas/widget/event_keyboard_route.rs");
+    const UI_CANVAS_WIDGET_EVENT_KEYBOARD_RS: &str =
+        include_str!("ui/canvas/widget/event_keyboard.rs");
+    const UI_CANVAS_WIDGET_EVENT_KEYBOARD_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/event_keyboard_retained_cx.rs");
+    const UI_CANVAS_WIDGET_EVENT_ROUTER_SYSTEM_INPUT_RS: &str =
+        include_str!("ui/canvas/widget/event_router_system_input.rs");
+    const UI_CANVAS_WIDGET_EVENT_ROUTER_SYSTEM_RS: &str =
+        include_str!("ui/canvas/widget/event_router_system.rs");
+    const UI_CANVAS_WIDGET_EVENT_ROUTER_SYSTEM_LIFECYCLE_RS: &str =
+        include_str!("ui/canvas/widget/event_router_system_lifecycle.rs");
+    const UI_CANVAS_WIDGET_EVENT_CLIPBOARD_RS: &str =
+        include_str!("ui/canvas/widget/event_clipboard.rs");
+    const UI_CANVAS_WIDGET_INTERNAL_DRAG_EVENT_RS: &str =
+        include_str!("ui/canvas/widget/insert_node_drag/internal_event.rs");
+    const UI_CANVAS_WIDGET_INTERNAL_DRAG_MOVE_RS: &str =
+        include_str!("ui/canvas/widget/insert_node_drag/internal_move.rs");
+    const UI_CANVAS_WIDGET_INTERNAL_DRAG_DROP_RS: &str =
+        include_str!("ui/canvas/widget/insert_node_drag/internal_drop.rs");
     const UI_CANVAS_WIDGET_KEYBOARD_PAN_ACTIVATION_RS: &str =
         include_str!("ui/canvas/widget/keyboard_pan_activation.rs");
     const UI_CANVAS_WIDGET_NODE_DRAG_CONSTRAINTS_RS: &str =
@@ -553,12 +607,13 @@ mod surface_policy_tests {
         assert!(!CARGO_TOML.contains("\nimui = ["));
         assert!(!CARGO_TOML.contains("fret-authoring"));
         assert!(!CARGO_TOML.contains("compat-retained-bridge"));
-        assert!(CARGO_TOML.contains(
-            "compat-retained-canvas = [\"fret-ui\", \"fret-ui/unstable-retained-bridge\"]"
-        ));
+        assert!(CARGO_TOML.contains("compat-retained-canvas = [\"fret-ui\"]"));
         assert!(
-            !UI_DECLARATIVE_MOD_RS.contains("compat_retained")
-                && !UI_DECLARATIVE_MOD_RS.contains("node_graph_surface_compat_retained")
+            !CARGO_TOML.contains("fret-ui/unstable-retained-bridge"),
+            "fret-node compat-retained-canvas must no longer enable the deleted fret-ui bridge"
+        );
+        assert!(
+            !UI_DECLARATIVE_MOD_RS.contains("node_graph_surface_compat_retained")
                 && !UI_DECLARATIVE_MOD_RS.contains("NodeGraphSurfaceCompatRetainedProps"),
             "`fret-node` declarative surface must not expose a retained-subtree compatibility entry point"
         );
@@ -591,6 +646,7 @@ mod surface_policy_tests {
             UI_CANVAS_WIDGET_STICKY_WIRE_CONNECT_FINISH_RS,
             UI_CANVAS_WIDGET_EDGE_INSERT_DRAG_DRAG_TAIL_RS,
             UI_CANVAS_WIDGET_CANCEL_CLEANUP_RS,
+            UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_RS,
             UI_CANVAS_WIDGET_STICKY_WIRE_TARGETS_PICKER_RS,
             UI_CANVAS_WIDGET_GROUP_DRAG_TAIL_RS,
             UI_CANVAS_WIDGET_GROUP_RESIZE_TAIL_RS,
@@ -607,6 +663,46 @@ mod surface_policy_tests {
             assert!(
                 !tail_policy_sources.contains(forbidden),
                 "canvas widget tail policy helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn sticky_wire_pointer_down_route_stays_off_retained_bridge() {
+        let sticky_wire_sources = [
+            UI_CANVAS_WIDGET_STICKY_WIRE_RS,
+            UI_CANVAS_WIDGET_STICKY_WIRE_CONNECT_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !sticky_wire_sources.contains(forbidden),
+                "sticky-wire pointer-down route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn wire_drag_helpers_stay_off_retained_bridge() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_WIRE_DRAG_HELPERS_RS.contains(forbidden),
+                "wire-drag helpers must stay behind retained-agnostic Cx seams; found `{forbidden}`"
             );
         }
     }
@@ -812,6 +908,30 @@ mod surface_policy_tests {
             assert!(
                 !insert_node_drag_move_sources.contains(forbidden),
                 "insert-node drag move handlers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn edge_insert_menu_and_insert_routes_stay_off_retained_bridge() {
+        let edge_insert_sources = [
+            UI_CANVAS_WIDGET_EDGE_INSERT_PRELUDE_RS,
+            UI_CANVAS_WIDGET_EDGE_INSERT_INSERT_RS,
+            UI_CANVAS_WIDGET_EDGE_INSERT_CONTEXT_MENU_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !edge_insert_sources.contains(forbidden),
+                "edge-insert menu/insert routes should stay behind retained-agnostic Cx seams; found `{forbidden}`"
             );
         }
     }
@@ -1470,6 +1590,197 @@ mod surface_policy_tests {
     }
 
     #[test]
+    fn keyboard_shortcut_command_helpers_stay_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_COMMANDS_RS.contains(forbidden),
+                "keyboard shortcut command helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS.contains("trait KeyboardShortcutCommandSink"),
+            "keyboard shortcut retained adapter should stay isolated behind a named command seam"
+        );
+    }
+
+    #[test]
+    fn keyboard_shortcut_wrapper_stays_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS.contains(forbidden),
+                "keyboard shortcut wrapper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RETAINED_CX_RS.contains("EventCx"),
+            "keyboard shortcut retained adapter should stay explicit and isolated"
+        );
+    }
+
+    #[test]
+    fn keyboard_overlay_helpers_stay_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_OVERLAY_RS.contains(forbidden),
+                "keyboard overlay helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_OVERLAY_RS.contains("trait KeyboardOverlayCx"),
+            "keyboard overlay route should stay behind the composed searcher/context-menu/cancel seam"
+        );
+    }
+
+    #[test]
+    fn keyboard_event_route_stays_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_EVENT_KEYBOARD_ROUTE_RS.contains(forbidden),
+                "keyboard event route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_EVENT_KEYBOARD_ROUTE_RS.contains("trait KeyboardRouteCx"),
+            "keyboard event route should stay behind a composed retained-agnostic route seam"
+        );
+    }
+
+    #[test]
+    fn keyboard_system_input_route_stays_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_EVENT_ROUTER_SYSTEM_INPUT_RS.contains(forbidden),
+                "keyboard system input route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_EVENT_KEYBOARD_RS.contains("trait KeyboardInputSink"),
+            "keyboard retained adapter should expose a narrow input sink seam"
+        );
+    }
+
+    #[test]
+    fn keyboard_input_focus_helper_stays_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_EVENT_KEYBOARD_RS.contains(forbidden),
+                "keyboard input focus helper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_EVENT_KEYBOARD_RS.contains("trait KeyboardInputFocusCx"),
+            "keyboard input focus helper should expose a narrow retained-agnostic focus seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_EVENT_KEYBOARD_RETAINED_CX_RS.contains("EventCx"),
+            "keyboard input focus retained adapter should stay explicit and isolated"
+        );
+    }
+
+    #[test]
+    fn system_non_pointer_route_stays_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_EVENT_ROUTER_SYSTEM_RS.contains(forbidden),
+                "system non-pointer route must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_EVENT_ROUTER_SYSTEM_RS.contains("trait SystemRouteCx"),
+            "system non-pointer route should stay behind a composed retained-agnostic route seam"
+        );
+    }
+
+    #[test]
+    fn system_lifecycle_route_helpers_stay_off_retained_cx() {
+        let lifecycle_sources = [
+            UI_CANVAS_WIDGET_EVENT_ROUTER_SYSTEM_LIFECYCLE_RS,
+            UI_CANVAS_WIDGET_EVENT_CLIPBOARD_RS,
+            UI_CANVAS_WIDGET_INTERNAL_DRAG_EVENT_RS,
+            UI_CANVAS_WIDGET_INTERNAL_DRAG_MOVE_RS,
+            UI_CANVAS_WIDGET_INTERNAL_DRAG_DROP_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !lifecycle_sources.contains(forbidden),
+                "system lifecycle route helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_EVENT_ROUTER_SYSTEM_LIFECYCLE_RS.contains("trait SystemLifecycleCx"),
+            "system lifecycle route should stay behind a composed retained-agnostic route seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_EVENT_CLIPBOARD_RS.contains("trait ClipboardTextCx"),
+            "clipboard lifecycle handling should expose a retained-agnostic text seam"
+        );
+    }
+
+    #[test]
     fn keyboard_pan_activation_stays_off_retained_bridge() {
         for forbidden in [
             "retained_bridge",
@@ -1809,6 +2120,10 @@ mod surface_policy_tests {
     #[test]
     fn pointer_move_route_wrapper_stays_off_retained_bridge() {
         let pointer_move_sources = [
+            UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_MOVE_RS,
+            UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_RS,
+            UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_RELEASE_RS,
+            UI_CANVAS_WIDGET_EVENT_POINTER_MOVE_TAIL_ROUTE_RS,
             UI_CANVAS_WIDGET_POINTER_MOVE_DISPATCH_RS,
             UI_CANVAS_WIDGET_POINTER_MOVE_CX_RS,
         ]
@@ -1816,6 +2131,7 @@ mod surface_policy_tests {
 
         for forbidden in [
             "retained_bridge",
+            "compat_retained_canvas",
             "EventCx",
             "CommandCx",
             "LayoutCx",
@@ -1945,6 +2261,8 @@ mod surface_policy_tests {
         let wheel_sources = [
             UI_CANVAS_WIDGET_EVENT_POINTER_WHEEL_RS,
             UI_CANVAS_WIDGET_EVENT_POINTER_WHEEL_ROUTE_RS,
+            UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_WHEEL_RS,
+            UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_WHEEL_CX_RS,
             UI_CANVAS_WIDGET_POINTER_WHEEL_CX_RS,
             UI_CANVAS_WIDGET_VIEWPORT_MOTION_CX_RS,
             UI_CANVAS_WIDGET_POINTER_WHEEL_MOTION_RS,
@@ -1960,6 +2278,7 @@ mod surface_policy_tests {
 
         for forbidden in [
             "retained_bridge",
+            "compat_retained_canvas",
             "EventCx",
             "CommandCx",
             "LayoutCx",
@@ -2172,6 +2491,24 @@ mod surface_policy_tests {
     }
 
     #[test]
+    fn pure_geometry_and_route_math_helpers_are_available_without_compat_gating() {
+        let geometry_mod = include_str!("ui/canvas/geometry/mod.rs");
+        let route_math_mod = include_str!("ui/canvas/route_math.rs");
+
+        for forbidden in [
+            "#[cfg(any(test, feature = \"compat-retained-canvas\"))]\npub(crate) use order::group_order;",
+            "#[cfg(any(test, feature = \"compat-retained-canvas\"))]\npub(crate) use origin::{node_anchor_from_rect_origin, node_rect_origin_from_anchor};",
+            "#[cfg(feature = \"compat-retained-canvas\")]\npub(crate) use route_math_curve::{cubic_bezier, normal_from_tangent};",
+            "#[cfg(feature = \"compat-retained-canvas\")]\npub(crate) use route_math_tangent::{edge_route_end_tangent, edge_route_start_tangent};",
+        ] {
+            assert!(
+                !geometry_mod.contains(forbidden) && !route_math_mod.contains(forbidden),
+                "pure node geometry/route math helpers should not be compat-gated: {forbidden}"
+            );
+        }
+    }
+
+    #[test]
     fn retained_bridge_source_usage_stays_on_the_migration_ledger() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let ui_root = manifest_dir.join("src/ui");
@@ -2181,9 +2518,9 @@ mod surface_policy_tests {
         let allowed_exact = ["src/ui/canvas/widget.rs"];
         let allowed_prefixes = ["src/ui/canvas/widget/"];
         let retained_terms = [
-            "use fret_ui::retained_bridge",
-            "use fret_ui::{UiHost, retained_bridge",
-            "fret_ui::retained_bridge::",
+            "use fret_ui::compat_retained_canvas",
+            "use fret_ui::{UiHost, compat_retained_canvas",
+            "fret_ui::compat_retained_canvas::",
             "RetainedSubtreeProps",
             "UiTreeRetainedExt",
         ];
@@ -2209,6 +2546,383 @@ mod surface_policy_tests {
         assert!(
             offenders.is_empty(),
             "retained bridge source usage must stay on the explicit compat-retained-canvas migration ledger:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn left_click_route_stays_off_retained_bridge() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ui_root = manifest_dir.join("src/ui");
+        let left_click_root = ui_root.join("canvas/widget/left_click");
+        let mut files = Vec::new();
+        collect_rs_files(&left_click_root, &mut files);
+
+        let retained_terms = [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ];
+
+        let mut offenders = Vec::new();
+        for path in files {
+            let source =
+                std::fs::read_to_string(&path).expect("source file should be readable as UTF-8");
+            if !retained_terms.iter().any(|term| source.contains(term)) {
+                continue;
+            }
+
+            offenders.push(source_rel_path(&path, &ui_root));
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "left-click routing should stay behind retained-agnostic Cx seams:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn pointer_down_double_click_route_stays_off_retained_bridge() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ui_root = manifest_dir.join("src/ui");
+        let route_roots = [
+            ui_root.join("canvas/widget/pointer_down_double_click_background"),
+            ui_root.join("canvas/widget/pointer_down_double_click_edge"),
+        ];
+        let mut files = vec![ui_root.join("canvas/widget/pointer_down_double_click.rs")];
+        files.push(ui_root.join("canvas/widget/event_pointer_down_route/double_click.rs"));
+        files.push(ui_root.join("canvas/widget/event_pointer_down_state.rs"));
+        for root in route_roots {
+            collect_rs_files(&root, &mut files);
+        }
+
+        let retained_terms = [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ];
+
+        let mut offenders = Vec::new();
+        for path in files {
+            let source =
+                std::fs::read_to_string(&path).expect("source file should be readable as UTF-8");
+            if !retained_terms.iter().any(|term| source.contains(term)) {
+                continue;
+            }
+
+            offenders.push(source_rel_path(&path, &ui_root));
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "pointer-down double-click routing should stay behind retained-agnostic Cx seams:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn pointer_down_preflight_route_stays_off_retained_bridge() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ui_root = manifest_dir.join("src/ui");
+        let files = [
+            ui_root.join("canvas/widget/event_pointer_down_route/preflight.rs"),
+            ui_root.join("canvas/widget/pointer_down_gesture_start/close_button.rs"),
+        ];
+
+        let retained_terms = [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ];
+
+        let mut offenders = Vec::new();
+        for path in files {
+            let source =
+                std::fs::read_to_string(&path).expect("source file should be readable as UTF-8");
+            if !retained_terms.iter().any(|term| source.contains(term)) {
+                continue;
+            }
+
+            offenders.push(source_rel_path(&path, &ui_root));
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "pointer-down preflight routing should stay behind retained-agnostic Cx seams:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn pointer_down_starts_route_stays_off_retained_bridge() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ui_root = manifest_dir.join("src/ui");
+        let files = [
+            ui_root.join("canvas/widget/event_pointer_down_route/starts.rs"),
+            ui_root.join("canvas/widget/pointer_down_gesture_start.rs"),
+            ui_root.join("canvas/widget/pointer_down_gesture_start/menu.rs"),
+            ui_root.join("canvas/widget/pointer_down_gesture_start/pending_right_click.rs"),
+            ui_root.join("canvas/widget/pointer_down_gesture_start/pan_start.rs"),
+            ui_root.join("canvas/widget/pointer_down_gesture_start/sticky.rs"),
+        ];
+
+        let retained_terms = [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ];
+
+        let mut offenders = Vec::new();
+        for path in files {
+            let source =
+                std::fs::read_to_string(&path).expect("source file should be readable as UTF-8");
+            if !retained_terms.iter().any(|term| source.contains(term)) {
+                continue;
+            }
+
+            offenders.push(source_rel_path(&path, &ui_root));
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "pointer-down start routing should stay behind retained-agnostic Cx seams:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn pointer_down_tail_route_stays_off_retained_bridge() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ui_root = manifest_dir.join("src/ui");
+        let files = [
+            ui_root.join("canvas/widget/event_pointer_down.rs"),
+            ui_root.join("canvas/widget/event_pointer_down_route.rs"),
+            ui_root.join("canvas/widget/event_pointer_down_route/dispatch.rs"),
+            ui_root.join("canvas/widget/event_router_pointer_button/down.rs"),
+        ];
+
+        let retained_terms = [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ];
+
+        let mut offenders = Vec::new();
+        for path in files {
+            let source =
+                std::fs::read_to_string(&path).expect("source file should be readable as UTF-8");
+            if !retained_terms.iter().any(|term| source.contains(term)) {
+                continue;
+            }
+
+            offenders.push(source_rel_path(&path, &ui_root));
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "pointer-down tail routing should stay behind retained-agnostic Cx seams:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn top_level_event_router_stays_off_retained_bridge() {
+        let router_sources = [
+            UI_CANVAS_WIDGET_EVENT_ROUTER_RS,
+            UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_RS,
+            UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_RS,
+            UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_DOWN_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !router_sources.contains(forbidden),
+                "top-level event routing should stay behind retained-agnostic Cx seams; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn retained_canvas_facade_usage_stays_explicit_not_globbed() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ui_root = manifest_dir.join("src/ui");
+        let mut files = Vec::new();
+        collect_rs_files(&ui_root, &mut files);
+
+        let mut offenders = Vec::new();
+        for path in files {
+            let source =
+                std::fs::read_to_string(&path).expect("source file should be readable as UTF-8");
+            if source.contains("compat_retained_canvas::*") {
+                offenders.push(source_rel_path(&path, &ui_root));
+            }
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "compat_retained_canvas facade imports must stay explicit; glob imports hide which retained bridge exports remain needed:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn retained_canvas_widget_trait_stays_on_stable_widget_export() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ui_root = manifest_dir.join("src/ui");
+        let mut files = Vec::new();
+        collect_rs_files(&ui_root, &mut files);
+
+        let mut offenders = Vec::new();
+        for path in files {
+            let source =
+                std::fs::read_to_string(&path).expect("source file should be readable as UTF-8");
+            if source.contains("compat_retained_canvas::widget") {
+                offenders.push(source_rel_path(&path, &ui_root));
+            }
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "widget trait imports must use the stable fret_ui::Widget export, not the compat facade:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn retained_canvas_command_contexts_stay_on_stable_command_export() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ui_root = manifest_dir.join("src/ui");
+        let mut files = Vec::new();
+        collect_rs_files(&ui_root, &mut files);
+
+        let mut offenders = Vec::new();
+        for path in files {
+            let source =
+                std::fs::read_to_string(&path).expect("source file should be readable as UTF-8");
+            if source.contains("compat_retained_canvas::command") {
+                offenders.push(source_rel_path(&path, &ui_root));
+            }
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "command ctx imports must use the stable fret_ui::CommandCx export, not the compat facade:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn retained_canvas_event_contexts_stay_on_stable_event_export() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ui_root = manifest_dir.join("src/ui");
+        let mut files = Vec::new();
+        collect_rs_files(&ui_root, &mut files);
+
+        let mut offenders = Vec::new();
+        for path in files {
+            let source =
+                std::fs::read_to_string(&path).expect("source file should be readable as UTF-8");
+            if source.contains("compat_retained_canvas::event") {
+                offenders.push(source_rel_path(&path, &ui_root));
+            }
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "event ctx imports must use the stable fret_ui::EventCx export, not the compat facade:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn retained_canvas_layout_contexts_stay_on_stable_layout_export() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ui_root = manifest_dir.join("src/ui");
+        let mut files = Vec::new();
+        collect_rs_files(&ui_root, &mut files);
+
+        let mut offenders = Vec::new();
+        for path in files {
+            let source =
+                std::fs::read_to_string(&path).expect("source file should be readable as UTF-8");
+            if source.contains("compat_retained_canvas::layout") {
+                offenders.push(source_rel_path(&path, &ui_root));
+            }
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "layout ctx imports must use the stable fret_ui::LayoutCx export, not the compat facade:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn retained_canvas_paint_contexts_stay_on_stable_paint_export() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ui_root = manifest_dir.join("src/ui");
+        let mut files = Vec::new();
+        collect_rs_files(&ui_root, &mut files);
+
+        let mut offenders = Vec::new();
+        for path in files {
+            let source =
+                std::fs::read_to_string(&path).expect("source file should be readable as UTF-8");
+            if source.contains("compat_retained_canvas::paint") {
+                offenders.push(source_rel_path(&path, &ui_root));
+            }
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "paint ctx imports must use the stable fret_ui::PaintCx export, not the compat facade:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn retained_canvas_frame_contexts_stay_on_stable_frame_export() {
+        let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let ui_root = manifest_dir.join("src/ui");
+        let mut files = Vec::new();
+        collect_rs_files(&ui_root, &mut files);
+
+        let mut offenders = Vec::new();
+        for path in files {
+            let source =
+                std::fs::read_to_string(&path).expect("source file should be readable as UTF-8");
+            if source.contains("compat_retained_canvas::frame") {
+                offenders.push(source_rel_path(&path, &ui_root));
+            }
+        }
+
+        assert!(
+            offenders.is_empty(),
+            "frame ctx imports must use the stable fret_ui::PrepaintCx / fret_ui::SemanticsCx exports, not the compat facade:\n{}",
             offenders.join("\n")
         );
     }

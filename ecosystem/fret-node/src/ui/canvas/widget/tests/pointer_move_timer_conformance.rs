@@ -1,6 +1,6 @@
 use fret_core::{Event, Modifiers, MouseButtons, Point, PointerEvent, PointerType, Px, Rect, Size};
 use fret_runtime::Effect;
-use fret_ui::retained_bridge::Widget as _;
+use fret_ui::Widget as _;
 
 use crate::core::CanvasPoint;
 use crate::ui::canvas::state::NodeDrag;

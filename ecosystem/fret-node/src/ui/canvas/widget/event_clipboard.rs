@@ -1,9 +1,19 @@
 use super::*;
 
+pub(super) trait ClipboardTextCx<H: UiHost>:
+    super::event_clipboard_feedback_cx::ClipboardFeedbackCx<H>
+{
+}
+
+impl<H: UiHost, T> ClipboardTextCx<H> for T where
+    T: super::event_clipboard_feedback_cx::ClipboardFeedbackCx<H>
+{
+}
+
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn handle_clipboard_text<H: UiHost>(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut impl ClipboardTextCx<H>,
         token: fret_core::ClipboardToken,
         text: &str,
     ) {
@@ -14,13 +24,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         };
 
-        self.apply_paste_text(cx.app, cx.window, text, pending.at);
+        let window = cx.window();
+        self.apply_paste_text(cx.host(), window, text, pending.at);
         super::event_clipboard_feedback::request_paste_feedback(cx);
     }
 
     pub(super) fn handle_clipboard_text_unavailable<H: UiHost>(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut impl ClipboardTextCx<H>,
         token: fret_core::ClipboardToken,
     ) {
         if !super::event_clipboard_pending::clear_pending_if_matches(

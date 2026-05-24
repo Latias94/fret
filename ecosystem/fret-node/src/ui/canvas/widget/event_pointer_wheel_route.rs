@@ -3,6 +3,7 @@ use super::*;
 pub(super) fn route_pointer_wheel<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut Cx,
+    platform: fret_runtime::Platform,
     snapshot: &ViewSnapshot,
     position: Point,
     delta: Point,
@@ -23,7 +24,8 @@ pub(super) fn route_pointer_wheel<H: UiHost, M, Cx>(
         return;
     }
 
-    let _ = pointer_wheel_viewport::handle_scroll_pan(canvas, cx, snapshot, delta, modifiers);
+    let _ =
+        pointer_wheel_viewport::handle_scroll_pan(canvas, cx, platform, snapshot, delta, modifiers);
 }
 
 pub(super) fn route_pinch_gesture<H: UiHost, M, Cx>(

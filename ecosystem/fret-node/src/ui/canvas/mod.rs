@@ -3,25 +3,20 @@
 //! This module is split into submodules to keep the editor-grade canvas maintainable. The retained
 //! widget entry point is `NodeGraphCanvas`.
 
-mod geometry;
-mod resize_handle;
-mod route_math;
-mod spatial;
-
-#[cfg(feature = "compat-retained-canvas")]
-mod context_menu;
 #[cfg(feature = "compat-retained-canvas")]
 mod conversion;
-#[cfg(feature = "compat-retained-canvas")]
-mod event;
+mod geometry;
 #[cfg(feature = "compat-retained-canvas")]
 mod middleware;
 #[cfg(feature = "compat-retained-canvas")]
 mod paint;
+mod resize_handle;
+mod route_math;
 #[cfg(feature = "compat-retained-canvas")]
 mod searcher;
 #[cfg(feature = "compat-retained-canvas")]
 mod snaplines;
+mod spatial;
 #[cfg(feature = "compat-retained-canvas")]
 mod state;
 #[cfg(feature = "compat-retained-canvas")]

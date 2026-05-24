@@ -4,7 +4,7 @@ use fret_core::{
     KeyCode, Modifiers, MouseButton, Point, PointerEvent, PointerId, PointerType, Px, Rect, Size,
 };
 use fret_runtime::CommandId;
-use fret_ui::retained_bridge::Widget;
+use fret_ui::Widget;
 
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, Group, GroupId,

@@ -2,7 +2,7 @@ use super::*;
 
 pub(super) fn handle_escape_key<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::keyboard_shortcuts_overlay::KeyboardOverlayCx<H, M>,
     key: fret_core::KeyCode,
 ) -> bool {
     super::keyboard_shortcuts_overlay::handle_escape_key(canvas, cx, key)
@@ -10,15 +10,19 @@ pub(super) fn handle_escape_key<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_overlay_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::keyboard_shortcuts_overlay::KeyboardOverlayCx<H, M>,
     key: fret_core::KeyCode,
     modifiers: fret_core::Modifiers,
 ) -> bool {
     super::keyboard_shortcuts_overlay::handle_overlay_key_down(canvas, cx, key, modifiers)
 }
 
-pub(super) fn handle_modifier_shortcuts<H: UiHost>(
-    cx: &mut EventCx<'_, H>,
+pub(in crate::ui::canvas::widget) trait KeyboardShortcutCommandSink {
+    fn dispatch_keyboard_command(&mut self, command: &'static str);
+}
+
+pub(super) fn handle_modifier_shortcuts(
+    cx: &mut impl KeyboardShortcutCommandSink,
     snapshot: &ViewSnapshot,
     key: fret_core::KeyCode,
     modifiers: fret_core::Modifiers,
@@ -26,9 +30,9 @@ pub(super) fn handle_modifier_shortcuts<H: UiHost>(
     super::keyboard_shortcuts_commands::handle_modifier_shortcuts(cx, snapshot, key, modifiers)
 }
 
-pub(super) fn handle_tab_navigation<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn handle_tab_navigation<M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl KeyboardShortcutCommandSink,
     snapshot: &ViewSnapshot,
     key: fret_core::KeyCode,
     modifiers: fret_core::Modifiers,
@@ -36,8 +40,8 @@ pub(super) fn handle_tab_navigation<H: UiHost, M: NodeGraphCanvasMiddleware>(
     super::keyboard_shortcuts_commands::handle_tab_navigation(canvas, cx, snapshot, key, modifiers)
 }
 
-pub(super) fn handle_arrow_nudging<H: UiHost>(
-    cx: &mut EventCx<'_, H>,
+pub(super) fn handle_arrow_nudging(
+    cx: &mut impl KeyboardShortcutCommandSink,
     snapshot: &ViewSnapshot,
     key: fret_core::KeyCode,
     modifiers: fret_core::Modifiers,
@@ -45,15 +49,10 @@ pub(super) fn handle_arrow_nudging<H: UiHost>(
     super::keyboard_shortcuts_commands::handle_arrow_nudging(cx, snapshot, key, modifiers)
 }
 
-pub(super) fn handle_delete_shortcut<H: UiHost>(
-    cx: &mut EventCx<'_, H>,
+pub(super) fn handle_delete_shortcut(
+    cx: &mut impl KeyboardShortcutCommandSink,
     snapshot: &ViewSnapshot,
     key: fret_core::KeyCode,
 ) -> bool {
     super::keyboard_shortcuts_commands::handle_delete_shortcut(cx, snapshot, key)
-}
-
-pub(super) fn dispatch_command<H: UiHost>(cx: &mut EventCx<'_, H>, command: &'static str) {
-    cx.dispatch_command(CommandId::from(command));
-    cx.stop_propagation();
 }

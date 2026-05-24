@@ -5,13 +5,14 @@ mod resize;
 use fret_core::{Modifiers, Point, Rect};
 use fret_ui::UiHost;
 
+use super::LeftClickCx;
 use crate::core::NodeId as GraphNodeId;
 use crate::ui::canvas::state::{NodeResizeHandle, ViewSnapshot};
 use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 pub(super) fn handle_resize_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     node: GraphNodeId,
@@ -24,7 +25,7 @@ pub(super) fn handle_resize_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_node_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     node: GraphNodeId,
@@ -46,7 +47,7 @@ pub(super) fn handle_node_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_edge_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: Modifiers,

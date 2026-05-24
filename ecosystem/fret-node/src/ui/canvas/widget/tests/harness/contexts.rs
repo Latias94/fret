@@ -7,8 +7,8 @@ pub(crate) fn event_cx<'a>(
     services: &'a mut NullServices,
     bounds: Rect,
     prevented_default_actions: &'a mut fret_runtime::DefaultActionSet,
-) -> fret_ui::retained_bridge::EventCx<'a, TestUiHostImpl> {
-    fret_ui::retained_bridge::EventCx::new(
+) -> fret_ui::EventCx<'a, TestUiHostImpl> {
+    fret_ui::EventCx::new(
         host,
         services,
         fret_core::NodeId::default(),
@@ -35,8 +35,8 @@ pub(crate) fn command_cx<'a>(
     host: &'a mut TestUiHostImpl,
     services: &'a mut NullServices,
     tree: &'a mut fret_ui::UiTree<TestUiHostImpl>,
-) -> fret_ui::retained_bridge::CommandCx<'a, TestUiHostImpl> {
-    fret_ui::retained_bridge::CommandCx {
+) -> fret_ui::CommandCx<'a, TestUiHostImpl> {
+    fret_ui::CommandCx {
         app: host,
         services,
         tree,

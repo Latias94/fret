@@ -6,7 +6,7 @@ use super::*;
 
 pub(super) fn route_button_pointer_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl event_router_cx::PointerButtonRouteCx<H, M>,
     event: &Event,
     snapshot: &ViewSnapshot,
     zoom: f32,

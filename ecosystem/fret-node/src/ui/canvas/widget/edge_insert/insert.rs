@@ -5,7 +5,7 @@ pub(in super::super) fn activate_edge_insert_picker_action<
     M: NodeGraphCanvasMiddleware,
 >(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl EdgeInsertCx<H>,
     edge: EdgeId,
     invoked_at: Point,
     action: NodeGraphContextMenuAction,
@@ -25,7 +25,7 @@ pub(in super::super) fn activate_edge_insert_picker_action<
 
 pub(in super::super) fn insert_node_on_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl EdgeInsertCx<H>,
     edge: EdgeId,
     invoked_at: Point,
     candidate: InsertNodeCandidate,
@@ -39,7 +39,7 @@ pub(in super::super) fn insert_node_on_edge<H: UiHost, M: NodeGraphCanvasMiddlew
     canvas.record_recent_kind(&candidate.kind);
 
     let outcome = canvas
-        .plan_canvas_split_edge_insert_candidate(cx.app, edge, &candidate, invoked_at)
+        .plan_canvas_split_edge_insert_candidate(cx.host(), edge, &candidate, invoked_at)
         .map(|result| match result {
             Ok(ops) => Outcome::Apply(ops),
             Err(diags) => {
@@ -56,10 +56,14 @@ pub(in super::super) fn insert_node_on_edge<H: UiHost, M: NodeGraphCanvasMiddlew
             let node_id = is_reroute_insert_candidate(&candidate)
                 .then(|| NodeGraphCanvasWith::<M>::first_added_node_id(&ops))
                 .flatten();
-            canvas.apply_ops(cx.app, cx.window, ops);
-            canvas.select_inserted_node(cx.app, node_id);
+            let window = cx.window();
+            canvas.apply_ops(cx.host(), window, ops);
+            canvas.select_inserted_node(cx.host(), node_id);
         }
-        Outcome::Reject(sev, msg) => canvas.show_toast(cx.app, cx.window, sev, msg),
+        Outcome::Reject(sev, msg) => {
+            let window = cx.window();
+            canvas.show_toast(cx.host(), window, sev, msg);
+        }
         Outcome::Ignore => {}
     }
 }

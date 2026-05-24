@@ -1,8 +1,24 @@
 use super::*;
 
+pub(in crate::ui::canvas::widget) trait KeyboardRouteCx<H: UiHost, M: NodeGraphCanvasMiddleware>:
+    super::keyboard_shortcuts_overlay::KeyboardOverlayCx<H, M>
+    + super::keyboard_shortcuts::KeyboardShortcutCommandSink
+    + super::widget_tail::WidgetHandledCx<H>
+{
+}
+
+impl<H: UiHost, M, T> KeyboardRouteCx<H, M> for T
+where
+    M: NodeGraphCanvasMiddleware,
+    T: super::keyboard_shortcuts_overlay::KeyboardOverlayCx<H, M>
+        + super::keyboard_shortcuts::KeyboardShortcutCommandSink
+        + super::widget_tail::WidgetHandledCx<H>,
+{
+}
+
 pub(super) fn route_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl KeyboardRouteCx<H, M>,
     snapshot: &ViewSnapshot,
     key: fret_core::KeyCode,
     modifiers: fret_core::Modifiers,
@@ -37,7 +53,7 @@ pub(super) fn route_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn route_key_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::widget_tail::WidgetPaintInvalidationCx<H>,
     snapshot: &ViewSnapshot,
     key: fret_core::KeyCode,
 ) {

@@ -3,7 +3,7 @@ use super::*;
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn start_sticky_wire_drag_from_port<H: UiHost>(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut impl wire_drag_helpers_cx::WireDragStartCx<H>,
         from: PortId,
         pos: Point,
     ) {
@@ -17,13 +17,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.interaction.sticky_wire = true;
         self.interaction.sticky_wire_ignore_next_up = true;
         super::focus_session::clear_hover_port_hints(&mut self.interaction);
-        cx.capture_pointer(cx.node);
+        cx.capture_self_pointer();
         super::paint_invalidation::invalidate_paint(cx);
     }
 
     pub(super) fn restore_suspended_wire_drag<H: UiHost>(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut impl wire_drag_helpers_cx::WireDragStartCx<H>,
         fallback_from: Option<PortId>,
         fallback_pos: Point,
     ) {
@@ -32,7 +32,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             self.interaction.sticky_wire = true;
             self.interaction.sticky_wire_ignore_next_up = true;
             super::focus_session::clear_hover_port_hints(&mut self.interaction);
-            cx.capture_pointer(cx.node);
+            cx.capture_self_pointer();
             super::paint_invalidation::invalidate_paint(cx);
             return;
         }

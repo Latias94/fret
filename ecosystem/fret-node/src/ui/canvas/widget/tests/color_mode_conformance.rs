@@ -1,5 +1,5 @@
 use fret_core::{AppWindowId, NodeId as UiNodeId, Point, Px, Rect, Scene, Size, Transform2D};
-use fret_ui::retained_bridge::Widget as _;
+use fret_ui::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::ui::{NodeGraphColorMode, NodeGraphStyle, canvas::NodeGraphCanvas};
@@ -19,7 +19,7 @@ fn paint_once(
     let mut observe_model = |_id, _inv: Invalidation| {};
     let mut observe_global = |_id, _inv: Invalidation| {};
 
-    let mut cx = fret_ui::retained_bridge::PaintCx::new(
+    let mut cx = fret_ui::PaintCx::new(
         host,
         tree,
         UiNodeId::default(),

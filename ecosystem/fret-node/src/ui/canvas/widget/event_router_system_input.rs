@@ -2,7 +2,7 @@ use super::*;
 
 pub(super) fn route_input_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::event_keyboard::KeyboardInputSink<H, M>,
     event: &Event,
     snapshot: &ViewSnapshot,
 ) -> bool {

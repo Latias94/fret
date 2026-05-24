@@ -1,12 +1,11 @@
 use fret_core::Point;
 use fret_ui::UiHost;
 
+use super::super::super::{LeftClickCx, capture_pointer_and_invalidate_paint};
 use crate::core::NodeId as GraphNodeId;
 use crate::interaction::NodeGraphDragHandleMode;
 use crate::ui::canvas::state::{PendingNodeDrag, PendingNodeSelectAction, ViewSnapshot};
-use crate::ui::canvas::widget::{
-    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, paint_invalidation::invalidate_paint,
-};
+use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 pub(super) fn drag_nodes_for_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &NodeGraphCanvasWith<M>,
@@ -53,7 +52,7 @@ pub(super) fn drag_enabled_for_node_hit(
 
 pub(super) fn arm_pending_node_drag<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     primary: GraphNodeId,
     nodes: Vec<GraphNodeId>,
     grab_offset: Point,
@@ -69,8 +68,7 @@ pub(super) fn arm_pending_node_drag<H: UiHost, M: NodeGraphCanvasMiddleware>(
         select_action,
         drag_enabled,
     });
-    cx.capture_pointer(cx.node);
-    invalidate_paint(cx);
+    capture_pointer_and_invalidate_paint(cx);
 }
 
 fn base_drag_nodes(

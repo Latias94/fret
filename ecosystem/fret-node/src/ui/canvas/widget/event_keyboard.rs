@@ -1,14 +1,34 @@
 use super::*;
 
+pub(in crate::ui::canvas::widget) trait KeyboardInputFocusCx {
+    fn focus_is_text_input(&self) -> bool;
+}
+
+pub(in crate::ui::canvas::widget) trait KeyboardInputSink<H: UiHost, M: NodeGraphCanvasMiddleware>:
+    super::event_keyboard_route::KeyboardRouteCx<H, M>
+    + super::widget_tail::WidgetPaintInvalidationCx<H>
+    + KeyboardInputFocusCx
+{
+}
+
+impl<H: UiHost, M, T> KeyboardInputSink<H, M> for T
+where
+    M: NodeGraphCanvasMiddleware,
+    T: super::event_keyboard_route::KeyboardRouteCx<H, M>
+        + super::widget_tail::WidgetPaintInvalidationCx<H>
+        + KeyboardInputFocusCx,
+{
+}
+
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn handle_key_down<H: UiHost>(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut impl KeyboardInputSink<H, M>,
         snapshot: &ViewSnapshot,
         key: fret_core::KeyCode,
         modifiers: fret_core::Modifiers,
     ) {
-        if super::event_keyboard_state::should_ignore_key_down(cx.input_ctx.focus_is_text_input) {
+        if super::event_keyboard_state::should_ignore_key_down(cx.focus_is_text_input()) {
             return;
         }
 
@@ -18,7 +38,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     pub(super) fn handle_key_up<H: UiHost>(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut impl super::widget_tail::WidgetPaintInvalidationCx<H>,
         snapshot: &ViewSnapshot,
         key: fret_core::KeyCode,
     ) {

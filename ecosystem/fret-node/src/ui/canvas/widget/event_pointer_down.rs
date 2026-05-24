@@ -6,7 +6,7 @@ use super::*;
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn handle_pointer_down<H: UiHost>(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut impl event_pointer_down_route_cx::PointerDownRouteCx<H, M>,
         snapshot: &ViewSnapshot,
         position: Point,
         button: MouseButton,

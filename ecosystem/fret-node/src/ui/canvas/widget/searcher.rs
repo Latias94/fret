@@ -39,7 +39,7 @@ pub(super) fn handle_searcher_key_down<H, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_searcher_pointer_down<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl SearcherCx<H, M>,
+    cx: &mut impl SearcherPointerDownCx<H>,
     position: Point,
     button: MouseButton,
     zoom: f32,

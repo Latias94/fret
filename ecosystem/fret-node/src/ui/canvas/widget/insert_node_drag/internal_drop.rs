@@ -1,10 +1,8 @@
-use fret_ui::retained_bridge::EventCx;
-
 use super::prelude::*;
 
 pub(super) fn handle_drop<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::super::internal_drag_cx::InternalDragCx<H>,
     snapshot: &ViewSnapshot,
     event: &InternalDragEvent,
     payload: super::InsertNodeDragPayload,
@@ -17,11 +15,12 @@ pub(super) fn handle_drop<H: UiHost, M: NodeGraphCanvasMiddleware>(
     };
     let candidate = payload.candidate;
     canvas.record_recent_kind(&candidate.kind);
+    let window = cx.window();
 
-    let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
+    let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
     let edge_hit: Option<EdgeId> = canvas
         .graph
-        .read_ref(cx.app, |graph| {
+        .read_ref(cx.host(), |graph| {
             let mut scratch = HitTestScratch::default();
             let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
             canvas.hit_edge(graph, snapshot, &mut ctx, pos)
@@ -33,35 +32,35 @@ pub(super) fn handle_drop<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
     if let Some(edge_id) = edge_hit {
         let planned =
-            canvas.plan_canvas_split_edge_insert_candidate(cx.app, edge_id, &candidate, pos);
+            canvas.plan_canvas_split_edge_insert_candidate(cx.host(), edge_id, &candidate, pos);
 
         if let Some(Ok(ops)) = planned {
             let node_id = NodeGraphCanvasWith::<M>::first_added_node_id(&ops);
-            applied = canvas.commit_ops(cx.app, cx.window, Some("Insert Node"), ops);
+            applied = canvas.commit_ops(cx.host(), window, Some("Insert Node"), ops);
             if applied {
-                canvas.select_inserted_node(cx.app, node_id);
+                canvas.select_inserted_node(cx.host(), node_id);
             }
         } else if let Some(Err(diags)) = planned {
             let (sev, msg) =
                 NodeGraphCanvasWith::<M>::split_edge_candidate_rejection_toast(&candidate, &diags);
-            canvas.show_toast(cx.app, cx.window, sev, msg);
+            canvas.show_toast(cx.host(), window, sev, msg);
         }
     }
 
     if !applied {
         let ops = canvas
-            .plan_canvas_insert_candidate_ops(cx.app, &candidate, at)
+            .plan_canvas_insert_candidate_ops(cx.host(), &candidate, at)
             .and_then(|result| result.ok());
 
         if let Some(ops) = ops {
             let node_id = NodeGraphCanvasWith::<M>::first_added_node_id(&ops);
-            if canvas.commit_ops(cx.app, cx.window, Some("Insert Node"), ops) {
-                canvas.select_inserted_node(cx.app, node_id);
+            if canvas.commit_ops(cx.host(), window, Some("Insert Node"), ops) {
+                canvas.select_inserted_node(cx.host(), node_id);
             }
         } else {
             canvas.show_toast(
-                cx.app,
-                cx.window,
+                cx.host(),
+                window,
                 crate::rules::DiagnosticSeverity::Info,
                 Arc::<str>::from("node insertion is not supported"),
             );

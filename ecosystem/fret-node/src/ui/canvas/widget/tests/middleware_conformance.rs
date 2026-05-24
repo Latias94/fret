@@ -1,7 +1,7 @@
 use fret_core::AppWindowId;
 use fret_runtime::CommandId;
 use fret_ui::UiHost;
-use fret_ui::retained_bridge::Widget as _;
+use fret_ui::Widget as _;
 
 use crate::ops::GraphTransaction;
 use crate::rules::{Diagnostic, DiagnosticSeverity, DiagnosticTarget};

@@ -1,8 +1,8 @@
 use fret_core::{AppWindowId, NodeId as UiNodeId, Point, Px, Rect, Size};
 use fret_ui::LayoutOverflowContext;
 use fret_ui::UiTree;
+use fret_ui::Widget as _;
 use fret_ui::layout_pass::LayoutPassKind;
-use fret_ui::retained_bridge::Widget as _;
 
 use crate::core::CanvasPoint;
 
@@ -22,7 +22,7 @@ fn layout_once(
     let mut observe_model = |_id, _inv| {};
     let mut observe_global = |_id, _inv| {};
 
-    let mut cx = fret_ui::retained_bridge::LayoutCx {
+    let mut cx = fret_ui::LayoutCx {
         app: host,
         tree,
         node: UiNodeId::default(),

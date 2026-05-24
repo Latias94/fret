@@ -3,7 +3,7 @@ use super::*;
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn handle_event<H: UiHost>(
         &mut self,
-        cx: &mut EventCx<'_, H>,
+        cx: &mut impl event_router_cx::EventRouteCx<H, M>,
         event: &Event,
         snapshot: &ViewSnapshot,
     ) {

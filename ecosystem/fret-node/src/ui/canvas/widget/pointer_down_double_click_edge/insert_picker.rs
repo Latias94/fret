@@ -4,7 +4,7 @@ use super::{finish, target};
 
 pub(super) fn handle_edge_insert_picker_double_click<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl pointer_down_double_click_cx::PointerDownDoubleClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: fret_core::Modifiers,
@@ -23,8 +23,9 @@ pub(super) fn handle_edge_insert_picker_double_click<H: UiHost, M: NodeGraphCanv
         return false;
     };
 
-    canvas.select_edge_context_target(cx.app, edge_id);
-    canvas.open_edge_insert_node_picker(cx.app, cx.window, edge_id, position);
+    let window = cx.window();
+    canvas.select_edge_context_target(cx.host(), edge_id);
+    canvas.open_edge_insert_node_picker(cx.host(), window, edge_id, position);
     finish::finish_double_click(cx);
     true
 }

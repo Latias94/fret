@@ -1,5 +1,5 @@
 use fret_core::Rect;
-use fret_ui::{UiHost, retained_bridge::EventCx};
+use fret_ui::{EventCx, UiHost};
 
 use super::ContextMenuOpeningCx;
 

@@ -2,16 +2,16 @@ use super::*;
 
 pub(super) fn prepare_pointer_down_state<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl event_pointer_down_state_cx::PointerDownStateCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: fret_core::Modifiers,
 ) {
     if canvas.interaction.viewport_animation.is_some() {
-        canvas.stop_viewport_animation_timer(cx.app);
+        canvas.stop_viewport_animation_timer(cx.host());
     }
     if canvas.interaction.pan_inertia.is_some() {
-        canvas.stop_pan_inertia_timer(cx.app);
+        canvas.stop_pan_inertia_timer(cx.host());
         canvas.emit_move_end(
             snapshot,
             ViewportMoveKind::PanInertia,

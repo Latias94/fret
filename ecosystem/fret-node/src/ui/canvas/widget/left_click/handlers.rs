@@ -1,6 +1,7 @@
 use fret_core::{Modifiers, Point};
 use fret_ui::UiHost;
 
+use super::LeftClickCx;
 use super::connection_hits;
 use super::element_hits;
 use super::group_background;
@@ -10,7 +11,7 @@ use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 pub(super) fn handle_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: Modifiers,

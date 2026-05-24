@@ -1,12 +1,11 @@
 use fret_core::{Modifiers, Point};
 use fret_ui::UiHost;
 
+use super::super::super::{LeftClickCx, capture_pointer_and_invalidate_paint};
 use crate::core::{EdgeId, PortId};
 use crate::rules::EdgeEndpoint;
 use crate::ui::canvas::state::{PendingWireDrag, ViewSnapshot, WireDragKind};
-use crate::ui::canvas::widget::{
-    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, paint_invalidation::invalidate_paint,
-};
+use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 type YankedReconnectEdges = Vec<(EdgeId, EdgeEndpoint, PortId)>;
 
@@ -24,7 +23,7 @@ pub(super) fn wire_drag_kind_for_port_hit<H: UiHost, M: NodeGraphCanvasMiddlewar
 
 pub(super) fn arm_pending_wire_drag<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     kind: WireDragKind,
     position: Point,
 ) {
@@ -32,8 +31,7 @@ pub(super) fn arm_pending_wire_drag<H: UiHost, M: NodeGraphCanvasMiddleware>(
         kind,
         start_pos: position,
     });
-    cx.capture_pointer(cx.node);
-    invalidate_paint(cx);
+    capture_pointer_and_invalidate_paint(cx);
 }
 
 fn should_yank_edges(modifiers: Modifiers) -> bool {

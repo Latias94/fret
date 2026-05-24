@@ -2,6 +2,7 @@ use fret_core::{Modifiers, Point, Rect};
 use fret_ui::UiHost;
 
 mod connection_hits;
+mod cx;
 mod edge_selection;
 mod element_hits;
 mod group_background;
@@ -11,6 +12,9 @@ mod node_selection;
 
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::ViewSnapshot;
+
+pub(in crate::ui::canvas::widget) use cx::LeftClickCx;
+use cx::capture_pointer_and_invalidate_paint;
 
 fn node_header_hit(rect: Rect, header_height_screen: f32, zoom: f32, position: Point) -> bool {
     let zoom = if zoom.is_finite() && zoom > 0.0 {
@@ -33,7 +37,7 @@ fn node_header_hit(rect: Rect, header_height_screen: f32, zoom: f32, position: P
 
 pub(super) fn handle_left_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: Modifiers,

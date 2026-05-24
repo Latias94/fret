@@ -15,7 +15,7 @@ use fret_core::{
     AppWindowId, Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Size,
 };
 use fret_runtime::{CommandId, DragSession, DragSessionId, Effect};
-use fret_ui::retained_bridge::Widget as _;
+use fret_ui::Widget as _;
 use serde_json::Value;
 
 macro_rules! new_canvas {
@@ -1337,8 +1337,8 @@ mod legacy_inline_harness {
         services: &'a mut NullServices,
         bounds: Rect,
         prevented_default_actions: &'a mut fret_runtime::DefaultActionSet,
-    ) -> fret_ui::retained_bridge::EventCx<'a, TestUiHostImpl> {
-        fret_ui::retained_bridge::EventCx::new(
+    ) -> fret_ui::EventCx<'a, TestUiHostImpl> {
+        fret_ui::EventCx::new(
             host,
             services,
             fret_core::NodeId::default(),
@@ -1365,8 +1365,8 @@ mod legacy_inline_harness {
         host: &'a mut TestUiHostImpl,
         services: &'a mut NullServices,
         tree: &'a mut fret_ui::UiTree<TestUiHostImpl>,
-    ) -> fret_ui::retained_bridge::CommandCx<'a, TestUiHostImpl> {
-        fret_ui::retained_bridge::CommandCx {
+    ) -> fret_ui::CommandCx<'a, TestUiHostImpl> {
+        fret_ui::CommandCx {
             app: host,
             services,
             tree,

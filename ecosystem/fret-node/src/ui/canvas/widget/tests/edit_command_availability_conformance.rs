@@ -3,12 +3,12 @@ use super::*;
 fn availability_cx<'a>(
     host: &'a mut TestUiHostImpl,
     tree: &'a fret_ui::UiTree<TestUiHostImpl>,
-) -> fret_ui::retained_bridge::CommandAvailabilityCx<'a, TestUiHostImpl> {
+) -> fret_ui::CommandAvailabilityCx<'a, TestUiHostImpl> {
     let mut input_ctx = fret_runtime::InputContext::default();
     input_ctx.caps.clipboard.text.read = true;
     input_ctx.caps.clipboard.text.write = true;
 
-    fret_ui::retained_bridge::CommandAvailabilityCx {
+    fret_ui::CommandAvailabilityCx {
         app: host,
         tree,
         node: fret_core::NodeId::default(),
@@ -29,10 +29,7 @@ fn node_graph_blocks_edit_copy_without_selection() {
 
     let mut cx = availability_cx(&mut host, &tree);
     let availability = canvas.command_availability(&mut cx, &CommandId::from("edit.copy"));
-    assert_eq!(
-        availability,
-        fret_ui::retained_bridge::CommandAvailability::Blocked
-    );
+    assert_eq!(availability, fret_ui::CommandAvailability::Blocked);
 }
 
 #[test]
@@ -50,10 +47,7 @@ fn node_graph_enables_edit_copy_with_selected_nodes() {
 
     let mut cx = availability_cx(&mut host, &tree);
     let availability = canvas.command_availability(&mut cx, &CommandId::from("edit.copy"));
-    assert_eq!(
-        availability,
-        fret_ui::retained_bridge::CommandAvailability::Available
-    );
+    assert_eq!(availability, fret_ui::CommandAvailability::Available);
 }
 
 #[test]
@@ -72,8 +66,5 @@ fn node_graph_blocks_edit_copy_without_window() {
     let mut cx = availability_cx(&mut host, &tree);
     cx.window = None;
     let availability = canvas.command_availability(&mut cx, &CommandId::from("edit.copy"));
-    assert_eq!(
-        availability,
-        fret_ui::retained_bridge::CommandAvailability::Blocked
-    );
+    assert_eq!(availability, fret_ui::CommandAvailability::Blocked);
 }
