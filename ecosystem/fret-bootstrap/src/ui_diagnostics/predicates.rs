@@ -258,6 +258,20 @@ fn semantics_relation_is_empty(
     }
 }
 
+fn semantics_inline_span_includes(
+    node: &fret_core::SemanticsNode,
+    role: &str,
+    tag: Option<&str>,
+) -> bool {
+    let Some(want_role) = parse_semantics_role(role) else {
+        return false;
+    };
+
+    node.inline_spans.iter().any(|span| {
+        span.role == want_role && tag.is_none_or(|want_tag| span.tag.as_deref() == Some(want_tag))
+    })
+}
+
 fn app_snapshot_field_equals(
     app_snapshot: Option<&serde_json::Value>,
     pointer: &str,
@@ -357,6 +371,7 @@ fn eval_predicate_without_semantics(
         UiPredicateV1::RawSemanticsHiddenIs { .. }
         | UiPredicateV1::SemanticsRelationIncludes { .. }
         | UiPredicateV1::SemanticsRelationIsEmpty { .. }
+        | UiPredicateV1::SemanticsInlineSpanIncludes { .. }
         | UiPredicateV1::ElementEffectiveOpacityApproxEq { .. } => None,
         UiPredicateV1::KnownWindowCountGe { n } => Some(open_window_count >= *n),
         UiPredicateV1::KnownWindowCountIs { n } => Some(open_window_count == *n),
@@ -1101,6 +1116,12 @@ fn eval_predicate(
                 return false;
             };
             semantics_action_value(node.actions, *action) == *enabled
+        }
+        UiPredicateV1::SemanticsInlineSpanIncludes { target, role, tag } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            semantics_inline_span_includes(node, role, tag.as_deref())
         }
         UiPredicateV1::CapturedIs { target, captured } => {
             let Some(node) = select_node(target) else {
@@ -2710,6 +2731,89 @@ mod predicate_tests {
                 relation: UiSemanticsRelationV1::Controls,
             },
         ));
+    }
+
+    #[test]
+    fn semantics_inline_span_predicates_match_inline_link_metadata() {
+        let window = window_id(1);
+        let mut root = semantics_node(1, "root", false);
+        root.role = SemanticsRole::Window;
+        let mut paragraph = semantics_node(2, "paragraph", false);
+        paragraph.parent = Some(root.id);
+        paragraph.role = SemanticsRole::Text;
+        paragraph.value = Some(
+            "The king thought long and hard, and finally came up with a brilliant plan."
+                .to_string(),
+        );
+        paragraph.actions.set_text_selection = true;
+        paragraph.inline_spans.push(fret_core::SemanticsInlineSpan {
+            range_utf8: (64, 81),
+            role: SemanticsRole::Link,
+            tag: Some("https://example.com/kings-plan".to_string()),
+        });
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![root, paragraph.clone()],
+        };
+
+        let selector = UiSelectorV1::TestId {
+            id: "paragraph".to_string(),
+            root_z_index: None,
+        };
+        let eval = |predicate: &UiPredicateV1| {
+            eval_predicate(
+                &snapshot,
+                rect(0.0, 0.0, 100.0, 100.0),
+                window,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                &[],
+                1,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                0,
+                false,
+                true,
+                predicate,
+            )
+        };
+
+        assert!(eval(&UiPredicateV1::SemanticsInlineSpanIncludes {
+            target: selector.clone(),
+            role: "link".to_string(),
+            tag: Some("https://example.com/kings-plan".to_string()),
+        }));
+        assert!(eval(&UiPredicateV1::SemanticsInlineSpanIncludes {
+            target: selector.clone(),
+            role: "link".to_string(),
+            tag: None,
+        }));
+        assert!(!eval(&UiPredicateV1::SemanticsInlineSpanIncludes {
+            target: selector,
+            role: "link".to_string(),
+            tag: Some("https://example.com/other".to_string()),
+        }));
     }
 
     #[test]

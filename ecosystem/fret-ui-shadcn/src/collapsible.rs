@@ -58,6 +58,7 @@ pub struct Collapsible {
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     force_mount_content: bool,
+    content_test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for Collapsible {
@@ -67,6 +68,7 @@ impl std::fmt::Debug for Collapsible {
             .field("disabled", &self.disabled)
             .field("layout", &self.layout)
             .field("force_mount_content", &self.force_mount_content)
+            .field("content_test_id", &self.content_test_id.as_deref())
             .finish()
     }
 }
@@ -81,6 +83,7 @@ impl Collapsible {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
+            content_test_id: None,
         }
     }
 
@@ -93,6 +96,7 @@ impl Collapsible {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             force_mount_content: false,
+            content_test_id: None,
         }
     }
 
@@ -119,6 +123,12 @@ impl Collapsible {
     /// This is a partial parity knob for Radix's `forceMount` on `CollapsibleContent`.
     pub fn force_mount_content(mut self, force_mount_content: bool) -> Self {
         self.force_mount_content = force_mount_content;
+        self
+    }
+
+    /// Stamps the motion/content wrapper that trigger `controls` points at.
+    pub fn content_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.content_test_id = Some(id.into());
         self
     }
 
@@ -151,6 +161,7 @@ impl Collapsible {
         let chrome = self.chrome;
         let layout = self.layout;
         let force_mount_content = self.force_mount_content;
+        let content_test_id = self.content_test_id;
 
         cx.scope(move |cx| {
             let open = open_root.use_open_model(cx).model();
@@ -202,6 +213,7 @@ impl Collapsible {
                     let mut children = Vec::new();
                     let motion_for_wrapper = motion.clone();
                     let motion_for_update = motion.clone();
+                    let content_test_id_for_wrapper = content_test_id.clone();
 
                     let (content_id, wrapper_el) = cx.keyed("collapsible-content", move |cx| {
                         cx.scope(|cx| {
@@ -240,6 +252,12 @@ impl Collapsible {
                             };
 
                             let wrapper_el = AnyElement::new(content_id, wrapper_kind, children);
+                            let wrapper_el =
+                                if let Some(test_id) = content_test_id_for_wrapper.clone() {
+                                    wrapper_el.test_id(test_id)
+                                } else {
+                                    wrapper_el
+                                };
 
                             (content_id, Some(wrapper_el))
                         })
@@ -981,6 +999,73 @@ mod tests {
         assert!(
             !trigger_node.controls.is_empty(),
             "expected trigger controls relationship to resolve when content is mounted"
+        );
+    }
+
+    #[test]
+    fn collapsible_content_test_id_stamps_controls_target_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        for _ in 0..4 {
+            app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
+            app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "collapsible",
+                |cx| {
+                    vec![cx.keyed("collapsible-root", |cx| {
+                        Collapsible::new(open.clone())
+                            .content_test_id("content")
+                            .into_element_with_open_model(
+                                cx,
+                                |cx, open, is_open| {
+                                    CollapsibleTrigger::new(open, vec![cx.text("Trigger")])
+                                        .into_element(cx, is_open)
+                                },
+                                |cx| {
+                                    CollapsibleContent::new(vec![cx.text("Content")])
+                                        .into_element(cx)
+                                },
+                            )
+                    })]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == fret_core::SemanticsRole::Button)
+            .expect("trigger node");
+        let content_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("content"))
+            .expect("content wrapper node");
+
+        assert!(
+            trigger_node.controls.contains(&content_node.id),
+            "expected trigger controls to target the test-id-decorated content wrapper"
         );
     }
 

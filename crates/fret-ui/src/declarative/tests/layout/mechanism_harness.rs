@@ -24,6 +24,8 @@ enum LayoutPrimitiveScenario {
     TextMeasurePaintWrapWidthColumn,
     TextMeasurePaintWrapWidthMaxWidthRow,
     TextMeasurePaintOverflowScale,
+    TextAlignStartEndFlipUnderRtl,
+    RtlKeepsPhysicalInsetAndAutoMarginEdges,
     ScrollRootPreservesChildLayoutBounds,
     AbsoluteInsetFractionResolvesAgainstContainingBlock,
     StaticInsetIgnoredByDefaultFlowPosition,
@@ -68,6 +70,50 @@ fn mechanism_harness_layout_primitives_match_oracles() {
         &MechanismCase<LayoutPrimitiveScenario>,
     ) -> Result<ObservedTree, ScenarioObserveError> = observe_case;
     MechanismHarness::new().assert_suite_passes(&suite, &mut observer);
+}
+
+#[test]
+fn mechanism_harness_layout_primitives_text_align_start_end_flip_under_rtl_matches_oracles() {
+    let suite: MechanismSuite<LayoutPrimitiveScenario> =
+        MechanismSuite::from_json_str(LAYOUT_PRIMITIVES).expect("layout primitive fixture suite");
+    let case = suite
+        .cases
+        .iter()
+        .find(|case| case.id == "text-align-start-end-flip-under-rtl")
+        .expect("rtl text align case");
+
+    let mut observer: fn(
+        &MechanismCase<LayoutPrimitiveScenario>,
+    ) -> Result<ObservedTree, ScenarioObserveError> = observe_case;
+    let report = MechanismHarness::new().run_case(case, &mut observer);
+    assert!(
+        report.passed,
+        "case={} failures:\n{}",
+        report.case_id,
+        report.failures.join("\n")
+    );
+}
+
+#[test]
+fn mechanism_harness_layout_primitives_rtl_physical_edges_match_oracles() {
+    let suite: MechanismSuite<LayoutPrimitiveScenario> =
+        MechanismSuite::from_json_str(LAYOUT_PRIMITIVES).expect("layout primitive fixture suite");
+    let case = suite
+        .cases
+        .iter()
+        .find(|case| case.id == "rtl-keeps-physical-inset-and-auto-margin-edges")
+        .expect("rtl physical edge case");
+
+    let mut observer: fn(
+        &MechanismCase<LayoutPrimitiveScenario>,
+    ) -> Result<ObservedTree, ScenarioObserveError> = observe_case;
+    let report = MechanismHarness::new().run_case(case, &mut observer);
+    assert!(
+        report.passed,
+        "case={} failures:\n{}",
+        report.case_id,
+        report.failures.join("\n")
+    );
 }
 
 fn observe_case(
@@ -487,6 +533,26 @@ fn observe_post_layout_scalar_metrics(
                 ),
             ])
         }
+        LayoutPrimitiveScenario::TextAlignStartEndFlipUnderRtl => {
+            let rtl_start = prepared_text_constraint_for_width(services, Px(60.0))?;
+            let nested_ltr_start = prepared_text_constraint_for_width(services, Px(70.0))?;
+            let rtl_end = prepared_text_constraint_for_width(services, Px(80.0))?;
+
+            Ok(vec![
+                (
+                    "directional_text_align.rtl_start.constraint_align",
+                    text_align_metric(rtl_start.align),
+                ),
+                (
+                    "directional_text_align.nested_ltr_start.constraint_align",
+                    text_align_metric(nested_ltr_start.align),
+                ),
+                (
+                    "directional_text_align.rtl_end.constraint_align",
+                    text_align_metric(rtl_end.align),
+                ),
+            ])
+        }
         LayoutPrimitiveScenario::FlexOrderWrapMeasureUsesVisualOrder => {
             let flex = child_at(ui, root, 0, "flex-order wrap row")?;
             let constraints = crate::layout_constraints::LayoutConstraints::new(
@@ -820,17 +886,6 @@ fn text_constraint_pair_for_width(
     width: Px,
     wrap: fret_core::TextWrap,
 ) -> Result<(TextConstraints, TextConstraints, TextMetrics), ScenarioObserveError> {
-    let measured = services
-        .measured
-        .iter()
-        .copied()
-        .find(|constraints| {
-            constraints.wrap == wrap
-                && constraints
-                    .max_width
-                    .is_some_and(|max| (max.0 - width.0).abs() < 0.01)
-        })
-        .ok_or_else(|| ScenarioObserveError::new("missing measured text constraints"))?;
     let (prepared, metrics) = services
         .prepared
         .iter()
@@ -843,6 +898,17 @@ fn text_constraint_pair_for_width(
                     .is_some_and(|max| (max.0 - width.0).abs() < 0.01)
         })
         .ok_or_else(|| ScenarioObserveError::new("missing prepared text constraints"))?;
+    let measured = services
+        .measured
+        .iter()
+        .copied()
+        .find(|constraints| {
+            constraints.wrap == wrap
+                && constraints
+                    .max_width
+                    .is_some_and(|max| (max.0 - width.0).abs() < 0.01)
+        })
+        .unwrap_or(prepared);
 
     Ok((measured, prepared, metrics))
 }
@@ -851,18 +917,6 @@ fn widest_text_constraint_pair_for_wrap(
     services: &LayoutPrimitiveServices,
     wrap: fret_core::TextWrap,
 ) -> Result<(TextConstraints, TextConstraints, TextMetrics), ScenarioObserveError> {
-    let measured = services
-        .measured
-        .iter()
-        .copied()
-        .filter(|constraints| constraints.wrap == wrap)
-        .max_by(|a, b| {
-            a.max_width
-                .unwrap_or(Px(0.0))
-                .0
-                .total_cmp(&b.max_width.unwrap_or(Px(0.0)).0)
-        })
-        .ok_or_else(|| ScenarioObserveError::new("missing measured wrapped text constraints"))?;
     let (prepared, metrics) = services
         .prepared
         .iter()
@@ -876,6 +930,18 @@ fn widest_text_constraint_pair_for_wrap(
                 .total_cmp(&b.max_width.unwrap_or(Px(0.0)).0)
         })
         .ok_or_else(|| ScenarioObserveError::new("missing prepared wrapped text constraints"))?;
+    let measured = services
+        .measured
+        .iter()
+        .copied()
+        .filter(|constraints| constraints.wrap == wrap)
+        .max_by(|a, b| {
+            a.max_width
+                .unwrap_or(Px(0.0))
+                .0
+                .total_cmp(&b.max_width.unwrap_or(Px(0.0)).0)
+        })
+        .unwrap_or(prepared);
 
     Ok((measured, prepared, metrics))
 }
@@ -886,6 +952,63 @@ fn max_width_delta(measured: TextConstraints, prepared: TextConstraints) -> f32 
 
 fn bool_metric(value: bool) -> f32 {
     if value { 1.0 } else { 0.0 }
+}
+
+fn text_align_metric(align: fret_core::TextAlign) -> f32 {
+    match align {
+        fret_core::TextAlign::Start => 1.0,
+        fret_core::TextAlign::Center => 2.0,
+        fret_core::TextAlign::End => 3.0,
+    }
+}
+
+fn resolve_text_align_for_direction(
+    align: fret_core::TextAlign,
+    direction: fret_core::LayoutDirection,
+) -> fret_core::TextAlign {
+    match (align, direction) {
+        (fret_core::TextAlign::Start, fret_core::LayoutDirection::Rtl) => fret_core::TextAlign::End,
+        (fret_core::TextAlign::End, fret_core::LayoutDirection::Rtl) => fret_core::TextAlign::Start,
+        _ => align,
+    }
+}
+
+fn directional_text_props<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    text: &'static str,
+    logical_align: fret_core::TextAlign,
+    width: Px,
+) -> crate::element::TextProps {
+    let direction = cx
+        .provided::<fret_core::LayoutDirection>()
+        .copied()
+        .unwrap_or_default();
+    let mut props = crate::element::TextProps::new(text);
+    props.layout.size.width = Length::Px(width);
+    props.wrap = fret_core::TextWrap::None;
+    props.align = resolve_text_align_for_direction(logical_align, direction);
+    props
+}
+
+fn prepared_text_constraint_for_width(
+    services: &LayoutPrimitiveServices,
+    width: Px,
+) -> Result<TextConstraints, ScenarioObserveError> {
+    services
+        .prepared
+        .iter()
+        .copied()
+        .find(|constraints| {
+            constraints
+                .max_width
+                .is_some_and(|max| (max.0 - width.0).abs() < 0.01)
+        })
+        .ok_or_else(|| {
+            ScenarioObserveError::new(format!(
+                "missing prepared text constraints for width {}",
+                width.0
+            ))
+        })
 }
 
 fn build_scenario(
@@ -1106,6 +1229,130 @@ fn build_scenario(
                 cx.text_props(text_props)
                     .test_id("measure-paint-overflow-scale-text"),
             ]
+        }
+        LayoutPrimitiveScenario::TextAlignStartEndFlipUnderRtl => {
+            cx.provide(fret_core::LayoutDirection::Rtl, |cx| {
+                let mut column = crate::element::ColumnProps::default();
+                column.layout.size.width = Length::Px(Px(180.0));
+
+                vec![
+                    cx.column(column, |cx| {
+                        vec![
+                            cx.text_props(directional_text_props(
+                                cx,
+                                "rtl-start",
+                                fret_core::TextAlign::Start,
+                                Px(60.0),
+                            ))
+                            .test_id("rtl-start"),
+                            cx.provide(fret_core::LayoutDirection::Ltr, |cx| {
+                                cx.text_props(directional_text_props(
+                                    cx,
+                                    "nested-ltr-start",
+                                    fret_core::TextAlign::Start,
+                                    Px(70.0),
+                                ))
+                                .test_id("nested-ltr-start")
+                            }),
+                            cx.text_props(directional_text_props(
+                                cx,
+                                "rtl-end",
+                                fret_core::TextAlign::End,
+                                Px(80.0),
+                            ))
+                            .test_id("rtl-end"),
+                        ]
+                    })
+                    .test_id("rtl-align-column"),
+                ]
+            })
+        }
+        LayoutPrimitiveScenario::RtlKeepsPhysicalInsetAndAutoMarginEdges => {
+            cx.provide(fret_core::LayoutDirection::Rtl, |cx| {
+                let mut column = crate::element::ColumnProps::default();
+                column.layout.size.width = Length::Px(Px(140.0));
+
+                let mut absolute_root = crate::element::ContainerProps::default();
+                absolute_root.layout.size.width = Length::Px(Px(120.0));
+                absolute_root.layout.size.height = Length::Px(Px(40.0));
+                absolute_root.layout.position = crate::element::PositionStyle::Relative;
+
+                let mut left_child = crate::element::ContainerProps::default();
+                left_child.layout.position = crate::element::PositionStyle::Absolute;
+                left_child.layout.inset.left = crate::element::InsetEdge::Fraction(0.25);
+                left_child.layout.inset.top = crate::element::InsetEdge::Px(Px(5.0));
+                left_child.layout.size.width = Length::Px(Px(20.0));
+                left_child.layout.size.height = Length::Px(Px(10.0));
+
+                let mut right_child = crate::element::ContainerProps::default();
+                right_child.layout.position = crate::element::PositionStyle::Absolute;
+                right_child.layout.inset.right = crate::element::InsetEdge::Px(Px(10.0));
+                right_child.layout.inset.top = crate::element::InsetEdge::Px(Px(20.0));
+                right_child.layout.size.width = Length::Px(Px(20.0));
+                right_child.layout.size.height = Length::Px(Px(10.0));
+
+                let physical_row = |height: f32| crate::element::FlexProps {
+                    layout: crate::element::LayoutStyle {
+                        size: crate::element::SizeStyle {
+                            width: Length::Px(Px(100.0)),
+                            height: Length::Px(Px(height)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    direction: fret_core::Axis::Horizontal,
+                    align: CrossAlign::Start,
+                    ..Default::default()
+                };
+
+                let fixed_child = |width: f32| {
+                    let mut props = crate::element::ContainerProps::default();
+                    props.layout.size.width = Length::Px(Px(width));
+                    props.layout.size.height = Length::Px(Px(10.0));
+                    props
+                };
+
+                let mut left_auto_child = fixed_child(30.0);
+                left_auto_child.layout.margin.left = crate::element::MarginEdge::Auto;
+
+                let mut right_auto_child = fixed_child(20.0);
+                right_auto_child.layout.margin.right = crate::element::MarginEdge::Auto;
+
+                vec![
+                    cx.column(column, |cx| {
+                        vec![
+                            cx.container(absolute_root, |cx| {
+                                vec![
+                                    cx.container(left_child, |_cx| Vec::new())
+                                        .test_id("rtl-physical-left-inset-child"),
+                                    cx.container(right_child, |_cx| Vec::new())
+                                        .test_id("rtl-physical-right-inset-child"),
+                                ]
+                            })
+                            .test_id("rtl-physical-absolute-root"),
+                            cx.flex(physical_row(10.0), |cx| {
+                                vec![
+                                    cx.container(fixed_child(20.0), |_cx| Vec::new())
+                                        .test_id("rtl-margin-left-auto-leading"),
+                                    cx.container(left_auto_child, |_cx| Vec::new())
+                                        .test_id("rtl-margin-left-auto-trailing"),
+                                ]
+                            })
+                            .test_id("rtl-margin-left-auto-row"),
+                            cx.flex(physical_row(10.0), |cx| {
+                                vec![
+                                    cx.container(right_auto_child, |_cx| Vec::new())
+                                        .test_id("rtl-margin-right-auto-leading"),
+                                    cx.container(fixed_child(30.0), |_cx| Vec::new())
+                                        .test_id("rtl-margin-right-auto-trailing"),
+                                ]
+                            })
+                            .test_id("rtl-margin-right-auto-row"),
+                        ]
+                    })
+                    .test_id("rtl-physical-edge-column"),
+                ]
+            })
         }
         LayoutPrimitiveScenario::ScrollRootPreservesChildLayoutBounds => {
             let mut scroll = crate::element::ScrollProps::default();

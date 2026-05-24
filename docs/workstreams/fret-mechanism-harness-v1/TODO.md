@@ -658,12 +658,12 @@ date: 2026-05-12
     state, cache-key misses, RAF invalidation, model-observation preservation across cache-hit
     frames, unrelated model scoping, inspection-mode cache bypass, and layout-query next-frame
     invalidation. No new mechanism defect was reproduced; the slice closed a harness coverage gap.
-- [ ] Add RTL/writing-mode layout primitive cases once the direction/writing-mode contract is
-  explicit enough to avoid encoding a recipe policy as a mechanism oracle.
-  - 2026-05-20 audit: keep this blocked. `LayoutDirection` is currently a narrow core enum,
-    ADR 0057 covers declarative flex direction rather than a general writing-mode/logical-layout
-    primitive contract, and current RTL behavior lives in component/overlay policy surfaces. Do not
-    add fixture oracles here until that mechanism contract is explicit.
+- [ ] Add RTL layout primitive cases once the direction contract is explicit enough to avoid
+  encoding recipe policy as a mechanism oracle.
+  - 2026-05-24 audit: ADR 0329 now makes the logical direction boundary explicit. `LayoutDirection`
+    is LTR/RTL only, provider state is recipe-owned and must be threaded across portal roots, and
+    `TextAlign::Start` / `TextAlign::End` flip under RTL when helpers consume direction. Keep
+    general writing-mode cases blocked until a dedicated writing-mode ADR exists.
 - [x] Add a runtime UI Gallery companion for cached model/layout-query dependency mutation only if
   a real surface exposes a non-synthetic risk; otherwise continue with scroll/click stability or
   retained/component semantics mutation.
@@ -695,9 +695,15 @@ date: 2026-05-12
     steps in ScrollArea scrollbar-drag scripts. Those scripts now use bounded `wait_until`, the
     registry lint rejects future promoted regressions, both focused ScrollArea runtime gates pass,
     and the full `ui-gallery-scroll-area` suite passes.
-- [ ] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
+- [x] If ScrollArea "Arm content growth" click intermittency recurs, add a focused diagnostics
   stability slice that proves whether the miss is click synthesis, command dispatch, or state
   publication.
+  - Result: added a focused `ui-gallery-scrollbar-arm-content-growth-click-stability` gate plus
+    hardened `ui-gallery-scrollbar-drag-baseline-content-growth` and
+    `ui-gallery-scrollbar-drag-pointer-cancel-release` so the old promoted scripts now prove
+    target visibility, action exposure, `/shell/last_action` dispatch, and state publication
+    without racing the transient Armed badge. The focused gates and the full
+    `ui-gallery-scroll-area` suite pass.
 - [x] Promote timer-target visibility semantics into a fixture-driven mechanism matrix.
   - Result: `timer_dispatch_v1.json` now covers visible base targets, visible but hit-test-inert
     overlay targets, hidden overlay targets, and removed overlay targets. No new mechanism defect
@@ -1732,6 +1738,20 @@ date: 2026-05-12
     `ui-gallery-menubar-semantics` suite passed 1/1 with summary
     `target/fret-diag-menubar-semantics-suite-disabled-item-v1/sessions/1779383570688-235732/suite.summary.json`.
 
+- [x] Add a Menubar keyboard-nav and escape focus-return runtime gate.
+  - Result:
+    `ui-gallery-menubar-keyboard-nav.json` now starts directly on the Menubar page's File trigger
+    path, proves ArrowDown lands on the app-owned `ui_gallery.app.open` menu item, and proves
+    Escape returns focus to the File trigger. The dedicated
+    `ui-gallery-menubar-keyboard-nav-action-state` suite now covers the canonical script, and the
+    docs-surface guard was refreshed to match the live usage snippet import line
+    `use fret::{AppComponentCx, UiChild};`. No Menubar recipe defect was reproduced. Fresh
+    verification passed with protocol run id `23fe6fe6-f8aa-44da-a19a-dcc4274c5283`, gallery
+    docs-surface run id `ef8805f0-524a-4620-97bf-38ab73e89876`, registry refresh via
+    `python tools/check_diag_scripts_registry.py --write`, build, and runtime suite run id
+    `1779619632698` with summary
+    `target/fret-diag-menubar-keyboard-nav-action-state-v1/sessions/1779619620521-132232/suite.summary.json`.
+
 - [x] Add a ContextMenu disabled command-item action-state and roving-focus runtime gate.
   - Result:
     `ui-gallery-context-menu-disabled-item-action-state.json` now starts on the Context Menu page's
@@ -1929,3 +1949,919 @@ Next slice recommendation:
 - Treat retained Table row-pinning selected/invoke semantics as covered. Move to another
   retained/cached relation or action-state mutation surface outside the Resizable, ContextMenu, AI
   transcript, and retained Table clusters unless a fresh bundle shows concrete drift there.
+
+- [x] Add a UI Kit List row-root semantics/action-state companion under view-cache.
+  - Result:
+    `ui-gallery-ui-kit-list-window-boundary-scroll.json` now starts directly on the UI Kit List
+    Torture page with `FRET_UI_GALLERY_VIEW_CACHE=1`, targets deterministic retained-list row-root
+    ids, and proves row 0 / row 22 expose collection metadata, selected state, and invoke action
+    availability while the list scrolls. The first draft corrected a gate-definition issue rather
+    than a retained mechanism defect: retained-host reconcile telemetry belongs to the dedicated
+    Virtual List Torture retained suites. The runtime pass also exposed a UI Kit List width
+    ownership gap; list rows now fill width with `min_width=0`, including the inner row flex root,
+    so row labels no longer produce `layout.zero_size` lint warnings. Focused runtime passed with
+    run id `1779492630662`; the dedicated `ui-gallery-ui-kit-list-retained` suite passed with
+    summary
+    `target/fret-diag-ui-kit-list-row-root-semantics-suite-v3/sessions/1779493162475-79408/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat UI Kit List row-root semantics/action-state as covered. Move to a different cached or
+  retained relation/action-state surface outside the Table, Resizable, ContextMenu, AI transcript,
+  and UI Kit List clusters unless a fresh bundle shows concrete drift.
+
+- [x] Harden Card retained-analysis diagnostics with page/bisect/app-snapshot preconditions.
+  - Result:
+    the eight Card retained-analysis scripts now start on the Card page with nav hidden, prove the
+    selected page, bisect flags, code-tab and intro toggles, section counts, code counts, and shell
+    counts before capture. The previous preview-only probe timed out at `capture_bundle` after a
+    600-frame wait even though it had already emitted a usable bundle; the updated scripts use a
+    short warmup/reset/capture sequence because WGPU allocator samples are available from early
+    frames. Focused runtime passed with run id `1779496575867`; the retained-analysis,
+    preview-bisect, and preview-hotspots suites passed with summaries
+    `target/fret-diag-card-retained-analysis-navnone-v1/sessions/1779496691808-84884/suite.summary.json`,
+    `target/fret-diag-card-preview-retained-bisect-navnone-v1/sessions/1779496977891-58936/suite.summary.json`,
+    and
+    `target/fret-diag-card-preview-retained-hotspots-navnone-v1/sessions/1779497297107-51152/suite.summary.json`.
+
+Next slice recommendation:
+
+- Leave the Card retained-analysis cluster unless a fresh bundle shows concrete retained-cache or
+  allocator drift. Prefer a fresh cached or retained relation/action-state surface outside the
+  Table, Resizable, ContextMenu, AI transcript, UI Kit List, and Card retained-analysis clusters.
+
+- [x] Add a FileTree Torture retained hierarchy/action-state freshness gate.
+  - Result:
+    `ui-gallery-file-tree-torture-retained-hierarchy-action-state.json` now starts directly on the
+    dev-only retained FileTree Torture page, proves root/folder/leaf hierarchy levels, folder
+    expanded state, selected-state transfer, invoke action availability, collapse/expand
+    detach/reattach, and retained virtual-list scroll escape/reatach for the selected leaf. No
+    FileTree mechanism defect was reproduced. The first focused draft exposed diagnostics
+    authoring drift from immediate `assert` predicates; the final gate uses bounded `wait_until`
+    predicates for semantics convergence. Focused runtime passed with run id `1779499421903`; the
+    dedicated `ui-gallery-file-tree-retained` suite passed with summary
+    `target/fret-diag-file-tree-retained-suite-hierarchy-action-state-v1/sessions/1779499651434-70912/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat FileTree Torture retained hierarchy/action-state freshness as covered. Move to a different
+  cached or retained surface outside Table, DataTable, Virtual List, Tree, FileTree, Command,
+  Resizable, ContextMenu, AI transcript, UI Kit List, and Card retained-analysis clusters unless a
+  fresh bundle shows concrete drift.
+
+- [x] Add an Inspector Torture row-root selected/action-state freshness gate.
+  - Result:
+    `ui-gallery-inspector-torture-row-root-selected-action-state-bounce.json` now starts directly
+    on the dev-only Inspector Torture page, stamps retained row-root `ListItem` semantics with
+    collection metadata plus `selected`/`invoke`, selects row 2, scrolls it out of the retained
+    window, and proves the row reattaches with `selected=true` and `invoke=true` while the retained
+    virtual list still reports detach/reattach reconciliation. Focused runtime passed with run id
+    `1779506078170`; the dedicated
+    `ui-gallery-inspector-torture-row-root-selected-action-state` suite passed with summary
+    `target/fret-diag-inspector-row-root-selected-action-state-suite-v1/sessions/1779506349279-97672/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Inspector Torture row-root selected/action-state freshness as covered. Move to a different
+  cached or retained surface outside Table, DataTable, Virtual List, Tree, FileTree, Command,
+  Resizable, ContextMenu, AI transcript, UI Kit List, Card retained-analysis, and Inspector
+  clusters unless a fresh bundle shows concrete drift.
+
+- [x] Add a View Cache cached Popover relation/action-state gate.
+  - Result:
+    `ui-gallery-view-cache-cached-popover-relation-action-state.json` now starts directly on the
+    View Cache harness page, stamps a stable `ui-gallery-view-cache-popover-dialog` test id on the
+    Popover dialog wrapper, proves the trigger keeps `invoke=true` and a `controls` edge to that
+    wrapper while open, proves the edge clears after close, and rechecks the same
+    relation/action-state contract after a cached counter mutation and reopen. Focused runtime
+    passed with run id `1779519791015`; the dedicated `ui-gallery-view-cache` suite passed with
+    summary
+    `target/fret-diag-view-cache-suite-cached-popover-relation-v1/sessions/1779519979352-64968/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat View Cache cached Popover relation/action-state as covered. Move to a different cached or
+  retained relation/action-state surface outside Table, DataTable, Virtual List, Tree, FileTree,
+  Command, Resizable, ContextMenu, AI transcript, UI Kit List, Card retained-analysis, Inspector,
+  and View Cache Popover clusters unless a fresh bundle shows concrete drift.
+
+- [x] Add a Chrome Torture cached overlay action-dispatch gate.
+  - Result:
+    `ui-gallery-chrome-torture-overlay-action-dispatch.json` now starts directly on the dev-only
+    Chrome Torture page and exercises overlay controls rendered inside the cached overlay body. The
+    gate proves reset, DropdownMenu, ContextMenu, and Popover trigger action exposure; verifies
+    `/shell/last_action` dispatch for reset, DropdownMenu Apple, ContextMenu Action, and Popover
+    outside-press dismissal; and confirms menu closure plus underlay/dismissal state publication.
+    No mechanism defect was reproduced. The first focused draft failed on an over-specific
+    underlay-focus oracle after dismissal even though click routing, dismissal, and state
+    publication had already succeeded, so the promoted gate keeps the invariant on action routing
+    and dismissal state. Focused runtime passed with run id `1779526747845`; the dedicated
+    `ui-gallery-chrome-torture-overlay-action-dispatch` suite passed with summary
+    `target/fret-diag-chrome-torture-overlay-action-dispatch-suite-v1/sessions/1779526947605-48036/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Chrome Torture cached overlay action-dispatch as covered. Move to a different cached or
+  retained relation/action-state surface outside Table, DataTable, Virtual List, Tree, FileTree,
+  Command, Resizable, ContextMenu, AI transcript, UI Kit List, Card retained-analysis, Inspector,
+  View Cache Popover, ScrollArea, and Chrome Torture overlay clusters unless a fresh bundle shows
+  concrete drift.
+
+- [x] Add a Material3 State Matrix chip action-state gate.
+  - Result:
+    `ui-gallery-material3-state-matrix-chip-action-state.json` now starts directly on the cacheable
+    Material 3 State Matrix page with `gallery-material3`, proves FilterChip/InputChip checked
+    state, disabled invoke suppression, primary/trailing-icon action exposure, and
+    `/shell/last_action` dispatch through the derived `.trailing-icon` nodes. The first focused
+    runtime pass exposed a real Material3 semantics gap: FilterChip and InputChip exported legacy
+    `checked` but not explicit `checked_state`, so diagnostics could not distinguish true/false
+    selected state through the accessibility contract. `FilterChip` and `InputChip` now stamp
+    `SemanticsCheckedState::True/False` alongside `checked`. A later draft failure was diagnostics
+    authoring drift from immediate static asserts after scrolling; the promoted gate uses bounded
+    `wait_until` predicates and an explicit InputChip visibility guard before clicks. Focused
+    runtime passed with run id `1779529828041`; the dedicated
+    `ui-gallery-material3-state-matrix-chip-action-state` suite passed with summary
+    `target/fret-diag-material3-state-matrix-chip-action-state-suite-v1/sessions/1779529969098-52044/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Material3 State Matrix chip checked/action-state as covered. Move to a different cached or
+  retained relation/action-state surface outside Table, DataTable, Virtual List, Tree, FileTree,
+  Command, Resizable, ContextMenu, AI transcript, UI Kit List, Card retained-analysis, Inspector,
+  View Cache Popover, ScrollArea, Chrome Torture overlay, and Material3 State Matrix chip clusters
+  unless a fresh bundle shows concrete drift.
+
+- [x] Promote the Windowed Rows Surface scroll-refresh gate.
+  - Result:
+    `ui-gallery-windowed-rows-surface-scroll-refresh.json` now runs as a direct-start schema v2
+    UI Gallery gate for the dev-only Windowed Rows Surface torture page. The script scrolls the
+    single-node Scroll+Canvas surface and relies on the `fret-diag` post-run gates for scroll
+    offset changes plus `visible_start` repaint freshness. No mechanism defect was reproduced:
+    the surface produced offset changes and repainted scene fingerprints after visible-start
+    movement. The slice did close a diagnostics wiring gap: the promoted suite and protocol
+    roundtrip now point at the real `ui-gallery/windowed-rows/...` script instead of the legacy
+    top-level redirect. Focused runtime passed with run id `1779531611027`; the dedicated
+    `ui-gallery-windowed-rows-surface` suite passed with summary
+    `target/fret-diag-windowed-rows-surface-suite-v1/sessions/1779531680574-89080/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Windowed Rows Surface scroll-refresh and visible-start repaint freshness as covered. Move
+  to a different cached or retained relation/action-state surface outside Table, DataTable,
+  Virtual List, Tree, FileTree, Command, Resizable, ContextMenu, AI transcript, UI Kit List, Card
+  retained-analysis, Inspector, View Cache Popover, ScrollArea, Chrome Torture overlay, Material3
+  State Matrix chip, and Windowed Rows Surface clusters unless a fresh bundle shows concrete drift.
+
+- [x] Add an AI Plan collapsible relation/action-state gate.
+  - Result:
+    `ui-gallery-ai-plan-demo-toggle.json` now starts directly on the cacheable AI Plan docs page
+    and proves the AI Elements `PlanTrigger` / `PlanContent` collapsible contract through the
+    runtime diagnostics path. The script asserts the closed trigger has `expanded=false`,
+    `invoke=true`, and no resolved `controls` edge, opens the plan, proves the trigger mutates to
+    `expanded=true` with a `controls` relation to `ui-ai-plan-content-marker`, then closes it and
+    proves the relation clears again. No mechanism defect was reproduced; the existing
+    `fret-ui-ai` Plan implementation already stamps the trigger `controls_element` against the
+    same stable content root that `PlanContent::test_id(...)` decorates. Focused runtime passed
+    with run id `1779532840657`; the dedicated `ui-gallery-ai-plan-relation-action-state` suite
+    passed with summary
+    `target/fret-diag-ai-plan-relation-action-state-suite-v1/sessions/1779532864319-95604/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat AI Plan collapsible expanded/controls/action-state as covered. Move to a different cached
+  or retained relation/action-state surface outside Table, DataTable, Virtual List, Tree,
+  FileTree, Command, Resizable, ContextMenu, AI transcript, AI Plan collapsible, UI Kit List,
+  Card retained-analysis, Inspector, View Cache Popover, ScrollArea, Chrome Torture overlay,
+  Material3 State Matrix chip, and Windowed Rows Surface clusters unless a fresh bundle shows
+  concrete drift.
+
+- [x] Add an AI Reasoning collapsible relation/action-state gate.
+  - Result:
+    `ui-gallery-ai-reasoning-demo-auto-open-close.json` now starts directly on the cacheable AI
+    Reasoning docs page and proves streaming-driven auto-open/auto-close semantics through the
+    runtime diagnostics path. The first focused run exposed a real recipe diagnostics gap:
+    `ReasoningTrigger` correctly exported `expanded=true` and a `controls` edge, but that edge
+    pointed at the shadcn `Collapsible` motion/content wrapper while
+    `ReasoningContent::test_id(...)` decorated an inner content node. `Collapsible` now has a
+    `content_test_id(...)` wrapper hook, and the Reasoning composition API promotes
+    `ReasoningContent::test_id(...)` to the actual controls target. Focused runtime passed after
+    the fix with run id `1779534765888`; the dedicated
+    `ui-gallery-ai-reasoning-relation-action-state` suite passed with summary
+    `target/fret-diag-ai-reasoning-relation-action-state-suite-v1/sessions/1779534799046-95680/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat AI Reasoning collapsible expanded/controls/action-state as covered. Move to a different
+  cached or retained relation/action-state surface outside Table, DataTable, Virtual List, Tree,
+  FileTree, Command, Resizable, ContextMenu, AI transcript, AI Plan collapsible, AI Reasoning
+  collapsible, UI Kit List, Card retained-analysis, Inspector, View Cache Popover, ScrollArea,
+  Chrome Torture overlay, Material3 State Matrix chip, and Windowed Rows Surface clusters unless a
+  fresh bundle shows concrete drift.
+
+- [x] Add an AI Task collapsible relation/action-state gate.
+  - Result:
+    `ui-gallery-ai-task-demo-toggle.json` now starts directly on the cacheable AI Task docs page
+    and proves the AI Elements `TaskTrigger` / `TaskContent` collapsible contract through the
+    runtime diagnostics path. The first promoted probe exposed a real recipe diagnostics gap: the
+    stable trigger id selected an outer container role button that lacked `invoke`, `expanded`, and
+    `controls`; after moving the id to the pressable, a unit probe showed `Collapsible` was still
+    stamping the styled wrapper returned by `TaskTrigger`, not the pressable action root. The fix
+    makes the `TaskTrigger` pressable the root element and promotes `TaskContent::test_id(...)` to
+    the shadcn content wrapper via `Collapsible::content_test_id(...)`. Focused runtime passed
+    after the fix with run id `1779535893081`; the dedicated
+    `ui-gallery-ai-task-relation-action-state` suite passed with summary
+    `target/fret-diag-ai-task-relation-action-state-suite-v1/sessions/1779536058135-86692/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat AI Task collapsible expanded/controls/action-state as covered. Move to a different cached
+  or retained relation/action-state surface outside Table, DataTable, Virtual List, Tree,
+  FileTree, Command, Resizable, ContextMenu, AI transcript, AI Plan collapsible, AI Reasoning
+  collapsible, AI Task collapsible, UI Kit List, Card retained-analysis, Inspector, View Cache
+  Popover, ScrollArea, Chrome Torture overlay, Material3 State Matrix chip, and Windowed Rows
+  Surface clusters unless a fresh bundle shows concrete drift.
+
+- [x] Promote Collapsible Basic into a relation/action-state gate.
+  - Result:
+    `ui-gallery-collapsible-basic-double-click-close.json` now starts directly on the cacheable
+    Collapsible docs page and proves the compact shadcn `Collapsible` Basic trigger/content
+    contract through closed -> open -> closed -> reopened transitions. The first probe exposed real
+    diagnostics endpoint drift: the old script only gated bounds, and
+    `ui-gallery-collapsible-basic-content` collided with the DocSection generated content wrapper
+    while the trigger `controls` relation pointed at the internal shadcn motion/content wrapper.
+    The Basic snippet now stamps `ui-gallery-collapsible-basic-panel` on that actual wrapper via
+    `Collapsible::content_test_id(...)`, and the promoted gate proves `expanded`, `invoke`, and
+    `controls -> ui-gallery-collapsible-basic-panel`. Focused runtime passed with run id
+    `1779537328201`; the dedicated `ui-gallery-collapsible-basic-relation-action-state` suite
+    passed with summary
+    `target/fret-diag-collapsible-basic-relation-action-state-suite-v1/sessions/1779537469123-97920/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Collapsible Basic expanded/controls/action-state as covered. Move to a different cached or
+  retained relation/action-state surface outside Table, DataTable, Virtual List, Tree, FileTree,
+  Command, Resizable, ContextMenu, Collapsible Basic, AI transcript, AI Plan collapsible,
+  AI Reasoning collapsible, AI Task collapsible, UI Kit List, Card retained-analysis, Inspector,
+  View Cache Popover, ScrollArea, Chrome Torture overlay, Material3 State Matrix chip, and
+  Windowed Rows Surface clusters unless a fresh bundle shows concrete drift.
+
+- [x] Promote Tooltip focus relation/action-state into a runtime gate.
+  - Result: `ui-gallery-tooltip-focus-opens.json` now starts directly on the Tooltip docs page and
+    proves the keyboard-focus trigger exports `focus=true`, `invoke=true`, and no resolved
+    `described_by` edge while closed, tabs focus onto the trigger, opens and proves
+    `described_by -> ui-gallery-tooltip-focus-content-node`, captures a layout sidecar plus
+    screenshot, then presses Escape and proves the relation clears again. The first probe found an
+    endpoint drift: `ui-gallery-tooltip-focus-panel` is the geometry-only popper marker, while the
+    actual `role=tooltip` content node needed its own stable test id via
+    `TooltipContent::test_id(...)`.
+
+Next slice recommendation:
+
+- Treat Tooltip keyboard-focus relation/action-state as covered. Move to a different overlay/focus
+  surface outside Command, Combobox, Select, HoverCard, Date Picker, Menubar Placement,
+  DropdownMenu, ContextMenu, and Tooltip clusters unless a fresh bundle shows concrete drift.
+
+- [x] Promote AlertDialog Demo relation/action-state into a runtime gate.
+  - Result:
+    `ui-gallery-alert-dialog-demo-relation-action-state.json` now starts directly on the
+    AlertDialog docs page and proves the Demo trigger/content contract through closed -> modal
+    open -> closed transitions. The gate asserts the closed trigger exports `expanded=false`,
+    `invoke=true`, and no resolved `controls` edge; opens the dialog; proves modal and focus
+    barrier roots are active; proves `controls -> ui-gallery-alert-dialog-demo-content`; proves
+    the `alert_dialog` content exports `labelled_by -> ui-gallery-alert-dialog-demo-title` and
+    `described_by -> ui-gallery-alert-dialog-demo-description`; verifies Cancel and Action expose
+    `invoke=true`; then closes via Cancel and proves focus returns to the trigger, barrier roots
+    clear, `expanded=false`, and the `controls` edge is empty again. The first draft found a
+    diagnostics authoring pitfall rather than a component defect: ordinary underlay selectors are
+    correctly filtered while a modal barrier is active, so the open-state trigger relation must be
+    asserted through relation endpoints instead of `expanded_is` on the inert underlay trigger.
+    Focused runtime passed with run id `1779563787191`; the dedicated
+    `ui-gallery-alert-dialog-relation-action-state` suite passed with summary
+    `target/fret-diag-alert-dialog-relation-action-state-suite-v1/sessions/1779563883496-110116/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat AlertDialog Demo modal relation/action-state as covered. Move to a different overlay/focus
+  surface outside Command, Combobox, Select, HoverCard, Date Picker, Menubar Placement,
+  DropdownMenu, ContextMenu, Tooltip, and AlertDialog clusters unless a fresh bundle shows
+  concrete drift.
+
+- [x] Promote Sheet Demo relation/action-state into a runtime gate.
+  - Result:
+    `ui-gallery-sheet-demo-relation-action-state.json` now starts directly on the Sheet docs page
+    and proves the Demo trigger/content contract through closed -> modal open -> closed
+    transitions. The gate asserts the closed trigger exports `expanded=false`, `invoke=true`, and
+    no resolved `controls` edge; opens the sheet; proves modal and focus barrier roots are active;
+    proves `controls -> ui-gallery-sheet-demo-panel`; proves the dialog content exports
+    `labelled_by -> ui-gallery-sheet-demo-dialog-title` and
+    `described_by -> ui-gallery-sheet-demo-dialog-description`; verifies the name input, save
+    button, and close button expose the expected actions; then closes via the footer close action
+    and proves focus returns to the trigger, barrier roots clear, `expanded=false`, and the
+    `controls` edge is empty again. The first focused probe found a real Sheet recipe semantics
+    gap: Sheet had open/close behavior but did not stamp Dialog-style trigger `expanded/controls`
+    metadata, and `SheetContent` did not join the modal title/description registry. The fix reuses
+    Dialog trigger a11y stamping in Sheet and registers `SheetTitle`/`SheetDescription` through the
+    modal a11y scope. Focused runtime passed with run id `1779566915448`; the dedicated
+    `ui-gallery-sheet-relation-action-state` suite passed with summary
+    `target/fret-diag-sheet-relation-action-state-suite-v2/sessions/1779566998050-99572/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Sheet Demo modal relation/action-state as covered. Move to a different overlay/focus
+  surface outside Command, Combobox, Select, HoverCard, Date Picker, Menubar Placement,
+  DropdownMenu, ContextMenu, Tooltip, AlertDialog, and Sheet clusters unless a fresh bundle shows
+  concrete drift.
+
+- [x] Promote Drawer Demo relation/action-state into a runtime gate.
+  - Result:
+    `ui-gallery-drawer-demo-relation-action-state.json` now starts directly on the Drawer docs page
+    and proves the Demo trigger/content contract through closed -> modal open -> closed
+    transitions. The gate asserts the closed trigger exports `expanded=false`, `invoke=true`, and
+    no resolved `controls` edge; opens the drawer; proves modal and focus barrier roots are active;
+    proves `controls -> ui-gallery-drawer-demo-content`; proves the dialog content exports
+    `labelled_by -> ui-gallery-drawer-demo-dialog-title` and
+    `described_by -> ui-gallery-drawer-demo-dialog-description`; verifies decrease, increase,
+    submit, and cancel expose `invoke=true`; then closes via Cancel and proves focus returns to the
+    trigger, barrier roots clear, `expanded=false`, and the `controls` edge is empty again. The
+    targeted unit regression found a real Sheet-backed Drawer semantics gap: the trigger controls
+    target could land on the outer drag/motion wrapper instead of the actual dialog content, and
+    DrawerContent did not attach modal title/description relations. Sheet now prefers a returned
+    content-tree `role=dialog` element for trigger a11y controls, with the old root fallback
+    preserved, and DrawerContent reads the modal a11y scope. Focused runtime passed with run id
+    `1779568082318`; the dedicated `ui-gallery-drawer-relation-action-state` suite passed with
+    summary
+    `target/fret-diag-drawer-relation-action-state-suite-v1/sessions/1779568174460-103024/suite.summary.json`.
+
+- [x] Promote Dialog Demo relation/action-state into a runtime gate.
+  - Result:
+    `ui-gallery-dialog-demo-relation-action-state.json` now starts directly on the Dialog docs page
+    and proves the Demo trigger/content contract through closed -> modal open -> closed
+    transitions. The gate asserts the closed trigger exports `expanded=false`, `invoke=true`, and
+    no resolved `controls` edge; opens the dialog; proves modal and focus barrier roots are active;
+    proves `controls -> ui-gallery-dialog-demo-content`; proves the dialog content exports
+    `labelled_by -> ui-gallery-dialog-demo-title` and
+    `described_by -> ui-gallery-dialog-demo-description`; verifies both inputs expose
+    `set_value=true` and Cancel/Save expose `invoke=true`; then closes via Cancel and proves focus
+    returns to the trigger, barrier roots clear, `expanded=false`, and the `controls` edge is empty
+    again. No Dialog implementation defect was reproduced; this slice promotes the existing Dialog
+    a11y mechanism into a durable runtime gate next to AlertDialog, Sheet, and Drawer.
+
+Next slice recommendation:
+
+- Treat Dialog Demo modal relation/action-state as covered. Move to NavigationMenu or another
+  not-yet-promoted overlay/focus surface outside Command, Combobox, Select, HoverCard, Date Picker,
+  Menubar Placement, DropdownMenu, ContextMenu, Tooltip, AlertDialog, Sheet, Drawer, and Dialog
+  clusters unless a fresh bundle shows concrete drift.
+
+- [x] Promote NavigationMenu Docs Demo relation/action-state into a runtime gate.
+  - Result:
+    `ui-gallery-navigation-menu-docs-demo-relation-action-state.json` now starts directly on the
+    NavigationMenu docs page and proves the docs-demo Components trigger/content contract through
+    closed -> open -> keyboard-entry -> closed transitions. The gate asserts the Components trigger
+    exports `role=button`, `expanded=false`, and `invoke=true` while closed; verifies the
+    contentless Docs item stays `role=link`, `invoke=true`, and has an empty `controls` edge; opens
+    the Components viewport; proves `expanded=true` plus
+    `controls -> ui-gallery-navigation-menu-docs-demo-content-components`; verifies the first
+    content link role/action state; moves focus into the content with ArrowDown; then closes with
+    Escape and proves viewport/content teardown plus `expanded=false`. The first targeted
+    regression found a recipe diagnostics endpoint gap rather than a behavior defect:
+    NavigationMenu already computed a stable internal content wrapper id for trigger `controls`,
+    but shadcn did not expose a stable test id for that exact wrapper. `NavigationMenuItem` now has
+    `content_test_id(...)`, and the docs demo stamps the Components content endpoint.
+
+Next slice recommendation:
+
+- Treat NavigationMenu Docs Demo relation/action-state as covered. Move to Popover Demo
+  relation/action-state or another not-yet-promoted overlay/focus surface outside Command,
+  Combobox, Select, HoverCard, Date Picker, Menubar Placement, DropdownMenu, ContextMenu, Tooltip,
+  AlertDialog, Sheet, Drawer, Dialog, and NavigationMenu clusters unless a fresh bundle shows
+  concrete drift.
+
+- [x] Promote Popover Demo relation/action-state into a runtime gate.
+  - Result:
+    `ui-gallery-popover-demo-relation-action-state.json` now starts directly on the Popover docs
+    page and proves the Demo trigger/content contract through closed -> open -> Escape-closed
+    transitions. The gate targets the actual semantic trigger
+    `ui-gallery-popover-demo-popover`, not the visual Button chrome, asserts closed
+    `role=button`, `expanded=false`, `invoke=true`, and no resolved `controls` edge; opens the
+    popover; proves `controls -> ui-gallery-popover-demo-dialog`; proves the dialog wrapper is
+    `role=dialog` while the visual content panel remains `role=panel`; verifies the non-modal
+    Popover installs no modal or focus barrier roots; verifies all four dimensions inputs expose
+    `set_value=true`; then closes with Escape and proves focus returns to the trigger,
+    `expanded=false`, and the `controls` edge is empty again. The first focused probe found a
+    diagnostics selector assumption: Popover trigger semantics live on the Popover root test id,
+    while Button's authored id lands on visual `.chrome`/label descendants. The first suite run
+    then found a Gallery test-id hygiene defect: the DocSection already owns
+    `ui-gallery-popover-demo-title` and `ui-gallery-popover-demo-description`, so the overlay
+    header no longer reuses those IDs. Focused runtime passed with run id `1779573937811`; the
+    dedicated `ui-gallery-popover-relation-action-state` suite passed with summary
+    `target/fret-diag-popover-relation-action-state-suite-v2/sessions/1779574027661-101288/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Popover Demo relation/action-state as covered. Move to Avatar Dropdown relation/action-state
+  as a composed consumer probe, or another not-yet-promoted overlay/focus surface outside Command,
+  Combobox, Select, HoverCard, Date Picker, Menubar Placement, bare DropdownMenu, ContextMenu,
+  Tooltip, AlertDialog, Sheet, Drawer, Dialog, NavigationMenu, and Popover clusters unless a fresh
+  bundle shows concrete drift.
+
+- [x] Promote Avatar Dropdown relation/action-state into a runtime gate.
+  - Result:
+    `ui-gallery-avatar-dropdown-relation-action-state.json` now starts directly on the Avatar
+    Dropdown docs section and proves the composed Avatar-as-DropdownMenu-trigger contract through
+    closed -> open -> Escape-closed transitions. The gate asserts the nested Avatar leaf remains
+    presentational (`role=generic`, `invoke=false`), the authored Button trigger remains the
+    relation/action source (`role=button`, `expanded=false`, `invoke=true`, empty `controls` while
+    closed), opening resolves `controls -> ui-gallery-avatar-dropdown-menu`, focus enters the
+    `role=menu`, each menu item exposes `invoke=true`, and Escape restores focus to the trigger
+    with `expanded=false` plus an empty `controls` edge. The first focused draft found a
+    diagnostics authoring pitfall: `ui-gallery-avatar-dropdown` is not a DocSection root endpoint;
+    the observable section endpoint is `ui-gallery-avatar-dropdown-content`. The second draft
+    found a contract assumption mismatch: DropdownMenu is not a Dialog-style barrier-root surface,
+    so this gate intentionally asserts focused menu relation/action-state instead of
+    `barrier_roots some/some`. Focused runtime passed with run id `1779575688231`; the dedicated
+    `ui-gallery-avatar-dropdown-relation-action-state` suite passed with summary
+    `target/fret-diag-avatar-dropdown-relation-action-state-suite-v1/sessions/1779575714167-95056/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Avatar Dropdown relation/action-state as covered. Move to Input Group Dropdown
+  relation/action-state as another composed consumer probe, or another not-yet-promoted
+  overlay/focus surface outside Command, Combobox, Select, HoverCard, Date Picker, Menubar
+  Placement, bare DropdownMenu, ContextMenu, Tooltip, AlertDialog, Sheet, Drawer, Dialog,
+  NavigationMenu, Popover, and Avatar Dropdown clusters unless a fresh bundle shows concrete drift.
+
+- [x] Promote Input Group Dropdown relation/action-state into a runtime gate.
+  - Result:
+    `ui-gallery-input-group-dropdown-relation-action-state.json` now starts directly on the Input
+    Group Dropdown docs section and proves the composed text-field plus inline-end DropdownMenu
+    trigger contract through closed -> open -> Escape-closed transitions. The gate asserts the
+    input control remains `role=text_field` with focus and `set_value` actions; the addon
+    `InputGroupButton` remains the trigger relation/action source (`role=button`,
+    `expanded=false`, `invoke=true`, `focus=true`, empty `controls` while closed); opening resolves
+    `controls -> ui-gallery-input-group-dropdown-leading-menu`; focus enters the `role=menu`; all
+    leading menu items expose `invoke=true`; Escape restores focus to the trigger with
+    `expanded=false` plus an empty `controls` edge; and the input control remains writable after
+    close. No InputGroup or DropdownMenu behavior defect was reproduced; the only code change was
+    adding stable Gallery menu/item endpoints so this composed consumer path is observable.
+    Focused runtime passed with run id `1779576490520`; the dedicated
+    `ui-gallery-input-group-dropdown-relation-action-state` suite passed with summary
+    `target/fret-diag-input-group-dropdown-relation-action-state-suite-v1/sessions/1779576510828-110644/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Input Group Dropdown relation/action-state as covered. Move to Breadcrumb ellipsis
+  Dropdown relation/action-state as another composed consumer probe, or another not-yet-promoted
+  overlay/focus surface outside Command, Combobox, Select, HoverCard, Date Picker, Menubar
+  Placement, bare DropdownMenu, ContextMenu, Tooltip, AlertDialog, Sheet, Drawer, Dialog,
+  NavigationMenu, Popover, Avatar Dropdown, and Input Group Dropdown clusters unless a fresh bundle
+  shows concrete drift.
+
+- [x] Promote Breadcrumb Demo ellipsis Dropdown relation/action-state into a runtime gate.
+  - Result:
+    `ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json` now starts directly on the
+    Breadcrumb Demo section and proves the collapsed ellipsis DropdownMenu trigger contract through
+    closed -> open -> Escape-closed transitions. The gate asserts the ellipsis trigger exports
+    `role=button`, `expanded=false`, `invoke=true`, `focus=true`, and empty `controls` while
+    closed; opening resolves `controls -> ui-gallery-breadcrumb-demo-menu-content`; focus enters
+    the `role=menu`; Documentation/Themes/GitHub rows expose `invoke=true`; and Escape restores
+    focus to the trigger with `expanded=false` plus an empty `controls` edge. No Breadcrumb or
+    DropdownMenu behavior defect was reproduced; the only code change was adding a stable Demo
+    dropdown content prefix plus menu item test ids so this composed ellipsis path is observable.
+    Focused runtime passed with run id `1779576951600`; the dedicated
+    `ui-gallery-breadcrumb-ellipsis-relation-action-state` suite passed with summary
+    `target/fret-diag-breadcrumb-ellipsis-relation-action-state-suite-v1/sessions/1779576971606-108904/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Breadcrumb Demo ellipsis relation/action-state as covered. Move to Sidebar account/team
+  Dropdown relation/action-state as another composed consumer probe, or another not-yet-promoted
+  overlay/focus surface outside Command, Combobox, Select, HoverCard, Date Picker, Menubar
+  Placement, bare DropdownMenu, ContextMenu, Tooltip, AlertDialog, Sheet, Drawer, Dialog,
+  NavigationMenu, Popover, Avatar Dropdown, Input Group Dropdown, and Breadcrumb ellipsis clusters
+  unless a fresh bundle shows concrete drift.
+
+- [x] Promote Sidebar AppSidebar team/account Dropdown relation/action-state into a runtime gate.
+  - Result:
+    `ui-gallery-sidebar-app-sidebar-dropdown-relation-action-state.json` now starts directly on
+    `sidebar` / `AppSidebar` and proves two DropdownMenu instances in the same composed Sidebar
+    consumer. The gate asserts the team switcher and account trigger both export `role=button`,
+    `expanded=false`, focus/invoke actions, and empty `controls` while closed; opening resolves
+    `controls` to each menu's content endpoint; focus enters the `role=menu`; team/account menu
+    rows expose `invoke=true`; selecting a team row closes and clears the team relation; and Escape
+    closes the account menu with focus restored to the current account trigger. The first full
+    focused runtime found and drove a real shared overlay fix: an older non-modal overlay hidden
+    finalizer could run a second autofocus restore after close-edge autofocus had already been
+    handled, stealing focus from a later dropdown. `finalize_hidden_non_modal_overlay` now skips the
+    hidden-finalizer restore when `close_auto_focus_handled` is true. Focused runtime passed after
+    the fix with run id `1779580505188`; the dedicated
+    `ui-gallery-sidebar-dropdown-relation-action-state` suite passed with summary
+    `target/fret-diag-sidebar-dropdown-relation-action-state-suite-v2/sessions/1779580605772-110628/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Sidebar AppSidebar Dropdown relation/action-state as covered. Move to another
+  not-yet-promoted composed overlay/focus surface outside Command, Combobox, Select, HoverCard,
+  Date Picker, Menubar Placement, bare DropdownMenu, ContextMenu, Tooltip, AlertDialog, Sheet,
+  Drawer, Dialog, NavigationMenu, Popover, Avatar Dropdown, Input Group Dropdown, Breadcrumb
+  ellipsis, and Sidebar AppSidebar Dropdown clusters unless a fresh bundle shows concrete drift.
+
+- [x] Promote Pagination Demo action/selected-state into a runtime gate.
+  - Result:
+    `ui-gallery-pagination-demo-action-selected-state.json` now starts directly on `pagination` /
+    `Demo` and proves the non-overlay Pagination recipe path end to end. The gate asserts the demo
+    root is a labelled `role=region`, Previous/Next plus page links are `role=link`, page 2 exports
+    `selected=true` while pages 1 and 3 remain unselected, clickable endpoints expose
+    `invoke=true`, page 1/page 2 clicks produce pointer-sourced command dispatch traces with
+    `handled=true` and `handled_by_driver=true`, `/shell/last_action` updates to `cmd.open` /
+    `cmd.save`, and the static selected-state example remains stable after activation. The first
+    focused runtime found a diagnostics selector gap for `SemanticsRole::Region`; the follow-up
+    found the Gallery app commands updated state but did not publish driver-handled dispatch
+    decisions for `CMD_APP_OPEN` / `CMD_APP_SAVE`. Focused runtime passed after fixes with run id
+    `1779582821896`; the dedicated `ui-gallery-pagination-action-selected-state` suite passed with
+    summary
+    `target/fret-diag-pagination-action-selected-state-suite-v1/sessions/1779582840753-86300/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Pagination Demo action/selected-state as covered. Move to another non-overlay/non-list
+  action-state or relation surface outside the promoted overlay clusters and outside current
+  Switch/Input/Form/Radio/Checkbox/ToggleGroup/Menubar/ContextMenu/Pagination action-state clusters
+  unless a fresh bundle shows concrete drift.
+
+- [x] Promote Tabs Demo relation/action-state into a runtime gate.
+  - Result:
+    `ui-gallery-tabs-demo-relation-action-state.json` now starts directly on `tabs` / `Demo` and
+    proves the Tabs composite semantics beyond the older selected-state-only gate. The gate asserts
+    the root-derived tablist is `role=tab_list`, Account/Password triggers are `role=tab` with
+    `invoke=true`, the active panel is `role=tab_panel`, selected tab `controls` points to the
+    active panel, and the panel `labelled_by` points back to the selected tab. It pointer-switches
+    from Account to Password, then presses ArrowLeft to prove automatic roving activation updates
+    focus, selected state, mounted panel, and relation endpoints back to Account. The first focused
+    runtime found an observability gap: the Gallery demo stamped root `.test_id(...)` after
+    `into_element(cx)`, so recipe-derived child ids like `ui-gallery-tabs-demo-list` could not be
+    generated. Tabs now exposes panel test ids, derives a root-scoped tablist id, and the Gallery
+    demo stamps its root id at the builder layer. Focused runtime passed after fixes with run id
+    `1779584088541`; the dedicated `ui-gallery-tabs-relation-action-state` suite passed with
+    summary
+    `target/fret-diag-tabs-relation-action-state-suite-v1/sessions/1779584134695-115524/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Tabs Demo relation/action-state as covered. Move to another non-overlay composite
+  relation/action-state surface outside Select/Tabs/Pagination and outside the already-promoted
+  overlay/dropdown clusters unless fresh evidence shows concrete drift.
+
+- [x] Promote Accordion Demo relation/action-state into a runtime gate.
+  - Result:
+    `ui-gallery-accordion-demo-relation-action-state.json` now starts directly on `accordion` /
+    `Demo` and proves the Accordion composite semantics beyond the older Usage expanded-state and
+    focusable-disabled gates. The gate asserts Shipping/Returns triggers are `role=button` with
+    `invoke=true`, opens Shipping and proves its content is `role=region` with trigger `controls`
+    plus content `labelled_by`, switches to Returns and proves relation migration plus Shipping
+    cleanup, then focuses Returns and presses Enter to prove collapsible keyboard close clears
+    `controls` when the content unmounts. No mechanism or recipe defect was reproduced; this slice
+    promotes the existing stable demo endpoints into durable runtime evidence. Focused runtime
+    passed with run id `1779585528462`; the dedicated
+    `ui-gallery-accordion-relation-action-state` suite passed with summary
+    `target/fret-diag-accordion-relation-action-state-suite-v1/sessions/1779585598791-113112/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Accordion Demo relation/action-state as covered. Move to another non-overlay composite
+  relation/action-state surface outside Select/Tabs/Pagination/Accordion and outside the
+  already-promoted overlay/dropdown clusters unless fresh evidence shows concrete drift.
+
+- [x] Promote ButtonGroupText label-control action-state into a runtime gate.
+  - Result:
+    `ui-gallery-button-group-text-label-control-action-state.json` now starts directly on
+    `button_group` / `ButtonGroupText` and proves the prefix-label plus input contract. The gate
+    asserts the ButtonGroupText prefix/suffix surfaces remain groups, the prefix label is
+    `role=text` with no focus or set-value actions, the input is `role=text_field` with focus and
+    `set_value` actions, the label publishes `controls -> ui-gallery-button-group-text-control`,
+    and the input publishes `labelled_by -> ui-gallery-button-group-text-prefix-label`. It then
+    clicks the prefix label, waits for the input to become focused, types `docs`, and proves the
+    value mutation. The first focused run found the Gallery example's direct
+    `.a11y_label("URL")` shadowed registry `labelled_by`; the second found primitive
+    `Label::for_control` did not suppress default pointer-down focus for `FocusOnly` wrapped-root
+    labels. The Gallery example now lets the input derive `labelled_by`, and the primitive label
+    plus `FieldLabel` FocusOnly paths now prevent default pointer-down focus and capture the click.
+    Focused runtime passed after fixes with run id `1779588722417`; the dedicated
+    `ui-gallery-button-group-text-label-control-action-state` suite passed with summary
+    `target/fret-diag-button-group-text-label-control-action-state-suite-v1/sessions/1779588746195-86804/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat ButtonGroupText label-control action-state as covered. Move to another non-overlay
+  composite relation/action-state surface outside Select/Tabs/Pagination/Accordion/ButtonGroupText
+  and outside the already-promoted overlay/dropdown clusters unless fresh evidence shows concrete
+  drift.
+
+- [x] Promote Field Demo label-control action-state into a runtime gate.
+  - Result:
+    `ui-gallery-field-demo-label-control-action-state.json` now starts directly on `field` /
+    `Demo` and proves the broader Field label/control contract across select triggers, TextInput
+    controls, a checkbox, and a textarea. The gate asserts labels publish `controls` edges,
+    concrete controls publish reciprocal `labelled_by` where appropriate, text controls expose
+    focus/set-value actions, the checkbox exposes invoke and checked-state, label clicks focus
+    CVV/card-name/card-number/comments controls, the same-as-shipping label toggles the checkbox,
+    and typed values land in the text and textarea controls. The focused run found and fixed two
+    issues: the Field Demo's direct control labels shadowed `FieldLabel::for_control` relations,
+    and the diagnostics no-frame keepalive path could evaluate semantics predicates without
+    current frame semantics, producing a false `assert_failed` even when the captured node was
+    correct. Focused runtime passed after fixes with run id `1779592992710`; the dedicated
+    `ui-gallery-field-demo-label-control-action-state` suite passed with summary
+    `target/fret-diag-field-demo-label-control-action-state-suite-v1/sessions/1779593090166-51384/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Field Demo label-control action-state as covered. Move to another non-overlay composite
+  relation/action-state surface outside Select/Tabs/Pagination/Accordion/ButtonGroupText/Field Demo
+  and outside the already-promoted overlay/dropdown clusters unless fresh evidence shows concrete
+  drift.
+
+- [x] Promote Item Demo link/action-state into a runtime gate.
+  - Result:
+    `ui-gallery-item-demo-link-action-state.json` now starts directly on `item` / `Demo` and proves
+    the Item Demo split between a non-interactive Basic Item row and a link-rendered action row.
+    The gate asserts the Basic Item root suppresses focus and invoke actions, the link row exposes
+    `role=link`, the expected accessible label, focus and invoke actions, and stable media/content
+    anchors, then focuses and clicks the link row. The click must produce a
+    `ui_gallery.app.open` command dispatch trace with `handled=true` and `handled_by_driver=true`,
+    and `/shell/last_action` must update to `cmd.open`. No mechanism or recipe defect was
+    reproduced; this slice promotes existing stable Demo endpoints beyond the older link-role-only
+    smoke. Focused runtime passed with run id `1779594651180`; the dedicated
+    `ui-gallery-item-demo-action-state` suite passed with summary
+    `target/fret-diag-item-demo-action-state-suite-v1/sessions/1779594685092-122432/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Item Demo link/action-state as covered. Move to another non-overlay action-state or
+  relation surface outside Select/Tabs/Pagination/Accordion/ButtonGroupText/Field Demo/Item Demo
+  and outside the already-promoted overlay/dropdown clusters unless fresh evidence shows concrete
+  drift.
+
+- [x] Promote Empty Demo action-state into a runtime gate.
+  - Result:
+    `ui-gallery-empty-demo-action-state.json` now starts directly on `empty` / `Demo` and proves
+    the Empty composition split between structural content and interactive child controls. The gate
+    asserts the title is `role=text` with no focus or invoke actions, Create Project and Import
+    Project are `role=button` with focus/invoke actions, and the Learn More CTA rendered through
+    `ButtonRender::Link` is `role=link` with focus/invoke actions. It also verifies Tab traversal
+    across the three controls and clicks the no-op link CTA to keep browser launch out of runtime
+    evidence. No mechanism or recipe defect was reproduced. Focused runtime passed with run id
+    `1779595557061`; the dedicated `ui-gallery-empty-demo-action-state` suite passed with summary
+    `target/fret-diag-empty-demo-action-state-suite-v1/sessions/1779595700919-125456/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Empty Demo action-state as covered. Move to another non-overlay action-state or relation
+  surface outside Select/Tabs/Pagination/Accordion/ButtonGroupText/Field Demo/Item Demo/Empty Demo
+  and outside the already-promoted overlay/dropdown clusters unless fresh evidence shows concrete
+  drift.
+
+- [x] Promote Card Demo action-state into a runtime gate.
+  - Result:
+    `ui-gallery-card-demo-action-state.json` now starts directly on `card` / `Demo` and proves the
+    login Card composition keeps structural text separate from interactive descendants. The gate
+    asserts the title and description are `role=text`, the title suppresses focus/invoke actions,
+    email and password inputs are `role=text_field` with focus/set-value actions, the supporting
+    Forgot Password chrome is `role=link` with focus/invoke actions, and Sign Up/Login/Login with
+    Google are `role=button` with focus/invoke actions. It also focuses the email input, types
+    `ada@example.com`, proves the value mutation, focuses the password input, clicks Login, and
+    captures layout/screenshot/bundle evidence. No mechanism or recipe defect was reproduced.
+    Focused runtime passed with run id `1779596574143`; the dedicated
+    `ui-gallery-card-demo-action-state` suite passed with summary
+    `target/fret-diag-card-demo-action-state-suite-v1/sessions/1779596642442-120232/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Card Demo action-state as covered. Move to Badge link-render action-state as a narrow
+  non-overlay link/button-role surface, or another non-overlay action-state/relation surface
+  outside Select/Tabs/Pagination/Accordion/ButtonGroupText/Field Demo/Item Demo/Empty Demo/Card
+  Demo and outside the already-promoted overlay/dropdown clusters unless fresh evidence shows
+  concrete drift.
+
+- [x] Promote Badge link-render action-state into a runtime gate.
+  - Result:
+    the existing canonical `ui-gallery-badge-link-render.json` now starts directly on `badge` /
+    `Link` and proves the `BadgeRender::Link` surface beyond the older role-only smoke. The gate
+    asserts the Link section row and derived `.chrome` marker exist, the badge-owned render surface
+    exports `role=link`, label `Open Link`, focus and invoke actions, focuses the link, activates it
+    with Enter, clicks it through the no-op example handler, and captures layout/screenshot/bundle
+    evidence. The first focused draft over-asserted the layout row as `role=group`; runtime slice
+    evidence showed the row is correctly `generic` while `ui-gallery-badge-link` owns the link role
+    and actions, so the script oracle was narrowed to the real contract. No mechanism or recipe
+    defect was reproduced. Focused runtime passed with run id `1779597602835`; the dedicated
+    `ui-gallery-badge-link-action-state` suite passed with summary
+    `target/fret-diag-badge-link-action-state-suite-v1/sessions/1779597642170-110112/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Badge link-render action-state as covered. Move to Button link-render action-state or
+  another narrow non-overlay semantic-link surface outside Select/Tabs/Pagination/Accordion/
+  ButtonGroupText/Field Demo/Item Demo/Empty Demo/Card Demo/Badge link and outside the promoted
+  overlay/dropdown clusters unless fresh evidence shows concrete drift.
+
+- [x] Promote Button link-render action-state into a runtime gate.
+  - Result:
+    the canonical `ui-gallery-button-link-render.json` now starts directly on `button` /
+    `As Link / As Child (Semantic)` and proves `ButtonRender::Link` beyond role-only smoke. It
+    asserts section content, row, and `.chrome` anchors, `role=link`, label `Login`, focus and
+    invoke actions, keyboard Enter dispatch handled by the driver with `started_from_focus=true`,
+    `/shell/last_action=cmd.open`, pointer click dispatch through `source_test_id`, and captures
+    layout/screenshot/bundle evidence. The first draft failed on the wrong DocSection prefix:
+    runtime evidence showed the stable section content id is
+    `ui-gallery-button-link-semantic-content`. The second draft found a real diagnostics trace
+    defect: driver-handled keyboard commands in UI Gallery, default bootstrap, and Workspace Shell
+    recorded `started_from_focus=false` after consuming a keyboard pending source. The driver
+    trace attribution now preserves focus-origin keyboard activation in
+    `apps/fret-ui-gallery/src/driver/runtime_driver.rs`,
+    `ecosystem/fret-bootstrap/src/ui_app_driver.rs`, and
+    `apps/fret-examples/src/workspace_shell_demo.rs`. Focused runtime passed after the fix with
+    run id `1779599736183`; the dedicated `ui-gallery-button-link-action-state` suite passed with
+    summary
+    `target/fret-diag-button-link-action-state-suite-v1/sessions/1779599758073-43676/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Button link-render action-state and driver-handled keyboard trace attribution as covered.
+  Move to Typography inline link/action-state or another narrow non-overlay semantic-link surface
+  outside Select/Tabs/Pagination/Accordion/ButtonGroupText/Field Demo/Item Demo/Empty Demo/Card
+  Demo/Badge link/Button link and outside promoted overlay/dropdown clusters unless fresh evidence
+  shows drift.
+
+- [x] Promote Typography interactive inline-link action-state into a runtime gate.
+  - Result:
+    `ui-gallery-typography-interactive-links-activation.json` now starts directly on `typography` /
+    `Interactive Links` and proves the `p_rich(...).inline_link(...)` selectable-text lane. The
+    gate asserts the paragraph exports `role=text`, carries the rich paragraph value, exposes
+    `set_text_selection=true`, and publishes an inline span with `role=link` plus
+    `tag=https://example.com/kings-plan`. It then activates that span through
+    `click_selectable_text_span_stable`, verifies the app-owned status switches from idle to
+    active, and captures layout/screenshot/bundle evidence. No Typography or selectable-text
+    defect was reproduced. This slice did expose and close a diagnostics observability gap:
+    scripts had no predicate for asserting inline span role/tag metadata directly, so
+    `semantics_inline_span_includes` was added to the protocol, builder, selector tracing, and
+    bootstrap predicate evaluator. Focused runtime passed with run id `1779603327158`; the
+    dedicated `ui-gallery-typography-inline-link-action-state` suite passed with summary
+    `target/fret-diag-typography-inline-link-action-state-suite-v1/sessions/1779603371227-113256/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Typography inline link/action-state and `semantics_inline_span_includes` diagnostics
+  coverage as complete. Move to another not-yet-promoted rich text or semantic-link surface
+  outside Select/Tabs/Pagination/Accordion/ButtonGroupText/Field Demo/Item Demo/Empty Demo/Card
+  Demo/Badge link/Button link/Typography inline links and outside promoted overlay/dropdown
+  clusters unless fresh evidence shows drift.
+
+- [x] Promote Alert Interactive Links action-state into a runtime gate.
+  - Result:
+    the canonical `ui-gallery-alert-link-activation.json` now starts directly on `alert` /
+    `Interactive Links` and proves the composed AlertDescription pressable-link surface beyond the
+    old billing-click smoke. The gate asserts the Alert page, Interactive Links section, and snippet
+    root, proves both Billing and Support links expose `role=link`, accessible labels, URL values,
+    focus and invoke actions, focuses Billing and activates it with Enter, then clicks Support and
+    verifies both app-owned status mutations. No mechanism or recipe defect was reproduced. The
+    legacy redirect stub and `ui-gallery-shadcn-conformance` membership remain intact, while the
+    new dedicated `ui-gallery-alert-link-action-state` suite gives this semantic-link path its own
+    reusable runtime gate. Focused runtime passed with run id `1779604711175`; the dedicated suite
+    passed with summary
+    `target/fret-diag-alert-link-action-state-suite-v1/sessions/1779604866072-98788/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Alert Interactive Links action-state as covered. Move to another not-yet-promoted rich text
+  or semantic-link surface outside Select/Tabs/Pagination/Accordion/ButtonGroupText/Field
+  Demo/Item Demo/Empty Demo/Card Demo/Badge link/Button link/Typography inline links/Alert links
+  and outside promoted overlay/dropdown clusters. Good candidates are Markdown span-link or
+  AlertDialog inline-link surfaces only if a fresh audit confirms their older scripts still lack
+  direct-start action metadata.
+
+- [x] Promote Markdown span-link action-state into a runtime gate.
+  - Result:
+    the canonical `ui-gallery-markdown-span-link-gate-activate.json` now starts directly on the
+    `markdown_editor_source` dev page and proves the Markdown selectable-text link span metadata
+    instead of relying on the old navigation-search smoke. The gate asserts the page root, editor
+    root, span gate, `role=text`, `value_contains=https://example.com`, `set_text_selection=true`,
+    and `semantics_inline_span_includes(role=link, tag=https://example.com)`, then activates the
+    span and verifies the app-owned activated readout. The existing redirect stub and text-wrap
+    suite membership remain intact, while the new dedicated
+    `ui-gallery-markdown-span-link-action-state` suite gives the span-link path its own reusable
+    runtime gate. Focused runtime passed with run id `1779606113404`; the dedicated suite passed
+    with summary
+    `target/fret-diag-markdown-span-link-action-state-suite-v1/sessions/1779606213201-114820/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Markdown span-link action-state as covered. Move to another not-yet-promoted rich text or
+  semantic-link surface outside Select/Tabs/Pagination/Accordion/ButtonGroupText/Field Demo/Item
+  Demo/Empty Demo/Card Demo/Badge link/Button link/Typography inline links/Alert links/Markdown
+  span-link and outside promoted overlay/dropdown clusters. AlertDialog destructive inline-link is
+  still a reasonable follow-up only if a fresh audit shows its older script lacks direct-start
+  action metadata.
+
+- [x] Promote AlertDialog destructive inline-link action-state into a runtime gate.
+  - Result:
+    the strengthened `ui-gallery-alert-dialog-destructive-inline-link-activate.json` starts
+    directly on `alert_dialog` / `Destructive`, opens the dialog, proves the content exports
+    `role=alert_dialog`, proves the selectable description text carries the destructive copy,
+    `set_text_selection=true`, and inline span metadata for the Settings link, captures a layout
+    sidecar and screenshots, then activates the span with `click_selectable_text_span_stable`.
+    The first focused draft exposed an authoring mismatch: diagnostics role strings use
+    `alert_dialog`, not `alertdialog`. The second focused run exposed a real mechanism defect:
+    paint-cache replay skipped selectable-text paint and allowed
+    `SelectableTextState.interactive_span_bounds` to fall out of the runtime state buffers after
+    repeated cache-hit frames, so span-click geometry eventually reported `no_runtime_state` even
+    though semantics and hit testing still resolved the node. Paint-cache replay now touches
+    replayed subtree selectable-text state, and a focused `fret-ui` regression locks that liveness
+    contract. Focused runtime passed after the final fix with run id `1779609862553`; the dedicated
+    `ui-gallery-alert-dialog-inline-link-action-state` suite passed with summary
+    `target/fret-diag-alert-dialog-inline-link-action-state-suite-v2/sessions/1779609886205-109624/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat AlertDialog destructive inline-link action-state and paint-cache replay selectable span
+  state liveness as covered. Move to another not-yet-promoted rich text or semantic-link surface
+  outside Select/Tabs/Pagination/Accordion/ButtonGroupText/Field Demo/Item Demo/Empty Demo/Card
+  Demo/Badge link/Button link/Typography inline links/Alert links/Markdown span-link/AlertDialog
+  destructive inline-link and outside promoted overlay/dropdown clusters unless fresh evidence
+  shows drift.
+
+- [x] Promote Breadcrumb Usage/Dropdown link action-state into a runtime gate.
+  - Result:
+    the historical `ui-gallery-breadcrumb-usage-home-command.json` script now starts directly on
+    `breadcrumb` / `Usage` instead of routing through navigation search, and proves ordinary
+    `BreadcrumbLink` nodes beyond role-only semantics. The gate asserts the Breadcrumb Usage root
+    is a `region`, Home and Components are `role=link`, both publish labels and URL values, Home
+    exposes focus and invoke actions, keyboard Enter activation dispatches
+    `ui_gallery.app.open` with `started_from_focus=true`, pointer activation on Components
+    dispatches the same command with the expected source test id, and `/shell/last_action` updates
+    to `cmd.open`. The existing conformance-held `ui-gallery-breadcrumb-links-semantic-link.json`
+    script now starts directly on `breadcrumb` / `Dropdown` and proves the raw-primitives
+    Dropdown-section Home link with the same role/label/value/action and keyboard/pointer command
+    attribution. No mechanism or recipe defect was reproduced; the Dropdown snippet now uses the
+    same deterministic `ui_gallery.app.open` command action as Usage instead of a no-op
+    `on_activate`, preserving link semantics while making activation observable. Focused runtime
+    passed for Usage with run id `1779610661121` and for Dropdown with run id `1779611307893`; the
+    dedicated `ui-gallery-breadcrumb-link-action-state` suite passed 2/2 with summary
+    `target/fret-diag-breadcrumb-link-action-state-suite-v2/sessions/1779611330691-124372/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Breadcrumb Usage/Dropdown link action-state as covered. Move to another not-yet-promoted rich text
+  or semantic-link surface outside Select/Tabs/Pagination/Accordion/ButtonGroupText/Field Demo/
+  Item Demo/Empty Demo/Card Demo/Badge link/Button link/Typography inline links/Alert links/
+  Markdown span-link/AlertDialog destructive inline-link/Breadcrumb Usage/Dropdown links and
+  outside promoted overlay/dropdown clusters unless fresh evidence shows drift. If the
+  rich-text/link lane is saturated, pivot back to a cached/retained relation or action-state
+  surface with older smoke-only diagnostics.
+
+- [x] Promote Item Link (render) action-state into a runtime gate.
+  - Result:
+    the conformance-held `ui-gallery-item-link-render.json` script now starts directly on `item` /
+    `Link (render)` and proves the standalone `ItemRender::Link` example beyond its old role-only
+    smoke. The gate asserts the Item page, Link (render) row bounds, `role=link`, label
+    `Dashboard`, focus and invoke actions, keyboard Enter command dispatch with
+    `started_from_focus=true`, `/shell/last_action=cmd.open`, pointer dispatch through
+    `source_test_id=ui-gallery-item-link-render`, and captures layout/screenshot/bundle evidence.
+    No mechanism or recipe defect was reproduced; this slice promotes the older shadcn-conformance
+    smoke into a reusable action-state suite while keeping the existing redirect stub and
+    conformance membership intact. Focused runtime passed with run id `1779612297612`; the
+    dedicated `ui-gallery-item-link-action-state` suite passed with summary
+    `target/fret-diag-item-link-action-state-suite-v1/sessions/1779612316673-125332/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat Item Link (render) action-state as covered. Move to another not-yet-promoted
+  semantic-link surface outside Select/Tabs/Pagination/Accordion/ButtonGroupText/Field Demo/Item
+  Demo/Item Link (render)/Empty Demo/Card Demo/Badge link/Button link/Typography inline
+  links/Alert links/Markdown span-link/AlertDialog destructive inline-link/Breadcrumb
+  Usage/Dropdown links and outside promoted overlay/dropdown clusters. `NavigationMenu Docs
+  Smoke` remains the clearest remaining old conformance semantic-link candidate if a fresh audit
+  confirms it still lacks direct action-state assertions.
+
+- [x] Promote NavigationMenu Docs Smoke action-state into a runtime gate.
+  - Result:
+    the canonical `ui-gallery-navigation-menu-docs-smoke.json` script now starts directly on
+    `navigation_menu` and proves the real docs-page smoke surface, not the older docs-demo-only
+    relation script. The strengthened gate keeps the docs-demo and RTL snippets wired to
+    `ui_gallery.app.open`, asserts closed/open action state, targets the real expanded content
+    link instead of the top-level contentless Docs link to match roving-focus semantics, and waits
+    for keyboard/pointer command-dispatch traces. The focused rollout made the failure progression
+    explicit: v1 failed on an early wait, v2 failed on a closed-state assertion, and v3/v4 timed
+    out waiting for command-trace evidence. The fix stayed in the shadcn recipe layer:
+    `NavigationMenuLink` now dispatches through `pressable_dispatch_command_if_enabled_opt`, and
+    the contentless top-level item appends its close handler instead of overwriting the command
+    hook. Focused runtime v5 passed with run id `1779614863615`; the dedicated
+    `ui-gallery-navigation-menu-docs-smoke-action-state` suite passed with summary
+    `target/fret-diag-navigation-menu-docs-smoke-action-state-suite-v1/sessions/1779614903581-127224/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat NavigationMenu Docs Smoke action-state as covered. Move to another not-yet-promoted
+  semantic-link or overlay/focus surface outside Select/Tabs/Pagination/Accordion/
+  ButtonGroupText/Field Demo/Item Demo/Item Link (render)/Empty Demo/Card Demo/Badge link/Button
+  link/Typography inline links/Alert links/Markdown span-link/AlertDialog destructive
+  inline-link/Breadcrumb Usage/Dropdown links and outside promoted overlay/dropdown clusters unless
+  fresh evidence shows drift.

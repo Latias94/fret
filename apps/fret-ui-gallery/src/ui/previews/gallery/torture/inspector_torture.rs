@@ -1,5 +1,6 @@
 use super::super::super::super::*;
 use fret::AppComponentCx;
+use fret_ui::element::{LayoutStyle, Length, PressableA11y, PressableProps, SizeStyle};
 
 fn inspector_row_label_text<T>(cx: &mut AppComponentCx<'_>, text: T) -> AnyElement
 where
@@ -13,6 +14,37 @@ where
     T: Into<Arc<str>>,
 {
     doc_layout::control_readout_text(cx, text)
+}
+
+fn inspector_row_test_id(index: usize) -> Arc<str> {
+    Arc::<str>::from(format!("ui-gallery-inspector-row-{index}"))
+}
+
+fn inspector_row_label_test_id(index: usize) -> Arc<str> {
+    Arc::<str>::from(format!("ui-gallery-inspector-row-{index}-label"))
+}
+
+fn inspector_row_value_test_id(index: usize) -> Arc<str> {
+    Arc::<str>::from(format!("ui-gallery-inspector-row-{index}-value"))
+}
+
+fn inspector_row_semantics(index: usize, len: usize, selected: bool) -> PressableA11y {
+    let mut a11y = PressableA11y {
+        role: Some(fret_core::SemanticsRole::ListItem),
+        label: Some(Arc::<str>::from(format!("prop_{index}"))),
+        selected,
+        test_id: Some(inspector_row_test_id(index)),
+        ..Default::default()
+    };
+
+    if let (Ok(pos_in_set), Ok(set_size)) =
+        (u32::try_from(index.saturating_add(1)), u32::try_from(len))
+    {
+        a11y.pos_in_set = Some(pos_in_set);
+        a11y.set_size = Some(set_size);
+    }
+
+    a11y
 }
 
 pub(in crate::ui) fn preview_inspector_torture(
@@ -33,6 +65,7 @@ pub(in crate::ui) fn preview_inspector_torture(
         .clamp(0, 4096);
 
     let scroll_handle = cx.slot_state(VirtualListScrollHandle::new, |h| h.clone());
+    let selected_row = cx.local_model_keyed("inspector_selected_row", || None::<usize>);
 
     let list_layout = fret_ui::element::LayoutStyle {
         size: fret_ui::element::SizeStyle {
@@ -51,17 +84,27 @@ pub(in crate::ui) fn preview_inspector_torture(
     let theme = theme.clone();
     let row = move |cx: &mut AppComponentCx<'_>, index: usize| {
         let zebra = (index % 2) == 0;
-        let background = if zebra {
-            theme.color_token("muted")
-        } else {
-            theme.color_token("background")
-        };
-
         let depth = (index % 8) as f32;
         let indent_px = Px(depth * 12.0);
 
-        let name = inspector_row_label_text(cx, format!("prop_{index}"));
-        let value = inspector_row_value_text(cx, format!("value {index}"));
+        let selected_row_value = cx
+            .get_model_copied(&selected_row, Invalidation::Layout)
+            .flatten();
+        let is_selected = selected_row_value == Some(index);
+        let selected_row_for_activate = selected_row.clone();
+        let on_select_row: fret_ui::action::OnActivate =
+            Arc::new(move |host, action_cx, _reason| {
+                let _ = host
+                    .models_mut()
+                    .update(&selected_row_for_activate, |value| *value = Some(index));
+                host.request_redraw(action_cx.window);
+            });
+
+        let name = inspector_row_label_text(cx, format!("prop_{index}"))
+            .test_id(inspector_row_label_test_id(index));
+        let value = inspector_row_value_text(cx, format!("value {index}"))
+            .test_id(inspector_row_value_test_id(index));
+        let row_theme = theme.clone();
 
         let spacer = cx.container(
             fret_ui::element::ContainerProps {
@@ -78,28 +121,58 @@ pub(in crate::ui) fn preview_inspector_torture(
             |_cx| Vec::new(),
         );
 
-        let mut row_props = decl_style::container_props(
-            &theme,
-            ChromeRefinement::default()
-                .bg(ColorRef::Color(background))
-                .p(Space::N2),
-            LayoutRefinement::default()
-                .w_full()
-                .h_px(MetricRef::Px(row_height)),
+        let row = cx.pressable(
+            PressableProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Fill,
+                        height: Length::Px(row_height),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                a11y: inspector_row_semantics(index, len, is_selected),
+                ..Default::default()
+            },
+            move |cx, st| {
+                cx.pressable_add_on_activate(on_select_row.clone());
+
+                let background = if is_selected {
+                    row_theme.color_token("accent")
+                } else if zebra {
+                    row_theme.color_token("muted")
+                } else {
+                    row_theme.color_token("background")
+                };
+
+                let mut row_props = decl_style::container_props(
+                    &row_theme,
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(if st.pressed {
+                            row_theme.color_token("accent")
+                        } else {
+                            background
+                        }))
+                        .p(Space::N2),
+                    LayoutRefinement::default()
+                        .w_full()
+                        .h_px(MetricRef::Px(row_height)),
+                );
+                row_props.layout.overflow = fret_ui::element::Overflow::Clip;
+
+                vec![cx.container(row_props, |cx| {
+                    vec![
+                        ui::h_flex(|_cx| vec![spacer, name, value])
+                            .layout(LayoutRefinement::default().w_full().h_full())
+                            .gap(Space::N2)
+                            .items_center()
+                            .into_element(cx),
+                    ]
+                })]
+            },
         );
-        row_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-        let row = cx.container(row_props, |cx| {
-            vec![
-                ui::h_flex(|_cx| vec![spacer, name, value])
-                    .layout(LayoutRefinement::default().w_full().h_full())
-                    .gap(Space::N2)
-                    .items_center()
-                    .into_element(cx),
-            ]
-        });
-
-        row.test_id(format!("ui-gallery-inspector-row-{index}-label"))
+        row.test_id(inspector_row_test_id(index))
     };
 
     let list = cx.virtual_list_keyed_retained_with_layout_fn(

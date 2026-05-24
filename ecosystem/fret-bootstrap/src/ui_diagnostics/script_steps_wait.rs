@@ -1844,6 +1844,7 @@ fn record_wait_until_predicate_selector_trace(
         | UiPredicateV1::DisabledIs { target, .. }
         | UiPredicateV1::ReadOnlyIs { target, .. }
         | UiPredicateV1::SemanticsActionIs { target, .. }
+        | UiPredicateV1::SemanticsInlineSpanIncludes { target, .. }
         | UiPredicateV1::CapturedIs { target, .. }
         | UiPredicateV1::SemanticsNumericApproxEq { target, .. }
         | UiPredicateV1::SemanticsScrollIsFinite { target, .. }

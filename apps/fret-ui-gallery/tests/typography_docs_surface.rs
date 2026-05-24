@@ -104,3 +104,86 @@ fn typography_table_snippets_keep_fixed_cell_text_on_table_role() {
         }
     }
 }
+
+#[test]
+fn typography_interactive_links_keep_runtime_action_state_anchors() {
+    let page = include_str!("../src/ui/pages/typography.rs");
+    let snippet = include_str!("../src/ui/snippets/typography/interactive_links.rs");
+
+    for needle in [
+        "DocSection::build(cx, \"Interactive Links\", interactive_links)",
+        "Fret follow-up showing the copyable app-facing `p_rich(...).on_activate_link(...)` lane.",
+    ] {
+        assert!(
+            page.contains(needle),
+            "typography page should keep the Interactive Links doc section observable; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "shadcn::raw::typography::p_rich([",
+        "shadcn::raw::typography::inline_link(\"a brilliant plan\", \"https://example.com/kings-plan\")",
+        ".on_activate_link(Arc::new({",
+        "activation.tag.clone()",
+        ".test_id(\"ui-gallery-typography-interactive-links-paragraph\")",
+        ".test_id(\"ui-gallery-typography-interactive-links-status-active\")",
+        ".test_id(\"ui-gallery-typography-interactive-links-status-idle\")",
+        ".test_id(\"ui-gallery-typography-interactive-links\")",
+    ] {
+        assert!(
+            snippet.contains(needle),
+            "typography interactive-links snippet should keep runtime-observable inline-link anchors; missing `{needle}`",
+        );
+    }
+}
+
+#[test]
+fn typography_interactive_links_diag_script_gates_inline_span_activation() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json"
+    );
+    let stub = include_str!(
+        "../../../tools/diag-scripts/ui-gallery-typography-interactive-links-activation.json"
+    );
+    let suite = include_str!(
+        "../../../tools/diag-scripts/suites/ui-gallery-typography-inline-link-action-state/suite.json"
+    );
+
+    for needle in [
+        "\"ui-gallery-typography-interactive-links-activation\"",
+        "\"FRET_UI_GALLERY_START_PAGE\": \"typography\"",
+        "\"FRET_UI_GALLERY_START_SECTION\": \"Interactive Links\"",
+        "\"ui-gallery-page-typography\"",
+        "\"docsec-interactive-links-content\"",
+        "\"ui-gallery-typography-interactive-links\"",
+        "\"ui-gallery-typography-interactive-links-paragraph\"",
+        "\"role_is\"",
+        "\"value_contains\"",
+        "\"semantics_action_is\"",
+        "\"set_text_selection\"",
+        "\"semantics_inline_span_includes\"",
+        "\"role\": \"link\"",
+        "\"tag\": \"https://example.com/kings-plan\"",
+        "\"click_selectable_text_span_stable\"",
+        "\"ui-gallery-typography-interactive-links-status-active\"",
+        "\"capture_layout_sidecar\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "typography interactive-links script should gate inline span activation; missing `{needle}`",
+        );
+    }
+
+    assert!(
+        stub.contains(
+            "\"to\": \"tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json\""
+        ),
+        "typography interactive-links redirect stub should point at the canonical script",
+    );
+    assert!(
+        suite.contains(
+            "tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json"
+        ),
+        "typography inline-link action-state suite should reference the promoted script",
+    );
+}

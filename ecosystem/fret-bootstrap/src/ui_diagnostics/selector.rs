@@ -15,6 +15,7 @@ pub(crate) fn semantics_role_label(role: SemanticsRole) -> &'static str {
         SemanticsRole::Window => "window",
         SemanticsRole::Panel => "panel",
         SemanticsRole::Group => "group",
+        SemanticsRole::Region => "region",
         SemanticsRole::Toolbar => "toolbar",
         SemanticsRole::Heading => "heading",
         SemanticsRole::Dialog => "dialog",
@@ -62,6 +63,7 @@ pub(super) fn parse_semantics_role(s: &str) -> Option<SemanticsRole> {
         "window" => SemanticsRole::Window,
         "panel" => SemanticsRole::Panel,
         "group" => SemanticsRole::Group,
+        "region" => SemanticsRole::Region,
         "toolbar" => SemanticsRole::Toolbar,
         "heading" => SemanticsRole::Heading,
         "dialog" => SemanticsRole::Dialog,
@@ -802,6 +804,17 @@ pub(super) fn best_selector_for_node(
     suggest_selectors(snapshot, raw_node, &exported, element, cfg)
         .into_iter()
         .next()
+}
+
+#[cfg(test)]
+mod role_label_tests {
+    use super::*;
+
+    #[test]
+    fn semantics_region_role_label_round_trips_for_diagnostics() {
+        assert_eq!(semantics_role_label(SemanticsRole::Region), "region");
+        assert_eq!(parse_semantics_role("region"), Some(SemanticsRole::Region));
+    }
 }
 
 #[cfg(any())]

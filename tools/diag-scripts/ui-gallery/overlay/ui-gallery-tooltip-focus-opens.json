@@ -2,112 +2,52 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-tooltip-focus-opens",
-    "required_capabilities": [
-      "diag.script_v2"
-    ],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "required_launch_features": ["gallery-dev"],
     "tags": [
       "ui_gallery",
       "shadcn",
       "tooltip",
       "keyboard",
-      "focus"
+      "focus",
+      "relation",
+      "mechanism_harness",
+      "runtime"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "tooltip"
+    },
+    "target_hints": [
+      "Proves the keyboard-focus Tooltip trigger exports focus/invoke action state while closed and open.",
+      "Asserts focus-open adds described_by to the actual role=tooltip content node, not the geometry-only popper panel marker.",
+      "Asserts Escape closes the tooltip and clears the described_by relation."
     ]
   },
   "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-nav-search"
-        }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-tooltip" }
       },
-      "timeout_frames": 600
-    },
-    {
-      "type": "press_key",
-      "key": "escape"
-    },
-    {
-      "type": "wait_frames",
-      "n": 2
-    },
-    {
-      "type": "click_stable",
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-nav-search"
-      },
-      "button": "left",
-      "stable_frames": 10,
-      "max_move_px": 0.5,
-      "timeout_frames": 600
-    },
-    {
-      "type": "press_key",
-      "key": "a",
-      "modifiers": {
-        "ctrl": true
-      }
-    },
-    {
-      "type": "press_key",
-      "key": "backspace"
-    },
-    {
-      "type": "type_text",
-      "text": "tooltip"
-    },
-    {
-      "type": "wait_frames",
-      "n": 2
-    },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "bounds_within_window",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-nav-tooltip"
-        },
-        "padding_px": 8.0,
-        "eps_px": 1.0
-      },
-      "timeout_frames": 600
-    },
-    {
-      "type": "click_stable",
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-nav-tooltip"
-      },
-      "button": "left",
-      "stable_frames": 10,
-      "max_move_px": 0.5,
       "timeout_frames": 600
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-page-tooltip"
-        }
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-start" }
       },
       "timeout_frames": 600
     },
     {
       "type": "scroll_into_view",
-      "container": {
-        "kind": "test_id",
-        "id": "ui-gallery-content-scroll"
-      },
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-tooltip-focus-start"
-      },
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-start" },
       "delta_y": -240.0,
       "require_fully_within_window": true,
       "padding_px": 12.0,
@@ -116,14 +56,26 @@
     },
     {
       "type": "click_stable",
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-tooltip-focus-start"
-      },
+      "target": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-start" },
       "button": "left",
       "stable_frames": 10,
       "max_move_px": 0.5,
       "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_relation_is_empty",
+        "source": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-trigger" },
+        "relation": "described_by"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-content-node" }
+      }
     },
     {
       "type": "press_key",
@@ -133,20 +85,32 @@
       "type": "assert",
       "predicate": {
         "kind": "focus_is",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-tooltip-focus-trigger"
-        }
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-trigger" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-trigger" },
+        "action": "focus",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-trigger" },
+        "action": "invoke",
+        "enabled": true
       }
     },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-tooltip-focus-panel"
-        }
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-content-node" }
       },
       "timeout_frames": 600
     },
@@ -154,22 +118,63 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-tooltip-focus-arrow"
-        }
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-panel" }
       },
       "timeout_frames": 600
     },
     {
-      "type": "wait_bounds_stable",
-      "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-tooltip-focus-panel"
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-arrow" }
       },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-trigger" },
+        "relation": "described_by",
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-content-node" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-panel" },
       "stable_frames": 30,
       "max_move_px": 0.75,
       "timeout_frames": 1200
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-tooltip-focus-open.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-tooltip-focus-open"
+    },
+    {
+      "type": "press_key",
+      "key": "escape"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-content-node" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_is_empty",
+        "source": { "kind": "test_id", "id": "ui-gallery-tooltip-focus-trigger" },
+        "relation": "described_by"
+      },
+      "timeout_frames": 240
     },
     {
       "type": "capture_bundle",

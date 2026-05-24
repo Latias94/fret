@@ -23,7 +23,7 @@ pub(in crate::ui) fn preview_ui_kit_list_torture(
                 doc_layout::paragraph_text(cx,
                     "Goal: validate fret-ui-kit list virtualization under view-cache + shell reuse (ADR 0177).",
                 ),
-                doc_layout::paragraph_text(cx, "Expect: scroll boundary shifts reconcile without scroll-window dirty views."),
+                doc_layout::paragraph_text(cx, "Expect: row-root semantics, collection metadata, and action-state stay stable while the list scrolls under view-cache."),
             ]
         })
             .layout(LayoutRefinement::default().w_full())
@@ -34,13 +34,17 @@ pub(in crate::ui) fn preview_ui_kit_list_torture(
         .and_then(|v| v.parse().ok())
         .unwrap_or(10_000)
         .clamp(16, 200_000);
+    let keep_alive: usize = std::env::var("FRET_UI_GALLERY_UI_KIT_LIST_KEEP_ALIVE")
+        .ok()
+        .and_then(|v| v.trim().parse::<usize>().ok())
+        .unwrap_or(0);
     let overscan: usize = 6;
 
     let list = cx.cached_subtree_with(
         CachedSubtreeProps::default().contain_layout_when_bounds_known(true),
         |cx| {
             vec![
-                fret_ui_kit::declarative::list::list_virtualized_copyable_retained_v0(
+                fret_ui_kit::declarative::list::list_virtualized_copyable_retained_v0_with_debug_options(
                     cx,
                     selection,
                     fret_ui_kit::Size::Medium,
@@ -52,6 +56,9 @@ pub(in crate::ui) fn preview_ui_kit_list_torture(
                     |i| i as u64,
                     Arc::new(|_models, i| Some(format!("Item {i}"))),
                     |_i| None,
+                    fret_ui_kit::declarative::list::RetainedListDebugOptions::default()
+                        .row_test_id_prefix("ui-gallery-ui-kit-list-row-")
+                        .keep_alive(keep_alive),
                     |cx, i| {
                         let mut out = Vec::new();
                         let label = ui_kit_list_row_label_text(cx, format!("Item {i}"));
@@ -110,7 +117,7 @@ pub(in crate::ui) fn preview_ui_kit_list_torture(
     );
 
     let harness = DocSection::build(cx, "Harness", root)
-        .description("Expect: scroll boundary shifts reconcile without scroll-window dirty views.")
+        .description("Expect: row-root semantics and collection metadata stay queryable while the list scrolls under view-cache.")
         .no_shell()
         .max_w(Px(980.0));
 

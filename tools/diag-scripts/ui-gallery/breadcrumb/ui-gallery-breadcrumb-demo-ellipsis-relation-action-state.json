@@ -1,0 +1,238 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-breadcrumb-demo-ellipsis-relation-action-state",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "breadcrumb",
+      "dropdown",
+      "overlay",
+      "focus",
+      "relation",
+      "action_state",
+      "mechanism_harness",
+      "runtime"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "breadcrumb",
+      "FRET_UI_GALLERY_START_SECTION": "Demo"
+    },
+    "target_hints": [
+      "Proves the Breadcrumb Demo ellipsis trigger owns DropdownMenu relation/action-state semantics.",
+      "Asserts the collapsed ellipsis visual remains nested inside a button trigger while the menu content is the controls endpoint.",
+      "Asserts the trigger controls edge resolves to the menu content while open and clears after Escape close."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-breadcrumb" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-ellipsis-trigger" },
+      "delta_y": -160.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-ellipsis-trigger" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-ellipsis-trigger" },
+        "role": "button"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-ellipsis-trigger" },
+        "expanded": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-ellipsis-trigger" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-ellipsis-trigger" },
+        "action": "focus",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_relation_is_empty",
+        "source": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-ellipsis-trigger" },
+        "relation": "controls"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-menu-content" }
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-ellipsis-trigger" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-menu-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-menu-content" },
+        "role": "menu"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-menu-content" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-ellipsis-trigger" },
+        "relation": "controls",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-menu-content" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-menu-docs" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-menu-themes" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-menu-github" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-breadcrumb-demo-ellipsis-open.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-breadcrumb-demo-ellipsis-open-relation-action-state"
+    },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-menu-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-ellipsis-trigger" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-ellipsis-trigger" },
+        "expanded": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_is_empty",
+        "source": { "kind": "test_id", "id": "ui-gallery-breadcrumb-demo-ellipsis-trigger" },
+        "relation": "controls"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-breadcrumb-demo-ellipsis-relation-action-state"
+    }
+  ]
+}

@@ -607,7 +607,8 @@ fn finalize_hidden_non_modal_overlay<H: UiHost>(
     // when the overlay consumes outside pointer-down events (non-click-through), it's safe to
     // restore focus to the trigger on unmount (like modals), unless another still-open overlay
     // already owns focus in the same frame.
-    if !close_auto_focus_prevented
+    if !close_auto_focus_handled
+        && !close_auto_focus_prevented
         && !focus_in_other_open_overlay
         && (consume_outside_pointer_events
             || (focus_in_layer || (!focus_cleared_by_modal_scope && should_restore_focus)))

@@ -2950,6 +2950,36 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-accordion-demo-relation-action-state",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-demo-relation-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
+      "suite_memberships": [
+        "ui-gallery-accordion-relation-action-state"
+      ],
+      "tags": [
+        "accordion",
+        "action_state",
+        "expanded",
+        "keyboard",
+        "mechanism_harness",
+        "relation",
+        "runtime",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves Accordion Demo trigger controls and content labelled_by relations migrate between open items.",
+        "Asserts trigger expanded/invoke action state and content role=region through pointer and keyboard activation.",
+        "Asserts collapsible close clears the relation endpoint when the panel unmounts."
+      ]
+    },
+    {
       "id": "ui-gallery-accordion-demo-shipping-initial-open-height",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-demo-shipping-initial-open-height.json",
       "required_capabilities": [],
@@ -3378,15 +3408,60 @@
     {
       "id": "ui-gallery-ai-plan-demo-toggle",
       "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-plan-demo-toggle.json",
-      "required_capabilities": [],
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
       "required_launch_features": [
         "gallery-dev"
       ],
       "suite_memberships": [
-        "ui-gallery-ai-elements"
+        "ui-gallery-ai-elements",
+        "ui-gallery-ai-plan-relation-action-state"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "action_state",
+        "ai",
+        "collapsible",
+        "mechanism_harness",
+        "plan",
+        "relation",
+        "runtime",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the AI Elements Plan trigger exports fresh collapsible expanded/action semantics.",
+        "Asserts the trigger controls relation resolves to the PlanContent wrapper while open and clears when closed."
+      ]
+    },
+    {
+      "id": "ui-gallery-ai-reasoning-demo-auto-open-close",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-reasoning-demo-auto-open-close.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-reasoning-relation-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "ai",
+        "auto_open_close",
+        "collapsible",
+        "mechanism_harness",
+        "reasoning",
+        "relation",
+        "runtime",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the AI Elements Reasoning trigger keeps fresh collapsible expanded/action semantics across streaming-driven auto-open and auto-close.",
+        "Asserts the trigger controls relation resolves to the ReasoningContent wrapper while open and clears when closed."
+      ]
     },
     {
       "id": "ui-gallery-ai-sandbox-demo-screenshots-zinc-dark",
@@ -3478,6 +3553,34 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-ai-task-demo-toggle",
+      "path": "tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-task-demo-toggle.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
+      "suite_memberships": [
+        "ui-gallery-ai-task-relation-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "ai",
+        "collapsible",
+        "mechanism_harness",
+        "relation",
+        "runtime",
+        "task",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the AI Elements Task trigger exports fresh collapsible expanded/action semantics.",
+        "Asserts the trigger controls relation resolves to the TaskContent wrapper while open and clears when closed."
+      ]
     },
     {
       "id": "ui-gallery-ai-transcript-append-window-refresh",
@@ -3616,23 +3719,64 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-alert-dialog-destructive-inline-link-activate",
-      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json",
+      "id": "ui-gallery-alert-dialog-demo-relation-action-state",
+      "path": "tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-demo-relation-action-state.json",
       "required_capabilities": [
+        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
+        "ui-gallery-alert-dialog-relation-action-state"
       ],
       "tags": [
+        "action_state",
         "alert_dialog",
-        "links",
+        "focus",
+        "mechanism_harness",
         "overlay",
+        "relation",
+        "runtime",
         "shadcn",
         "ui_gallery"
       ],
-      "target_hints": []
+      "target_hints": [
+        "Proves the AlertDialog Demo trigger keeps fresh action and relation semantics through open and close.",
+        "Asserts the trigger controls edge resolves to the dialog content while open and clears after close.",
+        "Asserts the modal barrier is active while open so ordinary underlay selectors stay inert.",
+        "Asserts the alertdialog content exports labelled_by and described_by edges to the stable title and description nodes."
+      ]
+    },
+    {
+      "id": "ui-gallery-alert-dialog-destructive-inline-link-activate",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-alert-dialog-inline-link-action-state",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "action_state",
+        "alert_dialog",
+        "inline_link",
+        "links",
+        "mechanism_harness",
+        "overlay",
+        "runtime",
+        "selectable_text",
+        "semantic_link",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on Alert Dialog / Destructive.",
+        "Proves the destructive description selectable text exports inline link metadata.",
+        "Activates the Settings inline link while diagnostics mode suppresses external URL opening."
+      ]
     },
     {
       "id": "ui-gallery-alert-dialog-detached-trigger-focus-restore",
@@ -3696,19 +3840,29 @@
       "id": "ui-gallery-alert-link-activation",
       "path": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json",
       "required_capabilities": [
+        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-alert-link-action-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
+        "action_state",
         "alert",
         "links",
+        "mechanism_harness",
+        "runtime",
+        "semantic_link",
         "shadcn",
         "ui_gallery"
       ],
-      "target_hints": []
+      "target_hints": [
+        "Starts directly on Alert / Interactive Links.",
+        "Proves composed AlertDescription pressable links expose link role, label, URL value, focus, and invoke actions.",
+        "Activates one link via keyboard and one via pointer while diagnostics mode keeps URL opening deterministic."
+      ]
     },
     {
       "id": "ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta",
@@ -3823,23 +3977,61 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-badge-link-render",
-      "path": "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json",
+      "id": "ui-gallery-avatar-dropdown-relation-action-state",
+      "path": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-relation-action-state.json",
       "required_capabilities": [
+        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "required_launch_features": [],
       "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
+        "ui-gallery-avatar-dropdown-relation-action-state"
       ],
       "tags": [
-        "badge",
-        "link",
-        "render",
+        "action_state",
+        "avatar",
+        "dropdown",
+        "focus",
+        "mechanism_harness",
+        "overlay",
+        "relation",
+        "runtime",
         "shadcn",
         "ui_gallery"
       ],
-      "target_hints": []
+      "target_hints": [
+        "Proves Avatar-as-DropdownMenu-trigger composition keeps the authored Button as the semantic trigger.",
+        "Asserts the nested Avatar remains presentational while the trigger publishes fresh expanded/action semantics.",
+        "Asserts the trigger controls edge resolves to the menu content while open and clears after Escape close."
+      ]
+    },
+    {
+      "id": "ui-gallery-badge-link-render",
+      "path": "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-badge-link-action-state",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "action_state",
+        "badge",
+        "link",
+        "mechanism_harness",
+        "render",
+        "runtime",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves BadgeRender::Link exports link semantics on the badge-owned render surface.",
+        "Asserts the link-rendered badge exposes focus and invoke actions while the row stays structural.",
+        "Clicks the no-op example link so diagnostics evidence never launches a system browser."
+      ]
     },
     {
       "id": "ui-gallery-breadcrumb-custom-separator-single-line",
@@ -3871,23 +4063,63 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-breadcrumb-links-semantic-link",
-      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-links-semantic-link.json",
+      "id": "ui-gallery-breadcrumb-demo-ellipsis-relation-action-state",
+      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json",
       "required_capabilities": [
+        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-breadcrumb-ellipsis-relation-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "breadcrumb",
+        "dropdown",
+        "focus",
+        "mechanism_harness",
+        "overlay",
+        "relation",
+        "runtime",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the Breadcrumb Demo ellipsis trigger owns DropdownMenu relation/action-state semantics.",
+        "Asserts the collapsed ellipsis visual remains nested inside a button trigger while the menu content is the controls endpoint.",
+        "Asserts the trigger controls edge resolves to the menu content while open and clears after Escape close."
+      ]
+    },
+    {
+      "id": "ui-gallery-breadcrumb-links-semantic-link",
+      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-links-semantic-link.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-breadcrumb-link-action-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
+        "action_state",
         "breadcrumb",
+        "command_dispatch",
         "link",
+        "mechanism_harness",
+        "runtime",
         "semantics",
         "shadcn",
         "ui_gallery"
       ],
-      "target_hints": []
+      "target_hints": [
+        "Starts directly on the Breadcrumb Dropdown section.",
+        "Proves the raw-primitives BreadcrumbLink Home row exports link role, label, URL value, focus action, and invoke action.",
+        "Activates the Home link through keyboard and pointer while the gallery driver records deterministic command dispatch."
+      ]
     },
     {
       "id": "ui-gallery-breadcrumb-responsive-toggle",
@@ -3927,6 +4159,34 @@
         "ui_gallery"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-breadcrumb-usage-home-command",
+      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-breadcrumb-link-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "breadcrumb",
+        "command_dispatch",
+        "link",
+        "mechanism_harness",
+        "runtime",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Breadcrumb Usage section.",
+        "Proves BreadcrumbLink exports link role, label, URL value, focus action, and invoke action.",
+        "Activates the Home link through keyboard and pointer while the gallery driver records deterministic command dispatch."
+      ]
     },
     {
       "id": "ui-gallery-button-docs-screenshots",
@@ -4192,23 +4452,62 @@
       ]
     },
     {
-      "id": "ui-gallery-button-link-render",
-      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json",
+      "id": "ui-gallery-button-group-text-label-control-action-state",
+      "path": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json",
       "required_capabilities": [
+        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-button-group-text-label-control-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "button_group",
+        "button_group_text",
+        "label",
+        "mechanism_harness",
+        "relation",
+        "runtime",
+        "shadcn",
+        "text_input",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves ButtonGroupText can host an explicit Label::for_control(...) child without stealing text-field semantics.",
+        "Asserts the label controls edge resolves to the input and the input labelled_by edge resolves back to the label.",
+        "Clicks the prefix label, proves focus routes to the input, and verifies the input remains writable."
+      ]
+    },
+    {
+      "id": "ui-gallery-button-link-render",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-button-link-action-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
+        "action_state",
         "button",
+        "command_dispatch",
         "link",
+        "mechanism_harness",
         "render",
+        "runtime",
         "shadcn",
         "ui_gallery"
       ],
-      "target_hints": []
+      "target_hints": [
+        "Proves ButtonRender::Link exports semantic link role on the button-owned render surface.",
+        "Asserts the semantic-link button exposes focus and invoke actions with a deterministic command handler.",
+        "Activates the link-rendered button without launching a browser during diagnostics runs."
+      ]
     },
     {
       "id": "ui-gallery-button-rtl-row-screenshots",
@@ -4325,6 +4624,35 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-card-demo-action-state",
+      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-card-demo-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "button",
+        "card",
+        "form",
+        "link",
+        "mechanism_harness",
+        "runtime",
+        "shadcn",
+        "text_input",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the Card Demo keeps title and description structural while interactive children own semantics.",
+        "Asserts email and password inputs expose text_field roles plus focus/set_value actions.",
+        "Asserts the supporting link and footer actions expose link/button roles plus focus/invoke actions."
+      ]
     },
     {
       "id": "ui-gallery-card-demo-screenshot",
@@ -5584,6 +5912,33 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-chrome-torture-overlay-action-dispatch",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-overlay-action-dispatch.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-chrome-torture-overlay-action-dispatch"
+      ],
+      "tags": [
+        "action_state",
+        "cached_subtree",
+        "chrome",
+        "focus",
+        "mechanism_harness",
+        "overlay",
+        "runtime",
+        "torture",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the dev-only Chrome Torture page.",
+        "Exercises overlay controls rendered inside the cached overlay body.",
+        "Separates action exposure, command dispatch through /shell/last_action, menu closure, and outside-press dismissal."
+      ]
+    },
+    {
       "id": "ui-gallery-chrome-torture-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-steady.json",
       "required_capabilities": [],
@@ -6087,13 +6442,30 @@
     {
       "id": "ui-gallery-collapsible-basic-double-click-close",
       "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-basic-double-click-close.json",
-      "required_capabilities": [],
-      "required_launch_features": [],
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
+        "ui-gallery-collapsible-basic-relation-action-state",
         "ui-gallery-shadcn-conformance"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "action_state",
+        "collapsible",
+        "mechanism_harness",
+        "relation",
+        "runtime",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the compact Collapsible Basic trigger exports fresh expanded/action semantics.",
+        "Asserts the trigger controls relation resolves to the content wrapper while open and clears when closed."
+      ]
     },
     {
       "id": "ui-gallery-collapsible-demo-first-open-height",
@@ -8206,6 +8578,35 @@
       ]
     },
     {
+      "id": "ui-gallery-dialog-demo-relation-action-state",
+      "path": "tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-demo-relation-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-dialog-relation-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "dialog",
+        "focus",
+        "mechanism_harness",
+        "overlay",
+        "relation",
+        "runtime",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the Dialog Demo trigger keeps fresh action and relation semantics through open and close.",
+        "Asserts the trigger controls edge resolves to the dialog content while open and clears after close.",
+        "Asserts the modal barrier is active while open so ordinary underlay selectors stay inert.",
+        "Asserts the dialog content exports labelled_by and described_by edges to the stable title and description nodes."
+      ]
+    },
+    {
       "id": "ui-gallery-dialog-detached-trigger-focus-restore",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-detached-trigger-focus-restore.json",
       "required_capabilities": [
@@ -8352,6 +8753,35 @@
       "target_hints": [
         "Navigate to the Direction page via the left nav search.",
         "Verify the docs surface exposes the page root plus the `useDirection` and `Composable Children (Fret)` sections."
+      ]
+    },
+    {
+      "id": "ui-gallery-drawer-demo-relation-action-state",
+      "path": "tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-demo-relation-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-drawer-relation-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "drawer",
+        "focus",
+        "mechanism_harness",
+        "overlay",
+        "relation",
+        "runtime",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the Drawer Demo trigger keeps fresh action and relation semantics through open and close.",
+        "Asserts the trigger controls edge resolves to the drawer content while open and clears after close.",
+        "Asserts the modal barrier is active while open so ordinary underlay selectors stay inert.",
+        "Asserts the dialog content exports labelled_by and described_by edges to the stable title and description nodes."
       ]
     },
     {
@@ -8667,6 +9097,33 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-empty-demo-action-state",
+      "path": "tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-demo-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-empty-demo-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "button",
+        "empty",
+        "link",
+        "mechanism_harness",
+        "runtime",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the Empty Demo root/header remain structural while child controls own interaction semantics.",
+        "Asserts the Create/Import action row buttons expose button roles plus focus/invoke actions.",
+        "Asserts the Learn More CTA rendered through ButtonRender::Link exposes link semantics plus focus/invoke actions."
+      ]
+    },
+    {
       "id": "ui-gallery-empty-demo-actions-layout-sidecar",
       "path": "tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-demo-actions-layout-sidecar.json",
       "required_capabilities": [
@@ -8679,6 +9136,64 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-field-demo-label-control-action-state",
+      "path": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-field-demo-label-control-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "checkbox",
+        "field",
+        "label",
+        "mechanism_harness",
+        "relation",
+        "runtime",
+        "shadcn",
+        "text_input",
+        "textarea",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves FieldLabel::for_control(...) owns explicit controls/labelled_by relations in the Field Demo.",
+        "Asserts Field labels remain text nodes without focus/set-value actions while concrete controls keep their own actions.",
+        "Clicks labels to prove text inputs receive focus and the checkbox toggles through the label-control forwarding path."
+      ]
+    },
+    {
+      "id": "ui-gallery-file-tree-torture-retained-hierarchy-action-state",
+      "path": "tools/diag-scripts/ui-gallery/file-tree/ui-gallery-file-tree-torture-retained-hierarchy-action-state.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
+      "suite_memberships": [
+        "ui-gallery-file-tree-retained"
+      ],
+      "tags": [
+        "action-state",
+        "expanded",
+        "file-tree",
+        "hierarchy",
+        "mechanism-harness",
+        "retained",
+        "selected",
+        "ui-gallery",
+        "virtual-list"
+      ],
+      "target_hints": [
+        "Starts directly on the dev-only File Tree Torture page.",
+        "Proves retained file-tree rows keep hierarchy level, expanded state, selected state, and invoke action state fresh across collapse/expand detach/reattach and retained virtual-list scroll escape."
+      ]
     },
     {
       "id": "ui-gallery-file-tree-torture-scroll",
@@ -9213,6 +9728,35 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-input-group-dropdown-relation-action-state",
+      "path": "tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-input-group-dropdown-relation-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "dropdown",
+        "focus",
+        "input_group",
+        "mechanism_harness",
+        "overlay",
+        "relation",
+        "runtime",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves an InputGroupButton composed as a DropdownMenu trigger keeps button semantics separate from the text-field control.",
+        "Asserts the text-field control remains writable while the addon trigger owns expanded/action semantics.",
+        "Asserts the trigger controls edge resolves to the menu content while open and clears after Escape close."
+      ]
+    },
+    {
       "id": "ui-gallery-input-group-rtl-addon-order",
       "path": "tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json",
       "required_capabilities": [
@@ -9418,6 +9962,38 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-inspector-torture-row-root-selected-action-state-bounce",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-row-root-selected-action-state-bounce.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
+      "suite_memberships": [
+        "ui-gallery-inspector-torture-row-root-selected-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "collection_metadata",
+        "feature:gallery-dev",
+        "inspector",
+        "regression_pack",
+        "retained",
+        "row_root",
+        "selected_state",
+        "semantics",
+        "ui_gallery",
+        "view_cache",
+        "virtual_list"
+      ],
+      "target_hints": [
+        "Run `fret-ui-gallery` with `--features gallery-dev`; the Inspector Torture page is dev-only.",
+        "The gate starts directly on the retained inspector surface, proves row-root ListItem semantics plus collection position, and keeps the selected row stable across scroll detach/reattach.",
+        "The retained bounce covers row-root `selected` and `invoke` on the same node that carries the row test id."
+      ]
+    },
+    {
       "id": "ui-gallery-inspector-torture-scroll",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-scroll.json",
       "required_capabilities": [],
@@ -9428,6 +10004,33 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-item-demo-link-action-state",
+      "path": "tools/diag-scripts/ui-gallery/item/ui-gallery-item-demo-link-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-item-demo-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "command_dispatch",
+        "item",
+        "link",
+        "mechanism_harness",
+        "runtime",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the Item Demo exposes a non-interactive Basic Item without focus/invoke actions.",
+        "Asserts ItemRender::Link exports link semantics plus focus/invoke actions through the docs Demo row.",
+        "Clicks the link-rendered Item row and requires ui_gallery.app.open to be handled by the gallery driver."
+      ]
     },
     {
       "id": "ui-gallery-item-docs-smoke",
@@ -9446,20 +10049,31 @@
       "id": "ui-gallery-item-link-render",
       "path": "tools/diag-scripts/ui-gallery/item/ui-gallery-item-link-render.json",
       "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-item-link-action-state",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
+        "action_state",
+        "command_dispatch",
         "item",
         "link",
+        "mechanism_harness",
         "render",
+        "runtime",
         "shadcn",
         "ui_gallery"
       ],
-      "target_hints": []
+      "target_hints": [
+        "Proves ItemRender::Link exports semantic link role on the item-owned render surface.",
+        "Asserts the Link (render) row exposes focus and invoke actions with deterministic command handling.",
+        "Activates the link-rendered item without launching a browser during diagnostics runs."
+      ]
     },
     {
       "id": "ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap",
@@ -9774,17 +10388,26 @@
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-markdown-span-link-action-state",
         "ui-gallery-text-wrap"
       ],
       "tags": [
+        "action_state",
         "interactive_spans",
         "links",
         "markdown",
+        "mechanism_harness",
+        "runtime",
         "selectable_text",
+        "semantic_link",
         "text",
         "ui_gallery"
       ],
-      "target_hints": []
+      "target_hints": [
+        "Starts directly on the Markdown Editor (Source) dev page.",
+        "Proves the SelectableText markdown span gate exports text role, value, selection action, and inline link span metadata.",
+        "Activates the span through diagnostics without relying on Gallery nav search."
+      ]
     },
     {
       "id": "ui-gallery-markdown-wrap-long-tokens-screenshots",
@@ -9806,6 +10429,36 @@
         "wrap"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-material3-state-matrix-chip-action-state",
+      "path": "tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-state-matrix-chip-action-state.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-material3"
+      ],
+      "suite_memberships": [
+        "ui-gallery-material3-state-matrix-chip-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "cached_subtree",
+        "checked_state",
+        "chip",
+        "disabled",
+        "material3",
+        "mechanism_harness",
+        "runtime",
+        "state_matrix",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the cacheable Material 3 State Matrix page.",
+        "Verifies FilterChip/InputChip checked state, disabled action suppression, and primary/trailing action dispatch through /shell/last_action.",
+        "Covers the derived .trailing-icon semantics node so multi-action chip hit routing cannot silently drift."
+      ]
     },
     {
       "id": "ui-gallery-material3-tabs-switch-perf",
@@ -9879,7 +10532,8 @@
       "required_launch_features": [],
       "suite_memberships": [
         "perf-ui-gallery",
-        "ui-gallery"
+        "ui-gallery",
+        "ui-gallery-menubar-keyboard-nav-action-state"
       ],
       "tags": [],
       "target_hints": []
@@ -10131,30 +10785,64 @@
       ]
     },
     {
-      "id": "ui-gallery-navigation-menu-docs-smoke",
-      "path": "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json",
+      "id": "ui-gallery-navigation-menu-docs-demo-relation-action-state",
+      "path": "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-demo-relation-action-state.json",
       "required_capabilities": [
         "diag.screenshot_png",
         "diag.script_v2"
       ],
       "required_launch_features": [],
       "suite_memberships": [
+        "ui-gallery-navigation-menu-relation-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "focus",
+        "mechanism_harness",
+        "navigation_menu",
+        "overlay",
+        "relation",
+        "runtime",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the NavigationMenu docs demo trigger exports fresh expanded and invoke semantics.",
+        "Asserts the trigger controls edge resolves to the active viewport content wrapper while open.",
+        "Asserts contentless top-level links stay link-like and do not expose dangling controls edges.",
+        "Asserts entry-key focus can enter the controlled content before Escape closes the viewport."
+      ]
+    },
+    {
+      "id": "ui-gallery-navigation-menu-docs-smoke",
+      "path": "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-navigation-menu-docs-smoke-action-state",
         "ui-gallery-shadcn-conformance",
         "ui-gallery-shadcn-runtime-evidence"
       ],
       "tags": [
         "a11y",
+        "action_state",
+        "command_dispatch",
         "navigation_menu",
         "overlay",
+        "runtime",
         "screenshot",
         "shadcn",
         "ui_gallery"
       ],
       "target_hints": [
-        "Navigates to the Navigation Menu page.",
-        "Asserts trigger roles for link vs menu trigger.",
-        "Opens a menu and captures screenshots for quick parity triage.",
-        "Clicks the Docs link to close the menu (Radix/shadcn outcome)."
+        "Starts directly on the Navigation Menu page instead of routing through gallery search.",
+        "Asserts trigger and link action-state for the docs demo and RTL examples.",
+        "Opens menu content, captures screenshots, and verifies contentless links close the viewport.",
+        "Proves deterministic command dispatch for keyboard and pointer activation paths."
       ]
     },
     {
@@ -10382,6 +11070,34 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-pagination-demo-action-selected-state",
+      "path": "tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-pagination-action-selected-state"
+      ],
+      "tags": [
+        "action_state",
+        "link",
+        "mechanism_harness",
+        "pagination",
+        "runtime",
+        "selected",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the Pagination Demo section.",
+        "Proves PaginationLink selected semantics and invoke action exposure on numbered links.",
+        "Proves Previous/Next remain link-like action endpoints and page clicks dispatch through /shell/last_action."
+      ]
+    },
+    {
       "id": "ui-gallery-platform-preferences-runtime-environment-mutation",
       "path": "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-platform-preferences-runtime-environment-mutation.json",
       "required_capabilities": [
@@ -10460,6 +11176,35 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-popover-demo-relation-action-state",
+      "path": "tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-demo-relation-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-popover-relation-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "focus",
+        "mechanism_harness",
+        "overlay",
+        "popover",
+        "relation",
+        "runtime",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the Popover Demo trigger keeps fresh expanded/action semantics through closed -> open -> closed transitions.",
+        "Asserts the trigger controls edge resolves to the Radix-style dialog wrapper, while the visual panel remains a separate panel node.",
+        "Asserts the non-modal Popover does not install modal or focus barrier roots.",
+        "Asserts the dimensions form inputs expose set_value actions while the popover is open."
+      ]
     },
     {
       "id": "ui-gallery-popover-dialog-escape-underlay",
@@ -10989,6 +11734,32 @@
       ]
     },
     {
+      "id": "ui-gallery-scrollbar-arm-content-growth-click-stability",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-arm-content-growth-click-stability.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "action_state",
+        "click_stability",
+        "content_growth",
+        "mechanism_harness",
+        "runtime",
+        "scroll",
+        "scrollbar",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on the ScrollArea diagnostics section.",
+        "Separates Arm content growth click failures into target visibility/action exposure, command dispatch via /shell/last_action, and local state publication via the Armed/Grown badges.",
+        "Runs two arm/reset cycles so intermittent click synthesis failures are more likely to reproduce in the focused gate before the broader drag-content-growth script runs."
+      ]
+    },
+    {
       "id": "ui-gallery-scrollbar-drag-baseline-content-growth",
       "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json",
       "required_capabilities": [
@@ -11422,6 +12193,64 @@
         "Uses the Button Group page as the first shadcn parity seed harness.",
         "Asserts icon-only default buttons keep shadcn compact padding instead of collapsing to raw icon width.",
         "Captures layout sidecars and screenshots for ButtonGroupText vertical-centering review."
+      ]
+    },
+    {
+      "id": "ui-gallery-sheet-demo-relation-action-state",
+      "path": "tools/diag-scripts/ui-gallery/sheet/ui-gallery-sheet-demo-relation-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-sheet-relation-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "focus",
+        "mechanism_harness",
+        "overlay",
+        "relation",
+        "runtime",
+        "shadcn",
+        "sheet",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the Sheet Demo trigger keeps fresh action and relation semantics through open and close.",
+        "Asserts the trigger controls edge resolves to the sheet panel while open and clears after close.",
+        "Asserts the modal barrier is active while open so ordinary underlay selectors stay inert.",
+        "Asserts the dialog content exports labelled_by and described_by edges to the stable title and description nodes."
+      ]
+    },
+    {
+      "id": "ui-gallery-sidebar-app-sidebar-dropdown-relation-action-state",
+      "path": "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-app-sidebar-dropdown-relation-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-sidebar-dropdown-relation-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "dropdown",
+        "focus",
+        "mechanism_harness",
+        "overlay",
+        "relation",
+        "runtime",
+        "shadcn",
+        "sidebar",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the Sidebar AppSidebar team switcher DropdownMenu keeps the authored SidebarMenuButton as the trigger relation/action source.",
+        "Proves selecting a team row closes the menu, clears the trigger relation edge, and returns focus to the trigger.",
+        "Proves the Sidebar AppSidebar user/account DropdownMenu exposes its account rows as invokable menu items and restores focus on Escape."
       ]
     },
     {
@@ -12080,6 +12909,35 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-tabs-demo-relation-action-state",
+      "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-demo-relation-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-tabs-relation-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "keyboard",
+        "mechanism_harness",
+        "relation",
+        "runtime",
+        "shadcn",
+        "tab",
+        "tab_panel",
+        "tabs",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the Tabs Demo exports stable tablist, tab, and active tabpanel semantics.",
+        "Asserts the selected tab controls edge and reciprocal tabpanel labelled_by edge update after pointer activation.",
+        "Asserts automatic roving activation updates selected state, focus, mounted panel, and relation endpoints after ArrowLeft."
+      ]
+    },
+    {
       "id": "ui-gallery-tabs-demo-tab-text-centering-420",
       "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-demo-tab-text-centering-420.json",
       "required_capabilities": [
@@ -12430,6 +13288,35 @@
       ]
     },
     {
+      "id": "ui-gallery-tooltip-focus-opens",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-focus-opens.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
+      "suite_memberships": [
+        "ui-gallery-tooltip-focus-relation"
+      ],
+      "tags": [
+        "focus",
+        "keyboard",
+        "mechanism_harness",
+        "relation",
+        "runtime",
+        "shadcn",
+        "tooltip",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Proves the keyboard-focus Tooltip trigger exports focus/invoke action state while closed and open.",
+        "Asserts focus-open adds described_by to the actual role=tooltip content node, not the geometry-only popper panel marker.",
+        "Asserts Escape closes the tooltip and clears the described_by relation."
+      ]
+    },
+    {
       "id": "ui-gallery-tooltip-hovercard-scroll-clamp",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-hovercard-scroll-clamp.json",
       "required_capabilities": [],
@@ -12574,15 +13461,86 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-typography-interactive-links-activation",
+      "path": "tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-typography-inline-link-action-state"
+      ],
+      "tags": [
+        "action_state",
+        "inline_link",
+        "interactive_spans",
+        "mechanism_harness",
+        "runtime",
+        "selectable_text",
+        "shadcn",
+        "typography",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Starts directly on Typography / Interactive Links.",
+        "Proves p_rich(...).inline_link(...) exports inline link span metadata on the paragraph node.",
+        "Activates the selectable text span and verifies the app-owned on_activate_link state update."
+      ]
+    },
+    {
       "id": "ui-gallery-ui-kit-list-window-boundary-scroll",
       "path": "tools/diag-scripts/ui-gallery/ui-kit/ui-gallery-ui-kit-list-window-boundary-scroll.json",
-      "required_capabilities": [],
-      "required_launch_features": [],
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
       "suite_memberships": [
         "ui-gallery-ui-kit-list-retained"
       ],
-      "tags": [],
-      "target_hints": []
+      "tags": [
+        "action-state",
+        "collection-metadata",
+        "list",
+        "mechanism-harness",
+        "semantics",
+        "ui-gallery",
+        "ui-kit",
+        "view-cache"
+      ],
+      "target_hints": [
+        "Starts directly on the dev-only UI Kit List Torture page.",
+        "Proves UI Kit retained-list row roots expose deterministic row-level test ids, collection metadata, selected state, and invoke actions under Gallery view-cache.",
+        "This is a row-root semantics/action-state gate. Retained-host reconcile telemetry is covered by the dedicated Virtual List Torture retained suites."
+      ]
+    },
+    {
+      "id": "ui-gallery-view-cache-cached-popover-relation-action-state",
+      "path": "tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-cached-popover-relation-action-state.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "ui-gallery-view-cache"
+      ],
+      "tags": [
+        "action_state",
+        "cache_hit",
+        "mechanism_harness",
+        "popover",
+        "relation",
+        "runtime",
+        "ui_gallery",
+        "view_cache"
+      ],
+      "target_hints": [
+        "Proves a Popover inside the View Cache harness keeps trigger action state and controls relation fresh across close, cached-subtree counter mutation, and reopen.",
+        "Uses the dedicated Popover dialog wrapper test id so the trigger controls edge is asserted against the same node that the shadcn Popover recipe stamps for Radix-style a11y."
+      ]
     },
     {
       "id": "ui-gallery-view-cache-dynamic-text-mutation-through-cache",
@@ -12920,6 +13878,34 @@
         "window"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-windowed-rows-surface-scroll-refresh",
+      "path": "tools/diag-scripts/ui-gallery/windowed-rows/ui-gallery-windowed-rows-surface-scroll-refresh.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [
+        "gallery-dev"
+      ],
+      "suite_memberships": [
+        "ui-gallery-windowed-rows-surface"
+      ],
+      "tags": [
+        "canvas",
+        "feature:gallery-dev",
+        "paint_refresh",
+        "regression_pack",
+        "scroll",
+        "ui_gallery",
+        "visible_start",
+        "windowed_rows"
+      ],
+      "target_hints": [
+        "Starts directly on the Windowed Rows Surface torture page instead of navigating through the long Gallery nav.",
+        "The script intentionally scrolls the single-node Scroll+Canvas surface so fret-diag post-run checks can prove offset changes and visible_start repaint freshness.",
+        "The suite-level post-run gates are selected by the script filename in crates/fret-diag/src/diag_policy.rs."
+      ]
     },
     {
       "id": "ui-gallery-workspace-shell-chrome-shadcn-screenshot",

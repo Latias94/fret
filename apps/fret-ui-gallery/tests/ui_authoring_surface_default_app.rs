@@ -2070,7 +2070,7 @@ fn button_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
 
 #[test]
 fn button_group_text_follow_up_teaches_label_mapping_without_slot_api() {
-    assert_normalized_markers_present(
+    let snippet = assert_normalized_markers_present(
         "src/ui/snippets/button_group/text.rs",
         &[
             "let control_id = \"button-group-url\";",
@@ -2079,7 +2079,13 @@ fn button_group_text_follow_up_teaches_label_mapping_without_slot_api() {
             ".for_control(control_id)",
             ".into_element(cx)])",
             "shadcn::Input::new(url_value).control_id(control_id)",
+            ".a11y_label(\"Website URL\")",
         ],
+    );
+
+    assert!(
+        !snippet.contains(&canonicalize_rust_fragment(".a11y_label(\"URL\")")),
+        "ButtonGroupText label/control example should not give the input a direct a11y_label; the input must derive labelled_by from Label::for_control(...)"
     );
 
     assert_normalized_markers_present(

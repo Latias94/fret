@@ -842,10 +842,15 @@ impl ElementHostWidget {
         let pad_w = pad_left + pad_right;
         let pad_h = pad_top + pad_bottom;
 
-        let child_constraints = LayoutConstraints::new(
-            LayoutSize::new(None, None),
-            child_available_for_layout(measure_constraints, props.layout, pad_w, pad_h),
-        );
+        let mut child_available =
+            child_available_for_layout(measure_constraints, props.layout, pad_w, pad_h);
+        if measure_constraints.known.height.is_none()
+            && matches!(props.layout.size.height, Length::Auto)
+        {
+            child_available.height = AvailableSpace::MaxContent;
+        }
+        let child_constraints =
+            LayoutConstraints::new(LayoutSize::new(None, None), child_available);
         let max_child = max_non_absolute_children(cx, window, child_constraints);
 
         let desired = Size::new(

@@ -1,50 +1,119 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-windowed-rows-surface-scroll-refresh",
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "required_launch_features": [
+      "gallery-dev"
+    ],
+    "tags": [
+      "ui_gallery",
+      "windowed_rows",
+      "scroll",
+      "canvas",
+      "paint_refresh",
+      "visible_start",
+      "regression_pack",
+      "feature:gallery-dev"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "windowed_rows_surface_torture"
+    },
+    "target_hints": [
+      "Starts directly on the Windowed Rows Surface torture page instead of navigating through the long Gallery nav.",
+      "The script intentionally scrolls the single-node Scroll+Canvas surface so fret-diag post-run checks can prove offset changes and visible_start repaint freshness.",
+      "The suite-level post-run gates are selected by the script filename in crates/fret-diag/src/diag_policy.rs."
+    ]
+  },
   "steps": [
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-windowed-rows-surface-torture" }
+      "type": "reset_diagnostics"
     },
     {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-windowed-rows-surface-torture" }
-      },
-      "timeout_frames": 60
+      "type": "press_key",
+      "key": "escape"
     },
-    { "type": "press_key", "key": "enter" },
+    {
+      "type": "set_window_inner_size",
+      "width_px": 1280.0,
+      "height_px": 720.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 10
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-windowed-rows-root" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-windowed-rows-root"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
     {
       "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-windowed-rows-root" }
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-windowed-rows-root"
+      }
+    },
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
     },
     {
       "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-windowed-rows-root" },
-      "delta_y": -240.0
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-windowed-rows-root"
+      },
+      "delta_x": 0.0,
+      "delta_y": -720.0,
+      "pointer_kind": "touch"
     },
-    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_frames",
+      "n": 12
+    },
     {
       "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-windowed-rows-root" },
-      "delta_y": -240.0
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-windowed-rows-root"
+      },
+      "delta_x": 0.0,
+      "delta_y": -720.0,
+      "pointer_kind": "touch"
     },
-    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_frames",
+      "n": 12
+    },
     {
       "type": "wheel",
-      "target": { "kind": "test_id", "id": "ui-gallery-windowed-rows-root" },
-      "delta_y": 240.0
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-windowed-rows-root"
+      },
+      "delta_x": 0.0,
+      "delta_y": 720.0,
+      "pointer_kind": "touch"
     },
-    { "type": "wait_frames", "n": 5 },
-    { "type": "capture_bundle", "label": "ui-gallery-windowed-rows-surface-scroll-refresh" }
+    {
+      "type": "wait_frames",
+      "n": 12
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-windowed-rows-surface-scroll-refresh"
+    }
   ]
 }
-

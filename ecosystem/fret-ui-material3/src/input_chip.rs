@@ -11,8 +11,8 @@
 use std::sync::Arc;
 
 use fret_core::{
-    Axis, Color, Edges, LayoutDirection, Point, Px, Rect, SemanticsRole, Size, SvgFit,
-    TextOverflow, TextStyle, TextWrap,
+    Axis, Color, Edges, LayoutDirection, Point, Px, Rect, SemanticsCheckedState, SemanticsRole,
+    Size, SvgFit, TextOverflow, TextStyle, TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::{ActionId, Model};
@@ -325,6 +325,13 @@ impl InputChip {
                         label: self.a11y_label.clone().or_else(|| Some(self.label.clone())),
                         test_id: self.test_id.clone(),
                         checked,
+                        checked_state: checked.map(|checked| {
+                            if checked {
+                                SemanticsCheckedState::True
+                            } else {
+                                SemanticsCheckedState::False
+                            }
+                        }),
                         ..Default::default()
                     },
                     layout: {

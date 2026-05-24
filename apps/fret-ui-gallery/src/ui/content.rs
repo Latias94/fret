@@ -453,7 +453,7 @@ fn page_preview(
         PAGE_AVATAR => pages::preview_avatar(cx),
         PAGE_IMAGE_OBJECT_FIT => pages::preview_image_object_fit(cx),
         PAGE_SKELETON => pages::preview_skeleton(cx),
-        PAGE_SCROLL_AREA => pages::preview_scroll_area(cx),
+        PAGE_SCROLL_AREA => pages::preview_scroll_area(cx, Some(last_action.clone())),
         PAGE_TOOLTIP => pages::preview_tooltip(cx),
         PAGE_SLIDER => pages::preview_slider(cx),
         #[cfg(feature = "gallery-dev")]

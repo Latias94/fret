@@ -84,6 +84,18 @@ pub fn semantics_relation_is_empty(
     UiPredicateV1::SemanticsRelationIsEmpty { source, relation }
 }
 
+pub fn semantics_inline_span_includes(
+    target: UiSelectorV1,
+    role: impl Into<String>,
+    tag: Option<impl Into<String>>,
+) -> UiPredicateV1 {
+    UiPredicateV1::SemanticsInlineSpanIncludes {
+        target,
+        role: role.into(),
+        tag: tag.map(Into::into),
+    }
+}
+
 pub fn selected_is(target: UiSelectorV1, selected: bool) -> UiPredicateV1 {
     UiPredicateV1::SelectedIs { target, selected }
 }

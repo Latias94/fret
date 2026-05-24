@@ -78,11 +78,14 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     vec![
                         shadcn::SheetHeader::new([]).with_children(cx, |cx| {
                             vec![
-                                shadcn::SheetTitle::new("Edit profile").into_element(cx),
+                                shadcn::SheetTitle::new("Edit profile")
+                                    .into_element(cx)
+                                    .test_id("ui-gallery-sheet-demo-dialog-title"),
                                 shadcn::SheetDescription::new(
                                     "Make changes to your profile here. Click save when you're done.",
                                 )
-                                .into_element(cx),
+                                .into_element(cx)
+                                .test_id("ui-gallery-sheet-demo-dialog-description"),
                             ]
                         })
                         .test_id("ui-gallery-sheet-demo-header"),

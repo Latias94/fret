@@ -185,8 +185,10 @@ fn label_for_control<H: UiHost>(
                     });
                 if let Some((true, element, focus_on_pointer_down)) = target {
                     if focus_on_pointer_down {
+                        host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
                         host.request_focus(element);
-                        return false;
+                        host.capture_pointer();
+                        return true;
                     }
                     host.capture_pointer();
                 }
@@ -318,7 +320,7 @@ mod tests {
     use fret_ui::UiTree;
     use fret_ui::element::{
         ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, Length, MainAlign,
-        PressableProps, SizeStyle,
+        PressableProps, SizeStyle, TextInputProps,
     };
     use fret_ui::elements;
     use fret_ui::{Theme, ThemeConfig};
@@ -844,5 +846,165 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&checked), Some(true));
+    }
+
+    #[test]
+    fn label_for_control_wrapped_root_focus_only_consumes_ancestor_pressable_focus() {
+        let window = AppWindowId::default();
+        let mut app = test_app();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(320.0), Px(96.0)));
+        let mut services = FakeServices;
+        let text = app.models_mut().insert(String::new());
+        let text_for_render = text.clone();
+        let control_id = ControlId::from("label.focus.control.wrapped.root");
+        let input_element: std::rc::Rc<std::cell::Cell<Option<GlobalElementId>>> =
+            std::rc::Rc::new(std::cell::Cell::new(None));
+        let input_element_for_render = input_element.clone();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "label-for-control-wrapped-root-focus-only",
+            |cx| {
+                let mut row_layout = LayoutStyle::default();
+                row_layout.size.width = Length::Fill;
+                let registry_model = control_registry_model(cx);
+
+                vec![cx.pressable(PressableProps::default(), move |cx, _state| {
+                    let registry_model = registry_model.clone();
+                    let control_id = control_id.clone();
+                    let text_for_render = text_for_render.clone();
+                    let input_element_for_render = input_element_for_render.clone();
+
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: row_layout,
+                            direction: Axis::Horizontal,
+                            gap: Px(8.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |cx| {
+                            let wrapped_root = cx.container(
+                                ContainerProps {
+                                    layout: LayoutStyle {
+                                        size: SizeStyle {
+                                            width: Length::Px(Px(72.0)),
+                                            height: Length::Px(Px(32.0)),
+                                            min_width: None,
+                                            min_height: None,
+                                            max_width: None,
+                                            max_height: None,
+                                        },
+                                        ..Default::default()
+                                    },
+                                    ..Default::default()
+                                },
+                                |cx| vec![label(cx, "Prefix")],
+                            );
+
+                            let input = cx.text_input_with_id_props(|cx, id| {
+                                input_element_for_render.set(Some(id));
+                                let entry = crate::primitives::control_registry::ControlEntry {
+                                    element: id,
+                                    enabled: true,
+                                    action: ControlAction::FocusOnly,
+                                };
+                                let _ = cx.app.models_mut().update(&registry_model, |reg| {
+                                    reg.register_control(
+                                        cx.window,
+                                        cx.frame_id,
+                                        control_id.clone(),
+                                        entry,
+                                    );
+                                });
+
+                                let mut props = TextInputProps::new(text_for_render.clone());
+                                props.test_id = Some(Arc::from("test.control"));
+                                props.layout.size = SizeStyle {
+                                    width: Length::Px(Px(160.0)),
+                                    height: Length::Px(Px(32.0)),
+                                    min_width: None,
+                                    min_height: None,
+                                    max_width: None,
+                                    max_height: None,
+                                };
+                                props
+                            });
+
+                            vec![
+                                Label::new("Prefix")
+                                    .for_control(control_id.clone())
+                                    .test_id("test.label")
+                                    .wrap_root(wrapped_root)
+                                    .into_element(cx),
+                                input,
+                            ]
+                        },
+                    )]
+                })]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let label = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("test.label"))
+            .expect("label semantics node");
+        let input_node = elements::node_for_element(
+            &mut app,
+            window,
+            input_element.get().expect("input element id"),
+        )
+        .expect("input node");
+
+        let position = Point::new(
+            Px(label.bounds.origin.x.0 + label.bounds.size.width.0 * 0.5),
+            Px(label.bounds.origin.y.0 + label.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        assert_eq!(
+            ui.focus(),
+            Some(input_node),
+            "expected a wrapped label click to focus the registered control, not the ambient pressable"
+        );
     }
 }

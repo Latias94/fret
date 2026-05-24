@@ -2,45 +2,51 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-markdown-span-link-gate-activate",
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
-    "tags": ["ui_gallery", "markdown", "text", "selectable_text", "interactive_spans", "links"]
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "tags": [
+      "ui_gallery",
+      "markdown",
+      "text",
+      "selectable_text",
+      "interactive_spans",
+      "links",
+      "action_state",
+      "semantic_link",
+      "mechanism_harness",
+      "runtime"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "markdown_editor_source"
+    },
+    "target_hints": [
+      "Starts directly on the Markdown Editor (Source) dev page.",
+      "Proves the SelectableText markdown span gate exports text role, value, selection action, and inline link span metadata.",
+      "Activates the span through diagnostics without relying on Gallery nav search."
+    ]
   },
   "steps": [
     { "type": "reset_diagnostics" },
     { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
-
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-      "timeout_frames": 600
-    },
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll" } },
-      "timeout_frames": 600
-    },
-
     { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
     { "type": "wait_frames", "n": 10 },
 
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "markdown" },
-    { "type": "wait_frames", "n": 2 },
-
-    {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-markdown-editor-source" },
-      "delta_y": -240.0,
-      "timeout_frames": 600
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-markdown-editor-source" } },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-markdown-editor-root" } },
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-markdown-editor-source" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-markdown-editor-root" }
+      },
       "timeout_frames": 600
     },
 
@@ -53,32 +59,108 @@
     },
 
     { "type": "wait_frames", "n": 10 },
-    { "type": "capture_screenshot", "label": "markdown-span-link-gate-before", "timeout_frames": 240 },
 
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-gate" },
       "delta_y": -160.0,
+      "require_fully_within_container": true,
       "require_fully_within_window": true,
       "padding_px": 24.0,
       "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-gate" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-gate" },
+        "role": "text"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-gate" },
+        "text": "https://example.com"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-gate" },
+        "action": "set_text_selection",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_inline_span_includes",
+        "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-gate" },
+        "role": "link",
+        "tag": "https://example.com"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-activated" }
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-markdown-span-link-gate-activate.before-layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-markdown-span-link-gate-activate.before",
+      "timeout_frames": 240
     },
 
     {
       "type": "click_selectable_text_span_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-gate" },
-      "tag": "https://example.com"
+      "tag": "https://example.com",
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
     },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-activated" } },
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-activated" }
+      },
       "timeout_frames": 600
     },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-markdown-span-link-activated" },
+        "text": "Activated: https://example.com"
+      }
+    },
 
-    { "type": "wait_frames", "n": 5 },
-    { "type": "capture_screenshot", "label": "markdown-span-link-gate-after", "timeout_frames": 240 },
-    { "type": "capture_bundle", "label": "ui-gallery-markdown-span-link-gate-activate" },
-    { "type": "wait_frames", "n": 2 }
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-markdown-span-link-gate-activate.after",
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-markdown-span-link-gate-activate" }
   ]
 }

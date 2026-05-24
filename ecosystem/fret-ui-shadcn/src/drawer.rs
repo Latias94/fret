@@ -650,7 +650,14 @@ impl DrawerContent {
             ]
         });
 
-        content.attach_semantics(SemanticsDecoration::default().role(SemanticsRole::Dialog))
+        let (labelled_by_element, described_by_element) =
+            crate::a11y_modal::modal_relations_for_current_scope(cx.app);
+        content.attach_semantics(SemanticsDecoration {
+            role: Some(SemanticsRole::Dialog),
+            labelled_by_element,
+            described_by_element,
+            ..Default::default()
+        })
     }
 }
 
@@ -6079,6 +6086,185 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn drawer_children_builder_exports_trigger_and_content_relations() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        );
+        let open = app.models_mut().insert(true);
+        let trigger_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let content_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let title_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let description_id: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
+        let mut services = FakeServices;
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "drawer-children-builder-exports-trigger-and-content-relations",
+            |cx| {
+                let trigger_id = trigger_id.clone();
+                let content_id = content_id.clone();
+                let title_id = title_id.clone();
+                let description_id = description_id.clone();
+
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st, id| {
+                        trigger_id.set(Some(id));
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                vec![
+                    Drawer::new(open.clone())
+                        .children([
+                            DrawerPart::trigger(DrawerTrigger::new(trigger)),
+                            DrawerPart::portal(DrawerPortal::new()),
+                            DrawerPart::overlay(DrawerOverlay::new()),
+                            DrawerPart::content_with(move |cx| {
+                                let title = DrawerTitle::new("Move goal").into_element(cx);
+                                title_id.set(Some(title.id));
+                                let description =
+                                    DrawerDescription::new("Set your goal").into_element(cx);
+                                description_id.set(Some(description.id));
+                                let content =
+                                    DrawerContent::new(vec![title, description]).into_element(cx);
+                                content_id.set(Some(content.id));
+                                content
+                            }),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        ui.request_semantics_snapshot();
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "drawer-children-builder-exports-trigger-and-content-relations",
+            |cx| {
+                let trigger_id = trigger_id.clone();
+                let content_id = content_id.clone();
+                let title_id = title_id.clone();
+                let description_id = description_id.clone();
+
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st, id| {
+                        trigger_id.set(Some(id));
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                vec![
+                    Drawer::new(open.clone())
+                        .children([
+                            DrawerPart::trigger(DrawerTrigger::new(trigger)),
+                            DrawerPart::portal(DrawerPortal::new()),
+                            DrawerPart::overlay(DrawerOverlay::new()),
+                            DrawerPart::content_with(move |cx| {
+                                let title = DrawerTitle::new("Move goal").into_element(cx);
+                                title_id.set(Some(title.id));
+                                let description =
+                                    DrawerDescription::new("Set your goal").into_element(cx);
+                                description_id.set(Some(description.id));
+                                let content =
+                                    DrawerContent::new(vec![title, description]).into_element(cx);
+                                content_id.set(Some(content.id));
+                                content
+                            }),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = fret_ui::elements::node_for_element(
+            &mut app,
+            window,
+            trigger_id.get().expect("trigger id"),
+        )
+        .expect("trigger node");
+        let content_node = fret_ui::elements::node_for_element(
+            &mut app,
+            window,
+            content_id.get().expect("content id"),
+        )
+        .expect("content node");
+        let title_node = fret_ui::elements::node_for_element(
+            &mut app,
+            window,
+            title_id.get().expect("title id"),
+        )
+        .expect("title node");
+        let description_node = fret_ui::elements::node_for_element(
+            &mut app,
+            window,
+            description_id.get().expect("description id"),
+        )
+        .expect("description node");
+
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|node| node.id == trigger_node)
+            .expect("trigger semantics");
+        assert!(trigger.flags.expanded);
+        assert!(trigger.controls.contains(&content_node));
+
+        let content = snap
+            .nodes
+            .iter()
+            .find(|node| node.id == content_node)
+            .expect("content semantics");
+        assert_eq!(content.role, fret_core::SemanticsRole::Dialog);
+        assert!(content.labelled_by.contains(&title_node));
+        assert!(content.described_by.contains(&description_node));
     }
 
     #[test]

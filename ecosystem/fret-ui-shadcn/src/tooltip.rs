@@ -1570,6 +1570,7 @@ pub struct TooltipContent {
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    test_id: Option<Arc<str>>,
 }
 
 #[derive(Debug, Clone)]
@@ -1611,6 +1612,7 @@ impl TooltipContent {
             children,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            test_id: None,
         }
     }
 
@@ -1653,6 +1655,15 @@ impl TooltipContent {
         self
     }
 
+    /// Optional debug/test-only identifier for the actual tooltip semantics content node.
+    ///
+    /// Use this for `aria-describedby`-style relation diagnostics. `Tooltip::panel_test_id(...)`
+    /// remains the placed popper panel bounds marker used by geometry and arrow-placement gates.
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
@@ -1682,9 +1693,11 @@ impl TooltipContent {
             })
             .collect();
         let container = shadcn_layout::container_flow(cx, props, children).inherit_foreground(fg);
-        container.attach_semantics(
-            SemanticsDecoration::default().role(fret_core::SemanticsRole::Tooltip),
-        )
+        let mut semantics = SemanticsDecoration::default().role(fret_core::SemanticsRole::Tooltip);
+        if let Some(test_id) = self.test_id {
+            semantics = semantics.test_id(test_id);
+        }
+        container.attach_semantics(semantics)
     }
 }
 
@@ -1846,6 +1859,30 @@ mod tests {
             assert_eq!(props.layout.size.width, Length::Auto);
             assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
             assert_eq!(props.layout.size.max_width, Some(Length::Px(Px(320.0))));
+        });
+    }
+
+    #[test]
+    fn tooltip_content_test_id_marks_tooltip_semantics_node() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "tooltip-content-id", |cx| {
+            let content = TooltipContent::new(vec![ui::raw_text("tip").into_element(cx)])
+                .test_id("tooltip-content-node")
+                .into_element(cx);
+
+            let semantics = content
+                .semantics_decoration
+                .as_ref()
+                .expect("tooltip content semantics decoration");
+
+            assert_eq!(semantics.role, Some(SemanticsRole::Tooltip));
+            assert_eq!(semantics.test_id.as_deref(), Some("tooltip-content-node"));
         });
     }
 

@@ -1,27 +1,42 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-collapsible-basic-double-click-close",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "required_launch_features": ["gallery-dev"],
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "collapsible",
+      "relation",
+      "action_state",
+      "mechanism_harness",
+      "runtime"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "collapsible"
+    },
+    "target_hints": [
+      "Proves the compact Collapsible Basic trigger exports fresh expanded/action semantics.",
+      "Asserts the trigger controls relation resolves to the content wrapper while open and clears when closed."
+    ]
+  },
   "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-collapsible" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "collapsible" },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-collapsible" }
-      },
-      "timeout_frames": 240
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-collapsible" } },
     {
       "type": "wait_until",
       "predicate": {
@@ -34,28 +49,52 @@
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
-      "delta_y": -160.0,
+      "delta_y": -220.0,
       "require_fully_within_container": true,
       "require_fully_within_window": true,
       "padding_px": 16.0,
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 4 },
     {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
-      "stable_frames": 3,
-      "max_move_px": 2.0,
-      "timeout_frames": 600
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+        "expanded": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_relation_is_empty",
+        "source": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+        "relation": "controls"
+      }
     },
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "bounds_min_size",
-        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic" },
-        "min_w_px": 300.0,
-        "min_h_px": 80.0,
-        "eps_px": 1.0
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-panel" }
       },
       "timeout_frames": 240
     },
@@ -63,35 +102,108 @@
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
       "stable_frames": 3,
-      "max_move_px": 2.0,
+      "max_move_px": 1.0,
       "timeout_frames": 600
     },
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "bounds_max_size",
-        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic" },
-        "max_w_px": 400.0,
-        "max_h_px": 50.0,
-        "eps_px": 1.0
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-panel" }
       },
       "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+        "expanded": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+        "relation": "controls",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-panel" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-collapsible-basic-open.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-collapsible-basic-open"
     },
     {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
       "stable_frames": 3,
-      "max_move_px": 2.0,
+      "max_move_px": 1.0,
       "timeout_frames": 600
     },
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "bounds_min_size",
-        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic" },
-        "min_w_px": 300.0,
-        "min_h_px": 80.0,
-        "eps_px": 1.0
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+        "expanded": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_is_empty",
+        "source": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+        "relation": "controls"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-panel" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-panel" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+        "expanded": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-trigger" },
+        "relation": "controls",
+        "target": { "kind": "test_id", "id": "ui-gallery-collapsible-basic-panel" }
       },
       "timeout_frames": 240
     },

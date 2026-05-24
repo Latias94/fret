@@ -4,10 +4,16 @@ Tracking doc: `docs/workstreams/ui-direction-and-rtl-fearless-refactor-v1/DESIGN
 
 ## A — Lock the minimal contract surface (kit + recipes)
 
-- [ ] Write down the public “direction vocabulary” we expect shadcn recipes to use
+- [x] Write down the public “direction vocabulary” we expect shadcn recipes to use
   (provider install, local override, `Start/End` vs physical left/right).
-- [ ] Add a small “authoring helpers” section (recommended builders / helpers) to avoid repeated
+  - Result: documented the shared direction vocabulary in `DESIGN.md` so recipes can rely on
+    `LayoutDirection::{Ltr,Rtl}`, `DirectionProvider` / `with_direction_provider(...)`,
+    `use_direction(...)`, and logical `Start/End` semantics instead of ad-hoc left/right branches.
+- [x] Add a small “authoring helpers” section (recommended builders / helpers) to avoid repeated
   per-component ad-hoc mappings.
+  - Result: added a dedicated `Authoring helpers` section to `DESIGN.md` that recommends the
+    provider-install and local-resolution helpers and keeps physical branches explicit only when
+    needed.
 
 ## B — Parity matrix (direction-sensitive components)
 
@@ -28,9 +34,9 @@ Legend:
 | NavigationMenu | viewport `align=start` respects direction provider | OK | Test | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` |
 | Carousel | Drag sign + snap selection threshold under RTL | OK | Test | `ecosystem/fret-ui-shadcn/tests/carousel_direction_rtl.rs` + `ecosystem/fret-ui-shadcn/src/carousel.rs` |
 | Tabs (gallery) | APG keynav (Left/Right flip under RTL) | OK | Diag | `apps/fret-ui-gallery/src/ui/snippets/tabs/extras.rs` + `tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-rtl-keynav-screenshot.json` |
-| Slider / Range | Arrow keys + track fill direction | Unknown | None | — |
-| Tabs (recipe) | Visual indicator + spacing parity under RTL | Unknown | None | — |
-| Pagination | Chevron semantics + “next/prev” physical ordering | Unknown | None | — |
+| Slider / Range | Arrow keys + track fill direction | OK | Test | `ecosystem/fret-ui-shadcn/src/slider.rs` (`slider_rtl_direction_flips_left_right_keys`, `inverted_horizontal_slider_pointer_and_keys_follow_radix_direction_rules`, `inverted_vertical_slider_pointer_and_keys_follow_radix_direction_rules`, `vertical_slider_pointer_and_keys_follow_radix_direction_rules`) |
+| Tabs (recipe) | Visual indicator + spacing parity under RTL | OK | Test | `ecosystem/fret-ui-shadcn/src/tabs.rs` (`tabs_shared_indicator_pill_tracks_selected_trigger_in_rtl`) |
+| Pagination | Chevron semantics + “next/prev” physical ordering | OK | Test | `ecosystem/fret-ui-shadcn/src/pagination.rs` (`pagination_previous_next_use_logical_chevrons_and_physical_order`) |
 
 ## C — Gates (add the missing ones)
 

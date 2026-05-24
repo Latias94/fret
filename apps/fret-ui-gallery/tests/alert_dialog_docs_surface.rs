@@ -315,9 +315,25 @@ fn alert_dialog_docs_diag_scripts_cover_docs_path_and_existing_regression_gates(
     }
 
     for needle in [
+        "\"FRET_UI_GALLERY_START_PAGE\": \"alert_dialog\"",
+        "\"FRET_UI_GALLERY_START_SECTION\": \"Destructive\"",
+        "\"ui-gallery-page-alert-dialog\"",
+        "\"ui-gallery-alert-dialog-destructive-docsec-content\"",
         "\"ui-gallery-alert-dialog-destructive-trigger\"",
+        "\"ui-gallery-alert-dialog-destructive-content\"",
         "\"ui-gallery-alert-dialog-destructive-description-link\"",
         "\"ui-gallery-alert-dialog-destructive-inline-link-activate\"",
+        "\"role_is\"",
+        "\"value_contains\"",
+        "\"semantics_action_is\"",
+        "\"semantics_inline_span_includes\"",
+        "\"click_selectable_text_span_stable\"",
+        "\"role\": \"alert_dialog\"",
+        "\"role\": \"text\"",
+        "\"role\": \"link\"",
+        "\"action\": \"set_text_selection\"",
+        "\"https://example.com/settings\"",
+        "\"capture_layout_sidecar\"",
     ] {
         assert!(
             destructive_link.contains(needle),

@@ -3926,6 +3926,77 @@ fn icon_toggle_button_semantics_role_and_checked_state_are_stable() {
 }
 
 #[test]
+fn chips_export_checked_state_for_selected_semantics() {
+    use fret_ui_material3::{FilterChip, InputChip};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Dark, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let filter_selected = app.models.insert(true);
+    let input_unselected = app.models.insert(false);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(360.0), Px(180.0)),
+    );
+
+    let render = |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let mut props = fret_ui::element::FlexProps::default();
+            props.direction = fret_core::Axis::Vertical;
+            props.gap = fret_ui::element::SpacingLength::Px(Px(8.0));
+            let chips = cx.flex(props, |cx| {
+                vec![
+                    FilterChip::new(filter_selected.clone(), "Filter")
+                        .test_id("filter-chip-selected")
+                        .into_element(cx),
+                    InputChip::new(input_unselected.clone(), "Input")
+                        .test_id("input-chip-unselected")
+                        .into_element(cx),
+                ]
+            });
+            vec![with_padding(cx, Px(24.0), chips)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let snapshot = ui
+        .semantics_snapshot()
+        .expect("expected semantics snapshot");
+    let filter = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("filter-chip-selected"))
+        .expect("expected filter chip in semantics snapshot");
+    assert_eq!(filter.flags.checked, Some(true));
+    assert_eq!(
+        filter.flags.checked_state,
+        Some(fret_core::SemanticsCheckedState::True)
+    );
+
+    let input = snapshot
+        .nodes
+        .iter()
+        .find(|node| node.test_id.as_deref() == Some("input-chip-unselected"))
+        .expect("expected input chip in semantics snapshot");
+    assert_eq!(input.flags.checked, Some(false));
+    assert_eq!(
+        input.flags.checked_state,
+        Some(fret_core::SemanticsCheckedState::False)
+    );
+}
+
+#[test]
 fn icon_toggle_button_checked_transition_scene_structure_is_stable() {
     use fret_icons::ids;
     use fret_ui_material3::{

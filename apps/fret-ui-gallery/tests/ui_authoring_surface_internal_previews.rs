@@ -1286,6 +1286,34 @@ fn gallery_inspector_torture_uses_fixed_row_text_roles() {
 }
 
 #[test]
+fn gallery_inspector_torture_stamps_row_root_semantics_and_action_state() {
+    let normalized = assert_normalized_markers_present(
+        "src/ui/previews/gallery/torture/inspector_torture.rs",
+        &[
+            "fninspector_row_test_id(index:usize)->Arc<str>",
+            "fninspector_row_label_test_id(index:usize)->Arc<str>",
+            "fninspector_row_value_test_id(index:usize)->Arc<str>",
+            "fninspector_row_semantics(index:usize,len:usize,selected:bool)->PressableA11y",
+            "PressableA11y{role:Some(fret_core::SemanticsRole::ListItem),",
+            "test_id:Some(inspector_row_test_id(index)),",
+            "selected_row_value==Some(index)",
+            "cx.pressable_add_on_activate(on_select_row.clone())",
+            "row.test_id(inspector_row_test_id(index))",
+        ],
+    );
+
+    for forbidden in [
+        "row.test_id(format!(\"ui-gallery-inspector-row-{index}-label\"))",
+        "row.test_id(format!(\"ui-gallery-inspector-row-{index}\"))",
+    ] {
+        assert!(
+            !normalized.contains(forbidden),
+            "inspector_torture row-root semantics guard should stay on helper-based ids: {forbidden}"
+        );
+    }
+}
+
+#[test]
 fn harness_virtual_list_torture_uses_fixed_row_text_roles() {
     let normalized = assert_normalized_markers_present(
         "src/ui/previews/pages/harness/virtual_list_torture.rs",

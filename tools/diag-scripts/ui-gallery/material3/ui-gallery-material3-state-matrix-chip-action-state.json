@@ -1,0 +1,326 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-material3-state-matrix-chip-action-state",
+    "required_capabilities": ["diag.script_v2"],
+    "required_launch_features": ["gallery-material3"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "material3_state_matrix"
+    },
+    "tags": [
+      "ui_gallery",
+      "material3",
+      "state_matrix",
+      "chip",
+      "checked_state",
+      "disabled",
+      "action_state",
+      "cached_subtree",
+      "mechanism_harness",
+      "runtime"
+    ],
+    "target_hints": [
+      "Starts directly on the cacheable Material 3 State Matrix page.",
+      "Verifies FilterChip/InputChip checked state, disabled action suppression, and primary/trailing action dispatch through /shell/last_action.",
+      "Covers the derived .trailing-icon semantics node so multi-action chip hit routing cannot silently drift."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-material3-state-matrix" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/selected_page",
+        "value": "material3_state_matrix"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-selected" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-selected" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-filter-chip-selected.trailing-icon"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-input-chip-unselected.trailing-icon"
+        }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "role_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-selected" },
+        "role": "button"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_state_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-selected" },
+        "state": "true"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-selected" },
+        "action": "invoke",
+        "enabled": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-filter-chip-selected.trailing-icon"
+        },
+        "action": "invoke",
+        "enabled": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_state_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-disabled" },
+        "state": "false"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "disabled_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-disabled" },
+        "disabled": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-disabled" },
+        "action": "invoke",
+        "enabled": false
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-selected" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 360
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_state_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-selected" },
+        "state": "false"
+      },
+      "timeout_frames": 360
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "material3.filter_chip.primary.activated"
+      },
+      "timeout_frames": 360
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-material3-filter-chip-selected.trailing-icon"
+      },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 360
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "material3.filter_chip.trailing_icon.activated"
+      },
+      "timeout_frames": 360
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_state_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-filter-chip-selected" },
+        "state": "false"
+      },
+      "timeout_frames": 360
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-input-chip-unselected" },
+      "delta_y": -180.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-input-chip-unselected" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_state_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-input-chip-unselected" },
+        "state": "false"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-material3-input-chip-unselected.trailing-icon"
+        },
+        "action": "invoke",
+        "enabled": true
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-material3-input-chip-unselected" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 360
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_state_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-input-chip-unselected" },
+        "state": "true"
+      },
+      "timeout_frames": 360
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "material3.input_chip.primary.activated"
+      },
+      "timeout_frames": 360
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-material3-input-chip-unselected.trailing-icon"
+      },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 360
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "material3.input_chip.trailing_icon.activated"
+      },
+      "timeout_frames": 360
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_state_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-material3-input-chip-unselected" },
+        "state": "true"
+      },
+      "timeout_frames": 360
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-material3-state-matrix-chip-action-state",
+      "max_snapshots": 2
+    }
+  ]
+}

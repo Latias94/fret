@@ -514,6 +514,102 @@ fn paint_cache_replay_translates_descendant_bounds_for_descendants() {
 }
 
 #[test]
+fn paint_cache_replay_touches_selectable_text_span_state_for_replayed_subtrees() {
+    let mut app = crate::test_host::TestHost::new();
+    let window = AppWindowId::default();
+    let element = crate::elements::GlobalElementId(10_001);
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+    ui.set_paint_cache_enabled(true);
+    ui.set_debug_enabled(true);
+
+    struct SpanStateWidget {
+        element: crate::elements::GlobalElementId,
+        paints: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for SpanStateWidget {
+        fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+            self.paints.fetch_add(1, Ordering::SeqCst);
+            let Some(window) = cx.window else {
+                return;
+            };
+            crate::elements::with_element_state(
+                cx.app,
+                window,
+                self.element,
+                crate::element::SelectableTextState::default,
+                |state| {
+                    state.interactive_span_bounds =
+                        vec![crate::element::SelectableTextInteractiveSpanBounds {
+                            range: 6..10,
+                            tag: Arc::<str>::from("https://example.com"),
+                            bounds_local: Rect::new(
+                                Point::new(Px(6.0), Px(0.0)),
+                                Size::new(Px(4.0), Px(10.0)),
+                            ),
+                        }];
+                },
+            );
+            cx.scene.push(SceneOp::Quad {
+                order: DrawOrder(0),
+                rect: cx.bounds,
+                background: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
+                border: Edges::default(),
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
+                corner_radii: Corners::default(),
+            });
+        }
+    }
+
+    let paints = Arc::new(AtomicUsize::new(0));
+    let node = ui.create_node_for_element(
+        element,
+        SpanStateWidget {
+            element,
+            paints: paints.clone(),
+        },
+    );
+    ui.set_root(node);
+
+    let mut services = FakeUiServices;
+    let mut scene = Scene::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(100.0), Px(40.0)));
+
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert_eq!(paints.load(Ordering::SeqCst), 1);
+
+    for _ in 0..3 {
+        app.advance_frame();
+        ui.ingest_paint_cache_source(&mut scene);
+        scene.clear();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        assert_eq!(
+            paints.load(Ordering::SeqCst),
+            1,
+            "expected paint-cache replay to skip widget paint"
+        );
+        assert_eq!(
+            ui.debug_stats().paint_cache_hits,
+            1,
+            "expected paint-cache replay for the selectable state node"
+        );
+    }
+
+    let spans = app.with_global_mut(crate::elements::ElementRuntime::new, |runtime, _| {
+        runtime
+            .selectable_text_interactive_span_bounds_for_element(window, element)
+            .expect("selectable span state should survive repeated cache-hit frames")
+    });
+
+    assert_eq!(spans.len(), 1);
+    assert_eq!(spans[0].range, 6..10);
+    assert_eq!(spans[0].tag.as_ref(), "https://example.com");
+    assert_eq!(spans[0].bounds_local.origin.x, Px(6.0));
+    assert_eq!(spans[0].bounds_local.size.width, Px(4.0));
+}
+
+#[test]
 fn paint_cache_does_not_replay_ops_when_widget_requests_animation_frame() {
     let mut app = crate::test_host::TestHost::new();
 

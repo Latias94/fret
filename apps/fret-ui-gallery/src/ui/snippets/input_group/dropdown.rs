@@ -25,14 +25,24 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .trigger(more_trigger)
         .content(
             shadcn::DropdownMenuContent::new()
+                .test_id("ui-gallery-input-group-dropdown-leading-menu")
                 .align(shadcn::DropdownMenuAlign::End)
                 .side_offset(Px(8.0))
                 .align_offset(Px(-4.0)),
         )
         .entries([shadcn::DropdownMenuGroup::new([
-            shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Settings")),
-            shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Copy path")),
-            shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Open location")),
+            shadcn::DropdownMenuEntry::Item(
+                shadcn::DropdownMenuItem::new("Settings")
+                    .test_id("ui-gallery-input-group-dropdown-leading-item-settings"),
+            ),
+            shadcn::DropdownMenuEntry::Item(
+                shadcn::DropdownMenuItem::new("Copy path")
+                    .test_id("ui-gallery-input-group-dropdown-leading-item-copy-path"),
+            ),
+            shadcn::DropdownMenuEntry::Item(
+                shadcn::DropdownMenuItem::new("Open location")
+                    .test_id("ui-gallery-input-group-dropdown-leading-item-open-location"),
+            ),
         ])
         .into()])
         .into_element(cx);

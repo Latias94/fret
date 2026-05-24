@@ -1,0 +1,470 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-file-tree-torture-retained-hierarchy-action-state",
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "required_launch_features": [
+      "gallery-dev"
+    ],
+    "tags": [
+      "ui-gallery",
+      "file-tree",
+      "retained",
+      "virtual-list",
+      "hierarchy",
+      "selected",
+      "expanded",
+      "action-state",
+      "mechanism-harness"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "file_tree_torture",
+      "FRET_UI_GALLERY_FILE_TREE_ROOTS": "20"
+    },
+    "target_hints": [
+      "Starts directly on the dev-only File Tree Torture page.",
+      "Proves retained file-tree rows keep hierarchy level, expanded state, selected state, and invoke action state fresh across collapse/expand detach/reattach and retained virtual-list scroll escape."
+    ]
+  },
+  "steps": [
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "type": "set_window_inner_size",
+      "width_px": 1280.0,
+      "height_px": 720.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 5
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-root"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-0"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "role_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-0"
+        },
+        "role": "tree_item"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "level_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-0"
+        },
+        "level": 1
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-0"
+        },
+        "expanded": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-0"
+        },
+        "selected": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-0"
+        },
+        "action": "invoke",
+        "enabled": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-1000000"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "level_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-1000000"
+        },
+        "level": 2
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-1000000"
+        },
+        "expanded": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-1000000"
+        },
+        "selected": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-1000000"
+        },
+        "action": "invoke",
+        "enabled": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-2000000"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "level_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-2000000"
+        },
+        "level": 3
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-2000000"
+        },
+        "action": "invoke",
+        "enabled": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-file-tree-node-1000000"
+      },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-1000000"
+        },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-1000000"
+        },
+        "expanded": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-2000000"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-file-tree-node-1000000"
+      },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-1000000"
+        },
+        "expanded": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-1000000"
+        },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-2000000"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "level_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-2000000"
+        },
+        "level": 3
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-file-tree-node-2000000"
+      },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-2000000"
+        },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-1000000"
+        },
+        "selected": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-file-tree-root"
+      },
+      "delta_x": 0.0,
+      "delta_y": -720.0,
+      "pointer_kind": "touch"
+    },
+    {
+      "type": "wait_frames",
+      "n": 4
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-2000000"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "retained_virtual_list_reconciles_matching_ge",
+        "min": 1,
+        "reconcile_kind": "escape",
+        "kept_alive_items_min": 1,
+        "detached_items_min": 1
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-file-tree-root"
+      },
+      "delta_x": 0.0,
+      "delta_y": 720.0,
+      "pointer_kind": "touch"
+    },
+    {
+      "type": "wait_frames",
+      "n": 4
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-2000000"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "level_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-2000000"
+        },
+        "level": 3
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-2000000"
+        },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-file-tree-node-2000000"
+        },
+        "action": "invoke",
+        "enabled": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-file-tree-torture-retained-hierarchy-action-state",
+      "max_snapshots": 4
+    }
+  ]
+}

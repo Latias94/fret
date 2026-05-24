@@ -5,14 +5,17 @@ use crate::ui::diagnostics::scroll_area as diagnostics;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::scroll_area as snippets;
 
-pub(super) fn preview_scroll_area(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
+pub(super) fn preview_scroll_area(
+    cx: &mut AppComponentCx<'_>,
+    last_action: Option<fret_app::Model<Arc<str>>>,
+) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let horizontal = snippets::horizontal::render(cx);
     let rtl = snippets::rtl::render(cx);
     let compact_helper = snippets::compact_helper::render(cx);
     let nested_scroll_routing = snippets::nested_scroll_routing::render(cx);
-    let drag_baseline = diagnostics::drag_baseline::render(cx);
+    let drag_baseline = diagnostics::drag_baseline::render(cx, last_action);
     let expand_at_bottom = diagnostics::expand_at_bottom::render(cx);
 
     let api_reference = doc_layout::notes_block([

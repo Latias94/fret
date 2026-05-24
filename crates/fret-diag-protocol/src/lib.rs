@@ -2192,6 +2192,17 @@ pub enum UiPredicateV1 {
         action: UiSemanticsActionV1,
         enabled: bool,
     },
+    /// True when the target exists and exposes an inline semantics span with the given role and
+    /// optional tag.
+    ///
+    /// This is intended for rich text surfaces where a clickable region is represented as metadata
+    /// on a text node rather than as a separate semantics node.
+    SemanticsInlineSpanIncludes {
+        target: UiSelectorV1,
+        role: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        tag: Option<String>,
+    },
     /// True when `target` resolves to the currently captured semantics node.
     ///
     /// This is the owner-level counterpart to `input_pointer_capture_active_is`: it proves which
@@ -4882,6 +4893,35 @@ mod tests {
 
         let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
         assert!(matches!(roundtrip, UiPredicateV1::SemanticsActionIs { .. }));
+    }
+
+    #[test]
+    fn predicate_semantics_inline_span_includes_serializes_and_deserializes() {
+        let value = serde_json::to_value(UiPredicateV1::SemanticsInlineSpanIncludes {
+            target: UiSelectorV1::TestId {
+                id: "docs-paragraph".to_string(),
+                root_z_index: None,
+            },
+            role: "link".to_string(),
+            tag: Some("https://example.com/docs".to_string()),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "semantics_inline_span_includes",
+                "target": { "kind": "test_id", "id": "docs-paragraph" },
+                "role": "link",
+                "tag": "https://example.com/docs",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::SemanticsInlineSpanIncludes { .. }
+        ));
     }
 
     #[test]

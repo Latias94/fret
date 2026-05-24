@@ -56,7 +56,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
         let avatar = shadcn::Avatar::new([image, fallback])
             .size(shadcn::AvatarSize::Default)
-            .into_element(cx);
+            .into_element(cx)
+            .test_id("ui-gallery-avatar-dropdown-trigger-avatar-leaf");
 
         let trigger = shadcn::Button::new("")
             .variant(shadcn::ButtonVariant::Ghost)
@@ -77,7 +78,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                     shadcn::DropdownMenuContent::new()
                         .align(shadcn::DropdownMenuAlign::End)
                         .side_offset(Px(4.0))
-                        .min_width(Px(128.0)),
+                        .min_width(Px(128.0))
+                        .test_id("ui-gallery-avatar-dropdown-menu"),
                 )
                 .entries(entries(cx))
                 .into_element(cx),

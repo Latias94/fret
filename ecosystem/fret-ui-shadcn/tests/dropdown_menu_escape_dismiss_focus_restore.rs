@@ -2,7 +2,7 @@ use fret_app::App;
 use fret_core::{AppWindowId, FrameId, KeyCode, Point, Px, Rect, Size as CoreSize};
 use fret_runtime::Model;
 use fret_ui::ElementContext;
-use fret_ui::element::AnyElement;
+use fret_ui::element::{AnyElement, FlexProps, LayoutStyle, Length};
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
 use fret_ui_shadcn::facade as shadcn;
@@ -184,5 +184,207 @@ fn dropdown_menu_escape_closes_and_restores_focus_to_trigger() {
     assert!(
         trigger.flags.focused,
         "expected focus to restore to the trigger after Escape"
+    );
+}
+
+#[test]
+fn dropdown_menu_escape_restores_focus_to_pointer_opened_trigger_after_previous_menu_focus() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(640.0), Px(480.0)),
+    );
+
+    let mut app = App::new();
+    fret_ui_shadcn::facade::themes::apply_shadcn_new_york(
+        &mut app,
+        fret_ui_shadcn::facade::themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::facade::themes::ShadcnColorScheme::Light,
+    );
+
+    let first_open: Model<bool> = app.models_mut().insert(false);
+    let second_open: Model<bool> = app.models_mut().insert(false);
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    let build = move |first_open: Model<bool>, second_open: Model<bool>| {
+        move |cx: &mut ElementContext<'_, App>| {
+            let mut row_layout = LayoutStyle::default();
+            row_layout.size.width = Length::Px(Px(260.0));
+            row_layout.size.height = Length::Px(Px(48.0));
+
+            vec![cx.flex(
+                FlexProps {
+                    layout: row_layout,
+                    gap: Px(8.0).into(),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![
+                        shadcn::DropdownMenu::from_open(first_open).into_element(
+                            cx,
+                            |cx| {
+                                shadcn::Button::new("First")
+                                    .test_id("first-menu-trigger")
+                                    .into_element(cx)
+                            },
+                            |_cx| {
+                                vec![shadcn::DropdownMenuEntry::Item(
+                                    shadcn::DropdownMenuItem::new("First item").value("first-item"),
+                                )]
+                            },
+                        ),
+                        shadcn::DropdownMenu::from_open(second_open).into_element(
+                            cx,
+                            |cx| {
+                                shadcn::Button::new("Second")
+                                    .test_id("second-menu-trigger")
+                                    .into_element(cx)
+                            },
+                            |_cx| {
+                                vec![shadcn::DropdownMenuEntry::Item(
+                                    shadcn::DropdownMenuItem::new("Second item")
+                                        .value("second-item"),
+                                )]
+                            },
+                        ),
+                    ]
+                },
+            )]
+        }
+    };
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        build(first_open.clone(), second_open.clone()),
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+    let first_trigger = find_by_test_id(&snap, "first-menu-trigger");
+    click_at(
+        &mut ui,
+        &mut app,
+        &mut services,
+        Point::new(
+            Px(first_trigger.bounds.origin.x.0 + 5.0),
+            Px(first_trigger.bounds.origin.y.0 + 5.0),
+        ),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    let settle_frames = shadcn_motion::ticks_100() + 2;
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            request_semantics,
+            build(first_open.clone(), second_open.clone()),
+        );
+    }
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::Escape);
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        build(first_open.clone(), second_open.clone()),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&first_open),
+        Some(false),
+        "expected first dropdown-menu to close after Escape"
+    );
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+    let first_trigger = find_by_test_id(&snap, "first-menu-trigger");
+    assert!(
+        first_trigger.flags.focused,
+        "expected first trigger to have focus before opening the second menu"
+    );
+
+    let second_trigger = find_by_test_id(&snap, "second-menu-trigger");
+    click_at(
+        &mut ui,
+        &mut app,
+        &mut services,
+        Point::new(
+            Px(second_trigger.bounds.origin.x.0 + 5.0),
+            Px(second_trigger.bounds.origin.y.0 + 5.0),
+        ),
+    );
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    for tick in 0..settle_frames {
+        let request_semantics = tick + 1 == settle_frames;
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            request_semantics,
+            build(first_open.clone(), second_open.clone()),
+        );
+    }
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::Escape);
+    timers.ingest_effects(&mut app);
+    timers.fire_all(&mut ui, &mut app, &mut services);
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        true,
+        build(first_open.clone(), second_open.clone()),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&second_open),
+        Some(false),
+        "expected second dropdown-menu to close after Escape"
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+    let first_trigger = find_by_test_id(&snap, "first-menu-trigger");
+    let second_trigger = find_by_test_id(&snap, "second-menu-trigger");
+    assert!(
+        !first_trigger.flags.focused,
+        "expected focus not to restore to the previously focused trigger"
+    );
+    assert!(
+        second_trigger.flags.focused,
+        "expected Escape to restore focus to the trigger that opened the second menu"
     );
 }

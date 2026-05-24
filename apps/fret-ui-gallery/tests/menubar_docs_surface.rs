@@ -48,7 +48,7 @@ fn menubar_usage_snippet_stays_full_and_copyable() {
     let source = include_str!("../src/ui/snippets/menubar/usage.rs");
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "use fret_runtime::CommandId;",
         "use fret_ui_shadcn::facade as shadcn;",
         "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
@@ -137,5 +137,33 @@ fn menubar_demo_and_rtl_profiles_keep_upstream_separator_split() {
     assert!(
         !rtl.contains(&rtl_combined),
         "RTL menubar demo should not collapse the trailing profile actions into one group"
+    );
+}
+
+#[test]
+fn menubar_keyboard_nav_diag_script_gates_focus_return_and_escape_contract() {
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-keyboard-nav.json"
+    );
+    let suite = include_str!(
+        "../../../tools/diag-scripts/suites/ui-gallery-menubar-keyboard-nav-action-state/suite.json"
+    );
+
+    for needle in [
+        "\"menubar-trigger-file\"",
+        "\"menubar-item-ui_gallery-app-open\"",
+        "\"focus_is\"",
+        "\"escape\"",
+        "\"ui-gallery-menubar-file-escape-focus-restore\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "menubar keyboard-nav script should keep the open/close focus-return contract explicit; missing `{needle}`"
+        );
+    }
+
+    assert!(
+        suite.contains("tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-keyboard-nav.json"),
+        "menubar keyboard-nav suite should reference the promoted script"
     );
 }

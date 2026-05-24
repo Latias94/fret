@@ -103,9 +103,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     shadcn::tabs_uncontrolled(cx, Some("account"), |_cx| {
         [
             shadcn::TabsItem::new("account", "Account", [account_card])
-                .trigger_test_id("ui-gallery-tabs-demo-trigger-account"),
+                .trigger_test_id("ui-gallery-tabs-demo-trigger-account")
+                .content_test_id("ui-gallery-tabs-demo-panel-account"),
             shadcn::TabsItem::new("password", "Password", [password_card])
-                .trigger_test_id("ui-gallery-tabs-demo-trigger-password"),
+                .trigger_test_id("ui-gallery-tabs-demo-trigger-password")
+                .content_test_id("ui-gallery-tabs-demo-panel-password"),
         ]
     })
     .refine_layout(
@@ -114,8 +116,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .max_w(Px(384.0))
             .min_w_0(),
     )
-    .into_element(cx)
     .test_id("ui-gallery-tabs-demo")
+    .into_element(cx)
 }
 
 // endregion: example

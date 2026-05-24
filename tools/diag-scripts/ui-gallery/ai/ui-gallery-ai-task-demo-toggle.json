@@ -1,50 +1,171 @@
 {
   "schema_version": 2,
   "meta": {
-    "required_launch_features": ["gallery-dev"]
+    "name": "ui-gallery-ai-task-demo-toggle",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "required_launch_features": ["gallery-dev"],
+    "tags": [
+      "ui_gallery",
+      "ai",
+      "task",
+      "collapsible",
+      "relation",
+      "action_state",
+      "mechanism_harness",
+      "runtime"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "ai_task_demo"
+    },
+    "target_hints": [
+      "Proves the AI Elements Task trigger exports fresh collapsible expanded/action semantics.",
+      "Asserts the trigger controls relation resolves to the TaskContent wrapper while open and clears when closed."
+    ]
   },
   "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-ai-task-demo" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "ai task" },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-task-demo" }
-      },
-      "timeout_frames": 240
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-task-demo" } },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-ai-task-demo-trigger" }
       },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-ai-task-demo-trigger" },
+      "delta_y": -220.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-ai-task-demo-trigger" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
       "timeout_frames": 240
     },
-
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-ai-task-demo-trigger" } },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-ai-task-demo-trigger" },
+        "expanded": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-ai-task-demo-trigger" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "ui-ai-task-demo-trigger" },
+        "relation": "controls",
+        "target": { "kind": "test_id", "id": "ui-ai-task-demo-content" }
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-ai-task-demo-toggle-open.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-ai-task-demo-toggle-open"
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-ai-task-demo-trigger" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-ai-task-demo-trigger" },
+        "expanded": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-ai-task-demo-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_relation_is_empty",
+        "source": { "kind": "test_id", "id": "ui-ai-task-demo-trigger" },
+        "relation": "controls"
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-ai-task-demo-trigger" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-ai-task-demo-content" }
       },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-ai-task-demo-trigger" },
+        "expanded": true
+      },
       "timeout_frames": 240
     },
-
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "ui-ai-task-demo-trigger" },
+        "relation": "controls",
+        "target": { "kind": "test_id", "id": "ui-ai-task-demo-content" }
+      },
+      "timeout_frames": 240
+    },
     { "type": "capture_bundle", "label": "ui-gallery-ai-task-demo-toggle" }
   ]
 }
-

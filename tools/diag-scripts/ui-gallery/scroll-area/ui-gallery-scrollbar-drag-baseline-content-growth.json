@@ -71,20 +71,52 @@
       "padding_px": 4.0
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-scroll-area-drag-baseline-arm-grow"
+        },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-scroll-area-drag-baseline-arm-grow"
+        },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-drag-baseline-arm-grow" },
       "stable_frames": 2,
       "max_move_px": 2.0,
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-drag-baseline-armed" }
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "ui_gallery.scroll_area.drag_baseline.arm_growth"
       },
-      "timeout_frames": 600
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-drag-baseline-grown" }
+      }
     },
 
     {

@@ -1026,14 +1026,195 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_core::{
+        AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle,
+        Point, Px, Rect, Size, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics,
+        TextService,
+    };
+    use fret_icons::{IconRegistry, ids};
+    use fret_ui::UiTree;
     use fret_ui::element::ElementKind;
+    use std::cell::RefCell;
+    use std::rc::Rc;
 
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(300.0), Px(160.0)),
+            Size::new(Px(720.0), Px(160.0)),
         )
+    }
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: Size::new(Px(12.0), Px(16.0)),
+                    baseline: Px(12.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    fn install_direction_test_icons(app: &mut App) {
+        app.with_global_mut(IconRegistry::default, |icons, _app| {
+            icons.register_svg_static(ids::ui::CHEVRON_LEFT, b"<svg id=\"chevron-left\"/>");
+            icons.register_svg_static(ids::ui::CHEVRON_RIGHT, b"<svg id=\"chevron-right\"/>");
+        });
+    }
+
+    #[derive(Debug)]
+    struct PreviousNextSnapshot {
+        child_kinds: Vec<&'static str>,
+        text: Option<String>,
+        svg: &'static [u8],
+    }
+
+    fn render_previous_next_snapshot(
+        app: &mut App,
+        dir: LayoutDirection,
+        render: impl FnOnce(&mut ElementContext<'_, App>) -> AnyElement,
+    ) -> PreviousNextSnapshot {
+        let window = AppWindowId::default();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let snapshot = Rc::new(RefCell::new(None));
+        let snapshot_ref = snapshot.clone();
+
+        fret_ui::declarative::render_root(
+            &mut ui,
+            app,
+            &mut services,
+            window,
+            bounds(),
+            "pagination-previous-next-direction",
+            move |cx| {
+                let element = crate::direction::with_direction_provider(cx, dir, render);
+                let row = pressable_inner_row(&element);
+                *snapshot_ref.borrow_mut() = Some(PreviousNextSnapshot {
+                    child_kinds: child_kind_names(row),
+                    text: first_text(row).map(str::to_owned),
+                    svg: first_svg_bytes(row),
+                });
+                vec![element]
+            },
+        );
+
+        snapshot
+            .borrow_mut()
+            .take()
+            .expect("expected pagination previous/next render snapshot")
+    }
+
+    fn pressable_inner_row(element: &AnyElement) -> &AnyElement {
+        let pressable = match &element.kind {
+            ElementKind::Opacity(_) => element
+                .children
+                .first()
+                .expect("opacity wrapper should contain a pressable"),
+            ElementKind::Pressable(_) => element,
+            _ => panic!("expected a PaginationPrevious/Next pressable root"),
+        };
+        assert!(
+            matches!(pressable.kind, ElementKind::Pressable(_)),
+            "expected a PaginationPrevious/Next pressable root"
+        );
+        pressable
+            .children
+            .first()
+            .and_then(|container| container.children.first())
+            .expect("expected pressable -> container -> row")
+    }
+
+    fn child_kind_names(row: &AnyElement) -> Vec<&'static str> {
+        row.children
+            .iter()
+            .map(|child| match &child.kind {
+                ElementKind::SvgIcon(_) => "icon",
+                _ if element_contains_text(child) => "text",
+                _ => "other",
+            })
+            .collect()
+    }
+
+    fn element_contains_text(element: &AnyElement) -> bool {
+        matches!(
+            element.kind,
+            ElementKind::Text(_) | ElementKind::StyledText(_) | ElementKind::SelectableText(_)
+        ) || element.children.iter().any(element_contains_text)
+    }
+
+    fn first_text(row: &AnyElement) -> Option<&str> {
+        row.children.iter().find_map(first_text_in)
+    }
+
+    fn first_text_in(element: &AnyElement) -> Option<&str> {
+        match &element.kind {
+            ElementKind::Text(props) => Some(props.text.as_ref()),
+            ElementKind::StyledText(props) => Some(props.rich.text.as_ref()),
+            ElementKind::SelectableText(props) => Some(props.rich.text.as_ref()),
+            _ => element.children.iter().find_map(first_text_in),
+        }
+    }
+
+    fn first_svg_bytes(row: &AnyElement) -> &'static [u8] {
+        row.children
+            .iter()
+            .find_map(|child| match &child.kind {
+                ElementKind::SvgIcon(props) => match &props.svg {
+                    fret_ui::SvgSource::Static(bytes) => Some(*bytes),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .expect("expected one static svg icon")
     }
 
     #[test]
@@ -1194,5 +1375,56 @@ mod tests {
             matches!(child.kind, ElementKind::Pressable(_)),
             "expected opacity wrapper child to remain the pagination pressable"
         );
+    }
+
+    #[test]
+    fn pagination_previous_next_use_logical_chevrons_and_physical_order() {
+        let mut app = App::new();
+        install_direction_test_icons(&mut app);
+
+        let cases = [
+            (
+                "previous ltr",
+                render_previous_next_snapshot(&mut app, LayoutDirection::Ltr, |cx| {
+                    PaginationPrevious::new().text("Previous").into_element(cx)
+                }),
+                vec!["icon", "text"],
+                "Previous",
+                b"<svg id=\"chevron-left\"/>".as_slice(),
+            ),
+            (
+                "previous rtl",
+                render_previous_next_snapshot(&mut app, LayoutDirection::Rtl, |cx| {
+                    PaginationPrevious::new().text("Previous").into_element(cx)
+                }),
+                vec!["text", "icon"],
+                "Previous",
+                b"<svg id=\"chevron-right\"/>".as_slice(),
+            ),
+            (
+                "next ltr",
+                render_previous_next_snapshot(&mut app, LayoutDirection::Ltr, |cx| {
+                    PaginationNext::new().text("Next").into_element(cx)
+                }),
+                vec!["text", "icon"],
+                "Next",
+                b"<svg id=\"chevron-right\"/>".as_slice(),
+            ),
+            (
+                "next rtl",
+                render_previous_next_snapshot(&mut app, LayoutDirection::Rtl, |cx| {
+                    PaginationNext::new().text("Next").into_element(cx)
+                }),
+                vec!["icon", "text"],
+                "Next",
+                b"<svg id=\"chevron-left\"/>".as_slice(),
+            ),
+        ];
+
+        for (name, snapshot, expected_order, expected_text, expected_svg) in cases {
+            assert_eq!(snapshot.child_kinds, expected_order, "{name}");
+            assert_eq!(snapshot.text.as_deref(), Some(expected_text), "{name}");
+            assert_eq!(snapshot.svg, expected_svg, "{name}");
+        }
     }
 }

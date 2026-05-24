@@ -159,6 +159,16 @@ impl Reasoning {
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
+        self.into_element_with_content_test_id(cx, None, trigger, content)
+    }
+
+    fn into_element_with_content_test_id<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        content_test_id: Option<Arc<str>>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    ) -> AnyElement {
         use fret_ui_kit::primitives::collapsible::CollapsibleRoot;
         use fret_ui_shadcn::facade::Collapsible;
 
@@ -172,6 +182,7 @@ impl Reasoning {
         let duration_prop = self.duration_secs;
         let test_id_root = self.test_id_root;
         let layout = self.layout;
+        let content_test_id = content_test_id;
 
         cx.scope(move |cx| {
             let logic = cx.root_state(ReasoningLogicRef::default, |st| st.clone());
@@ -244,7 +255,10 @@ impl Reasoning {
                         is_streaming,
                         duration_secs: now_duration,
                     };
-                    let collapsible = Collapsible::new(open.clone());
+                    let mut collapsible = Collapsible::new(open.clone());
+                    if let Some(test_id) = content_test_id.clone() {
+                        collapsible = collapsible.content_test_id(test_id);
+                    }
 
                     vec![cx.provide(controller, move |cx| {
                         collapsible.into_element_with_open_model(
@@ -342,10 +356,15 @@ impl ReasoningWithChildren {
         }
 
         let trigger = trigger.unwrap_or_default();
-        let content = content.unwrap_or_else(|| ReasoningContent::new(""));
+        let mut content = content.unwrap_or_else(|| ReasoningContent::new(""));
+        let content_test_id = content.test_id.clone();
+        if content_test_id.is_some() {
+            content.test_id = None;
+        }
 
-        root.into_element(
+        root.into_element_with_content_test_id(
             cx,
+            content_test_id,
             move |cx| trigger.into_element(cx),
             move |cx| content.into_element(cx),
         )
@@ -750,6 +769,22 @@ mod tests {
             .find_map(|child| find_element_by_test_id(child, test_id))
     }
 
+    fn find_pressable_by_test_id<'a>(
+        element: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a AnyElement> {
+        if let ElementKind::Pressable(props) = &element.kind
+            && props.a11y.test_id.as_deref() == Some(test_id)
+        {
+            return Some(element);
+        }
+
+        element
+            .children
+            .iter()
+            .find_map(|child| find_pressable_by_test_id(child, test_id))
+    }
+
     #[test]
     fn reasoning_trigger_default_streaming_message_scopes_inherited_typography_for_shimmer() {
         let window = AppWindowId::default();
@@ -912,6 +947,30 @@ mod tests {
             });
 
         assert!(find_element_by_test_id(&element, "content").is_some());
+    }
+
+    #[test]
+    fn reasoning_content_test_id_marks_collapsible_controls_target() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Reasoning::new(true)
+                    .trigger(ReasoningTrigger::new().test_id("trigger"))
+                    .content(ReasoningContent::new("Hello").test_id("content"))
+                    .into_element(cx)
+            });
+
+        let trigger =
+            find_pressable_by_test_id(&element, "trigger").expect("expected trigger pressable");
+        let ElementKind::Pressable(trigger_props) = &trigger.kind else {
+            panic!("expected trigger to be a pressable element");
+        };
+        let content = find_element_by_test_id(&element, "content").expect("expected content node");
+
+        assert_eq!(trigger_props.a11y.expanded, Some(true));
+        assert_eq!(trigger_props.a11y.controls_element, Some(content.id.0));
     }
 
     #[test]

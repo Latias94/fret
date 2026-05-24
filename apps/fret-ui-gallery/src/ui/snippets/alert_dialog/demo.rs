@@ -22,11 +22,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                             shadcn::AlertDialogHeader::new([]).with_children(cx, |cx| {
                                 vec![
                                     shadcn::AlertDialogTitle::new("Are you absolutely sure?")
-                                        .into_element(cx),
+                                        .into_element(cx)
+                                        .test_id("ui-gallery-alert-dialog-demo-title"),
                                     shadcn::AlertDialogDescription::new(
                                         "This action cannot be undone. This will permanently delete your account and remove your data from our servers.",
                                     )
-                                    .into_element(cx),
+                                    .into_element(cx)
+                                    .test_id("ui-gallery-alert-dialog-demo-description"),
                                 ]
                             }),
                             shadcn::AlertDialogFooter::new([]).with_children(cx, |cx| {

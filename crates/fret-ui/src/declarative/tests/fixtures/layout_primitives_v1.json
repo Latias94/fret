@@ -265,6 +265,115 @@
       }
     },
     {
+      "id": "text-align-start-end-flip-under-rtl",
+      "scenario": { "kind": "text_align_start_end_flip_under_rtl" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "directional_text_align.rtl_start.constraint_align",
+            "comparison": "eq",
+            "value": 3.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "directional_text_align.nested_ltr_start.constraint_align",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.01
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "directional_text_align.rtl_end.constraint_align",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.01
+          }
+        ]
+      }
+    },
+    {
+      "id": "rtl-keeps-physical-inset-and-auto-margin-edges",
+      "scenario": { "kind": "rtl_keeps_physical_inset_and_auto_margin_edges" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "rtl-physical-left-inset-child" },
+            "expected": {
+              "origin": { "x": 30.0, "y": 5.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "rtl-physical-right-inset-child" },
+            "expected": {
+              "origin": { "x": 90.0, "y": 20.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "rtl-margin-left-auto-row" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 40.0 },
+              "size": { "width": 100.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "rtl-margin-left-auto-leading" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 40.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "rtl-margin-left-auto-trailing" },
+            "expected": {
+              "origin": { "x": 70.0, "y": 40.0 },
+              "size": { "width": 30.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "rtl-margin-right-auto-row" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 50.0 },
+              "size": { "width": 100.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "rtl-margin-right-auto-leading" },
+            "expected": {
+              "origin": { "x": 0.0, "y": 50.0 },
+              "size": { "width": 20.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          },
+          {
+            "kind": "bounds_rect",
+            "target": { "kind": "test_id", "id": "rtl-margin-right-auto-trailing" },
+            "expected": {
+              "origin": { "x": 70.0, "y": 50.0 },
+              "size": { "width": 30.0, "height": 10.0 }
+            },
+            "eps_px": 0.01
+          }
+        ]
+      }
+    },
+    {
       "id": "scroll-root-preserves-child-layout-bounds",
       "scenario": { "kind": "scroll_root_preserves_child_layout_bounds" },
       "oracle": {

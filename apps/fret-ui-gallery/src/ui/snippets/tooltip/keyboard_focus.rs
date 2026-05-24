@@ -17,7 +17,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             let focus_content = shadcn::TooltipContent::build(cx, |_cx| {
                 [shadcn::TooltipContent::text("Opens on keyboard focus")
                     .test_id("ui-gallery-tooltip-focus-text")]
-            });
+            })
+            .test_id("ui-gallery-tooltip-focus-content-node");
 
             let focus_tooltip = shadcn::Tooltip::new(
                 cx,

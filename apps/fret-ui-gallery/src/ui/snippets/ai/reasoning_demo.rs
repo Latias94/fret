@@ -55,7 +55,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let reasoning = ui_ai::Reasoning::new(is_streaming)
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .test_id_root("ui-ai-reasoning-root")
-        .trigger(ui_ai::ReasoningTrigger::new())
+        .trigger(ui_ai::ReasoningTrigger::new().test_id("ui-ai-reasoning-trigger"))
         .content(ui_ai::ReasoningContent::new(reasoning_text).test_id("ui-ai-reasoning-content"))
         .into_element(cx);
 

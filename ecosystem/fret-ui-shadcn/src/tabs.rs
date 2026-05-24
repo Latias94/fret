@@ -45,6 +45,11 @@ struct TabsListLayoutRuntime {
 }
 
 #[derive(Debug, Default, Clone)]
+struct TabsSharedIndicatorRuntime {
+    has_measured_target: bool,
+}
+
+#[derive(Debug, Default, Clone)]
 struct TabsContentPresenceRuntime {
     active_value: Option<Arc<str>>,
     exiting_values: Vec<Arc<str>>,
@@ -415,6 +420,7 @@ fn tabs_shared_indicator<H: UiHost>(
                 })
             })
             .and_then(|tab_id| cx.last_bounds_for_element(tab_id));
+        let has_measured_target = tab_bounds.is_some();
 
         let (
             target_x,
@@ -601,43 +607,29 @@ fn tabs_shared_indicator<H: UiHost>(
             tolerance: Tolerance::default(),
             snap_to_target: true,
         });
+        // The first render can only estimate from container bounds. Once real trigger bounds arrive,
+        // snap to them so the indicator does not animate from an oversized root fallback.
+        let snap_to_measured_target = cx.root_state(TabsSharedIndicatorRuntime::default, |rt| {
+            let snap = has_measured_target && !rt.has_measured_target;
+            rt.has_measured_target |= has_measured_target;
+            snap
+        });
+        let update_for = |target| {
+            if snap_to_measured_target {
+                MotionValueF32Update::Snap(target)
+            } else {
+                MotionValueF32Update::To {
+                    target,
+                    spec,
+                    kick: None,
+                }
+            }
+        };
 
-        let x = drive_motion_value_f32(
-            cx,
-            target_x,
-            MotionValueF32Update::To {
-                target: target_x,
-                spec,
-                kick: None,
-            },
-        );
-        let y = drive_motion_value_f32(
-            cx,
-            target_y,
-            MotionValueF32Update::To {
-                target: target_y,
-                spec,
-                kick: None,
-            },
-        );
-        let width = drive_motion_value_f32(
-            cx,
-            target_width,
-            MotionValueF32Update::To {
-                target: target_width,
-                spec,
-                kick: None,
-            },
-        );
-        let height = drive_motion_value_f32(
-            cx,
-            target_height,
-            MotionValueF32Update::To {
-                target: target_height,
-                spec,
-                kick: None,
-            },
-        );
+        let x = drive_motion_value_f32(cx, target_x, update_for(target_x));
+        let y = drive_motion_value_f32(cx, target_y, update_for(target_y));
+        let width = drive_motion_value_f32(cx, target_width, update_for(target_width));
+        let height = drive_motion_value_f32(cx, target_height, update_for(target_height));
 
         let mut props = fret_ui::element::CanvasProps::default();
         props.layout.position = fret_ui::element::PositionStyle::Absolute;
@@ -982,6 +974,7 @@ impl TabsList {
 pub struct TabsContent {
     value: Arc<str>,
     children: Vec<AnyElement>,
+    test_id: Option<Arc<str>>,
 }
 
 impl TabsContent {
@@ -989,7 +982,13 @@ impl TabsContent {
         Self {
             value: value.into(),
             children: children.into_iter().collect(),
+            test_id: None,
         }
+    }
+
+    pub fn test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(test_id.into());
+        self
     }
 }
 
@@ -1372,22 +1371,25 @@ impl TabsRoot {
             on_value_change_with_event_details,
         } = self;
 
-        let mut content_by_value: std::collections::HashMap<Arc<str>, Vec<AnyElement>> =
-            std::collections::HashMap::new();
+        let mut content_by_value: std::collections::HashMap<
+            Arc<str>,
+            (Vec<AnyElement>, Option<Arc<str>>),
+        > = std::collections::HashMap::new();
         for content in contents {
-            content_by_value.insert(content.value.clone(), content.children);
+            content_by_value.insert(content.value.clone(), (content.children, content.test_id));
         }
 
         let items: Vec<TabsItem> = list
             .triggers
             .into_iter()
             .map(|trigger| {
-                let content = content_by_value
+                let (content, content_test_id) = content_by_value
                     .remove(trigger.value.as_ref())
                     .unwrap_or_default();
                 let mut item = TabsItem::new(trigger.value, trigger.label, content)
                     .trigger_children(trigger.children.unwrap_or_default())
-                    .disabled(trigger.disabled);
+                    .disabled(trigger.disabled)
+                    .content_test_id_opt(content_test_id);
                 if let Some(test_id) = trigger.test_id {
                     item = item.trigger_test_id(test_id);
                 }
@@ -1442,6 +1444,7 @@ pub struct TabsItem {
     trigger_leading_icon: Option<IconId>,
     trigger_trailing_icon: Option<IconId>,
     trigger_test_id: Option<Arc<str>>,
+    content_test_id: Option<Arc<str>>,
     disabled: bool,
 }
 
@@ -1459,6 +1462,7 @@ impl TabsItem {
             trigger_leading_icon: None,
             trigger_trailing_icon: None,
             trigger_test_id: None,
+            content_test_id: None,
             disabled: false,
         }
     }
@@ -1496,6 +1500,16 @@ impl TabsItem {
 
     pub fn trigger_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.trigger_test_id = Some(id.into());
+        self
+    }
+
+    pub fn content_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.content_test_id = Some(id.into());
+        self
+    }
+
+    pub fn content_test_id_opt(mut self, id: Option<Arc<str>>) -> Self {
+        self.content_test_id = id;
         self
     }
 
@@ -1971,6 +1985,7 @@ impl Tabs {
             trigger_leading_icon: Option<IconId>,
             trigger_trailing_icon: Option<IconId>,
             trigger_test_id: Option<Arc<str>>,
+            content_test_id: Option<Arc<str>>,
         }
 
         let items_len = items.len();
@@ -1986,6 +2001,7 @@ impl Tabs {
                 trigger_leading_icon: item.trigger_leading_icon,
                 trigger_trailing_icon: item.trigger_trailing_icon,
                 trigger_test_id: item.trigger_test_id,
+                content_test_id: item.content_test_id,
             });
         }
 
@@ -2017,8 +2033,11 @@ impl Tabs {
                 .as_ref()
                 .map(|id| Arc::<str>::from(format!("{id}-content-stage")));
 
-            let tab_list_semantics =
+            let mut tab_list_semantics =
                 radix_tabs::tab_list_semantics_props(list_props.layout, orientation);
+            tab_list_semantics.test_id = root_test_id_for_children
+                .as_ref()
+                .map(|id| Arc::<str>::from(format!("{id}-list")));
             let tab_list = cx.semantics(tab_list_semantics, |cx| {
                 vec![cx.container(list_props, |cx| {
                     let list_container_id = cx.root_id();
@@ -2814,6 +2833,11 @@ impl Tabs {
                             let labelled_by_element = selected_tab_element.get();
                             let active_value = active_value.clone();
 
+                            let active_content_test_id = items
+                                .iter()
+                                .find(|item| item.value == active_value)
+                                .and_then(|item| item.content_test_id.clone());
+
                             let panel = cx.keyed(("tabs_panel", active_value), |cx| {
                                 let out = transition::drive_transition_with_durations_and_cubic_bezier_duration_with_mount_behavior(
                                     cx,
@@ -2824,14 +2848,18 @@ impl Tabs {
                                     switched,
                                 );
                                 cx.opacity(out.progress, |cx| {
-                                    vec![cx.semantics(
+                                    let mut panel = cx.semantics(
                                         radix_tabs::tab_panel_semantics_props(
                                             tab_panel_layout,
                                             active_label_opt.clone(),
                                             labelled_by_element,
                                         ),
                                         move |_cx| content,
-                                    )]
+                                    );
+                                    if let Some(test_id) = active_content_test_id.as_ref() {
+                                        panel = panel.test_id(test_id.clone());
+                                    }
+                                    vec![panel]
                                 })
                             });
                             stacked_panels.push(panel);
@@ -2861,7 +2889,14 @@ impl Tabs {
                         .and_then(|value| content_by_value.remove(value.as_ref()))
                         .unwrap_or_default();
 
-                    if let Some(panel) = radix_tabs::tab_panel_with_gate(
+                    let active_content_test_id = active_value.as_ref().and_then(|value| {
+                        items
+                            .iter()
+                            .find(|item| item.value.as_ref() == value.as_ref())
+                            .and_then(|item| item.content_test_id.clone())
+                    });
+
+                    if let Some(mut panel) = radix_tabs::tab_panel_with_gate(
                         cx,
                         true,
                         false,
@@ -2870,8 +2905,11 @@ impl Tabs {
                         selected_tab_element.get(),
                         move |_cx| active_children,
                     ) {
-                    children.push(panel);
-                }
+                        if let Some(test_id) = active_content_test_id {
+                            panel = panel.test_id(test_id);
+                        }
+                        children.push(panel);
+                    }
                 }
             }
 
@@ -2886,7 +2924,7 @@ impl Tabs {
                         .remove(item.value.as_ref())
                         .unwrap_or_default();
 
-                    let panel = radix_tabs::tab_panel_with_gate(
+                    let mut panel = radix_tabs::tab_panel_with_gate(
                         cx,
                         active,
                         true,
@@ -2896,6 +2934,9 @@ impl Tabs {
                         move |_cx| content,
                     )
                     .expect("force-mounted tabs content should always render a subtree");
+                    if let Some(test_id) = item.content_test_id.as_ref() {
+                        panel = panel.test_id(test_id.clone());
+                    }
                     children.push(panel);
                 }
             }
@@ -3479,6 +3520,85 @@ mod tests {
     }
 
     #[test]
+    fn tabs_content_test_id_stamps_active_tab_panel_relation_endpoint() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::<str>::from("alpha")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(220.0)),
+        );
+        let mut services = FakeServices;
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "tabs-content-test-id-relations",
+            |cx| {
+                vec![
+                    Tabs::new(model.clone())
+                        .test_id("tabs-demo")
+                        .items([
+                            TabsItem::new("alpha", "Alpha", [cx.text("Alpha panel")])
+                                .content_test_id("tabs-demo-panel-alpha"),
+                            TabsItem::new("beta", "Beta", [cx.text("Beta panel")])
+                                .content_test_id("tabs-demo-panel-beta"),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let tab_list = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("tabs-demo-list"))
+            .expect("root test_id should derive a stable tablist selector");
+        assert_eq!(tab_list.role, SemanticsRole::TabList);
+
+        let alpha_tab = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("tabs-demo-trigger-alpha"))
+            .expect("root test_id should derive the alpha tab selector");
+        assert_eq!(alpha_tab.role, SemanticsRole::Tab);
+        assert!(alpha_tab.flags.selected);
+
+        let alpha_panel = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("tabs-demo-panel-alpha"))
+            .expect("content_test_id should stamp the active tabpanel");
+        assert_eq!(alpha_panel.role, SemanticsRole::TabPanel);
+        assert_eq!(alpha_panel.label.as_deref(), Some("Alpha"));
+        assert!(
+            alpha_panel.labelled_by.contains(&alpha_tab.id),
+            "tabpanel should be labelled by the selected tab"
+        );
+        assert!(
+            alpha_tab.controls.contains(&alpha_panel.id),
+            "selected tab should expose the derived controls edge to its tabpanel"
+        );
+        assert!(
+            !snap
+                .nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("tabs-demo-panel-beta")),
+            "inactive non-force-mounted tabpanel should not be present"
+        );
+    }
+
+    #[test]
     fn tabs_shared_indicator_test_id_has_non_empty_bounds() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -3538,6 +3658,145 @@ mod tests {
             indicator.bounds.size.width.0 > 0.0 && indicator.bounds.size.height.0 > 0.0,
             "shared indicator should have non-empty diagnostics bounds, got {:?}",
             indicator.bounds
+        );
+    }
+
+    #[test]
+    fn tabs_shared_indicator_pill_tracks_selected_trigger_in_rtl() {
+        fn bounds_for_test_id(snap: &fret_core::SemanticsSnapshot, test_id: &str) -> Rect {
+            snap.nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some(test_id))
+                .map(|n| n.bounds)
+                .unwrap_or_else(|| panic!("missing semantics node for {test_id}"))
+        }
+
+        fn center(rect: Rect) -> (f32, f32) {
+            (
+                rect.origin.x.0 + rect.size.width.0 / 2.0,
+                rect.origin.y.0 + rect.size.height.0 / 2.0,
+            )
+        }
+
+        fn rect_tracks_selected_indicator(rect: Rect, selected: Rect) -> bool {
+            let (rx, ry) = center(rect);
+            let (sx, sy) = center(selected);
+            if (rx - sx).abs() > 1.0 || (ry - sy).abs() > 1.0 {
+                return false;
+            }
+
+            let full_size = (rect.size.width.0 - selected.size.width.0).abs() <= 1.0
+                && (rect.size.height.0 - selected.size.height.0).abs() <= 1.0;
+            let inset_size = (rect.size.width.0 - (selected.size.width.0 - 2.0).max(0.0)).abs()
+                <= 1.0
+                && (rect.size.height.0 - (selected.size.height.0 - 2.0).max(0.0)).abs() <= 1.0;
+
+            full_size || inset_size
+        }
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(Some(Arc::<str>::from("beta")));
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(480.0), Px(180.0)),
+        );
+        let mut services = FakeServices;
+
+        let mut render = |frame_id| {
+            app.set_frame_id(FrameId(frame_id));
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "tabs-shared-indicator-rtl-paint",
+                |cx| {
+                    vec![crate::direction::with_direction_provider(
+                        cx,
+                        crate::direction::LayoutDirection::Rtl,
+                        |cx| {
+                            Tabs::new(model.clone())
+                                .test_id("tabs-demo")
+                                .shared_indicator_motion(true)
+                                .items([
+                                    TabsItem::new("alpha", "Alpha", Vec::<AnyElement>::new()),
+                                    TabsItem::new("beta", "Beta", Vec::<AnyElement>::new()),
+                                    TabsItem::new("gamma", "Gamma", Vec::<AnyElement>::new()),
+                                ])
+                                .into_element(cx)
+                        },
+                    )]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        };
+
+        render(1);
+        render(2);
+        render(3);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let alpha = bounds_for_test_id(snap, "tabs-demo-trigger-alpha");
+        let beta = bounds_for_test_id(snap, "tabs-demo-trigger-beta");
+        let gamma = bounds_for_test_id(snap, "tabs-demo-trigger-gamma");
+        let _indicator = bounds_for_test_id(snap, "tabs-demo-shared-indicator");
+
+        let mut trigger_bounds = [alpha, beta, gamma];
+        trigger_bounds.sort_by(|a, b| a.origin.x.0.total_cmp(&b.origin.x.0));
+        for pair in trigger_bounds.windows(2) {
+            let prev_right = pair[0].origin.x.0 + pair[0].size.width.0;
+            let gap = pair[1].origin.x.0 - prev_right;
+            assert!(
+                gap.abs() <= 0.51,
+                "RTL tabs trigger spacing should remain adjacent, got gap={gap:.3} between {:?} and {:?}",
+                pair[0],
+                pair[1]
+            );
+        }
+
+        let mut scene = fret_core::Scene::default();
+        ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+        let mut indicator_rects = Vec::new();
+        let mut solid_quads = Vec::new();
+        for op in scene.ops() {
+            let fret_core::SceneOp::Quad {
+                rect, background, ..
+            } = op
+            else {
+                continue;
+            };
+            let fret_core::Paint::Solid(bg) = background.paint else {
+                continue;
+            };
+            if bg.a <= 0.5 {
+                continue;
+            }
+            solid_quads.push((*rect, bg.a));
+            if rect_tracks_selected_indicator(*rect, beta) {
+                indicator_rects.push(*rect);
+            }
+        }
+
+        assert!(
+            !indicator_rects.is_empty(),
+            "expected RTL shared indicator pill to paint over selected trigger {:?}; solid_quads={:?}; scene had {} ops",
+            beta,
+            solid_quads,
+            scene.ops().len()
         );
     }
 

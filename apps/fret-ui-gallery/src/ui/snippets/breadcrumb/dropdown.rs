@@ -9,6 +9,8 @@ use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use shadcn::raw::breadcrumb::primitives as bc;
 use std::sync::Arc;
 
+const CMD_APP_OPEN: &str = "ui_gallery.app.open";
+
 fn slash_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> impl IntoUiElement<H> + use<H> {
     bc::BreadcrumbSeparator::new()
         .children(|cx| {
@@ -31,7 +33,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 vec![
                     bc::BreadcrumbLink::new("Home")
                         .href("/")
-                        .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                        // Keep the gallery deterministic while preserving link semantics.
+                        .action(CMD_APP_OPEN)
                         .into_element(cx)
                         .test_id("ui-gallery-breadcrumb-dropdown-home-link"),
                 ]

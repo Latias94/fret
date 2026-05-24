@@ -437,6 +437,7 @@ pub struct Popover {
     initial_focus_from_cell: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     diagnostics_content_element_from_cell:
         Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
+    dialog_test_id: Option<Arc<str>>,
     anchor_override: Option<fret_ui::elements::GlobalElementId>,
     on_dismiss_request: Option<OnDismissRequest>,
     on_open_auto_focus: Option<OnOpenAutoFocus>,
@@ -482,6 +483,7 @@ impl std::fmt::Debug for Popover {
                 "diagnostics_content_element_from_cell",
                 &self.diagnostics_content_element_from_cell.is_some(),
             )
+            .field("dialog_test_id", &self.dialog_test_id)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
             .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
             .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
@@ -527,6 +529,7 @@ impl Popover {
             initial_focus: None,
             initial_focus_from_cell: None,
             diagnostics_content_element_from_cell: None,
+            dialog_test_id: None,
             anchor_override: None,
             on_dismiss_request: None,
             on_open_auto_focus: None,
@@ -698,6 +701,14 @@ impl Popover {
     /// Alias for [`Popover::keep_mounted`], using Radix naming.
     pub fn force_mount(mut self, force_mount: bool) -> Self {
         self.keep_mounted = force_mount;
+        self
+    }
+
+    /// Stamps a diagnostics test id on the Radix-style dialog wrapper used as the trigger's
+    /// `controls` relation target. `PopoverContent::test_id(...)` still applies to the visual
+    /// content panel inside this wrapper.
+    pub fn dialog_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.dialog_test_id = Some(id.into());
         self
     }
 
@@ -1020,6 +1031,7 @@ impl Popover {
                 present: self.keep_mounted || motion.present,
                 interactive: is_open,
             };
+            let dialog_test_id = self.dialog_test_id.clone();
             let dialog_id_for_trigger: Rc<Cell<Option<fret_ui::elements::GlobalElementId>>> =
                 Rc::new(Cell::new(None));
 
@@ -1109,8 +1121,11 @@ impl Popover {
                         );
                         let measure_id = inner.id;
                         let hint = size_hint_px(&inner);
-                        let content =
+                        let mut content =
                             radix_popover::popover_dialog_wrapper(cx, None, move |_cx| vec![inner]);
+                        if let Some(test_id) = dialog_test_id.clone() {
+                            content = content.test_id(test_id);
+                        }
                         dialog_id_for_trigger.set(Some(content.id));
 
                         let last_content_size =
@@ -3024,6 +3039,7 @@ mod tests {
                 let popover_content_id_out = popover_content_id_out.clone();
                 let popover = Popover::from_open(open.clone())
                     .auto_focus(true)
+                    .dialog_test_id("popover-dialog")
                     .arrow(arrow)
                     .into_element_with(
                         cx,
@@ -4128,6 +4144,7 @@ mod tests {
             .find(|n| n.id == controlled)
             .expect("controlled node");
         assert_eq!(controlled_node.role, SemanticsRole::Dialog);
+        assert_eq!(controlled_node.test_id.as_deref(), Some("popover-dialog"));
     }
 
     #[test]

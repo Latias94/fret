@@ -216,6 +216,7 @@ pub(in crate::ui) fn preview_view_cache(
             .into_element(cx);
 
         let popover = shadcn::Popover::from_open(view_cache_popover_open.clone())
+            .dialog_test_id("ui-gallery-view-cache-popover-dialog")
             .auto_focus(true)
             .into_element_with(
                 cx,
@@ -235,6 +236,7 @@ pub(in crate::ui) fn preview_view_cache(
                             .toggle_model(view_cache_popover_open.clone())
                             .into_element(cx),
                     ])
+                    .test_id("ui-gallery-view-cache-popover-content")
                     .into_element(cx)
                 },
             );

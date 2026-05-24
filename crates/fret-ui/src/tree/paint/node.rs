@@ -264,6 +264,8 @@ impl<H: UiHost> UiTree<H> {
                     self.update_invalidation_counters(prev, next);
                 }
 
+                self.touch_paint_cache_replay_state_for_subtree(app, node);
+
                 if delta.x.0 != 0.0 || delta.y.0 != 0.0 {
                     // Paint-cache replay translates recorded draw ops by `delta` without visiting
                     // descendants. Keep hit-testing and semantics consistent by translating the
@@ -772,5 +774,30 @@ impl<H: UiHost> UiTree<H> {
             // don't keep a stale cache entry that could be replayed later.
             self.clear_paint_cache_entry_for_node(node);
         }
+    }
+
+    fn touch_paint_cache_replay_state_for_subtree(&mut self, app: &mut H, node: NodeId) {
+        let Some(window) = self.window else {
+            return;
+        };
+
+        let mut stack = self.take_scratch_node_stack();
+        stack.clear();
+        stack.push(node);
+
+        crate::elements::with_window_state(app, window, |st| {
+            while let Some(id) = stack.pop() {
+                let Some(n) = self.nodes.get(id) else {
+                    continue;
+                };
+                if let Some(element) = n.element {
+                    st.touch_paint_cache_replay_state_for_element(element);
+                }
+                for &child in &n.children {
+                    stack.push(child);
+                }
+            }
+        });
+        self.restore_scratch_node_stack(stack);
     }
 }

@@ -176,6 +176,7 @@ Use this as the “what should I read first?” map when implementing a subsyste
 - **Frame pipeline + runtime view boundaries**: `docs/adr/0327-frame-pipeline-v2-and-view-boundaries.md`, `docs/adr/0213-cache-roots-and-cached-subtree-semantics-v1.md`, `docs/adr/0165-dirty-views-and-notify-gpui-aligned.md`, `docs/adr/0175-prepaint-windowed-virtual-surfaces.md`, `docs/adr/0055-frame-recording-and-subtree-replay-caching.md`
 - **Fluent authoring ergonomics (unified builder surface)**: `docs/adr/0160-unified-authoring-builder-surface-v1.md`
 - **Declarative layout semantics (Flex + sizing)**: `docs/adr/0057-declarative-layout-style-and-flex-semantics.md`, `docs/adr/0035-layout-constraints-and-optional-taffy-integration.md`, `docs/adr/0042-virtualization-and-large-lists.md`
+- **Direction / RTL boundary (logical LTR/RTL only)**: `docs/adr/0329-direction-and-writing-mode-boundary.md`, `docs/audits/radix-direction.md`
 - **Tailwind layout vocabulary (margin/position/grid/aspect-ratio)**: `docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md`
 - **Container queries (panel-width responsiveness)**: `docs/adr/0231-container-queries-and-frame-lagged-layout-queries-v1.md`
 - **Environment queries (viewport/device capabilities)**: `docs/adr/0232-environment-queries-and-viewport-snapshots-v1.md`

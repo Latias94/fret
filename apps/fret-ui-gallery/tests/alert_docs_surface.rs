@@ -140,6 +140,73 @@ fn alert_demo_snippet_matches_upstream_docs_surface_and_keeps_link_logic_in_extr
 }
 
 #[test]
+fn alert_interactive_links_diag_script_gates_action_state() {
+    let interactive_links = include_str!("../src/ui/snippets/alert/interactive_links.rs");
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json"
+    );
+    let stub = include_str!("../../../tools/diag-scripts/ui-gallery-alert-link-activation.json");
+    let suite = include_str!(
+        "../../../tools/diag-scripts/suites/ui-gallery-alert-link-action-state/suite.json"
+    );
+
+    for needle in [
+        "PressableKeyActivation::EnterOnly",
+        "props.a11y.role = Some(SemanticsRole::Link)",
+        "props.a11y.label = Some(label_arc.clone())",
+        ".a11y_value(href_for_semantics)",
+        "\"ui-gallery-alert-link-billing\"",
+        "\"ui-gallery-alert-link-support\"",
+        "ui-gallery-alert-link-status-{tag}",
+    ] {
+        assert!(
+            interactive_links.contains(needle),
+            "alert interactive-links snippet should keep runtime-observable link anchors; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "\"ui-gallery-alert-link-activation\"",
+        "\"FRET_UI_GALLERY_START_PAGE\": \"alert\"",
+        "\"FRET_UI_GALLERY_START_SECTION\": \"Interactive Links\"",
+        "\"ui-gallery-page-alert\"",
+        "\"docsec-interactive-links-content\"",
+        "\"ui-gallery-alert-interactive-links\"",
+        "\"ui-gallery-alert-link-billing\"",
+        "\"ui-gallery-alert-link-support\"",
+        "\"role_is\"",
+        "\"label_contains\"",
+        "\"value_contains\"",
+        "\"semantics_action_is\"",
+        "\"focus_is\"",
+        "\"role\": \"link\"",
+        "\"action\": \"invoke\"",
+        "\"action\": \"focus\"",
+        "\"https://example.com/billing-information\"",
+        "\"https://example.com/support-article\"",
+        "\"ui-gallery-alert-link-status-billing-information\"",
+        "\"ui-gallery-alert-link-status-support-article\"",
+        "\"capture_layout_sidecar\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "alert link activation script should gate the expected runtime path; missing `{needle}`",
+        );
+    }
+
+    assert!(
+        stub.contains(
+            "\"to\": \"tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json\""
+        ),
+        "alert link redirect stub should point at the canonical alert script",
+    );
+    assert!(
+        suite.contains("tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json"),
+        "alert link action-state suite should reference the promoted script",
+    );
+}
+
+#[test]
 fn alert_action_snippet_stays_on_the_upstream_with_actions_surface() {
     let action = include_str!("../src/ui/snippets/alert/action.rs");
     let page = include_str!("../src/ui/pages/alert.rs");

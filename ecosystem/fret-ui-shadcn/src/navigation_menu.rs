@@ -706,13 +706,10 @@ impl NavigationMenuLink {
 
             let modifier_state_for_activate = modifier_state.clone();
             let model_for_activate = model.clone();
+            cx.pressable_dispatch_command_if_enabled_opt(command.clone());
             cx.pressable_add_on_activate(Arc::new(move |host, action_cx, _reason| {
                 if disabled {
                     return;
-                }
-
-                if let Some(command) = command.as_ref() {
-                    host.dispatch_command(Some(action_cx.window), command.clone());
                 }
 
                 if let Some(on_activate) = on_activate.clone() {
@@ -879,6 +876,7 @@ pub struct NavigationMenuItem {
     content: Vec<AnyElement>,
     trigger: Option<Vec<AnyElement>>,
     trigger_test_id: Option<Arc<str>>,
+    content_test_id: Option<Arc<str>>,
     command: Option<CommandId>,
     on_activate: Option<OnActivate>,
     href: Option<Arc<str>>,
@@ -895,6 +893,7 @@ impl std::fmt::Debug for NavigationMenuItem {
             .field("content_len", &self.content.len())
             .field("trigger_len", &self.trigger.as_ref().map(Vec::len))
             .field("trigger_test_id", &self.trigger_test_id)
+            .field("content_test_id", &self.content_test_id)
             .field("command", &self.command)
             .field("on_activate", &self.on_activate.is_some())
             .field("href", &self.href)
@@ -918,6 +917,7 @@ impl NavigationMenuItem {
             content,
             trigger: None,
             trigger_test_id: None,
+            content_test_id: None,
             command: None,
             on_activate: None,
             href: None,
@@ -929,6 +929,11 @@ impl NavigationMenuItem {
 
     pub fn trigger_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.trigger_test_id = Some(test_id.into());
+        self
+    }
+
+    pub fn content_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
+        self.content_test_id = Some(test_id.into());
         self
     }
 
@@ -1705,7 +1710,7 @@ impl NavigationMenu {
 
                                         let mut element = cx.pressable(pressable, move |cx, st| {
                                             cx.pressable_dispatch_command_if_enabled_opt(command.clone());
-                                            cx.pressable_on_activate(combined_on_activate.clone());
+                                            cx.pressable_add_on_activate(combined_on_activate.clone());
 
                                             if st.focused {
                                                 let _ = cx.app.models_mut().update(
@@ -1972,10 +1977,15 @@ impl NavigationMenu {
                         },
                     );
 
-                    let viewport_children = active_idx
+                    let (viewport_children, content_test_id) = active_idx
                         .and_then(|idx| items.get_mut(idx))
-                        .map(|active| std::mem::take(&mut active.content))
-                        .unwrap_or_default();
+                        .map(|active| {
+                            (
+                                std::mem::take(&mut active.content),
+                                active.content_test_id.clone(),
+                            )
+                        })
+                        .unwrap_or_else(|| (Vec::new(), None));
 
                     let has_content = !viewport_children.is_empty();
                     let is_open = selected_local.is_some() && has_content && open_for_motion;
@@ -2079,6 +2089,7 @@ impl NavigationMenu {
                         let root_state_for_viewport = root_state.clone();
                         let value_for_hover = value_for_viewport.clone();
                         let viewport_children_for_panel = viewport_children;
+                        let content_test_id_for_panel = content_test_id;
                         let content_switch_for_panel = content_switch;
                         let content_switch_slide_px = content_switch_slide_px;
 
@@ -2211,6 +2222,7 @@ impl NavigationMenu {
                                 let value_for_hover = value_for_hover.clone();
                                 let panel_props = panel_props;
                                 let viewport_children = viewport_children_for_panel;
+                                let content_test_id = content_test_id_for_panel;
                                 let content_switch = content_switch_for_panel;
                                 let content_switch_slide_px = content_switch_slide_px;
                                 let content_padding = content_padding;
@@ -2428,6 +2440,11 @@ impl NavigationMenu {
                                         })]
                                         })];
 
+                                        let content_a11y = PressableA11y {
+                                            test_id: content_test_id.clone(),
+                                            ..Default::default()
+                                        };
+
                                         (
                                             PressableProps {
                                                 layout: LayoutStyle::default(),
@@ -2437,7 +2454,7 @@ impl NavigationMenu {
                                                 focus_ring_always_paint: false,
                                                 focus_ring_bounds: None,
                                                 key_activation: Default::default(),
-                                                a11y: PressableA11y::default(),
+                                                a11y: content_a11y,
                                             },
                                             children,
                                         )
@@ -3636,6 +3653,77 @@ mod tests {
     }
 
     #[test]
+    fn navigation_menu_content_test_id_stamps_controls_target_wrapper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::<str>::from("alpha")));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(520.0), Px(320.0)),
+        );
+        let mut services = FakeServices;
+
+        for frame in 1..=5 {
+            app.set_tick_id(TickId(frame));
+            app.set_frame_id(FrameId(frame));
+            OverlayController::begin_frame(&mut app, window);
+            let model_for_render = model.clone();
+            let root = fret_ui::declarative::render_root(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                "navigation-menu-content-test-id",
+                move |cx| {
+                    let content = vec![
+                        NavigationMenuLink::new(model_for_render.clone(), vec![cx.text("Go")])
+                            .label("Go")
+                            .into_element(cx),
+                    ];
+                    let items = vec![
+                        NavigationMenuItem::new("alpha", "Alpha", content)
+                            .trigger_test_id("nav.alpha")
+                            .content_test_id("nav.alpha.content"),
+                        NavigationMenuItem::new("docs", "Docs", std::iter::empty()),
+                    ];
+                    vec![
+                        NavigationMenu::new(model_for_render.clone())
+                            .items(items)
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("nav.alpha"))
+            .expect("trigger node");
+        let content_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("nav.alpha.content"))
+            .expect("content wrapper node");
+
+        assert!(trigger_node.flags.expanded);
+        assert!(
+            trigger_node.controls.contains(&content_node.id),
+            "expected trigger controls to target the test-id-decorated content wrapper"
+        );
+    }
+
+    #[test]
     fn navigation_menu_link_does_not_dismiss_on_ctrl_click() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -4467,6 +4555,242 @@ mod tests {
             .find(|n| n.test_id.as_deref() == Some("disabled-link"))
             .expect("expected a semantics node for the link test_id");
         assert!(node.flags.disabled);
+    }
+
+    #[test]
+    fn navigation_menu_link_command_activation_records_pointer_source() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let cmd = CommandId::from("test.navigation-menu-link-open");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Open Link").with_scope(CommandScope::App),
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        bump_frame(&mut app);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "navigation-menu-link-command-source",
+            |cx| {
+                vec![
+                    NavigationMenuLink::new(model.clone(), vec![cx.text("Docs")])
+                        .label("Docs")
+                        .action(cmd.clone())
+                        .test_id("navigation-menu-link-command")
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let _ = app.flush_effects();
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("navigation-menu-link-command"))
+            .expect("expected navigation menu link semantics node");
+        let center = Point::new(
+            Px(node.bounds.origin.x.0 + node.bounds.size.width.0 * 0.5),
+            Px(node.bounds.origin.y.0 + node.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+                is_click: true,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(|effect| {
+                matches!(
+                    effect,
+                    fret_runtime::Effect::Command { window: Some(effect_window), command }
+                        if *effect_window == window && command == &cmd
+                )
+            }),
+            "expected NavigationMenuLink action to emit its command effect"
+        );
+
+        let source = app
+            .with_global_mut(
+                fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                |svc, app| svc.consume(window, app.tick_id(), &cmd),
+            )
+            .expect("expected NavigationMenuLink to record pending command source metadata");
+        assert_eq!(
+            source.kind,
+            fret_runtime::CommandDispatchSourceKindV1::Pointer
+        );
+        assert_eq!(
+            source.test_id.as_deref(),
+            Some("navigation-menu-link-command")
+        );
+    }
+
+    #[test]
+    fn navigation_menu_contentless_item_command_activation_records_pointer_source() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let model = app.models_mut().insert(Some(Arc::<str>::from("alpha")));
+        let cmd = CommandId::from("test.navigation-menu-contentless-open");
+        app.commands_mut().register(
+            cmd.clone(),
+            CommandMeta::new("Open Docs").with_scope(CommandScope::App),
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(520.0), Px(320.0)),
+        );
+        let mut services = FakeServices;
+
+        bump_frame(&mut app);
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "navigation-menu-contentless-command-source",
+            |cx| {
+                let content = vec![cx.text("Alpha content")];
+                vec![
+                    NavigationMenu::new(model.clone())
+                        .items([
+                            NavigationMenuItem::new("alpha", "Alpha", content),
+                            NavigationMenuItem::new("docs", "Docs", std::iter::empty())
+                                .action(cmd.clone())
+                                .trigger_test_id("navigation-menu-contentless-command"),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        let _ = app.flush_effects();
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("navigation-menu-contentless-command"))
+            .expect("expected contentless navigation menu item semantics node");
+        let center = Point::new(
+            Px(node.bounds.origin.x.0 + node.bounds.size.width.0 * 0.5),
+            Px(node.bounds.origin.y.0 + node.bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+                is_click: true,
+            }),
+        );
+
+        let selected = app.models().get_cloned(&model).flatten();
+        assert_eq!(
+            selected, None,
+            "expected contentless item activation to keep NavigationMenu dismissal behavior"
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(|effect| {
+                matches!(
+                    effect,
+                    fret_runtime::Effect::Command { window: Some(effect_window), command }
+                        if *effect_window == window && command == &cmd
+                )
+            }),
+            "expected contentless NavigationMenu item action to emit its command effect"
+        );
+
+        let source = app
+            .with_global_mut(
+                fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                |svc, app| svc.consume(window, app.tick_id(), &cmd),
+            )
+            .expect(
+                "expected contentless NavigationMenu item to record pending command source metadata",
+            );
+        assert_eq!(
+            source.kind,
+            fret_runtime::CommandDispatchSourceKindV1::Pointer
+        );
+        assert_eq!(
+            source.test_id.as_deref(),
+            Some("navigation-menu-contentless-command")
+        );
     }
 
     #[test]

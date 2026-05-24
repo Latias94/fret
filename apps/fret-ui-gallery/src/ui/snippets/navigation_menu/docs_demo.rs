@@ -379,7 +379,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
 
     let components =
         shadcn::NavigationMenuItem::new("components", "Components", [components_content])
-            .trigger_test_id("ui-gallery-navigation-menu-docs-demo-trigger-components");
+            .trigger_test_id("ui-gallery-navigation-menu-docs-demo-trigger-components")
+            .content_test_id("ui-gallery-navigation-menu-docs-demo-content-components");
 
     let docs = shadcn::NavigationMenuItem::new("docs", "Docs", std::iter::empty())
         .trigger_test_id("ui-gallery-navigation-menu-docs-demo-trigger-docs")

@@ -1,276 +1,249 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-ui-kit-list-window-boundary-scroll",
+    "required_capabilities": ["diag.script_v2"],
+    "required_launch_features": ["gallery-dev"],
+    "tags": [
+      "ui-gallery",
+      "ui-kit",
+      "list",
+      "view-cache",
+      "semantics",
+      "collection-metadata",
+      "action-state",
+      "mechanism-harness"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "ui_kit_list_torture",
+      "FRET_UI_GALLERY_UI_KIT_LIST_LEN": "10000",
+      "FRET_UI_GALLERY_VIEW_CACHE": "1"
+    },
+    "target_hints": [
+      "Starts directly on the dev-only UI Kit List Torture page.",
+      "Proves UI Kit retained-list row roots expose deterministic row-level test ids, collection metadata, selected state, and invoke actions under Gallery view-cache.",
+      "This is a row-root semantics/action-state gate. Retained-host reconcile telemetry is covered by the dedicated Virtual List Torture retained suites."
+    ]
+  },
   "steps": [
+    { "type": "reset_diagnostics" },
     {
-      "button": "left",
-      "target": {
-        "id": "ui-gallery-nav-ui-kit-list-torture",
-        "kind": "test_id"
-      },
-      "type": "click"
+      "type": "set_window_inner_size",
+      "width_px": 1280.0,
+      "height_px": 720.0
     },
+    { "type": "wait_frames", "n": 20 },
     {
-      "predicate": {
-        "kind": "focus_is",
-        "target": {
-          "id": "ui-gallery-nav-ui-kit-list-torture",
-          "kind": "test_id"
-        }
-      },
-      "timeout_frames": 60,
-      "type": "wait_until"
-    },
-    {
-      "key": "enter",
-      "modifiers": {
-        "alt": false,
-        "ctrl": false,
-        "meta": false,
-        "shift": false
-      },
-      "repeat": false,
-      "type": "press_key"
-    },
-    {
+      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-ui-kit-list-root",
-          "kind": "test_id"
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-torture-root"
         }
       },
-      "timeout_frames": 240,
-      "type": "wait_until"
+      "timeout_frames": 600
     },
     {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/view_cache/enabled",
+        "value": true
+      }
+    },
+    {
+      "type": "wait_until",
       "predicate": {
         "kind": "exists",
         "target": {
-          "id": "ui-gallery-ui-kit-list-row-0-label",
-          "kind": "test_id"
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-0"
         }
       },
-      "timeout_frames": 240,
-      "type": "wait_until"
+      "timeout_frames": 240
     },
     {
+      "type": "assert",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-0"
+        },
+        "pos_in_set": 1
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "set_size_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-0"
+        },
+        "set_size": 10000
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-0"
+        },
+        "selected": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-0"
+        },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "wheel",
       "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
       },
-      "type": "move_pointer"
-    },
-    {
-      "n": 6,
-      "type": "wait_frames"
-    },
-    {
       "delta_x": 0.0,
-      "delta_y": 10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
+      "delta_y": -720.0,
+      "pointer_kind": "touch"
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-22"
+        },
+        "pos_in_set": 23
       },
-      "type": "wheel"
+      "timeout_frames": 600
     },
     {
-      "n": 2,
-      "type": "wait_frames"
+      "type": "assert",
+      "predicate": {
+        "kind": "set_size_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-22"
+        },
+        "set_size": 10000
+      }
     },
     {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-22"
+        },
+        "selected": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-22"
+        },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-10"
+        },
+        "pos_in_set": 11
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "set_size_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-10"
+        },
+        "set_size": 10000
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-10"
+        },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
+      },
       "delta_x": 0.0,
-      "delta_y": 10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
+      "delta_y": 720.0,
+      "pointer_kind": "touch"
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-0"
+        },
+        "pos_in_set": 1
       },
-      "type": "wheel"
+      "timeout_frames": 600
     },
     {
-      "n": 2,
-      "type": "wait_frames"
+      "type": "assert",
+      "predicate": {
+        "kind": "set_size_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-0"
+        },
+        "set_size": 10000
+      }
     },
     {
-      "delta_x": 0.0,
-      "delta_y": 10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": 10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": 10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": 10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": 10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": 10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": 10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": 10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 5,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": -10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": -10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": -10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": -10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": -10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 2,
-      "type": "wait_frames"
-    },
-    {
-      "delta_x": 0.0,
-      "delta_y": -10.0,
-      "target": {
-        "id": "ui-gallery-ui-kit-list-row-0-label",
-        "kind": "test_id"
-      },
-      "type": "wheel"
-    },
-    {
-      "n": 5,
-      "type": "wait_frames"
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-ui-kit-list-row-0"
+        },
+        "action": "invoke",
+        "enabled": true
+      }
     },
     {
       "label": "ui-gallery-ui-kit-list-window-boundary-scroll",

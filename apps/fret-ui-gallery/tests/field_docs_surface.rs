@@ -131,12 +131,55 @@ fn field_snippets_keep_docs_path_examples_and_the_existing_wrapped_label_lane() 
 }
 
 #[test]
+fn field_demo_teaches_label_control_relations_without_direct_label_shadowing() {
+    let demo = include_str!("../src/ui/snippets/field/demo.rs");
+
+    for needle in [
+        ".test_id(\"ui-gallery-field-demo-card-name-label\")",
+        ".test_id(\"ui-gallery-field-demo-card-name\")",
+        ".test_id(\"ui-gallery-field-demo-card-number-label\")",
+        ".test_id(\"ui-gallery-field-demo-card-number\")",
+        ".test_id(\"ui-gallery-field-demo-same-as-shipping-label\")",
+        ".test_id(\"ui-gallery-field-demo-same-as-shipping\")",
+        ".test_id(\"ui-gallery-field-demo-comments-label\")",
+        ".test_id(\"ui-gallery-field-demo-comments\")",
+        ".for_control(\"ui-gallery-field-demo-card-name\")",
+        ".control_id(\"ui-gallery-field-demo-card-name\")",
+        ".for_control(\"ui-gallery-field-demo-same-as-shipping\")",
+        ".control_id(\"ui-gallery-field-demo-same-as-shipping\")",
+        ".for_control(\"ui-gallery-field-demo-comments\")",
+        ".control_id(\"ui-gallery-field-demo-comments\")",
+    ] {
+        assert!(
+            demo.contains(needle),
+            "field demo should keep explicit label-control wiring observable; missing `{needle}`",
+        );
+    }
+
+    for stale_direct_label in [
+        ".a11y_label(\"Name on Card\")",
+        ".a11y_label(\"Card Number\")",
+        ".a11y_label(\"CVV\")",
+        ".a11y_label(\"Same as shipping address\")",
+        ".a11y_label(\"Comments\")",
+    ] {
+        assert!(
+            !demo.contains(stale_direct_label),
+            "field demo controls should derive their accessible relation from FieldLabel::for_control instead of shadowing it with `{stale_direct_label}`",
+        );
+    }
+}
+
+#[test]
 fn field_diag_scripts_cover_docs_smoke_and_responsive_follow_up() {
     let docs_script = include_str!(
         "../../../tools/diag-scripts/ui-gallery/field/ui-gallery-field-docs-smoke.json"
     );
     let responsive_script = include_str!(
         "../../../tools/diag-scripts/ui-gallery/field/ui-gallery-field-responsive-orientation-container-md.json"
+    );
+    let relation_script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json"
     );
 
     for needle in [
@@ -165,6 +208,24 @@ fn field_diag_scripts_cover_docs_smoke_and_responsive_follow_up() {
         assert!(
             responsive_script.contains(needle),
             "field responsive diag script should keep the container-width follow-up gate; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "\"ui-gallery-field-demo-label-control-action-state\"",
+        "\"ui-gallery-field-demo-card-name-label\"",
+        "\"ui-gallery-field-demo-card-name\"",
+        "\"ui-gallery-field-demo-same-as-shipping-label\"",
+        "\"ui-gallery-field-demo-same-as-shipping\"",
+        "\"ui-gallery-field-demo-comments-label\"",
+        "\"ui-gallery-field-demo-comments\"",
+        "\"semantics_relation_includes\"",
+        "\"checked_state_is\"",
+        "\"focus_is\"",
+    ] {
+        assert!(
+            relation_script.contains(needle),
+            "field relation/action-state script should gate label-control semantics; missing `{needle}`",
         );
     }
 }

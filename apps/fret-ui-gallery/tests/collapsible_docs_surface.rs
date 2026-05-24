@@ -59,7 +59,7 @@ fn collapsible_docs_path_snippets_stay_copyable_and_docs_aligned() {
     let rtl = include_str!("../src/ui/snippets/collapsible/rtl.rs");
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "shadcn::CollapsibleRoot::new().into_element(cx, |cx| {",
         "shadcn::CollapsibleTriggerPart::new([",
@@ -90,7 +90,7 @@ fn collapsible_docs_path_snippets_stay_copyable_and_docs_aligned() {
         "\"Learn More\"",
         "shadcn::ButtonSize::Xs",
         "\"ui-gallery-collapsible-basic-trigger\"",
-        "\"ui-gallery-collapsible-basic-content\"",
+        ".content_test_id(\"ui-gallery-collapsible-basic-panel\")",
     ] {
         assert!(
             basic.contains(needle),

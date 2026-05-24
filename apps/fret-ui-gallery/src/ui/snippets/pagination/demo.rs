@@ -25,24 +25,31 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 ui::children![
                     cx;
                     shadcn::pagination_item(
-                        shadcn::PaginationPrevious::new().action(CMD_APP_OPEN),
+                        shadcn::PaginationPrevious::new()
+                            .action(CMD_APP_OPEN)
+                            .test_id("ui-gallery-pagination-demo-previous"),
                     ),
                     shadcn::pagination_item(
                         shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "1")])
-                            .action(CMD_APP_OPEN),
+                            .action(CMD_APP_OPEN)
+                            .test_id("ui-gallery-pagination-demo-page-1"),
                     ),
                     shadcn::pagination_item(
                         shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "2")])
                             .action(CMD_APP_SAVE)
-                            .active(true),
+                            .active(true)
+                            .test_id("ui-gallery-pagination-demo-page-2"),
                     ),
                     shadcn::pagination_item(
                         shadcn::pagination_link(|cx| ui::children![cx; page_number(cx, "3")])
-                            .action(CMD_APP_SAVE),
+                            .action(CMD_APP_SAVE)
+                            .test_id("ui-gallery-pagination-demo-page-3"),
                     ),
                     shadcn::pagination_item(shadcn::PaginationEllipsis::new()),
                     shadcn::pagination_item(
-                        shadcn::PaginationNext::new().action(CMD_APP_SAVE),
+                        shadcn::PaginationNext::new()
+                            .action(CMD_APP_SAVE)
+                            .test_id("ui-gallery-pagination-demo-next"),
                     ),
                 ]
             }),

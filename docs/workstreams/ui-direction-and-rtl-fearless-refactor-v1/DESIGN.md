@@ -30,6 +30,37 @@ to a `crates/*` contract change when we can’t get stable parity outcomes witho
 - Radix direction semantics audit: `docs/audits/radix-direction.md`
 - shadcn docs parity tracker: `docs/workstreams/standalone/ui-gallery-shadcn-docs-alignment-v4-todo.md`
 
+## Public direction vocabulary
+
+The direction substrate is intentionally small:
+
+- `LayoutDirection::{Ltr, Rtl}` is the public direction enum used by authoring code.
+- `DirectionProvider` / `with_direction_provider(...)` install an inherited direction for a
+  subtree.
+- `use_direction(local, inherited)` resolves `local || inherited || Ltr`.
+- `use_direction_in_scope(cx, local)` is the common helper for recipes that need to resolve the
+  active provider plus an optional local override.
+- `TextAlign::Start` and `TextAlign::End` are logical. Use them when the desired outcome should
+  flip under RTL.
+- Physical `Left` / `Right` decisions must be explicit when the geometry should not flip.
+- Overlay and placement helpers should take an explicit `LayoutDirection` rather than reading
+  hidden ambient state after entering a portal/root boundary.
+
+This workstream does not attempt to define a general CSS writing-mode contract. If we need one,
+that is a separate mechanism discussion.
+
+## Authoring helpers
+
+Recommended call-site patterns:
+
+- At the recipe root, prefer `DirectionProvider::new(dir)` or
+  `with_direction_provider(cx, dir, ...)` when a subtree needs an inherited direction.
+- Inside the recipe, prefer `use_direction(cx, None)` / `use_direction_in_scope(cx, None)` over
+  ad-hoc branching.
+- For start/end placement or alignment, prefer the shared logical helpers in `fret-ui-kit` and
+  `fret-ui-shadcn` instead of repeating left/right mappings per component.
+- Keep physical left/right branches explicit only where the component truly needs them.
+
 ## Invariants (must hold)
 
 1. **Logical direction resolution**
@@ -54,6 +85,13 @@ to a `crates/*` contract change when we can’t get stable parity outcomes witho
   - `crates/fret-ui/src/overlay_placement/`
 - Text logical alignment (policy default) landed in kit builders:
   - `ecosystem/fret-ui-kit/src/ui.rs`
+- Slider / Range direction tests now cover horizontal RTL key mapping and inverted pointer/key
+  direction rules:
+  - `ecosystem/fret-ui-shadcn/src/slider.rs`
+- Pagination direction tests now cover logical previous/next chevrons plus physical text/icon order:
+  - `ecosystem/fret-ui-shadcn/src/pagination.rs`
+- Tabs direction tests now cover RTL shared-indicator pill paint alignment and trigger spacing:
+  - `ecosystem/fret-ui-shadcn/src/tabs.rs`
 - ScrollArea RTL snippet updated to match upstream padding expectations:
   - `apps/fret-ui-gallery/src/ui/snippets/scroll_area/rtl.rs`
 

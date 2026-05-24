@@ -9,8 +9,9 @@ use std::sync::Arc;
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let open = cx.local_model(|| false);
-    let dropdown =
-        shadcn::DropdownMenu::from_open(open.clone()).align(shadcn::DropdownMenuAlign::Start);
+    let dropdown = shadcn::DropdownMenu::from_open(open.clone())
+        .align(shadcn::DropdownMenuAlign::Start)
+        .test_id_prefix("ui-gallery-breadcrumb-demo-menu");
 
     let crumb = bc::Breadcrumb::new().into_element(cx, |cx| {
         vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
@@ -51,11 +52,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                 ),
                                 shadcn::DropdownMenuEntry::Item(
                                     shadcn::DropdownMenuItem::new("Themes")
-                                        .on_activate(Arc::new(|_host, _acx, _reason| {})),
+                                        .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                                        .test_id("ui-gallery-breadcrumb-demo-menu-themes"),
                                 ),
                                 shadcn::DropdownMenuEntry::Item(
                                     shadcn::DropdownMenuItem::new("GitHub")
-                                        .on_activate(Arc::new(|_host, _acx, _reason| {})),
+                                        .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                                        .test_id("ui-gallery-breadcrumb-demo-menu-github"),
                                 ),
                             ]
                         },

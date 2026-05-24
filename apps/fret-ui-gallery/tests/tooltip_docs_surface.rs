@@ -55,7 +55,7 @@ fn tooltip_snippets_stay_copyable_and_docs_aligned() {
     let keyboard_focus = include_str!("../src/ui/snippets/tooltip/keyboard_focus.rs");
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "use fret_ui_shadcn::facade as shadcn;",
         "shadcn::TooltipProvider::new()",
         "shadcn::TooltipTrigger::build(",
@@ -96,6 +96,7 @@ fn tooltip_snippets_stay_copyable_and_docs_aligned() {
     for needle in [
         "\"Opens on keyboard focus\"",
         ".test_id(\"ui-gallery-tooltip-focus-trigger\")",
+        ".test_id(\"ui-gallery-tooltip-focus-content-node\")",
         ".panel_test_id(\"ui-gallery-tooltip-focus-panel\")",
         ".test_id(\"ui-gallery-tooltip-focus-row\")",
     ] {
@@ -116,6 +117,9 @@ fn tooltip_snippets_stay_copyable_and_docs_aligned() {
 fn tooltip_docs_diag_scripts_cover_docs_path_and_follow_ups() {
     let docs_script = include_str!(
         "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-docs-smoke.json"
+    );
+    let focus_script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-focus-opens.json"
     );
     let long_content_script = include_str!(
         "../../../tools/diag-scripts/ui-gallery/tooltip/ui-gallery-tooltip-long-content-screenshot-zinc-dark.json"
@@ -153,6 +157,19 @@ fn tooltip_docs_diag_scripts_cover_docs_path_and_follow_ups() {
         assert!(
             long_content_script.contains(needle),
             "tooltip long-content diag script should keep the existing visual regression coverage; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "\"ui-gallery-tooltip-focus-start\"",
+        "\"ui-gallery-tooltip-focus-trigger\"",
+        "\"ui-gallery-tooltip-focus-content-node\"",
+        "\"ui-gallery-tooltip-focus-panel\"",
+        "\"ui-gallery-tooltip-focus-opens\"",
+    ] {
+        assert!(
+            focus_script.contains(needle),
+            "tooltip focus diag script should keep the relation/action-state gate surface; missing `{needle}`",
         );
     }
 

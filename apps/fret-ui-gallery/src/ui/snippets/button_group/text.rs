@@ -18,7 +18,6 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         .into(),
         shadcn::Input::new(url_value)
             .control_id(control_id)
-            .a11y_label("URL")
             .placeholder("my-app")
             .test_id("ui-gallery-button-group-text-control")
             .refine_layout(LayoutRefinement::default().w_px(Px(220.0)).min_w_0())
@@ -27,6 +26,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .test_id("ui-gallery-button-group-text-suffix")
             .into(),
     ])
+    .a11y_label("Website URL")
     .into_element(cx)
     .test_id("ui-gallery-button-group-text")
 }

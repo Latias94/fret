@@ -145,3 +145,71 @@ fn navigation_menu_list_item_copy_uses_shared_title_and_clamped_paragraph_roles(
         );
     }
 }
+
+#[test]
+fn navigation_menu_docs_smoke_gates_demo_and_rtl_action_state() {
+    let docs_demo = include_str!("../src/ui/snippets/navigation_menu/docs_demo.rs");
+    let rtl = include_str!("../src/ui/snippets/navigation_menu/rtl.rs");
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json"
+    );
+    let conformance_suite =
+        include_str!("../../../tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json");
+    let runtime_suite = include_str!(
+        "../../../tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json"
+    );
+    let action_suite = include_str!(
+        "../../../tools/diag-scripts/suites/ui-gallery-navigation-menu-docs-smoke-action-state/suite.json"
+    );
+
+    for (name, source) in [("docs_demo.rs", docs_demo), ("rtl.rs", rtl)] {
+        for needle in [
+            ".trigger_test_id(",
+            ".action(CMD_APP_OPEN)",
+            "ui_gallery.app.open",
+        ] {
+            assert!(
+                source.contains(needle),
+                "{name} should keep NavigationMenu docs-smoke runtime action anchors; missing `{needle}`",
+            );
+        }
+    }
+
+    for needle in [
+        "\"ui-gallery-navigation-menu-docs-smoke\"",
+        "\"FRET_UI_GALLERY_START_PAGE\": \"navigation_menu\"",
+        "\"ui-gallery-navigation-menu-docs-demo-trigger-docs\"",
+        "\"ui-gallery-navigation-menu-docs-demo-link-alert-dialog\"",
+        "\"ui-gallery-navigation-menu-rtl-trigger-docs\"",
+        "\"ui-gallery-navigation-menu-rtl-link-alert-dialog\"",
+        "\"expanded_is\"",
+        "\"semantics_action_is\"",
+        "\"focus_is\"",
+        "\"semantics_relation_is_empty\"",
+        "\"wait_command_dispatch_trace\"",
+        "\"app_snapshot_field_equals\"",
+        "\"ui_gallery.app.open\"",
+        "\"cmd.open\"",
+        "\"started_from_focus\": true",
+    ] {
+        assert!(
+            script.contains(needle),
+            "navigation-menu docs-smoke script should gate docs demo and RTL action-state; missing `{needle}`",
+        );
+    }
+
+    let script_path =
+        "tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json";
+    assert!(
+        conformance_suite.contains(script_path),
+        "shadcn conformance suite should continue to reference navigation-menu docs-smoke",
+    );
+    assert!(
+        runtime_suite.contains(script_path),
+        "shadcn runtime-evidence suite should continue to reference navigation-menu docs-smoke",
+    );
+    assert!(
+        action_suite.contains(script_path),
+        "navigation-menu docs-smoke action-state suite should reference the promoted script",
+    );
+}

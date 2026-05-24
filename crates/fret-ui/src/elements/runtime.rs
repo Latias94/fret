@@ -1679,6 +1679,10 @@ impl WindowElementState {
         self.insert_state_box(key, value);
     }
 
+    pub(crate) fn touch_paint_cache_replay_state_for_element(&mut self, element: GlobalElementId) {
+        self.touch_state_key((element, TypeId::of::<crate::element::SelectableTextState>()));
+    }
+
     pub(crate) fn touch_view_cache_state_keys_if_recorded(&mut self, root: GlobalElementId) {
         let Some(keys) = self
             .view_cache_build_boundaries

@@ -1,6 +1,8 @@
 use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_runtime::{CommandId, Effect, Model, ModelStore};
-use fret_ui::element::{AnyElement, ContainerProps, PressableA11y, PressableProps, SpacerProps};
+use fret_ui::element::{
+    AnyElement, ContainerProps, LayoutStyle, PressableA11y, PressableProps, SpacerProps,
+};
 use fret_ui::scroll::{ScrollStrategy, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -50,6 +52,13 @@ fn resolve_row_padding_x(theme: &Theme) -> Px {
 
 fn resolve_row_padding_y(theme: &Theme) -> Px {
     MetricRef::space(Space::N1p5).resolve(theme)
+}
+
+fn list_fill_width_layout() -> LayoutStyle {
+    let mut layout = LayoutStyle::default();
+    layout.size.width = fret_ui::element::Length::Fill;
+    layout.size.min_width = Some(fret_ui::element::Length::Px(Px(0.0)));
+    layout
 }
 
 fn list_from_strings_row_contents<H: UiHost>(
@@ -182,6 +191,8 @@ where
         items_revision,
         key_at,
         None,
+        None,
+        0,
         on_select,
         row_contents,
     )
@@ -219,6 +230,115 @@ where
         items_revision,
         key_at,
         Some(copy_text_at),
+        None,
+        0,
+        on_select,
+        row_contents,
+    )
+}
+
+/// Retained-host copyable list helper with deterministic row-root test ids for diagnostics gates.
+///
+/// `debug_row_test_id_prefix` is intentionally debug/automation-only. It is stamped onto the
+/// row pressable semantics node, not the visible label child, so diagnostics can assert row-level
+/// collection metadata, selected state, and action availability on the same node.
+#[allow(clippy::too_many_arguments)]
+pub fn list_virtualized_copyable_retained_v0_with_debug_row_test_id_prefix<
+    H: UiHost + 'static,
+    I,
+    T,
+>(
+    cx: &mut ElementContext<'_, H>,
+    selection: Model<Option<usize>>,
+    size: Size,
+    row_height: Option<Px>,
+    len: usize,
+    overscan: usize,
+    scroll_handle: &VirtualListScrollHandle,
+    items_revision: u64,
+    key_at: impl Fn(usize) -> u64 + 'static,
+    copy_text_at: Arc<CopyTextAtFn>,
+    on_select: impl Fn(usize) -> Option<CommandId> + 'static,
+    debug_row_test_id_prefix: Arc<str>,
+    row_contents: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> I + 'static,
+) -> AnyElement
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    list_virtualized_retained_impl(
+        cx,
+        Some(selection),
+        size,
+        row_height,
+        len,
+        overscan,
+        scroll_handle,
+        items_revision,
+        key_at,
+        Some(copy_text_at),
+        Some(debug_row_test_id_prefix),
+        0,
+        on_select,
+        row_contents,
+    )
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct RetainedListDebugOptions {
+    pub row_test_id_prefix: Option<Arc<str>>,
+    pub keep_alive: usize,
+}
+
+impl RetainedListDebugOptions {
+    pub fn row_test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.row_test_id_prefix = Some(prefix.into());
+        self
+    }
+
+    pub fn keep_alive(mut self, keep_alive: usize) -> Self {
+        self.keep_alive = keep_alive;
+        self
+    }
+}
+
+/// Retained-host copyable list helper with explicit diagnostics options.
+///
+/// This keeps the stable helper signatures small while letting UI Gallery and mechanism harnesses
+/// exercise row-root semantics and retained keep-alive reuse without component-specific wrappers.
+#[allow(clippy::too_many_arguments)]
+pub fn list_virtualized_copyable_retained_v0_with_debug_options<H: UiHost + 'static, I, T>(
+    cx: &mut ElementContext<'_, H>,
+    selection: Model<Option<usize>>,
+    size: Size,
+    row_height: Option<Px>,
+    len: usize,
+    overscan: usize,
+    scroll_handle: &VirtualListScrollHandle,
+    items_revision: u64,
+    key_at: impl Fn(usize) -> u64 + 'static,
+    copy_text_at: Arc<CopyTextAtFn>,
+    on_select: impl Fn(usize) -> Option<CommandId> + 'static,
+    debug_options: RetainedListDebugOptions,
+    row_contents: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> I + 'static,
+) -> AnyElement
+where
+    I: IntoIterator<Item = T>,
+    T: IntoUiElement<H>,
+{
+    list_virtualized_retained_impl(
+        cx,
+        Some(selection),
+        size,
+        row_height,
+        len,
+        overscan,
+        scroll_handle,
+        items_revision,
+        key_at,
+        Some(copy_text_at),
+        debug_options.row_test_id_prefix,
+        debug_options.keep_alive,
         on_select,
         row_contents,
     )
@@ -266,6 +386,7 @@ where
 
     cx.container(
         ContainerProps {
+            layout: list_fill_width_layout(),
             background: Some(list_bg),
             border: Edges::all(Px(1.0)),
             border_color: Some(border),
@@ -324,14 +445,20 @@ where
                     }),
                 );
             }
-            vec![
-                cx.virtual_list_keyed(len, options, scroll_handle, key_at, |cx, i| {
+            vec![cx.virtual_list_keyed_with_layout(
+                list_fill_width_layout(),
+                len,
+                options,
+                scroll_handle,
+                key_at,
+                |cx, i| {
                     let cmd = on_select(i);
                     let enabled = cmd.is_some() || selection.is_some();
                     let is_selected = selected == Some(i);
 
                     cx.pressable(
                         PressableProps {
+                            layout: list_fill_width_layout(),
                             enabled,
                             a11y: PressableA11y {
                                 role: Some(SemanticsRole::ListItem),
@@ -356,6 +483,7 @@ where
 
                             vec![cx.container(
                                 ContainerProps {
+                                    layout: list_fill_width_layout(),
                                     padding: Edges::symmetric(row_px, row_py).into(),
                                     background: bg,
                                     ..Default::default()
@@ -363,6 +491,11 @@ where
                                 |cx| {
                                     vec![
                                         ui::h_row(|cx| row_contents(cx, i))
+                                            .layout(
+                                                crate::LayoutRefinement::default()
+                                                    .w_full()
+                                                    .min_w_0(),
+                                            )
                                             .gap(Space::N2)
                                             .justify_start()
                                             .items_center()
@@ -372,8 +505,8 @@ where
                             )]
                         },
                     )
-                }),
-            ]
+                },
+            )]
         },
     )
 }
@@ -390,6 +523,8 @@ fn list_virtualized_retained_impl<H: UiHost + 'static, I, T>(
     items_revision: u64,
     key_at: impl Fn(usize) -> u64 + 'static,
     copy_text_at: Option<Arc<CopyTextAtFn>>,
+    debug_row_test_id_prefix: Option<Arc<str>>,
+    keep_alive: usize,
     on_select: impl Fn(usize) -> Option<CommandId> + 'static,
     row_contents: impl for<'b> Fn(&mut ElementContext<'b, H>, usize) -> I + 'static,
 ) -> AnyElement
@@ -416,10 +551,12 @@ where
 
     let mut options = fret_ui::element::VirtualListOptions::new(row_h, overscan);
     options.items_revision = items_revision;
+    options.keep_alive = keep_alive;
     let set_size = len;
 
     cx.container(
         ContainerProps {
+            layout: list_fill_width_layout(),
             background: Some(list_bg),
             border: Edges::all(Px(1.0)),
             border_color: Some(border),
@@ -479,7 +616,8 @@ where
                 );
             }
 
-            vec![cx.virtual_list_keyed_retained_fn(
+            vec![cx.virtual_list_keyed_retained_with_layout_fn(
+                list_fill_width_layout(),
                 len,
                 options,
                 scroll_handle,
@@ -488,13 +626,18 @@ where
                     let cmd = on_select(i);
                     let enabled = cmd.is_some() || selection.is_some();
                     let is_selected = selected == Some(i);
+                    let debug_test_id: Option<Arc<str>> = debug_row_test_id_prefix
+                        .as_ref()
+                        .map(|prefix| Arc::from(format!("{}{}", prefix.as_ref(), i)));
 
                     cx.pressable(
                         PressableProps {
+                            layout: list_fill_width_layout(),
                             enabled,
                             a11y: PressableA11y {
                                 role: Some(SemanticsRole::ListItem),
                                 selected: is_selected,
+                                test_id: debug_test_id,
                                 ..Default::default()
                             }
                             .with_collection_position(i, set_size),
@@ -518,6 +661,7 @@ where
 
                             vec![cx.container(
                                 ContainerProps {
+                                    layout: list_fill_width_layout(),
                                     padding: Edges::symmetric(row_px, row_py).into(),
                                     background: bg,
                                     ..Default::default()
@@ -525,6 +669,11 @@ where
                                 |cx| {
                                     vec![
                                         ui::h_row(|_cx| row_children)
+                                            .layout(
+                                                crate::LayoutRefinement::default()
+                                                    .w_full()
+                                                    .min_w_0(),
+                                            )
                                             .gap(Space::N2)
                                             .justify_start()
                                             .items_center()
@@ -1102,6 +1251,89 @@ mod tests {
                 matches!(e, fret_runtime::Effect::ClipboardWriteText { text, .. } if text == "Item 1")
             }),
             "expected edit.copy to emit ClipboardWriteText for the selected row"
+        );
+    }
+
+    #[test]
+    fn list_virtualized_copyable_retained_debug_row_ids_target_row_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let selection = app.models_mut().insert(Some(1usize));
+        let scroll_handle = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(240.0), Px(160.0)),
+        );
+        let mut services = FakeServices;
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![
+                    list_virtualized_copyable_retained_v0_with_debug_row_test_id_prefix(
+                        cx,
+                        selection.clone(),
+                        Size::Medium,
+                        None,
+                        3,
+                        2,
+                        &scroll_handle,
+                        0,
+                        |i| i as u64,
+                        Arc::new(|_models, i| Some(format!("Item {i}"))),
+                        |_i| None,
+                        Arc::from("list-row-"),
+                        |cx, i| vec![cx.text(format!("Item {i}"))],
+                    ),
+                ]
+            })
+        };
+
+        // VirtualList computes the visible window based on viewport metrics populated during layout,
+        // so it takes two frames for the first set of rows to mount.
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let node = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("list-row-1"))
+            .expect("selected retained list row should expose row-root test id");
+
+        assert_eq!(node.role, SemanticsRole::ListItem);
+        assert_eq!(node.pos_in_set, Some(2));
+        assert_eq!(node.set_size, Some(3));
+        assert!(
+            node.flags.selected,
+            "row-root selected semantics should be targetable by debug test id"
+        );
+        assert!(
+            node.actions.invoke,
+            "row-root invoke action should stay targetable by debug test id"
+        );
+        assert!(
+            node.bounds.size.width.0 > 1.0,
+            "row-root diagnostics/action target should not collapse to zero width"
         );
     }
 }

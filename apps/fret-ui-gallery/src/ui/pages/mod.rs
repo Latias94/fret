@@ -943,8 +943,11 @@ pub(super) fn preview_pagination(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement>
     pagination::preview_pagination(cx)
 }
 
-pub(super) fn preview_scroll_area(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
-    scroll_area::preview_scroll_area(cx)
+pub(super) fn preview_scroll_area(
+    cx: &mut AppComponentCx<'_>,
+    last_action: Option<fret_app::Model<std::sync::Arc<str>>>,
+) -> Vec<AnyElement> {
+    scroll_area::preview_scroll_area(cx, last_action)
 }
 
 pub(super) fn preview_separator(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {

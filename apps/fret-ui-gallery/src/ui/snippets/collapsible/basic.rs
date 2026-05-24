@@ -68,6 +68,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             .container(props, |cx| {
                 vec![
                     shadcn::Collapsible::new(open.clone())
+                        .content_test_id("ui-gallery-collapsible-basic-panel")
                         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                         .into_element_with_open_model(
                             cx,
@@ -120,7 +121,6 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                                     )
                                     .refine_layout(LayoutRefinement::default().w_full())
                                     .into_element(cx)
-                                    .test_id("ui-gallery-collapsible-basic-content")
                             },
                         )
                 ]

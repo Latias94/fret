@@ -2,7 +2,7 @@ pub const SOURCE: &str = include_str!("drag_baseline.rs");
 
 // region: example
 use fret_core::{Point, Px, SemanticsRole, TimerToken};
-use fret_runtime::Effect;
+use fret_runtime::{Effect, Model};
 use fret_ui::Invalidation;
 use fret_ui::element::SemanticsDecoration;
 use fret_ui::element::SemanticsProps;
@@ -14,7 +14,10 @@ use std::time::Duration;
 // Intentional diagnostics raw boundary: this harness owns timers, scroll handles, and explicit
 // scrollbar semantics as one landed root, while the page registers that landed root through
 // `DocSection::build(cx, ...)`.
-pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+pub fn render<H: UiHost + 'static>(
+    cx: &mut ElementContext<'_, H>,
+    last_action: Option<Model<Arc<str>>>,
+) -> AnyElement {
     cx.named("ui-gallery.scroll_area.drag_baseline", |cx| {
         let scroll_handle = cx.slot_state(ScrollHandle::default, |h| h.clone());
         let arm_grow = cx.local_model_keyed("arm_grow", || false);
@@ -66,6 +69,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 let reset = {
                     let arm_grow = arm_grow.clone();
                     let grew = grew.clone();
+                    let last_action = last_action.clone();
                     let timer_token = timer_token.clone();
                     let scroll_handle = scroll_handle.clone();
                     shadcn::Button::new("Reset")
@@ -74,6 +78,13 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                             let _ = host.models_mut().update(&arm_grow, |v| *v = false);
                             let _ = host.models_mut().update(&grew, |v| *v = false);
                             let _ = host.models_mut().update(&timer_token, |v| *v = None);
+                            if let Some(last_action) = last_action.as_ref() {
+                                let _ = host.models_mut().update(last_action, |v| {
+                                    *v = Arc::<str>::from(
+                                        "ui_gallery.scroll_area.drag_baseline.reset",
+                                    );
+                                });
+                            }
                             scroll_handle.scroll_to_offset(Point::new(Px(0.0), Px(0.0)));
                             host.notify(action_cx);
                             host.request_redraw(action_cx.window);
@@ -85,6 +96,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 let arm = {
                     let arm_grow = arm_grow.clone();
                     let grew = grew.clone();
+                    let last_action = last_action.clone();
                     let timer_token = timer_token.clone();
                     shadcn::Button::new("Arm content growth")
                         .on_activate(Arc::new(move |host, action_cx, _reason| {
@@ -92,10 +104,17 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                             let _ = host.models_mut().update(&arm_grow, |v| *v = true);
                             let _ = host.models_mut().update(&grew, |v| *v = false);
                             let _ = host.models_mut().update(&timer_token, |v| *v = Some(token));
+                            if let Some(last_action) = last_action.as_ref() {
+                                let _ = host.models_mut().update(last_action, |v| {
+                                    *v = Arc::<str>::from(
+                                        "ui_gallery.scroll_area.drag_baseline.arm_growth",
+                                    );
+                                });
+                            }
                             host.push_effect(Effect::SetTimer {
                                 window: Some(action_cx.window),
                                 token,
-                                after: Duration::from_millis(120),
+                                after: Duration::from_millis(360),
                                 repeat: None,
                             });
                             host.notify(action_cx);
@@ -128,7 +147,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                     .test_id("ui-gallery-scroll-area-drag-baseline-controls");
 
                 let instructions = shadcn::raw::typography::muted(
-                    "Drag the thumb, then click “Arm content growth”. Content will grow after ~120ms; the thumb should remain stable.",
+                    "Drag the thumb, then click “Arm content growth”. Content will grow after a short delay; the thumb should remain stable.",
                 )
                 .into_element(cx)
                 .test_id("ui-gallery-scroll-area-drag-baseline-instructions");

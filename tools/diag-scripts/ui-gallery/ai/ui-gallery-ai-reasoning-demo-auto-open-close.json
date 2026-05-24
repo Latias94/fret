@@ -1,32 +1,43 @@
 {
   "schema_version": 2,
   "meta": {
-    "required_launch_features": ["gallery-dev"]
+    "name": "ui-gallery-ai-reasoning-demo-auto-open-close",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "required_launch_features": ["gallery-dev"],
+    "tags": [
+      "ui_gallery",
+      "ai",
+      "reasoning",
+      "collapsible",
+      "relation",
+      "action_state",
+      "auto_open_close",
+      "mechanism_harness",
+      "runtime"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "ai_reasoning_demo"
+    },
+    "target_hints": [
+      "Proves the AI Elements Reasoning trigger keeps fresh collapsible expanded/action semantics across streaming-driven auto-open and auto-close.",
+      "Asserts the trigger controls relation resolves to the ReasoningContent wrapper while open and clears when closed."
+    ]
   },
   "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-ai-reasoning-demo" }
       },
-      "timeout_frames": 240
-    },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "ai reasoning" },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-reasoning-demo" }
-      },
-      "timeout_frames": 240
-    },
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-nav-ai-reasoning-demo" }
+      "timeout_frames": 600
     },
     {
       "type": "wait_until",
@@ -34,19 +45,66 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-ai-reasoning-root" }
       },
-      "timeout_frames": 240
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-ai-reasoning-trigger" },
+      "delta_y": -220.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
     },
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "not_exists",
-        "target": { "kind": "test_id", "id": "ui-ai-reasoning-content" }
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-ai-reasoning-trigger" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
       },
       "timeout_frames": 240
     },
     {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-ai-reasoning-content" }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-ai-reasoning-trigger" },
+        "expanded": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-ai-reasoning-trigger" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_relation_is_empty",
+        "source": { "kind": "test_id", "id": "ui-ai-reasoning-trigger" },
+        "relation": "controls"
+      }
+    },
+    {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-ai-reasoning-start-streaming" }
+      "target": { "kind": "test_id", "id": "ui-ai-reasoning-start-streaming" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",
@@ -54,11 +112,50 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-ai-reasoning-content" }
       },
-      "timeout_frames": 360
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-ai-reasoning-trigger" },
+        "expanded": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_relation_includes",
+        "source": { "kind": "test_id", "id": "ui-ai-reasoning-trigger" },
+        "relation": "controls",
+        "target": { "kind": "test_id", "id": "ui-ai-reasoning-content" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-ai-reasoning-trigger" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-ai-reasoning-demo-auto-open.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-ai-reasoning-demo-auto-open"
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-ai-reasoning-stop-streaming" }
+      "target": { "kind": "test_id", "id": "ui-ai-reasoning-stop-streaming" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",
@@ -68,8 +165,24 @@
       },
       "timeout_frames": 900
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "expanded_is",
+        "target": { "kind": "test_id", "id": "ui-ai-reasoning-trigger" },
+        "expanded": false
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_relation_is_empty",
+        "source": { "kind": "test_id", "id": "ui-ai-reasoning-trigger" },
+        "relation": "controls"
+      }
+    },
     { "type": "wait_frames", "n": 10 },
     { "type": "capture_bundle", "label": "ui-gallery-ai-reasoning-demo-auto-open-close" }
   ]
 }
-

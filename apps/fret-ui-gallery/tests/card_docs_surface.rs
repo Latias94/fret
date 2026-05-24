@@ -228,3 +228,60 @@ fn card_docs_diag_script_covers_docs_path_and_fret_followups() {
         "card docs smoke script should stay promoted in the shadcn conformance suite",
     );
 }
+
+#[test]
+fn card_demo_action_state_gate_keeps_runtime_anchors() {
+    let demo = include_str!("../src/ui/snippets/card/demo.rs");
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json"
+    );
+    let suite = include_str!(
+        "../../../tools/diag-scripts/suites/ui-gallery-card-demo-action-state/suite.json"
+    );
+
+    for needle in [
+        ".test_id(\"ui-gallery-card-demo-title\")",
+        ".test_id(\"ui-gallery-card-demo-description\")",
+        ".test_id(\"ui-gallery-card-demo-email-input\")",
+        ".test_id(\"ui-gallery-card-demo-password-input\")",
+        "\"ui-gallery-card-demo-forgot-password\"",
+        ".test_id(format!(\"{test_id}.chrome\"))",
+        ".test_id(\"ui-gallery-card-demo-sign-up\")",
+        ".test_id(\"ui-gallery-card-demo-login\")",
+        ".test_id(\"ui-gallery-card-demo-login-google\")",
+        ".test_id(\"ui-gallery-card-demo\")",
+    ] {
+        assert!(
+            demo.contains(needle),
+            "card demo should keep runtime-observable action-state anchors; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "\"ui-gallery-card-demo-action-state\"",
+        "\"FRET_UI_GALLERY_START_PAGE\": \"card\"",
+        "\"FRET_UI_GALLERY_START_SECTION\": \"Demo\"",
+        "\"ui-gallery-card-demo-title\"",
+        "\"ui-gallery-card-demo-description\"",
+        "\"ui-gallery-card-demo-email-input\"",
+        "\"ui-gallery-card-demo-password-input\"",
+        "\"ui-gallery-card-demo-forgot-password.chrome\"",
+        "\"ui-gallery-card-demo-sign-up\"",
+        "\"ui-gallery-card-demo-login\"",
+        "\"ui-gallery-card-demo-login-google\"",
+        "\"role_is\"",
+        "\"semantics_action_is\"",
+        "\"value_equals\"",
+        "\"role\": \"link\"",
+    ] {
+        assert!(
+            script.contains(needle),
+            "card Demo action-state script should gate the expected runtime path; missing `{needle}`",
+        );
+    }
+
+    assert!(
+        suite.contains("tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json"),
+        "card Demo action-state suite should reference the promoted script",
+    );
+}

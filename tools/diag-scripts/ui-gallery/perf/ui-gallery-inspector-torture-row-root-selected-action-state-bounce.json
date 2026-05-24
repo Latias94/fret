@@ -1,0 +1,268 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-inspector-torture-row-root-selected-action-state-bounce",
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "required_launch_features": [
+      "gallery-dev"
+    ],
+    "tags": [
+      "ui_gallery",
+      "inspector",
+      "virtual_list",
+      "retained",
+      "view_cache",
+      "row_root",
+      "semantics",
+      "selected_state",
+      "action_state",
+      "collection_metadata",
+      "regression_pack",
+      "feature:gallery-dev"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "inspector_torture",
+      "FRET_UI_GALLERY_INSPECTOR_LEN": "96",
+      "FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE": "64"
+    },
+    "target_hints": [
+      "Run `fret-ui-gallery` with `--features gallery-dev`; the Inspector Torture page is dev-only.",
+      "The gate starts directly on the retained inspector surface, proves row-root ListItem semantics plus collection position, and keeps the selected row stable across scroll detach/reattach.",
+      "The retained bounce covers row-root `selected` and `invoke` on the same node that carries the row test id."
+    ]
+  },
+  "steps": [
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "type": "press_key",
+      "key": "escape"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "set_window_inner_size",
+      "width_px": 1280.0,
+      "height_px": 720.0
+    },
+    {
+      "type": "wait_frames",
+      "n": 20
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-inspector-root"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "visible_in_window",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-inspector-row-2"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-inspector-row-2"
+        },
+        "pos_in_set": 3
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "set_size_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-inspector-row-2"
+        },
+        "set_size": 96
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-inspector-row-2"
+        },
+        "selected": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-inspector-row-2"
+        },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-inspector-row-2"
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-inspector-row-2"
+        },
+        "selected": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "reset_diagnostics"
+    },
+    {
+      "type": "wait_frames",
+      "n": 2
+    },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
+      },
+      "delta_x": 0.0,
+      "delta_y": -720.0,
+      "pointer_kind": "touch"
+    },
+    {
+      "type": "wait_semantics_scroll_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
+      },
+      "field": "y",
+      "max_delta": 0.25,
+      "stable_frames": 4,
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-inspector-row-25"
+        },
+        "pos_in_set": 26
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-inspector-row-2"
+        }
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "retained_virtual_list_reconciles_matching_ge",
+        "min": 1,
+        "reconcile_kind": "escape",
+        "kept_alive_items_min": 1,
+        "detached_items_min": 1
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-inspector-torture-row-root-selected-action-state-detached"
+    },
+    {
+      "type": "wheel",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
+      },
+      "delta_x": 0.0,
+      "delta_y": 720.0,
+      "pointer_kind": "touch"
+    },
+    {
+      "type": "wait_semantics_scroll_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-content-viewport"
+      },
+      "field": "y",
+      "max_delta": 0.25,
+      "stable_frames": 4,
+      "timeout_frames": 300
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-inspector-row-2"
+        },
+        "pos_in_set": 3
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "selected_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-inspector-row-2"
+        },
+        "selected": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-inspector-row-2"
+        },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-inspector-torture-row-root-selected-action-state"
+    }
+  ]
+}

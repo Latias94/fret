@@ -254,6 +254,33 @@ fn inherited_sheet_open<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Model<b
         .map(|st| st.current.clone())
 }
 
+fn dialog_content_element_for_trigger(element: &AnyElement) -> fret_ui::elements::GlobalElementId {
+    if element
+        .semantics_decoration
+        .as_ref()
+        .and_then(|decoration| decoration.role)
+        == Some(fret_core::SemanticsRole::Dialog)
+    {
+        return element.id;
+    }
+
+    element
+        .children
+        .iter()
+        .find_map(|child| {
+            let candidate = dialog_content_element_for_trigger(child);
+            (candidate != child.id || {
+                child
+                    .semantics_decoration
+                    .as_ref()
+                    .and_then(|decoration| decoration.role)
+                    == Some(fret_core::SemanticsRole::Dialog)
+            })
+            .then_some(candidate)
+        })
+        .unwrap_or(element.id)
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum SheetSide {
     Left,
@@ -551,9 +578,17 @@ impl Sheet {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).snapshot();
             let is_open = cx.watch_model(&self.open).paint().copied().unwrap_or(false);
+            let open_id = self.open.id();
+
+            #[derive(Default)]
+            struct SheetA11yState {
+                content_element: Option<fret_ui::elements::GlobalElementId>,
+            }
 
             let trigger = trigger(cx);
             let id = trigger.id;
+            let prev_content_element =
+                cx.keyed_slot_state("a11y", SheetA11yState::default, |st| st.content_element);
             let modal = matches!(self.modal_mode, SheetModalMode::Modal);
             let trap_focus_only = matches!(self.modal_mode, SheetModalMode::TrapFocus);
             let overlay_root_name = if modal {
@@ -586,6 +621,9 @@ impl Sheet {
                 present: motion.present,
                 interactive: is_open,
             };
+
+            let content_element_for_trigger: Cell<Option<fret_ui::elements::GlobalElementId>> =
+                Cell::new(None);
 
             if overlay_presence.present {
                 let on_dismiss_request_for_barrier = self.on_dismiss_request.clone();
@@ -692,7 +730,14 @@ impl Sheet {
 
                         let content =
                             with_sheet_open_provider(cx, open_for_children.clone(), |cx| {
-                                with_sheet_side_provider(cx, sheet_side, |cx| content(cx))
+                                with_sheet_side_provider(cx, sheet_side, |cx| {
+                                    crate::a11y_modal::begin_modal_a11y_scope(cx.app, open_id);
+                                    let content = content(cx);
+                                    content_element_for_trigger
+                                        .set(Some(dialog_content_element_for_trigger(&content)));
+                                    crate::a11y_modal::end_modal_a11y_scope(cx.app, open_id);
+                                    content
+                                })
                             });
                         let content = if modal {
                             content
@@ -1000,9 +1045,16 @@ impl Sheet {
                     request.dismissible_on_dismiss_request = on_dismiss_request_for_request;
                     OverlayController::request(cx, request);
                 }
+
+                if let Some(content_element) = content_element_for_trigger.get() {
+                    cx.keyed_slot_state("a11y", SheetA11yState::default, |st| {
+                        st.content_element = Some(content_element)
+                    });
+                }
             }
 
-            trigger
+            let content_element = content_element_for_trigger.get().or(prev_content_element);
+            radix_dialog::apply_dialog_trigger_a11y(trigger, is_open, content_element)
         })
     }
 
@@ -1651,8 +1703,14 @@ impl SheetContent {
             children,
         );
 
-        container
-            .attach_semantics(SemanticsDecoration::default().role(fret_core::SemanticsRole::Dialog))
+        let (labelled_by_element, described_by_element) =
+            crate::a11y_modal::modal_relations_for_current_scope(cx.app);
+        container.attach_semantics(SemanticsDecoration {
+            role: Some(fret_core::SemanticsRole::Dialog),
+            labelled_by_element,
+            described_by_element,
+            ..Default::default()
+        })
     }
 }
 
@@ -1962,7 +2020,7 @@ impl SheetTitle {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        match self.content {
+        let title = match self.content {
             SheetTitleContent::Text(text) => ui::text(text)
                 .text_size_px(px)
                 .line_height_px(line_height)
@@ -1994,6 +2052,13 @@ impl SheetTitle {
                 }
             }
         }
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Heading)
+                .level(2),
+        );
+        crate::a11y_modal::register_modal_title(cx.app, title.id);
+        title
     }
 }
 
@@ -2103,7 +2168,7 @@ impl SheetDescription {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        match self.content {
+        let description = match self.content {
             SheetDescriptionContent::Text(text) => scope_description_text(
                 ui::raw_text(text)
                     .wrap(TextWrap::Word)
@@ -2121,7 +2186,9 @@ impl SheetDescription {
                 &theme,
                 "component.sheet.description",
             ),
-        }
+        };
+        crate::a11y_modal::register_modal_description(cx.app, description.id);
+        description
     }
 }
 
@@ -2965,6 +3032,188 @@ mod tests {
         );
 
         assert_eq!(app.models().get_copied(&open), Some(false));
+    }
+
+    #[test]
+    fn sheet_children_builder_exports_trigger_and_content_relations() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app.models_mut().insert(true);
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        let trigger_id = Rc::new(Cell::new(None));
+        let content_id = Rc::new(Cell::new(None));
+        let title_id = Rc::new(Cell::new(None));
+        let description_id = Rc::new(Cell::new(None));
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "sheet-children-builder-exports-trigger-and-content-relations",
+            |cx| {
+                let trigger_id = trigger_id.clone();
+                let content_id = content_id.clone();
+                let title_id = title_id.clone();
+                let description_id = description_id.clone();
+
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st, id| {
+                        trigger_id.set(Some(id));
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                vec![
+                    Sheet::new(open.clone())
+                        .children([
+                            SheetPart::trigger(SheetTrigger::new(trigger)),
+                            SheetPart::portal(SheetPortal::new()),
+                            SheetPart::overlay(SheetOverlay::new()),
+                            SheetPart::content_with(move |cx| {
+                                let title = SheetTitle::new("Edit profile").into_element(cx);
+                                title_id.set(Some(title.id));
+                                let description =
+                                    SheetDescription::new("Profile changes").into_element(cx);
+                                description_id.set(Some(description.id));
+                                let content = SheetContent::new(vec![title, description])
+                                    .show_close_button(false)
+                                    .into_element(cx);
+                                content_id.set(Some(content.id));
+                                content
+                            }),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+        ui.request_semantics_snapshot();
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "sheet-children-builder-exports-trigger-and-content-relations",
+            |cx| {
+                let trigger_id = trigger_id.clone();
+                let content_id = content_id.clone();
+                let title_id = title_id.clone();
+                let description_id = description_id.clone();
+
+                let trigger = cx.pressable_with_id(
+                    PressableProps {
+                        layout: {
+                            let mut layout = LayoutStyle::default();
+                            layout.size.width = Length::Px(Px(120.0));
+                            layout.size.height = Length::Px(Px(40.0));
+                            layout
+                        },
+                        enabled: true,
+                        focusable: true,
+                        ..Default::default()
+                    },
+                    move |cx, _st, id| {
+                        trigger_id.set(Some(id));
+                        vec![cx.container(ContainerProps::default(), |_cx| Vec::new())]
+                    },
+                );
+
+                vec![
+                    Sheet::new(open.clone())
+                        .children([
+                            SheetPart::trigger(SheetTrigger::new(trigger)),
+                            SheetPart::portal(SheetPortal::new()),
+                            SheetPart::overlay(SheetOverlay::new()),
+                            SheetPart::content_with(move |cx| {
+                                let title = SheetTitle::new("Edit profile").into_element(cx);
+                                title_id.set(Some(title.id));
+                                let description =
+                                    SheetDescription::new("Profile changes").into_element(cx);
+                                description_id.set(Some(description.id));
+                                let content = SheetContent::new(vec![title, description])
+                                    .show_close_button(false)
+                                    .into_element(cx);
+                                content_id.set(Some(content.id));
+                                content
+                            }),
+                        ])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = fret_ui::elements::node_for_element(
+            &mut app,
+            window,
+            trigger_id.get().expect("trigger id"),
+        )
+        .expect("trigger node");
+        let content_node = fret_ui::elements::node_for_element(
+            &mut app,
+            window,
+            content_id.get().expect("content id"),
+        )
+        .expect("content node");
+        let title_node = fret_ui::elements::node_for_element(
+            &mut app,
+            window,
+            title_id.get().expect("title id"),
+        )
+        .expect("title node");
+        let description_node = fret_ui::elements::node_for_element(
+            &mut app,
+            window,
+            description_id.get().expect("description id"),
+        )
+        .expect("description node");
+
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|node| node.id == trigger_node)
+            .expect("trigger semantics");
+        assert!(trigger.flags.expanded);
+        assert!(trigger.controls.contains(&content_node));
+
+        let content = snap
+            .nodes
+            .iter()
+            .find(|node| node.id == content_node)
+            .expect("content semantics");
+        assert_eq!(content.role, fret_core::SemanticsRole::Dialog);
+        assert!(content.labelled_by.contains(&title_node));
+        assert!(content.described_by.contains(&description_node));
     }
 
     #[test]

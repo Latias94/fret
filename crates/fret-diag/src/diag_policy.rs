@@ -168,6 +168,7 @@ pub(crate) fn ui_gallery_script_requires_windowed_rows_offset_changes_gate(scrip
         name,
         "ui-gallery-code-editor-torture-scroll-stability.json"
             | "ui-gallery-code-editor-torture-soft-wrap-editing-baseline.json"
+            | "ui-gallery-windowed-rows-surface-scroll-refresh.json"
     )
 }
 
@@ -178,7 +179,11 @@ pub(crate) fn ui_gallery_script_requires_windowed_rows_visible_start_repaint_gat
         return false;
     };
 
-    matches!(name, "ui-gallery-code-editor-torture-scroll-stability.json")
+    matches!(
+        name,
+        "ui-gallery-code-editor-torture-scroll-stability.json"
+            | "ui-gallery-windowed-rows-surface-scroll-refresh.json"
+    )
 }
 
 pub(crate) fn ui_gallery_script_pixels_changed_test_id(script: &Path) -> Option<&'static str> {
@@ -887,4 +892,22 @@ pub(crate) fn ui_gallery_script_requires_code_editor_a11y_composition_drag_gate(
         name,
         "ui-gallery-code-editor-a11y-composition-drag-baseline.json"
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::{
+        ui_gallery_script_requires_windowed_rows_offset_changes_gate,
+        ui_gallery_script_requires_windowed_rows_visible_start_repaint_gate,
+    };
+
+    #[test]
+    fn windowed_rows_gallery_surface_scroll_refresh_uses_offset_and_repaint_gates() {
+        let script = Path::new("ui-gallery-windowed-rows-surface-scroll-refresh.json");
+
+        assert!(ui_gallery_script_requires_windowed_rows_offset_changes_gate(script));
+        assert!(ui_gallery_script_requires_windowed_rows_visible_start_repaint_gate(script));
+    }
 }

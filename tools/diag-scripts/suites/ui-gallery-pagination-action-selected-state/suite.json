@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json"
+  ]
+}

@@ -8386,3 +8386,2321 @@ Next slice recommendation:
   `target/dev-fast/fretboard-dev.exe diag slice target/fret-diag-table-retained-row-pinning-selected-action-v1/sessions/1779480713460-19924 --test-id ui-gallery-table-retained-row-0 --json --max-matches 2 --max-ancestors 6`
   shows row 0 under `ui-gallery-table-retained-torture-root` with role `list_item`,
   `flags.selected=true`, and `actions.invoke=true`.
+
+## FileTree Torture Retained Hierarchy/Action-State Gate
+
+- invariant:
+  a retained FileTree row hierarchy must keep fresh semantics metadata across collapse/expand
+  detach/reattach and retained virtual-list scroll escape. Presence alone is insufficient: root,
+  folder, and leaf rows must expose correct hierarchy levels, expanded state where applicable,
+  selected-state transfer, and invoke action availability after the selected leaf detaches and
+  reattaches.
+- finding:
+  no FileTree retained hierarchy/action-state defect was reproduced. The first focused draft
+  exposed diagnostics authoring drift where an immediate assertion could race semantics predicate
+  convergence; the failure bundle already contained the expected `level=2` folder semantics. The
+  final gate uses bounded `wait_until` predicates for semantics convergence while retaining strict
+  outcome checks.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/file-tree/ui-gallery-file-tree-torture-retained-hierarchy-action-state.json`
+  starts directly on File Tree Torture with `FRET_UI_GALLERY_FILE_TREE_ROOTS=20`, verifies root,
+  folder, and leaf semantics, collapses/re-expands folder `1000000`, selects leaf `2000000`,
+  scrolls it out through a retained virtual-list escape reconcile, then scrolls back and proves the
+  leaf reattaches with `level=3`, `selected=true`, and `invoke=true`.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/file-tree/ui-gallery-file-tree-torture-retained-hierarchy-action-state.json`,
+  `tools/diag-scripts/ui-gallery-file-tree-torture-retained-hierarchy-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-file-tree-retained/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`, and
+  `apps/fret-ui-gallery/src/ui/previews/gallery/torture/file_tree_torture.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-file-tree-retained-hierarchy-action-state-v4/sessions/1779499403324-13196/1779499421903/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-file-tree-retained-hierarchy-action-state-v4/sessions/1779499403324-13196/share/1779499421903.zip`;
+  dedicated suite summary:
+  `target/fret-diag-file-tree-retained-suite-hierarchy-action-state-v1/sessions/1779499651434-70912/suite.summary.json`.
+- JSON/registry:
+  `python -m json.tool tools/diag-scripts/ui-gallery/file-tree/ui-gallery-file-tree-torture-retained-hierarchy-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery-file-tree-torture-retained-hierarchy-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-file-tree-retained/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_file_tree_torture_retained_hierarchy_action_state --no-fail-fast --no-capture`
+  - result: passed; run id `1532f582-9abf-48b9-bd1e-267fa00a6f3b`.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/file-tree/ui-gallery-file-tree-torture-retained-hierarchy-action-state.json --dir target/fret-diag-file-tree-retained-hierarchy-action-state-v4 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; run id `1779499421903`.
+- retained FileTree runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-file-tree-retained --dir target/fret-diag-file-tree-retained-suite-hierarchy-action-state-v1 --session-auto --include-triage --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed 1/1; run id `1779499662204`; summary:
+    `target/fret-diag-file-tree-retained-suite-hierarchy-action-state-v1/sessions/1779499651434-70912/suite.summary.json`.
+- bounded evidence:
+  `target/dev-fast/fretboard-dev.exe diag slice target/fret-diag-file-tree-retained-hierarchy-action-state-v4/sessions/1779499403324-13196 --test-id ui-gallery-file-tree-node-2000000 --json --max-matches 2 --max-ancestors 8`
+  shows the reattached leaf under `ui-gallery-file-tree-root` with role `tree_item`, `level=3`,
+  `flags.selected=true`, and `actions.invoke=true`.
+
+## Inspector Torture Row-Root Selected/Action-State Gate
+
+- invariant:
+  a retained Inspector row root must keep fresh collection semantics and action state across
+  detach/reattach and retained virtual-list scroll escape. Presence alone is insufficient: the row
+  root must still expose `ListItem` semantics, collection metadata, `selected`, and `invoke` after
+  the selected row leaves and reenters the retained window.
+- finding:
+  no Inspector retained row-root selected/action-state defect was reproduced. The gate proved the
+  row root can be selected, detached, and reattached with fresh semantics while the retained
+  virtual list still reports detach/reattach reconciliation.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-row-root-selected-action-state-bounce.json`
+  starts directly on the dev-only Inspector Torture page, stamps retained row-root `ListItem`
+  semantics with collection metadata plus `selected`/`invoke`, selects row 2, scrolls it out of the
+  retained window, and proves the row reattaches with `selected=true` and `invoke=true`.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-torture-row-root-selected-action-state-bounce.json`,
+  `tools/diag-scripts/ui-gallery-inspector-torture-row-root-selected-action-state-bounce.json`,
+  `tools/diag-scripts/suites/ui-gallery-inspector-torture-row-root-selected-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`, and
+  `apps/fret-ui-gallery/src/ui/previews/gallery/torture/inspector_torture.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-inspector-row-root-selected-action-state-v3/sessions/1779506053131-100636/1779506078170/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-inspector-row-root-selected-action-state-v3/sessions/1779506053131-100636/share/1779506078170.zip`;
+  dedicated suite summary:
+  `target/fret-diag-inspector-row-root-selected-action-state-suite-v1/sessions/1779506349279-97672/suite.summary.json`.
+- JSON/registry:
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo fmt -p fret-diag-protocol --check`;
+  `cargo fmt -p fret-ui-gallery --check`.
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_inspector_torture_row_root_selected_action_state_bounce --no-fail-fast --no-capture`
+  - result: passed; run id `2f89ec06-073d-4d7a-ac52-ab73b0abc156`.
+- gallery authoring guards:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_internal_previews gallery_inspector_torture_uses_fixed_row_text_roles gallery_inspector_torture_stamps_row_root_semantics_and_action_state --no-fail-fast --no-capture`
+  - result: passed; run id `3a4ec18b-57b6-4348-98ea-ebcbacde9fa9`.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery-inspector-torture-row-root-selected-action-state-bounce.json --dir target/fret-diag-inspector-row-root-selected-action-state-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; run id `1779506078170`.
+- dedicated runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-inspector-torture-row-root-selected-action-state --dir target/fret-diag-inspector-row-root-selected-action-state-suite-v1 --session-auto --include-triage --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed 1/1; summary
+    `target/fret-diag-inspector-row-root-selected-action-state-suite-v1/sessions/1779506349279-97672/suite.summary.json`.
+
+## Fresh Continuation Verification 2026-05-23
+
+- scope:
+  after recovering session `019e5316-ad17-74d0-a3ee-97a095ee099a`, revalidated the dirty worktree
+  slice set covering UI Kit List row-root semantics, Windowed Rows surface refresh policy,
+  FileTree retained hierarchy/action-state, Inspector retained row-root selected/action-state, and
+  Card retained-analysis precondition scripts. The first Inspector suite attempt used a prebuilt
+  binary and failed only the diagnostics feature preflight (`tooling.launch.failed`); it was
+  discarded as non-evidence and rerun with an inspectable `cargo run` launch.
+- formatting/build:
+  `cargo fmt --check --package fret-ui-kit --package fret-ui-gallery --package fret-diag --package fret-diag-protocol`
+  - result: passed.
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused Rust gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit list_virtualized_copyable_retained_debug_row_ids_target_row_semantics --no-fail-fast --no-capture`
+  - result: passed; run id `f3b180b4-4104-407e-8e5e-46e440dd3317`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery gallery_inspector_torture_stamps_row_root_semantics_and_action_state --no-fail-fast --no-capture`
+  - result: passed; run id `13258b92-ce0b-4668-972e-f483fc8ba2ed`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag windowed_rows_gallery_surface_scroll_refresh_uses_offset_and_repaint_gates --no-fail-fast --no-capture`
+  - result: passed; run id `35e3dd47-2c95-4d73-bb3f-bb4fe76450eb`.
+- protocol roundtrip gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_windowed_rows_surface_scroll_refresh --no-fail-fast --no-capture`
+  - result: passed; run id `ba0b3d36-536b-4099-8edf-4cb83b73663e`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_ui_kit_list_window_boundary_scroll --no-fail-fast --no-capture`
+  - result: passed; run id `5ed3bee1-776b-4bc2-aa10-3a2eb3f48b59`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_file_tree_torture_retained_hierarchy_action_state --no-fail-fast --no-capture`
+  - result: passed; run id `a2ec4ecb-e866-4278-957e-0700e8d9d6b8`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_inspector_torture_row_root_selected_action_state_bounce --no-fail-fast --no-capture`
+  - result: passed; run id `b418f5d1-cb7b-4261-8630-4760a4eff71d`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_card_memory_retained_analysis_scripts --no-fail-fast --no-capture`
+  - result: passed; run id `79d25d77-bdb7-4d85-88ce-8af2a0d8592f`.
+- fresh runtime suites:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-inspector-torture-row-root-selected-action-state --dir target/fret-diag-inspector-row-root-selected-action-state-fresh-v2 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed 1/1; run id `1779515633307`; summary
+    `target/fret-diag-inspector-row-root-selected-action-state-fresh-v2/sessions/1779515556317-60168/suite.summary.json`.
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-ui-kit-list-retained --dir target/fret-diag-ui-kit-list-row-root-semantics-fresh-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed 1/1; run id `1779516015401`; summary
+    `target/fret-diag-ui-kit-list-row-root-semantics-fresh-v1/sessions/1779516004847-57072/suite.summary.json`.
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-file-tree-retained --dir target/fret-diag-file-tree-retained-hierarchy-action-state-fresh-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed 1/1; run id `1779516059547`; summary
+    `target/fret-diag-file-tree-retained-hierarchy-action-state-fresh-v1/sessions/1779516044541-31432/suite.summary.json`.
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-windowed-rows-surface --dir target/fret-diag-windowed-rows-surface-scroll-refresh-fresh-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed 1/1; run id `1779516287552`; summary
+    `target/fret-diag-windowed-rows-surface-scroll-refresh-fresh-v1/sessions/1779516276970-56592/suite.summary.json`.
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-card-retained-analysis-navnone --dir target/fret-diag-card-retained-analysis-navnone-fresh-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed 4/4; row run ids `1779516346989`, `1779516515594`,
+    `1779516542022`, and `1779516664699`; summary
+    `target/fret-diag-card-retained-analysis-navnone-fresh-v1/sessions/1779516342911-64120/suite.summary.json`.
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-card-preview-retained-bisect-navnone --dir target/fret-diag-card-preview-retained-bisect-navnone-fresh-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed 3/3; row run ids `1779516887535`, `1779517007443`, and
+    `1779517083664`; summary
+    `target/fret-diag-card-preview-retained-bisect-navnone-fresh-v1/sessions/1779516867410-58496/suite.summary.json`.
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-card-preview-retained-hotspots-navnone --dir target/fret-diag-card-preview-retained-hotspots-navnone-fresh-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed 4/4; row run ids `1779517181481`, `1779517302911`,
+    `1779517416967`, and `1779517508009`; summary
+    `target/fret-diag-card-preview-retained-hotspots-navnone-fresh-v1/sessions/1779517160250-1544/suite.summary.json`.
+
+## View Cache Cached Popover Relation/Action-State Gate
+
+- invariant:
+  a cached View Cache Popover must keep fresh trigger `invoke` action state and a valid
+  `controls` relation to the dialog wrapper across close, cached counter mutation, and reopen.
+  Presence alone is not enough: the trigger must clear the relation when closed and reestablish it
+  after the cached subtree is reused.
+- finding:
+  no View Cache Popover relation/action-state defect was reproduced. The trigger kept
+  `invoke=true`, the `controls` edge resolved to the dedicated dialog wrapper test id while open,
+  the edge cleared after close, and the same relation/action-state contract returned after a
+  cached counter mutation and reopen.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-cached-popover-relation-action-state.json`
+  starts directly on the View Cache harness page, stamps
+  `ui-gallery-view-cache-popover-dialog` on the Popover dialog wrapper, asserts the
+  `ui-gallery-view-cache-popover-content` panel, and drives close/reopen across a cached counter
+  mutation while checking `expanded`, `invoke`, and `controls`.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/previews/pages/harness/view_cache.rs`,
+  `ecosystem/fret-ui-shadcn/src/popover.rs`,
+  `tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-cached-popover-relation-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-view-cache/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-view-cache-cached-popover-relation-action-state-v1/sessions/1779519713733-54180/1779519791015/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-view-cache-cached-popover-relation-action-state-v1/sessions/1779519713733-54180/share/1779519791015.zip`;
+  dedicated suite summary:
+  `target/fret-diag-view-cache-suite-cached-popover-relation-v1/sessions/1779519979352-64968/suite.summary.json`.
+- run results:
+  `python tools/check_diag_scripts_registry.py`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-cached-popover-relation-action-state.json > $null`;
+  `cargo fmt --package fret-ui-shadcn --package fret-ui-gallery --package fret-diag-protocol`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_view_cache_cached_popover_relation_action_state --no-fail-fast --no-capture`
+  (run id `d2dea496-7781-4279-8e64-185b3271844c`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib popover_trigger_exposes_expanded_and_controls_semantics --no-fail-fast --no-capture`
+  (run id `0b36665f-a777-46bd-a81a-f107e9c0fdc0`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-cached-popover-relation-action-state.json --dir target/fret-diag-view-cache-cached-popover-relation-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  (run id `1779519791015`);
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-view-cache --dir target/fret-diag-view-cache-suite-cached-popover-relation-v1 --session-auto --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  (suite run id `1779519979352-64968`, 3/3 passed).
+
+## ScrollArea Arm Content Growth Click Stability
+
+- invariant:
+  the ScrollArea Arm content growth path must prove target visibility, action exposure, command
+  dispatch, and growth publication separately; a transient `Armed` badge is not the only valid
+  oracle.
+- finding:
+  no mechanism defect was reproduced. The old promoted `content-growth` gate was racing the
+  intermediate `Armed` badge even though the click already reached the target and published
+  `ui_gallery.scroll_area.drag_baseline.arm_growth`. The focused gate now proves the action-state
+  split directly, and the full ScrollArea suite passes after hardening the old drag scripts.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-arm-content-growth-click-stability.json`
+  starts directly on the ScrollArea diagnostics page, proves the reset button, checks the arm
+  button bounds and `invoke` semantics, confirms `/shell/last_action`, and then exercises two
+  arm/reset cycles before the growth/drag checks.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/diagnostics/scroll_area/drag_baseline.rs`,
+  `apps/fret-ui-gallery/src/ui/pages/scroll_area.rs`,
+  `apps/fret-ui-gallery/src/ui/content.rs`,
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-arm-content-growth-click-stability.json`,
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`,
+  `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json`,
+  `tools/diag-scripts/suites/ui-gallery-scroll-area/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-scrollbar-arm-content-growth-click-stability-v1/sessions/1779521866482-61600/1779521876031/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-scrollbar-arm-content-growth-click-stability-v1/sessions/1779521866482-61600/share/1779521876031.zip`;
+  old-suite failure bundle:
+  `target/fret-diag-scroll-area-suite-arm-click-stability-v1/sessions/1779521906514-77508/1779522373786-script-step-0016-wait_until-timeout`;
+  dedicated suite summary:
+  `target/fret-diag-scroll-area-suite-arm-click-stability-v2/sessions/1779523448787-60024/suite.summary.json`.
+- run results:
+  `python tools/check_diag_scripts_registry.py`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-arm-content-growth-click-stability.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json > $null`;
+  `cargo fmt --package fret-ui-gallery --package fret-diag-protocol`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_scrollbar --no-fail-fast --no-capture`
+  (run id `c63b5638-b317-4a31-a09b-7a0efb5923b5`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-arm-content-growth-click-stability.json --dir target/fret-diag-scrollbar-arm-content-growth-click-stability-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779521876031`);
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json --dir target/fret-diag-scrollbar-drag-baseline-content-growth-arm-hardening-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779523331279`);
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json --dir target/fret-diag-scrollbar-drag-pointer-cancel-release-arm-hardening-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779523399032`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-scroll-area --dir target/fret-diag-scroll-area-suite-arm-click-stability-v2 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (suite run id `1779523448787-60024`, 8/8 passed).
+
+## Chrome Torture Cached Overlay Action Dispatch
+
+- invariant:
+  overlay controls rendered inside the Chrome Torture cached overlay body must keep fresh action
+  exposure, command dispatch, menu close, and outside-press dismissal state. A focused gate should
+  prove routing and state publication without relying on an overlay-page-specific focus target.
+- finding:
+  no mechanism defect was reproduced. Reset, DropdownMenu Apple, ContextMenu Action, and Popover
+  outside-press dismissal all dispatched through `/shell/last_action`; DropdownMenu and ContextMenu
+  content closed after activation; and Popover dismissal published both `ui-gallery-popover-dismissed`
+  and `ui-gallery-overlay-underlay-activated`. The first focused draft failed only on an
+  over-specific `focus_is(ui-gallery-overlay-underlay)` oracle after dismissal.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-overlay-action-dispatch.json`
+  starts directly on the dev-only Chrome Torture page, uses `ui-gallery-content-scroll` to keep the
+  cached overlay controls visible, checks `invoke` action availability, and captures a bounded
+  bundle after the dispatch/dismissal sequence.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/previews/pages/torture/chrome_torture.rs`,
+  `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay.rs`,
+  `apps/fret-ui-gallery/src/ui/previews/gallery/overlays/overlay/widgets.rs`,
+  `tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-overlay-action-dispatch.json`,
+  `tools/diag-scripts/suites/ui-gallery-chrome-torture-overlay-action-dispatch/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-chrome-torture-overlay-action-dispatch-v2/sessions/1779526726749-55768/1779526747845/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-chrome-torture-overlay-action-dispatch-v2/sessions/1779526726749-55768/share/1779526747845.zip`;
+  first-draft focus-oracle failure packet:
+  `target/fret-diag-chrome-torture-overlay-action-dispatch-v1/sessions/1779526230419-78920/1779526251707/ai.packet`;
+  dedicated suite summary:
+  `target/fret-diag-chrome-torture-overlay-action-dispatch-suite-v1/sessions/1779526947605-48036/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-overlay-action-dispatch.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-chrome-torture-overlay-action-dispatch/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo fmt --package fret-diag-protocol`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_chrome_torture_overlay_action_dispatch --no-fail-fast --no-capture`
+  (run id `d7d3aed1-c539-4a17-a6f6-656e7fa662e9`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-overlay-action-dispatch.json --dir target/fret-diag-chrome-torture-overlay-action-dispatch-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779526747845`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-chrome-torture-overlay-action-dispatch --dir target/fret-diag-chrome-torture-overlay-action-dispatch-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779526968150`, suite run id `1779526947605-48036`, 1/1 passed).
+
+## Material3 State Matrix Chip Action State
+
+- invariant:
+  cacheable Material 3 State Matrix chip controls must expose explicit checked-state semantics,
+  disabled action suppression, primary/trailing action availability, and action dispatch through
+  the same runtime path used by the UI Gallery shell.
+- finding:
+  a real Material3 recipe gap was reproduced and fixed. `FilterChip` and `InputChip` exported
+  legacy `checked` flags but did not stamp explicit `checked_state=true|false`, which left the
+  accessibility contract weaker than the shadcn RadioGroup/Checkbox/ToggleGroup action-state gates.
+  The fixed components now publish `SemanticsCheckedState::True/False` alongside `checked`.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-state-matrix-chip-action-state.json`
+  starts directly on `material3_state_matrix` with `gallery-material3`, checks selected/disabled
+  FilterChip and unselected InputChip semantics, drives primary and trailing-icon clicks, and
+  validates `/shell/last_action` for each dispatched action.
+- implementation anchors:
+  `ecosystem/fret-ui-material3/src/filter_chip.rs`,
+  `ecosystem/fret-ui-material3/src/input_chip.rs`,
+  `ecosystem/fret-ui-material3/tests/radio_alignment.rs`,
+  `tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-state-matrix-chip-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-material3-state-matrix-chip-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  first checked-state failure packet:
+  `target/fret-diag-material3-state-matrix-chip-action-state-v2/sessions/1779528536077-91872/1779528622600/ai.packet`;
+  focused runtime AI packet after fix:
+  `target/fret-diag-material3-state-matrix-chip-action-state-v4/sessions/1779529811396-91432/1779529828041/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-material3-state-matrix-chip-action-state-v4/sessions/1779529811396-91432/share/1779529828041.zip`;
+  dedicated suite summary:
+  `target/fret-diag-material3-state-matrix-chip-action-state-suite-v1/sessions/1779529969098-52044/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-state-matrix-chip-action-state.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo fmt --package fret-ui-material3 --package fret-diag-protocol`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-material3 chips_export_checked_state_for_selected_semantics --no-fail-fast --no-capture`
+  (run id `6a401c1c-2c72-4eb9-9089-e6d87751e6b9`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_material3_state_matrix_chip_action_state --no-fail-fast --no-capture`
+  (run id `371aa041-7561-4bc3-a8b3-f48ee8a4006e`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-material3`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-state-matrix-chip-action-state.json --dir target/fret-diag-material3-state-matrix-chip-action-state-v4 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-material3 --bin fret-ui-gallery`
+  (run id `1779529828041`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-material3-state-matrix-chip-action-state --dir target/fret-diag-material3-state-matrix-chip-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-material3 --bin fret-ui-gallery`
+  (script run id `1779529987189`, suite run id `1779529969098-52044`, 1/1 passed);
+  `git diff --check`.
+
+## Windowed Rows Surface Scroll Refresh
+
+- invariant:
+  the Windowed Rows Surface torture page must publish scroll offset changes and repaint scene
+  fingerprints when `visible_start` changes, even though the UI is rendered as a single
+  Scroll+Canvas surface instead of per-row element subtrees.
+- finding:
+  no mechanism defect was reproduced. The focused runtime and dedicated suite produced valid
+  offset-change samples and the `visible_start` repaint post-run gate passed. The slice did close a
+  diagnostics wiring gap by pointing the promoted suite and roundtrip test at the real
+  `ui-gallery/windowed-rows/...` script instead of the legacy top-level redirect.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/windowed-rows/ui-gallery-windowed-rows-surface-scroll-refresh.json`
+  starts directly on `windowed_rows_surface_torture`, moves the pointer onto
+  `ui-gallery-windowed-rows-root`, wheels the single-node surface, and captures a bounded bundle so
+  `fret-diag` can enforce offset-change and visible-start repaint post-run checks.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/previews/pages/torture/windowed_rows_surface_torture.rs`,
+  `apps/fret-ui-gallery/src/driver/diag_snapshot.rs`,
+  `crates/fret-diag/src/diag_policy.rs`,
+  `crates/fret-diag/src/stats/windowed_rows.rs`,
+  `tools/diag-scripts/ui-gallery/windowed-rows/ui-gallery-windowed-rows-surface-scroll-refresh.json`,
+  `tools/diag-scripts/suites/ui-gallery-windowed-rows-surface/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  preflight-only failure from prebuilt binary feature inference:
+  `target/fret-diag-windowed-rows-surface-scroll-refresh-v1/sessions/1779531509683-57936`;
+  focused runtime AI packet:
+  `target/fret-diag-windowed-rows-surface-scroll-refresh-v2/sessions/1779531525117-82708/1779531611027/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-windowed-rows-surface-scroll-refresh-v2/sessions/1779531525117-82708/share/1779531611027.zip`;
+  dedicated suite summary:
+  `target/fret-diag-windowed-rows-surface-suite-v1/sessions/1779531680574-89080/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/windowed-rows/ui-gallery-windowed-rows-surface-scroll-refresh.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-windowed-rows-surface/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo fmt --package fret-diag --package fret-diag-protocol`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_windowed_rows_surface_scroll_refresh --no-fail-fast --no-capture`
+  (run id `aaf9b8d8-429f-4671-bcb0-3cfc81d242b4`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag windowed_rows_gallery_surface_scroll_refresh_uses_offset_and_repaint_gates --no-fail-fast --no-capture`
+  (run id `4e1e1aaf-3c6b-4187-b3ee-9bfc9395525e`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/windowed-rows/ui-gallery-windowed-rows-surface-scroll-refresh.json --dir target/fret-diag-windowed-rows-surface-scroll-refresh-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  (run id `1779531611027`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-windowed-rows-surface --dir target/fret-diag-windowed-rows-surface-suite-v1 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  (script run id `1779531695396`, suite run id `1779531680574-89080`, 1/1 passed);
+  `git diff --check`.
+
+## AI Plan Collapsible Relation Action State
+
+- invariant:
+  the AI Elements Plan trigger must keep fresh collapsible action-state and relation semantics
+  through closed -> open -> closed transitions: closed triggers expose `expanded=false` and
+  `invoke=true` without a resolved `controls` edge; open triggers expose `expanded=true`,
+  `invoke=true`, and a `controls` edge to the rendered `PlanContent` wrapper; closing clears the
+  edge again.
+- finding:
+  no mechanism defect was reproduced. The runtime gate confirmed the existing `fret-ui-ai`
+  implementation already lines up the trigger's `controls_element` with the stable content root
+  that `PlanContent::test_id(...)` decorates. This slice promoted the old screenshot smoke into a
+  relation/action-state gate and gave it a dedicated suite entry.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-plan-demo-toggle.json` starts directly on
+  `ai_plan_demo`, scrolls the Plan trigger into view, asserts closed trigger semantics, opens the
+  content, proves `controls -> ui-ai-plan-content-marker`, captures a layout sidecar plus
+  screenshot, then closes and proves the relation is empty again.
+- implementation anchors:
+  `ecosystem/fret-ui-ai/src/elements/plan.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/ai/plan_demo.rs`,
+  `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-plan-demo-toggle.json`,
+  `tools/diag-scripts/suites/ui-gallery-ai-plan-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-ai-plan-relation-action-state-v1/sessions/1779532816937-65624/1779532840657/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-ai-plan-relation-action-state-v1/sessions/1779532816937-65624/share/1779532840657.zip`;
+  dedicated suite summary:
+  `target/fret-diag-ai-plan-relation-action-state-suite-v1/sessions/1779532864319-95604/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-plan-demo-toggle.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-ai-plan-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo fmt --package fret-diag-protocol`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_ai_plan_demo_toggle --no-fail-fast --no-capture`
+  (run id `0d24e7ba-d371-45dd-8c8b-71e51c736b81`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-ai plan_trigger_stamps_controls_and_expanded_for_collapsible_semantics plan_content_uses_controller_content_id_as_root_element_id --no-fail-fast --no-capture`
+  (run id `f7e03d04-067f-4a52-beb4-2852f39e5f34`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-plan-demo-toggle.json --dir target/fret-diag-ai-plan-relation-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  (run id `1779532840657`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-ai-plan-relation-action-state --dir target/fret-diag-ai-plan-relation-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  (script run id `1779532876930`, suite run id `1779532864319-95604`, 1/1 passed);
+  `git diff --check`.
+
+## AI Reasoning Collapsible Relation Action State
+
+- invariant:
+  the AI Elements Reasoning trigger must keep fresh collapsible action-state and relation semantics
+  through streaming-driven closed -> open -> closed transitions: closed triggers expose
+  `expanded=false`, `invoke=true`, and no resolved `controls` edge; streaming opens the content and
+  mutates the trigger to `expanded=true` with `controls -> ReasoningContent`; stopping streaming
+  auto-closes the content and clears the relation again.
+- finding:
+  a real recipe diagnostics gap was reproduced and fixed. `ReasoningTrigger` exported the correct
+  expanded state and a `controls` edge, but the edge targeted the shadcn `Collapsible` internal
+  motion/content wrapper while `ReasoningContent::test_id(...)` decorated an inner content node.
+  Diagnostics therefore could not resolve `controls -> ui-ai-reasoning-content` even though both
+  nodes existed. The fix adds a `Collapsible::content_test_id(...)` wrapper hook and makes the
+  Reasoning composition API promote `ReasoningContent::test_id(...)` to that actual wrapper target.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-reasoning-demo-auto-open-close.json` starts
+  directly on `ai_reasoning_demo`, asserts closed trigger semantics, starts streaming, proves
+  content mount plus `expanded=true` and `controls -> ui-ai-reasoning-content`, captures a layout
+  sidecar plus screenshot, stops streaming, and proves auto-close clears the relation.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/collapsible.rs`,
+  `ecosystem/fret-ui-ai/src/elements/reasoning.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/ai/reasoning_demo.rs`,
+  `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-reasoning-demo-auto-open-close.json`,
+  `tools/diag-scripts/suites/ui-gallery-ai-reasoning-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  first relation failure AI packet:
+  `target/fret-diag-ai-reasoning-relation-action-state-v1/sessions/1779533634109-94232/1779533669080/ai.packet`;
+  focused runtime AI packet after fix:
+  `target/fret-diag-ai-reasoning-relation-action-state-v2/sessions/1779534750446-89492/1779534765888/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-ai-reasoning-relation-action-state-v2/sessions/1779534750446-89492/share/1779534765888.zip`;
+  dedicated suite summary:
+  `target/fret-diag-ai-reasoning-relation-action-state-suite-v1/sessions/1779534799046-95680/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-reasoning-demo-auto-open-close.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-ai-reasoning-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo fmt --package fret-ui-shadcn --package fret-ui-ai --package fret-ui-gallery --package fret-diag-protocol`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_ai_reasoning_demo_auto_open_close --no-fail-fast --no-capture`
+  (run id `8894e9ee-81a3-4615-9d01-71ed2dbe5d83`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-ai reasoning_children_composition_renders_content_by_default_when_streaming reasoning_content_test_id_marks_collapsible_controls_target reasoning_controller_is_available_inside_custom_parts --no-fail-fast --no-capture`
+  (run id `56645f0f-fb7b-4c32-b7cd-b46ff20ac87f`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --lib collapsible_content_test_id_stamps_controls_target_wrapper collapsible_trigger_controls_resolves_to_content_when_open collapsible_custom_trigger_receives_expanded_semantics --no-fail-fast --no-capture`
+  (run id `4d1dc26f-3179-4214-bdfc-51e74424796a`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --features gallery-dev ai_reasoning_stack_trace_and_voice_selector_use_shared_chrome_text_roles --no-fail-fast --no-capture`
+  (run id `4999a68d-0566-4631-aa01-dc3373abdcf6`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-reasoning-demo-auto-open-close.json --dir target/fret-diag-ai-reasoning-relation-action-state-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  (run id `1779534765888`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-ai-reasoning-relation-action-state --dir target/fret-diag-ai-reasoning-relation-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  (script run id `1779534813901`, suite run id `1779534799046-95680`, 1/1 passed);
+  `git diff --check`.
+
+## AI Task Collapsible Relation Action State
+
+- invariant:
+  the AI Elements Task trigger must keep fresh collapsible action-state and relation semantics
+  through default-open -> closed -> reopened transitions: open triggers expose `expanded=true`,
+  `invoke=true`, and `controls -> TaskContent`; closed triggers keep `invoke=true` but clear the
+  resolved `controls` edge; reopening restores the content edge.
+- finding:
+  a real recipe diagnostics gap was reproduced and fixed. The old smoke clicked the Task trigger
+  and captured content visibility but did not prove action-state or relation semantics. The first
+  promoted probe found `ui-ai-task-demo-trigger` on an outer container with role `button` but no
+  exported `invoke`, `expanded`, or `controls`. Moving the id to the pressable exposed the deeper
+  contract issue: `TaskTrigger` returned a styled container as the `Collapsible` trigger root, so
+  `Collapsible` stamped relation state on that wrapper instead of the pressable action root. The
+  fix makes the pressable the root element and nests the visual row inside it. `TaskContent` ids
+  are also promoted to the shadcn content wrapper via `Collapsible::content_test_id(...)`, matching
+  the actual `controls` target.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-task-demo-toggle.json` starts directly on
+  `ai_task_demo`, proves the initially open Task trigger exports `expanded=true`, `invoke=true`,
+  and `controls -> ui-ai-task-demo-content`, captures a layout sidecar plus screenshot, closes the
+  Task and proves the content disappears plus the relation clears, then reopens and proves the
+  relation is restored.
+- implementation anchors:
+  `ecosystem/fret-ui-ai/src/elements/task.rs`,
+  `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-task-demo-toggle.json`,
+  `tools/diag-scripts/suites/ui-gallery-ai-task-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/ai/task_demo.rs`.
+- evidence anchors:
+  initial smoke/probe AI packet:
+  `target/fret-diag-ai-task-current-smoke-probe-v1/sessions/1779535197077-26148/1779535218767/ai.packet`;
+  focused runtime AI packet after fix:
+  `target/fret-diag-ai-task-relation-action-state-v1/sessions/1779535809422-77104/1779535893081/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-ai-task-relation-action-state-v1/sessions/1779535809422-77104/share/1779535893081.zip`;
+  dedicated suite summary:
+  `target/fret-diag-ai-task-relation-action-state-suite-v1/sessions/1779536058135-86692/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-task-demo-toggle.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-ai-task-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo fmt --package fret-ui-ai --package fret-diag-protocol`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_ai_task_demo_toggle --no-fail-fast --no-capture`
+  (run id `a09a00fe-7083-4c3a-b4b8-c06a226f7141fa7`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-ai task_compound_children_surface_resolves_trigger_and_content task_trigger_and_content_test_ids_mark_collapsible_relation_endpoints task_trigger_default_row_attaches_foreground_without_wrapper task_surfaces_use_shared_typography_presets --no-fail-fast --no-capture`
+  (run id `9b6eb6f4-74fa-4b98-b083-06a7263b772d`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --features gallery-dev ai_task_demo_uses_shared_content_text_roles --no-fail-fast --no-capture`
+  (run id `f293fbae-da9f-44ae-a40b-f2da894e4aba`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-task-demo-toggle.json --dir target/fret-diag-ai-task-relation-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  (run id `1779535893081`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-ai-task-relation-action-state --dir target/fret-diag-ai-task-relation-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  (script run id `1779536079556`, suite run id `1779536058135-86692`, 1/1 passed).
+
+## Collapsible Basic Relation Action State
+
+- invariant:
+  the compact shadcn Collapsible Basic trigger must keep fresh action-state and relation semantics
+  through closed -> open -> closed -> reopened transitions: closed triggers expose
+  `expanded=false`, `invoke=true`, and no resolved `controls` edge; opening exposes
+  `expanded=true`, `invoke=true`, and `controls -> content wrapper`; closing clears the edge; and
+  reopening restores it.
+- finding:
+  a real diagnostics endpoint gap was reproduced and fixed. The previous Basic script only checked
+  bounds after repeated clicks, so it could pass without proving trigger action-state or relation
+  semantics. The first probe also showed `ui-gallery-collapsible-basic-content` was ambiguous: one
+  match was the docs `DocSection` content wrapper and another was the inner Collapsible content
+  node, while trigger `controls` pointed at the internal shadcn motion/content wrapper. The fix
+  avoids the generated `*-content` naming collision and stamps
+  `ui-gallery-collapsible-basic-panel` on the actual controls target via
+  `Collapsible::content_test_id(...)`.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-basic-double-click-close.json`
+  starts directly on `collapsible`, scrolls Basic into view, asserts the initial closed
+  `expanded=false`, `invoke=true`, and empty `controls` state, opens and proves
+  `controls -> ui-gallery-collapsible-basic-panel`, captures a layout sidecar plus screenshot,
+  closes and proves the relation clears, then reopens and proves the relation returns.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/collapsible/basic.rs`,
+  `apps/fret-ui-gallery/tests/collapsible_docs_surface.rs`,
+  `tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-basic-double-click-close.json`,
+  `tools/diag-scripts/suites/ui-gallery-collapsible-basic-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`,
+  `ecosystem/fret-ui-shadcn/src/collapsible.rs`.
+- evidence anchors:
+  initial smoke/probe AI packet:
+  `target/fret-diag-collapsible-basic-current-smoke-probe-v1/sessions/1779536818310-2952/1779536832035/ai.packet`;
+  focused runtime AI packet after fix:
+  `target/fret-diag-collapsible-basic-relation-action-state-v1/sessions/1779537310318-97472/1779537328201/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-collapsible-basic-relation-action-state-v1/sessions/1779537310318-97472/share/1779537328201.zip`;
+  focused final capture bundle:
+  `target/fret-diag-collapsible-basic-relation-action-state-v1/sessions/1779537310318-97472/1779537449506-ui-gallery-collapsible-basic-double-click-close/bundle.json`;
+  dedicated suite summary:
+  `target/fret-diag-collapsible-basic-relation-action-state-suite-v1/sessions/1779537469123-97920/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-basic-double-click-close.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-collapsible-basic-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo fmt --package fret-ui-gallery --package fret-diag-protocol`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_collapsible_basic_double_click_close --no-fail-fast --no-capture`
+  (run id `6fe0d779-8098-4c02-93bb-b71f3973f23c`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --features gallery-dev collapsible_docs_path_snippets_stay_copyable_and_docs_aligned collapsible_docs_diag_scripts_cover_docs_smoke_and_existing_notes_follow_ups --no-fail-fast --no-capture`
+  (run id `a7f2c102-95f8-450d-b511-ea7ba941d931`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-basic-double-click-close.json --dir target/fret-diag-collapsible-basic-relation-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  (run id `1779537328201`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-collapsible-basic-relation-action-state --dir target/fret-diag-collapsible-basic-relation-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  (script run id `1779537488552`, suite run id `1779537469123-97920`, 1/1 passed).
+
+## Tooltip Focus Relation Action State
+
+- invariant:
+  the keyboard-focus Tooltip trigger must keep fresh focus/action and relation semantics through
+  closed -> open -> closed transitions: closed triggers expose `focus=true`, `invoke=true`, and no
+  resolved `described_by` edge; tab focus opens the tooltip and adds
+  `described_by -> ui-gallery-tooltip-focus-content-node`; Escape closes and clears the relation
+  again.
+- finding:
+  diagnostics endpoint drift was reproduced and fixed. `ui-gallery-tooltip-focus-panel` is the
+  geometry-only popper marker, while `described_by` targets the actual `role=tooltip` content
+  node. `TooltipContent::test_id(...)` now stamps that semantics node so the runtime gate can
+  assert the true relation target.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-focus-opens.json` starts directly on
+  tooltip, scrolls `ui-gallery-tooltip-focus-start` into view, clicks the focus starter, tabs to
+  the trigger, proves focus/invoke, waits for `ui-gallery-tooltip-focus-content-node`,
+  `ui-gallery-tooltip-focus-panel`, and `ui-gallery-tooltip-focus-arrow`, asserts
+  `described_by -> ui-gallery-tooltip-focus-content-node`, captures a layout sidecar plus
+  screenshot, presses Escape, and proves the relation clears.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/tooltip.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/tooltip/keyboard_focus.rs`,
+  `apps/fret-ui-gallery/tests/tooltip_docs_surface.rs`,
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-focus-opens.json`,
+  `tools/diag-scripts/suites/ui-gallery-tooltip-focus-relation/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  initial probe AI packet:
+  `target/fret-diag-tooltip-focus-current-probe-v1/sessions/1779539319670-97768/1779539334280/ai.packet`;
+  focused runtime AI packet:
+  `target/fret-diag-tooltip-focus-relation-v1/sessions/1779542537375-93968/1779542563339/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-tooltip-focus-relation-v1/sessions/1779542537375-93968/share/1779542563339.zip`;
+  focused runtime bundle:
+  `target/fret-diag-tooltip-focus-relation-v1/sessions/1779542537375-93968/1779542563339/bundle.json`;
+  dedicated suite summary:
+  `target/fret-diag-tooltip-focus-relation-suite-v2/sessions/1779546745483-87812/suite.summary.json`.
+- run results:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_tooltip_focus_opens --no-fail-fast --no-capture`
+  (run id `2cc3ca43-3778-4e41-812b-bcab83dd8daf`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --features gallery-dev tooltip_page_documents_source_axes_and_children_api_decision tooltip_snippets_stay_copyable_and_docs_aligned tooltip_docs_diag_scripts_cover_docs_path_and_follow_ups --no-fail-fast --no-capture`
+  (run id `890f9914-550e-4d90-8cba-671e6c3a4878`);
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-tooltip-focus-relation --dir target/fret-diag-tooltip-focus-relation-suite-v2 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  (script run id `1779546771353`, suite run id `1779546745483-87812`, 1/1 passed);
+  `python tools/check_diag_scripts_registry.py`
+  - result: passed.
+
+## AlertDialog Demo Relation Action State
+
+- invariant:
+  the shadcn AlertDialog Demo trigger/content pair must keep fresh modal relation and action-state
+  semantics through closed -> modal open -> closed transitions: closed triggers expose
+  `expanded=false`, `invoke=true`, and no resolved `controls` edge; opening installs modal/focus
+  barrier roots, keeps relation endpoints resolvable through `controls -> AlertDialogContent`,
+  exposes content `labelled_by` and `described_by` edges to the stable title/description nodes, and
+  keeps Cancel/Action invokable; closing restores focus to the trigger, clears barrier roots, resets
+  `expanded=false`, and clears the `controls` edge.
+- finding:
+  no AlertDialog component defect was reproduced. The first focused run found a diagnostics
+  authoring pitfall: once the modal barrier is active, ordinary selectors correctly treat the
+  underlay trigger as inert, so `expanded_is` on the trigger cannot be used to prove open-state
+  relation semantics. The script now asserts active modal/focus barrier roots and uses relation
+  endpoint resolution for the open trigger `controls` edge. A second run confirmed the newly added
+  title/description test ids required rebuilding `target/dev-fast/fret-ui-gallery.exe`; after the
+  rebuild the focused gate passed.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-demo-relation-action-state.json`
+  starts directly on `alert_dialog`, scrolls the Demo trigger into view, asserts closed trigger
+  action/relation state, opens the dialog, proves barrier roots, content role, trigger/content and
+  title/description relation endpoints, Cancel/Action invoke exposure, captures a layout sidecar
+  plus screenshot, closes with Cancel, and proves focus restore plus teardown semantics.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/alert_dialog/demo.rs`,
+  `tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-demo-relation-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-alert-dialog-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  initial modal-underlay selector failure AI packet:
+  `target/fret-diag-alert-dialog-relation-action-state-v1/sessions/1779562755425-105832/1779562768730/ai.packet`;
+  stale-binary title/description selector failure AI packet:
+  `target/fret-diag-alert-dialog-relation-action-state-v2/sessions/1779563462670-4272/1779563476042/ai.packet`;
+  focused runtime AI packet after rebuild:
+  `target/fret-diag-alert-dialog-relation-action-state-v3/sessions/1779563774152-109180/1779563787191/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-alert-dialog-relation-action-state-v3/sessions/1779563774152-109180/share/1779563787191.zip`;
+  dedicated suite summary:
+  `target/fret-diag-alert-dialog-relation-action-state-suite-v1/sessions/1779563883496-110116/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-demo-relation-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-alert-dialog-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_alert_dialog_demo_relation_action_state --no-fail-fast --no-capture`
+  (run id `8c83fe42-96c8-4bd1-8169-b1a429d79cda`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-demo-relation-action-state.json --dir target/fret-diag-alert-dialog-relation-action-state-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779563787191`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-alert-dialog-relation-action-state --dir target/fret-diag-alert-dialog-relation-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779563896213`, suite run id `1779563883496-110116`, 1/1 passed).
+
+## Sheet Demo Relation Action State
+
+- invariant:
+  the shadcn Sheet Demo trigger/content pair must keep fresh modal relation and action-state
+  semantics through closed -> modal open -> closed transitions: closed triggers expose
+  `expanded=false`, `invoke=true`, and no resolved `controls` edge; opening installs modal/focus
+  barrier roots, keeps relation endpoints resolvable through `controls -> SheetContent`, exposes
+  content `labelled_by` and `described_by` edges to the stable title/description nodes, focuses the
+  first editable input, and keeps input/save/close actions available; closing restores focus to the
+  trigger, clears barrier roots, resets `expanded=false`, and clears the `controls` edge.
+- finding:
+  a real Sheet recipe semantics gap was reproduced and fixed. Unlike Dialog/AlertDialog, Sheet did
+  not stamp Dialog-style trigger `expanded/controls` metadata and `SheetContent` did not participate
+  in the modal title/description registry. The fix reuses `radix_dialog::apply_dialog_trigger_a11y`
+  from the Sheet recipe, stores the last content element for the closed frame, wraps Sheet content
+  construction in the modal a11y scope, and registers `SheetTitle`/`SheetDescription` as modal
+  relation endpoints. The suite pass also caught an authoring issue: the initial title/description
+  test ids collided with DocSection-generated ids, so the open panel now uses
+  `ui-gallery-sheet-demo-dialog-title` and `ui-gallery-sheet-demo-dialog-description`.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/sheet/ui-gallery-sheet-demo-relation-action-state.json` starts
+  directly on `sheet`, scrolls the Demo trigger into view, asserts closed trigger action/relation
+  state, opens the sheet, proves barrier roots, content role, trigger/content and title/description
+  relation endpoints, input/save/close action exposure, captures a layout sidecar plus screenshot,
+  closes through the footer close action, and proves focus restore plus teardown semantics.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/sheet.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/sheet/demo.rs`,
+  `tools/diag-scripts/ui-gallery/sheet/ui-gallery-sheet-demo-relation-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-sheet-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  initial trigger action endpoint failure AI packet:
+  `target/fret-diag-sheet-relation-action-state-v1/sessions/1779566147348-14700/1779566159272/ai.packet`;
+  focused runtime AI packet after Sheet a11y fix and stable selector cleanup:
+  `target/fret-diag-sheet-relation-action-state-v4/sessions/1779566903805-109808/1779566915448/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-sheet-relation-action-state-v4/sessions/1779566903805-109808/share/1779566915448.zip`;
+  dedicated suite summary:
+  `target/fret-diag-sheet-relation-action-state-suite-v2/sessions/1779566998050-99572/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/sheet/ui-gallery-sheet-demo-relation-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-sheet-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/sheet/demo.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs ecosystem/fret-ui-shadcn/src/sheet.rs`;
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib sheet_children_builder_exports_trigger_and_content_relations -- --nocapture`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_sheet_demo_relation_action_state --no-fail-fast --no-capture`
+  (run id `4453ab41-3619-41a9-b9ed-b1a034c4d782`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/sheet/ui-gallery-sheet-demo-relation-action-state.json --dir target/fret-diag-sheet-relation-action-state-v4 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779566915448`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-sheet-relation-action-state --dir target/fret-diag-sheet-relation-action-state-suite-v2 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779567009477`, suite run id `1779566998050-99572`, 1/1 passed).
+
+## Drawer Demo Relation Action State
+
+- invariant:
+  the shadcn Drawer Demo trigger/content pair must keep fresh modal relation and action-state
+  semantics through closed -> modal open -> closed transitions: closed triggers expose
+  `expanded=false`, `invoke=true`, and no resolved `controls` edge; opening installs modal/focus
+  barrier roots, keeps relation endpoints resolvable through `controls -> DrawerContent`, exposes
+  content `labelled_by` and `described_by` edges to the stable title/description nodes, and keeps
+  drawer-local actions invokable; closing restores focus to the trigger, clears barrier roots,
+  resets `expanded=false`, and clears the `controls` edge.
+- finding:
+  a real Sheet-backed Drawer semantics gap was reproduced and fixed. Drawer delegates modal root
+  behavior to Sheet, but Drawer adds a drag/motion wrapper around its content. Sheet's generic
+  trigger a11y path used the returned content root as the `controls` target, which could point at
+  that wrapper instead of the actual `role=dialog` DrawerContent node. DrawerContent also stamped
+  only `role=dialog`, so it did not read the modal title/description registry populated by
+  `DrawerTitle` and `DrawerDescription`. The fix makes Sheet prefer the first returned content-tree
+  element with `SemanticsRole::Dialog` as the trigger `controls` target, preserving the fallback to
+  the returned root, and makes DrawerContent attach modal `labelled_by` / `described_by` relations.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-demo-relation-action-state.json` starts
+  directly on `drawer`, scrolls the Demo trigger into view, asserts closed trigger action/relation
+  state, opens the drawer, proves barrier roots, content role, trigger/content and
+  title/description relation endpoints, decrease/increase/submit/cancel action exposure, captures
+  a layout sidecar plus screenshot, closes through the footer close action, and proves focus
+  restore plus teardown semantics.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/sheet.rs`,
+  `ecosystem/fret-ui-shadcn/src/drawer.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/drawer/demo.rs`,
+  `tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-demo-relation-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-drawer-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  initial focused unit failure:
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib drawer_children_builder_exports_trigger_and_content_relations -- --nocapture`
+  failed because the Drawer trigger `controls` edge did not include the DrawerContent node;
+  focused runtime AI packet after fix:
+  `target/fret-diag-drawer-relation-action-state-v1/sessions/1779568067455-77948/1779568082318/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-drawer-relation-action-state-v1/sessions/1779568067455-77948/share/1779568082318.zip`;
+  dedicated suite summary:
+  `target/fret-diag-drawer-relation-action-state-suite-v1/sessions/1779568174460-103024/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-demo-relation-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-drawer-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/drawer/demo.rs ecosystem/fret-ui-shadcn/src/drawer.rs ecosystem/fret-ui-shadcn/src/sheet.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib drawer_children_builder_exports_trigger_and_content_relations -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib sheet_children_builder_exports_trigger_and_content_relations -- --nocapture`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_drawer_demo_relation_action_state --no-fail-fast --no-capture`
+  (run id `6fc23ee4-4488-423e-9037-e0a466bf9809`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-demo-relation-action-state.json --dir target/fret-diag-drawer-relation-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779568082318`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-drawer-relation-action-state --dir target/fret-diag-drawer-relation-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779568191247`, suite run id `1779568174460-103024`, 1/1 passed);
+  `git diff --check -- apps/fret-ui-gallery/src/ui/snippets/drawer/demo.rs ecosystem/fret-ui-shadcn/src/drawer.rs ecosystem/fret-ui-shadcn/src/sheet.rs tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-demo-relation-action-state.json tools/diag-scripts/suites/ui-gallery-drawer-relation-action-state/suite.json crates/fret-diag-protocol/tests/script_json_roundtrip.rs tools/diag-scripts/index.json`
+  - result: passed.
+## Dialog Demo Relation Action State
+
+- invariant:
+  the shadcn Dialog Demo trigger/content pair must keep fresh modal relation and action-state
+  semantics through closed -> modal open -> closed transitions: closed triggers expose
+  `expanded=false`, `invoke=true`, and no resolved `controls` edge; opening installs modal/focus
+  barrier roots, keeps relation endpoints resolvable through `controls -> DialogContent`, exposes
+  content `labelled_by` and `described_by` edges to the stable title/description nodes, keeps both
+  inputs invokable for value changes, and closing restores focus to the trigger, clears barrier
+  roots, resets `expanded=false`, and clears the `controls` edge.
+- finding:
+  no Dialog implementation defect was reproduced. The run only promoted the existing Dialog
+  mechanism into a durable UI Gallery gate and suite.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-demo-relation-action-state.json` starts
+  directly on `dialog`, scrolls the Demo trigger into view, asserts closed trigger action/relation
+  state, opens the dialog, proves barrier roots, content role, trigger/content and
+  title/description relation endpoints, input/save/cancel action exposure, captures a layout
+  sidecar plus screenshot, closes through Cancel, and proves focus restore plus teardown semantics.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/dialog.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/dialog/demo.rs`,
+  `tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-demo-relation-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-dialog-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-dialog-relation-action-state-v1/sessions/1779569173628-108412/1779569186080/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-dialog-relation-action-state-v1/sessions/1779569173628-108412/share/1779569186080.zip`;
+  dedicated suite summary:
+  `target/fret-diag-dialog-relation-action-state-suite-v1/sessions/1779569276359-76248/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-demo-relation-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-dialog-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_dialog_demo_relation_action_state --no-fail-fast --no-capture`
+  (run id `f24a4ab6-2fb3-4c83-b5a2-bba51da0eca1`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-demo-relation-action-state.json --dir target/fret-diag-dialog-relation-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779569186080`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-dialog-relation-action-state --dir target/fret-diag-dialog-relation-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779569288674`, suite run id `1779569276359-76248`, 1/1 passed).
+
+## NavigationMenu Docs Demo Relation Action State
+
+- invariant:
+  the shadcn NavigationMenu docs-demo Components trigger/content pair must keep fresh relation and
+  action-state semantics through closed -> open -> keyboard-entry -> closed transitions: the
+  closed trigger exposes `role=button`, `expanded=false`, and `invoke=true`; contentless top-level
+  links stay link-like and publish no dangling `controls` edge; opening the Components item exposes
+  `expanded=true` and a resolvable `controls` edge to the actual active content wrapper; content
+  links keep `role=link` and `invoke=true`; ArrowDown from the focused trigger enters the first
+  content link; Escape unmounts the viewport/content and returns the trigger to `expanded=false`.
+- finding:
+  a recipe diagnostics endpoint gap was found and fixed. The NavigationMenu primitive already
+  computes a stable internal viewport-content wrapper id so triggers can publish `controls` before
+  the viewport mounts, but the shadcn recipe exposed only `trigger_test_id` and `viewport_test_id`.
+  That meant a runtime script could prove the viewport opened, but could not name the actual
+  wrapper that the trigger controlled. `NavigationMenuItem::content_test_id(...)` now stamps the
+  active content wrapper's `PressableA11y.test_id`; the UI Gallery docs demo stamps the Components
+  endpoint as `ui-gallery-navigation-menu-docs-demo-content-components`. No runtime interaction
+  defect was reproduced after that endpoint was made observable.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-demo-relation-action-state.json`
+  starts directly on `navigation_menu`, scrolls the docs demo into view, asserts closed trigger
+  and contentless-link semantics, opens the Components viewport, proves trigger/content relation
+  resolution plus link action state, moves focus into the first content link, captures a layout
+  sidecar plus screenshot, closes with Escape, and proves teardown semantics.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs`,
+  `tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-demo-relation-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-navigation-menu-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-navigation-menu-relation-action-state-v1/sessions/1779572326270-109576/1779572337827/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-navigation-menu-relation-action-state-v1/sessions/1779572326270-109576/share/1779572337827.zip`;
+  dedicated suite summary:
+  `target/fret-diag-navigation-menu-relation-action-state-suite-v1/sessions/1779572364960-84260/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-demo-relation-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-navigation-menu-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem/fret-ui-shadcn/src/navigation_menu.rs apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib navigation_menu_content_test_id_stamps_controls_target_wrapper -- --nocapture`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_navigation_menu_docs_demo_relation_action_state --no-fail-fast --no-capture`
+  (run id `ad62a166-01ff-45d3-bdb7-c92fdbd683a3`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-demo-relation-action-state.json --dir target/fret-diag-navigation-menu-relation-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779572337827`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-navigation-menu-relation-action-state --dir target/fret-diag-navigation-menu-relation-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779572376459`, suite run id `1779572364960-84260`, 1/1 passed).
+
+## Popover Demo Relation Action State
+
+- invariant:
+  the shadcn Popover Demo trigger/content pair must keep fresh non-modal relation and
+  action-state semantics through closed -> open -> Escape-closed transitions: the closed trigger
+  exposes `role=button`, `expanded=false`, `invoke=true`, and no resolved `controls` edge; opening
+  exposes a resolvable `controls` edge to the Popover dialog wrapper, keeps the visual panel as a
+  separate `role=panel` node, installs no modal or focus barrier roots, and keeps all dimensions
+  inputs writable; Escape closes the popover, restores focus to the trigger, resets
+  `expanded=false`, and clears the `controls` edge.
+- finding:
+  no Popover interaction defect was reproduced. The first focused probe found a diagnostics
+  selector assumption: the semantic trigger endpoint is the Popover root test id
+  `ui-gallery-popover-demo-popover`, while the authored Button test id lands on visual
+  `.chrome`/label descendants. The first suite run then exposed a Gallery duplicate-test-id
+  hygiene defect: DocSection already owns `ui-gallery-popover-demo-title` and
+  `ui-gallery-popover-demo-description`, so the overlay header stopped reusing those IDs.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-demo-relation-action-state.json`
+  starts directly on `popover`, scrolls the Demo section into view, asserts closed trigger
+  action/relation state, opens the popover, proves dialog-wrapper and panel roles, proves
+  trigger/content relation resolution, verifies non-modal barrier absence and input action state,
+  captures a layout sidecar plus screenshot, closes with Escape, and proves focus restore plus
+  teardown semantics.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/popover.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/popover/demo.rs`,
+  `tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-demo-relation-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-popover-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  initial focused selector failure:
+  `target/fret-diag-popover-relation-action-state-v1/sessions/1779573406048-106528/1779573419118/ai.packet`;
+  duplicate-id suite lint failure before Gallery cleanup:
+  `target/fret-diag-popover-relation-action-state-suite-v1/sessions/1779573703268-103052/1779573793718-ui-gallery-popover-demo-open-relation-action-state/check.lint.json`;
+  focused runtime AI packet after cleanup:
+  `target/fret-diag-popover-relation-action-state-v3/sessions/1779573924306-108720/1779573937811/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-popover-relation-action-state-v3/sessions/1779573924306-108720/share/1779573937811.zip`;
+  dedicated suite summary:
+  `target/fret-diag-popover-relation-action-state-suite-v2/sessions/1779574027661-101288/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-demo-relation-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-popover-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/popover/demo.rs ecosystem/fret-ui-shadcn/src/popover.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib popover_trigger_exposes_expanded_and_controls_semantics -- --nocapture`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_popover_demo_relation_action_state --no-fail-fast --no-capture`
+  (run id `da3ab815-3732-42ee-b3b4-c194b97f8acf`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-demo-relation-action-state.json --dir target/fret-diag-popover-relation-action-state-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779573937811`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-popover-relation-action-state --dir target/fret-diag-popover-relation-action-state-suite-v2 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779574040099`, suite run id `1779574027661-101288`, 1/1 passed).
+
+## Avatar Dropdown Relation Action State
+
+- invariant:
+  the Avatar Dropdown composed example must preserve the authored Button as the DropdownMenu
+  trigger while keeping the nested Avatar presentational: the closed trigger exposes
+  `role=button`, `expanded=false`, `invoke=true`, and no resolved `controls` edge; the nested
+  Avatar leaf stays `role=generic` with `invoke=false`; opening the menu exposes a resolvable
+  `controls -> DropdownMenuContent` edge, focuses the `role=menu`, and keeps menu items invokable;
+  Escape closes the menu, restores focus to the trigger, resets `expanded=false`, and clears the
+  `controls` edge.
+- finding:
+  no DropdownMenu or Avatar behavior defect was reproduced. This slice added stable Gallery
+  endpoints so the composed consumer path can be observed. The first focused script found a
+  diagnostics authoring pitfall: `DocSection::test_id_prefix("ui-gallery-avatar-dropdown")`
+  produces `ui-gallery-avatar-dropdown-content`, not a root node named
+  `ui-gallery-avatar-dropdown`. The second focused script found an oracle mismatch: DropdownMenu
+  should not be asserted as a Dialog/Sheet-style modal barrier-root surface. The correct gate is
+  relation/action-state plus focused `role=menu` semantics and Escape teardown.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-relation-action-state.json`
+  starts directly on `avatar` / `Dropdown`, asserts the section content, closed trigger state, and
+  nested Avatar leaf semantics, opens the menu, proves trigger/menu relation resolution, menu focus,
+  and menu-item action state, captures a layout sidecar plus screenshot, closes with Escape, and
+  proves focus restore plus relation teardown.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/avatar/dropdown.rs`,
+  `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`,
+  `tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-relation-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-avatar-dropdown-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  initial section-root authoring failure:
+  `target/fret-diag-avatar-dropdown-relation-action-state-v1/sessions/1779575254174-61912/1779575262932/ai.packet`;
+  barrier-root oracle mismatch before narrowing the gate:
+  `target/fret-diag-avatar-dropdown-relation-action-state-v2/sessions/1779575486465-78436/1779575495118/ai.packet`;
+  focused runtime AI packet:
+  `target/fret-diag-avatar-dropdown-relation-action-state-v3/sessions/1779575679508-106740/1779575688231/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-avatar-dropdown-relation-action-state-v3/sessions/1779575679508-106740/share/1779575688231.zip`;
+  dedicated suite summary:
+  `target/fret-diag-avatar-dropdown-relation-action-state-suite-v1/sessions/1779575714167-95056/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-relation-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-avatar-dropdown-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/avatar/dropdown.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib dropdown_menu_part_trigger_keeps_authored_button_semantics_when_avatar_is_nested_child -- --nocapture`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_avatar_dropdown_relation_action_state --no-fail-fast --no-capture`
+  (run id `3e3553c4-e444-40a1-9b87-240f758071b1`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-relation-action-state.json --dir target/fret-diag-avatar-dropdown-relation-action-state-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779575688231`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-avatar-dropdown-relation-action-state --dir target/fret-diag-avatar-dropdown-relation-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779575722734`, suite run id `1779575714167-95056`, 1/1 passed).
+
+## Input Group Dropdown Relation Action State
+
+- invariant:
+  the Input Group Dropdown composed example must keep the text-field control and inline-end
+  DropdownMenu trigger semantically separate inside the same input-group chrome: the control keeps
+  `role=text_field`, focus, and `set_value`; the addon `InputGroupButton` owns `role=button`,
+  `expanded`, `invoke`, and `controls`; opening the menu focuses the `role=menu`, resolves the
+  trigger `controls` edge to the menu content, and keeps menu items invokable; Escape closes the
+  menu, restores focus to the trigger, resets `expanded=false`, clears `controls`, and leaves the
+  text field writable.
+- finding:
+  no InputGroup or DropdownMenu behavior defect was reproduced. The slice only added stable
+  Gallery endpoints for the leading menu content and its items, then promoted the existing
+  composition into a durable relation/action-state runtime gate.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json`
+  starts directly on `input_group` / `Dropdown`, asserts the section content, text-field control
+  role/action state, closed addon trigger state, and empty trigger `controls`, focuses the control
+  first, opens the menu from the addon trigger, proves menu role/focus, trigger/menu relation
+  resolution, and item action state, captures a layout sidecar plus screenshot, closes with Escape,
+  and proves focus restore plus relation teardown and post-close control writability.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/input_group/dropdown.rs`,
+  `ecosystem/fret-ui-shadcn/src/input_group.rs`,
+  `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`,
+  `tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-input-group-dropdown-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-input-group-dropdown-relation-action-state-v1/sessions/1779576481503-79512/1779576490520/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-input-group-dropdown-relation-action-state-v1/sessions/1779576481503-79512/share/1779576490520.zip`;
+  dedicated suite summary:
+  `target/fret-diag-input-group-dropdown-relation-action-state-suite-v1/sessions/1779576510828-110644/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-input-group-dropdown-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/input_group/dropdown.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_input_group_dropdown_relation_action_state --no-fail-fast --no-capture`
+  (run id `233b0ba6-2681-4586-ab42-721f73ca6596`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json --dir target/fret-diag-input-group-dropdown-relation-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779576490520`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-input-group-dropdown-relation-action-state --dir target/fret-diag-input-group-dropdown-relation-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779576520084`, suite run id `1779576510828-110644`, 1/1 passed).
+
+## Breadcrumb Demo Ellipsis Relation Action State
+
+- invariant:
+  the Breadcrumb Demo ellipsis dropdown must keep the collapsed breadcrumb affordance as a real
+  DropdownMenu trigger: the closed ellipsis trigger exposes `role=button`, `expanded=false`,
+  `invoke=true`, and no resolved `controls` edge; opening focuses the `role=menu` content, resolves
+  `controls -> DropdownMenuContent`, and keeps menu items invokable; Escape closes the menu,
+  restores focus to the trigger, resets `expanded=false`, and clears the `controls` edge.
+- finding:
+  no Breadcrumb or DropdownMenu behavior defect was reproduced. The slice added a stable
+  `test_id_prefix(...)` for the Demo dropdown content and stable test ids for the remaining menu
+  rows, then promoted the existing open/close smoke path into a durable relation/action-state gate.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json`
+  starts directly on `breadcrumb` / `Demo`, asserts the closed ellipsis trigger role/action/relation
+  state, opens the menu, proves menu role/focus, trigger/menu relation resolution, and item action
+  state, captures a layout sidecar plus screenshot, closes with Escape, and proves focus restore
+  plus relation teardown.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/breadcrumb/demo.rs`,
+  `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`,
+  `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`,
+  `tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-breadcrumb-ellipsis-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-breadcrumb-ellipsis-relation-action-state-v1/sessions/1779576942614-110248/1779576951600/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-breadcrumb-ellipsis-relation-action-state-v1/sessions/1779576942614-110248/share/1779576951600.zip`;
+  dedicated suite summary:
+  `target/fret-diag-breadcrumb-ellipsis-relation-action-state-suite-v1/sessions/1779576971606-108904/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-breadcrumb-ellipsis-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/breadcrumb/demo.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_breadcrumb_demo_ellipsis_relation_action_state --no-fail-fast --no-capture`
+  (run id `626eeb24-1d33-41f9-a477-f7af7bf28f8c`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json --dir target/fret-diag-breadcrumb-ellipsis-relation-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779576951600`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-breadcrumb-ellipsis-relation-action-state --dir target/fret-diag-breadcrumb-ellipsis-relation-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779576980821`, suite run id `1779576971606-108904`, 1/1 passed).
+
+## Sidebar AppSidebar Dropdown Relation Action State
+
+- invariant:
+  the Sidebar AppSidebar team switcher and account menu must behave as independent DropdownMenu
+  instances in one composed Sidebar consumer: each closed trigger owns `role=button`,
+  `expanded=false`, focus/invoke actions, and an empty `controls` edge; opening either menu focuses
+  its `role=menu` content, resolves trigger `controls` to that menu content, and keeps menu items
+  invokable; selecting a team closes the team menu and clears its relation; Escape closes the user
+  menu, restores focus to the current user trigger, resets `expanded=false`, and clears `controls`.
+- finding:
+  the first complete focused script found a real shared non-modal overlay focus-restore defect.
+  After the team menu closed and the user menu was opened by pointer, pressing Escape closed the
+  user menu but focus restored to the earlier team trigger. The stale restoration came from the
+  previous overlay's hidden finalizer: close-edge autofocus had already been handled, but the
+  hidden finalizer still ran a second restore path and stole focus from the later dropdown.
+- fix:
+  `finalize_hidden_non_modal_overlay` now skips the hidden-finalizer autofocus restore when
+  `close_auto_focus_handled` is already true. This keeps the close edge as the single autofocus
+  owner for that overlay and prevents older hidden overlays from overwriting a newer overlay's
+  correct restore target.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-app-sidebar-dropdown-relation-action-state.json`
+  starts directly on `sidebar` / `AppSidebar`, asserts initial closed trigger relation/action
+  state, opens the team menu, proves menu focus, `controls` resolution, and item action state,
+  selects a team item and proves close/teardown, then opens the user menu, proves relation/action
+  state again, closes with Escape, and proves focus returns to the user trigger. The initial closed
+  relation checks use `wait_until` after content non-existence so startup snapshots can converge.
+  The script intentionally avoids visible text `value_contains` assertions because default
+  diagnostics launch redacts text.
+- implementation anchors:
+  `ecosystem/fret-ui-kit/src/window_overlays/render.rs`,
+  `ecosystem/fret-ui-shadcn/tests/dropdown_menu_escape_dismiss_focus_restore.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs`,
+  `tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-app-sidebar-dropdown-relation-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-sidebar-dropdown-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  failing pre-fix focused bundle:
+  `target/fret-diag-sidebar-dropdown-relation-action-state-v3/sessions/1779579417831-70260/1779579569845-script-step-0047-wait_until-timeout`;
+  focused runtime AI packet after fix:
+  `target/fret-diag-sidebar-dropdown-relation-action-state-v4/sessions/1779580492724-113160/1779580505188/ai.packet`;
+  focused runtime pack after fix:
+  `target/fret-diag-sidebar-dropdown-relation-action-state-v4/sessions/1779580492724-113160/share/1779580505188.zip`;
+  dedicated suite summary after fix:
+  `target/fret-diag-sidebar-dropdown-relation-action-state-suite-v2/sessions/1779580605772-110628/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-app-sidebar-dropdown-relation-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-sidebar-dropdown-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/sidebar/app_sidebar.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs ecosystem/fret-ui-kit/src/window_overlays/render.rs ecosystem/fret-ui-shadcn/tests/dropdown_menu_escape_dismiss_focus_restore.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_sidebar_app_sidebar_dropdown_relation_action_state --no-fail-fast --no-capture`
+  (run id `d116320b-fa71-4487-af39-67454a71f660`);
+  `cargo test --profile dev-fast -p fret-ui-shadcn --test dropdown_menu_escape_dismiss_focus_restore -- --nocapture`
+  (2/2 passed);
+  `cargo test --profile dev-fast -p fret-ui-kit --lib non_modal_overlay -- --nocapture`
+  (14/14 passed);
+  `cargo test --profile dev-fast -p fret-ui-kit --lib hidden_popover -- --nocapture`
+  (1/1 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-app-sidebar-dropdown-relation-action-state.json --dir target/fret-diag-sidebar-dropdown-relation-action-state-v4 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779580505188`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-sidebar-dropdown-relation-action-state --dir target/fret-diag-sidebar-dropdown-relation-action-state-suite-v2 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779580618006`, suite run id `1779580605772-110628`, 1/1 passed).
+
+## Pagination Demo Action Selected State
+
+- invariant:
+  the Pagination Demo must expose link-like pagination endpoints with explicit action and selected
+  semantics: the root is a labelled `region`, Previous/Next and page links are `role=link`, page 2
+  is the only selected page in the static demo, clickable endpoints expose `invoke=true`, and
+  pointer activation dispatches the authored app commands without mutating the static selected
+  example.
+- finding:
+  the first focused runtime pass found a diagnostics role-vocabulary gap: `SemanticsRole::Region`
+  existed in the semantics tree but exported as `unknown` through diagnostics selectors, so
+  `role_is region` could not be asserted. The second focused pass found an app-driver diagnostics
+  gap: `CMD_APP_OPEN` and `CMD_APP_SAVE` updated `/shell/last_action`, but did not record
+  `handled_by_driver=true` command dispatch decisions, so trace-based action gates could not prove
+  driver ownership for those commands.
+- fix:
+  diagnostics selector role labels now round-trip `region`, and the Gallery driver now records
+  driver-handled command dispatch decisions for `CMD_APP_OPEN` / `CMD_APP_SAVE` after updating
+  `last_action`.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json`
+  starts directly on `pagination` / `Demo`, asserts root/link roles, selected-state, invoke action
+  state, command-dispatch trace ownership for page 1 and page 2 clicks, `/shell/last_action`
+  updates to `cmd.open` / `cmd.save`, and captures layout/screenshot/bundle evidence.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/pagination/demo.rs`,
+  `ecosystem/fret-ui-shadcn/src/pagination.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/selector.rs`,
+  `apps/fret-ui-gallery/src/driver/runtime_driver.rs`,
+  `tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-pagination-action-selected-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  failing pre-fix region bundle:
+  `target/fret-diag-pagination-demo-action-selected-state-v1/sessions/1779581631921-115356/1779581648658-script-step-0008-assert-failed`;
+  failing pre-fix dispatch bundle:
+  `target/fret-diag-pagination-demo-action-selected-state-v3/sessions/1779582115192-96036/1779582191425-script-step-0022-wait_until-timeout`;
+  focused runtime AI packet after fixes:
+  `target/fret-diag-pagination-demo-action-selected-state-v4/sessions/1779582812866-7968/1779582821896/ai.packet`;
+  focused runtime pack after fixes:
+  `target/fret-diag-pagination-demo-action-selected-state-v4/sessions/1779582812866-7968/share/1779582821896.zip`;
+  dedicated suite summary:
+  `target/fret-diag-pagination-action-selected-state-suite-v1/sessions/1779582840753-86300/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-pagination-action-selected-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --config skip_children=true --check apps/fret-ui-gallery/src/driver/runtime_driver.rs apps/fret-ui-gallery/src/ui/snippets/pagination/demo.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs ecosystem/fret-bootstrap/src/ui_diagnostics/selector.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_pagination_demo_action_selected_state --no-fail-fast --no-capture`
+  (run id `6552f734-5959-432b-8cb3-8f3e19dbd9a5`);
+  `cargo test --profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics semantics_region_role_label_round_trips_for_diagnostics -- --nocapture`
+  (1/1 passed);
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib pagination -- --nocapture`
+  (11/11 passed);
+  `cargo test --profile dev-fast -p fret-ui-gallery driver_handled_command_dispatch_records_source_and_scope -- --nocapture`
+  (1/1 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json --dir target/fret-diag-pagination-demo-action-selected-state-v4 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779582821896`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-pagination-action-selected-state --dir target/fret-diag-pagination-action-selected-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779582849598`, suite run id `1779582840753-86300`, 1/1 passed).
+
+## Tabs Demo Relation Action State
+
+- invariant:
+  the Tabs Demo must expose APG/Radix-aligned composite semantics through stable runtime selectors:
+  root-derived `role=tab_list`, tab triggers with `role=tab`, `invoke=true`, selected state, and an
+  active `role=tab_panel` whose `labelled_by` edge points back to the selected tab while the
+  selected tab exposes the derived `controls` edge. Pointer activation and ArrowLeft automatic
+  roving activation must update selected state, focus, mounted panel, and relation endpoints
+  together.
+- finding:
+  no core relation-normalization defect was reproduced. The first focused runtime found an
+  authoring/observability gap in the Gallery demo: `.test_id("ui-gallery-tabs-demo")` was stamped
+  after `into_element(cx)`, so `Tabs` could not derive child selectors like
+  `ui-gallery-tabs-demo-list`. The runtime script could locate the demo root and hand-authored
+  trigger ids, but not the recipe-derived tablist endpoint needed for role/relation assertions.
+- fix:
+  `TabsContent` and direct `TabsItem` now accept content-panel `test_id`s, `Tabs` derives a
+  root-scoped tablist selector, and the Gallery Tabs demo stamps its root test id at the builder
+  layer before `into_element(cx)`. The demo also gives Account and Password panels stable ids so
+  diagnostics can assert the active panel relation endpoint.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-demo-relation-action-state.json` starts
+  directly on `tabs` / `Demo`, asserts tablist/tab/panel roles, trigger invoke actions, initial
+  Account selected-state and panel relation, pointer-switches to Password and proves relation
+  migration, then presses ArrowLeft and proves focus, selected state, panel mount, `controls`, and
+  `labelled_by` return to Account.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/tabs.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/tabs/demo.rs`,
+  `tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-demo-relation-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-tabs-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  failing pre-fix child-id bundle:
+  `target/fret-diag-tabs-demo-relation-action-state-v1/sessions/1779583914893-112252/1779583955034-script-step-0008-assert-failed`;
+  focused runtime AI packet after fix:
+  `target/fret-diag-tabs-demo-relation-action-state-v2/sessions/1779584075748-113716/1779584088541/ai.packet`;
+  focused runtime pack after fix:
+  `target/fret-diag-tabs-demo-relation-action-state-v2/sessions/1779584075748-113716/share/1779584088541.zip`;
+  dedicated suite summary:
+  `target/fret-diag-tabs-relation-action-state-suite-v1/sessions/1779584134695-115524/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-demo-relation-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-tabs-relation-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem/fret-ui-shadcn/src/tabs.rs apps/fret-ui-gallery/src/ui/snippets/tabs/demo.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_tabs_demo_relation_action_state --no-fail-fast --no-capture`
+  (run id `efaa1de3-c092-4126-9d89-445689d7d755`);
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib tabs_content_test_id_stamps_active_tab_panel_relation_endpoint -- --nocapture`
+  (1/1 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-demo-relation-action-state.json --dir target/fret-diag-tabs-demo-relation-action-state-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779584088541`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-tabs-relation-action-state --dir target/fret-diag-tabs-relation-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779584147936`, suite run id `1779584134695-115524`, 1/1 passed).
+
+## Accordion Demo Relation Action State
+
+- invariant:
+  the Accordion Demo must expose Radix-aligned trigger/content semantics through stable runtime
+  selectors: each trigger is a button-like invokable expanded-state source, the mounted content is
+  `role=region`, the open trigger exposes `controls -> content`, and the content exposes
+  `labelled_by -> trigger`. In a single collapsible accordion, pointer switching must migrate those
+  relation endpoints to the newly open item, and keyboard close must clear `controls` when the
+  panel unmounts.
+- finding:
+  no core relation-normalization, keyboard activation, or shadcn Accordion recipe defect was
+  reproduced. The existing demo already had stable Shipping/Returns trigger and content ids; the
+  missing piece was a promoted runtime gate tying those ids to relation/action-state assertions.
+- fix:
+  no runtime or recipe fix was required. Added the runtime script, suite manifest, registry entry,
+  and protocol roundtrip coverage.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-demo-relation-action-state.json`
+  starts directly on `accordion` / `Demo`, asserts Shipping/Returns trigger roles and invoke
+  actions, opens Shipping, proves content `region` plus `controls` / `labelled_by`, switches to
+  Returns and proves Shipping clears while Returns relations mount, then focuses Returns and uses
+  Enter to close and prove the relation endpoint clears.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/accordion/demo.rs`,
+  `ecosystem/fret-ui-shadcn/src/accordion.rs`,
+  `tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-demo-relation-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-accordion-relation-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-accordion-demo-relation-action-state-v1/sessions/1779585499822-114736/1779585528462/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-accordion-demo-relation-action-state-v1/sessions/1779585499822-114736/share/1779585528462.zip`;
+  dedicated suite summary:
+  `target/fret-diag-accordion-relation-action-state-suite-v1/sessions/1779585598791-113112/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-demo-relation-action-state.json`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-accordion-relation-action-state/suite.json`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_accordion_demo_relation_action_state --no-fail-fast --no-capture`
+  (run id `b88ef617-0d12-4c19-a28b-a4ddbd5ebc7f`);
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib accordion_trigger_controls_resolves_to_content_when_open -- --nocapture`
+  (2/2 passed);
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib accordion_content_is_region_and_labelled_by_trigger_when_open -- --nocapture`
+  (2/2 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-demo-relation-action-state.json --dir target/fret-diag-accordion-demo-relation-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`
+  (run id `1779585528462`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-accordion-relation-action-state --dir target/fret-diag-accordion-relation-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`
+  (script run id `1779585617613`, suite run id `1779585598791-113112`, 1/1 passed).
+
+## ButtonGroupText Label Control Action State
+
+- invariant:
+  the ButtonGroupText docs example must preserve shadcn-style label/control semantics when a
+  custom `Label::for_control` child is used as a prefix addon. The prefix label should expose a
+  text role with no focus or set-value actions, publish `controls -> input`, and remain clickable
+  as a label. The adjacent input should expose `role=text_field`, focus and set-value actions,
+  derive `labelled_by -> prefix-label` from the control registry, receive focus when the label is
+  clicked, and accept typed text after that focus transfer.
+- finding:
+  the first focused runtime found a Gallery authoring bug: the input had a direct
+  `.a11y_label("URL")`, so `Input` intentionally skipped the registry-derived `labelled_by`
+  relation from `Label::for_control`. After fixing that, the second focused runtime proved the
+  semantic relation was correct but click-to-focus still timed out. The hit-test trace included
+  the intended prefix label and no occlusion, while the input remained unfocused. The root cause
+  was in `fret-ui-kit` primitive `Label::for_control`: the `FocusOnly` pointer-down branch
+  requested focus but did not prevent the runtime's default pointer-down focus or capture the
+  pointer, so ambient ancestors could keep focus instead of the registered control in wrapped-root
+  compositions.
+- fix:
+  the ButtonGroupText example now lets the input derive its accessible label from the prefix
+  `Label::for_control` and moves the contextual name to the ButtonGroup root with
+  `.a11y_label("Website URL")`. `fret-ui-kit` `Label::for_control` now prevents
+  `DefaultAction::FocusOnPointerDown`, captures the pointer, and stops propagation for
+  `ControlAction::FocusOnly`, matching the intended label-to-control focus handoff. `FieldLabel`
+  received the same FocusOnly consistency fix because it owns a parallel label-control forwarding
+  path.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json`
+  starts directly on `button_group` / `ButtonGroupText`, asserts prefix/suffix group and label
+  roles, label action suppression, input focus/set-value action exposure, label `controls`, input
+  `labelled_by`, click-label focus transfer, typed value mutation to `docs`, and captures
+  layout/screenshot/bundle evidence.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/button_group/text.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`,
+  `ecosystem/fret-ui-kit/src/primitives/label.rs`,
+  `ecosystem/fret-ui-shadcn/src/field.rs`,
+  `ecosystem/fret-ui-shadcn/src/input.rs`,
+  `tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-button-group-text-label-control-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  failing pre-fix relation bundle:
+  `target/fret-diag-button-group-text-label-control-action-state-v1/sessions/1779586724469-55396/1779586758864-script-step-0018-assert-failed`;
+  failing pre-fix focus bundle:
+  `target/fret-diag-button-group-text-label-control-action-state-v2/sessions/1779587155678-119616/1779587326432-script-step-0024-wait_until-timeout`;
+  focused runtime AI packet after fixes:
+  `target/fret-diag-button-group-text-label-control-action-state-v3/sessions/1779588626684-64836/1779588722417/ai.packet`;
+  focused runtime pack after fixes:
+  `target/fret-diag-button-group-text-label-control-action-state-v3/sessions/1779588626684-64836/share/1779588722417.zip`;
+  dedicated suite summary:
+  `target/fret-diag-button-group-text-label-control-action-state-suite-v1/sessions/1779588746195-86804/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-button-group-text-label-control-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check ecosystem/fret-ui-kit/src/primitives/label.rs ecosystem/fret-ui-shadcn/src/field.rs apps/fret-ui-gallery/src/ui/snippets/button_group/text.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_button_group_text_label_control_action_state --no-fail-fast --no-capture`
+  (run id `d274c12f-af83-4d82-b682-3074c49ee460`);
+  `cargo test --profile dev-fast -p fret-ui-kit --lib label_for_control -- --nocapture`
+  (4/4 passed);
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib field_label_click -- --nocapture`
+  (7/7 passed);
+  `cargo test --profile dev-fast -p fret-ui-shadcn --test input_label_focus field_label_click_focuses_input_control -- --nocapture`
+  (1/1 passed);
+  `cargo test --profile dev-fast -p fret-ui-shadcn --test textarea_label_focus field_label_click_focuses_textarea_control -- --nocapture`
+  (1/1 passed);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test ui_authoring_surface_default_app button_group_text_follow_up_teaches_label_mapping_without_slot_api -- --nocapture`
+  (1/1 passed);
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib button_group -- --nocapture`
+  (15/15 passed);
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib input_control_id -- --nocapture`
+  (2/2 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json --dir target/fret-diag-button-group-text-label-control-action-state-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 480000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`
+  (run id `1779588722417`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-button-group-text-label-control-action-state --dir target/fret-diag-button-group-text-label-control-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness`
+  (script run id `1779588761135`, suite run id `1779588746195-86804`, 1/1 passed).
+
+## Field Demo Label Control Action State
+
+- invariant:
+  the Field Demo must preserve shadcn-style label/control semantics across heterogeneous controls.
+  Labels should expose text semantics and `controls` edges, concrete controls should expose the
+  appropriate role/action-state plus reciprocal `labelled_by` when the label registry owns the
+  accessible name, label clicks should focus text inputs and textarea controls, the checkbox label
+  should toggle the checkbox, and typed diagnostics values should land in writable controls.
+- finding:
+  the first focused runtime drafts found authoring and diagnostics issues. The Gallery demo gave
+  several concrete controls direct `.a11y_label(...)` values, so `FieldLabel::for_control(...)`
+  relations were intentionally shadowed and could not be asserted as `labelled_by` edges. After
+  exposing concrete control test ids and removing those direct labels, a later run failed
+  `role_is card-name text_field` even though the failure bundle contained
+  `ui-gallery-field-demo-card-name` with `role=text_field`, focus/set_value actions, and the
+  expected label relation.
+- fix:
+  the Field Demo now stamps stable test ids on its label/control endpoints and lets CVV, name on
+  card, card number, same-as-shipping, and comments controls derive accessible names from their
+  `FieldLabel::for_control(...)` relations. The diagnostics script engine now defers
+  semantics-dependent `wait_until` / `assert` predicates during no-frame keepalive ticks until a
+  real frame provides current semantics, while still allowing frame-independent predicates to run.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json`
+  starts directly on `field` / `Demo`, asserts label roles and relation edges, control
+  roles/actions, click-label focus/toggle behavior, text and textarea value mutation, and captures
+  layout/screenshot/bundle evidence.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/field/demo.rs`,
+  `apps/fret-ui-gallery/tests/field_docs_surface.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`,
+  `tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-field-demo-label-control-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  failing pre-fix root-selector bundle:
+  `target/fret-diag-field-demo-label-control-action-state-v1/sessions/1779589782434-100720/1779589864588/ai.packet`;
+  failing pre-fix missing-control-id bundle:
+  `target/fret-diag-field-demo-label-control-action-state-v2/sessions/1779590105841-121252/1779590114343/ai.packet`;
+  failing no-frame false-assert bundle:
+  `target/fret-diag-field-demo-label-control-action-state-v4/sessions/1779590766986-112780/1779590783535/ai.packet`;
+  focused runtime AI packet after fixes:
+  `target/fret-diag-field-demo-label-control-action-state-v7/sessions/1779592978782-55812/1779592992710/ai.packet`;
+  focused runtime pack after fixes:
+  `target/fret-diag-field-demo-label-control-action-state-v7/sessions/1779592978782-55812/share/1779592992710.zip`;
+  dedicated suite summary:
+  `target/fret-diag-field-demo-label-control-action-state-suite-v1/sessions/1779593090166-51384/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-field-demo-label-control-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/field/demo.rs apps/fret-ui-gallery/tests/field_docs_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_field_demo_label_control_action_state --no-fail-fast --no-capture`
+  (run id `1732da94-77ab-4df2-9e93-ca59ecd8506c`);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test field_docs_surface field_demo_teaches_label_control_relations_without_direct_label_shadowing -- --nocapture`
+  (1/1 passed);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test field_docs_surface field_diag_scripts_cover_docs_smoke_and_responsive_follow_up -- --nocapture`
+  (1/1 passed);
+  `cargo test --profile dev-fast -p fret-bootstrap --lib --features diagnostics,ui-app-driver no_frame_keepalive_defers_semantics_predicates_to_real_frame -- --nocapture`
+  (1/1 passed);
+  `cargo test --profile dev-fast -p fret-bootstrap --lib --features diagnostics,ui-app-driver no_frame_keepalive_still_evaluates_frame_independent_predicates -- --nocapture`
+  (1/1 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json --dir target/fret-diag-field-demo-label-control-action-state-v7 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779592992710`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-field-demo-label-control-action-state --dir target/fret-diag-field-demo-label-control-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779593105444`, suite run id `1779593090166-51384`, 1/1 passed).
+
+## Item Demo Link Action State
+
+- invariant:
+  the Item Demo must keep plain Item rows non-interactive unless the caller opts into an action or
+  interactive render mode, while link-rendered rows must expose link semantics, focus/invoke
+  actions, and route their authored app command through the diagnostics dispatch trace.
+- finding:
+  no mechanism or recipe defect was reproduced. The older `ui-gallery-item-link-render` smoke only
+  asserted `role=link` on a separate example; this slice promotes the docs Demo row into a stronger
+  runtime gate that also covers non-interactive action suppression and driver-handled command
+  attribution.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/item/ui-gallery-item-demo-link-action-state.json` starts directly
+  on `item` / `Demo`, asserts the Basic Item root has `focus=false` and `invoke=false`, verifies the
+  link-rendered Item media/content/actions anchors, asserts `role=link`, label, focus and invoke
+  actions, focuses the link row, clicks it, waits for `ui_gallery.app.open` with
+  `handled_by_driver=true`, proves `/shell/last_action=cmd.open`, and captures
+  layout/screenshot/bundle evidence.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/item/demo.rs`,
+  `apps/fret-ui-gallery/tests/item_docs_surface.rs`,
+  `tools/diag-scripts/ui-gallery/item/ui-gallery-item-demo-link-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-item-demo-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-item-demo-link-action-state-v1/sessions/1779594634911-118812/1779594651180/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-item-demo-link-action-state-v1/sessions/1779594634911-118812/share/1779594651180.zip`;
+  dedicated suite summary:
+  `target/fret-diag-item-demo-action-state-suite-v1/sessions/1779594685092-122432/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/item/ui-gallery-item-demo-link-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-item-demo-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/tests/item_docs_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_item_demo_link_action_state --no-fail-fast --no-capture`
+  (run id `60b589ea-6521-4160-80e9-7f28661c7b90`);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test item_docs_surface -- --nocapture`
+  (2/2 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/item/ui-gallery-item-demo-link-action-state.json --dir target/fret-diag-item-demo-link-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779594651180`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-item-demo-action-state --dir target/fret-diag-item-demo-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779594700725`, suite run id `1779594685092-122432`, 1/1 passed).
+
+## Item Link-Render Action State
+
+- invariant:
+  the standalone `ItemRender::Link` example should expose link semantics and focus/invoke actions
+  on the item-owned render surface, keyboard activation should be attributable to a focus-origin
+  command dispatch, and pointer activation should retain the concrete source `test_id`.
+- finding:
+  no mechanism or recipe defect was reproduced. The previous
+  `tools/diag-scripts/ui-gallery/item/ui-gallery-item-link-render.json` script was part of
+  `ui-gallery-shadcn-conformance`, but it still navigated through search, asserted only
+  `role=link`, clicked the row, and captured a bundle. The strengthened gate now turns that old
+  smoke into action-state and command-dispatch evidence.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/item/ui-gallery-item-link-render.json` starts directly on
+  `item` / `Link (render)`, asserts the page and link row are present, scrolls the row fully into
+  view, asserts `role=link`, label `Dashboard`, focus and invoke actions, focuses the row,
+  activates it via Enter, requires `ui_gallery.app.open` with `source_kind=keyboard` and
+  `started_from_focus=true`, proves `/shell/last_action=cmd.open`, clicks the row, requires pointer
+  dispatch with `source_test_id=ui-gallery-item-link-render`, and captures
+  layout/screenshot/bundle evidence.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/item/link_render.rs`,
+  `apps/fret-ui-gallery/tests/item_docs_surface.rs`,
+  `tools/diag-scripts/ui-gallery/item/ui-gallery-item-link-render.json`,
+  `tools/diag-scripts/ui-gallery-item-link-render.json`,
+  `tools/diag-scripts/suites/ui-gallery-item-link-action-state/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-item-link-action-state-v1/sessions/1779612288654-129960/1779612297612/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-item-link-action-state-v1/sessions/1779612288654-129960/share/1779612297612.zip`;
+  dedicated suite summary:
+  `target/fret-diag-item-link-action-state-suite-v1/sessions/1779612316673-125332/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/item/ui-gallery-item-link-render.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-item-link-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/tests/item_docs_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `git diff --check -- tools/diag-scripts/ui-gallery/item/ui-gallery-item-link-render.json tools/diag-scripts/suites/ui-gallery-item-link-action-state/suite.json apps/fret-ui-gallery/tests/item_docs_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_item_link_render script_v2_roundtrip_ui_gallery_item_demo_link_action_state --no-fail-fast --no-capture`
+  (run id `d6252e0c-95cb-4318-9542-818edf50c848`);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test item_docs_surface -- --nocapture`
+  (4/4 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/item/ui-gallery-item-link-render.json --dir target/fret-diag-item-link-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779612297612`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-item-link-action-state --dir target/fret-diag-item-link-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779612325507`, suite run id `1779612316673-125332`, 1/1 passed).
+
+## Empty Demo Action State
+
+- invariant:
+  the Empty Demo must keep structural Empty/Header/Title surfaces non-interactive while preserving
+  action semantics on the child Buttons and link CTA. The title should remain text with no focus or
+  invoke actions, ordinary buttons should export button roles plus focus/invoke actions, and
+  `ButtonRender::Link` should expose link semantics with focus/invoke actions without requiring a
+  generic `asChild` escape hatch.
+- finding:
+  no mechanism or recipe defect was reproduced. Existing Empty evidence covered docs smoke,
+  layout sidecars, and screenshots; this slice closes the missing Demo-level action-state and
+  focus traversal evidence.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-demo-action-state.json` starts directly on
+  `empty` / `Demo`, asserts title text semantics and action suppression, asserts Create Project and
+  Import Project button semantics/actions, asserts Learn More link semantics/actions, verifies Tab
+  traversal across the action row and link CTA, clicks the link CTA with the example-local
+  no-op activation handler, and captures layout/screenshot/bundle evidence.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/empty/demo.rs`,
+  `apps/fret-ui-gallery/tests/empty_docs_surface.rs`,
+  `tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-demo-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-empty-demo-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-empty-demo-action-state-v1/sessions/1779595537286-123920/1779595557061/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-empty-demo-action-state-v1/sessions/1779595537286-123920/share/1779595557061.zip`;
+  dedicated suite summary:
+  `target/fret-diag-empty-demo-action-state-suite-v1/sessions/1779595700919-125456/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-demo-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-empty-demo-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/tests/empty_docs_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_empty_demo_action_state --no-fail-fast --no-capture`
+  (run id `1e7a6b23-7300-496c-84bb-cc751f071a64`);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test empty_docs_surface -- --nocapture`
+  (2/2 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-demo-action-state.json --dir target/fret-diag-empty-demo-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779595557061`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-empty-demo-action-state --dir target/fret-diag-empty-demo-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779595720079`, suite run id `1779595700919-125456`, 1/1 passed).
+
+## Card Demo Action State
+
+- invariant:
+  the Card Demo login composition must keep title/description text structural while preserving
+  action semantics on form fields, the supporting link, and Card header/footer actions. Text fields
+  should expose focus/set-value actions, link chrome should expose link semantics with
+  focus/invoke actions, and link-variant/ordinary buttons should remain button action endpoints.
+- finding:
+  no mechanism or recipe defect was reproduced. Existing Card evidence covered docs-path smoke,
+  screenshots, and retained-memory analysis; this slice closes the missing Demo-level action-state
+  and text-input mutation evidence.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json` starts directly on
+  `card` / `Demo`, asserts structural title/description text semantics, asserts email/password
+  text-field roles and actions, asserts the Forgot Password chrome link semantics/actions, asserts
+  Sign Up/Login/Login with Google button semantics/actions, types `ada@example.com` into the email
+  field, proves the value mutation, focuses the password field, clicks Login, and captures
+  layout/screenshot/bundle evidence.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/card/demo.rs`,
+  `apps/fret-ui-gallery/tests/card_docs_surface.rs`,
+  `tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json`,
+  `tools/diag-scripts/suites/ui-gallery-card-demo-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-card-demo-action-state-v1/sessions/1779596562467-100040/1779596574143/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-card-demo-action-state-v1/sessions/1779596562467-100040/share/1779596574143.zip`;
+  dedicated suite summary:
+  `target/fret-diag-card-demo-action-state-suite-v1/sessions/1779596642442-120232/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-card-demo-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/tests/card_docs_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_card_demo_action_state --no-fail-fast --no-capture`
+  (run id `1562d937-a6ec-4517-a116-e31921cdfaad`);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test card_docs_surface card_demo_action_state_gate_keeps_runtime_anchors -- --nocapture`
+  (1/1 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json --dir target/fret-diag-card-demo-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779596574143`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-card-demo-action-state --dir target/fret-diag-card-demo-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779596653764`, suite run id `1779596642442-120232`, 1/1 passed).
+
+## Badge Link-Render Action State
+
+- invariant:
+  `BadgeRender::Link` should expose link semantics and focus/invoke actions on the badge-owned
+  render surface, while the surrounding docs row stays a layout concern and must not be required to
+  carry interaction semantics.
+- finding:
+  no mechanism or recipe defect was reproduced. The first focused draft failed because the script
+  over-asserted `ui-gallery-badge-link-row` as `role=group`; runtime slice evidence showed the row
+  is a `generic` layout container, while `ui-gallery-badge-link` correctly exports `role=link`,
+  label `Open Link`, and focus/invoke actions. The final gate narrows the row check to existence
+  and keeps the semantic action contract on the Badge link node itself.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json` now starts directly on
+  `badge` / `Link`, asserts the row and derived `.chrome` marker exist, asserts link role, label,
+  focus and invoke actions, focuses the link, activates it with Enter, clicks the no-op example
+  handler, and captures layout/screenshot/bundle evidence.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/badge/link.rs`,
+  `apps/fret-ui-gallery/tests/badge_docs_surface.rs`,
+  `tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json`,
+  `tools/diag-scripts/ui-gallery-badge-link-render.json`,
+  `tools/diag-scripts/suites/ui-gallery-badge-link-action-state/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  over-specific pre-oracle bundle:
+  `target/fret-diag-badge-link-action-state-v1/sessions/1779597372964-123748/1779597405221-script-step-0008-assert-failed`;
+  focused runtime AI packet:
+  `target/fret-diag-badge-link-action-state-v2/sessions/1779597589387-126604/1779597602835/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-badge-link-action-state-v2/sessions/1779597589387-126604/share/1779597602835.zip`;
+  dedicated suite summary:
+  `target/fret-diag-badge-link-action-state-suite-v1/sessions/1779597642170-110112/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-badge-link-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/tests/badge_docs_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_badge_link_render --no-fail-fast --no-capture`
+  (post-oracle run id `96fe8e8d-d742-4c27-95cf-1cce907755c5`);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test badge_docs_surface -- --nocapture`
+  (2/2 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json --dir target/fret-diag-badge-link-action-state-v2 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779597602835`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-badge-link-action-state --dir target/fret-diag-badge-link-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779597652401`, suite run id `1779597642170-110112`, 1/1 passed).
+
+## Button Link-Render Action State
+
+- invariant:
+  `ButtonRender::Link` should expose link semantics and focus/invoke actions on the button-owned
+  render surface, keyboard activation should be attributable to focus-origin command dispatch, and
+  pointer activation should keep the concrete source `test_id`. Surrounding docs row/chrome nodes
+  are anchors for observability, not the owners of the link role.
+- finding:
+  the first strengthened script used the wrong DocSection prefix and timed out waiting for
+  `ui-gallery-button-link-semantic`; runtime slice evidence showed the actual stable content id is
+  `ui-gallery-button-link-semantic-content`. After fixing the script oracle, the next focused run
+  found a real diagnostics attribution defect: the keyboard Enter activation produced a pending
+  keyboard source with `started_from_focus=true`, but the later driver-handled trace for
+  `ui_gallery.app.open` recorded `started_from_focus=false`. Pointer dispatch attribution was
+  already correct.
+- fix:
+  the canonical Button link-render script now starts directly on `button` /
+  `As Link / As Child (Semantic)` and asserts section content, row/chrome anchors, link role,
+  label, actions, keyboard dispatch, app snapshot mutation, pointer dispatch, and bundle captures.
+  Driver-handled command dispatch tracing now preserves focus-origin keyboard activation in the UI
+  Gallery driver, the default bootstrap app driver, and Workspace Shell demo driver. Keyboard
+  pending sources are classified as `started_from_focus=true`; shortcuts and pointer sources remain
+  separate source kinds.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json` asserts
+  `role=link`, label `Login`, `focus=true`, `invoke=true`, focused Enter activation,
+  `ui_gallery.app.open` handled by the driver with `source_kind=keyboard` and
+  `started_from_focus=true`, `/shell/last_action=cmd.open`, pointer click dispatch with
+  `source_test_id=ui-gallery-button-render-link`, and captures layout/screenshot/bundle evidence.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/button/link_render.rs`,
+  `apps/fret-ui-gallery/tests/button_docs_surface.rs`,
+  `tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json`,
+  `tools/diag-scripts/ui-gallery-button-link-render.json`,
+  `tools/diag-scripts/suites/ui-gallery-button-link-action-state/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`,
+  `apps/fret-ui-gallery/src/driver/runtime_driver.rs`,
+  `ecosystem/fret-bootstrap/src/ui_app_driver.rs`,
+  `apps/fret-examples/src/workspace_shell_demo.rs`.
+- evidence anchors:
+  wrong-section-id failure bundle:
+  `target/fret-diag-button-link-action-state-v1/sessions/1779598532428-94836/1779598752440-script-step-0005-wait_until-timeout`;
+  pre-fix keyboard trace failure AI packet:
+  `target/fret-diag-button-link-action-state-v2/sessions/1779598995024-118036/1779599006627/ai.packet`;
+  pre-fix keyboard trace pack:
+  `target/fret-diag-button-link-action-state-v2/sessions/1779598995024-118036/share/1779599006627.zip`;
+  pre-fix keyboard trace timeout bundle:
+  `target/fret-diag-button-link-action-state-v2/sessions/1779598995024-118036/1779599060978-script-step-0017-wait_command_dispatch_trace-timeout`;
+  focused runtime AI packet after fixes:
+  `target/fret-diag-button-link-action-state-v3/sessions/1779599727232-124860/1779599736183/ai.packet`;
+  focused runtime pack after fixes:
+  `target/fret-diag-button-link-action-state-v3/sessions/1779599727232-124860/share/1779599736183.zip`;
+  dedicated suite summary:
+  `target/fret-diag-button-link-action-state-suite-v1/sessions/1779599758073-43676/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-button-link-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check --config skip_children=true apps/fret-ui-gallery/tests/button_docs_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs apps/fret-ui-gallery/src/driver/runtime_driver.rs ecosystem/fret-bootstrap/src/ui_app_driver.rs apps/fret-examples/src/workspace_shell_demo.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_button_link_render --no-fail-fast --no-capture`
+  (run id `41dcf93c-4bc4-49c3-93a8-1bfba17c4883`);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test button_docs_surface -- --nocapture`
+  (2/2 passed);
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_pressable_key_activation_matches_oracles --no-fail-fast --no-capture`
+  (run id `41da1eca-4ea9-425c-825a-8a7f2f3bb4a5`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  `cargo build --profile dev-fast -p fret-examples`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json --dir target/fret-diag-button-link-action-state-v3 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779599736183`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-button-link-action-state --dir target/fret-diag-button-link-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779599767438`, suite run id `1779599758073-43676`, 1/1 passed).
+
+## Typography Inline Link Action State
+
+- invariant:
+  `p_rich(...).inline_link(...)` should remain a selectable-text mechanism surface: the paragraph
+  owns `role=text`, exposes `set_text_selection`, publishes inline span role/tag metadata, and
+  activation is component policy through `on_activate_link(...)`, not a separate button/link node.
+- finding:
+  no Typography or selectable-text runtime defect was reproduced. The slice did find a diagnostics
+  observability gap: scripts could activate a selectable-text span by tag but could not directly
+  assert that the semantics snapshot contained the inline span role/tag metadata that made the
+  click meaningful.
+- fix:
+  the diagnostics protocol now includes `semantics_inline_span_includes`, with a typed builder
+  helper, bootstrap predicate evaluator support, selector-resolution tracing, and focused protocol
+  plus executor tests. The canonical Typography Interactive Links script now starts directly on
+  `typography` / `Interactive Links`, asserts paragraph text/value/action/span metadata, activates
+  the `https://example.com/kings-plan` span, and verifies the app-owned status switches from idle
+  to active.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json`
+  asserts `role=text`, `value_contains=a brilliant plan`, `set_text_selection=true`,
+  `semantics_inline_span_includes(role=link, tag=https://example.com/kings-plan)`,
+  `click_selectable_text_span_stable`, and active/idle status mutation, then captures
+  layout/screenshot/bundle evidence.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/pages/typography.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/typography/interactive_links.rs`,
+  `apps/fret-ui-gallery/tests/typography_docs_surface.rs`,
+  `tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json`,
+  `tools/diag-scripts/ui-gallery-typography-interactive-links-activation.json`,
+  `tools/diag-scripts/suites/ui-gallery-typography-inline-link-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/src/lib.rs`,
+  `crates/fret-diag-protocol/src/builder.rs`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-typography-inline-link-action-state-v1/sessions/1779603310309-127364/1779603327158/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-typography-inline-link-action-state-v1/sessions/1779603310309-127364/share/1779603327158.zip`;
+  dedicated suite summary:
+  `target/fret-diag-typography-inline-link-action-state-suite-v1/sessions/1779603371227-113256/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-typography-inline-link-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates/fret-diag-protocol/src/lib.rs crates/fret-diag-protocol/src/builder.rs ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs apps/fret-ui-gallery/tests/typography_docs_surface.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol predicate_semantics_inline_span_includes_serializes_and_deserializes --no-fail-fast --no-capture`
+  (run id `aa8c2b87-1d29-4888-9028-0cae8927c832`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_typography_interactive_links_activation --no-fail-fast --no-capture`
+  (run id `19d9cab9-2da6-4570-ac16-627494a9e66f`);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test typography_docs_surface -- --nocapture`
+  (3/3 passed);
+  `cargo nextest run --cargo-profile dev-fast -p fret-bootstrap --features ui-app-driver,diagnostics semantics_inline_span_predicates_match_inline_link_metadata --no-fail-fast --no-capture`
+  (run id `0780b162-d707-4b5b-9dc6-46e74cb5e75d`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json --dir target/fret-diag-typography-inline-link-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779603327158`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-typography-inline-link-action-state --dir target/fret-diag-typography-inline-link-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779603386622`, suite run id `1779603371227-113256`, 1/1 passed).
+
+## Alert Link Action State
+
+- invariant:
+  AlertDescription-composed pressable links should expose semantic link role, accessible label, URL
+  value, focus action, and invoke action on the concrete link nodes. Keyboard Enter activation and
+  pointer activation should update the app-owned diagnostics status without opening external URLs in
+  diagnostics mode.
+- finding:
+  no Alert recipe or pressable runtime defect was reproduced. The existing script was an old
+  navigation smoke that clicked only the Billing link and waited for a status marker; it did not
+  prove direct-start section entry, Support-link metadata, URL values, focus action exposure, or
+  keyboard activation.
+- fix:
+  the canonical Alert link script now starts directly on `alert` / `Interactive Links`, asserts the
+  page and section anchors, proves both Billing and Support link role/label/value/action metadata,
+  activates Billing from keyboard focus, clicks Support with a stable pointer click, and captures
+  layout/screenshot/bundle evidence. A dedicated `ui-gallery-alert-link-action-state` suite and
+  Gallery authoring test now lock the strengthened gate while preserving the legacy redirect stub
+  and shadcn-conformance membership.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json` asserts
+  `role=link`, `label_contains`, `value_contains`, `semantics_action_is(focus=true)`,
+  `semantics_action_is(invoke=true)`, `focus_is`, keyboard Enter activation, pointer click
+  activation, and status mutation for both Alert links.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/pages/alert.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/alert/interactive_links.rs`,
+  `apps/fret-ui-gallery/tests/alert_docs_surface.rs`,
+  `tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json`,
+  `tools/diag-scripts/ui-gallery-alert-link-activation.json`,
+  `tools/diag-scripts/suites/ui-gallery-alert-link-action-state/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-alert-link-action-state-v1/sessions/1779604692279-129204/1779604711175/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-alert-link-action-state-v1/sessions/1779604692279-129204/share/1779604711175.zip`;
+  dedicated suite summary:
+  `target/fret-diag-alert-link-action-state-suite-v1/sessions/1779604866072-98788/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-alert-link-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/tests/alert_docs_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_alert_link_activation --no-fail-fast --no-capture`
+  (run id `1bf2754a-c4ca-4738-b39b-e763dcb09b2d`);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test alert_docs_surface alert_interactive_links_diag_script_gates_action_state -- --nocapture`
+  (1/1 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json --dir target/fret-diag-alert-link-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779604711175`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-alert-link-action-state --dir target/fret-diag-alert-link-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779604885723`, suite run id `1779604866072-98788`, 1/1 passed).
+
+## Markdown Span Link Action State
+
+- invariant:
+  Markdown selectable-text links should expose text role, full value text, set-text-selection
+  action support, and inline link span metadata on the selectable-text node. Activation should
+  update the app-owned readout without relying on navigation search or a generic smoke path.
+- finding:
+  no Markdown renderer or selectable-text runtime defect was reproduced. The old script still used
+  navigation search and only proved activation, so the span-link metadata and direct-start path were
+  not yet locked.
+- fix:
+  the canonical Markdown span-link script now starts directly on the `markdown_editor_source` dev
+  page, asserts the page root, editor root, span gate, `role=text`, `value_contains`, selection
+  action exposure, inline span metadata, and activated readout, and captures layout/screenshot/
+  bundle evidence. A dedicated `ui-gallery-markdown-span-link-action-state` suite and Gallery
+  authoring test now lock the span-link gate while preserving the legacy redirect stub and existing
+  text-wrap suite continuity.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/text-wrap/ui-gallery-markdown-span-link-gate-activate.json`
+  asserts `role=text`, `value_contains=https://example.com`,
+  `semantics_action_is(set_text_selection=true)`,
+  `semantics_inline_span_includes(role=link, tag=https://example.com)`, stable span activation,
+  and the activated readout.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/previews/pages/editors/markdown.rs`,
+  `apps/fret-ui-gallery/tests/markdown_editor_docs_surface.rs`,
+  `tools/diag-scripts/ui-gallery/text-wrap/ui-gallery-markdown-span-link-gate-activate.json`,
+  `tools/diag-scripts/ui-gallery-markdown-span-link-gate-activate.json`,
+  `tools/diag-scripts/suites/ui-gallery-markdown-span-link-action-state/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-text-wrap/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`,
+  `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-markdown-span-link-action-state-v1/sessions/1779606095997-126196/1779606113404/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-markdown-span-link-action-state-v1/sessions/1779606095997-126196/share/1779606113404.zip`;
+  dedicated suite summary:
+  `target/fret-diag-markdown-span-link-action-state-suite-v1/sessions/1779606213201-114820/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/text-wrap/ui-gallery-markdown-span-link-gate-activate.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-markdown-span-link-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/tests/markdown_editor_docs_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_markdown_span_link_gate_activate --no-fail-fast --no-capture`
+  (run id `375a7d6e-4ae4-4b82-b1af-eb1e5a1c762d`);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test markdown_editor_docs_surface markdown_span_link_diag_script_gates_action_state -- --nocapture`
+  (1/1 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/text-wrap/ui-gallery-markdown-span-link-gate-activate.json --dir target/fret-diag-markdown-span-link-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779606113404`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-markdown-span-link-action-state --dir target/fret-diag-markdown-span-link-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779606229614`, suite run id `1779606213201-114820`, 1/1 passed).
+
+## AlertDialog Destructive Inline Link Action State
+
+- invariant:
+  AlertDialog Destructive description text should remain a selectable-text mechanism surface inside
+  modal content: the dialog content owns `role=alert_dialog`, the description owns `role=text`,
+  exposes `set_text_selection`, publishes inline span role/tag metadata for Settings, and stable
+  span activation must keep working after screenshots and cache-hit frames.
+- finding:
+  two issues were reproduced. The first was an authoring mismatch: diagnostics role strings use
+  `alert_dialog`, not `alertdialog`. The second was a real mechanism defect: paint-cache replay
+  skipped selectable-text paint and did not keep `SelectableTextState.interactive_span_bounds`
+  live in the current runtime state buffer, so `click_selectable_text_span_stable` eventually timed
+  out with `no_runtime_state` even though semantics, hit testing, and inline span metadata were
+  still present.
+- fix:
+  paint-cache replay now touches selectable-text state for every element in the replayed subtree,
+  preserving previously computed interactive span bounds across repeated cache-hit frames. The
+  AlertDialog script now starts directly on `alert_dialog` / `Destructive`, asserts the modal
+  content role, description text/action/span metadata, captures a layout sidecar and screenshots,
+  and activates the Settings span through the stable selectable-text span click helper.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json`
+  asserts `role=alert_dialog`, description `role=text`, `value_contains=View Settings`,
+  `semantics_action_is(set_text_selection=true)`,
+  `semantics_inline_span_includes(role=link, tag=https://example.com/settings)`,
+  `capture_layout_sidecar`, screenshots, stable span activation, and a final bundle.
+- implementation anchors:
+  `crates/fret-ui/src/elements/runtime.rs`,
+  `crates/fret-ui/src/tree/paint/node.rs`,
+  `crates/fret-ui/src/tree/tests/paint_cache.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/alert_dialog/destructive.rs`,
+  `apps/fret-ui-gallery/tests/alert_dialog_docs_surface.rs`,
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json`,
+  `tools/diag-scripts/suites/ui-gallery-alert-dialog-inline-link-action-state/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  pre-fix role-string failure bundle:
+  `target/fret-diag-alert-dialog-inline-link-action-state-v1/sessions/1779607109957-124104/1779607143293-script-step-0009-assert-failed`;
+  pre-fix runtime-state failure bundle:
+  `target/fret-diag-alert-dialog-inline-link-action-state-v2/sessions/1779607651727-126360/1779607807424-script-step-0017-click_selectable_span-timeout`;
+  focused runtime AI packet:
+  `target/fret-diag-alert-dialog-inline-link-action-state-v4/sessions/1779609853670-94944/1779609862553/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-alert-dialog-inline-link-action-state-v4/sessions/1779609853670-94944/share/1779609862553.zip`;
+  dedicated suite summary:
+  `target/fret-diag-alert-dialog-inline-link-action-state-suite-v2/sessions/1779609886205-109624/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-alert-dialog-inline-link-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates/fret-ui/src/elements/runtime.rs crates/fret-ui/src/tree/paint/node.rs crates/fret-ui/src/tree/tests/paint_cache.rs apps/fret-ui-gallery/tests/alert_dialog_docs_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui paint_cache_replay_touches_selectable_text_span_state_for_replayed_subtrees --no-fail-fast --no-capture`
+  (run id `0c2d679c-4164-49ae-8d60-e737f391ca9b`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui selectable_text_records_interactive_span_bounds_after_paint --no-fail-fast --no-capture`
+  (run id `8cb793c5-26e1-4cbe-8257-96065f60de30`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui paint_cache_replay_translates_descendant_bounds_for_descendants --no-fail-fast --no-capture`
+  (run id `90cb2ec0-2fdc-4a6c-81cc-2bb9dbb263c5`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_alert_dialog_destructive_inline_link_activate --no-fail-fast --no-capture`
+  (run id `be1ab63d-ceef-4d08-9429-b5088789a071`);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test alert_dialog_docs_surface alert_dialog_docs_diag_scripts_cover_docs_path_and_existing_regression_gates -- --nocapture`
+  (1/1 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json --dir target/fret-diag-alert-dialog-inline-link-action-state-v4 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779609862553`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-alert-dialog-inline-link-action-state --dir target/fret-diag-alert-dialog-inline-link-action-state-suite-v2 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779609894817`, suite run id `1779609886205-109624`, 1/1 passed).
+
+## Breadcrumb Usage/Dropdown Link Action State
+
+- invariant:
+  ordinary `BreadcrumbLink` nodes on both the curated Usage lane and raw-primitives Dropdown lane
+  should expose semantic link role, accessible label, URL value, focus action, and invoke action
+  while app-bound links dispatch through the command pipeline instead of opening an external
+  browser during diagnostics.
+- finding:
+  no Breadcrumb recipe or pressable runtime defect was reproduced. The older
+  `ui-gallery-breadcrumb-usage-home-command.json` script still used navigation search and only
+  asserted `role=link` plus `cmd.open`, so it did not prove direct-start section entry, URL value
+  publication, action exposure, keyboard activation attribution, or pointer source attribution.
+  The conformance-held `ui-gallery-breadcrumb-links-semantic-link.json` script had the same
+  navigation-search and role-only limitation on the raw-primitives Dropdown Home link, and the
+  snippet used a no-op activation handler that left click behavior unobservable.
+- fix:
+  the script now starts directly on `breadcrumb` / `Usage`, asserts Home and Components link
+  metadata, focuses Home and activates it with Enter, requires a driver-handled keyboard command
+  dispatch with `started_from_focus=true`, clicks Components with a stable pointer click, and
+  captures layout/screenshot/bundle evidence. The Dropdown script now starts directly on
+  `breadcrumb` / `Dropdown`, asserts the raw-primitives Home link metadata, verifies the adjacent
+  dropdown trigger remains a separate `role=button`, and exercises keyboard plus pointer command
+  dispatch. The Dropdown snippet now uses the same deterministic `ui_gallery.app.open` command
+  action as Usage. A dedicated `ui-gallery-breadcrumb-link-action-state` suite and Gallery
+  authoring test now lock both gates.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json` asserts
+  `role=region`, `role=link`, `label_contains`, `value_contains`,
+  `semantics_action_is(focus=true)`, `semantics_action_is(invoke=true)`, `focus_is`,
+  `wait_command_dispatch_trace`, `/shell/last_action=cmd.open`, layout sidecar, screenshots, and a
+  final bundle. `tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-links-semantic-link.json`
+  applies the same action-state contract to the Dropdown Home link.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/snippets/breadcrumb/usage.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/breadcrumb/dropdown.rs`,
+  `apps/fret-ui-gallery/tests/breadcrumb_docs_surface.rs`,
+  `ecosystem/fret-ui-shadcn/src/breadcrumb.rs`,
+  `tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json`,
+  `tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-links-semantic-link.json`,
+  `tools/diag-scripts/ui-gallery-breadcrumb-links-semantic-link.json`,
+  `tools/diag-scripts/ui-gallery/misc/ui-gallery-breadcrumb-links-semantic-link.json`,
+  `tools/diag-scripts/suites/ui-gallery-breadcrumb-link-action-state/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused Usage runtime AI packet:
+  `target/fret-diag-breadcrumb-link-action-state-v1/sessions/1779610651964-3356/1779610661121/ai.packet`;
+  focused Usage runtime pack:
+  `target/fret-diag-breadcrumb-link-action-state-v1/sessions/1779610651964-3356/share/1779610661121.zip`;
+  focused Dropdown runtime AI packet:
+  `target/fret-diag-breadcrumb-dropdown-link-action-state-v1/sessions/1779611299035-128284/1779611307893/ai.packet`;
+  focused Dropdown runtime pack:
+  `target/fret-diag-breadcrumb-dropdown-link-action-state-v1/sessions/1779611299035-128284/share/1779611307893.zip`;
+  dedicated suite summary:
+  `target/fret-diag-breadcrumb-link-action-state-suite-v2/sessions/1779611330691-124372/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-links-semantic-link.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-breadcrumb-link-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/snippets/breadcrumb/dropdown.rs apps/fret-ui-gallery/tests/breadcrumb_docs_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_breadcrumb_links_semantic_link script_v2_roundtrip_ui_gallery_breadcrumb_usage_home_command --no-fail-fast --no-capture`
+  (run id `3c534f2a-e6c5-4570-b785-8b2e865e02df`);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test breadcrumb_docs_surface -- --nocapture`
+  (4/4 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json --dir target/fret-diag-breadcrumb-link-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779610661121`);
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-links-semantic-link.json --dir target/fret-diag-breadcrumb-dropdown-link-action-state-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779611307893`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-breadcrumb-link-action-state --dir target/fret-diag-breadcrumb-link-action-state-suite-v2 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run ids `1779611339499`, `1779611360379`, suite run id `1779611330691-124372`, 2/2 passed).
+
+## NavigationMenu Docs Smoke Action State
+
+- invariant:
+  the canonical NavigationMenu docs smoke should prove the real docs-page command and action-state
+  contract, not only open/close presence. The docs-demo and RTL snippets must keep deterministic
+  `ui_gallery.app.open` action anchors; closed and open triggers must expose action state; the
+  expanded viewport content link, not the top-level contentless Docs link, is the correct
+  roving-focus command target; and keyboard/pointer activation must leave command-dispatch trace
+  evidence.
+- finding:
+  v1 failed on an early wait, v2 failed on a closed-state assertion, and v3/v4 timed out waiting
+  for command-trace evidence. The root cause was in the shadcn recipe layer rather than `fret-ui`:
+  normal `NavigationMenuLink` activation did not use the shared pressable command dispatch path,
+  and the contentless top-level item replaced its command hook when installing close behavior.
+- fix:
+  `NavigationMenuLink` now dispatches through `pressable_dispatch_command_if_enabled_opt`, and the
+  contentless top-level item appends its close handler instead of overwriting the command hook.
+  The canonical docs smoke script now gates the real docs-page action-state and command-dispatch
+  surface, and the dedicated `ui-gallery-navigation-menu-docs-smoke-action-state` suite promotes
+  that script without replacing its shadcn-conformance or shadcn-runtime-evidence memberships.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json`
+  starts directly on `navigation_menu`, asserts docs-demo and RTL action anchors, proves closed/open
+  action state, targets the expanded content link for command attribution, waits for command traces,
+  captures layout/screenshots/bundle evidence, and remains the canonical NavigationMenu docs-page
+  proof surface.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/src/navigation_menu.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/navigation_menu/docs_demo.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/navigation_menu/rtl.rs`,
+  `apps/fret-ui-gallery/tests/navigation_menu_docs_surface.rs`,
+  `tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json`,
+  `tools/diag-scripts/suites/ui-gallery-navigation-menu-docs-smoke-action-state/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-conformance/suite.json`,
+  `tools/diag-scripts/suites/ui-gallery-shadcn-runtime-evidence/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  v1 early-wait failure packet:
+  `target/fret-diag-navigation-menu-docs-smoke-action-state-v1/sessions/1779612961611-89860/1779612971191/ai.packet`;
+  v2 closed-state failure packet:
+  `target/fret-diag-navigation-menu-docs-smoke-action-state-v2/sessions/1779613175695-128644/1779613185620/ai.packet`;
+  v3 command-trace timeout packet:
+  `target/fret-diag-navigation-menu-docs-smoke-action-state-v3/sessions/1779613730683-124312/1779613740207/ai.packet`;
+  v4 command-trace timeout packet:
+  `target/fret-diag-navigation-menu-docs-smoke-action-state-v4/sessions/1779614478852-133068/1779614491391/ai.packet`;
+  focused runtime AI packet after the fix:
+  `target/fret-diag-navigation-menu-docs-smoke-action-state-v5/sessions/1779614850511-114228/1779614863615/ai.packet`;
+  focused runtime pack after the fix:
+  `target/fret-diag-navigation-menu-docs-smoke-action-state-v5/sessions/1779614850511-114228/share/1779614863615.zip`;
+  dedicated suite summary:
+  `target/fret-diag-navigation-menu-docs-smoke-action-state-suite-v1/sessions/1779614903581-127224/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-navigation-menu-docs-smoke-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_navigation_menu_docs_smoke -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-gallery --test navigation_menu_docs_surface navigation_menu_docs_smoke_gates_demo_and_rtl_action_state -- --nocapture`;
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib navigation_menu -- --nocapture`
+  (31/31 passed);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  focused runtime `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json --dir target/fret-diag-navigation-menu-docs-smoke-action-state-v5 --session-auto --pack --ai-packet --include-triage --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779614863615`);
+  dedicated suite `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-navigation-menu-docs-smoke-action-state --dir target/fret-diag-navigation-menu-docs-smoke-action-state-suite-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (script run id `1779614919851`, suite run id `1779614903581-127224`, 1/1 passed).
+- fresh verification on 2026-05-24:
+  `python -m json.tool tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-navigation-menu-docs-smoke-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py`;
+  `git diff --check -- docs/workstreams/fret-mechanism-harness-v1/TODO.md docs/workstreams/fret-mechanism-harness-v1/EVIDENCE_AND_GATES.md docs/workstreams/fret-mechanism-harness-v1/COVERAGE_MAP.md ecosystem/fret-ui-shadcn/src/navigation_menu.rs tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json apps/fret-ui-gallery/tests/navigation_menu_docs_surface.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `cargo test --profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_navigation_menu_docs_smoke -- --nocapture`
+  (1/1 passed);
+  `cargo test --profile dev-fast -p fret-ui-gallery --test navigation_menu_docs_surface navigation_menu_docs_smoke_gates_demo_and_rtl_action_state -- --nocapture`
+  (1/1 passed);
+  `cargo test --profile dev-fast -p fret-ui-shadcn --lib navigation_menu -- --nocapture`
+  (31/31 passed; emitted an existing non-blocking `fret-ui` dead-code warning for
+  `current_effective_opacity`).
+
+## Menubar Keyboard Nav / Escape Focus Restore
+
+- invariant:
+  the canonical Menubar keyboard-nav docs path should prove that File opens the menu, ArrowDown
+  lands on the app-owned command item, and Escape returns focus to the trigger.
+- finding:
+  no Menubar recipe defect was reproduced. The only verification drift was a stale docs-surface
+  assertion about the usage snippet import order; the live snippet currently imports
+  `AppComponentCx` before `UiChild`, so the guard was refreshed to match the current source.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-keyboard-nav.json` remains the
+  canonical script. `tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-escape-exits-active.json`
+  stays as the redirect alias, and the dedicated
+  `tools/diag-scripts/suites/ui-gallery-menubar-keyboard-nav-action-state/suite.json` suite now
+  promotes the canonical script.
+- implementation anchors:
+  `apps/fret-ui-gallery/tests/menubar_docs_surface.rs`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`,
+  `tools/diag-scripts/suites/ui-gallery-menubar-keyboard-nav-action-state/suite.json`,
+  `tools/diag-scripts/index.json`.
+- evidence anchors:
+  focused runtime suite summary:
+  `target/fret-diag-menubar-keyboard-nav-action-state-v1/sessions/1779619620521-132232/suite.summary.json`.
+- run results:
+  `python -m json.tool tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-keyboard-nav.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-menubar-keyboard-nav-action-state/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol script_v2_roundtrip_ui_gallery_menubar_keyboard_nav script_v2_roundtrip_ui_gallery_menubar_escape_exits_active --no-fail-fast --no-capture`
+  (run id `23fe6fe6-f8aa-44da-a19a-dcc4274c5283`);
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --test menubar_docs_surface --no-fail-fast --no-capture`
+  (run id `ef8805f0-524a-4620-97bf-38ab73e89876`);
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`;
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-menubar-keyboard-nav-action-state --dir target/fret-diag-menubar-keyboard-nav-action-state-v1 --session-auto --timeout-ms 600000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  (run id `1779619632698`).
+- fresh verification on 2026-05-24:
+  the registry refresh passed after `--write`, the gallery docs-surface guard passed after the
+  import-order fix, the protocol roundtrip tests passed, the build passed, and the runtime suite
+  passed 1/1 with summary
+  `target/fret-diag-menubar-keyboard-nav-action-state-v1/sessions/1779619620521-132232/suite.summary.json`.

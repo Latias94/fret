@@ -44,12 +44,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let content = shadcn::PopoverContent::build(cx, move |cx| {
         let header = shadcn::PopoverHeader::new(ui::children![
             cx;
-            shadcn::PopoverTitle::new("Dimensions")
-                .into_element(cx)
-                .test_id("ui-gallery-popover-demo-title"),
-            shadcn::PopoverDescription::new("Set the dimensions for the layer.")
-                .into_element(cx)
-                .test_id("ui-gallery-popover-demo-description")
+            shadcn::PopoverTitle::new("Dimensions").into_element(cx),
+            shadcn::PopoverDescription::new("Set the dimensions for the layer.").into_element(cx)
         ])
         .into_element(cx)
         .test_id("ui-gallery-popover-demo-header");
@@ -81,6 +77,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         ),
         content,
     )
+    .dialog_test_id("ui-gallery-popover-demo-dialog")
     .into_element(cx)
     .test_id("ui-gallery-popover-demo-popover");
 

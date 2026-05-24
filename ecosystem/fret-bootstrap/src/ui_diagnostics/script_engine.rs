@@ -48,6 +48,29 @@ fn predicate_needs_element_runtime(predicate: &UiPredicateV1) -> bool {
     )
 }
 
+fn predicate_can_eval_without_current_semantics(predicate: &UiPredicateV1) -> bool {
+    matches!(
+        predicate,
+        UiPredicateV1::WindowInnerSizeApproxEqual { .. }
+            | UiPredicateV1::EventKindSeen { .. }
+            | UiPredicateV1::RunnerAccessibilityActivated
+            | UiPredicateV1::TextFontStackKeyStable { .. }
+            | UiPredicateV1::FontCatalogPopulated
+            | UiPredicateV1::SystemFontRescanIdle
+            | UiPredicateV1::AppSnapshotFieldEquals { .. }
+    ) || UiDiagnosticsService::predicate_can_eval_from_cached_test_id_bounds(predicate)
+        || UiDiagnosticsService::predicate_can_eval_off_window(predicate)
+}
+
+fn script_step_requires_current_semantics(step: &UiActionStepV2) -> bool {
+    match step {
+        UiActionStepV2::WaitUntil { predicate, .. } | UiActionStepV2::Assert { predicate, .. } => {
+            !predicate_can_eval_without_current_semantics(predicate)
+        }
+        _ => false,
+    }
+}
+
 fn serialized_step_contains_global_element_selector(step: &UiActionStepV2) -> bool {
     serde_json::to_value(step)
         .ok()
@@ -2297,6 +2320,11 @@ impl UiDiagnosticsService {
             return UiScriptFrameOutput::default();
         };
 
+        if script_step_requires_current_semantics(&step) {
+            self.active_scripts.insert(window, active);
+            return no_frame_keepalive_redraw_output(window);
+        }
+
         let (step_index_u32, step_kind) =
             self.note_step_start_and_scope_evidence(app, window, step_index, &step, &mut active);
 
@@ -2908,6 +2936,14 @@ mod tests {
         }
     }
 
+    fn script_result_path_for_test(name: &str) -> std::path::PathBuf {
+        let unique = format!("{}-{}", name, std::process::id());
+        std::env::temp_dir()
+            .join("fret-bootstrap-script-engine-tests")
+            .join(unique)
+            .join("script.result.json")
+    }
+
     fn active_pointer_move_script() -> ActiveScript {
         ActiveScript {
             steps: vec![UiActionStepV2::PointerMove {
@@ -3069,6 +3105,109 @@ mod tests {
         let active = service.active_scripts.get(&window).unwrap();
         assert_eq!(active.next_step, 1);
         assert_eq!(active.wait_frames_remaining, 0);
+    }
+
+    #[test]
+    fn no_frame_keepalive_defers_semantics_predicates_to_real_frame() {
+        let window = app_window(1);
+        let mut active = active_pointer_move_script();
+        active.steps = vec![UiActionStepV2::Assert {
+            window: None,
+            predicate: UiPredicateV1::RoleIs {
+                target: test_id_selector("field-name"),
+                role: "text_field".to_string(),
+            },
+        }];
+        active.pointer_sessions.clear();
+
+        let mut service = UiDiagnosticsService::default();
+        service.cfg.enabled = true;
+        let script_result_path =
+            script_result_path_for_test("no-frame-defers-semantics-predicates");
+        let _ = std::fs::remove_file(&script_result_path);
+        service.cfg.script_result_path = script_result_path.clone();
+        service.active_scripts.insert(window, active);
+
+        let mut app = App::new();
+        let output = service.drive_script_for_window_no_frame(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(100.0), Px(100.0)),
+            ),
+            1.0,
+            UiDiagnosticsService::SCRIPT_NO_FRAME_DRIVE_HARD_TIMEOUT_MS,
+        );
+
+        assert!(output.request_redraw);
+        assert!(
+            output
+                .effects
+                .iter()
+                .any(|effect| matches!(effect, Effect::RequestAnimationFrame(w) if *w == window))
+        );
+        let active = service.active_scripts.get(&window).unwrap();
+        assert_eq!(active.next_step, 0);
+        let result: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&script_result_path).unwrap()).unwrap();
+        assert_eq!(result["stage"].as_str(), Some("running"));
+        assert_eq!(result["reason"].as_str(), None);
+    }
+
+    #[test]
+    fn no_frame_keepalive_still_evaluates_frame_independent_predicates() {
+        let window = app_window(1);
+        let mut active = active_pointer_move_script();
+        active.steps = vec![UiActionStepV2::WaitUntil {
+            window: None,
+            predicate: UiPredicateV1::EventKindSeen {
+                event_kind: "timer".to_string(),
+            },
+            timeout_frames: 1,
+            timeout_ms: None,
+        }];
+        active.pointer_sessions.clear();
+
+        let mut service = UiDiagnosticsService::default();
+        service.cfg.enabled = true;
+        let script_result_path =
+            script_result_path_for_test("no-frame-frame-independent-predicates");
+        let _ = std::fs::remove_file(&script_result_path);
+        service.cfg.script_result_path = script_result_path.clone();
+        service.active_scripts.insert(window, active);
+
+        let mut app = App::new();
+        let first = service.drive_script_for_window_no_frame(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(100.0), Px(100.0)),
+            ),
+            1.0,
+            UiDiagnosticsService::SCRIPT_NO_FRAME_DRIVE_HARD_TIMEOUT_MS,
+        );
+
+        assert!(first.request_redraw);
+        assert!(service.active_scripts.get(&window).is_some());
+
+        let output = service.drive_script_for_window_no_frame(
+            &mut app,
+            window,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(100.0), Px(100.0)),
+            ),
+            1.0,
+            UiDiagnosticsService::SCRIPT_NO_FRAME_DRIVE_HARD_TIMEOUT_MS,
+        );
+
+        assert!(output.request_redraw);
+        assert!(service.active_scripts.get(&window).is_none());
+        let result: UiScriptResultV1 =
+            serde_json::from_slice(&std::fs::read(&script_result_path).unwrap()).unwrap();
+        assert_eq!(result.reason.as_deref(), Some("wait_until_timeout"));
     }
 
     #[test]

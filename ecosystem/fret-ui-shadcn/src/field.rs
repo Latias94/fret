@@ -1443,7 +1443,11 @@ impl FieldLabel {
                                         });
                                     if let Some((true, element, focus_on_pointer_down)) = target {
                                         if focus_on_pointer_down {
+                                            host.prevent_default(
+                                                fret_runtime::DefaultAction::FocusOnPointerDown,
+                                            );
                                             host.request_focus(element);
+                                            host.capture_pointer();
                                             return true;
                                         }
                                         host.capture_pointer();

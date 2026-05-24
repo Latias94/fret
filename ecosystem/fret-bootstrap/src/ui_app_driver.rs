@@ -1515,6 +1515,8 @@ fn ui_app_handle_command<S>(
                 .get(command.clone())
                 .map(|m| m.scope)
                 .or(Some(fret_runtime::CommandScope::Window));
+            let started_from_focus =
+                source.kind == fret_runtime::CommandDispatchSourceKindV1::Keyboard;
             app.with_global_mut(
                 fret_runtime::WindowCommandDispatchDiagnosticsStore::default,
                 |store, app| {
@@ -1530,7 +1532,7 @@ fn ui_app_handle_command<S>(
                         handled_by_scope,
                         handled_by_driver: true,
                         stopped: false,
-                        started_from_focus: false,
+                        started_from_focus,
                         used_default_root_fallback: false,
                     });
                 },

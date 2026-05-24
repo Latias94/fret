@@ -56,11 +56,60 @@ fn scroll_area_page_documents_wrapper_mapping_and_children_api_decision() {
 }
 
 #[test]
+fn scroll_area_docs_surface_covers_last_action_plumbing_and_click_stability_gate() {
+    let content = include_str!("../src/ui/content.rs");
+    let pages_mod = include_str!("../src/ui/pages/mod.rs");
+    let diagnostics = include_str!("../src/ui/diagnostics/scroll_area/drag_baseline.rs");
+    let preview_atom = include_str!("../src/ui/previews/gallery/atoms/scroll.rs");
+    let script = include_str!(
+        "../../../tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-arm-content-growth-click-stability.json"
+    );
+    let suite =
+        include_str!("../../../tools/diag-scripts/suites/ui-gallery-scroll-area/suite.json");
+
+    for needle in [
+        "PAGE_SCROLL_AREA => pages::preview_scroll_area(cx, Some(last_action.clone()))",
+        "pub(super) fn preview_scroll_area(",
+        "last_action: Option<fret_app::Model<std::sync::Arc<str>>>",
+        "scroll_area::preview_scroll_area(cx, last_action)",
+        "pages::preview_scroll_area(cx, None)",
+    ] {
+        assert!(
+            content.contains(needle) || pages_mod.contains(needle) || preview_atom.contains(needle),
+            "scroll area page wiring should keep the last_action plumbing visible; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "last_action: Option<Model<Arc<str>>>",
+        "ui_gallery.scroll_area.drag_baseline.reset",
+        "ui_gallery.scroll_area.drag_baseline.arm_growth",
+        "Duration::from_millis(360)",
+        "ui-gallery-scroll-area-drag-baseline-arm-grow",
+    ] {
+        assert!(
+            diagnostics.contains(needle) || script.contains(needle),
+            "scroll area drag-baseline diagnostics should keep the click-stability gate surface; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "\"ui-gallery-scrollbar-arm-content-growth-click-stability\"",
+        "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-arm-content-growth-click-stability.json",
+    ] {
+        assert!(
+            script.contains(needle) || suite.contains(needle),
+            "scroll area suite registration should keep the new click-stability gate promoted; missing `{needle}`",
+        );
+    }
+}
+
+#[test]
 fn scroll_area_usage_snippet_keeps_wrapper_chrome_and_copyable_root_lane() {
     let source = include_str!("../src/ui/snippets/scroll_area/usage.rs");
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "let area = shadcn::ScrollArea::new([content])",
         ".refine_layout(LayoutRefinement::default().w_full().h_full())",

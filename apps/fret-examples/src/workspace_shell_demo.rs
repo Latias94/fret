@@ -1471,6 +1471,7 @@ fn record_workspace_shell_driver_handled_command_dispatch(
         .get(command.clone())
         .map(|m| m.scope)
         .or(Some(CommandScope::Window));
+    let started_from_focus = source.kind == fret_runtime::CommandDispatchSourceKindV1::Keyboard;
     app.with_global_mut(
         WindowCommandDispatchDiagnosticsStore::default,
         |store, app| {
@@ -1486,7 +1487,7 @@ fn record_workspace_shell_driver_handled_command_dispatch(
                 handled_by_scope,
                 handled_by_driver: true,
                 stopped: false,
-                started_from_focus: false,
+                started_from_focus,
                 used_default_root_fallback: false,
             });
         },

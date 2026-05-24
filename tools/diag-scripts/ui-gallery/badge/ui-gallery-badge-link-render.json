@@ -2,30 +2,35 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-badge-link-render",
-    "required_capabilities": ["diag.script_v2"],
-    "tags": ["ui_gallery", "shadcn", "badge", "link", "render"]
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ],
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "badge",
+      "link",
+      "render",
+      "action_state",
+      "mechanism_harness",
+      "runtime"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "badge",
+      "FRET_UI_GALLERY_START_SECTION": "Link"
+    },
+    "target_hints": [
+      "Proves BadgeRender::Link exports link semantics on the badge-owned render surface.",
+      "Asserts the link-rendered badge exposes focus and invoke actions while the row stays structural.",
+      "Clicks the no-op example link so diagnostics evidence never launches a system browser."
+    ]
   },
   "steps": [
     { "type": "reset_diagnostics" },
-    {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
-      },
-      "timeout_frames": 600
-    },
     { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
     { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
-    { "type": "wait_frames", "n": 20 },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "badge" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-badge" } },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "predicate": {
@@ -34,15 +39,40 @@
       },
       "timeout_frames": 600
     },
-    { "type": "wait_frames", "n": 20 },
-
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-badge-link-row" }
+      },
+      "timeout_frames": 600
+    },
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-badge-link" },
-      "delta_y": -360.0,
+      "target": { "kind": "test_id", "id": "ui-gallery-badge-link-row" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
       "padding_px": 16.0,
-      "timeout_frames": 1800
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-badge-link" },
+        "padding_px": 2.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-badge-link.chrome" }
+      }
     },
     {
       "type": "assert",
@@ -53,12 +83,61 @@
       }
     },
     {
-      "type": "click_stable",
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-badge-link" },
+        "text": "Open Link"
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-badge-link" },
+        "action": "focus",
+        "enabled": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_action_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-badge-link" },
+        "action": "invoke",
+        "enabled": true
+      }
+    },
+    {
+      "type": "focus",
       "target": { "kind": "test_id", "id": "ui-gallery-badge-link" }
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-badge-link" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "enter" },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-badge-link" },
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
     { "type": "wait_frames", "n": 10 },
-
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-badge-link-render.layout"
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-badge-link-render"
+    },
     { "type": "capture_bundle", "label": "ui-gallery-badge-link-render" }
   ]
 }
-

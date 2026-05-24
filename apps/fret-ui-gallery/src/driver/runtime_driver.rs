@@ -640,6 +640,7 @@ impl UiGalleryDriver {
             .get(command.clone())
             .map(|meta| meta.scope)
             .or(Some(fret_runtime::CommandScope::Window));
+        let started_from_focus = source.kind == fret_runtime::CommandDispatchSourceKindV1::Keyboard;
 
         app.with_global_mut(
             WindowCommandDispatchDiagnosticsStore::default,
@@ -656,7 +657,7 @@ impl UiGalleryDriver {
                     handled_by_scope,
                     handled_by_driver: true,
                     stopped: false,
-                    started_from_focus: false,
+                    started_from_focus,
                     used_default_root_fallback: false,
                 });
             },
@@ -1490,8 +1491,7 @@ impl WinitAppDriver for UiGalleryDriver {
             return;
         }
 
-        let pending_source =
-            Self::consume_pending_command_dispatch_source(app, window, &command);
+        let pending_source = Self::consume_pending_command_dispatch_source(app, window, &command);
         Self::restore_pending_command_dispatch_source(
             app,
             window,
@@ -1683,11 +1683,23 @@ impl WinitAppDriver for UiGalleryDriver {
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("cmd.open");
                 });
+                Self::record_driver_handled_command_dispatch(
+                    app,
+                    window,
+                    &command,
+                    pending_source.clone(),
+                );
             }
             CMD_APP_SAVE => {
                 let _ = app.models_mut().update(&state.last_action, |v| {
                     *v = Arc::<str>::from("cmd.save");
                 });
+                Self::record_driver_handled_command_dispatch(
+                    app,
+                    window,
+                    &command,
+                    pending_source.clone(),
+                );
             }
             CMD_APP_SETTINGS => {
                 let open_now = app
@@ -2431,8 +2443,8 @@ impl WinitAppDriver for UiGalleryDriver {
                     None,
                     scene,
                 );
-                let defer_dump_until_renderer_perf = std::env::var_os("FRET_DIAG_RENDERER_PERF")
-                    .is_some_and(|v| !v.is_empty());
+                let defer_dump_until_renderer_perf =
+                    std::env::var_os("FRET_DIAG_RENDERER_PERF").is_some_and(|v| !v.is_empty());
                 if !defer_dump_until_renderer_perf {
                     let _ = svc.maybe_dump_if_triggered();
                 }

@@ -36,15 +36,107 @@
       "type": "reset_diagnostics"
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-card"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/selected_page",
+        "value": "card"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/nav_visible_items_count",
+        "value": 0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/bisect_flags",
+        "value": 163840
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/card_code_tabs_disabled",
+        "value": true
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/card_page_intro_disabled",
+        "value": false
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/card_sections_hidden_count",
+        "value": 1
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/card_doc_section_slots_total",
+        "value": 12
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/card_doc_visible_sections_count",
+        "value": 11
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/card_doc_visible_sections_with_code_count",
+        "value": 0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/card_doc_visible_sections_with_shell_count",
+        "value": 1
+      }
+    },
+    {
       "type": "wait_frames",
-      "n": 10
+      "n": 5
     },
     {
       "type": "reset_diagnostics"
     },
     {
       "type": "wait_frames",
-      "n": 600
+      "n": 5
     },
     {
       "type": "capture_bundle",

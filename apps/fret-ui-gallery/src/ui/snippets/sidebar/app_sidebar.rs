@@ -360,6 +360,7 @@ fn team_switcher(
 
     shadcn::SidebarMenu::new([shadcn::SidebarMenuItem::new(
         shadcn::DropdownMenu::uncontrolled(cx)
+            .test_id_prefix("ui-gallery-sidebar-app-sidebar-team-menu")
             .compose()
             .trigger(shadcn::DropdownMenuTrigger::new(trigger))
             .content(
@@ -581,6 +582,7 @@ fn nav_user(cx: &mut AppComponentCx<'_>, last_action: Model<Arc<str>>) -> AnyEle
 
     shadcn::SidebarMenu::new([shadcn::SidebarMenuItem::new(
         shadcn::DropdownMenu::uncontrolled(cx)
+            .test_id_prefix("ui-gallery-sidebar-app-sidebar-user-menu")
             .compose()
             .trigger(shadcn::DropdownMenuTrigger::new(trigger))
             .content(

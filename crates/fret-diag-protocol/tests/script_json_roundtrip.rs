@@ -325,6 +325,13 @@ fn script_v2_roundtrip_ui_gallery_menubar_escape_exits_active() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_menubar_keyboard_nav() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-keyboard-nav.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_menubar_disabled_item_action_state() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-disabled-item-action-state.json"
@@ -449,6 +456,13 @@ fn script_v2_roundtrip_ui_gallery_node_graph_cull_window_no_shifts_small_pan() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_windowed_rows_surface_scroll_refresh() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/windowed-rows/ui-gallery-windowed-rows-surface-scroll-refresh.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_imui_editor_proof_advanced_axis_composites() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/imui-editor-proof-advanced-axis-composites.json"
@@ -512,6 +526,13 @@ fn script_v2_roundtrip_ui_gallery_accordion_focusable_disabled_keyboard_suppress
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_accordion_demo_relation_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-demo-relation-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_incoming_open_inject_smoke() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-incoming-open-inject-smoke.json"
@@ -522,6 +543,13 @@ fn script_v2_roundtrip_ui_gallery_incoming_open_inject_smoke() {
 fn script_v2_roundtrip_ui_gallery_input_group_text_non_overlap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-input-group-text-non-overlap.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_input_group_dropdown_relation_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json"
     ));
 }
 
@@ -585,6 +613,97 @@ fn script_v2_roundtrip_ui_gallery_checkbox_required_disabled_group_action_state(
 fn script_v2_roundtrip_ui_gallery_button_group_input_group_long_text() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-button-group-input-group-long-text.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_button_group_text_label_control_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_field_demo_label_control_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_item_demo_link_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/item/ui-gallery-item-demo-link-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_item_link_render() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/item/ui-gallery-item-link-render.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_empty_demo_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-demo-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_card_demo_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_badge_link_render() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_button_link_render() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_breadcrumb_demo_ellipsis_relation_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_breadcrumb_usage_home_command() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_breadcrumb_links_semantic_link() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-links-semantic-link.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_sidebar_app_sidebar_dropdown_relation_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-app-sidebar-dropdown-relation-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_pagination_demo_action_selected_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json"
     ));
 }
 
@@ -744,6 +863,13 @@ fn script_v2_roundtrip_ui_gallery_virtual_list_retained_selected_action_state_bo
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_ui_kit_list_window_boundary_scroll() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/ui-kit/ui-gallery-ui-kit-list-window-boundary-scroll.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_tree_retained_hierarchy_semantics_toggle() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-tree-retained-hierarchy-semantics-toggle.json"
@@ -775,6 +901,118 @@ fn script_v2_roundtrip_ui_gallery_ai_file_tree_large_scroll() {
 fn script_v2_roundtrip_ui_gallery_ai_file_tree_demo_screenshot_zinc_dark() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-ai-file-tree-demo-screenshot-zinc-dark.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_plan_demo_toggle() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-plan-demo-toggle.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_task_demo_toggle() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-task-demo-toggle.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_reasoning_demo_auto_open_close() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-reasoning-demo-auto-open-close.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_alert_link_activation() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_alert_dialog_demo_relation_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-demo-relation-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_alert_dialog_destructive_inline_link_activate() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_sheet_demo_relation_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/sheet/ui-gallery-sheet-demo-relation-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_drawer_demo_relation_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-demo-relation-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_dialog_demo_relation_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/dialog/ui-gallery-dialog-demo-relation-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_navigation_menu_docs_demo_relation_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-demo-relation-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_navigation_menu_docs_smoke() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/navigation-menu/ui-gallery-navigation-menu-docs-smoke.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_popover_demo_relation_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-demo-relation-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_collapsible_basic_double_click_close() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-basic-double-click-close.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_tooltip_focus_opens() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-focus-opens.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_file_tree_torture_retained_hierarchy_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-file-tree-torture-retained-hierarchy-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_inspector_torture_row_root_selected_action_state_bounce() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-inspector-torture-row-root-selected-action-state-bounce.json"
     ));
 }
 
@@ -877,6 +1115,38 @@ fn script_v2_roundtrip_ui_gallery_card_description_no_early_wrap() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_card_memory_retained_analysis_scripts() {
+    for script in [
+        include_str!(
+            "../../../tools/diag-scripts/ui-gallery/memory/ui-gallery-card-memory-retained-analysis.json"
+        ),
+        include_str!(
+            "../../../tools/diag-scripts/ui-gallery/memory/ui-gallery-card-preview-only-memory-retained-analysis.json"
+        ),
+        include_str!(
+            "../../../tools/diag-scripts/ui-gallery/memory/ui-gallery-card-scaffold-only-memory-retained-analysis.json"
+        ),
+        include_str!(
+            "../../../tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-heavy-sections-preview-only-memory-retained-analysis.json"
+        ),
+        include_str!(
+            "../../../tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-light-sections-preview-only-memory-retained-analysis.json"
+        ),
+        include_str!(
+            "../../../tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-image-preview-only-memory-retained-analysis.json"
+        ),
+        include_str!(
+            "../../../tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-compositions-preview-only-memory-retained-analysis.json"
+        ),
+        include_str!(
+            "../../../tools/diag-scripts/ui-gallery/memory/ui-gallery-card-no-meeting-notes-preview-only-memory-retained-analysis.json"
+        ),
+    ] {
+        assert_script_v2_roundtrip(script);
+    }
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_markdown_span_link_gate_activate() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-markdown-span-link-gate-activate.json"
@@ -915,6 +1185,13 @@ fn script_v2_roundtrip_ui_gallery_avatar_dropdown_click_stable_open() {
 fn script_v2_roundtrip_ui_gallery_avatar_dropdown_activate_open_trigger() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-activate-open-trigger.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_avatar_dropdown_relation_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-relation-action-state.json"
     ));
 }
 
@@ -1013,6 +1290,20 @@ fn script_v2_roundtrip_ui_gallery_view_cache_model_mutation_through_cache() {
 fn script_v2_roundtrip_ui_gallery_view_cache_dynamic_text_mutation_through_cache() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-dynamic-text-mutation-through-cache.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_view_cache_cached_popover_relation_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/view-cache/ui-gallery-view-cache-cached-popover-relation-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_chrome_torture_overlay_action_dispatch() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/perf/ui-gallery-chrome-torture-overlay-action-dispatch.json"
     ));
 }
 
@@ -1136,6 +1427,27 @@ fn script_v2_roundtrip_ui_gallery_scroll_area_expand_at_bottom() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_scrollbar_drag_baseline_content_growth() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_scrollbar_drag_pointer_cancel_release() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-pointer-cancel-release.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_scrollbar_arm_content_growth_click_stability() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-arm-content-growth-click-stability.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_select_scrollable_placement_boundary() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/select/ui-gallery-select-scrollable-placement-boundary.json"
@@ -1227,6 +1539,13 @@ fn script_v2_roundtrip_ui_gallery_tabs_selected_state_mutation() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_tabs_demo_relation_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-demo-relation-action-state.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_radio_group_checked_state_mutation() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-checked-state-mutation.json"
@@ -1237,6 +1556,13 @@ fn script_v2_roundtrip_ui_gallery_radio_group_checked_state_mutation() {
 fn script_v2_roundtrip_ui_gallery_radio_group_required_disabled_action_state() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-required-disabled-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_material3_state_matrix_chip_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-state-matrix-chip-action-state.json"
     ));
 }
 

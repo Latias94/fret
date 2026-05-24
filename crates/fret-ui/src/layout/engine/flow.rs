@@ -267,7 +267,10 @@ fn build_flow_subtree_impl<H: UiHost>(
             probe = next;
         }
 
-        let needs_definite_width = descendant_requests_fill_width
+        let promotes_fill_width = matches!(wrapper_style.size.width, crate::element::Length::Auto)
+            && descendant_requests_fill_width
+            && should_promote_auto_wrapper_for_fill(parent_kind, fret_core::Axis::Horizontal);
+        let needs_definite_width = promotes_fill_width
             || matches!(wrapper_style.size.width, crate::element::Length::Fill)
             || matches!(
                 wrapper_style.size.width,
@@ -281,7 +284,11 @@ fn build_flow_subtree_impl<H: UiHost>(
                 taffy::style_helpers::auto()
             })];
 
-        let needs_definite_height = descendant_requests_fill_height
+        let promotes_fill_height =
+            matches!(wrapper_style.size.height, crate::element::Length::Auto)
+                && descendant_requests_fill_height
+                && should_promote_auto_wrapper_for_fill(parent_kind, fret_core::Axis::Vertical);
+        let needs_definite_height = promotes_fill_height
             || matches!(wrapper_style.size.height, crate::element::Length::Fill)
             || matches!(
                 wrapper_style.size.height,
@@ -673,8 +680,19 @@ fn build_flow_subtree_impl<H: UiHost>(
             // Wrapper nodes (container/opacity/semantics/...) should remain shrink-wrapped by
             // default, but still provide a definite containing block when percent/fill sizing is
             // requested by flow children.
-            let needs_definite_width = has_flow_child_fill_w
+            let promotes_fill_width =
+                matches!(wrapper_style.size.width, crate::element::Length::Auto)
+                    && has_flow_child_fill_w
+                    && should_promote_auto_wrapper_for_fill(
+                        parent_kind,
+                        fret_core::Axis::Horizontal,
+                    );
+            let needs_definite_width = promotes_fill_width
                 || matches!(wrapper_style.size.width, crate::element::Length::Fill)
+                || matches!(
+                    wrapper_style.size.width,
+                    crate::element::Length::Fraction(_)
+                )
                 || matches!(wrapper_style.size.width, crate::element::Length::Px(_));
             style.grid_template_columns =
                 vec![GridTemplateComponent::Single(if needs_definite_width {
@@ -683,8 +701,16 @@ fn build_flow_subtree_impl<H: UiHost>(
                     taffy::style_helpers::auto()
                 })];
 
-            let needs_definite_height = has_flow_child_fill_h
+            let promotes_fill_height =
+                matches!(wrapper_style.size.height, crate::element::Length::Auto)
+                    && has_flow_child_fill_h
+                    && should_promote_auto_wrapper_for_fill(parent_kind, fret_core::Axis::Vertical);
+            let needs_definite_height = promotes_fill_height
                 || matches!(wrapper_style.size.height, crate::element::Length::Fill)
+                || matches!(
+                    wrapper_style.size.height,
+                    crate::element::Length::Fraction(_)
+                )
                 || matches!(wrapper_style.size.height, crate::element::Length::Px(_));
             style.grid_template_rows =
                 vec![GridTemplateComponent::Single(if needs_definite_height {
@@ -712,16 +738,10 @@ fn build_flow_subtree_impl<H: UiHost>(
             //
             // Practical impact: shadcn-like compositions commonly put `w_full()/h_full()` on inner
             // stacks, expecting the outer wrapper (CardHeader/CardContent, etc) to fill the card.
-            if matches!(wrapper_style.size.width, crate::element::Length::Auto)
-                && has_flow_child_fill_w
-                && should_promote_auto_wrapper_for_fill(parent_kind, fret_core::Axis::Horizontal)
-            {
+            if promotes_fill_width {
                 style.size.width = Dimension::percent(1.0);
             }
-            if matches!(wrapper_style.size.height, crate::element::Length::Auto)
-                && has_flow_child_fill_h
-                && should_promote_auto_wrapper_for_fill(parent_kind, fret_core::Axis::Vertical)
-            {
+            if promotes_fill_height {
                 style.size.height = Dimension::percent(1.0);
             }
 

@@ -218,6 +218,11 @@ impl Task {
         let content = self
             .content
             .unwrap_or_else(|| TaskContent::new(Vec::<AnyElement>::new()));
+        let mut content = content;
+        let content_test_id = content.test_id.clone();
+        if content_test_id.is_some() {
+            content.test_id = None;
+        }
         let test_id_root = self.test_id_root;
         let open = fret_ui_kit::primitives::collapsible::CollapsibleRoot::new()
             .open(self.open.clone())
@@ -232,9 +237,12 @@ impl Task {
             is_open,
         };
 
-        let collapsible = Collapsible::new(open)
+        let mut collapsible = Collapsible::new(open)
             .refine_style(chrome)
             .refine_layout(layout);
+        if let Some(test_id) = content_test_id {
+            collapsible = collapsible.content_test_id(test_id);
+        }
 
         let root = cx.provide(controller, |cx| {
             collapsible.into_element_with_open_model(
@@ -338,8 +346,11 @@ impl TaskTrigger {
         is_open: bool,
     ) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
+        let chrome = self.chrome;
+        let layout = self.layout;
+        let test_id = self.test_id;
 
-        let trigger = if self.children.is_empty() {
+        let trigger_body = if self.children.is_empty() {
             let title = self.title;
             let icon_size = Px(16.0);
             let hover_layout =
@@ -400,25 +411,25 @@ impl TaskTrigger {
                 },
             );
 
-            CollapsibleTrigger::new(open, [row]).a11y_label("Toggle task")
+            cx.container(
+                decl_style::container_props(&theme, chrome, layout),
+                move |_cx| vec![row],
+            )
         } else {
-            CollapsibleTrigger::new(open, self.children).a11y_label("Toggle task")
+            let children = self.children;
+            cx.container(
+                decl_style::container_props(&theme, chrome, layout),
+                move |_cx| children,
+            )
         };
 
-        let el = trigger.into_element(cx, is_open);
-        let el = cx.container(
-            decl_style::container_props(&theme, self.chrome, self.layout),
-            move |_cx| vec![el],
-        );
-
-        let Some(test_id) = self.test_id else {
-            return el;
-        };
-        el.attach_semantics(
-            SemanticsDecoration::default()
-                .role(SemanticsRole::Button)
-                .test_id(test_id),
-        )
+        let mut el = CollapsibleTrigger::new(open, [trigger_body])
+            .a11y_label("Toggle task")
+            .into_element(cx, is_open);
+        if let Some(test_id) = test_id {
+            el = el.test_id(test_id);
+        }
+        el
     }
 }
 
@@ -680,6 +691,28 @@ mod tests {
         }
     }
 
+    fn find_element_by_test_id<'a>(el: &'a AnyElement, test_id: &str) -> Option<&'a AnyElement> {
+        if el
+            .semantics_decoration
+            .as_ref()
+            .and_then(|dec| dec.test_id.as_deref())
+            == Some(test_id)
+        {
+            return Some(el);
+        }
+
+        match &el.kind {
+            ElementKind::Semantics(props) if props.test_id.as_deref() == Some(test_id) => {
+                return Some(el);
+            }
+            _ => {}
+        }
+
+        el.children
+            .iter()
+            .find_map(|child| find_element_by_test_id(child, test_id))
+    }
+
     #[test]
     fn task_trigger_default_row_attaches_foreground_without_wrapper() {
         let window = AppWindowId::default();
@@ -792,5 +825,39 @@ mod tests {
             find_text_by_content(&el, "Read layout.tsx").is_some(),
             "compound Task root should render TaskContent children"
         );
+    }
+
+    #[test]
+    fn task_trigger_and_content_test_ids_mark_collapsible_relation_endpoints() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(360.0), Px(220.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "task-root", |cx| {
+            Task::root()
+                .default_open(true)
+                .children([
+                    TaskChild::Trigger(TaskTrigger::new("Found project files").test_id("trigger")),
+                    TaskChild::Content(
+                        TaskContent::new([
+                            TaskItem::new([cx.text("Read layout.tsx")]).into_element(cx)
+                        ])
+                        .test_id("content"),
+                    ),
+                ])
+                .into_element(cx)
+        });
+
+        let trigger = find_element_by_test_id(&el, "trigger").expect("task trigger");
+        let ElementKind::Pressable(trigger_props) = &trigger.kind else {
+            panic!("expected task trigger test id to resolve to the pressable trigger");
+        };
+        let content = find_element_by_test_id(&el, "content").expect("task content");
+
+        assert_eq!(trigger_props.a11y.expanded, Some(true));
+        assert_eq!(trigger_props.a11y.controls_element, Some(content.id.0));
     }
 }

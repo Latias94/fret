@@ -165,11 +165,15 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         let header = shadcn::DrawerHeader::new([])
                             .children(|cx| {
                                 ui::children![
-                                    cx;
-                                    shadcn::DrawerTitle::new("Move Goal"),
+                                cx;
+                                    shadcn::DrawerTitle::new("Move Goal")
+                                        .into_element(cx)
+                                        .test_id("ui-gallery-drawer-demo-dialog-title"),
                                     shadcn::DrawerDescription::new(
                                         "Set your daily activity goal.",
                                     )
+                                    .into_element(cx)
+                                    .test_id("ui-gallery-drawer-demo-dialog-description")
                                 ]
                             })
                             .into_element(cx)

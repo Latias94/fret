@@ -23,6 +23,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::Field::new([
                 shadcn::FieldLabel::new("Month")
                     .for_control("ui-gallery-field-demo-expiry-month")
+                    .test_id("ui-gallery-field-demo-expiry-month-label")
                     .into_element(cx),
                 shadcn::Select::new(expiry_month, expiry_month_open)
                     .control_id("ui-gallery-field-demo-expiry-month")
@@ -49,6 +50,7 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::Field::new([
                 shadcn::FieldLabel::new("Year")
                     .for_control("ui-gallery-field-demo-expiry-year")
+                    .test_id("ui-gallery-field-demo-expiry-year-label")
                     .into_element(cx),
                 shadcn::Select::new(expiry_year, expiry_year_open)
                     .control_id("ui-gallery-field-demo-expiry-year")
@@ -69,11 +71,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::Field::new([
                 shadcn::FieldLabel::new("CVV")
                     .for_control("ui-gallery-field-demo-cvv")
+                    .test_id("ui-gallery-field-demo-cvv-label")
                     .into_element(cx),
                 shadcn::Input::new(cvv)
                     .control_id("ui-gallery-field-demo-cvv")
+                    .test_id("ui-gallery-field-demo-cvv")
                     .placeholder("123")
-                    .a11y_label("CVV")
                     .into_element(cx),
             ])
             .refine_layout(LayoutRefinement::default().w_full())
@@ -94,22 +97,24 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                 shadcn::Field::new([
                     shadcn::FieldLabel::new("Name on Card")
                         .for_control("ui-gallery-field-demo-card-name")
+                        .test_id("ui-gallery-field-demo-card-name-label")
                         .into_element(cx),
                     shadcn::Input::new(card_name)
                         .control_id("ui-gallery-field-demo-card-name")
+                        .test_id("ui-gallery-field-demo-card-name")
                         .placeholder("Evil Rabbit")
-                        .a11y_label("Name on Card")
                         .into_element(cx),
                 ])
                 .into_element(cx),
                 shadcn::Field::new([
                     shadcn::FieldLabel::new("Card Number")
                         .for_control("ui-gallery-field-demo-card-number")
+                        .test_id("ui-gallery-field-demo-card-number-label")
                         .into_element(cx),
                     shadcn::Input::new(card_number)
                         .control_id("ui-gallery-field-demo-card-number")
+                        .test_id("ui-gallery-field-demo-card-number")
                         .placeholder("1234 5678 9012 3456")
-                        .a11y_label("Card Number")
                         .into_element(cx),
                     shadcn::FieldDescription::new("Enter your 16-digit card number")
                         .into_element(cx),
@@ -130,10 +135,11 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
             shadcn::FieldGroup::new([shadcn::Field::new([
                 shadcn::Checkbox::new(same_as_shipping)
                     .control_id("ui-gallery-field-demo-same-as-shipping")
-                    .a11y_label("Same as shipping address")
+                    .test_id("ui-gallery-field-demo-same-as-shipping")
                     .into_element(cx),
                 shadcn::FieldLabel::new("Same as shipping address")
                     .for_control("ui-gallery-field-demo-same-as-shipping")
+                    .test_id("ui-gallery-field-demo-same-as-shipping-label")
                     .into_element(cx),
             ])
             .orientation(shadcn::FieldOrientation::Horizontal)
@@ -145,11 +151,12 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         shadcn::FieldSet::new([shadcn::FieldGroup::new([shadcn::Field::new([
             shadcn::FieldLabel::new("Comments")
                 .for_control("ui-gallery-field-demo-comments")
+                .test_id("ui-gallery-field-demo-comments-label")
                 .into_element(cx),
             shadcn::Textarea::new(comments)
                 .control_id("ui-gallery-field-demo-comments")
+                .test_id("ui-gallery-field-demo-comments")
                 .placeholder("Add any additional comments")
-                .a11y_label("Comments")
                 .refine_layout(LayoutRefinement::default().h_px(Px(96.0)))
                 .into_element(cx),
         ])
