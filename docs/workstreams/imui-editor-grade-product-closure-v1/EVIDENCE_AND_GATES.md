@@ -1842,6 +1842,43 @@ git diff --check
 Result: passed locally. This is an owner-split, boundary-lock, and diagnostics closeout slice only;
 full editor perf/smoothness attribution remains open in the dedicated perf lanes.
 
+## Editor Canvas paint replay closeout - 2026-05-23 follow-up
+
+Scope: record the bounded editor-paint owner-lane closeout without moving performance pressure into
+`fret-imui`.
+
+- `docs/workstreams/editor-canvas-paint-replay-slice-v1/` is now closed.
+- Implementation landed in `ecosystem/fret-code-editor/src/editor/paint/scene.rs` and focused
+  regression coverage in `ecosystem/fret-code-editor/src/editor/tests/row_text_cache.rs`.
+- The r59 Windows RTX4090 target-machine pass produced:
+  - baseline validation:
+    `target/fret-diag/editor-paint-contract-validate-20260523-r59/summary.json`;
+  - attribution validation:
+    `target/fret-diag/editor-paint-contract-validate-20260523-r59-attrib/summary.json`;
+  - artifact verification:
+    `target/fret-diag/editor-paint-contract-validate-20260523-r59/artifact-verification.summary.json`;
+  - closeout:
+    `target/fret-diag/editor-paint-contract-validate-20260523-r59/editor-paint-contract-closeout.summary.json`.
+- The closeout kept checked-in baselines unchanged and retained `canvas-paint-replay` as the
+  verified owner.
+- This is editor paint / perf-lane progress only; it does not justify `fret-imui` helper growth or
+  close broad editor smoothness attribution.
+
+Focused evidence commands from the closed lane:
+
+```text
+cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay prepaint_row_scene_replay_plan_handles_plain_cached_rows prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context prepaint_row_scene_replay_plan_rejects_plain_rows_when_fg_changes --features syntax-rust --no-fail-fast
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260523-r59
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260523-r59-attrib --with-paint-perf
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260523-r59 --attribution-dir target/fret-diag/editor-paint-contract-validate-20260523-r59-attrib
+python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260523-r59 --attribution-dir target/fret-diag/editor-paint-contract-validate-20260523-r59-attrib
+```
+
+Result: passed and recorded in
+`docs/workstreams/editor-canvas-paint-replay-slice-v1/CLOSEOUT_AUDIT_2026-05-23.md`. Broader
+DevTools GUI maturity, real-host Wayland hand-feel, and full perf/smoothness attribution remain
+outside this slice.
+
 ## DevTools MCP recent-evidence bridge - 2026-05-21 follow-up
 
 Scope: keep AI/MCP first-open diagnostics aligned with the GUI `Recent Evidence` product surface

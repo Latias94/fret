@@ -1,12 +1,17 @@
 use super::*;
 
-pub(super) fn route_pointer_move_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn route_pointer_move_event<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     event: &Event,
     snapshot: &ViewSnapshot,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: super::super::pointer_move_release::PointerMoveReleaseCx<H, M>
+        + super::super::pointer_move_tail_cx::PointerMoveTailCx<H>,
+{
     let Event::Pointer(fret_core::PointerEvent::Move {
         position,
         buttons,

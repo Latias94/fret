@@ -91,10 +91,7 @@ impl CodeEditorHandle {
         st.row_geom_cache_queue.clear();
         st.row_geom_cache_caret_stops_len_total = 0;
         st.sync_row_scene_cache_epoch();
-        st.row_scene_cache_tick = 0;
-        st.row_scene_cache.clear();
-        st.row_scene_cache_queue.clear();
-        st.row_scene_cache_scene_ops_len_total = 0;
+        st.clear_row_scene_cache_storage();
         #[cfg(feature = "syntax")]
         {
             st.syntax_row_cache_rev = st.buffer.revision();

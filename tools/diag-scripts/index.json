@@ -1755,6 +1755,25 @@
       ]
     },
     {
+      "id": "docking-arbitration-tearoff-multiwindow-basic",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-tearoff-multiwindow-basic.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "required_launch_features": [],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking"
+      ],
+      "tags": [
+        "docking",
+        "multiwindow",
+        "tearoff"
+      ],
+      "target_hints": [
+        "fret-demo docking_arbitration_demo (native)"
+      ]
+    },
+    {
       "id": "docking-demo-split-toggle-retarget-fixed-frame-delta",
       "path": "tools/diag-scripts/docking/demo/docking-demo-split-toggle-retarget-fixed-frame-delta.json",
       "required_capabilities": [],

@@ -1,5 +1,5 @@
 use fret_core::{Event, Modifiers, MouseButton, MouseButtons, Point, PointerEvent, Px, Rect, Size};
-use fret_ui::retained_bridge::Widget;
+use fret_ui::Widget;
 
 use crate::core::{Edge, EdgeId, EdgeKind};
 

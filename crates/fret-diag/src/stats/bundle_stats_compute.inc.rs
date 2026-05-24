@@ -52,6 +52,12 @@ fn snapshot_code_editor_paint_perf(
         rows_scene_prepaint_skip_key_mismatch: u64_field!(
             "rows_scene_prepaint_skip_key_mismatch"
         ),
+        rows_scene_prepaint_plan_cache_hits: u64_field!(
+            "rows_scene_prepaint_plan_cache_hits"
+        ),
+        rows_scene_prepaint_plan_cache_rejects: u64_field!(
+            "rows_scene_prepaint_plan_cache_rejects"
+        ),
         rows_scene_fast_miss_no_entry: u64_field!("rows_scene_fast_miss_no_entry"),
         rows_scene_fast_miss_key_mismatch: u64_field!("rows_scene_fast_miss_key_mismatch"),
         rows_scene_full_miss_no_entry: u64_field!("rows_scene_full_miss_no_entry"),
@@ -86,6 +92,10 @@ fn snapshot_code_editor_paint_perf(
         us_row_scene_full_key_compare: us_field!(
             "us_row_scene_full_key_compare",
             "ns_row_scene_full_key_compare"
+        ),
+        us_row_scene_replay_setup: us_field!(
+            "us_row_scene_replay_setup",
+            "ns_row_scene_replay_setup"
         ),
         us_row_scene_replay_touch: us_field!(
             "us_row_scene_replay_touch",
@@ -1490,12 +1500,141 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("layout_clean_geometry_proof_boundaries"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let layout_clean_geometry_proof_leaf_shortcut_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_leaf_shortcut_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_node_state_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_node_state_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_contract_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_contract_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_record_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_record_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_contract_eval_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_contract_eval_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_child_bounds_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_child_bounds_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_child_bounds_origin_only_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_child_bounds_origin_only_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us = stats
+                .and_then(|m| {
+                    m.get("layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us =
+                stats
+                    .and_then(|m| {
+                        m.get(
+                            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us",
+                        )
+                    })
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+            let layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us =
+                stats
+                    .and_then(|m| {
+                        m.get(
+                            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us",
+                        )
+                    })
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+            let layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us =
+                stats
+                    .and_then(|m| {
+                        m.get(
+                            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us",
+                        )
+                    })
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+            let layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us =
+                stats
+                    .and_then(|m| {
+                        m.get(
+                            "layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us",
+                        )
+                    })
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+            let layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us = stats
+                .and_then(|m| {
+                    m.get("layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us = stats
+                .and_then(|m| {
+                    m.get("layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_child_bounds_container_px_insets_time_us = stats
+                .and_then(|m| {
+                    m.get("layout_clean_geometry_proof_child_bounds_container_px_insets_time_us")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us =
+                stats
+                    .and_then(|m| {
+                        m.get(
+                            "layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us",
+                        )
+                    })
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0);
+            let layout_clean_geometry_proof_text_metrics_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_text_metrics_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_child_prev_bounds_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_child_prev_bounds_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_proof_emit_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_proof_emit_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let layout_clean_geometry_apply_nodes = stats
                 .and_then(|m| m.get("layout_clean_geometry_apply_nodes"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let layout_clean_geometry_apply_fallback_layouts = stats
                 .and_then(|m| m.get("layout_clean_geometry_apply_fallback_layouts"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_apply_fallback_layouts_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_apply_fallback_layouts_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_apply_fallback_layouts_top_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_apply_fallback_layouts_top_time_us"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_apply_fallback_layouts_top_kind = stats
+                .and_then(|m| m.get("layout_clean_geometry_apply_fallback_layouts_top_kind"))
+                .and_then(|v| v.as_str())
+                .map(str::to_string);
+            let layout_clean_geometry_scroll_side_effect_fast_paths = stats
+                .and_then(|m| m.get("layout_clean_geometry_scroll_side_effect_fast_paths"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let layout_clean_geometry_apply_paint_fingerprint_time_us = stats
+                .and_then(|m| m.get("layout_clean_geometry_apply_paint_fingerprint_time_us"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let layout_request_build_roots_phase2_compute_time_us = stats
@@ -1911,12 +2050,95 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.sum_layout_clean_geometry_proof_boundaries = out
                 .sum_layout_clean_geometry_proof_boundaries
                 .saturating_add(layout_clean_geometry_proof_boundaries);
+            out.sum_layout_clean_geometry_proof_leaf_shortcut_time_us = out
+                .sum_layout_clean_geometry_proof_leaf_shortcut_time_us
+                .saturating_add(layout_clean_geometry_proof_leaf_shortcut_time_us);
+            out.sum_layout_clean_geometry_proof_node_state_time_us = out
+                .sum_layout_clean_geometry_proof_node_state_time_us
+                .saturating_add(layout_clean_geometry_proof_node_state_time_us);
+            out.sum_layout_clean_geometry_proof_contract_time_us = out
+                .sum_layout_clean_geometry_proof_contract_time_us
+                .saturating_add(layout_clean_geometry_proof_contract_time_us);
+            out.sum_layout_clean_geometry_proof_record_time_us = out
+                .sum_layout_clean_geometry_proof_record_time_us
+                .saturating_add(layout_clean_geometry_proof_record_time_us);
+            out.sum_layout_clean_geometry_proof_contract_eval_time_us = out
+                .sum_layout_clean_geometry_proof_contract_eval_time_us
+                .saturating_add(layout_clean_geometry_proof_contract_eval_time_us);
+            out.sum_layout_clean_geometry_proof_child_bounds_time_us = out
+                .sum_layout_clean_geometry_proof_child_bounds_time_us
+                .saturating_add(layout_clean_geometry_proof_child_bounds_time_us);
+            out.sum_layout_clean_geometry_proof_child_bounds_origin_only_time_us = out
+                .sum_layout_clean_geometry_proof_child_bounds_origin_only_time_us
+                .saturating_add(layout_clean_geometry_proof_child_bounds_origin_only_time_us);
+            out.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us = out
+                .sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us
+                .saturating_add(
+                    layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us,
+                );
+            out.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us =
+                out.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us
+                    .saturating_add(
+                        layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us,
+                    );
+            out.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us =
+                out.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us
+                    .saturating_add(
+                        layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us,
+                    );
+            out.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us =
+                out.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us
+                    .saturating_add(
+                        layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us,
+                    );
+            out.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us =
+                out.sum_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us
+                    .saturating_add(
+                        layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us,
+                    );
+            out.sum_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us = out
+                .sum_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us
+                .saturating_add(layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us);
+            out.sum_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us = out
+                .sum_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us
+                .saturating_add(
+                    layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us,
+                );
+            out.sum_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us = out
+                .sum_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us
+                .saturating_add(layout_clean_geometry_proof_child_bounds_container_px_insets_time_us);
+            out.sum_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us =
+                out.sum_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us
+                    .saturating_add(
+                        layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us,
+                    );
+            out.sum_layout_clean_geometry_proof_text_metrics_time_us = out
+                .sum_layout_clean_geometry_proof_text_metrics_time_us
+                .saturating_add(layout_clean_geometry_proof_text_metrics_time_us);
+            out.sum_layout_clean_geometry_proof_child_prev_bounds_time_us = out
+                .sum_layout_clean_geometry_proof_child_prev_bounds_time_us
+                .saturating_add(layout_clean_geometry_proof_child_prev_bounds_time_us);
+            out.sum_layout_clean_geometry_proof_emit_time_us = out
+                .sum_layout_clean_geometry_proof_emit_time_us
+                .saturating_add(layout_clean_geometry_proof_emit_time_us);
             out.sum_layout_clean_geometry_apply_nodes = out
                 .sum_layout_clean_geometry_apply_nodes
                 .saturating_add(layout_clean_geometry_apply_nodes);
             out.sum_layout_clean_geometry_apply_fallback_layouts = out
                 .sum_layout_clean_geometry_apply_fallback_layouts
                 .saturating_add(layout_clean_geometry_apply_fallback_layouts);
+            out.sum_layout_clean_geometry_apply_fallback_layouts_time_us = out
+                .sum_layout_clean_geometry_apply_fallback_layouts_time_us
+                .saturating_add(layout_clean_geometry_apply_fallback_layouts_time_us);
+            out.sum_layout_clean_geometry_apply_fallback_layouts_top_time_us = out
+                .sum_layout_clean_geometry_apply_fallback_layouts_top_time_us
+                .saturating_add(layout_clean_geometry_apply_fallback_layouts_top_time_us);
+            out.sum_layout_clean_geometry_scroll_side_effect_fast_paths = out
+                .sum_layout_clean_geometry_scroll_side_effect_fast_paths
+                .saturating_add(layout_clean_geometry_scroll_side_effect_fast_paths);
+            out.sum_layout_clean_geometry_apply_paint_fingerprint_time_us = out
+                .sum_layout_clean_geometry_apply_paint_fingerprint_time_us
+                .saturating_add(layout_clean_geometry_apply_paint_fingerprint_time_us);
             out.sum_layout_request_build_roots_phase2_compute_time_us = out
                 .sum_layout_request_build_roots_phase2_compute_time_us
                 .saturating_add(layout_request_build_roots_phase2_compute_time_us);
@@ -2043,12 +2265,96 @@ pub(super) fn bundle_stats_from_json_with_options(
             out.max_layout_clean_geometry_proof_boundaries = out
                 .max_layout_clean_geometry_proof_boundaries
                 .max(layout_clean_geometry_proof_boundaries);
+            out.max_layout_clean_geometry_proof_leaf_shortcut_time_us = out
+                .max_layout_clean_geometry_proof_leaf_shortcut_time_us
+                .max(layout_clean_geometry_proof_leaf_shortcut_time_us);
+            out.max_layout_clean_geometry_proof_node_state_time_us = out
+                .max_layout_clean_geometry_proof_node_state_time_us
+                .max(layout_clean_geometry_proof_node_state_time_us);
+            out.max_layout_clean_geometry_proof_contract_time_us = out
+                .max_layout_clean_geometry_proof_contract_time_us
+                .max(layout_clean_geometry_proof_contract_time_us);
+            out.max_layout_clean_geometry_proof_record_time_us = out
+                .max_layout_clean_geometry_proof_record_time_us
+                .max(layout_clean_geometry_proof_record_time_us);
+            out.max_layout_clean_geometry_proof_contract_eval_time_us = out
+                .max_layout_clean_geometry_proof_contract_eval_time_us
+                .max(layout_clean_geometry_proof_contract_eval_time_us);
+            out.max_layout_clean_geometry_proof_child_bounds_time_us = out
+                .max_layout_clean_geometry_proof_child_bounds_time_us
+                .max(layout_clean_geometry_proof_child_bounds_time_us);
+            out.max_layout_clean_geometry_proof_child_bounds_origin_only_time_us = out
+                .max_layout_clean_geometry_proof_child_bounds_origin_only_time_us
+                .max(layout_clean_geometry_proof_child_bounds_origin_only_time_us);
+            out.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us = out
+                .max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us
+                .max(layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us);
+            out.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us =
+                out.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us
+                    .max(
+                        layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us,
+                    );
+            out.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us =
+                out.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us
+                    .max(
+                        layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us,
+                    );
+            out.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us =
+                out.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us
+                    .max(
+                        layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us,
+                    );
+            out.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us =
+                out.max_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us
+                    .max(
+                        layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us,
+                    );
+            out.max_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us = out
+                .max_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us
+                .max(layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us);
+            out.max_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us = out
+                .max_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us
+                .max(layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us);
+            out.max_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us = out
+                .max_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us
+                .max(layout_clean_geometry_proof_child_bounds_container_px_insets_time_us);
+            out.max_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us =
+                out.max_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us
+                    .max(
+                        layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us,
+                    );
+            out.max_layout_clean_geometry_proof_text_metrics_time_us = out
+                .max_layout_clean_geometry_proof_text_metrics_time_us
+                .max(layout_clean_geometry_proof_text_metrics_time_us);
+            out.max_layout_clean_geometry_proof_child_prev_bounds_time_us = out
+                .max_layout_clean_geometry_proof_child_prev_bounds_time_us
+                .max(layout_clean_geometry_proof_child_prev_bounds_time_us);
+            out.max_layout_clean_geometry_proof_emit_time_us = out
+                .max_layout_clean_geometry_proof_emit_time_us
+                .max(layout_clean_geometry_proof_emit_time_us);
             out.max_layout_clean_geometry_apply_nodes = out
                 .max_layout_clean_geometry_apply_nodes
                 .max(layout_clean_geometry_apply_nodes);
             out.max_layout_clean_geometry_apply_fallback_layouts = out
                 .max_layout_clean_geometry_apply_fallback_layouts
                 .max(layout_clean_geometry_apply_fallback_layouts);
+            out.max_layout_clean_geometry_apply_fallback_layouts_time_us = out
+                .max_layout_clean_geometry_apply_fallback_layouts_time_us
+                .max(layout_clean_geometry_apply_fallback_layouts_time_us);
+            if layout_clean_geometry_apply_fallback_layouts_top_time_us
+                > out.max_layout_clean_geometry_apply_fallback_layouts_top_time_us
+            {
+                out.max_layout_clean_geometry_apply_fallback_layouts_top_time_us =
+                    layout_clean_geometry_apply_fallback_layouts_top_time_us;
+                out.max_layout_clean_geometry_apply_fallback_layouts_top_kind =
+                    layout_clean_geometry_apply_fallback_layouts_top_kind.clone();
+            }
+            out.max_layout_clean_geometry_scroll_side_effect_fast_paths = out
+                .max_layout_clean_geometry_scroll_side_effect_fast_paths
+                .max(layout_clean_geometry_scroll_side_effect_fast_paths);
+            out.max_layout_clean_geometry_apply_paint_fingerprint_time_us = out
+                .max_layout_clean_geometry_apply_paint_fingerprint_time_us
+                .max(layout_clean_geometry_apply_paint_fingerprint_time_us);
             out.max_layout_request_build_roots_phase2_compute_time_us = out
                 .max_layout_request_build_roots_phase2_compute_time_us
                 .max(layout_request_build_roots_phase2_compute_time_us);
@@ -2238,8 +2544,32 @@ pub(super) fn bundle_stats_from_json_with_options(
                 layout_request_build_roots_phase2_clean_geometry_proof_time_us,
                 layout_clean_geometry_proof_nodes,
                 layout_clean_geometry_proof_boundaries,
+                layout_clean_geometry_proof_leaf_shortcut_time_us,
+                layout_clean_geometry_proof_node_state_time_us,
+                layout_clean_geometry_proof_contract_time_us,
+                layout_clean_geometry_proof_record_time_us,
+                layout_clean_geometry_proof_contract_eval_time_us,
+                layout_clean_geometry_proof_child_bounds_time_us,
+                layout_clean_geometry_proof_child_bounds_origin_only_time_us,
+                layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us,
+                layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us,
+                layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us,
+                layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us,
+                layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us,
+                layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us,
+                layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us,
+                layout_clean_geometry_proof_child_bounds_container_px_insets_time_us,
+                layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us,
+                layout_clean_geometry_proof_text_metrics_time_us,
+                layout_clean_geometry_proof_child_prev_bounds_time_us,
+                layout_clean_geometry_proof_emit_time_us,
                 layout_clean_geometry_apply_nodes,
                 layout_clean_geometry_apply_fallback_layouts,
+                layout_clean_geometry_apply_fallback_layouts_time_us,
+                layout_clean_geometry_apply_fallback_layouts_top_time_us,
+                layout_clean_geometry_apply_fallback_layouts_top_kind,
+                layout_clean_geometry_scroll_side_effect_fast_paths,
+                layout_clean_geometry_apply_paint_fingerprint_time_us,
                 layout_request_build_roots_phase2_compute_time_us,
                 layout_request_build_roots_put_engine_time_us,
                 layout_roots_time_us,
@@ -2636,6 +2966,10 @@ pub(super) fn bundle_stats_from_json_with_options(
             rows_scene_prepaint_skip_key_mismatch: metric!(
                 rows_scene_prepaint_skip_key_mismatch
             ),
+            rows_scene_prepaint_plan_cache_hits: metric!(rows_scene_prepaint_plan_cache_hits),
+            rows_scene_prepaint_plan_cache_rejects: metric!(
+                rows_scene_prepaint_plan_cache_rejects
+            ),
             rows_scene_fast_miss_no_entry: metric!(rows_scene_fast_miss_no_entry),
             rows_scene_fast_miss_key_mismatch: metric!(rows_scene_fast_miss_key_mismatch),
             rows_scene_full_miss_no_entry: metric!(rows_scene_full_miss_no_entry),
@@ -2656,6 +2990,7 @@ pub(super) fn bundle_stats_from_json_with_options(
             us_row_scene_full_probe: metric!(us_row_scene_full_probe),
             us_row_scene_fast_key_compare: metric!(us_row_scene_fast_key_compare),
             us_row_scene_full_key_compare: metric!(us_row_scene_full_key_compare),
+            us_row_scene_replay_setup: metric!(us_row_scene_replay_setup),
             us_row_scene_replay_touch: metric!(us_row_scene_replay_touch),
             us_row_scene_replay_ops: metric!(us_row_scene_replay_ops),
             us_row_scene_prepaint_plan: metric!(us_row_scene_prepaint_plan),
@@ -2741,6 +3076,125 @@ pub(super) fn bundle_stats_from_json_with_options(
         out.p95_layout_clean_geometry_proof_boundaries,
     ) = p50_p95(rows.iter().map(|r| r.layout_clean_geometry_proof_boundaries));
     (
+        out.p50_layout_clean_geometry_proof_leaf_shortcut_time_us,
+        out.p95_layout_clean_geometry_proof_leaf_shortcut_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_proof_leaf_shortcut_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_node_state_time_us,
+        out.p95_layout_clean_geometry_proof_node_state_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_proof_node_state_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_contract_time_us,
+        out.p95_layout_clean_geometry_proof_contract_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_clean_geometry_proof_contract_time_us));
+    (
+        out.p50_layout_clean_geometry_proof_record_time_us,
+        out.p95_layout_clean_geometry_proof_record_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_clean_geometry_proof_record_time_us));
+    (
+        out.p50_layout_clean_geometry_proof_contract_eval_time_us,
+        out.p95_layout_clean_geometry_proof_contract_eval_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_proof_contract_eval_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_child_bounds_time_us,
+        out.p95_layout_clean_geometry_proof_child_bounds_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_clean_geometry_proof_child_bounds_time_us));
+    (
+        out.p50_layout_clean_geometry_proof_child_bounds_origin_only_time_us,
+        out.p95_layout_clean_geometry_proof_child_bounds_origin_only_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_proof_child_bounds_origin_only_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us,
+        out.p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us,
+        out.p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us,
+        out.p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us,
+        out.p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us,
+        out.p95_layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us,
+        out.p95_layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us,
+        out.p95_layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us,
+        out.p95_layout_clean_geometry_proof_child_bounds_container_px_insets_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_proof_child_bounds_container_px_insets_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us,
+        out.p95_layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us,
+    ) = p50_p95(
+        rows.iter().map(|r| {
+            r.layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us
+        }),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_text_metrics_time_us,
+        out.p95_layout_clean_geometry_proof_text_metrics_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_clean_geometry_proof_text_metrics_time_us));
+    (
+        out.p50_layout_clean_geometry_proof_child_prev_bounds_time_us,
+        out.p95_layout_clean_geometry_proof_child_prev_bounds_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_proof_child_prev_bounds_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_proof_emit_time_us,
+        out.p95_layout_clean_geometry_proof_emit_time_us,
+    ) = p50_p95(rows.iter().map(|r| r.layout_clean_geometry_proof_emit_time_us));
+    (
         out.p50_layout_clean_geometry_apply_nodes,
         out.p95_layout_clean_geometry_apply_nodes,
     ) = p50_p95(rows.iter().map(|r| r.layout_clean_geometry_apply_nodes));
@@ -2750,6 +3204,34 @@ pub(super) fn bundle_stats_from_json_with_options(
     ) = p50_p95(
         rows.iter()
             .map(|r| r.layout_clean_geometry_apply_fallback_layouts),
+    );
+    (
+        out.p50_layout_clean_geometry_apply_fallback_layouts_time_us,
+        out.p95_layout_clean_geometry_apply_fallback_layouts_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_apply_fallback_layouts_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_apply_fallback_layouts_top_time_us,
+        out.p95_layout_clean_geometry_apply_fallback_layouts_top_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_apply_fallback_layouts_top_time_us),
+    );
+    (
+        out.p50_layout_clean_geometry_scroll_side_effect_fast_paths,
+        out.p95_layout_clean_geometry_scroll_side_effect_fast_paths,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_scroll_side_effect_fast_paths),
+    );
+    (
+        out.p50_layout_clean_geometry_apply_paint_fingerprint_time_us,
+        out.p95_layout_clean_geometry_apply_paint_fingerprint_time_us,
+    ) = p50_p95(
+        rows.iter()
+            .map(|r| r.layout_clean_geometry_apply_paint_fingerprint_time_us),
     );
     (
         out.p50_layout_request_build_roots_phase2_compute_time_us,

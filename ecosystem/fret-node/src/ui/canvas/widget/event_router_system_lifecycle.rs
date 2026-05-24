@@ -1,8 +1,24 @@
 use super::*;
 
+pub(in crate::ui::canvas::widget) trait SystemLifecycleCx<H: UiHost>:
+    super::event_clipboard::ClipboardTextCx<H>
+    + super::cancel_cx::CancelGestureCx<H>
+    + super::internal_drag_cx::InternalDragCx<H>
+    + super::timer_motion_cx::TimerMotionCx<H>
+{
+}
+
+impl<H: UiHost, T> SystemLifecycleCx<H> for T where
+    T: super::event_clipboard::ClipboardTextCx<H>
+        + super::cancel_cx::CancelGestureCx<H>
+        + super::internal_drag_cx::InternalDragCx<H>
+        + super::timer_motion_cx::TimerMotionCx<H>
+{
+}
+
 pub(super) fn route_lifecycle_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl SystemLifecycleCx<H>,
     event: &Event,
     snapshot: &ViewSnapshot,
     zoom: f32,

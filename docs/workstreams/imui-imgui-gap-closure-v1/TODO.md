@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-21
+Last updated: 2026-05-24
 
 ## P0 - Source Baseline
 
@@ -1240,6 +1240,11 @@ Readiness order for the next locally testable review slices:
    Current review: `P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`. The useful comparison axis is
    Zed-style attribution and reuse discipline plus egui-style integration/repaint clarity; do not
    treat egui's full-layout-every-frame model as an IMUI architecture target.
+   2026-05-23 refresh: the Windows RTX4090 editor-paint closeout and the closed
+   `editor-canvas-paint-replay-slice-v1` follow-on keep the current performance owner in
+   editor paint / row-scene replay bookkeeping, not in `fret-imui`. r59 target-machine closeout
+   passed without a checked-in baseline change, so Dear ImGui-class smoothness pressure remains a
+   dedicated perf/editor owner-lane concern.
 
 These slices should stay Windows/Web-verifiable first; Linux-specific validation is not a gate for
 opening the slice.
@@ -1249,3 +1254,86 @@ opening the slice.
 - [x] Add a closeout audit once the first cleanup/refactor slice lands and gates pass.
       Result: `P1_CLOSEOUT_AUDIT_2026-05-06.md` closes P1 cleanup while leaving this lane active for
       P2/P3 sequencing.
+
+## P5 - Fearless Refactor Execution
+
+- [x] Split the floating-window resize/chrome logic out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into a dedicated internal helper
+      without changing the public IMUI surface.
+      Result: `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` now owns the resize-handle
+      interaction logic and `floating_window_on_area.rs` only orchestrates it.
+- [x] Keep the floating-window public API and teaching surfaces stable while the internal owner
+      split lands.
+      Result: no public IMUI exports changed and the current floating smoke suite still passes.
+- [x] Verify the floating smoke/tests and the current IMUI source gates after the split.
+      Result: `cargo test -p fret-ui-kit --features imui --lib
+      floating_window_close_glyph_uses_shared_chrome_glyph_text_role`, `cargo nextest run -p
+      fret-imui floating --no-fail-fast`, `cargo check -p fret-ui-kit --features imui --lib`, `python
+      tools/gate_imui_workstream_source.py`, `python tools/gate_imui_facade_teaching_source.py`,
+      `python tools/check_workstream_catalog.py`, and `git diff --check` all pass.
+- [x] Split the floating-window title-bar row/close-button composition out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into a dedicated internal helper
+      without changing the public IMUI surface.
+      Result: `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` now owns the
+      title-row / close-button orchestration, while `floating_window_on_area.rs` keeps shell,
+      content, and resize orchestration.
+- [x] Split the floating-window content/blocker orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_content.rs` into dedicated internal helpers
+      without changing the public IMUI surface.
+      Result: `floating_window_content.rs` now owns the content scroll/focus wrapper and
+      `floating_window_blocker.rs` now owns the input-blocking overlay, while
+      `floating_window_on_area.rs` keeps the shell that wires title, content, blocker, and resize
+      stack together.
+- [x] Split the floating-window resize-stack orchestration out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into the resize owner without
+      changing the public IMUI surface.
+      Result: `floating_window_resize.rs` now owns the body/blocker/resize-handle stack assembly,
+      while `floating_window_on_area.rs` passes a clipped body, blocker, resize flags, and handle
+      test ids into that owner.
+- [x] Split the floating-window resize-state calculation out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into the resize owner without
+      changing the public IMUI surface.
+      Result: `floating_window_resize.rs` now owns the resize-state clamp/snap/update logic via
+      `prepare_resize_state(...)`, while `floating_window_on_area.rs` only wires the resulting
+      state into the shell, chrome, and stack assembly.
+- [x] Split the floating-window resize drag snapshot read out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into the resize owner without
+      changing the public IMUI surface.
+      Result: `floating_window_resize.rs` now owns the handle enumeration, drag-kind lookup, drag
+      snapshot shape, and collapsed-aware resizing signal, while `floating_window_on_area.rs`
+      consumes `current_resize_snapshot(...)` / `prepare_resize_state(...)` as owner outputs.
+- [x] Split the floating-window shell/container composition out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into a dedicated internal helper
+      without changing the public IMUI surface.
+      Result: `floating_window_shell.rs` now owns the window frame, title-bar container, clipped
+      body, blocker, and resize stack assembly, while `floating_window_on_area.rs` only wires the
+      prepared owner outputs together.
+- [x] Split the floating-window resize-handle layout mapping out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` into a private helper without
+      changing the public IMUI surface.
+      Result: `resize_handle_layout(...)` now owns the repeated cursor/inset/size mapping, and
+      `resize_handle_element(...)` only wires that layout into the pointer-region behavior.
+- [x] Split the floating-window resize drag application out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs::prepare_resize_state(...)` into a
+      private helper without changing the public IMUI surface.
+      Result: `apply_resize_drag(...)` now owns the handle-driven size/position mutation, and
+      `prepare_resize_state(...)` only handles snapshot selection, collapse checks, and pixel snap.
+- [x] Split the floating-window shell `ContainerProps` / `ColumnProps` construction out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_shell.rs::floating_window_shell_element(...)`
+      into private helpers without changing the public IMUI surface.
+      Result: `window_frame_props(...)`, `shell_column_props(...)`,
+      `title_bar_container_props(...)`, and `clipped_body_props(...)` now own shell frame/layout
+      properties while the shell element only composes owner outputs.
+- [x] Split the floating-window title-bar `RowProps` / drag-surface `PointerRegionProps` /
+      close-button props construction out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs::floating_window_title_bar_row(...)`
+      into a dedicated internal helper module without changing the public IMUI surface.
+      Result: `floating_window_title_bar_props.rs` now owns the title-row layout, drag-surface
+      layout, and close-button accessibility/size props, while `floating_window_title_bar.rs`
+      keeps title-bar behavior orchestration and text-role helpers.
+- [x] Split the floating-window content scroll/container layout construction out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_content.rs::floating_window_content_element(...)`
+      into private helpers without changing the public IMUI surface.
+      Result: `floating_window_content_props.rs` now owns the content surface layout, scroll
+      layout, and container props, while `floating_window_content.rs` keeps the pointer/focus
+      orchestration and consumes the prepared owner outputs.

@@ -94,6 +94,13 @@ impl CanvasHostedResources {
         }
     }
 
+    /// Merge precomputed hosted-resource references from another retained scene fragment.
+    pub fn extend_resources(&mut self, resources: &CanvasHostedResources) {
+        self.text_blobs.extend(resources.text_blobs.iter().copied());
+        self.paths.extend(resources.paths.iter().copied());
+        self.svgs.extend(resources.svgs.iter().copied());
+    }
+
     /// Build a precomputed hosted-resource list from retained scene ops.
     pub fn from_scene_ops(ops: &[SceneOp]) -> Self {
         let mut resources = Self::default();
@@ -103,6 +110,10 @@ impl CanvasHostedResources {
 
     pub fn text_blob_ids(&self) -> &[fret_core::TextBlobId] {
         &self.text_blobs
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.text_blobs.is_empty() && self.paths.is_empty() && self.svgs.is_empty()
     }
 }
 

@@ -1,6 +1,6 @@
 use fret_core::{AppWindowId, Rect};
+use fret_ui::EventCx;
 use fret_ui::UiHost;
-use fret_ui::retained_bridge::EventCx;
 
 use super::auto_pan_timer_cx::AutoPanTimerCx;
 

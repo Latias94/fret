@@ -5,7 +5,7 @@ pub(in super::super) fn handle_left_button_double_click_routes<
     M: NodeGraphCanvasMiddleware,
 >(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl pointer_down_double_click_cx::PointerDownDoubleClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     button: MouseButton,

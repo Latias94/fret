@@ -10,7 +10,6 @@ pub mod echarts;
 pub mod input_map;
 pub mod linking;
 pub mod output;
-pub mod retained;
 pub mod style;
 pub mod tooltip;
 
@@ -18,6 +17,7 @@ mod a11y;
 mod legend_logic;
 mod slider_logic;
 mod tooltip_layout;
+mod visual_map_logic;
 
 pub use declarative::*;
 pub use input_map::*;
@@ -32,28 +32,11 @@ mod public_surface_policy {
         source.split_whitespace().collect::<String>()
     }
 
-    #[test]
-    fn retained_multi_grid_helpers_are_removed_from_public_surface() {
-        let retained_mod = compact(include_str!("retained/mod.rs"));
-        let retained_canvas = compact(include_str!("retained/canvas.rs"));
-
-        assert!(
-            !retained_mod.contains("modmulti_grid;")
-                && !retained_mod.contains("pubusemulti_grid::*;"),
-            "retained chart should not keep the legacy multi-grid helper module public"
-        );
-
-        for marker in [
-            "pubfnnew_grid_view(",
-            "pubfnnew_overlay(",
-            "ChartCanvasMode::GridView",
-            "ChartCanvasMode::Overlay",
-        ] {
-            assert!(
-                !retained_canvas.contains(marker),
-                "retained ChartCanvas should not keep legacy multi-grid surface marker `{marker}`"
-            );
-        }
+    fn public_surface() -> &'static str {
+        include_str!("lib.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap_or(include_str!("lib.rs"))
     }
 
     #[test]
@@ -102,23 +85,8 @@ mod public_surface_policy {
     }
 
     #[test]
-    fn retained_output_reexport_is_removed_from_public_surface() {
-        let retained_mod = compact(include_str!("retained/mod.rs"));
-        let retained_canvas = include_str!("retained/canvas.rs");
-
-        assert!(
-            !retained_mod.contains("modoutput;") && !retained_mod.contains("pubuseoutput::*;"),
-            "retained chart should not re-export shared output contracts from a retained output module"
-        );
-        assert!(
-            !retained_canvas.contains("crate::retained::ChartCanvasOutput"),
-            "retained ChartCanvas should consume top-level ChartCanvasOutput directly"
-        );
-    }
-
-    #[test]
     fn retained_widgets_are_not_glob_reexported_from_crate_root() {
-        let root = compact(include_str!("lib.rs"));
+        let root = compact(public_surface());
         let marker = ["pubuse", "retained::*;"].concat();
 
         assert!(
@@ -128,54 +96,53 @@ mod public_surface_policy {
     }
 
     #[test]
-    fn legend_scroll_policy_lives_in_shared_logic() {
-        let retained_canvas = include_str!("retained/canvas.rs");
-        let declarative_legend = include_str!("declarative/legend_overlay.rs");
+    fn retained_chart_compat_feature_is_noop_and_module_is_quarantined() {
+        let root = compact(public_surface());
+        let cargo_toml = include_str!("../Cargo.toml");
 
-        for (name, source) in [
-            ("retained/canvas.rs", retained_canvas),
-            ("declarative/legend_overlay.rs", declarative_legend),
-        ] {
-            assert!(
-                source.contains("crate::legend_logic::legend_scroll_after_wheel"),
-                "{name} should route legend wheel scrolling through shared legend_logic"
-            );
-            assert!(
-                source.contains("crate::legend_logic::legend_clamp_scroll_y"),
-                "{name} should route legend scroll clamping through shared legend_logic"
-            );
-            assert!(
-                !source.contains("0.75f32"),
-                "{name} should not duplicate the legend wheel speed policy"
-            );
-        }
+        assert!(
+            !root.contains("modretained;"),
+            "retained chart source should stay deleted instead of compiling behind a bridge feature"
+        );
+        assert!(
+            !cargo_toml.contains("fret-ui/unstable-retained-bridge"),
+            "fret-chart should not map any feature to fret-ui/unstable-retained-bridge"
+        );
+        assert!(
+            cargo_toml.contains("compat-retained-canvas = []"),
+            "fret-chart should keep compat-retained-canvas only as a no-op transition alias"
+        );
+        assert!(
+            !cargo_toml.contains(
+                "fret-ui = { version = \"0.1.0\", path = \"../../crates/fret-ui\", features = [\"unstable-retained-bridge\"] }"
+            ),
+            "fret-chart should not enable unstable-retained-bridge from the default fret-ui dependency"
+        );
     }
 
     #[test]
-    fn slider_math_policy_lives_in_shared_logic() {
-        let retained_canvas = include_str!("retained/canvas.rs");
+    fn default_chart_dependency_does_not_enable_unstable_retained_bridge() {
+        let cargo_toml = include_str!("../Cargo.toml");
+        let root = compact(public_surface());
 
-        for marker in [
-            "fn slider_norm(",
-            "fn slider_value_at(",
-            "fn slider_value_at_y(",
-            "fn slider_window_after_delta(",
-        ] {
-            assert!(
-                !retained_canvas.contains(marker),
-                "retained ChartCanvas should route slider math through shared slider_logic; unexpected `{marker}`"
-            );
-        }
-
-        for marker in [
-            "use crate::slider_logic::{",
-            "slider_window_after_delta(",
-            "slider_norm(",
-        ] {
-            assert!(
-                retained_canvas.contains(marker),
-                "retained ChartCanvas should consume shared slider policy marker `{marker}`"
-            );
-        }
+        assert!(
+            cargo_toml.contains("compat-retained-canvas = []"),
+            "fret-chart should keep compat-retained-canvas only as a no-op transition alias"
+        );
+        assert!(
+            !cargo_toml.contains("fret-ui/unstable-retained-bridge"),
+            "fret-chart should not map any feature to fret-ui/unstable-retained-bridge"
+        );
+        assert!(
+            !cargo_toml.contains(
+                "fret-ui = { version = \"0.1.0\", path = \"../../crates/fret-ui\", features = [\"unstable-retained-bridge\"] }"
+            ),
+            "fret-chart should not enable unstable-retained-bridge from the default fret-ui dependency"
+        );
+        assert!(
+            !root.contains("#[cfg(feature=\"compat-retained-canvas\")]modretained;")
+                && !root.contains("#[cfg(feature=\"compat-retained-canvas\")]pubmodretained;"),
+            "fret-chart compat-retained-canvas should not compile a retained chart module"
+        );
     }
 }

@@ -82,8 +82,6 @@ impl ElementHostWidget {
             ElementInstance::MaskLayer(_) => false,
             ElementInstance::CompositeGroup(_) => false,
             ElementInstance::ViewCache(_) => false,
-            #[cfg(feature = "unstable-retained-bridge")]
-            ElementInstance::RetainedSubtree(_) => false,
             ElementInstance::VisualTransform(_) => false,
             ElementInstance::RenderTransform(_) => false,
             ElementInstance::FractionalRenderTransform(_) => false,
@@ -189,8 +187,6 @@ impl ElementHostWidget {
             ElementInstance::HoverRegion(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::MaskLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::CompositeGroup(p) => matches!(p.layout.overflow, Overflow::Clip),
-            #[cfg(feature = "unstable-retained-bridge")]
-            ElementInstance::RetainedSubtree(p) => matches!(p.layout.overflow, Overflow::Clip),
             // These primitives are always hit-test clipped by their own bounds (they are not
             // intended as overflow-visible containers).
             ElementInstance::VirtualList(_)
@@ -1594,14 +1590,6 @@ impl ElementHostWidget {
                     self.managed_surface_hit_test_mask = managed_cx
                         .take_hit_test_rects()
                         .map(crate::managed_surface::ManagedSurfaceHitTestMask::new);
-                }
-                clamp_to_constraints(cx.available, props.layout, cx.available)
-            }
-            #[cfg(feature = "unstable-retained-bridge")]
-            ElementInstance::RetainedSubtree(props) => {
-                if let Some(&child) = cx.children.first() {
-                    let bounds = Rect::new(cx.bounds.origin, cx.available);
-                    let _ = cx.layout_in(child, bounds);
                 }
                 clamp_to_constraints(cx.available, props.layout, cx.available)
             }

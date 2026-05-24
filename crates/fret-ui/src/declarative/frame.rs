@@ -76,8 +76,6 @@ pub(crate) enum ElementInstance {
     Image(crate::element::ImageProps),
     Canvas(crate::element::CanvasProps),
     ManagedSurface(crate::element::ManagedSurfaceProps),
-    #[cfg(feature = "unstable-retained-bridge")]
-    RetainedSubtree(crate::retained_bridge::RetainedSubtreeProps),
     ViewportSurface(crate::element::ViewportSurfaceProps),
     SvgIcon(crate::element::SvgIconProps),
     SvgImage(crate::element::SvgImageProps),
@@ -131,8 +129,6 @@ impl ElementInstance {
             Self::Image(_) => "Image",
             Self::Canvas(_) => "Canvas",
             Self::ManagedSurface(_) => "ManagedSurface",
-            #[cfg(feature = "unstable-retained-bridge")]
-            Self::RetainedSubtree(_) => "RetainedSubtree",
             Self::ViewportSurface(_) => "ViewportSurface",
             Self::SvgIcon(_) => "SvgIcon",
             Self::SvgImage(_) => "SvgImage",
@@ -187,13 +183,10 @@ pub(crate) fn element_record_for_node<H: UiHost>(
     window: AppWindowId,
     node: NodeId,
 ) -> Option<ElementRecord> {
-    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
-        frame
-            .windows
-            .get(&window)
-            .and_then(|w| w.instances.get(node))
-            .cloned()
-    })
+    app.global::<ElementFrame>()
+        .and_then(|frame| frame.windows.get(&window))
+        .and_then(|w| w.instances.get(node))
+        .cloned()
 }
 
 pub(crate) fn with_element_record_for_node<H: UiHost, R>(
@@ -202,13 +195,10 @@ pub(crate) fn with_element_record_for_node<H: UiHost, R>(
     node: NodeId,
     f: impl FnOnce(&ElementRecord) -> R,
 ) -> Option<R> {
-    app.with_global_mut_untracked(ElementFrame::default, |frame, _app| {
-        frame
-            .windows
-            .get(&window)
-            .and_then(|w| w.instances.get(node))
-            .map(f)
-    })
+    app.global::<ElementFrame>()
+        .and_then(|frame| frame.windows.get(&window))
+        .and_then(|w| w.instances.get(node))
+        .map(f)
 }
 
 pub(crate) fn inherited_text_style_for_node<H: UiHost>(
@@ -589,8 +579,6 @@ pub(crate) fn layout_style_for_instance(instance: &ElementInstance) -> LayoutSty
         ElementInstance::Image(p) => p.layout,
         ElementInstance::Canvas(p) => p.layout,
         ElementInstance::ManagedSurface(p) => p.layout,
-        #[cfg(feature = "unstable-retained-bridge")]
-        ElementInstance::RetainedSubtree(p) => p.layout,
         ElementInstance::ViewportSurface(p) => p.layout,
         ElementInstance::SvgIcon(p) => p.layout,
         ElementInstance::SvgImage(p) => p.layout,

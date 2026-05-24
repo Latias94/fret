@@ -2,7 +2,7 @@ use super::*;
 
 pub(super) fn handle_pointer_down_starts<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl pointer_down_gesture_start::PointerDownStartCx<H, M>,
     snapshot: &ViewSnapshot,
     position: Point,
     button: MouseButton,

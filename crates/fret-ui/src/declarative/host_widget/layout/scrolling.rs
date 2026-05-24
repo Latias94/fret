@@ -951,6 +951,54 @@ fn resolve_scroll_probe_seed<H: UiHost>(
     seed
 }
 
+fn clean_geometry_scroll_side_effect_fast_path_allowed<H: UiHost>(
+    cx: &LayoutCx<'_, H>,
+    props: &crate::element::ScrollProps,
+    pending_extent_probe: bool,
+    must_probe_for_growing_extent: bool,
+    force_barrier_child_root_relayout: bool,
+    children_layout_invalidated: bool,
+    post_layout_extents_mode: bool,
+    previous_content: Size,
+    desired: Size,
+) -> bool {
+    if cx.pass_kind != crate::layout_pass::LayoutPassKind::Final {
+        return false;
+    }
+    if !cx
+        .tree
+        .clean_geometry_scroll_side_effect_fallback_active_for(cx.node)
+    {
+        return false;
+    }
+    if !post_layout_extents_mode {
+        return false;
+    }
+    if pending_extent_probe || must_probe_for_growing_extent || force_barrier_child_root_relayout {
+        return false;
+    }
+    if children_layout_invalidated || cx.tree.node_subtree_layout_dirty(cx.node) {
+        return false;
+    }
+    if previous_content == Size::default() {
+        return false;
+    }
+    if matches!(props.layout.size.width, Length::Auto)
+        || matches!(props.layout.size.height, Length::Auto)
+    {
+        return false;
+    }
+
+    if props.axis.scroll_x() && previous_content.width.0 + 0.5 < desired.width.0 {
+        return false;
+    }
+    if props.axis.scroll_y() && previous_content.height.0 + 0.5 < desired.height.0 {
+        return false;
+    }
+
+    true
+}
+
 #[derive(Debug, Clone, Copy)]
 struct ScrollDeferredProbeInputs {
     force_probe_now: bool,
@@ -2328,6 +2376,88 @@ impl ElementHostWidget {
 
         let overflow_context_started = profile_cfg.is_some().then(Instant::now);
         let mut content_bounds = Rect::new(cx.bounds.origin, Size::new(content_w, content_h));
+
+        if clean_geometry_scroll_side_effect_fast_path_allowed(
+            cx,
+            &props,
+            pending_extent_probe,
+            must_probe_for_growing_extent,
+            force_barrier_child_root_relayout,
+            children_layout_invalidated,
+            post_layout_extents_mode,
+            previous_content,
+            desired,
+        ) {
+            cx.tree
+                .debug_record_clean_geometry_scroll_side_effect_fast_path();
+            if let Some(cfg) = profile_cfg
+                && let Some(started) = profile_started
+            {
+                let total = started.elapsed();
+                if total >= cfg.min_elapsed && t_measure_children >= cfg.min_self_measure {
+                    let element_path: Option<String> = {
+                        #[cfg(feature = "diagnostics")]
+                        {
+                            Some(crate::elements::with_window_state(
+                                &mut *cx.app,
+                                window,
+                                |st| {
+                                    st.debug_path_for_element(self.element)
+                                        .unwrap_or_else(|| "<unknown>".to_string())
+                                },
+                            ))
+                        }
+                        #[cfg(not(feature = "diagnostics"))]
+                        {
+                            None
+                        }
+                    };
+
+                    phase_profiles.record("clean_geometry_scroll_side_effect_fast_path", total);
+                    cx.tree
+                        .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
+                            node: cx.node,
+                            element: Some(self.element),
+                            test_id: debug_test_id,
+                            axis: match props.axis {
+                                crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
+                                crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
+                                crate::element::ScrollAxis::Both => UiDebugScrollAxis::Both,
+                            },
+                            offset: handle.offset(),
+                            viewport: handle.viewport_size(),
+                            content: handle.content_size(),
+                            observed_extent: None,
+                            overflow_observation: None,
+                            layout_profile: Some(child_layout_profile.into_debug_profile(
+                                cx.pass_kind,
+                                props.probe_unbounded,
+                                cx.children.len(),
+                                Size::new(Px(cx.available.width.0), Px(cx.available.height.0)),
+                                desired,
+                                Size::new(content_w, content_h),
+                                post_layout_extents_mode,
+                                cx.tree.interactive_resize_active(),
+                                direct_children_layout_invalidated,
+                                descendant_subtree_layout_dirty,
+                                force_barrier_child_root_relayout,
+                                phase_profiles.into_sorted(),
+                                t_measure_children.as_micros() as u64,
+                                t_solve_barrier.as_micros() as u64,
+                                t_layout_children.as_micros() as u64,
+                                child_layout_first_pass_profile,
+                                t_layout_children_first_pass.as_micros() as u64,
+                                child_layout_corrected_content_profile,
+                                t_layout_children_corrected_content.as_micros() as u64,
+                                corrected_content_relayout,
+                                total.as_micros() as u64,
+                                element_path,
+                            )),
+                        });
+                }
+            }
+            return desired;
+        }
 
         // Install an overflow context so wrapper
         // widgets can probe their descendants with `MaxContent` on the scroll axis. This is a

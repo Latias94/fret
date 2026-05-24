@@ -1,5 +1,5 @@
 use fret_core::{Modifiers, MouseButton, Point, PointerEvent, Px, Rect, Size};
-use fret_ui::{Invalidation, retained_bridge::Widget as _};
+use fret_ui::{Invalidation, Widget as _};
 use serde_json::Value;
 use std::sync::Arc;
 use uuid::Uuid;

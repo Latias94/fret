@@ -45,8 +45,6 @@ pub mod paint;
 pub mod pending_shortcut;
 pub mod pixel_snap;
 mod pointer_motion;
-#[cfg(feature = "unstable-retained-bridge")]
-pub mod retained_bridge;
 mod runtime_config;
 pub(crate) mod strict_runtime;
 /// Stable key type used by keyed element APIs (e.g. lists and cached subtrees).
@@ -93,4 +91,12 @@ pub use tree::{
     UiDebugHoverDeclarativeInvalidationHotspot, UiDebugLayerInfo, UiLayerId, UiTree,
 };
 pub use widget::CommandAvailability;
+pub use widget::CommandAvailabilityCx;
+pub use widget::CommandCx;
+pub use widget::EventCx;
 pub use widget::Invalidation;
+pub use widget::LayoutCx;
+pub use widget::PaintCx;
+pub use widget::PrepaintCx;
+pub use widget::SemanticsCx;
+pub use widget::Widget;

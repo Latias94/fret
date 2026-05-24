@@ -208,12 +208,6 @@ fn validate_element_tree_unique_ids_or_log(
     tracing::error!("{msg}");
 }
 
-#[cfg(feature = "unstable-retained-bridge")]
-#[derive(Default)]
-struct RetainedSubtreeHostState {
-    root: Option<NodeId>,
-}
-
 pub struct RenderRootContext<'a, H: UiHost> {
     pub ui: &'a mut UiTree<H>,
     pub app: &'a mut H,
@@ -1513,12 +1507,6 @@ fn mount_element<H: UiHost + 'static>(
     let reuse_view_cache =
         view_cache_props.is_some() && window_state.should_reuse_view_cache_root(id);
 
-    #[cfg(feature = "unstable-retained-bridge")]
-    let retained_subtree_props = match &element.kind {
-        ElementKind::RetainedSubtree(props) => Some(props.clone()),
-        _ => None,
-    };
-
     let span = if view_cache_props.is_some() && tracing::enabled!(tracing::Level::TRACE) {
         tracing::trace_span!(
             "ui.cache_root.mount",
@@ -1702,8 +1690,6 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::Image(p) => ElementInstance::Image(p),
         ElementKind::Canvas(p) => ElementInstance::Canvas(p),
         ElementKind::ManagedSurface(p) => ElementInstance::ManagedSurface(p),
-        #[cfg(feature = "unstable-retained-bridge")]
-        ElementKind::RetainedSubtree(p) => ElementInstance::RetainedSubtree(p),
         ElementKind::ViewportSurface(p) => ElementInstance::ViewportSurface(p),
         ElementKind::SvgIcon(p) => ElementInstance::SvgIcon(p),
         ElementKind::SvgImage(p) => ElementInstance::SvgImage(p),
@@ -1882,44 +1868,6 @@ fn mount_element<H: UiHost + 'static>(
             node,
         );
         window_state.restore_scratch_element_children_vec(children);
-        return node;
-    }
-
-    #[cfg(feature = "unstable-retained-bridge")]
-    if let Some(props) = retained_subtree_props {
-        if !element.children.is_empty() {
-            tracing::warn!(
-                element = ?id,
-                children = element.children.len(),
-                "RetainedSubtree ignores declarative children (expected leaf element)",
-            );
-        }
-
-        let retained_root = window_state.with_state_mut(
-            id,
-            RetainedSubtreeHostState::default,
-            |st: &mut RetainedSubtreeHostState| {
-                if let Some(root) = st.root
-                    && ui.node_exists(root)
-                {
-                    return root;
-                }
-
-                let root = props.factory.build(ui);
-                st.root = Some(root);
-                root
-            },
-        );
-
-        let child_nodes = vec![retained_root];
-        if had_existing_node {
-            ui.set_children(node, child_nodes.clone());
-        } else {
-            ui.set_children_in_mount(node, child_nodes.clone());
-        }
-        window_frame
-            .children
-            .insert(node, Arc::<[NodeId]>::from(child_nodes));
         return node;
     }
 
@@ -2476,11 +2424,6 @@ fn paint_passthrough_for_instance(
             inherited_foreground,
         )),
         ElementInstance::ViewCache(props) => Some(paint_passthrough_for_layout(
-            props.layout,
-            inherited_foreground,
-        )),
-        #[cfg(feature = "unstable-retained-bridge")]
-        ElementInstance::RetainedSubtree(props) => Some(paint_passthrough_for_layout(
             props.layout,
             inherited_foreground,
         )),

@@ -6,13 +6,14 @@ mod start;
 use fret_core::{Modifiers, Point};
 use fret_ui::UiHost;
 
+use super::LeftClickCx;
 use crate::core::{CanvasRect, GroupId};
 use crate::ui::canvas::state::ViewSnapshot;
 use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 pub(super) fn handle_group_resize_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     group: GroupId,
@@ -29,7 +30,7 @@ pub(super) fn handle_group_resize_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_group_header_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     group: GroupId,
@@ -46,7 +47,7 @@ pub(super) fn handle_group_header_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_background_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: Modifiers,

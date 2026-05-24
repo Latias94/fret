@@ -6,12 +6,13 @@ use fret_launch::{
     FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_plot::cartesian::DataPoint;
-use fret_plot::retained::{
-    AreaPlotCanvas, AreaPlotModel, AreaSeries, LinePlotStyle, PlotOutput, PlotState,
-};
+use fret_plot::declarative::{AreaPlotPanelProps, area_plot_panel_in};
+use fret_plot::models::{AreaPlotModel, AreaSeries};
 use fret_plot::series::Series;
+use fret_plot::state::{PlotOutput, PlotState};
+use fret_plot::style::LinePlotStyle;
 use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
+use fret_ui::{UiTree, declarative};
 
 struct AreaDemoWindowState {
     ui: UiTree<App>,
@@ -147,18 +148,31 @@ fn render(_driver: &mut AreaDemoDriver, context: WinitRenderContext<'_, AreaDemo
         scene,
     } = context;
 
-    let root = state.root.get_or_insert_with(|| {
-        let style = LinePlotStyle::default();
-        let canvas = AreaPlotCanvas::new(state.plot.clone())
-            .style(style)
-            .state(state.plot_state.clone())
-            .output(state.plot_output.clone());
-        let node = AreaPlotCanvas::create_node(&mut state.ui, canvas);
+    if state.root.is_none() {
+        let node =
+            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                .render_root("area-demo", {
+                    let plot = state.plot.clone();
+                    let plot_state = state.plot_state.clone();
+                    let plot_output = state.plot_output.clone();
+                    move |cx| {
+                        let style = LinePlotStyle::default();
+                        let props = AreaPlotPanelProps::new(plot.clone())
+                            .style(style)
+                            .state(plot_state.clone())
+                            .output(plot_output.clone());
+                        vec![area_plot_panel_in(cx, props)]
+                    }
+                });
         state.ui.set_root(node);
-        node
-    });
+        state.ui.set_focus(Some(node));
+        state.ui.publish_window_runtime_snapshots(app);
+        state.root = Some(node);
+    }
 
-    state.ui.set_root(*root);
+    if let Some(root) = state.root {
+        state.ui.set_root(root);
+    }
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
 

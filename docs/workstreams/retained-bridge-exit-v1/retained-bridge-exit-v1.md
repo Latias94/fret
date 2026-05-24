@@ -1,6 +1,7 @@
 # Retained Bridge Exit Plan v1 (Fearless Refactor)
 
-Status: Draft (workstream notes only; ADRs remain the source of truth)
+Status: Closed for the runtime retained-bridge exit (workstream notes only; ADRs remain the source
+of truth)
 
 Tracking file:
 
@@ -20,11 +21,15 @@ Fret’s primary UI direction is **declarative authoring** (per-frame element tr
 substrate that provides **retained semantics** (focus/IME correctness, caching, virtualization, overlay layering).
 
 However, some ecosystem surfaces (docking, node graphs, charts/plots) were historically authored as retained
-widgets. To migrate policy-heavy UI out of `crates/fret-ui` without a rewrite, the runtime currently exposes a
-feature-gated compatibility mechanism:
+widgets. To migrate policy-heavy UI out of `crates/fret-ui` without a rewrite, the runtime originally exposed a
+feature-gated compatibility mechanism. That mechanism has now exited the runtime:
 
-- `fret-ui/unstable-retained-bridge` (module: `fret_ui::retained_bridge`)
-- `ElementKind::RetainedSubtree` (a declarative leaf that hosts a retained subtree)
+- `fret-ui/unstable-retained-bridge` (module: `fret_ui::retained_bridge`) was deleted by
+  `RBX-M4-043`.
+- retained widget context exports and `UiTreeRetainedExt` moved out of the bridge/facade path or
+  were deleted before `RBX-M4-043`.
+- `ElementKind::RetainedSubtree` (a declarative leaf that hosted a retained subtree) was removed by
+  `RBX-M4-014` after no runtime users remained.
 
 This bridge is intentionally sharp and temporary. Without an explicit exit plan, it risks becoming a permanent
 authoring path that:
@@ -42,7 +47,8 @@ least make it trivially removable) while keeping editor-grade demos moving.
 In scope:
 
 - Keep `crates/fret-ui` mechanism-only; prevent policy creep through bridge expansion.
-- Limit where `unstable-retained-bridge` can be enabled (allowlist + CI gate).
+- Limit where `unstable-retained-bridge` can be enabled (allowlist + CI gate); after `RBX-M4-043`,
+  the allowlist is empty and the gate is a no-regrowth policy.
 - Migrate high-value ecosystem UI to declarative authoring where feasible.
 - Provide a staged plan so refactors remain safe and measurable.
 
@@ -62,10 +68,15 @@ These are “hard seams” (ADR-driven) that the exit plan must preserve:
 
 2. **Declarative-only ecosystem golden path**
    - `ecosystem/fret-ui-shadcn` and shadcn-aligned components must not enable `unstable-retained-bridge`.
-   - retained authoring is allowed only as a temporary implementation detail in explicitly allowlisted crates.
+   - No workspace crate may enable `fret-ui/unstable-retained-bridge`; the feature has been deleted.
+   - Node-local retained widget implementation code can remain only behind
+     `fret-node/compat-retained-canvas` and must consume stable `fret-ui` root exports, not a runtime
+     bridge facade.
 
 3. **Bridge remains unstable + minimal**
-   - Any additions to `fret_ui::retained_bridge` must be justified as migration-critical and delete-planned.
+   - There is no remaining `fret_ui::retained_bridge` or `fret_ui::compat_retained_canvas` surface.
+   - Any attempt to reintroduce `fret-ui/unstable-retained-bridge` is a regression caught by
+     `tools/check_layering.py`.
 
 4. **Multi-window + overlays remain correct**
    - focus/IME, overlay dismissal, internal drag routing, and viewport input forwarding must keep working during
@@ -113,10 +124,15 @@ Each migration should remove at least one of:
 We consider the workstream successful when all of the following are true:
 
 1. `ecosystem/fret-ui-shadcn` does not enable `unstable-retained-bridge` (and CI enforces this).
-2. The allowlist of bridge-enabled crates is either empty or strictly limited to long-lived “special case”
-   surfaces with a clear justification and isolation.
-3. The runtime (`crates/fret-ui`) contains no policy shortcuts; retained bridge remains feature-gated and small.
+2. The allowlist of bridge-enabled crates is empty.
+3. The runtime (`crates/fret-ui`) contains no retained bridge facade or `unstable-retained-bridge`
+   feature; remaining node-local compatibility code uses stable `fret-ui` root exports.
 4. We have at least one editor-grade demo (docking + viewports) implemented declaratively end-to-end.
+
+All four criteria are satisfied as of `RBX-M4-043`. The broader architectural goal of splitting the
+remaining node graph implementation into declarative chrome/overlays/panels plus a canvas/viewport
+leaf is intentionally tracked as a follow-on, because it no longer blocks deletion of the runtime
+retained bridge.
 
 ## 6) Risks and mitigations
 

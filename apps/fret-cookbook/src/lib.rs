@@ -1306,7 +1306,8 @@ mod authoring_surface_policy_tests {
         }
         for legacy in [
             "use fret_chart::ChartCanvas;",
-            "use fret_ui::retained_bridge::RetainedSubtreeProps;",
+            "use fret_ui::compat_retained_canvas::RetainedSubtreeProps;",
+            "use fret_ui::retained_bridge::",
             "RetainedSubtreeProps::new::<KernelApp>",
             "UiTreeRetainedExt",
             "ChartCanvas::new_shared",

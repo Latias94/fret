@@ -1,7 +1,8 @@
 //! Declarative authoring surfaces for the node graph UI.
 //!
 //! This module is intentionally **declarative-first**. Downstream authors should not need to touch
-//! `UiTree`/`Widget`, `retained_bridge::*`, or retained subtree compatibility entry points.
+//! `UiTree`/`Widget`, the retained-widget compatibility facade, or retained subtree compatibility
+//! entry points.
 
 pub use super::editors::{
     PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,

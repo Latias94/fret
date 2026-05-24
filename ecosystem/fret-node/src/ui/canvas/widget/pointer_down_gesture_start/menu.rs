@@ -2,7 +2,7 @@ use super::*;
 
 pub(super) fn handle_context_menu_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl context_menu::ContextMenuCx<H, M>,
     position: Point,
     button: MouseButton,
     zoom: f32,

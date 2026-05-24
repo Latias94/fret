@@ -13,7 +13,6 @@ description = "Mechanism-layer UI engine for Fret with tree, layout, focus, rout
 [features]
 default = []
 compat-retained-widgets = []
-unstable-retained-bridge = []
 diagnostics = []
 
 [dependencies]

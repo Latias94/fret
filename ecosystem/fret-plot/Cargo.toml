@@ -13,12 +13,15 @@ documentation.workspace = true
 default = []
 
 ui = []
+# Legacy no-op feature kept temporarily for downstream transition. The retained plot bridge
+# source was deleted after quarantine and no longer enables the unstable retained bridge feature.
+compat-retained-canvas = []
 
 [dependencies]
 fret-canvas = { path = "../fret-canvas" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
-fret-ui = { path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
+fret-ui = { path = "../../crates/fret-ui" }
 slotmap.workspace = true
 fret-ui-kit = { path = "../fret-ui-kit" }
 

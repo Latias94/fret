@@ -1,7 +1,7 @@
 use fret_runtime::Model;
 use fret_ui::UiHost;
 
-use crate::retained::{PlotOutput, PlotOutputSnapshot, PlotState};
+use crate::state::{PlotOutput, PlotOutputSnapshot, PlotState};
 
 #[derive(Debug, Clone, Copy)]
 pub struct PlotLinkPolicy {

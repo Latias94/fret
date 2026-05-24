@@ -1,6 +1,7 @@
 use fret_core::Point;
 use fret_ui::UiHost;
 
+use super::super::super::LeftClickCx;
 use crate::core::PortId;
 use crate::ui::canvas::state::ViewSnapshot;
 use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
@@ -12,7 +13,7 @@ pub(super) enum PortClickConnectHit {
 
 pub(super) fn handle_click_connect_port_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,

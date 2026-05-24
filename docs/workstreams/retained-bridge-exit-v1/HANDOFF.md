@@ -1,11 +1,24 @@
 # Retained Bridge Exit v1 Handoff
 
-Updated: 2026-05-22
+Updated: 2026-05-24
 
 ## Current State
 
 `RBX-M1-010`, `RBX-M1-020`, `RBX-M1-021`, `RBX-M1-030`, `RBX-M1-040`, `RBX-M1-050`,
-`RBX-M1-060`, `RBX-M1-070`, `RBX-M1-075`, `RBX-M1-080`, and `RBX-M1-085` are complete. `RBX-M1-080` removed
+`RBX-M1-060`, `RBX-M1-070`, `RBX-M1-075`, `RBX-M1-080`, and `RBX-M1-085` are complete.
+`RBX-M2-1070` then isolated the pointer-down starts route onto retained-agnostic seams and kept
+the remaining retained boundary on the tail wrappers. `RBX-M2-1080` then isolated the remaining
+pointer-down tail route onto `PointerDownRouteCx` and kept the broader `event_router.rs`
+wrapper as the next retained boundary. `RBX-M2-1090` then isolated that top-level event router
+wrapper onto `EventRouteCx`. `RBX-M2-1100` then isolated edge-insert menu/insert routing onto
+`EdgeInsertCx`, leaving the retained `EventCx` adapter in `edge_insert/retained_cx.rs`.
+`RBX-M2-1110` then isolated wire-drag helper capture / restore plumbing onto
+`WireDragStartCx`, leaving the retained `EventCx` adapter in `wire_drag_helpers_retained_cx.rs`.
+`RBX-M2-1120` then isolated keyboard input focus gating onto `KeyboardInputFocusCx`, leaving the
+retained `EventCx` adapter in `event_keyboard_retained_cx.rs`.
+`RBX-M2-1130` then moved keyboard shortcut command dispatch adaptation into
+`keyboard_shortcuts_retained_cx.rs`, leaving `keyboard_shortcuts.rs` retained-Cx agnostic.
+`RBX-M1-080` removed
 `fret-docking`'s `fret-ui/unstable-retained-bridge` dependency, deleted the retained docking
 adapter and retained public entry points, removed `fret-docking` from the retained-bridge
 allowlist, and mapped the deleted retained test files to public declarative or mechanism-level
@@ -17,10 +30,66 @@ recorded in:
 - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_010_DOCKING_RETAINED_BRIDGE_AUDIT_2026-05-18.md`
 - `docs/workstreams/retained-bridge-exit-v1/RBX_M1_030_DOCKING_DECLARATIVE_PRIMITIVE_GAP_AUDIT_2026-05-18.md`
 
+The docking diag hardening smoke suite now also includes the lightweight multi-window tear-off
+smoke, so the promoted registry keeps a minimal tear-off gate visible in `diag suite`.
+
 The first implementation slice was:
 
 - `RBX-M1-020` - Extract docking split geometry and handle painting from
   `fret_ui::retained_bridge`.
+
+`RBX-M4-033` deleted the quarantined `fret-plot` retained source tree and removed the
+`include_str!`-based policy coupling from the plot crate root. `fret-plot/compat-retained-canvas`
+remains a no-op transition alias; the crate no longer keeps a retained source tree around for the
+first-party plot path.
+
+`RBX-M4-034` then deleted the quarantined `fret-chart` retained source tree and removed the
+`include_str!`-based policy coupling from the chart crate root. `fret-chart/compat-retained-canvas`
+remains a no-op transition alias; the crate no longer keeps a retained source tree around for the
+first-party chart path.
+
+The explicit retained facade import path in `ecosystem/fret-node/src/ui/canvas/widget.rs` is now
+warning-free; `create_node_retained` has been removed from
+`crates/fret-ui/src/compat_retained_canvas.rs`, the retained `Widget` trait now re-exports from
+the stable `fret_ui` root instead of the compat facade, and the retained facade usage tests stay
+green.
+
+`RBX-M4-037` then deleted `compat_retained_canvas::widget`, kept the compat facade context-only,
+and added a source-policy gate so node code stays on the stable `fret_ui::Widget` export.
+
+`RBX-M4-038` then deleted `compat_retained_canvas::command`, kept the compat facade
+context-only-and-command-free, and added a source-policy gate so node code stays on the stable
+`fret_ui::CommandCx` / `CommandAvailabilityCx` exports.
+
+`RBX-M4-039` then deleted `compat_retained_canvas::event`, kept the compat facade down to
+`frame`/`layout`/`paint`, and added a source-policy gate so node code stays on the stable
+`fret_ui::EventCx` export.
+
+`RBX-M4-040` then deleted `compat_retained_canvas::layout`, kept the compat facade down to
+`frame`/`paint`, and added a source-policy gate so node code stays on the stable
+`fret_ui::LayoutCx` export.
+
+`RBX-M4-041` then deleted `compat_retained_canvas::paint`, kept the compat facade down to
+`frame`, and added a source-policy gate so node code stays on the stable `fret_ui::PaintCx`
+export.
+
+`RBX-M4-042` then deleted `compat_retained_canvas::frame`, kept the compat facade as an empty
+quarantine shell, and added a source-policy gate so node code stays on the stable
+`fret_ui::PrepaintCx` / `fret_ui::SemanticsCx` exports.
+
+`RBX-M4-043` then deleted that empty shell and the now-empty `fret-ui/unstable-retained-bridge`
+feature. `fret-node/compat-retained-canvas` remains as a node-local legacy implementation gate but
+now maps only to `fret-ui`; it no longer enables or imports a `fret-ui` retained bridge facade.
+Layering policy now treats any future `fret-ui/unstable-retained-bridge` mapping as a regression.
+User-facing docs (`docs/crate-usage-guide.md`, `docs/roadmap.md`, and
+`docs/shadcn-declarative-progress.md`) now describe the bridge as removed instead of current API,
+and ADR implementation notes were updated to point at the retained-bridge exit result.
+
+The 2026-05-24 closeout audit verified the runtime retained bridge exit with fresh source,
+manifest, layering, and `fret-node --features compat-retained-canvas` package gates. The broad
+node-graph implementation split into declarative chrome/overlays/panels plus a canvas/viewport
+leaf is explicitly a follow-on architecture lane; it no longer blocks this retained-bridge exit
+workstream because `fret-ui` no longer contains a retained bridge feature or facade.
 
 Readiness note:
 
@@ -212,7 +281,8 @@ declarative viewport-surface panel. `fret-plot3d` no longer enables
 `fret-ui/unstable-retained-bridge`, `Plot3dCanvas` / `src/retained.rs` were deleted, and the
 first-party Plot3D demos now mount `plot3d_panel(...)` through
 `declarative::RenderRootContext::render_root(...)`. The remaining retained bridge allowlist entries
-are now `fret-chart`, `fret-node`, and `fret-plot`.
+were then `fret-chart`, `fret-node`, and `fret-plot`; after the later `RBX-M3-316` and
+`RBX-M4-032` mapping-removal slices, only `fret-node` remains.
 `RBX-M3-020` then added the first default-feature declarative `fret-chart` capability baseline.
 The new test renders `chart_canvas_panel(...)` with a controlled `Model<ChartEngine>` through
 `fret_ui::declarative::render_root(...)`, lays out and paints the real `UiTree`, and proves the
@@ -334,10 +404,476 @@ duplicating the legend wheel speed policy again. The full `fret-chart` package g
 shared `SliderDragKind`, norm/value mapping, and window-after-delta policy. Shared slider tests and
 a source-policy test prevent those pure math helpers from moving back into retained canvas. The full
 `fret-chart` package gate now passes with 58 tests.
+`RBX-M3-170` then moved pure visual-map track layout, track hit selection, domain-window conversion,
+and value-to-y mapping into shared `visual_map_logic`. Retained `ChartCanvas` still owns retained
+paint/event/action orchestration, but it now consumes shared visual-map geometry and mapping policy.
+Shared tests cover endpoint y mapping, padded/gapped track layout, and hit selection; retained
+visual-map oracle tests remain green and the full `fret-chart` package gate now passes with 62 tests.
+`RBX-M3-180` then moved visual-map interaction decisions into shared `visual_map_logic`: piecewise
+mask reset/toggle/shift-range policy and continuous handle/pan/jump drag-start selection. Retained
+`ChartCanvas` still owns event routing, capture/invalidation/redraw, and engine action I/O, but it
+now consumes those shared decisions. Shared tests cover piecewise toggle/range/reset and continuous
+handle/pan/jump starts; the full `fret-chart` package gate now passes with 64 tests.
+`RBX-M3-190` then moved data-zoom slider interaction decisions into shared `slider_logic`: x/y
+handle-vs-pan-vs-jump drag-start selection, permission locks, jump start-window computation,
+drag-update projection, and window-span anchor choice. Retained `ChartCanvas` still owns retained
+event routing, capture/invalidation/redraw, and engine action I/O, but it now consumes the shared
+slider decisions. Shared tests cover x/y handle, pan, jump, lock, and drag-update behavior; the
+full `fret-chart` package gate now passes with 67 tests.
+`RBX-M3-200` then opened the `fret-plot` migration lane by moving shared plot data/state/style
+contracts to default `fret_plot::{models,state,style}`, gating retained plot canvases and
+keeping `LineChart` model-only on the default surface while the retained oracle stays behind
+explicit `compat-retained-canvas`, and adding a default declarative `line_plot_panel(...)` that
+paints seeded line-series data through
+`ElementContext::canvas(...)` without constructing retained `PlotCanvas`. Default `fret-plot` now
+depends on `fret-ui` without dependency features, while the retained plot oracle still compiles
+under `compat-retained-canvas`. `apps/fret-examples` now opts into that compatibility feature
+explicitly for the old retained plot demos, keeping them as migration oracles while the crate
+default stays declarative-first. The full default `fret-plot` package gate now passes with 23
+tests.
+`RBX-M3-210` then added a first-party `plot_declarative_demo` that uses the default declarative
+`LinePlotPanelProps` / `line_plot_panel_in(...)` surface from a `FretApp` view. The old retained
+plot demos remain intact as explicit compatibility oracles until axes, legend, tooltip/readout,
+pan/zoom/box/query, overlays, and non-line layers have declarative parity. A source-policy test now
+prevents the new declarative demo from teaching retained plot widget authoring.
+`RBX-M3-220` then added a default declarative axes/grid paint baseline for `line_plot_panel(...)`.
+The panel now paints tick-derived grid lines and x/y axis lines through shared
+`axis_ticks_scaled(...)` and `PlotTransform` mapping before drawing series paths above them. Labels,
+legend, readout, pan/zoom/query, overlays, and non-line layers remain separate parity slices.
+`RBX-M3-230` then added a default declarative legend paint baseline for `line_plot_panel(...)`.
+The panel now paints per-series legend swatches and labels through `CanvasPainter::text(...)`
+using stable text cache keys while preserving seeded series paths. Legend hover/pin/toggle,
+tooltip/readout, pan/zoom/query, overlays, and non-line layers remain separate parity slices.
+`RBX-M3-240` then added a default declarative axis tick label baseline for `line_plot_panel(...)`.
+The panel now paints x/y tick labels through shared `plot::axis` formatting helpers, including
+log10 decade labels, while preserving seeded series paths. Tooltip/readout, pan/zoom/query,
+overlays, and non-line layers remain separate parity slices.
+`RBX-M3-250` then moved the default declarative line plot from paint-only composition to a narrow
+managed-host pointer/output proof. `line_plot_panel(...)` now mounts through `ManagedSurface`,
+preserves the existing declarative canvas paint path as a child, and can publish `PlotOutput`
+cursor snapshots via `LinePlotPanelProps::output(...)` on pointer move without constructing
+retained `PlotCanvas`. This proves the host/event/output path for future tooltip/readout and
+pan/zoom/query migration, but those retained behavior families remain explicit future parity
+slices.
+`RBX-M3-251` then used that managed-host snapshot to paint cursor crosshair guides and the
+mouse-coordinate readout overlay on the default declarative line plot path. The readout works
+without requiring a caller-owned `PlotOutput` model, while `LinePlotPanelProps::output(...)` still
+publishes cursor snapshots for external coordination. Rich tooltip/readout rows, linked cursor
+readout, legend interactions, pan/zoom/query, overlays, and non-line layers remain future parity
+slices before retained plot source can be deleted.
+`RBX-M3-252` then moved linked cursor readout onto the default declarative line plot path as well.
+`LinePlotPanelProps::state(...)` now reads `PlotState.linked_cursor_x` and paints a linked cursor
+guide/readout overlay when no local pointer cursor is active, while local hover still takes
+precedence. Rich tooltip/readout rows, legend interactions, pan/zoom/query, overlays, and
+non-line layers remain future parity slices before retained plot source can be deleted.
+`RBX-M3-253` then moved line plot rich cursor readout rows onto the default declarative path. The
+declarative local and linked cursor overlays now append per-series rows through shared
+`plot::readout` value lookup, and the retained line layer delegates to that same default helper.
+Legend interactions, pan/zoom/query, overlays, non-line layer readouts, first-party retained plot
+consumers, and retained source deletion remain future parity slices.
+`RBX-M3-254` then moved line plot legend swatch visibility toggles onto the default declarative
+path. The declarative panel now mirrors caller-owned `PlotState.hidden_series`, skips hidden line
+series in paint/readout, and toggles visibility on swatch-column clicks while preserving the
+retained "do not hide the last visible series" guard. Label-area pin/unpin, shift-click
+solo/restore, hover emphasis, pan/zoom/query, overlays, non-line layers, first-party retained plot
+consumers, and retained source deletion remain future parity slices.
+`RBX-M3-255` then moved line plot legend label pin/unpin onto the default declarative path. Label
+clicks now update caller-owned `PlotState.pinned_series`, clicking the pinned label clears it, and
+pinning a hidden series restores it to visible. The declarative prepaint path mirrors only visible
+pins, and local/linked cursor readout rows now follow retained-style pinned-series filtering.
+`RBX-M3-256` then moved line plot legend-row shift-click solo/restore onto the default declarative
+path. The declarative legend event policy now handles `Shift+Click` before swatch/label hit
+semantics: non-solo rows hide every other line series, and clicking the already-solo visible row
+restores all line series. Legend hover emphasis, pan/zoom/query, overlays, non-line layers,
+first-party retained plot consumers, and retained source deletion remain future parity slices.
+`RBX-M3-257` then moved line plot legend hover emphasis onto the default declarative path. The
+managed host now tracks legend-row hover, paints a retained-style hover highlight, and dims
+non-hovered line series while preserving plot-region pointer move cursor/output updates when the
+pointer is not over a legend row. Pan/zoom/query, overlays, non-line layers, first-party retained
+plot consumers, and retained source deletion remain future parity slices.
+`RBX-M3-258` then moved caller-controlled line plot view bounds onto the default declarative path.
+`line_plot_panel(...)` now derives a current view from `PlotState.view_is_auto` /
+`PlotState.view_bounds` when state is supplied and uses that same view for paint, pointer-derived
+`PlotOutput`, local cursor readout, and linked cursor overlays. The actual pan/zoom/box/query
+gesture policies remain future parity slices, but the controlled-view substrate they need is now on
+the declarative path.
+`RBX-M3-259` then moved the basic line plot pan gesture onto the default declarative path. A plain
+left-button drag that starts in the plot region now updates caller-owned `PlotState.view_bounds`
+through a managed-host pan session, while legend rows keep priority over pan start. Wheel zoom,
+box zoom, query drag, axis locks, overlays, non-line layers, first-party retained plot consumers,
+and retained source deletion remain future parity slices.
+`RBX-M3-260` then moved basic plot-region wheel zoom onto the default declarative path. Wheel events
+inside the plot region now update caller-owned `PlotState.view_bounds` without constructing retained
+`PlotCanvas`, using the retained-compatible default wheel speed plus plot-region axis-only modifier
+policy from `PlotInputMap`. Axis-region wheel zoom, explicit axis locks, box zoom, query drag,
+overlays, non-line layers, first-party retained plot consumers, and retained source deletion remain
+future parity slices.
+`RBX-M3-261` then moved basic axis-region wheel zoom onto the default declarative path. Wheel events
+over the declarative X-axis region now route to X-only zoom, and wheel events over the declarative
+Y-axis region route to Y-only zoom, reusing the same controlled view substrate and retained-style
+wheel speed as plot-region zoom. Explicit axis locks, box zoom, query drag, overlays, non-line
+layers, first-party retained plot consumers, and retained source deletion remain future parity
+slices.
+`RBX-M3-262` then moved wheel-zoom axis-lock handling onto the default declarative path. Declarative
+wheel zoom now reads caller-owned `PlotState.axis_locks`: X zoom locks preserve the X range while
+allowing Y zoom, Y zoom locks preserve the Y range while allowing X zoom, and locking both axes makes
+wheel zoom a no-op. Pan locks, box zoom, query drag, overlays, non-line layers, first-party retained
+plot consumers, and retained source deletion remain future parity slices.
+`RBX-M3-263` then moved pan axis-lock handling onto the default declarative path. Declarative pan
+now reads caller-owned `PlotState.axis_locks`: X pan locks preserve the X range while allowing Y
+pan, Y pan locks preserve the Y range while allowing X pan, and locking both axes makes the pan
+move a no-op. Box zoom, query drag, overlays, non-line layers, first-party retained plot consumers,
+and retained source deletion remain future parity slices.
+`RBX-M3-264` then moved basic line plot box zoom onto the default declarative path. Right-button
+plot-region drag now tracks a managed-host box-zoom session and updates caller-owned
+`PlotState.view_bounds` from the selected data rect on release without constructing retained
+`PlotCanvas`. It reuses the shared scaled selection projection, retained box-select expand
+modifiers, data clamping, and primary X/Y zoom locks. Query drag, selection painting, overlays,
+non-line layers, first-party retained plot consumers, and retained source deletion remain future
+parity slices.
+`RBX-M3-265` then moved basic line plot query drag onto the default declarative path. `Alt+Left`
+plot-region drag now tracks a managed-host query session and writes caller-owned `PlotState.query`
+from the selected data rect on release without constructing retained `PlotCanvas`. It mirrors the
+retained raw query projection from plot-local selection points into the current primary X/Y view.
+Selection painting, query output publication, overlays, non-line layers, first-party retained plot
+consumers, and retained source deletion remain future parity slices.
+`RBX-M3-266` then moved query output publication onto the default declarative path. Declarative
+query drag now publishes the selected query rect through caller-owned `PlotOutputSnapshot.query`,
+and subsequent pointer output snapshots keep carrying caller-owned `PlotState.query` instead of
+clearing the observed selection. Selection painting, overlays, non-line layers, first-party
+retained plot consumers, and retained source deletion remain future parity slices.
+`RBX-M3-267` then moved query/box selection rectangle painting onto the default declarative path.
+Active query drag and active box zoom now paint retained-style selection rectangles, and persisted
+caller-owned `PlotState.query` remains visible after query release without constructing retained
+`PlotCanvas`. Selection tooltips, overlays, non-line layers, first-party retained plot consumers,
+and retained source deletion remain future parity slices.
+`RBX-M3-268` then moved active query/box selection tooltip painting onto the default declarative
+path. Active query drag now paints a `query` tooltip with selected X/Y ranges, and active box zoom
+now paints a `zoom` tooltip with selected X/Y ranges, both using the retained-style raw projection
+from plot-local selection points into the current primary X/Y view. Overlays, non-line layers,
+first-party retained plot consumers, and retained source deletion remain future parity slices.
+`RBX-M3-269` then moved basic reference-line overlays onto the default declarative path. Declarative
+line plots now read caller-owned `PlotState.overlays.inf_lines_x` and `inf_lines_y` and paint
+retained-compatible data-anchored vertical/horizontal strips before series painting without
+constructing retained `PlotCanvas`. Draggable overlays, tags/text/images, non-line layers,
+first-party retained plot consumers, and retained source deletion remain future parity slices.
+`RBX-M3-270` then moved draggable line overlay painting onto the default declarative path.
+Declarative line plots now paint caller-owned `PlotState.overlays.drag_lines_x` and left-axis
+`drag_lines_y` as retained-compatible data-anchored strips before series painting without
+constructing retained `PlotCanvas`. Draggable overlay interaction/output, right-side axis overlays,
+tags/text/images, non-line layers, first-party retained plot consumers, and retained source
+deletion remain future parity slices.
+`RBX-M3-271` then moved draggable point/rect overlay painting onto the default declarative path.
+Declarative line plots now paint caller-owned left-axis `PlotState.overlays.drag_points` and
+`drag_rects` as retained-compatible data-anchored rounded point quads and filled/bordered rects
+before series painting without constructing retained `PlotCanvas`. Draggable overlay
+interaction/output, right-side axis overlays, tags/text/images, non-line layers, first-party
+retained plot consumers, and retained source deletion remain future parity slices.
+`RBX-M3-272` then moved PlotText overlay painting onto the default declarative path. Declarative
+line plots now paint caller-owned left-axis `PlotState.overlays.text` before series painting with
+retained-compatible background/border/text placement and without constructing retained
+`PlotCanvas`. Draggable overlay interaction/output, right-side axis overlays, tags/images,
+non-line layers, first-party retained plot consumers, and retained source deletion remain future
+parity slices.
+`RBX-M3-273` then moved TagX/TagY overlay painting onto the default declarative path. Declarative
+line plots now paint caller-owned `PlotState.overlays.tags_x` and left-axis `tags_y` before series
+painting with retained-compatible label backgrounds, text, and bottom/left marker strips without
+constructing retained `PlotCanvas`. Draggable overlay labels/interaction/output, right-side axis
+overlays, images, non-line layers, first-party retained plot consumers, and retained source
+deletion remain future parity slices.
+`RBX-M3-274` then moved draggable overlay label painting onto the default declarative path.
+Declarative line plots now paint labels for caller-owned `drag_lines_x`, left-axis `drag_lines_y`,
+and left-axis `drag_points` before series painting using retained-compatible TagX/TagY label
+placement for lines and point-adjacent annotation placement for points, without constructing
+retained `PlotCanvas`. Draggable overlay interaction/output, right-side axis overlays/labels,
+images, non-line layers, first-party retained plot consumers, and retained source deletion remain
+future parity slices.
+`RBX-M3-275` then moved primary-axis image overlay painting onto the default declarative path.
+Declarative line plots now paint caller-owned left-axis `PlotState.overlays.images` as clipped
+`SceneOp::ImageRegion` ops, preserving data-rect projection, opacity, UVs, and BelowGrid/AboveGrid
+layer intent without constructing retained `PlotCanvas`. Draggable overlay interaction/output,
+right-side axis overlays/labels/images, non-line layers, first-party retained plot consumers, and
+retained source deletion remain future parity slices.
+A first-party `tags_demo` consumer now uses `line_plot_panel_in(...)` with TagX/TagY/PlotText
+overlays, and `plot_image_demo` now uses the same declarative lane with a `PlotImage` underlay and
+configurable y-axis labels, so two retained plot examples are already declarative-first.
+Declarative line plots also now project all right-side line-series axes (`YAxis::Right`,
+`YAxis::Right2`, and `YAxis::Right3`) through their matching axis bounds instead of the primary
+y-axis bounds, right-axis `PlotImage`, `TagY`, and `PlotText` overlays now paint on the
+declarative path with matching right-side transforms, right-axis draggable Y-line/point labels
+now paint on the declarative path, right-axis draggable Y-line/point/rect shapes now paint on that
+path, and right-axis draggable Y-line, draggable X-line, and right-axis draggable point
+start/update/end output now publishes through `PlotOutputSnapshot::drag` on the declarative event
+path.
+`RBX-M3-286` then completed the declarative draggable-output family for line plots by adding
+right-axis draggable rect hit-testing, movement, and `PlotDragOutput::Rect` start/update/end
+publication without constructing retained `PlotCanvas`.
+`RBX-M3-287` then migrated the first-party `drag_demo` off `LinePlotCanvas` and onto a declarative
+`RenderRootContext` plus `line_plot_panel_in(...)`, keeping the demo's `PlotOutputSnapshot::drag`
+feedback loop for `LineX`, `LineY`, `Point`, and `Rect` overlay updates and adding a source-policy
+regression against retained plot authoring.
+`RBX-M3-288` then migrated the first-party `plot_stress_demo` off `LinePlotCanvas` and onto the
+same declarative `RenderRootContext` plus `line_plot_panel_in(...)` path, preserving the low-level
+stress runner, perf reporting, and animated-bounds model updates while adding source-policy
+coverage that prevents the stress harness from teaching retained plot canvas construction again.
+`RBX-M3-289` then added declarative `LinePlotPanelProps::y2_axis_labels(...)`,
+`y3_axis_labels(...)`, and `y4_axis_labels(...)` plus right-axis tick-label text preparation using
+the matching y2/y3/y4 axis bounds and caller formatters. This removes the immediate retained
+`LinePlotCanvas` API dependency that had been blocking `inf_lines_demo` / `plot_demo` right-axis
+label migration; right-side layout/readout parity remains a follow-up concern.
+`RBX-M3-290` then migrated `inf_lines_demo` off `LinePlotCanvas` and onto the declarative
+`RenderRootContext` plus `line_plot_panel_in(...)` path, keeping the inf-line overlays, output
+logging, and custom y2/y3/y4 axis label formatters while adding source-policy coverage that keeps
+the demo off retained plot authoring again.
+`RBX-M3-291` then migrated `plot_demo` off `LinePlotCanvas` and onto the declarative
+`RenderRootContext` plus `line_plot_panel_in(...)` path, keeping the LogX scale, multi-axis
+formatting, query output logging, and right-axis label formatters while adding source-policy
+coverage that keeps the demo off retained plot authoring again.
+`RBX-M3-292` then removed the default `fret-chart` dependency on `fret-ui/unstable-retained-bridge`
+and moved the retained chart oracle module behind an explicit `compat-retained-canvas` feature.
+The default chart surface now stays on declarative panel APIs while the retained oracle path
+remains feature-gated for explicit compat checks. `fret-chart` is no longer allowed to enable the
+bridge from its default `fret-ui` dependency, but remains listed under the explicit
+`compat-retained-canvas` feature-mapping allowlist until retained chart source is deleted;
+`RBX-M4-032` later turned that chart compat feature into a no-op and removed it from the mapping
+allowlist.
+`RBX-M3-293` then migrated the first-party `bars_demo` off retained `fret-plot` bar authoring.
+The demo now builds a `delinea::ChartEngine` / `ChartSpec` bar chart, renders it through
+`ChartCanvasPanelProps` plus `chart_canvas_panel(...)`, and logs declarative tooltip output from
+`ChartCanvasOutput`. `basic_chart_demos_surface` now guards the demo against reintroducing
+`fret_plot::retained::BarsPlotCanvas`, `BarsPlotModel`, `PlotState`, or `PlotOutput`.
+`RBX-M3-294` then migrated the top line plot in `linked_cursor_demo` off retained
+`LinePlotCanvas` authoring. `RBX-M3-295` then extracted a reusable declarative area plot panel,
+migrated `area_demo` onto `AreaPlotPanelProps` / `area_plot_panel_in(...)`, and moved the bottom
+area half of `linked_cursor_demo` onto the same declarative area path. The linked demo still keeps
+the split-shell behavior and linked-cursor group intact, and the example source-policy coverage
+now keeps both the top line plot and bottom area plot on declarative paths.
+`RBX-M3-296` then migrated `stems_demo` off retained `StemsPlotCanvas` authoring and onto a
+reusable declarative stems panel that shares the same plot-model/readout skeleton. The demo keeps
+its drag-zoom/query shell and logging behavior intact while teaching the declarative stems path.
+`RBX-M3-297` then migrated `stairs_demo` off retained `StairsPlotCanvas` authoring and onto the
+shared declarative line plot panel with `StepMode::Post`. The demo keeps the same drag-zoom/query
+shell and logging behavior intact while teaching the declarative step-mode path.
+`RBX-M3-298` then migrated `shaded_demo` off retained `ShadedPlotCanvas` authoring and onto a
+reusable declarative shaded panel. The shared plot panel now carries optional lower-series data,
+paints shaded bands as one closed fill path plus upper/lower strokes, and preserves
+retained-compatible upper/lower cursor readout labels through owned readout label text.
+`RBX-M3-299` then migrated `error_bars_demo` off retained `ErrorBarsPlotCanvas` authoring and onto
+a reusable declarative error-bars panel. The shared plot panel now carries optional error-bar
+metadata and paints X/Y error segments, caps, and point markers as declarative stroke commands.
+`RBX-M3-300` then migrated `histogram_demo` off retained `HistogramPlotCanvas` authoring and onto
+a reusable declarative histogram panel. The shared plot panel now carries optional histogram
+metadata, converts bins into a sorted readout series, and paints non-empty bins as closed filled
+rectangle paths using the bins' real data-space width.
+`RBX-M3-301` then migrated `grouped_bars_demo` and `stacked_bars_demo` off retained
+`BarsPlotCanvas` authoring and onto a reusable declarative bars panel. The shared plot panel now
+carries optional bars metadata and paints grouped plus per-index-baseline stacked bars as closed
+filled rectangle path commands.
+`RBX-M3-302` then migrated `candlestick_demo` off retained `CandlestickPlotCanvas` authoring and
+onto a reusable declarative candlestick panel. The shared plot panel now carries optional
+candlestick metadata, uses close-series data for readouts, and paints wick strokes plus separate
+up/down closed body fill paths.
+`RBX-M3-303` then migrated `heatmap_demo` off retained `HeatmapPlotCanvas` authoring and onto a
+reusable declarative heatmap panel. The shared plot panel now carries optional heatmap metadata,
+paints visible finite grid cells as declarative quads, and paints the default retained-compatible
+colorbar with finite min/max labels.
+`RBX-M3-304` then migrated `histogram2d_demo` off retained `Histogram2DPlotCanvas` authoring and
+onto a reusable declarative histogram2d panel. The shared plot panel maps `Histogram2DPlotModel`
+onto the same grid/colorbar metadata path, preserving the demo's deterministic
+`histogram2d_counts(...)` setup and fixed axis labels without retained canvas construction.
+`RBX-M3-305` then removed `apps/fret-examples`' direct `fret-plot/compat-retained-canvas`
+dependency. The docking diagnostics demos now use declarative-managed-surface diagnostics anchors
+instead of retained bridge widgets, and `basic_plot_demos_surface` guards against re-enabling the
+retained plot compatibility feature from the first-party examples crate.
+`RBX-M3-306` then moved chart visual-map overlay paint and interaction coverage onto the default
+declarative chart panel. `visual_map_overlay.rs` now derives tracks from `ChartEngine`, paints
+visual-map tracks/ramps/continuous ranges/handles/piecewise buckets, and routes continuous drag plus
+piecewise click toggles through `CanvasToolRouter` without constructing retained `ChartCanvas`. The
+event handlers update both the shared engine state and overlay-local paint state so event-driven
+redraws show the current visual-map range/mask without waiting for retained hosting or a full
+declarative rerender.
+`RBX-M3-307` then moved chart data-zoom overlay paint and interaction coverage onto the default
+declarative chart panel. `data_zoom_overlay.rs` now derives x/y slider tracks from `ChartEngine`,
+paints the selected window/handles, and routes x/y drag start, update, and release through shared
+`slider_logic` without constructing retained `ChartCanvas`. The overlay keeps its local paint state
+synced with the shared zoom state so event-driven redraws show the current selection immediately.
+`RBX-M3-308` then removed `LineChart::into_canvas(...)` from the default `fret-plot` surface and
+kept `LineChart` model-only while the retained plot oracle stays behind `compat-retained-canvas`.
+`RBX-M3-309` then added `LineChart::into_element(...)` as the declarative convenience path: it
+installs the model and mounts `line_plot_panel_in(...)` directly from `ElementContextAccess`, so
+default-line authors now have a canvas-first declarative entry point without a retained canvas
+builder on the default surface. `RBX-M3-310` then stopped re-exporting default
+`models`/`state`/`style` surfaces through `fret_plot::retained`; retained plot kept only retained
+canvas/layer oracle exports, while stable plot model/state/style APIs stay under their default
+namespaces. `RBX-M3-311` then narrowed that retained plot root again: it no longer glob-re-exports
+`canvas::*` / `layers::*`, and temporarily explicitly exposed only `AxisConstraints` plus the
+concrete retained `*PlotCanvas` aliases. Raw retained layer authoring types such as `PlotCanvas`,
+`PlotLayer`, concrete `*PlotLayer` types, and retained paint/hit/readout helper structs stopped
+being public through `fret_plot::retained`. `RBX-M3-315` then kept the retained plot oracle module
+crate-private behind `#[cfg(feature = "compat-retained-canvas")] mod retained;` and removed the
+remaining public retained plot root re-exports while keeping default and compat `fret-plot` package
+tests green.
+
+`RBX-M3-312` then narrowed the retained chart module root: `fret_chart::retained` no longer
+glob-re-exports `canvas::*`, and initially explicitly exposed only `ChartCanvas`,
+`ChartStyleSource`, and `ChartTextCachePruneTuning`. `RBX-M3-313` then removed the no-user retained
+chart support knobs from the public retained API: `fret_chart::retained` now exports only
+`ChartCanvas`, `ChartStyleSource` and `ChartTextCachePruneTuning` are private retained-canvas
+implementation details, and public `ChartCanvas::set_style_source(...)` /
+`ChartCanvas::set_text_cache_prune_tuning(...)` were deleted. `RBX-M3-314` then kept the retained
+chart oracle module crate-private behind `#[cfg(feature = "compat-retained-canvas")] mod retained;`
+while preserving the explicit compat oracle for internal checks. The source-policy test requires
+exactly one explicit retained chart root re-export line and blocks legacy/internal retained chart
+root names plus those no-user support knobs. `RBX-M3-317` then moved the retained chart
+series-order palette oracle onto the default declarative chart panel. Declarative chart paint now
+computes a grid-aware `SeriesId -> series_order rank` map, uses that rank for series colors, and
+lets `source_series` override delinea's default line stroke `PaintId(0)` so later-declared line
+series no longer collapse to palette slot 0. The new declarative regression renders the real
+`chart_canvas_panel(...)`, maps emitted `SceneOp::Path` operations back to `delinea` polyline marks,
+and proves series id `42` receives palette slot 0 while later-declared series id `1` receives
+palette slot 1 without constructing retained `ChartCanvas`. `RBX-M3-318` then moved the retained
+first-chart bar pointer-hover tooltip output oracle onto the default declarative chart panel. The
+new declarative regression uses the retained Desktop/Mobile bar fixture, renders
+`chart_canvas_panel(...)` at a non-zero origin, dispatches a real mouse move to the first Desktop
+bar hover point, propagates model changes, and proves `ChartCanvasOutput` advances with tooltip
+lines whose first row is `TooltipTextLineKind::AxisHeader`. `RBX-M3-319` then moved the retained
+active-axis last-hovered-band oracle onto the default declarative chart panel. Declarative chart
+state now records the last hovered x/y axis bands, chart pan/wheel event handlers compute the same
+axis-band-aware panel layout as the retained oracle, plot interactions reuse the last hovered axis,
+and axis-band interactions affect only their own axis while respecting fixed, pan-lock, and
+zoom-lock gates. The new regression hovers the right y-axis band, performs a real plot pan through
+`chart_canvas_panel(...)`, and proves the right y-axis window changes while the primary left y-axis
+window remains absent. `RBX-M3-320` then moved the retained axis-pointer axis-band clamp oracle
+onto the default declarative chart panel. The new regression exercises
+`axis_pointer_hover_point_for_layout(...)` against a synthetic declarative panel layout with a
+bottom x-axis band plus left/right y-axis bands, and proves retained-compatible in-plot clamp
+outputs for bottom x-axis `(50, 99)`, left y-axis `(1, 25)`, and right y-axis `(99, 75)` without
+modifying retained chart source. `RBX-M3-321` then moved the retained primary-axes hidden-series
+oracle onto the default declarative chart panel. The new regression hides the first declared
+multi-axis series, renders `chart_canvas_panel(...)`, performs a plot-region pan, and proves the
+pan still updates the shared x-axis while skipping the hidden left y-axis and updating the first
+visible right y-axis. `RBX-M3-322` then moved the retained legend double-click isolate/restore
+oracle onto the default declarative chart panel. The new regression renders a two-series
+declarative panel, dispatches a real double-click pointer-down event on the second legend row,
+proves the first series is hidden while the second remains visible, then double-clicks the isolated
+row again and proves both series are visible. `RBX-M3-323` then moved the retained legend selector
+All/None/Invert oracle onto the default declarative chart panel. The new regression renders a
+two-series declarative panel, dispatches real pointer-down events on the selector row, and proves
+None hides all series, All shows all series, and Invert flips current series visibility.
+`RBX-M3-324` then moved the retained legend scroll clamp oracle onto the default declarative chart
+panel. The new regression renders a forty-series declarative panel, dispatches real wheel events
+inside the legend, verifies the retained max scroll of `422px` for the fixture, and proves the
+exposed rows clamp to series 13, 31, and 1 at the intermediate, bottom, and top scroll positions.
+`RBX-M3-325` then moved the retained visual-map track padding oracle onto the default declarative
+chart panel. The new regression renders a visual-map-enabled declarative panel with explicit track
+padding and proves the helper track rect is inset by the requested padding on both axes.
+`RBX-M3-326` then moved the retained data-zoom slider clamp/no-invert oracle onto the default
+declarative chart panel. The new regression mounts the real declarative panel, dispatches pointer
+drags through the x data-zoom slider, proves pan drags clamp to both ends of the axis extent, and
+proves min/max handle drags remain bounded and non-inverted when dragged past the opposite handle.
+`RBX-M3-327` then moved the retained visual-map domain-endpoint mapping oracle onto the default
+declarative chart panel. The new regression mounts a full-domain continuous visual-map panel,
+verifies the helper maps `domain.min` to the track bottom and `domain.max` to the track top, and
+proves the painted selection quad fills the track.
+
+`RBX-M3-328` then extracted the pure plot axis-lock helpers into shared `plot::view` and kept the
+retained `fit_view_bounds_with_zoom_locks(...)` glue as the adapter boundary. The shared helpers
+now carry direct unit coverage, while the retained plot surface keeps only the fit-view-specific
+policy wrapper.
 
 Remaining M3 chart work still needs explicit parity or migration before deleting retained chart
-source: retained chart interactive controls such as axes, visual-map, data-zoom, and any remaining
-public/demo/gallery/cookbook consumers that still rely on retained `ChartCanvas` behavior.
+source: axes/chrome UI edge cases, visual-map/data-zoom edge cases, multi-grid surfaces, plus any
+remaining public/demo/gallery/cookbook consumers that still rely on retained `ChartCanvas` behavior.
+The active-axis last-hovered-band and axis-pointer axis-band clamp oracles are now covered on the
+default declarative panel, and primary-axis selection now explicitly skips hidden series on the
+declarative event path. The legend double-click isolate/restore chrome oracle is also now covered
+on the declarative event path, along with legend selector All/None/Invert chrome behavior.
+`RBX-M3-317`, `RBX-M3-318`, `RBX-M3-319`, `RBX-M3-320`, `RBX-M3-321`, `RBX-M3-322`,
+`RBX-M3-323`, `RBX-M3-324`, `RBX-M3-325`, `RBX-M3-326`, and `RBX-M3-327` were deliberately
+preflight oracle migrations, not a removal of
+`fret-chart/compat-retained-canvas`; `RBX-M4-032` later removed that chart retained bridge mapping
+after the redundant retained oracles were deleted.
+Remaining M3 plot work still needs declarative parity for right-side layout/readouts beyond tick
+label formatter support and series projection, retained-only histogram2d performance/readout
+families, scatter/non-line families, and retained source deletion/quarantine before removing the
+`compat-retained-canvas` feature. No known first-party retained plot demo consumers remain,
+`apps/fret-examples` no longer enables the retained plot compatibility feature, and
+`fret_plot::retained` is no longer public from the crate root. `RBX-M3-316` then removed
+`fret-plot` from the retained bridge feature-mapping allowlist: `compat-retained-canvas = []` is now
+a no-op transition alias, the crate root no longer compiles `src/retained`, and the retained plot
+source remains quarantined/uncompiled for a later deletion slice.
+
+M4 has started. `RBX-M4-010` audited the current `crates/fret-ui/src/retained_bridge.rs` export
+surface and tightened `tools/check_layering.py` so it now distinguishes direct `fret-ui` dependency
+features from explicit package feature mappings. The direct retained-bridge dependency allowlist is
+empty. The original mapping allowlist covered `fret-node/compat-retained-canvas`,
+`fret-plot/compat-retained-canvas`, and `fret-chart/compat-retained-canvas`; after `RBX-M3-316`, the
+current allowed feature mappings are only `fret-node/compat-retained-canvas` and
+`fret-chart/compat-retained-canvas`; after `RBX-M4-032`, only
+`fret-node/compat-retained-canvas` remains. `RBX-M4-011` then deleted the no-user retained exports and
+removed the viewport helper module; no current workspace source users remain for `BoundTextInput`,
+`TextInput`, `MeasureCx`, `ViewportInputCapture`, or
+`handle_viewport_surface_input`. `RBX-M4-012` then narrowed `RetainedSubtreeProps` by making its
+`layout` and `factory` fields private and moving the declarative runtime to crate-private
+`layout()` / `factory()` accessors. The retained-subtree bridge remains available only through
+constructor-style public API (`new(...)` / `with_layout(...)`) while the broader quarantine/delete
+decision is still open. `RBX-M4-013` then removed `RetainedSubtreeFactory` from the public retained
+bridge surface by making the factory type crate-visible and its constructor non-public; downstream
+code can no longer name or construct that factory directly. `RBX-M4-014` then deleted the
+retained-subtree declarative bridge entirely: `RetainedSubtreeProps`, the factory implementation,
+`AppComponentCx::retained_subtree(...)`, `ElementKind::RetainedSubtree`,
+`ElementInstance::RetainedSubtree`, and their mount/layout/measure/paint runtime paths are gone.
+The retained bridge feature now only exposes the lower-level retained widget/context surface needed
+by the remaining explicit compatibility islands. `RBX-M4-015` then removed
+`CommandAvailability` from the retained bridge re-export surface; retained command-availability
+code now names the normal `fret_ui::CommandAvailability` enum while `CommandAvailabilityCx` remains
+in the bridge for retained widget compatibility. `RBX-M4-016` then removed `Invalidation` from the
+retained bridge re-export surface; node, plot, and chart retained code now name the normal
+`fret_ui::Invalidation` enum while retained context types remain bridge-gated. `RBX-M4-017` then
+deleted the legacy `fret_ui::retained_bridge` alias module entirely. The explicit compatibility
+facade is now `fret_ui::compat_retained_canvas`; remaining `fret-node`, `fret-plot`, and
+`fret-chart` compat islands compile through that path, and real workspace Rust sources no longer
+import `fret_ui::retained_bridge`. `RBX-M4-018` then removed the public `UiTreeRetainedExt`
+extension-trait shape from that compatibility facade. Remaining retained canvas islands now create
+retained nodes through the narrower explicit
+`fret_ui::compat_retained_canvas::create_node_retained(...)` free function; no workspace Rust source
+calls `.create_node_retained(...)` or defines/implements `UiTreeRetainedExt`. `RBX-M4-019` then
+added `fret-ui` source-policy tests that lock the `compat_retained_canvas` facade shape: the facade
+may expose only retained widget/context types plus `create_node_retained(...)`, and it must not
+regrow legacy retained bridge aliases, retained subtree types, old text/viewport helpers, stable
+enum re-exports, or extension traits. `RBX-M4-020` then deleted the retained
+`legend_scroll_clamps_to_content_height` oracle from `fret-chart` because the declarative chart
+panel already covers the same legend scroll clamp behavior. `RBX-M4-021` then deleted the retained
+`visual_map_y_mapping_respects_domain_endpoints` oracle from `fret-chart` because the declarative
+chart panel already covers the same visual-map domain-endpoint behavior. `RBX-M4-022` then deleted
+the retained `axis_pointer_hover_point_clamps_axis_band_into_plot` oracle from `fret-chart`
+because the declarative chart panel already covers the same axis-pointer hover clamping behavior.
+`RBX-M4-023` then deleted the retained `legend_double_click_isolates_and_restores_all_series`
+oracle from `fret-chart` because the declarative chart panel already covers the same legend
+double-click behavior. `RBX-M4-024` then deleted the retained
+`legend_select_all_none_invert_update_series_visibility` oracle from `fret-chart` because the
+declarative chart panel already covers the same legend visibility behavior. `RBX-M4-025` then
+deleted the retained `legend_selector_hit_test_returns_action` oracle from `fret-chart` because the
+declarative chart panel already covers the same selector hit-testing behavior.
+`RBX-M4-026` then deleted the retained
+`explicit_y_domain_window_propagates_to_second_linked_chart_output_model` oracle from `fret-chart`
+because the declarative chart panel already covers the same explicit Y-domain output propagation
+behavior. `RBX-M4-027` then deleted the retained `visual_map_track_applies_style_padding` oracle
+from `fret-chart` because the declarative chart panel already covers the same visual-map track
+padding behavior. `RBX-M4-028` then deleted the retained `primary_axes_skip_hidden_series` oracle
+from `fret-chart` because the declarative chart panel already covers the same hidden-series
+primary-axis behavior. `RBX-M4-029` then deleted the retained `active_axes_prefer_last_hovered_band`
+oracle from `fret-chart` because the declarative chart panel already covers the same active-axis
+hovered-band behavior. `RBX-M4-030` then deleted the retained first-chart tooltip/output oracles
+from `fret-chart` because the declarative chart panel already covers the same pointer-hover and
+keyboard-navigation tooltip/output behavior. `RBX-M4-031` then deleted the retained
+`explicit_link_axis_map_publishes_ambiguous_y_domain_window_to_output_model` oracle from
+`fret-chart` because the declarative chart panel already covers the same explicit Y-domain output
+propagation behavior. `RBX-M4-032` then turned `fret-chart/compat-retained-canvas` into a no-op
+transition alias, removed the crate-root retained module gate, and narrowed the retained-bridge
+feature-mapping allowlist to `fret-node/compat-retained-canvas` only. `fret-chart` retained source
+is now quarantined/uncompiled; source deletion remains a cleanup/follow-on rather than a bridge
+mapping blocker.
 
 ## Completed Implementation
 
@@ -777,7 +1313,15 @@ release-capture, optional propagation stop, and paint invalidation behind
 moved sticky-wire target picker host/window access plus handled-event finish behavior behind
 `StickyWireTargetPickerCx`; retained `EventCx` implements that seam in
 `sticky_wire_targets/retained_picker_cx.rs`, and `sticky_wire_targets/picker.rs` is now
-source-policy gated as retained-bridge-free support. `RBX-M2-270` then moved group drag/resize
+source-policy gated as retained-bridge-free support. `RBX-M2-261` then moved the sticky-wire
+non-port target handler itself off a direct retained `EventCx` signature; `sticky_wire_targets.rs`
+now composes `StickyWireTargetPickerCx` for host access, pointer-capture release, and target picker
+tail behavior, while the retained adapter remains isolated in
+`sticky_wire_targets/retained_picker_cx.rs`. `RBX-M2-262` then moved the sticky-wire pointer-down
+and connect-target route wrappers off direct retained `EventCx` signatures; `sticky_wire.rs` and
+`sticky_wire_connect.rs` now compose the same sticky-wire seam for host/window access and target
+tail behavior, while the retained adapter remains isolated in
+`sticky_wire_targets/retained_picker_cx.rs`. `RBX-M2-270` then moved group drag/resize
 preview tail paint invalidation behind `WidgetPaintInvalidationCx`; retained `cx.app` auto-pan
 view-state I/O remains in the retained event callers, and `group_drag/tail.rs` /
 `group_resize/tail.rs` are now source-policy gated as retained-bridge-free support. `RBX-M2-280`
@@ -838,7 +1382,61 @@ invalidate paint while stale timers leave toast state and feedback side effects 
 `RBX-M2-410` then deleted the unused retained `EventCx` parameter from pending node resize move
 handling. `pending_resize.rs` is now source-policy gated as retained-bridge-free support, with
 handler tests proving below-threshold moves stay pending and above-threshold moves activate node
-resize.
+resize. `RBX-M2-940` later un-gated the pure node geometry and route-math helper reexports so the
+default build can use `group_order`, `node_anchor_from_rect_origin`,
+`node_rect_origin_from_anchor`, `cubic_bezier`, `normal_from_tangent`,
+`edge_route_start_tangent`, and `edge_route_end_tangent` without `compat-retained-canvas`.
+`RBX-M2-950` then moved the left-click hit-routing subtree onto a narrow `LeftClickCx` seam built
+from the existing `MarqueeCx` and `WireCommitCx` capabilities. `left_click/**` no longer names
+retained `EventCx` directly, and a focused source-policy gate keeps the route explicit.
+`RBX-M2-960` then moved modifier, Tab, arrow-nudge, and delete shortcut command dispatch behind
+`KeyboardShortcutCommandSink`. `keyboard_shortcuts_commands.rs` no longer names retained Cx types;
+retained `EventCx` command adaptation is isolated in `keyboard_shortcuts.rs`. `RBX-M2-970` then
+moved overlay/Escape keyboard helpers behind `KeyboardOverlayCx`, composing the existing
+`SearcherCx`, `ContextMenuCx`, and `CancelGestureCx` seams without naming retained Cx types.
+`RBX-M2-980` then moved `event_keyboard_route.rs` onto `KeyboardRouteCx` /
+`WidgetPaintInvalidationCx`, leaving `event_keyboard.rs` as the smaller explicit retained
+`EventCx` adapter. `RBX-M2-990` then moved `event_router_system_input.rs` onto
+`KeyboardInputSink`; retained keyboard input adaptation is now isolated in `event_keyboard.rs`.
+`RBX-M2-1000` then moved `event_router_system_lifecycle.rs` onto `SystemLifecycleCx`, added
+`InternalDragCx`, moved clipboard text handling onto `ClipboardTextCx`, and kept retained adapters
+explicit in `internal_drag_retained_cx.rs` / `event_clipboard_feedback_retained_cx.rs`. The broader
+`event_router_system.rs` wrapper still receives retained event context and is the next route-level
+seam target. `RBX-M2-1010` then moved `event_router_system.rs` onto `SystemRouteCx`, composing the
+already-isolated lifecycle and keyboard input seams. `RBX-M2-1020` then moved pointer-down
+background zoom, edge-insert picker, and edge-reroute double-click routing onto
+`PointerDownDoubleClickCx`; retained `EventCx` adaptation for that path is isolated in
+`pointer_down_double_click_retained_cx.rs`, and the full `fret-node --features
+compat-retained-canvas` package gate is green. `RBX-M2-1030` then moved
+`event_router_pointer_wheel.rs` onto `PointerWheelRouteCx`, isolating retained platform access in
+`event_router_pointer_wheel_retained_cx.rs` while wheel/pinch behavior and the full compat package
+gate remain green. `RBX-M2-1040` then moved
+`event_router_pointer_button/move_event.rs` onto the existing retained-agnostic pointer-move route
+bounds. `RBX-M2-1050` then moved
+`event_pointer_down_route/double_click.rs` onto the existing `PointerDownDoubleClickCx` seam and
+expanded the source-policy gate to cover that route wrapper. `RBX-M2-1060` then moved
+`event_pointer_down_route/preflight.rs` onto `PointerDownPreflightCx`, narrowed
+`pointer_down_gesture_start/close_button.rs` onto `PointerDownCloseButtonCx`, and narrowed
+`searcher.rs` to `SearcherPointerDownCx`. `RBX-M2-1070` then moved
+`event_pointer_down_route/starts.rs` and the start helper subtree onto `PointerDownStartCx`
+plus the existing retained-agnostic menu, sticky-wire, and pan-start seams. `RBX-M2-1080` then
+moved `event_pointer_down.rs`, `event_pointer_down_route.rs`,
+`event_pointer_down_route/dispatch.rs`, `event_pointer_down/prelude.rs`,
+`event_pointer_down/dispatch.rs`, and `event_router_pointer_button/down.rs` onto
+`PointerDownRouteCx`. `RBX-M2-1090` then moved `event_router.rs`, `event_router_pointer.rs`, and
+`event_router_pointer_button.rs` onto `EventRouteCx`, `PointerEventRouteCx`, and
+`PointerButtonRouteCx`. `RBX-M2-1100` then moved `edge_insert/context_menu.rs` and
+`edge_insert/insert.rs` onto `EdgeInsertCx`, keeping host/window/bounds access behind a narrow
+retained-agnostic seam and isolating retained `EventCx` adaptation in
+`edge_insert/retained_cx.rs`. `RBX-M2-1110` then moved `wire_drag_helpers.rs` onto
+`WireDragStartCx`, keeping pointer capture and paint invalidation behind a narrow
+retained-agnostic seam and isolating retained `EventCx` adaptation in
+`wire_drag_helpers_retained_cx.rs`. `RBX-M2-1120` then moved the keyboard text-input focus check
+onto `KeyboardInputFocusCx`, keeping `event_keyboard.rs` retained-Cx agnostic and isolating
+retained `EventCx` adaptation in `event_keyboard_retained_cx.rs`. `RBX-M2-1130` then moved the
+retained `KeyboardShortcutCommandSink` implementation into `keyboard_shortcuts_retained_cx.rs`,
+keeping `keyboard_shortcuts.rs` retained-Cx agnostic. Remaining direct retained event boundaries
+should now be adapter files or explicitly retained widget runtime internals.
 `RBX-M2-420` then moved edge double-click finish stop-propagation plus paint invalidation behind
 the existing retained-agnostic `WidgetHandledCx` seam. `pointer_down_double_click_edge/finish.rs`
 is now source-policy gated as retained-bridge-free support, with a local tail test proving finish
@@ -1136,16 +1734,30 @@ behavior green.
 
 ## Next Task
 
-Pick the next task from:
+This workstream is closed for the runtime retained-bridge exit. Do not reopen it for broad node
+graph architecture work unless a real `fret-ui` retained bridge reference regrows.
 
-- `docs/workstreams/retained-bridge-exit-v1/retained-bridge-exit-v1-todo.md`
+If follow-up work is desired, open a new focused lane instead of extending this one:
 
-Recommended next implementation shape:
+- Node graph architecture follow-on: split remaining node-local retained widget implementation into
+  declarative chrome/overlays/panels plus a canvas/viewport leaf, while preserving the current
+  `fret-node/compat-retained-canvas` package gate as an oracle during the transition.
+- No-regrowth maintenance: keep `tools/check_layering.py` and source-policy tests rejecting any
+  future `fret-ui/unstable-retained-bridge`, `fret_ui::retained_bridge`, or
+  `fret_ui::compat_retained_canvas` surface.
 
-- Current M3 priority: keep draining first-party chart consumers before deleting retained chart
-  source. Good next candidates are chart demos/examples that still instantiate retained
-  `ChartCanvas` directly, or retained-only chart capability families that still need declarative
-  coverage before `fret-chart` can leave the retained bridge allowlist.
+Archived implementation guidance from before closeout:
+
+- Current M4 status: the empty `compat_retained_canvas` shell and `fret-ui/unstable-retained-bridge`
+  feature have been deleted. Future M4 work should be no-regrowth/documentation cleanup only unless
+  a new retained bridge reference appears; do not reintroduce a `fret-ui` bridge facade.
+- Current M3 priority: keep shrinking retained chart/plot oracles before deleting retained source.
+  Good next candidates are either chart demos/examples that still instantiate retained
+  `ChartCanvas` directly, or the next plot host slice that moves remaining right-side readout /
+  histogram2d/scatter/non-line interaction families to default-path tests before deleting retained
+  plot code. The retained plot and chart module roots are now explicit-only; do not restore
+  `pub use canvas::*`, `pub use layers::*`, raw retained `PlotCanvas`/`PlotLayer` root exports, or
+  retained chart root names beyond `ChartCanvas`.
 - Continue M2 by shrinking the RBX-M2-080 ledger. The retained controls widget is now gone; the
   retained toolbar widgets are gone; retained minimap is gone; retained blackboard is gone; retained
   rename host is gone; retained diagnostics anchors are gone; retained a11y active-descendant
@@ -1209,12 +1821,15 @@ Recommended next implementation shape:
   `InsertNodeDragMoveCx`; the secondary pointer-move wrapper now uses `SecondaryPointerMoveCx`;
   pointer-move cursor updates now use `CanvasCursorCx`; pointer-move auto-pan timer sync now uses
   `AutoPanTimerCx`; the pointer-move tail wrapper now composes those branches through
-  `PointerMoveTailCx`; wheel zoom/pan helpers now use `ViewportMotionCx` and
-  `PointerWheelViewportCx`; timer motion pan-inertia/viewport/auto-pan helpers now use
-  `ViewportMotionCx` plus `TimerMotionCx`; missing-left-release pointer-move inference now reuses
+  `PointerMoveTailCx`; wheel zoom/pan helpers now use `ViewportMotionCx` plus explicit `Platform`
+  threading; timer motion pan-inertia/viewport/auto-pan helpers now use `ViewportMotionCx` plus
+  `TimerMotionCx`; missing-left-release pointer-move inference now reuses
   `PointerUpCx`; the pointer-move release route now composes `PointerUpCx + PanZoomBeginCx`
-  through `PointerMoveReleaseCx`; and the pointer-up event entry and pointer-up button router now
-  use `PointerUpRouteCx`.
+  through `PointerMoveReleaseCx`; the pointer-up event entry and pointer-up button router now use
+  `PointerUpRouteCx`; pointer-down double-click routing now uses `PointerDownDoubleClickCx`
+  for background zoom, edge-insert picker, and edge-reroute helpers; and pointer wheel/pinch event
+  routing now uses `PointerWheelRouteCx` plus an isolated retained platform adapter; and the
+  pointer-move button router now reuses the retained-agnostic pointer-move route bounds.
   The remaining retained bridge source ledger is still the canvas widget root and `canvas/widget/**`,
   but `canvas/middleware.rs`, `widget_tail.rs`, `paint_invalidation.rs`, `redraw_request.rs`,
   `wire_drag/commit_cx.rs`, `pointer_up_finish.rs`, `pointer_up_session/cleanup.rs`,
@@ -1304,35 +1919,128 @@ Recommended next implementation shape:
   canvas interaction families still need default-path tests before their retained widget/event code
   can be deleted. Each slice should first add default declarative tests or retained-agnostic seams,
   then remove or gate less retained code.
-- After the ledger no longer contains behavior-only retained files, remove
-  `compat-retained-canvas` / `unstable-retained-bridge` from `fret-node`.
+- After the ledger no longer contains behavior-only retained files, remove the remaining
+  `compat-retained-canvas` feature from `fret-node`. The `unstable-retained-bridge` side has already
+  been deleted from `fret-ui` and must not be restored.
 - Keep the known independent `fret-ui` layout primitive drift
   (`chrome-container-stretch-keeps-outer-box`) separate from retained-bridge exit unless a future
   slice touches that layout path directly.
-- For M3 chart, retained `ChartCanvas` still cannot be deleted yet. Remaining retained-only chart
-  areas include axes/chrome UI, visual map, data zoom, multi-grid surfaces, and first-party demos or
-  cookbook/example paths still mounted through retained chart widgets. Continue by migrating or
-  explicitly covering one of those capability families before removing `fret-chart` from the
-  retained bridge allowlist.
+- For M3/M4 chart, retained chart source has been deleted and `fret-chart/compat-retained-canvas`
+  is only a no-op transition alias. Future chart cleanup should remove stale docs/examples or the
+  no-op alias when downstream transition risk is acceptable, not a bridge mapping blocker.
 
 ## Gates
 
-Last run on 2026-05-22 for `RBX-M2-930`:
+Last run on 2026-05-24 for `RBX-M2-1060`:
 
-- `cargo check -p fret-node` - passed with the pre-existing `fret-ui`
-  `current_effective_opacity` dead-code warning.
-- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+- `cargo nextest run -p fret-node --features compat-retained-canvas pointer_down_preflight_route_stays_off_retained_bridge` - first failed after adding `event_pointer_down_route/preflight.rs` and `pointer_down_gesture_start/close_button.rs` to the source-policy coverage, proving the gate caught the intended retained Cx preflight boundary.
+- `rustfmt --edition 2024 --check ecosystem/fret-node/src/ui/canvas/widget.rs ecosystem/fret-node/src/ui/canvas/widget/searcher.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_down_route/preflight.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_gesture_start.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_gesture_start/close_button.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_close_button_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_close_button_retained_cx.rs ecosystem/fret-node/src/lib.rs` - passed after reordering `widget.rs` modules.
+- `rg -n "EventCx|CommandCx|LayoutCx|PaintCx|retained_bridge|compat_retained_canvas" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_down_route/preflight.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_gesture_start/close_button.rs -g '*.rs' || test $? -eq 1` - passed with no matches.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the existing
   `fret-ui` `current_effective_opacity` dead-code warning.
-- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_wheel_route_stays_off_retained_bridge) | test(timer_motion_route_stays_off_retained_bridge) | test(wheel_zoom_emits_move_start_and_debounced_move_end) | test(pinch_zoom_emits_move_start_and_debounced_move_end) | test(wheel_pan_emits_move_start_and_debounced_move_end) | test(wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom) | test(frame_view_animates_over_timer_ticks_and_reaches_target) | test(pointer_move_auto_pan_timer_starts_for_node_drag_near_viewport_edge) | test(pinch_gesture_zooms_in_about_pointer) | test(wheel_zoom_zooms_about_pointer) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` -
-  passed, 11 tests.
-- `rg -n "retained_bridge|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel_route.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_motion.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan/apply.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/apply.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/pinch.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom/wheel.rs ecosystem/fret-node/src/ui/canvas/widget/event_timer.rs ecosystem/fret-node/src/ui/canvas/widget/event_timer_route.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_pan_inertia.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_auto_pan.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_auto_pan/dispatch.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport/animation.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_viewport/debounce.rs ecosystem/fret-node/src/ui/canvas/widget/viewport_motion_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_cx.rs ecosystem/fret-node/src/ui/canvas/widget/timer_motion_cx.rs` -
-  no matches.
-- `cargo fmt --check` - passed.
+- `cargo nextest run -p fret-node --features compat-retained-canvas pointer_down_preflight_route_stays_off_retained_bridge` - passed, 1 test.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 1151 tests.
+- `git diff --check -- ecosystem/fret-node/src/lib.rs ecosystem/fret-node/src/ui/canvas/widget.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_down_route/preflight.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_gesture_start.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_gesture_start/close_button.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_close_button_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_close_button_retained_cx.rs` - passed.
+
+Last run on 2026-05-24 for `RBX-M2-1050`:
+
+- `cargo nextest run -p fret-node --features compat-retained-canvas pointer_down_double_click_route_stays_off_retained_bridge` - first failed after adding `event_pointer_down_route/double_click.rs` to the source-policy coverage, proving the gate caught the intended retained Cx wrapper boundary.
+- `rustfmt --edition 2024 --check ecosystem/fret-node/src/ui/canvas/widget/event_pointer_down_route/double_click.rs ecosystem/fret-node/src/lib.rs` - passed after scoped rustfmt on the same files.
+- `rg -n "EventCx|CommandCx|LayoutCx|PaintCx|retained_bridge|compat_retained_canvas" ecosystem/fret-node/src/ui/canvas/widget/event_pointer_down_route/double_click.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_background ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge -g '*.rs' || test $? -eq 1` - passed with no matches.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas pointer_down_double_click_route_stays_off_retained_bridge` - passed, 1 test.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_down_double_click_route_stays_off_retained_bridge) | test(edge_double_click_finish_stays_off_retained_bridge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(background_double_click_zoom) | test(edge_insert) | test(reroute)'` - passed, 30 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 1150 tests.
+- `git diff --check -- ecosystem/fret-node/src/lib.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_down_route/double_click.rs` - passed.
+
+Last run on 2026-05-24 for `RBX-M2-1040`:
+
+- `rustfmt --edition 2024 --check ecosystem/fret-node/src/lib.rs ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_button/move_event.rs` - passed.
+- `rg -n "EventCx|CommandCx|LayoutCx|PaintCx|retained_bridge|compat_retained_canvas" ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_button/move_event.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move/release.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_move/tail.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_dispatch.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_move_cx.rs -g '*.rs' || test $? -eq 1` - passed with no matches.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas pointer_move_route_wrapper_stays_off_retained_bridge` - passed, 1 test.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_move_route_wrapper_stays_off_retained_bridge) | test(pointer_move_release_route_stays_off_retained_bridge) | test(pointer_move_primary_route_wrapper_stays_off_retained_bridge) | test(pointer_move_secondary_route_wrapper_stays_off_retained_bridge) | test(pointer_move_auto_pan_timer_starts_for_node_drag_near_viewport_edge) | test(missing_pointer_up_can_be_inferred_from_mouse_buttons_state) | test(missing_pan_pointer_up_can_be_inferred_from_mouse_buttons_state) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` - passed, 10 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 1150 tests.
 - `python3 tools/check_layering.py` - passed.
-- `python3 tools/check_workstream_catalog.py` - passed; validated 428 dedicated directories and 47
+- `python3 tools/check_workstream_catalog.py` - passed; validated 429 dedicated directories and 47
   standalone markdown files.
 - `git diff --check` - passed.
-- `rg -n "^(<<<<<<<|=======|>>>>>>>)" .` - no matches.
+
+Last run on 2026-05-24 for `RBX-M2-1030`:
+
+- `rustfmt --edition 2024 --check ecosystem/fret-node/src/lib.rs ecosystem/fret-node/src/ui/canvas/widget.rs ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_wheel.rs ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_wheel_cx.rs ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_wheel_retained_cx.rs` - passed after applying rustfmt to the same scoped files.
+- `rg -n "EventCx|CommandCx|LayoutCx|PaintCx|retained_bridge|compat_retained_canvas" ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_wheel.rs ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_wheel_cx.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel.rs ecosystem/fret-node/src/ui/canvas/widget/event_pointer_wheel_route.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_motion.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_pan.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_viewport.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_wheel_zoom.rs -g '*.rs' || test $? -eq 1` - passed with no matches.
+- `cargo check -p fret-node` - passed with the existing `fret-ui`
+  `current_effective_opacity` dead-code warning.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas pointer_wheel_route_stays_off_retained_bridge` - passed, 1 test.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_wheel_route_stays_off_retained_bridge) | test(wheel_zoom_emits_move_start_and_debounced_move_end) | test(pinch_zoom_emits_move_start_and_debounced_move_end) | test(wheel_pan_emits_move_start_and_debounced_move_end) | test(wheel_pan_then_wheel_zoom_ends_pan_and_starts_zoom) | test(pinch_gesture_zooms_in_about_pointer) | test(wheel_zoom_zooms_about_pointer) | test(retained_bridge_source_usage_stays_on_the_migration_ledger)'` - passed, 8 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 1150 tests.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 429 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+Last run on 2026-05-24 for `RBX-M2-1020`:
+
+- `rustfmt --edition 2024 --check ecosystem/fret-node/src/ui/canvas/widget.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_retained_cx.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_background.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_background/hit.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_background/apply.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge/insert_picker.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge/target.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge/reroute.rs` - passed.
+- `rg -n "EventCx|CommandCx|LayoutCx|PaintCx|retained_bridge|compat_retained_canvas" ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click.rs ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_background ecosystem/fret-node/src/ui/canvas/widget/pointer_down_double_click_edge -g '*.rs' || test $? -eq 1` - passed with no matches.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas pointer_down_double_click_route_stays_off_retained_bridge` - passed, 1 test.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(pointer_down_double_click_route_stays_off_retained_bridge) | test(edge_double_click_finish_stays_off_retained_bridge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(background_double_click_zoom) | test(edge_insert) | test(reroute)'` - passed, 30 tests.
+- `cargo nextest run -p fret-node --features compat-retained-canvas` - passed, 1150 tests.
+
+Broader gates not used as closeout evidence:
+
+- `cargo nextest run -p fret-ui` - not used because it currently fails independent layout tests:
+  `declarative::tests::layout::layout_engine::solve_barrier_flow_root_reuses_solved_root_even_after_other_solves`
+  and
+  `declarative::tests::layout::mechanism_harness::mechanism_harness_layout_primitives_match_oracles`.
+
+Last run on 2026-05-24 for `RBX-M2-261`:
+
+- `rustfmt --edition 2024 --check ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets/picker.rs ecosystem/fret-node/src/lib.rs` - passed.
+- `cargo check -p fret-node` - passed with the existing `fret-ui`
+  `current_effective_opacity` dead-code warning.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(finish_sticky_wire_target_picker_stops_and_invalidates_paint) | test(retained_canvas_tail_policy_helpers_stay_off_retained_bridge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'` -
+  passed, 4 tests.
+- `rg -n "retained_bridge|compat_retained_canvas|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets/picker.rs || test $? -eq 1` -
+  passed with no matches.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+Last run on 2026-05-24 for `RBX-M2-262`:
+
+- `rustfmt --edition 2024 --check ecosystem/fret-node/src/ui/canvas/widget/sticky_wire.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_connect.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets/picker.rs ecosystem/fret-node/src/lib.rs` - passed.
+- `cargo check -p fret-node` - passed with the existing `fret-ui`
+  `current_effective_opacity` dead-code warning.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo nextest run -p fret-node --features compat-retained-canvas -E 'test(sticky_wire_pointer_down_route_stays_off_retained_bridge) | test(finish_sticky_wire_target_picker_stops_and_invalidates_paint) | test(retained_canvas_tail_policy_helpers_stay_off_retained_bridge) | test(retained_bridge_source_usage_stays_on_the_migration_ledger) | test(retained_widget_compat_island_stays_crate_private_and_controller_bound)'` -
+  passed, 5 tests.
+- `rg -n "retained_bridge|compat_retained_canvas|EventCx|CommandCx|LayoutCx|PaintCx" ecosystem/fret-node/src/ui/canvas/widget/sticky_wire.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_connect.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets.rs ecosystem/fret-node/src/ui/canvas/widget/sticky_wire_targets/picker.rs || test $? -eq 1` -
+  passed with no matches.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed.
+- `git diff --check` - passed.
+
+Last run on 2026-05-24 for `RBX-M2-930`:
+
+- `cargo nextest run -p fret-node` - passed, 492 tests.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed with the pre-existing
+  `fret-ui` `current_effective_opacity` dead-code warning.
+- `cargo fmt --all -- --check` - passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 429 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
 
 Broader gates not run:
 

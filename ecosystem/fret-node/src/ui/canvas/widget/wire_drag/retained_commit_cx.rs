@@ -1,6 +1,6 @@
 use fret_core::{AppWindowId, Rect};
-use fret_ui::UiHost;
-use fret_ui::retained_bridge::{CommandCx, EventCx, Invalidation};
+use fret_ui::EventCx;
+use fret_ui::{CommandCx, Invalidation, UiHost};
 
 use super::commit_cx::WireCommitCx;
 

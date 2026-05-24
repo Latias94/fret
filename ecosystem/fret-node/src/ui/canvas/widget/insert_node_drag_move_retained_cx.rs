@@ -1,7 +1,7 @@
 use fret_core::{AppWindowId, PointerId, Rect};
 use fret_runtime::TickId;
+use fret_ui::EventCx;
 use fret_ui::UiHost;
-use fret_ui::retained_bridge::EventCx;
 
 use super::insert_node_drag_move_cx::InsertNodeDragMoveCx;
 

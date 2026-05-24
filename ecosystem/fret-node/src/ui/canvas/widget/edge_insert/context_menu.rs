@@ -2,18 +2,18 @@ use super::prelude::*;
 
 pub(in super::super) fn open_edge_insert_context_menu<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl EdgeInsertCx<H>,
     edge: EdgeId,
     invoked_at: Point,
 ) {
-    let menu_candidates = canvas.list_edge_insert_candidates(cx.app, edge);
+    let menu_candidates = canvas.list_edge_insert_candidates(cx.host(), edge);
     let items = super::super::build_insert_candidate_menu_items(&menu_candidates);
 
-    let snapshot = canvas.sync_view_state(cx.app);
+    let snapshot = canvas.sync_view_state(cx.host());
     let menu = super::super::build_context_menu_state(
         canvas,
         invoked_at,
-        cx.bounds,
+        cx.bounds(),
         &snapshot,
         ContextMenuTarget::EdgeInsertNodePicker(edge),
         items,

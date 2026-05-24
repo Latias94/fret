@@ -1,6 +1,6 @@
 use fret_core::PointerId;
 use fret_runtime::TickId;
-use fret_ui::{UiHost, retained_bridge::EventCx};
+use fret_ui::{EventCx, UiHost};
 
 use super::arm::SearcherArmCx;
 

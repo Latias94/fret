@@ -4,13 +4,14 @@ mod drag;
 use fret_core::{Point, Px, Rect};
 use fret_ui::UiHost;
 
+use super::super::LeftClickCx;
 use crate::core::NodeId as GraphNodeId;
 use crate::ui::canvas::state::ViewSnapshot;
 use crate::ui::canvas::widget::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 pub(super) fn handle_node_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     node: GraphNodeId,
@@ -24,21 +25,22 @@ pub(super) fn handle_node_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
         Px(position.y.0 - rect.origin.y.0),
     );
     let already_selected = snapshot.selected_nodes.iter().any(|id| *id == node);
-    let hit_caps = capabilities::node_hit_capabilities(canvas, cx.app, snapshot, node);
+    let hit_caps =
+        capabilities::node_hit_capabilities(canvas, cx.left_click_host(), snapshot, node);
     let select_action = super::super::node_selection::pending_node_select_action(
         hit_caps.selectable,
         multi_selection_pressed,
     );
 
     if hit_caps.selectable && !multi_selection_pressed {
-        canvas.update_view_state(cx.app, |s| {
+        canvas.update_view_state(cx.left_click_host(), |s| {
             super::super::node_selection::apply_node_hit_selection(s, node)
         });
     }
 
     let nodes_for_drag = drag::drag_nodes_for_hit(
         canvas,
-        cx.app,
+        cx.left_click_host(),
         snapshot,
         node,
         hit_caps.selectable,

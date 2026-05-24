@@ -138,6 +138,44 @@ enum CleanGeometryWidthDeltaSizeStability {
     TextCachedMetrics,
 }
 
+#[derive(Clone, Copy)]
+struct CleanGeometryFallbackLayout {
+    node: NodeId,
+    bounds: Rect,
+    kind: &'static str,
+}
+
+#[derive(Clone, Copy)]
+struct CleanGeometryAppliedNodeSnapshot {
+    node: NodeId,
+    bounds: Rect,
+    measured_size: Size,
+}
+
+struct CleanGeometryNodeStateSnapshot {
+    children: Vec<NodeId>,
+    measured_size: Size,
+    layout_dirty_children_suppressed: bool,
+    layout_invalidated: bool,
+    subtree_layout_dirty_count: u32,
+}
+
+struct CleanGeometryRecordSnapshot {
+    kind: &'static str,
+    absent_interactivity_gate_leaf: bool,
+    explicit_zero_driver_leaf: bool,
+    contract: Option<Result<CleanGeometryNodeContract, CleanGeometrySolveSkipRejection>>,
+    apply_element_after_checked_child_bounds: Option<GlobalElementId>,
+    text_instance: Option<crate::declarative::frame::ElementInstance>,
+}
+
+#[derive(Default)]
+pub(super) struct CleanGeometryApplyPlan {
+    fallback_layouts: Vec<CleanGeometryFallbackLayout>,
+    nodes_needing_paint_fingerprint: Vec<NodeId>,
+    applied_node_snapshots: Vec<CleanGeometryAppliedNodeSnapshot>,
+}
+
 impl CleanGeometryNodeContract {
     fn pure(child_bounds: CleanGeometryChildBoundsStrategy) -> Self {
         Self {
@@ -214,6 +252,19 @@ impl CleanGeometrySolveSkipRejectionDetail {
 }
 
 impl<H: UiHost> UiTree<H> {
+    fn with_clean_geometry_scroll_side_effect_fallback<R>(
+        &mut self,
+        node: Option<NodeId>,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> R {
+        let Some(node) = node else { return f(self) };
+
+        self.push_clean_geometry_scroll_side_effect_fallback(node);
+        let out = f(self);
+        self.pop_clean_geometry_scroll_side_effect_fallback();
+        out
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(super) fn try_propagate_clean_engine_layout(
         &mut self,
@@ -356,6 +407,432 @@ impl<H: UiHost> UiTree<H> {
 
         self.recompute_paint_geometry_fingerprint(node);
         Some(size)
+    }
+
+    pub(super) fn clean_geometry_apply_plan_for_resize(
+        &mut self,
+        app: &mut H,
+        engine: &mut crate::layout_engine::TaffyLayoutEngine,
+        root: NodeId,
+        bounds: Rect,
+        prev_bounds: Rect,
+        scale_factor: f32,
+    ) -> Option<CleanGeometryApplyPlan> {
+        match self.clean_geometry_apply_plan_decision(
+            app,
+            engine,
+            root,
+            bounds,
+            prev_bounds,
+            scale_factor,
+        ) {
+            Ok(plan) => {
+                if self.debug_enabled {
+                    self.debug_clean_geometry_solve_skip_rejections
+                        .remove(&root);
+                }
+                Some(plan)
+            }
+            Err(rejection) => {
+                self.debug_record_clean_geometry_solve_skip_rejection(
+                    app,
+                    root,
+                    rejection.at_node_if_missing(root),
+                );
+                None
+            }
+        }
+    }
+
+    pub(super) fn apply_clean_geometry_plan(
+        &mut self,
+        app: &mut H,
+        services: &mut dyn UiServices,
+        plan: CleanGeometryApplyPlan,
+        scale_factor: f32,
+        pass_kind: LayoutPassKind,
+        overflow_ctx: crate::layout::overflow::LayoutOverflowContext,
+    ) {
+        if pass_kind != LayoutPassKind::Final {
+            return;
+        }
+
+        let fallback_started = self.debug_enabled.then(Instant::now);
+        for fallback in plan.fallback_layouts {
+            if self.debug_enabled {
+                self.debug_stats
+                    .layout_clean_geometry_apply_fallback_layouts = self
+                    .debug_stats
+                    .layout_clean_geometry_apply_fallback_layouts
+                    .saturating_add(1);
+            }
+            let fallback_kind = Some(fallback.kind);
+            let fallback_node_started = self.debug_enabled.then(Instant::now);
+            let scroll_fallback_node = (fallback.kind == "Scroll").then_some(fallback.node);
+            let _ = self.with_clean_geometry_scroll_side_effect_fallback(
+                scroll_fallback_node,
+                |tree| {
+                    tree.layout_node(
+                        app,
+                        services,
+                        fallback.node,
+                        fallback.bounds,
+                        scale_factor,
+                        pass_kind,
+                        overflow_ctx,
+                    )
+                },
+            );
+            if self.debug_enabled
+                && let Some(fallback_node_started) = fallback_node_started
+            {
+                let elapsed = fallback_node_started.elapsed();
+                if elapsed
+                    > self
+                        .debug_stats
+                        .layout_clean_geometry_apply_fallback_layouts_top_time
+                    || (self
+                        .debug_stats
+                        .layout_clean_geometry_apply_fallback_layouts_top_kind
+                        .is_none()
+                        && fallback_kind.is_some())
+                {
+                    self.debug_stats
+                        .layout_clean_geometry_apply_fallback_layouts_top_time = elapsed;
+                    self.debug_stats
+                        .layout_clean_geometry_apply_fallback_layouts_top_kind = fallback_kind;
+                }
+            }
+        }
+        if self.debug_enabled
+            && let Some(fallback_started) = fallback_started
+        {
+            self.debug_stats
+                .layout_clean_geometry_apply_fallback_layouts_time += fallback_started.elapsed();
+        }
+
+        let fingerprint_started = self.debug_enabled.then(Instant::now);
+        for node in plan.nodes_needing_paint_fingerprint {
+            self.recompute_paint_geometry_fingerprint(node);
+        }
+        if self.debug_enabled
+            && let Some(fingerprint_started) = fingerprint_started
+        {
+            self.debug_stats
+                .layout_clean_geometry_apply_paint_fingerprint_time +=
+                fingerprint_started.elapsed();
+        }
+    }
+
+    fn clean_geometry_apply_plan_decision(
+        &mut self,
+        app: &mut H,
+        engine: &mut crate::layout_engine::TaffyLayoutEngine,
+        root: NodeId,
+        bounds: Rect,
+        prev_bounds: Rect,
+        scale_factor: f32,
+    ) -> Result<CleanGeometryApplyPlan, CleanGeometrySolveSkipRejection> {
+        if !self.interactive_resize_is_small_step() {
+            return Err(CleanGeometrySolveSkipRejection::new(
+                CleanGeometrySolveSkipRejectionReason::NotInteractiveResizeSmallStep,
+            ));
+        }
+        if prev_bounds == bounds {
+            return Err(CleanGeometrySolveSkipRejection::new(
+                CleanGeometrySolveSkipRejectionReason::NoSizeDelta,
+            ));
+        }
+        if (bounds.size.height.0 - prev_bounds.size.height.0).abs() > 0.01 {
+            return Err(CleanGeometrySolveSkipRejection::new(
+                CleanGeometrySolveSkipRejectionReason::HeightDelta,
+            ));
+        }
+        let Some(window) = self.window else {
+            return Err(CleanGeometrySolveSkipRejection::new(
+                CleanGeometrySolveSkipRejectionReason::MissingWindow,
+            ));
+        };
+        if let Err(rejection) = self.clean_geometry_node_clean_result(root) {
+            return Err(rejection.at_node_if_missing(root));
+        }
+        if Self::clean_size_matches(prev_bounds.size, bounds.size) {
+            return Ok(CleanGeometryApplyPlan::default());
+        }
+
+        let mut plan = CleanGeometryApplyPlan::default();
+        let scratch_bounds_len = self.scratch_bounds_records.len();
+        if let Err(rejection) = self.build_clean_geometry_apply_plan_checked(
+            app,
+            engine,
+            window,
+            root,
+            bounds,
+            prev_bounds,
+            scale_factor,
+            true,
+            true,
+            &mut plan,
+        ) {
+            self.rollback_clean_geometry_applied_nodes(&plan, scratch_bounds_len);
+            return Err(rejection);
+        }
+        plan.applied_node_snapshots.clear();
+        Ok(plan)
+    }
+
+    fn rollback_clean_geometry_applied_nodes(
+        &mut self,
+        plan: &CleanGeometryApplyPlan,
+        scratch_bounds_len: usize,
+    ) {
+        self.scratch_bounds_records.truncate(scratch_bounds_len);
+        for snapshot in plan.applied_node_snapshots.iter().rev() {
+            if let Some(node_entry) = self.nodes.get_mut(snapshot.node) {
+                node_entry.bounds = snapshot.bounds;
+                node_entry.measured_size = snapshot.measured_size;
+            }
+        }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn build_clean_geometry_apply_plan_checked(
+        &mut self,
+        app: &mut H,
+        engine: &mut crate::layout_engine::TaffyLayoutEngine,
+        window: AppWindowId,
+        node: NodeId,
+        bounds: Rect,
+        prev_bounds: Rect,
+        scale_factor: f32,
+        is_root: bool,
+        emit: bool,
+        plan: &mut CleanGeometryApplyPlan,
+    ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        if self.debug_enabled {
+            self.debug_stats.layout_clean_geometry_proof_nodes = self
+                .debug_stats
+                .layout_clean_geometry_proof_nodes
+                .saturating_add(1);
+        }
+
+        let node_state_started = self.debug_enabled.then(Instant::now);
+        let node_state = self
+            .nodes
+            .get(node)
+            .map(|entry| CleanGeometryNodeStateSnapshot {
+                children: entry.children.clone(),
+                measured_size: entry.measured_size,
+                layout_dirty_children_suppressed: entry.layout_dirty_children_suppressed,
+                layout_invalidated: entry.invalidation.layout,
+                subtree_layout_dirty_count: entry.subtree_layout_dirty_count,
+            })
+            .ok_or_else(|| {
+                CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::MissingNode,
+                )
+                .at_node(node)
+            })?;
+        if let Some(node_state_started) = node_state_started {
+            self.debug_stats.layout_clean_geometry_proof_node_state_time +=
+                node_state_started.elapsed();
+        }
+        let record_started = self.debug_enabled.then(Instant::now);
+        let (record_snapshot, contract_eval_elapsed) =
+            crate::declarative::frame::with_element_record_for_node(app, window, node, |record| {
+                Self::clean_geometry_record_snapshot(
+                    record,
+                    &node_state.children,
+                    self.debug_enabled,
+                )
+            })
+            .ok_or_else(|| {
+                CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::MissingElementRecord,
+                )
+                .at_node(node)
+            })?;
+        if let Some(record_started) = record_started {
+            let elapsed = record_started.elapsed();
+            self.debug_stats.layout_clean_geometry_proof_record_time +=
+                elapsed.saturating_sub(contract_eval_elapsed);
+            self.debug_stats
+                .layout_clean_geometry_proof_contract_eval_time += contract_eval_elapsed;
+            self.debug_stats.layout_clean_geometry_proof_contract_time += elapsed;
+        }
+        let kind = record_snapshot.kind;
+        let leaf_shortcut_started = self.debug_enabled.then(Instant::now);
+        let absent_interactivity_gate_leaf = record_snapshot.absent_interactivity_gate_leaf;
+        let explicit_zero_driver_leaf = record_snapshot.explicit_zero_driver_leaf;
+        if let Some(leaf_shortcut_started) = leaf_shortcut_started {
+            self.debug_stats
+                .layout_clean_geometry_proof_leaf_shortcut_time += leaf_shortcut_started.elapsed();
+        }
+        if absent_interactivity_gate_leaf || explicit_zero_driver_leaf {
+            if node_state.layout_invalidated {
+                return Err(CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::LayoutDirty,
+                )
+                .at_node(node));
+            }
+            if explicit_zero_driver_leaf && node_state.subtree_layout_dirty_count > 0 {
+                return Err(CleanGeometrySolveSkipRejection::new(
+                    CleanGeometrySolveSkipRejectionReason::SubtreeLayoutDirty,
+                )
+                .at_node(node));
+            }
+            if emit {
+                let emit_started = self.debug_enabled.then(Instant::now);
+                plan.fallback_layouts
+                    .push(CleanGeometryFallbackLayout { node, bounds, kind });
+                if let Some(emit_started) = emit_started {
+                    self.debug_stats.layout_clean_geometry_proof_emit_time +=
+                        emit_started.elapsed();
+                }
+            }
+            return Ok(());
+        }
+        let contract = record_snapshot
+            .contract
+            .expect("clean-geometry record snapshot must include a contract for non-leaf nodes")
+            .map_err(|rejection| rejection.at_node_if_missing(node))?;
+        if !is_root
+            && matches!(
+                contract.layout_effect,
+                CleanGeometryLayoutEffect::SideEffectBoundary
+            )
+        {
+            if self.debug_enabled {
+                self.debug_stats.layout_clean_geometry_proof_boundaries = self
+                    .debug_stats
+                    .layout_clean_geometry_proof_boundaries
+                    .saturating_add(1);
+            }
+            if emit {
+                let emit_started = self.debug_enabled.then(Instant::now);
+                plan.fallback_layouts
+                    .push(CleanGeometryFallbackLayout { node, bounds, kind });
+                if let Some(emit_started) = emit_started {
+                    self.debug_stats.layout_clean_geometry_proof_emit_time +=
+                        emit_started.elapsed();
+                }
+            }
+            return Ok(());
+        }
+
+        let node_state_started = self.debug_enabled.then(Instant::now);
+        Self::clean_geometry_node_clean_result_from_snapshot(node, &node_state)?;
+        if let Some(node_state_started) = node_state_started {
+            self.debug_stats.layout_clean_geometry_proof_node_state_time +=
+                node_state_started.elapsed();
+        }
+
+        let child_bounds_started = self.debug_enabled.then(Instant::now);
+        let child_bounds = self
+            .clean_manual_geometry_child_bounds_for_contract_checked(
+                app,
+                window,
+                node,
+                &node_state.children,
+                bounds,
+                prev_bounds,
+                scale_factor,
+                kind,
+                record_snapshot.text_instance.as_ref(),
+                &contract,
+            )
+            .map_err(|rejection| rejection.at_node_if_missing(node))?;
+        if let Some(child_bounds_started) = child_bounds_started {
+            self.debug_stats
+                .layout_clean_geometry_proof_child_bounds_time += child_bounds_started.elapsed();
+        }
+        let apply_element = if node_state.measured_size != Size::default()
+            && !node_state.layout_dirty_children_suppressed
+        {
+            record_snapshot.apply_element_after_checked_child_bounds
+        } else {
+            None
+        };
+        let mut has_emitted_pure_geometry = false;
+        let emit_children = emit && apply_element.is_some();
+        for (child, child_bounds) in child_bounds {
+            let child_prev_bounds_started = self.debug_enabled.then(Instant::now);
+            let child_prev_bounds =
+                self.nodes
+                    .get(child)
+                    .map(|entry| entry.bounds)
+                    .ok_or_else(|| {
+                        CleanGeometrySolveSkipRejection::new(
+                            CleanGeometrySolveSkipRejectionReason::MissingNode,
+                        )
+                        .at_node(child)
+                    })?;
+            if let Some(child_prev_bounds_started) = child_prev_bounds_started {
+                self.debug_stats
+                    .layout_clean_geometry_proof_child_prev_bounds_time +=
+                    child_prev_bounds_started.elapsed();
+            }
+            self.build_clean_geometry_apply_plan_checked(
+                app,
+                engine,
+                window,
+                child,
+                child_bounds,
+                child_prev_bounds,
+                scale_factor,
+                false,
+                emit_children,
+                plan,
+            )?;
+        }
+
+        if let Some(element) = apply_element {
+            if emit {
+                let emit_started = self.debug_enabled.then(Instant::now);
+                let next_measured_size =
+                    if node_state.children.is_empty() && prev_bounds.size == bounds.size {
+                        node_state.measured_size
+                    } else {
+                        bounds.size
+                    };
+                engine.mark_seen_if_present(node);
+                if let Some(node_entry) = self.nodes.get_mut(node) {
+                    plan.applied_node_snapshots
+                        .push(CleanGeometryAppliedNodeSnapshot {
+                            node,
+                            bounds: node_entry.bounds,
+                            measured_size: node_entry.measured_size,
+                        });
+                    node_entry.bounds = bounds;
+                    node_entry.measured_size = next_measured_size;
+                }
+                self.queue_layout_bounds_for_element(element, bounds);
+                plan.nodes_needing_paint_fingerprint.push(node);
+                has_emitted_pure_geometry = true;
+                if let Some(emit_started) = emit_started {
+                    self.debug_stats.layout_clean_geometry_proof_emit_time +=
+                        emit_started.elapsed();
+                }
+            }
+        } else if emit {
+            let emit_started = self.debug_enabled.then(Instant::now);
+            plan.fallback_layouts
+                .push(CleanGeometryFallbackLayout { node, bounds, kind });
+            if let Some(emit_started) = emit_started {
+                self.debug_stats.layout_clean_geometry_proof_emit_time += emit_started.elapsed();
+            }
+        }
+
+        if has_emitted_pure_geometry {
+            if self.debug_enabled {
+                self.debug_stats.layout_clean_geometry_apply_nodes = self
+                    .debug_stats
+                    .layout_clean_geometry_apply_nodes
+                    .saturating_add(1);
+            }
+        }
+
+        Ok(())
     }
 
     pub(crate) fn can_skip_clean_geometry_engine_solve_for_resize(
@@ -674,6 +1151,37 @@ impl<H: UiHost> UiTree<H> {
         Ok(())
     }
 
+    fn clean_geometry_node_clean_result_from_snapshot(
+        node: NodeId,
+        node_state: &CleanGeometryNodeStateSnapshot,
+    ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        if node_state.layout_invalidated {
+            return Err(CleanGeometrySolveSkipRejection::new(
+                CleanGeometrySolveSkipRejectionReason::LayoutDirty,
+            )
+            .at_node(node));
+        }
+        if node_state.subtree_layout_dirty_count > 0 {
+            return Err(CleanGeometrySolveSkipRejection::new(
+                CleanGeometrySolveSkipRejectionReason::SubtreeLayoutDirty,
+            )
+            .at_node(node));
+        }
+        if node_state.measured_size == Size::default() {
+            return Err(CleanGeometrySolveSkipRejection::new(
+                CleanGeometrySolveSkipRejectionReason::MissingMeasuredSize,
+            )
+            .at_node(node));
+        }
+        if node_state.layout_dirty_children_suppressed {
+            return Err(CleanGeometrySolveSkipRejection::new(
+                CleanGeometrySolveSkipRejectionReason::DirtyChildrenSuppressed,
+            )
+            .at_node(node));
+        }
+        Ok(())
+    }
+
     fn clean_geometry_boundary_layout_node_kind(
         &mut self,
         app: &mut H,
@@ -744,6 +1252,34 @@ impl<H: UiHost> UiTree<H> {
         let kind = record.instance.kind_name();
         let contract = Self::clean_geometry_node_contract(&record.instance, children, kind)
             .map_err(|rejection| rejection.at_node_if_missing(node))?;
+        self.clean_manual_geometry_child_bounds_for_contract_checked(
+            app,
+            window,
+            node,
+            children,
+            bounds,
+            prev_bounds,
+            scale_factor,
+            kind,
+            Some(&record.instance),
+            &contract,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn clean_manual_geometry_child_bounds_for_contract_checked(
+        &mut self,
+        app: &mut H,
+        window: AppWindowId,
+        node: NodeId,
+        children: &[NodeId],
+        bounds: Rect,
+        prev_bounds: Rect,
+        scale_factor: f32,
+        kind: &'static str,
+        text_instance: Option<&crate::declarative::frame::ElementInstance>,
+        contract: &CleanGeometryNodeContract,
+    ) -> Result<Vec<(NodeId, Rect)>, CleanGeometrySolveSkipRejection> {
         match contract.layout_effect {
             CleanGeometryLayoutEffect::Pure => {}
             CleanGeometryLayoutEffect::SideEffectBoundary => {
@@ -755,73 +1291,128 @@ impl<H: UiHost> UiTree<H> {
             }
         }
         if Self::clean_size_matches(prev_bounds.size, bounds.size) {
-            return self.clean_origin_only_child_bounds_checked(children, bounds, prev_bounds);
+            let child_bounds_started = self.debug_enabled.then(Instant::now);
+            let result = self.clean_origin_only_child_bounds_checked(children, bounds, prev_bounds);
+            if let Some(child_bounds_started) = child_bounds_started {
+                self.debug_stats
+                    .layout_clean_geometry_proof_child_bounds_origin_only_time +=
+                    child_bounds_started.elapsed();
+            }
+            return result;
         }
         match contract.size_stability {
             CleanGeometryWidthDeltaSizeStability::Propagated => {}
             CleanGeometryWidthDeltaSizeStability::TextCachedMetrics => {
+                let Some(text_instance) = text_instance else {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::TextReflow,
+                        kind,
+                    )
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextUnsupportedInstance)
+                    .at_node(node));
+                };
                 self.clean_text_cached_metrics_supported(
                     app,
                     window,
                     node,
                     bounds,
                     prev_bounds,
-                    &record.instance,
+                    text_instance,
                     kind,
                     scale_factor,
                 )?;
             }
         }
-        match contract.child_bounds {
-            CleanGeometryChildBoundsStrategy::PreserveLocalOrigins => self
-                .clean_preserved_origin_width_delta_child_bounds_checked(
+        match &contract.child_bounds {
+            CleanGeometryChildBoundsStrategy::PreserveLocalOrigins => {
+                let child_bounds_started = self.debug_enabled.then(Instant::now);
+                let result = self.clean_preserved_origin_width_delta_child_bounds_checked(
                     app,
                     window,
                     children,
                     bounds,
                     prev_bounds,
                     kind,
-                ),
-            CleanGeometryChildBoundsStrategy::VerticalNoWrapFlex(props) => self
-                .clean_vertical_flex_width_delta_child_bounds(
+                );
+                if let Some(child_bounds_started) = child_bounds_started {
+                    self.debug_stats
+                        .layout_clean_geometry_proof_child_bounds_preserve_local_origins_time +=
+                        child_bounds_started.elapsed();
+                }
+                result
+            }
+            CleanGeometryChildBoundsStrategy::VerticalNoWrapFlex(props) => {
+                let child_bounds_started = self.debug_enabled.then(Instant::now);
+                let result = self.clean_vertical_flex_width_delta_child_bounds(
                     app,
                     window,
                     children,
                     bounds,
                     prev_bounds,
-                    props,
+                    *props,
                     kind,
-                ),
-            CleanGeometryChildBoundsStrategy::HorizontalFixedFlex(props) => self
-                .clean_horizontal_fixed_flex_width_delta_child_bounds(
+                );
+                if let Some(child_bounds_started) = child_bounds_started {
+                    self.debug_stats
+                        .layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time +=
+                        child_bounds_started.elapsed();
+                }
+                result
+            }
+            CleanGeometryChildBoundsStrategy::HorizontalFixedFlex(props) => {
+                let child_bounds_started = self.debug_enabled.then(Instant::now);
+                let result = self.clean_horizontal_fixed_flex_width_delta_child_bounds(
                     app,
                     window,
                     children,
                     bounds,
                     prev_bounds,
-                    props,
+                    *props,
                     kind,
-                ),
-            CleanGeometryChildBoundsStrategy::ContainerPxInsets(props) => self
-                .clean_container_width_delta_child_bounds(
+                );
+                if let Some(child_bounds_started) = child_bounds_started {
+                    self.debug_stats
+                        .layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time +=
+                        child_bounds_started.elapsed();
+                }
+                result
+            }
+            CleanGeometryChildBoundsStrategy::ContainerPxInsets(props) => {
+                let child_bounds_started = self.debug_enabled.then(Instant::now);
+                let result = self.clean_container_width_delta_child_bounds(
                     app,
                     window,
                     children,
                     bounds,
                     prev_bounds,
-                    props,
+                    *props,
                     kind,
-                ),
-            CleanGeometryChildBoundsStrategy::SingleColumnAutoRowsGrid(props) => self
-                .clean_single_column_auto_rows_grid_width_delta_child_bounds(
+                );
+                if let Some(child_bounds_started) = child_bounds_started {
+                    self.debug_stats
+                        .layout_clean_geometry_proof_child_bounds_container_px_insets_time +=
+                        child_bounds_started.elapsed();
+                }
+                result
+            }
+            CleanGeometryChildBoundsStrategy::SingleColumnAutoRowsGrid(props) => {
+                let child_bounds_started = self.debug_enabled.then(Instant::now);
+                let result = self.clean_single_column_auto_rows_grid_width_delta_child_bounds(
                     app,
                     window,
                     children,
                     bounds,
                     prev_bounds,
-                    props,
+                    props.clone(),
                     kind,
-                ),
+                );
+                if let Some(child_bounds_started) = child_bounds_started {
+                    self.debug_stats
+                        .layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time +=
+                        child_bounds_started.elapsed();
+                }
+                result
+            }
             CleanGeometryChildBoundsStrategy::None => Ok(Vec::new()),
         }
     }
@@ -911,6 +1502,46 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    fn clean_geometry_record_snapshot(
+        record: &crate::declarative::frame::ElementRecord,
+        children: &[NodeId],
+        debug_enabled: bool,
+    ) -> (CleanGeometryRecordSnapshot, Duration) {
+        let kind = record.instance.kind_name();
+        let children_is_empty = children.is_empty();
+        let absent_interactivity_gate_leaf =
+            Self::clean_geometry_absent_interactivity_gate_leaf_for_record(record);
+        let explicit_zero_driver_leaf =
+            Self::clean_geometry_explicit_zero_driver_leaf_for_record(record, children_is_empty);
+        let contract_eval_started = debug_enabled.then(Instant::now);
+        let contract = (!absent_interactivity_gate_leaf && !explicit_zero_driver_leaf)
+            .then(|| Self::clean_geometry_node_contract(&record.instance, children, kind));
+        let contract_eval_elapsed = contract_eval_started
+            .map(|started| started.elapsed())
+            .unwrap_or_default();
+        let apply_element_after_checked_child_bounds =
+            Self::clean_geometry_apply_element_after_checked_child_bounds(record, children);
+        let text_instance = matches!(
+            record.instance,
+            crate::declarative::frame::ElementInstance::Text(_)
+                | crate::declarative::frame::ElementInstance::StyledText(_)
+                | crate::declarative::frame::ElementInstance::SelectableText(_)
+        )
+        .then(|| record.instance.clone());
+
+        (
+            CleanGeometryRecordSnapshot {
+                kind,
+                absent_interactivity_gate_leaf,
+                explicit_zero_driver_leaf,
+                contract,
+                apply_element_after_checked_child_bounds,
+                text_instance,
+            },
+            contract_eval_elapsed,
+        )
+    }
+
     fn clean_text_cached_metrics_supported(
         &mut self,
         app: &mut H,
@@ -922,72 +1553,92 @@ impl<H: UiHost> UiTree<H> {
         element_kind: &'static str,
         scale_factor: f32,
     ) -> Result<(), CleanGeometrySolveSkipRejection> {
+        let started = self.debug_enabled.then(Instant::now);
         if Self::clean_size_matches(bounds.size, prev_bounds.size) {
+            if let Some(started) = started {
+                self.debug_stats
+                    .layout_clean_geometry_proof_text_metrics_time += started.elapsed();
+            }
             return Ok(());
         }
-        if (bounds.size.height.0 - prev_bounds.size.height.0).abs() > 0.01 {
-            return Err(CleanGeometrySolveSkipRejection::for_kind(
-                CleanGeometrySolveSkipRejectionReason::TextReflow,
-                element_kind,
-            )
-            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextHeightDelta)
-            .at_node(node));
-        }
-        let theme = crate::Theme::global(&*app).snapshot();
-        let inherited_text_style =
-            crate::declarative::frame::inherited_text_style_for_node(app, window, node);
-        let font_stack_key = app
-            .global::<fret_runtime::TextFontStackKey>()
-            .map(|k| k.0)
-            .unwrap_or(0);
-        let fingerprint = match instance {
-            crate::declarative::frame::ElementInstance::Text(props) => {
-                if !matches!(props.overflow, TextOverflow::Clip | TextOverflow::Ellipsis) {
-                    return Err(CleanGeometrySolveSkipRejection::for_kind(
-                        CleanGeometrySolveSkipRejectionReason::TextReflow,
-                        element_kind,
-                    )
-                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextOverflowNotClip)
-                    .at_node(node));
-                }
-                if props.align != TextAlign::Start {
-                    return Err(CleanGeometrySolveSkipRejection::for_kind(
-                        CleanGeometrySolveSkipRejectionReason::TextReflow,
-                        element_kind,
-                    )
-                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextAlignNotStart)
-                    .at_node(node));
-                }
-                let resolved_style =
-                    props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
-                match props.wrap {
-                    TextWrap::None => crate::text_props::text_wrap_none_measure_fingerprint_plain(
-                        &props.text,
-                        &resolved_style,
-                        props.overflow,
-                        props.align,
-                        scale_factor,
-                        font_stack_key,
-                    ),
-                    TextWrap::Word if props.overflow == TextOverflow::Clip => {
-                        let fingerprint = crate::text_props::text_wrapped_measure_fingerprint_plain(
-                            &props.text,
-                            &resolved_style,
-                            props.wrap,
-                            props.overflow,
-                            props.align,
-                            scale_factor,
-                            font_stack_key,
-                        );
-                        return self.clean_wrapped_text_cached_metrics_supported(
-                            node,
-                            bounds,
-                            instance,
+        let result = (|| {
+            if (bounds.size.height.0 - prev_bounds.size.height.0).abs() > 0.01 {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::TextReflow,
+                    element_kind,
+                )
+                .with_detail(CleanGeometrySolveSkipRejectionDetail::TextHeightDelta)
+                .at_node(node));
+            }
+            let theme = crate::Theme::global(&*app).snapshot();
+            let inherited_text_style =
+                crate::declarative::frame::inherited_text_style_for_node(app, window, node);
+            let font_stack_key = app
+                .global::<fret_runtime::TextFontStackKey>()
+                .map(|k| k.0)
+                .unwrap_or(0);
+            let fingerprint = match instance {
+                crate::declarative::frame::ElementInstance::Text(props) => {
+                    if !matches!(props.overflow, TextOverflow::Clip | TextOverflow::Ellipsis) {
+                        return Err(CleanGeometrySolveSkipRejection::for_kind(
+                            CleanGeometrySolveSkipRejectionReason::TextReflow,
                             element_kind,
-                            fingerprint,
-                        );
+                        )
+                        .with_detail(CleanGeometrySolveSkipRejectionDetail::TextOverflowNotClip)
+                        .at_node(node));
                     }
-                    _ => {
+                    if props.align != TextAlign::Start {
+                        return Err(CleanGeometrySolveSkipRejection::for_kind(
+                            CleanGeometrySolveSkipRejectionReason::TextReflow,
+                            element_kind,
+                        )
+                        .with_detail(CleanGeometrySolveSkipRejectionDetail::TextAlignNotStart)
+                        .at_node(node));
+                    }
+                    let resolved_style = props
+                        .resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
+                    match props.wrap {
+                        TextWrap::None => {
+                            crate::text_props::text_wrap_none_measure_fingerprint_plain(
+                                &props.text,
+                                &resolved_style,
+                                props.overflow,
+                                props.align,
+                                scale_factor,
+                                font_stack_key,
+                            )
+                        }
+                        TextWrap::Word if props.overflow == TextOverflow::Clip => {
+                            let fingerprint =
+                                crate::text_props::text_wrapped_measure_fingerprint_plain(
+                                    &props.text,
+                                    &resolved_style,
+                                    props.wrap,
+                                    props.overflow,
+                                    props.align,
+                                    scale_factor,
+                                    font_stack_key,
+                                );
+                            return self.clean_wrapped_text_cached_metrics_supported(
+                                node,
+                                bounds,
+                                instance,
+                                element_kind,
+                                fingerprint,
+                            );
+                        }
+                        _ => {
+                            return Err(CleanGeometrySolveSkipRejection::for_kind(
+                                CleanGeometrySolveSkipRejectionReason::TextReflow,
+                                element_kind,
+                            )
+                            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+                            .at_node(node));
+                        }
+                    }
+                }
+                crate::declarative::frame::ElementInstance::StyledText(props) => {
+                    if props.wrap != TextWrap::None {
                         return Err(CleanGeometrySolveSkipRejection::for_kind(
                             CleanGeometrySolveSkipRejectionReason::TextReflow,
                             element_kind,
@@ -995,133 +1646,129 @@ impl<H: UiHost> UiTree<H> {
                         .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
                         .at_node(node));
                     }
+                    if !matches!(props.overflow, TextOverflow::Clip | TextOverflow::Ellipsis) {
+                        return Err(CleanGeometrySolveSkipRejection::for_kind(
+                            CleanGeometrySolveSkipRejectionReason::TextReflow,
+                            element_kind,
+                        )
+                        .with_detail(CleanGeometrySolveSkipRejectionDetail::TextOverflowNotClip)
+                        .at_node(node));
+                    }
+                    if props.align != TextAlign::Start {
+                        return Err(CleanGeometrySolveSkipRejection::for_kind(
+                            CleanGeometrySolveSkipRejectionReason::TextReflow,
+                            element_kind,
+                        )
+                        .with_detail(CleanGeometrySolveSkipRejectionDetail::TextAlignNotStart)
+                        .at_node(node));
+                    }
+                    let resolved_style = props
+                        .resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
+                    crate::text_props::text_wrap_none_measure_fingerprint_rich(
+                        &props.rich,
+                        &resolved_style,
+                        props.overflow,
+                        props.align,
+                        scale_factor,
+                        font_stack_key,
+                    )
                 }
-            }
-            crate::declarative::frame::ElementInstance::StyledText(props) => {
-                if props.wrap != TextWrap::None {
+                crate::declarative::frame::ElementInstance::SelectableText(props) => {
+                    if props.wrap != TextWrap::None {
+                        return Err(CleanGeometrySolveSkipRejection::for_kind(
+                            CleanGeometrySolveSkipRejectionReason::TextReflow,
+                            element_kind,
+                        )
+                        .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+                        .at_node(node));
+                    }
+                    if !matches!(props.overflow, TextOverflow::Clip | TextOverflow::Ellipsis) {
+                        return Err(CleanGeometrySolveSkipRejection::for_kind(
+                            CleanGeometrySolveSkipRejectionReason::TextReflow,
+                            element_kind,
+                        )
+                        .with_detail(CleanGeometrySolveSkipRejectionDetail::TextOverflowNotClip)
+                        .at_node(node));
+                    }
+                    if props.align != TextAlign::Start {
+                        return Err(CleanGeometrySolveSkipRejection::for_kind(
+                            CleanGeometrySolveSkipRejectionReason::TextReflow,
+                            element_kind,
+                        )
+                        .with_detail(CleanGeometrySolveSkipRejectionDetail::TextAlignNotStart)
+                        .at_node(node));
+                    }
+                    let resolved_style = props
+                        .resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
+                    crate::text_props::text_wrap_none_measure_fingerprint_rich(
+                        &props.rich,
+                        &resolved_style,
+                        props.overflow,
+                        props.align,
+                        scale_factor,
+                        font_stack_key,
+                    )
+                }
+                _ => {
                     return Err(CleanGeometrySolveSkipRejection::for_kind(
                         CleanGeometrySolveSkipRejectionReason::TextReflow,
                         element_kind,
                     )
-                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
+                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextUnsupportedInstance)
                     .at_node(node));
                 }
-                if !matches!(props.overflow, TextOverflow::Clip | TextOverflow::Ellipsis) {
-                    return Err(CleanGeometrySolveSkipRejection::for_kind(
-                        CleanGeometrySolveSkipRejectionReason::TextReflow,
-                        element_kind,
-                    )
-                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextOverflowNotClip)
-                    .at_node(node));
-                }
-                if props.align != TextAlign::Start {
-                    return Err(CleanGeometrySolveSkipRejection::for_kind(
-                        CleanGeometrySolveSkipRejectionReason::TextReflow,
-                        element_kind,
-                    )
-                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextAlignNotStart)
-                    .at_node(node));
-                }
-                let resolved_style =
-                    props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
-                crate::text_props::text_wrap_none_measure_fingerprint_rich(
-                    &props.rich,
-                    &resolved_style,
-                    props.overflow,
-                    props.align,
-                    scale_factor,
-                    font_stack_key,
-                )
-            }
-            crate::declarative::frame::ElementInstance::SelectableText(props) => {
-                if props.wrap != TextWrap::None {
-                    return Err(CleanGeometrySolveSkipRejection::for_kind(
-                        CleanGeometrySolveSkipRejectionReason::TextReflow,
-                        element_kind,
-                    )
-                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextWrapNotNone)
-                    .at_node(node));
-                }
-                if !matches!(props.overflow, TextOverflow::Clip | TextOverflow::Ellipsis) {
-                    return Err(CleanGeometrySolveSkipRejection::for_kind(
-                        CleanGeometrySolveSkipRejectionReason::TextReflow,
-                        element_kind,
-                    )
-                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextOverflowNotClip)
-                    .at_node(node));
-                }
-                if props.align != TextAlign::Start {
-                    return Err(CleanGeometrySolveSkipRejection::for_kind(
-                        CleanGeometrySolveSkipRejectionReason::TextReflow,
-                        element_kind,
-                    )
-                    .with_detail(CleanGeometrySolveSkipRejectionDetail::TextAlignNotStart)
-                    .at_node(node));
-                }
-                let resolved_style =
-                    props.resolved_text_style_with_inherited(theme, inherited_text_style.as_ref());
-                crate::text_props::text_wrap_none_measure_fingerprint_rich(
-                    &props.rich,
-                    &resolved_style,
-                    props.overflow,
-                    props.align,
-                    scale_factor,
-                    font_stack_key,
-                )
-            }
-            _ => {
+            };
+            let Some((cached_fingerprint, cached_size)) =
+                self.node_text_wrap_none_measure_cache(node)
+            else {
                 return Err(CleanGeometrySolveSkipRejection::for_kind(
                     CleanGeometrySolveSkipRejectionReason::TextReflow,
                     element_kind,
                 )
-                .with_detail(CleanGeometrySolveSkipRejectionDetail::TextUnsupportedInstance)
+                .with_detail(CleanGeometrySolveSkipRejectionDetail::TextMissingWrapNoneMeasureCache)
+                .at_node(node));
+            };
+            let expected_size = if matches!(
+                instance,
+                crate::declarative::frame::ElementInstance::Text(props)
+                    if props.overflow == TextOverflow::Ellipsis
+            ) || matches!(
+                instance,
+                crate::declarative::frame::ElementInstance::StyledText(props)
+                    if props.overflow == TextOverflow::Ellipsis
+            ) || matches!(
+                instance,
+                crate::declarative::frame::ElementInstance::SelectableText(props)
+                    if props.overflow == TextOverflow::Ellipsis
+            ) {
+                Size::new(bounds.size.width, cached_size.height)
+            } else {
+                cached_size
+            };
+            if !Self::clean_size_matches(expected_size, bounds.size) {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::TextReflow,
+                    element_kind,
+                )
+                .with_detail(CleanGeometrySolveSkipRejectionDetail::TextCachedSizeMismatch)
                 .at_node(node));
             }
-        };
-        let Some((cached_fingerprint, cached_size)) = self.node_text_wrap_none_measure_cache(node)
-        else {
-            return Err(CleanGeometrySolveSkipRejection::for_kind(
-                CleanGeometrySolveSkipRejectionReason::TextReflow,
-                element_kind,
-            )
-            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextMissingWrapNoneMeasureCache)
-            .at_node(node));
-        };
-        let expected_size = if matches!(
-            instance,
-            crate::declarative::frame::ElementInstance::Text(props)
-                if props.overflow == TextOverflow::Ellipsis
-        ) || matches!(
-            instance,
-            crate::declarative::frame::ElementInstance::StyledText(props)
-                if props.overflow == TextOverflow::Ellipsis
-        ) || matches!(
-            instance,
-            crate::declarative::frame::ElementInstance::SelectableText(props)
-                if props.overflow == TextOverflow::Ellipsis
-        ) {
-            Size::new(bounds.size.width, cached_size.height)
-        } else {
-            cached_size
-        };
-        if !Self::clean_size_matches(expected_size, bounds.size) {
-            return Err(CleanGeometrySolveSkipRejection::for_kind(
-                CleanGeometrySolveSkipRejectionReason::TextReflow,
-                element_kind,
-            )
-            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextCachedSizeMismatch)
-            .at_node(node));
-        }
-        if fingerprint != cached_fingerprint {
-            return Err(CleanGeometrySolveSkipRejection::for_kind(
-                CleanGeometrySolveSkipRejectionReason::TextReflow,
-                element_kind,
-            )
-            .with_detail(CleanGeometrySolveSkipRejectionDetail::TextFingerprintMismatch)
-            .at_node(node));
-        }
+            if fingerprint != cached_fingerprint {
+                return Err(CleanGeometrySolveSkipRejection::for_kind(
+                    CleanGeometrySolveSkipRejectionReason::TextReflow,
+                    element_kind,
+                )
+                .with_detail(CleanGeometrySolveSkipRejectionDetail::TextFingerprintMismatch)
+                .at_node(node));
+            }
 
-        Ok(())
+            Ok(())
+        })();
+        if let Some(started) = started {
+            self.debug_stats
+                .layout_clean_geometry_proof_text_metrics_time += started.elapsed();
+        }
+        result
     }
 
     fn clean_wrapped_text_cached_metrics_supported(
@@ -1199,13 +1846,17 @@ impl<H: UiHost> UiTree<H> {
         node: NodeId,
     ) -> bool {
         crate::declarative::frame::element_record_for_node(app, window, node).is_some_and(
-            |record| {
-                matches!(
-                    record.instance,
-                    crate::declarative::frame::ElementInstance::InteractivityGate(props)
-                        if !props.present
-                )
-            },
+            |record| Self::clean_geometry_absent_interactivity_gate_leaf_for_record(&record),
+        )
+    }
+
+    fn clean_geometry_absent_interactivity_gate_leaf_for_record(
+        record: &crate::declarative::frame::ElementRecord,
+    ) -> bool {
+        matches!(
+            record.instance,
+            crate::declarative::frame::ElementInstance::InteractivityGate(props)
+                if !props.present
         )
     }
 
@@ -1222,18 +1873,28 @@ impl<H: UiHost> UiTree<H> {
             return false;
         }
         crate::declarative::frame::element_record_for_node(app, window, node).is_some_and(
-            |record| match record.instance {
-                crate::declarative::frame::ElementInstance::Spacer(props) => {
-                    props.min.0.abs() <= 0.01
-                        && Self::clean_explicit_zero_driver_layout_supported(props.layout)
-                }
-                crate::declarative::frame::ElementInstance::Container(props) => {
-                    Self::clean_zero_driver_container_chrome_is_empty(props)
-                        && Self::clean_explicit_zero_driver_layout_supported(props.layout)
-                }
-                _ => false,
-            },
+            |record| Self::clean_geometry_explicit_zero_driver_leaf_for_record(&record, true),
         )
+    }
+
+    fn clean_geometry_explicit_zero_driver_leaf_for_record(
+        record: &crate::declarative::frame::ElementRecord,
+        children_is_empty: bool,
+    ) -> bool {
+        if !children_is_empty {
+            return false;
+        }
+        match record.instance {
+            crate::declarative::frame::ElementInstance::Spacer(props) => {
+                props.min.0.abs() <= 0.01
+                    && Self::clean_explicit_zero_driver_layout_supported(props.layout)
+            }
+            crate::declarative::frame::ElementInstance::Container(props) => {
+                Self::clean_zero_driver_container_chrome_is_empty(props)
+                    && Self::clean_explicit_zero_driver_layout_supported(props.layout)
+            }
+            _ => false,
+        }
     }
 
     fn clean_explicit_zero_driver_layout_supported(layout: crate::element::LayoutStyle) -> bool {
@@ -1318,7 +1979,14 @@ impl<H: UiHost> UiTree<H> {
     ) -> Result<Vec<(NodeId, Rect)>, CleanGeometrySolveSkipRejection> {
         let mut out = Vec::with_capacity(children.len());
         for &child in children {
+            let style_started = self.debug_enabled.then(Instant::now);
             let child_style = crate::declarative::frame::layout_style_for_node(app, window, child);
+            if let Some(style_started) = style_started {
+                self.debug_stats.layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time +=
+                    style_started.elapsed();
+            }
+
+            let prev_bounds_started = self.debug_enabled.then(Instant::now);
             let prev_child = self
                 .nodes
                 .get(child)
@@ -1329,54 +1997,73 @@ impl<H: UiHost> UiTree<H> {
                     .at_node(child)
                 })?
                 .bounds;
+            if let Some(prev_bounds_started) = prev_bounds_started {
+                self.debug_stats.layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time +=
+                    prev_bounds_started.elapsed();
+            }
+
             if child_style.position == crate::element::PositionStyle::Absolute {
-                let allow_zero_measured_size =
-                    self.clean_geometry_absent_interactivity_gate_leaf(app, window, child);
-                out.push((
-                    child,
+                let absolute_started = self.debug_enabled.then(Instant::now);
+                let result = (|| -> Result<Rect, CleanGeometrySolveSkipRejection> {
+                    let allow_zero_measured_size =
+                        self.clean_geometry_absent_interactivity_gate_leaf(app, window, child);
                     Self::clean_absolute_px_inset_child_bounds(
                         child_style,
                         bounds,
                         prev_child,
                         element_kind,
                         allow_zero_measured_size,
-                    )?,
-                ));
+                    )
+                })();
+                if let Some(absolute_started) = absolute_started {
+                    self.debug_stats.layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time +=
+                        absolute_started.elapsed();
+                }
+                out.push((child, result?));
                 continue;
             }
-            if child_style.position != crate::element::PositionStyle::Static {
-                return Err(CleanGeometrySolveSkipRejection::for_kind(
-                    CleanGeometrySolveSkipRejectionReason::PositionedChild,
+
+            let relative_started = self.debug_enabled.then(Instant::now);
+            let result = (|| -> Result<Rect, CleanGeometrySolveSkipRejection> {
+                if child_style.position != crate::element::PositionStyle::Static {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::PositionedChild,
+                        element_kind,
+                    ));
+                }
+                if !Self::clean_margin_edges_are_px(child_style.margin) {
+                    return Err(CleanGeometrySolveSkipRejection::for_kind(
+                        CleanGeometrySolveSkipRejectionReason::NonPxMargin,
+                        element_kind,
+                    ));
+                }
+                Self::clean_child_width_style_supported_for_width_delta(child_style, element_kind)?;
+                Self::clean_child_height_style_supported_for_width_delta(
+                    child_style,
                     element_kind,
-                ));
-            }
-            if !Self::clean_margin_edges_are_px(child_style.margin) {
-                return Err(CleanGeometrySolveSkipRejection::for_kind(
-                    CleanGeometrySolveSkipRejectionReason::NonPxMargin,
-                    element_kind,
-                ));
-            }
-            Self::clean_child_width_style_supported_for_width_delta(child_style, element_kind)?;
-            Self::clean_child_height_style_supported_for_width_delta(child_style, element_kind)?;
-            let local_x = prev_child.origin.x.0 - prev_bounds.origin.x.0;
-            let local_y = prev_child.origin.y.0 - prev_bounds.origin.y.0;
-            let width = if (prev_child.size.width.0 - prev_bounds.size.width.0).abs() <= 0.01
-                || matches!(child_style.size.width, crate::element::Length::Fill)
-            {
-                bounds.size.width
-            } else {
-                prev_child.size.width
-            };
-            out.push((
-                child,
-                Rect::new(
+                )?;
+                let local_x = prev_child.origin.x.0 - prev_bounds.origin.x.0;
+                let local_y = prev_child.origin.y.0 - prev_bounds.origin.y.0;
+                let width = if (prev_child.size.width.0 - prev_bounds.size.width.0).abs() <= 0.01
+                    || matches!(child_style.size.width, crate::element::Length::Fill)
+                {
+                    bounds.size.width
+                } else {
+                    prev_child.size.width
+                };
+                Ok(Rect::new(
                     Point::new(
                         Px(bounds.origin.x.0 + local_x),
                         Px(bounds.origin.y.0 + local_y),
                     ),
                     Size::new(width, prev_child.size.height),
-                ),
-            ));
+                ))
+            })();
+            if let Some(relative_started) = relative_started {
+                self.debug_stats.layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time +=
+                    relative_started.elapsed();
+            }
+            out.push((child, result?));
         }
         Ok(out)
     }
@@ -2674,6 +3361,33 @@ impl<H: UiHost> UiTree<H> {
                 }
                 _ => false,
             };
+        supported.then_some(record.element)
+    }
+
+    fn clean_geometry_apply_element_after_checked_child_bounds(
+        record: &crate::declarative::frame::ElementRecord,
+        children: &[NodeId],
+    ) -> Option<GlobalElementId> {
+        let supported = match &record.instance {
+            crate::declarative::frame::ElementInstance::Scroll(_)
+            | crate::declarative::frame::ElementInstance::TextInput(_)
+            | crate::declarative::frame::ElementInstance::TextArea(_)
+            | crate::declarative::frame::ElementInstance::ViewCache(_)
+            | crate::declarative::frame::ElementInstance::ResizablePanelGroup(_)
+            | crate::declarative::frame::ElementInstance::VirtualList(_)
+            | crate::declarative::frame::ElementInstance::ManagedSurface(_)
+            | crate::declarative::frame::ElementInstance::ViewportSurface(_) => false,
+            #[cfg(feature = "unstable-retained-bridge")]
+            crate::declarative::frame::ElementInstance::RetainedSubtree(_) => false,
+            crate::declarative::frame::ElementInstance::Canvas(_)
+            | crate::declarative::frame::ElementInstance::Spacer(_)
+            | crate::declarative::frame::ElementInstance::Image(_)
+            | crate::declarative::frame::ElementInstance::SvgIcon(_)
+            | crate::declarative::frame::ElementInstance::SvgImage(_)
+            | crate::declarative::frame::ElementInstance::Spinner(_)
+            | crate::declarative::frame::ElementInstance::Scrollbar(_) => children.is_empty(),
+            _ => true,
+        };
         supported.then_some(record.element)
     }
 

@@ -2,7 +2,6 @@ pub(super) use std::sync::Arc;
 
 pub(super) use fret_core::{AppWindowId, Point};
 pub(super) use fret_ui::UiHost;
-pub(super) use fret_ui::retained_bridge::EventCx;
 
 pub(super) use crate::core::EdgeId;
 pub(super) use crate::ops::GraphOp;
@@ -14,3 +13,5 @@ pub(super) use crate::ui::NodeGraphContextMenuAction;
 pub(super) use crate::ui::canvas::widget::{
     NodeGraphCanvasMiddleware, NodeGraphCanvasWith, is_reroute_insert_candidate,
 };
+
+pub(super) use super::cx::EdgeInsertCx;

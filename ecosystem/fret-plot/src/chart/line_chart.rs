@@ -1,8 +1,11 @@
 use fret_runtime::Model;
 use fret_runtime::ModelHost;
+use fret_ui::element::AnyElement;
+use fret_ui::{ElementContextAccess, UiHost};
 
 use crate::cartesian::{DataPoint, DataRect};
-use crate::retained::{LinePlotCanvas, LinePlotModel, LineSeries};
+use crate::declarative::{LinePlotPanelProps, line_plot_panel_in};
+use crate::models::{LinePlotModel, LineSeries};
 use crate::series::Series;
 
 type Accessor<T> = Box<dyn Fn(&T) -> Option<f64> + 'static>;
@@ -110,8 +113,12 @@ impl<T> LineChart<T> {
         host.models_mut().insert(self.build_model())
     }
 
-    pub fn into_canvas(self, host: &mut impl ModelHost) -> LinePlotCanvas {
-        let model = self.install(host);
-        LinePlotCanvas::new(model)
+    pub fn into_element<'a, H, Cx>(self, cx: &mut Cx) -> AnyElement
+    where
+        H: UiHost + 'a + 'static,
+        Cx: ElementContextAccess<'a, H>,
+    {
+        let model = self.install(cx.elements().app);
+        line_plot_panel_in(cx, LinePlotPanelProps::new(model))
     }
 }

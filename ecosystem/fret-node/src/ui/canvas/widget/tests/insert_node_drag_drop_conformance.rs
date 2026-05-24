@@ -4,7 +4,7 @@ use fret_core::{
     AppWindowId, Event, InternalDragEvent, InternalDragKind, Modifiers, Point, Px, Rect, Size,
 };
 use fret_runtime::{DragSession, DragSessionId};
-use fret_ui::retained_bridge::Widget as _;
+use fret_ui::Widget as _;
 use serde_json::Value;
 
 use crate::core::{NodeKindKey, PortCapacity, PortDirection, PortKey, PortKind};

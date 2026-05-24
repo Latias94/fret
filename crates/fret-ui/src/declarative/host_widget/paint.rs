@@ -332,14 +332,6 @@ impl ElementHostWidget {
                     None,
                 );
             }
-            #[cfg(feature = "unstable-retained-bridge")]
-            ElementInstance::RetainedSubtree(props) => {
-                paint_children_clipped_if(
-                    cx,
-                    matches!(props.layout.overflow, Overflow::Clip),
-                    None,
-                );
-            }
             ElementInstance::FocusScope(props) => {
                 paint_children_clipped_if(
                     cx,
@@ -1894,13 +1886,20 @@ impl ElementHostWidget {
 
                 self.canvas_cache
                     .begin_paint(cx.app.frame_id().0, props.cache_policy);
-                if let Some(on_paint) = on_paint {
+                let canvas_on_paint_elapsed = if let Some(on_paint) = on_paint {
+                    let canvas_on_paint_started = cx.tree.debug_enabled().then(Instant::now);
                     {
                         let mut host = crate::canvas::UiCanvasHostAdapter::new(cx);
                         let mut painter =
                             crate::canvas::CanvasPainter::new(&mut host, &mut self.canvas_cache);
                         (on_paint)(&mut painter);
                     }
+                    canvas_on_paint_started.map(|started| started.elapsed())
+                } else {
+                    None
+                };
+                if let Some(elapsed) = canvas_on_paint_elapsed {
+                    cx.tree.debug_record_paint_canvas_on_paint(elapsed);
                 }
                 self.canvas_cache.end_paint(cx.services);
             }

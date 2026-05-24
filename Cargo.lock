@@ -1980,6 +1980,7 @@ dependencies = [
  "fret-ui",
  "fret-ui-kit",
  "fret-undo",
+ "slotmap",
 ]
 
 [[package]]

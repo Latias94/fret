@@ -3,8 +3,8 @@
 //! This module is behind the `fret-ui` feature.
 //!
 //! Retained-canvas integration surfaces (the legacy widget/editor stack) are behind
-//! `compat-retained-canvas` so downstream authors can adopt declarative UI without enabling
-//! `fret-ui/unstable-retained-bridge`.
+//! `compat-retained-canvas`. The old `fret-ui` retained bridge has been deleted; this feature now
+//! only gates node-local legacy canvas modules that consume stable `fret-ui` widget/context exports.
 
 pub mod binding;
 mod canvas;

@@ -6,12 +6,13 @@ use fret_launch::{
     FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_plot::cartesian::DataPoint;
-use fret_plot::retained::{
-    LinePlotModel, LinePlotStyle, LineSeries, PlotOutput, PlotState, StairsPlotCanvas, StepMode,
-};
+use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+use fret_plot::models::{LinePlotModel, LineSeries, StepMode};
 use fret_plot::series::Series;
+use fret_plot::state::{PlotOutput, PlotState};
+use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
 use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
+use fret_ui::{UiTree, declarative};
 
 struct StairsDemoWindowState {
     ui: UiTree<App>,
@@ -141,19 +142,35 @@ fn render(_driver: &mut StairsDemoDriver, context: WinitRenderContext<'_, Stairs
         scene,
     } = context;
 
-    let root = state.root.get_or_insert_with(|| {
-        let style = LinePlotStyle::default();
-        let canvas = StairsPlotCanvas::new(state.plot.clone())
-            .step_mode(StepMode::Post)
-            .style(style)
-            .state(state.plot_state.clone())
-            .output(state.plot_output.clone());
-        let node = StairsPlotCanvas::create_node(&mut state.ui, canvas);
+    if state.root.is_none() {
+        let node =
+            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                .render_root("stairs-demo", {
+                    let plot = state.plot.clone();
+                    let plot_state = state.plot_state.clone();
+                    let plot_output = state.plot_output.clone();
+                    move |cx| {
+                        let style = LinePlotStyle {
+                            series_tooltip: SeriesTooltipMode::NearestAtCursor,
+                            ..Default::default()
+                        };
+                        let props = LinePlotPanelProps::new(plot.clone())
+                            .step_mode(StepMode::Post)
+                            .style(style)
+                            .state(plot_state.clone())
+                            .output(plot_output.clone());
+                        vec![line_plot_panel_in(cx, props)]
+                    }
+                });
         state.ui.set_root(node);
-        node
-    });
+        state.ui.set_focus(Some(node));
+        state.ui.publish_window_runtime_snapshots(app);
+        state.root = Some(node);
+    }
 
-    state.ui.set_root(*root);
+    if let Some(root) = state.root {
+        state.ui.set_root(root);
+    }
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
 

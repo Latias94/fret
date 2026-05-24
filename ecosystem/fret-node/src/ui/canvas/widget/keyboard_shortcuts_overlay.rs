@@ -1,8 +1,22 @@
 use super::*;
 
+pub(in crate::ui::canvas::widget) trait KeyboardOverlayCx<H: UiHost, M: NodeGraphCanvasMiddleware>:
+    searcher::SearcherCx<H, M> + context_menu::ContextMenuCx<H, M> + cancel_cx::CancelGestureCx<H>
+{
+}
+
+impl<H: UiHost, M, T> KeyboardOverlayCx<H, M> for T
+where
+    M: NodeGraphCanvasMiddleware,
+    T: searcher::SearcherCx<H, M>
+        + context_menu::ContextMenuCx<H, M>
+        + cancel_cx::CancelGestureCx<H>,
+{
+}
+
 pub(super) fn handle_escape_key<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl KeyboardOverlayCx<H, M>,
     key: fret_core::KeyCode,
 ) -> bool {
     if key != fret_core::KeyCode::Escape {
@@ -21,7 +35,7 @@ pub(super) fn handle_escape_key<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_overlay_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl KeyboardOverlayCx<H, M>,
     key: fret_core::KeyCode,
     modifiers: fret_core::Modifiers,
 ) -> bool {

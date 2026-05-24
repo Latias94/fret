@@ -1,12 +1,17 @@
 use super::*;
 
-pub(super) fn route_wheel_pointer_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn route_wheel_pointer_event<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut Cx,
     event: &Event,
     snapshot: &ViewSnapshot,
     zoom: f32,
-) -> bool {
+) -> bool
+where
+    M: NodeGraphCanvasMiddleware,
+    Cx: super::event_router_pointer_wheel_cx::PointerWheelRouteCx<H, M>,
+{
+    let platform = cx.platform();
     match event {
         Event::Pointer(fret_core::PointerEvent::Wheel {
             position,
@@ -14,7 +19,8 @@ pub(super) fn route_wheel_pointer_event<H: UiHost, M: NodeGraphCanvasMiddleware>
             modifiers,
             ..
         }) => {
-            canvas.handle_pointer_wheel(cx, snapshot, *position, *delta, *modifiers, zoom);
+            canvas
+                .handle_pointer_wheel(cx, platform, snapshot, *position, *delta, *modifiers, zoom);
             true
         }
         Event::Pointer(fret_core::PointerEvent::PinchGesture {

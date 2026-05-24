@@ -2,6 +2,11 @@ use super::*;
 #[cfg(feature = "syntax-rust")]
 use crate::editor::syntax::ensure_syntax_row_cache_fresh;
 
+#[cfg(test)]
+fn test_text_blob_id(raw: u64) -> fret_core::TextBlobId {
+    fret_core::TextBlobId::from(slotmap::KeyData::from_ffi(raw))
+}
+
 #[test]
 fn cached_row_text_hits_and_reuses_arc_for_repeated_calls() {
     let handle = CodeEditorHandle::new("hello\nworld");
@@ -170,6 +175,10 @@ fn test_retained_row_scene_fragment(row: usize) -> Arc<RowSceneRetainedFragment>
         ),
         fret_runtime::TextFontStackKey::default(),
     );
+    let local_bounds = Rect::new(
+        Point::new(Px(0.0), Px(row as f32 * 16.0)),
+        Size::new(Px(80.0), Px(16.0)),
+    );
     Arc::new(RowSceneRetainedFragment {
         content: Arc::new(RowContentSnapshot {
             text,
@@ -178,7 +187,8 @@ fn test_retained_row_scene_fragment(row: usize) -> Arc<RowSceneRetainedFragment>
             preedit_range: None,
             row_spans: Arc::from([]),
         }),
-        origin: Point::new(Px(0.0), Px(row as f32 * 16.0)),
+        local_bounds,
+        origin: local_bounds.origin,
         geom: RowGeom {
             row_range: row..row.saturating_add(1),
             key: row_geom_key,
@@ -193,6 +203,59 @@ fn test_retained_row_scene_fragment(row: usize) -> Arc<RowSceneRetainedFragment>
         ops: Arc::from(Vec::<SceneOp>::new()),
         hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
     })
+}
+
+#[test]
+fn retained_row_scene_origin_preserves_bounds_offset() {
+    let retained = RowSceneRetainedFragment {
+        content: Arc::new(RowContentSnapshot {
+            text: Arc::<str>::from("x"),
+            range: 0..1,
+            fold_map: None,
+            preedit_range: None,
+            row_spans: Arc::from([]),
+        }),
+        local_bounds: Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            Size::new(Px(80.0), Px(16.0)),
+        ),
+        origin: Point::new(Px(14.0), Px(31.0)),
+        geom: RowGeom {
+            row_range: 0..1,
+            key: geom::RowGeomKey::for_plain(
+                &Arc::<str>::from("x"),
+                &TextStyle {
+                    font: FontId::monospace(),
+                    size: Px(14.0),
+                    ..Default::default()
+                },
+                (
+                    Some(Px(80.0)),
+                    TextWrap::None,
+                    TextOverflow::Clip,
+                    fret_core::TextAlign::Start,
+                    1.0,
+                ),
+                fret_runtime::TextFontStackKey::default(),
+            ),
+            caret_stops: Vec::new(),
+            fold_map: None,
+            caret_rect_top: None,
+            caret_rect_height: None,
+            has_preedit: false,
+            preedit: None,
+        },
+        is_rich: false,
+        ops: Arc::from(Vec::<SceneOp>::new()),
+        hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
+    };
+
+    let next = retained.origin_for_local_bounds(Rect::new(
+        Point::new(Px(30.0), Px(100.0)),
+        Size::new(Px(80.0), Px(16.0)),
+    ));
+
+    assert_eq!(next, Point::new(Px(34.0), Px(111.0)));
 }
 
 #[test]
@@ -211,6 +274,8 @@ fn row_scene_replay_plan_rejects_stale_frame_and_skipped_rows() {
     let mut stale = RowSceneReplayPlan {
         frame_seq: 7,
         entries: std::collections::VecDeque::from([entry0.clone()]),
+        hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
+        hosted_resources_touched: false,
     };
     let (entry, rejected, reason) = paint::take_row_scene_replay_plan_entry(Some(&mut stale), 8, 0);
     assert!(entry.is_none());
@@ -221,6 +286,8 @@ fn row_scene_replay_plan_rejects_stale_frame_and_skipped_rows() {
     let mut advanced = RowSceneReplayPlan {
         frame_seq: 9,
         entries: std::collections::VecDeque::from([entry0, entry2]),
+        hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
+        hosted_resources_touched: false,
     };
     let (entry, rejected, reason) =
         paint::take_row_scene_replay_plan_entry(Some(&mut advanced), 9, 1);
@@ -233,6 +300,145 @@ fn row_scene_replay_plan_rejects_stale_frame_and_skipped_rows() {
     assert_eq!(entry.as_ref().map(|entry| entry.row), Some(2));
     assert_eq!(rejected, 0);
     assert_eq!(reason, None);
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn prepaint_row_scene_replay_plan_aggregates_hosted_resources_once() {
+    let handle = CodeEditorHandle::new("row0\nrow1\n");
+    let mut st = handle.state.borrow_mut();
+    st.paint_perf_enabled = true;
+
+    let fg = Color {
+        r: 0.2,
+        g: 0.8,
+        b: 0.3,
+        a: 1.0,
+    };
+    let text_style = TextStyle {
+        size: Px(14.0),
+        ..TextStyle::default()
+    };
+    let constraints = CanvasTextConstraints {
+        max_width: Some(Px(4096.0)),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+    let frame = WindowedRowsPaintFrame {
+        viewport_height: Px(32.0),
+        offset_y: Px(0.0),
+        row_height: Px(16.0),
+        row_stride: Px(16.0),
+        gap: Px(0.0),
+        scroll_margin: Px(0.0),
+        visible_start: 0,
+        visible_end: 1,
+    };
+    let content_bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(80.0), Px(32.0)));
+
+    for row in 0usize..=1 {
+        let text = Arc::<str>::from(format!("row{row}"));
+        let range = row..row.saturating_add(1);
+        let content = Arc::new(RowContentSnapshot {
+            text: Arc::clone(&text),
+            range: range.clone(),
+            fold_map: None,
+            preedit_range: None,
+            row_spans: Arc::from([]),
+        });
+        let row_geom_key = geom::RowGeomKey::for_plain(
+            &text,
+            &text_style,
+            (
+                constraints.max_width,
+                constraints.wrap,
+                constraints.overflow,
+                fret_core::TextAlign::Start,
+                1.0,
+            ),
+            st.font_stack_key,
+        );
+        let rect = frame
+            .row_rect(content_bounds, row)
+            .expect("test row should be visible");
+        let text_blob = test_text_blob_id((row + 1) as u64);
+        let ops = Arc::<[SceneOp]>::from(vec![SceneOp::Text {
+            order: DrawOrder(2),
+            origin: rect.origin,
+            text: text_blob,
+            paint: fret_core::Paint::Solid(fg).into(),
+            outline: None,
+            shadow: None,
+        }]);
+        let hosted_resources = fret_ui::canvas::CanvasHostedResources::from_scene_ops(ops.as_ref());
+        st.row_scene_cache.insert(
+            row,
+            (
+                RowSceneCacheEntry {
+                    key: RowSceneKey::plain(row_geom_key.clone(), fg),
+                    retained: Arc::new(RowSceneRetainedFragment {
+                        content,
+                        local_bounds: rect,
+                        origin: rect.origin,
+                        geom: RowGeom {
+                            row_range: range,
+                            key: row_geom_key,
+                            caret_stops: Vec::new(),
+                            fold_map: None,
+                            caret_rect_top: None,
+                            caret_rect_height: None,
+                            has_preedit: false,
+                            preedit: None,
+                        },
+                        is_rich: false,
+                        ops,
+                        hosted_resources,
+                    }),
+                    syntax_replay_key: None,
+                },
+                row as u64 + 1,
+            ),
+        );
+    }
+
+    st.begin_paint_frame(frame);
+    let mut plan = paint::prepaint_row_scene_replay_plan_for_frame(
+        &mut st,
+        frame,
+        content_bounds,
+        Px(8.0),
+        64,
+        &text_style,
+        fg,
+        0,
+        1.0,
+    );
+
+    assert_eq!(plan.entries.len(), 2);
+    assert_eq!(
+        plan.hosted_resources.text_blob_ids(),
+        &[test_text_blob_id(1), test_text_blob_id(2)],
+        "planned replay should aggregate retained row text blobs once per plan"
+    );
+
+    let (_entry0, _rejected0, _reason0) =
+        paint::take_row_scene_replay_plan_entry(Some(&mut plan), st.paint_perf_frame.frame_seq, 0);
+    let first_resources = paint::take_row_scene_replay_plan_hosted_resources_once(Some(&mut plan));
+    assert_eq!(
+        first_resources
+            .as_ref()
+            .map(|resources| resources.text_blob_ids()),
+        Some(&[test_text_blob_id(1), test_text_blob_id(2)][..]),
+        "the first actual planned replay should carry the aggregate hosted resources"
+    );
+
+    let (_entry1, _rejected1, _reason1) =
+        paint::take_row_scene_replay_plan_entry(Some(&mut plan), st.paint_perf_frame.frame_seq, 1);
+    let second_resources = paint::take_row_scene_replay_plan_hosted_resources_once(Some(&mut plan));
+    assert!(
+        second_resources.is_none(),
+        "later plan entries should not touch plan resources again"
+    );
 }
 
 #[test]
@@ -356,6 +562,7 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
                     .saturating_sub(old.retained.ops.len() as u64);
             }
         }
+        st.baseline_measure_cache = None;
     }
     let before = handle.cache_stats();
     let _ = render_code_editor_frame(
@@ -390,6 +597,14 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
     assert_eq!(
         perf.rows_scene_prepaint_plan_used, perf.rows_scene_prepaint_planned,
         "paint should consume the prepaint replay plan for each planned row"
+    );
+    assert!(
+        perf.ns_row_scene_replay_setup > 0,
+        "planned replay rows should record replay setup attribution"
+    );
+    assert_eq!(
+        perf.us_baseline_measure, 0,
+        "no-overlay planned replay rows should not remeasure the text baseline even if the cache is cold"
     );
     assert_eq!(
         perf.us_row_text, 0,
@@ -450,6 +665,243 @@ fn prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint() {
     assert!(
         scene_hits_delta >= perf.rows_scene_prepaint_planned,
         "prepaint planning should account for row scene cache hits"
+    );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn prepaint_row_scene_replay_plan_reuses_stable_window_plan() {
+    let handle = CodeEditorHandle::new("row0\nrow1\n");
+    handle.state.borrow_mut().paint_perf_enabled = true;
+
+    let fg = Color {
+        r: 0.2,
+        g: 0.3,
+        b: 0.4,
+        a: 1.0,
+    };
+    let text_style = TextStyle {
+        font: FontId::monospace(),
+        size: Px(14.0),
+        ..Default::default()
+    };
+    let content_bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(640.0), Px(32.0)));
+    let frame = WindowedRowsPaintFrame {
+        viewport_height: Px(32.0),
+        offset_y: Px(0.0),
+        row_height: Px(16.0),
+        row_stride: Px(16.0),
+        gap: Px(0.0),
+        scroll_margin: Px(0.0),
+        visible_start: 0,
+        visible_end: 1,
+    };
+    let constraints = CanvasTextConstraints {
+        max_width: Some(Px(4096.0)),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+
+    let mut st = handle.state.borrow_mut();
+    st.sync_row_scene_cache_epoch();
+    for (row, text, range) in [
+        (0usize, Arc::<str>::from("row0"), 0..4),
+        (1usize, Arc::<str>::from("row1"), 5..9),
+    ] {
+        let rect = frame
+            .row_rect(content_bounds, row)
+            .expect("seed row should be visible");
+        let content = Arc::new(RowContentSnapshot {
+            text: Arc::clone(&text),
+            range: range.clone(),
+            fold_map: None,
+            preedit_range: None,
+            row_spans: Arc::from([]),
+        });
+        let row_geom_key = geom::RowGeomKey::for_plain(
+            &text,
+            &text_style,
+            (
+                constraints.max_width,
+                constraints.wrap,
+                constraints.overflow,
+                fret_core::TextAlign::Start,
+                1.0,
+            ),
+            st.font_stack_key,
+        );
+        let row_scene_key = RowSceneKey::plain(row_geom_key.clone(), fg);
+        let ops = Arc::<[SceneOp]>::from(vec![SceneOp::Quad {
+            order: DrawOrder(2),
+            rect,
+            background: fret_core::Paint::Solid(fg).into(),
+            border: Edges::all(Px(0.0)),
+            border_paint: fret_core::Paint::TRANSPARENT.into(),
+            corner_radii: Corners::all(Px(0.0)),
+        }]);
+        st.row_scene_cache.insert(
+            row,
+            (
+                RowSceneCacheEntry {
+                    key: row_scene_key,
+                    retained: Arc::new(RowSceneRetainedFragment {
+                        content,
+                        local_bounds: rect,
+                        origin: rect.origin,
+                        geom: RowGeom {
+                            row_range: range,
+                            key: row_geom_key,
+                            caret_stops: Vec::new(),
+                            fold_map: None,
+                            caret_rect_top: None,
+                            caret_rect_height: None,
+                            has_preedit: false,
+                            preedit: None,
+                        },
+                        is_rich: false,
+                        hosted_resources: fret_ui::canvas::CanvasHostedResources::from_scene_ops(
+                            ops.as_ref(),
+                        ),
+                        ops,
+                    }),
+                    syntax_replay_key: None,
+                },
+                row as u64 + 1,
+            ),
+        );
+    }
+    st.row_scene_cache_tick = 2;
+    st.row_scene_cache_scene_ops_len_total = 2;
+
+    st.begin_paint_frame(frame);
+    let validation_plan = paint::prepaint_row_scene_replay_plan_for_frame(
+        &mut st,
+        frame,
+        content_bounds,
+        Px(8.0),
+        64,
+        &text_style,
+        fg,
+        0,
+        1.0,
+    );
+    assert_eq!(validation_plan.entries.len(), 2);
+    assert_eq!(st.paint_perf_frame.rows_scene_prepaint_candidates, 2);
+    assert_eq!(st.paint_perf_frame.rows_scene_prepaint_planned, 2);
+    assert_eq!(
+        st.row_scene_replay_plan_cache
+            .as_ref()
+            .map(|cache| cache.entries.len()),
+        Some(2),
+        "the validation frame should save every planned row for stable-window reuse"
+    );
+
+    let before_reuse = st.cache_stats;
+    st.begin_paint_frame(frame);
+    let reuse_plan = paint::prepaint_row_scene_replay_plan_for_frame(
+        &mut st,
+        frame,
+        content_bounds,
+        Px(8.0),
+        64,
+        &text_style,
+        fg,
+        0,
+        1.0,
+    );
+    let after_reuse = st.cache_stats;
+    let reuse_perf = st.paint_perf_frame;
+
+    assert_eq!(
+        reuse_plan.entries.len(),
+        validation_plan.entries.len(),
+        "stable-window plan reuse should preserve the planned row count"
+    );
+    assert_eq!(
+        reuse_perf.rows_scene_prepaint_candidates, 0,
+        "stable-window plan reuse should skip per-row candidate probing"
+    );
+    assert_eq!(
+        reuse_perf.us_row_scene_prepaint_probe, 0,
+        "stable-window plan reuse should skip per-row cache probes"
+    );
+    assert_eq!(
+        reuse_perf.us_row_scene_prepaint_key_compare, 0,
+        "stable-window plan reuse should skip per-row key comparisons"
+    );
+    assert_eq!(
+        after_reuse
+            .row_scene_fast_get_calls
+            .saturating_sub(before_reuse.row_scene_fast_get_calls),
+        0,
+        "stable-window plan reuse should not record synthetic row scene cache probes"
+    );
+    assert_eq!(
+        after_reuse
+            .row_text_get_calls
+            .saturating_sub(before_reuse.row_text_get_calls),
+        0,
+        "stable-window plan reuse should keep row content out of paint"
+    );
+
+    let shifted_frame = WindowedRowsPaintFrame {
+        viewport_height: Px(32.0),
+        offset_y: Px(16.0),
+        row_height: Px(16.0),
+        row_stride: Px(16.0),
+        gap: Px(0.0),
+        scroll_margin: Px(0.0),
+        visible_start: 1,
+        visible_end: 1,
+    };
+    let before_shifted_reuse = st.cache_stats;
+    st.begin_paint_frame(shifted_frame);
+    let shifted_plan = paint::prepaint_row_scene_replay_plan_for_frame(
+        &mut st,
+        shifted_frame,
+        content_bounds,
+        Px(8.0),
+        64,
+        &text_style,
+        fg,
+        0,
+        1.0,
+    );
+    let after_shifted_reuse = st.cache_stats;
+    let shifted_perf = st.paint_perf_frame;
+
+    assert_eq!(
+        shifted_plan.entries.len(),
+        1,
+        "a sliding visible window should reuse the overlapping retained row"
+    );
+    assert_eq!(
+        shifted_plan.entries.front().map(|entry| entry.row),
+        Some(1),
+        "overlap reuse should keep the row identity intact"
+    );
+    assert_eq!(
+        shifted_perf.rows_scene_prepaint_plan_cache_hits, 1,
+        "overlap reuse should be visible in paint diagnostics"
+    );
+    assert_eq!(
+        shifted_perf.rows_scene_prepaint_candidates, 0,
+        "overlap reuse should skip per-row probing for retained rows"
+    );
+    assert_eq!(
+        shifted_perf.us_row_scene_prepaint_probe, 0,
+        "overlap reuse should skip cache probe timing"
+    );
+    assert_eq!(
+        shifted_perf.us_row_scene_prepaint_key_compare, 0,
+        "overlap reuse should skip key comparison timing"
+    );
+    assert_eq!(
+        after_shifted_reuse
+            .row_scene_fast_get_calls
+            .saturating_sub(before_shifted_reuse.row_scene_fast_get_calls),
+        0,
+        "overlap reuse should not count as a synthetic row-scene probe"
     );
 }
 
@@ -592,6 +1044,212 @@ fn prepaint_row_scene_replay_plan_skips_only_inline_preedit_rows() {
 
 #[cfg(feature = "syntax-rust")]
 #[test]
+fn prepaint_row_scene_replay_plan_reuses_cached_non_preedit_rows_during_preedit() {
+    let handle = CodeEditorHandle::new("row0\nrow1\n");
+    handle.state.borrow_mut().paint_perf_enabled = true;
+
+    let fg = Color {
+        r: 0.2,
+        g: 0.3,
+        b: 0.4,
+        a: 1.0,
+    };
+    let text_style = TextStyle {
+        font: FontId::monospace(),
+        size: Px(14.0),
+        ..Default::default()
+    };
+    let content_bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(640.0), Px(32.0)));
+    let frame = WindowedRowsPaintFrame {
+        viewport_height: Px(32.0),
+        offset_y: Px(0.0),
+        row_height: Px(16.0),
+        row_stride: Px(16.0),
+        gap: Px(0.0),
+        scroll_margin: Px(0.0),
+        visible_start: 0,
+        visible_end: 1,
+    };
+    let constraints = CanvasTextConstraints {
+        max_width: Some(Px(4096.0)),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+
+    let mut st = handle.state.borrow_mut();
+    st.preedit = Some(PreeditState {
+        text: "xy".to_string(),
+        cursor: Some((1, 1)),
+    });
+    st.sync_row_scene_cache_epoch();
+    for (row, text, range) in [
+        (0usize, Arc::<str>::from("row0"), 0..4),
+        (1usize, Arc::<str>::from("row1"), 5..9),
+    ] {
+        let rect = frame
+            .row_rect(content_bounds, row)
+            .expect("seed row should be visible");
+        let content = Arc::new(RowContentSnapshot {
+            text: Arc::clone(&text),
+            range: range.clone(),
+            fold_map: None,
+            preedit_range: None,
+            row_spans: Arc::from([]),
+        });
+        let row_geom_key = geom::RowGeomKey::for_plain(
+            &text,
+            &text_style,
+            (
+                constraints.max_width,
+                constraints.wrap,
+                constraints.overflow,
+                fret_core::TextAlign::Start,
+                1.0,
+            ),
+            st.font_stack_key,
+        );
+        let row_scene_key = RowSceneKey::plain(row_geom_key.clone(), fg);
+        let ops = Arc::<[SceneOp]>::from(vec![SceneOp::Quad {
+            order: DrawOrder(2),
+            rect,
+            background: fret_core::Paint::Solid(fg).into(),
+            border: Edges::all(Px(0.0)),
+            border_paint: fret_core::Paint::TRANSPARENT.into(),
+            corner_radii: Corners::all(Px(0.0)),
+        }]);
+        st.row_scene_cache.insert(
+            row,
+            (
+                RowSceneCacheEntry {
+                    key: row_scene_key,
+                    retained: Arc::new(RowSceneRetainedFragment {
+                        content,
+                        local_bounds: rect,
+                        origin: rect.origin,
+                        geom: RowGeom {
+                            row_range: range,
+                            key: row_geom_key,
+                            caret_stops: Vec::new(),
+                            fold_map: None,
+                            caret_rect_top: None,
+                            caret_rect_height: None,
+                            has_preedit: false,
+                            preedit: None,
+                        },
+                        is_rich: false,
+                        hosted_resources: fret_ui::canvas::CanvasHostedResources::from_scene_ops(
+                            ops.as_ref(),
+                        ),
+                        ops,
+                    }),
+                    syntax_replay_key: None,
+                },
+                row as u64 + 1,
+            ),
+        );
+    }
+    st.row_scene_cache_tick = 2;
+    st.row_scene_cache_scene_ops_len_total = 2;
+
+    st.begin_paint_frame(frame);
+    st.paint_frame_overlay.caret = Some(PaintFrameCaretOverlay {
+        byte: 0,
+        row: 0,
+        col: 0,
+    });
+    let warm_plan = paint::prepaint_row_scene_replay_plan_for_frame(
+        &mut st,
+        frame,
+        content_bounds,
+        Px(8.0),
+        64,
+        &text_style,
+        fg,
+        0,
+        1.0,
+    );
+    assert_eq!(
+        warm_plan
+            .entries
+            .iter()
+            .map(|entry| entry.row)
+            .collect::<Vec<_>>(),
+        vec![1],
+        "the first active-preedit frame should plan only unrelated rows"
+    );
+    assert_eq!(
+        st.paint_perf_frame.rows_scene_prepaint_skip_preedit, 1,
+        "the first active-preedit frame should skip the actual preedit row"
+    );
+    assert_eq!(
+        st.row_scene_replay_plan_cache
+            .as_ref()
+            .map(|cache| cache.entries.len()),
+        Some(1),
+        "the first active-preedit frame should save a partial non-preedit replay plan"
+    );
+
+    let before_reuse = st.cache_stats;
+    st.begin_paint_frame(frame);
+    st.paint_frame_overlay.caret = Some(PaintFrameCaretOverlay {
+        byte: 0,
+        row: 0,
+        col: 0,
+    });
+    let reuse_plan = paint::prepaint_row_scene_replay_plan_for_frame(
+        &mut st,
+        frame,
+        content_bounds,
+        Px(8.0),
+        64,
+        &text_style,
+        fg,
+        0,
+        1.0,
+    );
+    let after_reuse = st.cache_stats;
+    let perf = st.paint_perf_frame;
+
+    assert!(
+        perf.rows_scene_prepaint_plan_cache_hits > 0,
+        "active preedit should still reuse cached replay-plan entries for unrelated rows"
+    );
+    assert_eq!(
+        reuse_plan
+            .entries
+            .iter()
+            .map(|entry| entry.row)
+            .collect::<Vec<_>>(),
+        vec![1],
+        "active preedit should only replay-plan non-preedit rows"
+    );
+    assert!(
+        perf.rows_scene_prepaint_skip_preedit > 0,
+        "the actual preedit row must stay on the paint-time path"
+    );
+    assert_eq!(
+        perf.rows_scene_prepaint_candidates, perf.rows_scene_prepaint_skip_preedit,
+        "cached non-preedit rows should avoid per-row candidate probing while preedit is active"
+    );
+    assert_eq!(
+        perf.us_row_scene_prepaint_probe, 0,
+        "cached non-preedit rows should avoid cache probe timing while preedit is active"
+    );
+    assert_eq!(
+        perf.us_row_scene_prepaint_key_compare, 0,
+        "cached non-preedit rows should avoid key comparison timing while preedit is active"
+    );
+    assert_eq!(
+        after_reuse
+            .row_scene_fast_get_calls
+            .saturating_sub(before_reuse.row_scene_fast_get_calls),
+        0,
+        "plan-cache reuse should not record synthetic row-scene probes"
+    );
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
 fn prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context() {
     let handle = CodeEditorHandle::new("fn main() {}\n");
     handle.set_language(Some(Arc::<str>::from("rust")));
@@ -695,6 +1353,7 @@ fn prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context() {
                 key: row_scene_key,
                 retained: Arc::new(RowSceneRetainedFragment {
                     content,
+                    local_bounds: content_bounds,
                     origin: content_bounds.origin,
                     geom,
                     is_rich: true,
@@ -755,6 +1414,121 @@ fn prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context() {
     assert_eq!(st.paint_perf_frame.rows_scene_prepaint_planned, 1);
     assert_eq!(st.paint_perf_frame.rows_scene_prepaint_skip_key_mismatch, 0);
     assert_eq!(st.paint_perf_frame.rows_scene_prepaint_skip_no_cache, 0);
+}
+
+#[cfg(feature = "syntax-rust")]
+#[test]
+fn prepaint_row_scene_replay_plan_rejects_plain_rows_when_fg_changes() {
+    let handle = CodeEditorHandle::new("plain\n");
+    handle.state.borrow_mut().paint_perf_enabled = true;
+
+    let mut st = handle.state.borrow_mut();
+    ensure_syntax_row_cache_fresh(&mut st);
+    st.sync_row_scene_cache_epoch();
+
+    let old_fg = Color {
+        r: 0.2,
+        g: 0.3,
+        b: 0.4,
+        a: 1.0,
+    };
+    let new_fg = Color {
+        r: 0.8,
+        g: 0.3,
+        b: 0.4,
+        a: 1.0,
+    };
+    let text_style = TextStyle {
+        font: FontId::monospace(),
+        size: Px(14.0),
+        ..Default::default()
+    };
+    let content_bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(640.0), Px(16.0)));
+    let constraints = CanvasTextConstraints {
+        max_width: Some(Px(4096.0)),
+        wrap: TextWrap::None,
+        overflow: TextOverflow::Clip,
+    };
+    let line = Arc::<str>::from("plain");
+    let row_range = 0..line.len();
+    let content = Arc::new(RowContentSnapshot {
+        text: Arc::clone(&line),
+        range: row_range.clone(),
+        fold_map: None,
+        preedit_range: None,
+        row_spans: Arc::from([]),
+    });
+    let row_geom_key = geom::RowGeomKey::for_plain(
+        &line,
+        &text_style,
+        (
+            constraints.max_width,
+            constraints.wrap,
+            constraints.overflow,
+            fret_core::TextAlign::Start,
+            1.0,
+        ),
+        st.font_stack_key,
+    );
+    let row_scene_key = RowSceneKey::plain(row_geom_key.clone(), old_fg);
+    st.row_scene_cache.insert(
+        0,
+        (
+            RowSceneCacheEntry {
+                key: row_scene_key,
+                retained: Arc::new(RowSceneRetainedFragment {
+                    content,
+                    local_bounds: content_bounds,
+                    origin: content_bounds.origin,
+                    geom: RowGeom {
+                        row_range,
+                        key: row_geom_key,
+                        caret_stops: Vec::new(),
+                        fold_map: None,
+                        caret_rect_top: None,
+                        caret_rect_height: None,
+                        has_preedit: false,
+                        preedit: None,
+                    },
+                    is_rich: false,
+                    ops: Arc::from(Vec::<SceneOp>::new()),
+                    hosted_resources: fret_ui::canvas::CanvasHostedResources::default(),
+                }),
+                syntax_replay_key: None,
+            },
+            1,
+        ),
+    );
+    st.row_scene_cache_tick = 1;
+
+    let frame = WindowedRowsPaintFrame {
+        viewport_height: Px(16.0),
+        offset_y: Px(0.0),
+        row_height: Px(16.0),
+        row_stride: Px(16.0),
+        gap: Px(0.0),
+        scroll_margin: Px(0.0),
+        visible_start: 0,
+        visible_end: 0,
+    };
+    st.begin_paint_frame(frame);
+    let plan = paint::prepaint_row_scene_replay_plan_for_frame(
+        &mut st,
+        frame,
+        content_bounds,
+        Px(8.0),
+        64,
+        &text_style,
+        new_fg,
+        0,
+        1.0,
+    );
+
+    assert!(plan.entries.is_empty());
+    assert_eq!(st.paint_perf_frame.rows_scene_prepaint_candidates, 1);
+    assert_eq!(st.paint_perf_frame.rows_scene_prepaint_planned, 0);
+    assert_eq!(st.paint_perf_frame.rows_scene_prepaint_skip_key_mismatch, 1);
+    assert_eq!(st.cache_stats.row_scene_fast_misses, 1);
 }
 
 #[cfg(feature = "syntax-rust")]

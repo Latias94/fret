@@ -5,11 +5,14 @@
 
 pub mod cartesian;
 pub mod chart;
+pub mod declarative;
 pub mod input_map;
 pub mod linking;
+pub mod models;
 pub mod plot;
-pub mod retained;
 pub mod series;
+pub mod state;
+pub mod style;
 
 mod theme_tokens;
 
@@ -17,6 +20,14 @@ mod theme_tokens;
 mod surface_policy_tests {
     const LIB_RS: &str = include_str!("lib.rs");
     const CARGO_TOML: &str = include_str!("../Cargo.toml");
+
+    fn cargo_toml_without_comments() -> String {
+        CARGO_TOML
+            .lines()
+            .filter(|line| !line.trim_start().starts_with('#'))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
 
     fn public_surface() -> &'static str {
         LIB_RS.split("#[cfg(test)]").next().unwrap_or(LIB_RS)
@@ -26,8 +37,44 @@ mod surface_policy_tests {
     fn no_public_imui_facade_survives() {
         let public_surface = public_surface();
         assert!(!public_surface.contains("pub mod imui;"));
-        assert!(public_surface.contains("pub mod retained;"));
         assert!(!CARGO_TOML.contains("\nimui = ["));
         assert!(!CARGO_TOML.contains("fret-authoring"));
+    }
+
+    #[test]
+    fn retained_plot_compat_feature_no_longer_enables_bridge_or_module() {
+        let public_surface = public_surface();
+        let cargo_toml = cargo_toml_without_comments();
+        let retained_bridge_feature = ["fret-ui/", "unstable-retained-bridge"].concat();
+        let public_retained_module = ["pub ", "mod ", "retained;"].concat();
+        let private_retained_module = ["mod ", "retained;"].concat();
+
+        assert!(
+            !public_surface.contains(&public_retained_module),
+            "retained plot canvas should not be public through fret_plot::retained"
+        );
+        assert!(
+            !public_surface.contains(&private_retained_module),
+            "retained plot source should stay deleted instead of compiling behind a bridge feature"
+        );
+        assert!(
+            cargo_toml.contains("compat-retained-canvas = []"),
+            "fret-plot should keep the legacy compat-retained-canvas feature as a no-op transition alias"
+        );
+        assert!(
+            !cargo_toml.contains(&retained_bridge_feature),
+            "fret-plot should no longer enable the retained bridge from any package feature"
+        );
+        assert!(!cargo_toml.contains("fret-ui\", features = [\"unstable-retained-bridge\"]"));
+    }
+
+    #[test]
+    fn line_chart_builder_stays_model_only_on_default_surface() {
+        let line_chart = include_str!("chart/line_chart.rs");
+        assert!(line_chart.contains("pub fn install"));
+        assert!(line_chart.contains("pub fn into_element"));
+        assert!(line_chart.contains("line_plot_panel_in"));
+        assert!(!line_chart.contains("into_canvas("));
+        assert!(!line_chart.contains("LinePlotCanvas"));
     }
 }

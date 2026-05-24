@@ -1,5 +1,5 @@
+use fret_ui::EventCx;
 use fret_ui::UiHost;
-use fret_ui::retained_bridge::EventCx;
 
 use super::pending_node_drag_release_cx::PendingNodeDragReleaseCx;
 

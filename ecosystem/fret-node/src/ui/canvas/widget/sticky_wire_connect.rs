@@ -19,22 +19,30 @@ pub(super) fn connectable_sticky_wire_target<H: UiHost, M: NodeGraphCanvasMiddle
 
 pub(super) fn handle_sticky_wire_connect_target<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl super::sticky_wire_targets::StickyWireTargetPickerCx<H>,
     snapshot: &ViewSnapshot,
     from_port: crate::core::PortId,
     target_port: crate::core::PortId,
     wire_drag: &mut WireDrag,
     position: Point,
 ) -> bool {
-    match plan::plan_sticky_wire_connect_outcome(canvas, cx.app, snapshot, from_port, target_port) {
+    match plan::plan_sticky_wire_connect_outcome(
+        canvas,
+        cx.host(),
+        snapshot,
+        from_port,
+        target_port,
+    ) {
         plan::StickyWireConnectOutcome::Apply(ops) => {
-            canvas.apply_ops(cx.app, cx.window, ops);
+            let window = cx.window();
+            canvas.apply_ops(cx.host(), window, ops);
             super::sticky_wire_targets::reset_sticky_wire_state(canvas);
             finish::finish_sticky_wire_pointer_down(cx);
             true
         }
         plan::StickyWireConnectOutcome::Reject(severity, message) => {
-            canvas.show_toast(cx.app, cx.window, severity, message);
+            let window = cx.window();
+            canvas.show_toast(cx.host(), window, severity, message);
             wire_drag.pos = position;
             canvas.interaction.wire_drag = Some(wire_drag.clone());
             finish::finish_sticky_wire_pointer_down(cx);

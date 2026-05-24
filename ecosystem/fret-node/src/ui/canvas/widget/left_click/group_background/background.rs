@@ -1,12 +1,13 @@
 use fret_core::{Modifiers, Point};
 use fret_ui::UiHost;
 
+use super::super::LeftClickCx;
 use crate::ui::canvas::state::ViewSnapshot;
 use crate::ui::canvas::widget::*;
 
 pub(super) fn begin_background_interaction<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     modifiers: Modifiers,

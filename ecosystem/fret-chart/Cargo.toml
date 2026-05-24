@@ -12,11 +12,14 @@ description = "Chart components for Fret built on delinea and fret-canvas."
 
 [features]
 default = []
+# Legacy no-op feature kept temporarily for downstream transition. The retained chart bridge
+# source was deleted after quarantine and no longer enables the unstable retained bridge feature.
+compat-retained-canvas = []
 echarts = ["dep:serde", "dep:serde_json"]
 
 [dependencies]
 fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
-fret-ui = { version = "0.1.0", path = "../../crates/fret-ui", features = ["unstable-retained-bridge"] }
+fret-ui = { version = "0.1.0", path = "../../crates/fret-ui" }
 fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime" }
 fret-canvas = { version = "0.1.0", path = "../fret-canvas", features = ["ui"] }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit", features = ["recipes"] }

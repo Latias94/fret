@@ -1,6 +1,6 @@
 # Workstreams
 
-Catalog updated: 2026-05-21
+Catalog updated: 2026-05-24
 Directory layout last reorganized: 2026-03-12
 Date fields in this index are resolved from git history. For files moved during the 2026-03-12
 reorganization, the historical tracked path was followed back to the pre-reorg location.
@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 429
+- Dedicated directories: 436
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -1984,6 +1984,13 @@ Rule:
 - `docs/workstreams/docking-nary-split-graph-v1/` — first 2026-02-11, latest 2026-02-24, 3 markdown docs
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/` — first 2026-02-28, latest 2026-03-05, 9 markdown docs
 - `docs/workstreams/ecosystem-integration-traits-v1/` — first 2026-03-11, latest 2026-03-12, 5 markdown docs
+- `docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/` — first n/a, latest n/a, 6 markdown docs (active follow-on for remaining Canvas exclusive / paint.widget overhead after r65 kept owner=canvas-paint-replay; includes `WORKSTREAM.json`)
+- `docs/workstreams/editor-canvas-paint-replay-fast-path-v1/` — first n/a, latest n/a, 6 markdown docs (closed implementation follow-on for no-overlay planned row-scene replay fast return after r65 kept owner=canvas-paint-replay; includes `WORKSTREAM.json`)
+- `docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for overlapping-window code-editor row-scene replay plan caching after the r59 closeout retained owner=canvas-paint-replay; r61 closeout still leaves the parent owner at canvas-paint-replay; includes `WORKSTREAM.json`)
+- `docs/workstreams/editor-canvas-paint-replay-preedit-plan-cache-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for keeping row-scene replay-plan cache useful on non-preedit rows while an inline preedit row stays on the paint-time path; r62 closeout still leaves the parent owner at canvas-paint-replay; includes `WORKSTREAM.json`)
+- `docs/workstreams/editor-canvas-paint-replay-resource-touch-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for reducing planned row-scene replay hosted-resource touch overhead after r62 kept owner=canvas-paint-replay; r63 closeout still leaves the parent owner at canvas-paint-replay; includes `WORKSTREAM.json`)
+- `docs/workstreams/editor-canvas-paint-replay-row-setup-v1/` — first n/a, latest n/a, 7 markdown docs (closed diagnostics-only follow-on for attributing planned replay row setup after r63 kept owner=canvas-paint-replay; closeout still selects canvas-paint-replay; includes `WORKSTREAM.json`)
+- `docs/workstreams/editor-canvas-paint-replay-slice-v1/` — first n/a, latest n/a, 6 markdown docs (active narrow follow-on for the 20260523-r58 Windows RTX4090 editor-paint closeout owner=canvas-paint-replay; includes `WORKSTREAM.json`)
 - `docs/workstreams/editor-ecosystem-fearless-refactor-v1/` — first 2026-03-09, latest 2026-05-12, 12 markdown docs (active editor ecosystem orchestration lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/editor-tabstrip-unification-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-05, 7 markdown docs
 - `docs/workstreams/editor-text-pipeline-v1/` — first 2026-02-14, latest 2026-03-03, 3 markdown docs

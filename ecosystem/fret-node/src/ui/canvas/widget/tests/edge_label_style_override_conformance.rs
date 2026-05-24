@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_core::{
     Color, NodeId as UiNodeId, Point, Px, Rect, Scene, SceneOp, Size, TextBlobId, Transform2D,
 };
-use fret_ui::retained_bridge::Widget as _;
+use fret_ui::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
@@ -87,7 +87,7 @@ fn paint_once(
     let mut observe_model = |_id, _inv: Invalidation| {};
     let mut observe_global = |_id, _inv: Invalidation| {};
 
-    let mut cx = fret_ui::retained_bridge::PaintCx::new(
+    let mut cx = fret_ui::PaintCx::new(
         host,
         tree,
         UiNodeId::default(),

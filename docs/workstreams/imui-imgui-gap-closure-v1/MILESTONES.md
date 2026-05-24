@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-21
+Last updated: 2026-05-24
 
 ## M0 - Current Source Baseline
 
@@ -1086,3 +1086,69 @@ Exit criteria:
   `diag-perf-attribution-v1`, `ui-perf-zed-smoothness-v1`, and the product-chain docking perf gate;
   do not use Dear ImGui/egui performance pressure as a reason to widen `fret-imui` or start a
   broad widget/API backlog.
+  2026-05-23 performance refresh result: `editor-canvas-paint-replay-slice-v1` is now closed after
+  the r59 Windows RTX4090 target-machine validation, attribution validation, artifact verification,
+  and closeout. The retained owner is `canvas-paint-replay`, checked-in baselines stay unchanged,
+  and the lesson remains an editor-paint/perf-lane owner split rather than an IMUI runtime/API
+  widening.
+
+## M5 - Fearless Refactor Execution
+
+Exit criteria:
+
+- The first internal owner split lands without changing the public IMUI surface.
+- Floating-window behavior stays covered by focused smoke tests and source gates.
+- The next cleanup slice is chosen from fresh evidence, not stale parity notes.
+
+2026-05-24 title-bar owner split result: the floating-window title-row / close-button composition
+now lives in `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs`, leaving
+`floating_window_on_area.rs` as the shell that frames the chrome, content, and resize stack.
+The public IMUI surface stayed stable, and the existing floating smoke + source gates were reused
+to validate the split.
+
+2026-05-24 content/blocker owner split result: the floating-window content scroll/focus wrapper
+now lives in `ecosystem/fret-ui-kit/src/imui/floating_window_content.rs`, and the input-blocking
+overlay moved to `ecosystem/fret-ui-kit/src/imui/floating_window_blocker.rs`. The main
+`floating_window_on_area.rs` shell now just wires title, content, blocker, and resize stack
+together, with the public IMUI surface still unchanged.
+
+2026-05-24 resize-stack owner split result: `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs`
+now owns the body/blocker/resize-handle stack assembly through an internal
+`resize_stack_element(...)` helper. `floating_window_on_area.rs` now only passes the clipped body,
+blocker, resize flags, activation policy, and handle test ids into the resize owner.
+
+2026-05-24 resize-state owner split result: the resize clamp/snap/update logic now lives in
+`prepare_resize_state(...)` inside `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs`.
+`floating_window_on_area.rs` no longer owns the `FloatWindowState` clamp/snap loop or the resize
+handle test-id tuple assembly.
+
+2026-05-24 resize-snapshot owner split result: the resize owner now also owns active resize handle
+discovery through `current_resize_snapshot(...)`. `floating_window_on_area.rs` no longer enumerates
+`FloatWindowResizeHandle` values, reads drag runtime snapshots directly, or derives the chrome
+`resizing` signal from tuple-shaped resize state.
+
+2026-05-24 shell owner split result: the remaining floating-window frame/container composition now
+lives in `ecosystem/fret-ui-kit/src/imui/floating_window_shell.rs`. `floating_window_on_area.rs`
+no longer owns the title-bar container, clipped body, blocker, or resize stack assembly.
+
+2026-05-24 resize-handle layout helper result: the repeated cursor/inset/size mapping now lives in
+`resize_handle_layout(...)` inside `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs`.
+`resize_handle_element(...)` now just consumes that helper and keeps the pointer-region wiring.
+
+2026-05-24 resize-drag application helper result: the handle-driven size/position mutation now
+lives in `apply_resize_drag(...)` inside `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs`.
+`prepare_resize_state(...)` now keeps the snapshot/collapse/snap orchestration only.
+
+2026-05-24 shell props helper result: `window_frame_props(...)`, `shell_column_props(...)`,
+`title_bar_container_props(...)`, and `clipped_body_props(...)` now own the frame/container property
+construction inside `ecosystem/fret-ui-kit/src/imui/floating_window_shell.rs`. The public shell
+helper now only composes the prepared title row, content, blocker, and resize stack.
+
+2026-05-24 title-bar props helper result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_title_bar_props.rs` now owns title-row layout,
+drag-surface layout, and close-button accessibility/size props. `floating_window_title_bar.rs`
+keeps keyboard/click behavior orchestration plus the close-glyph text-role helper.
+
+2026-05-24 content props helper result: `ecosystem/fret-ui-kit/src/imui/floating_window_content_props.rs`
+now owns content surface layout, scroll layout, and container props. `floating_window_content.rs`
+keeps the pointer/focus orchestration and consumes the prepared content owner outputs.

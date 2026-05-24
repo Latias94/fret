@@ -547,8 +547,7 @@ fn node_graph_surface_impl<H: UiHost + 'static>(
                                 true
                             }
                             PortalCommandOutcome::Commit(tx) => {
-                                let _ =
-                                    binding_for_command.submit_transaction_action_host(host, &tx);
+                                let _ = commit_graph_transaction(host, &binding_for_command, &tx);
                                 host.request_focus(action_cx.target);
                                 host.request_redraw(action_cx.window);
                                 host.notify(action_cx);

@@ -143,11 +143,10 @@ Retained-widget authoring is runtime-internal only:
 - `crates/fret-ui`: `UiTree::create_node` is `pub(crate)`.
 - Component crates author via declarative elements (`RenderOnce` / `Render` / `IntoElement`), not `Widget`.
 
-Exception (explicitly gated):
+Former migration exception (closed):
 
-- A dedicated docking crate may depend on a feature-gated, unstable retained-widget substrate for migration purposes.
-  This must remain **off by default** and must not be used by shadcn/tailwind component crates.
-  - Current gate: `fret-ui/unstable-retained-bridge` (ADR 0075).
+- The dedicated docking crate previously depended on a feature-gated retained-widget substrate during migration.
+  That bridge has been deleted; shadcn/tailwind component crates must continue authoring through declarative elements only.
 
 ---
 

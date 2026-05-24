@@ -6,14 +6,16 @@ use fret_launch::{
     FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
 use fret_plot::cartesian::DataPoint;
-use fret_plot::linking::{LinkedPlotGroup, LinkedPlotMember, PlotLinkPolicy};
-use fret_plot::retained::{
-    AreaPlotCanvas, AreaPlotModel, AreaSeries, LinePlotCanvas, LinePlotModel, LinePlotStyle,
-    LineSeries, PlotOutput, PlotState,
+use fret_plot::declarative::{
+    AreaPlotPanelProps, LinePlotPanelProps, area_plot_panel_in, line_plot_panel_in,
 };
+use fret_plot::linking::{LinkedPlotGroup, LinkedPlotMember, PlotLinkPolicy};
+use fret_plot::models::{AreaPlotModel, AreaSeries, LinePlotModel, LineSeries};
 use fret_plot::series::Series;
+use fret_plot::state::{PlotOutput, PlotState};
+use fret_plot::style::LinePlotStyle;
 use fret_runtime::PlatformCapabilities;
-use fret_ui::{FixedSplit, UiTree};
+use fret_ui::{FixedSplit, UiTree, declarative};
 
 struct LinkedCursorDemoWindowState {
     ui: UiTree<App>,
@@ -219,22 +221,36 @@ fn render(
     } = context;
 
     if state.root.is_none() {
-        let top_style = LinePlotStyle::default();
-        let top_canvas = LinePlotCanvas::new(state.top_plot.clone())
-            .style(top_style)
-            .debug_overlay(true)
-            .state(state.top_state.clone())
-            .output(state.top_output.clone());
-
-        let bottom_style = LinePlotStyle::default();
-        let bottom_canvas = AreaPlotCanvas::new(state.bottom_plot.clone())
-            .style(bottom_style)
-            .debug_overlay(true)
-            .state(state.bottom_state.clone())
-            .output(state.bottom_output.clone());
-
-        let top_node = LinePlotCanvas::create_node(&mut state.ui, top_canvas);
-        let bottom_node = AreaPlotCanvas::create_node(&mut state.ui, bottom_canvas);
+        let top_node =
+            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                .render_root("linked-cursor-demo-top", {
+                    let top_plot = state.top_plot.clone();
+                    let top_state = state.top_state.clone();
+                    let top_output = state.top_output.clone();
+                    move |cx| {
+                        let top_style = LinePlotStyle::default();
+                        let props = LinePlotPanelProps::new(top_plot)
+                            .style(top_style)
+                            .state(top_state)
+                            .output(top_output);
+                        vec![line_plot_panel_in(cx, props)]
+                    }
+                });
+        let bottom_node =
+            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                .render_root("linked-cursor-demo-bottom", {
+                    let bottom_plot = state.bottom_plot.clone();
+                    let bottom_state = state.bottom_state.clone();
+                    let bottom_output = state.bottom_output.clone();
+                    move |cx| {
+                        let bottom_style = LinePlotStyle::default();
+                        let props = AreaPlotPanelProps::new(bottom_plot.clone())
+                            .style(bottom_style)
+                            .state(bottom_state.clone())
+                            .output(bottom_output.clone());
+                        vec![area_plot_panel_in(cx, props)]
+                    }
+                });
         let root = FixedSplit::create_node_with_children(
             &mut state.ui,
             FixedSplit::vertical(0.5),

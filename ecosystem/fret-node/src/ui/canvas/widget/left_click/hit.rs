@@ -5,6 +5,7 @@ mod node;
 use fret_core::{Point, Rect};
 use fret_ui::UiHost;
 
+use super::LeftClickCx;
 use crate::core::{EdgeId, GroupId, NodeId as GraphNodeId, PortId};
 use crate::rules::EdgeEndpoint;
 
@@ -27,15 +28,15 @@ pub(super) enum Hit {
 
 pub(super) fn compute_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl LeftClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     zoom: f32,
 ) -> Hit {
-    let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
+    let (geom, index) = canvas.canvas_derived(&*cx.left_click_host(), snapshot);
     let this = &*canvas;
     this.graph
-        .read_ref(cx.app, |graph| {
+        .read_ref(cx.left_click_host(), |graph| {
             let mut scratch = HitTestScratch::default();
             let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
             if let Some(hit) =

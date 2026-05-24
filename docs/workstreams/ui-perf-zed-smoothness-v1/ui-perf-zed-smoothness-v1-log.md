@@ -16549,3 +16549,1181 @@ Interpretation:
   frame.
 - The next candidate should optimize clean-geometry proof/apply traversal or boundary-aware application directly.
   Do not broaden the Scroll fast path from this evidence, because Scroll self time is no longer the dominant owner.
+
+## 2026-05-22 13:20:24 +08:00 (inline clean-geometry apply plan)
+
+Question:
+- Can the r28 clean-geometry proof/apply double traversal be collapsed without weakening side-effect boundaries,
+  layout-query bounds, hit-test bounds, or paint-cache geometry fingerprints?
+
+Change:
+- Added `CleanGeometryApplyPlan` for clean resize roots. `request_build_window_roots_if_final(...)` now returns the
+  apply plans it proves, so the subsequent roots loop can skip re-running the root widget layout when the proof already
+  applied pure geometry.
+- Pure clean-geometry nodes are written during proof traversal, using rollback snapshots for node bounds/measured size
+  plus scratch bounds truncation if a later descendant rejects the proof.
+- Side-effect boundaries remain fallback layouts. The final apply step now only runs those fallback layouts and
+  recomputes paint-geometry fingerprints for pure nodes applied during proof.
+- Added a window-root resize regression proving that a direct pure root consumes the apply plan with
+  `layout_engine_solves=0` and `layout_nodes_performed=0`, while descendant element bounds still update to the new
+  width.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui
+cargo check -p fret-ui --lib
+cargo nextest run -p fret-ui -E 'test(clean_geometry_window_root_resize_consumes_apply_plan_without_root_layout) | test(clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary) | test(clean_geometry_small_resize_skips_barrier_root_engine_solve) | test(clean_geometry_skips_nested_fixed_size_horizontal_flex_origin_only_move)' --no-fail-fast
+cargo nextest run -p fret-ui -E 'test(clean_geometry_window_root_resize_consumes_apply_plan_without_root_layout) | test(clean_geometry_small_resize_propagates_through_hover_and_hit_test_wrappers) | test(clean_geometry_small_resize_propagates_through_semantics_wrapper) | test(clean_geometry_small_resize_propagates_through_pressable_wrapper) | test(clean_geometry_small_resize_runs_text_input_layout_as_side_effect_boundary) | test(clean_geometry_skips_default_shrink_fixed_px_horizontal_flex_with_free_space) | test(clean_geometry_rejects_default_shrink_fixed_px_horizontal_flex_without_free_space) | test(clean_geometry_skips_nested_fixed_size_horizontal_flex_origin_only_move) | test(clean_geometry_small_resize_skips_barrier_root_engine_solve)' --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260522-r33-clean-geometry-inline-apply-fresh --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260522-r34-clean-geometry-inline-apply-repeat --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260522-r34-clean-geometry-inline-apply-repeat\sessions\1779426690797-256808\1779426737560-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+git diff --check
+```
+
+Notes:
+- `cargo check` / build still report the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+- The `fret-ui-gallery` rebuild was rerun after the code change so r33/r34 used a fresh gallery binary.
+
+Evidence:
+- r33 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260522-r33-clean-geometry-inline-apply-fresh/sessions/1779426429223-250268/1779426467689-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r33 reports p50/p95 total `100/1374us`, layout `30/752us`, prepaint `34/63us`, paint `34/581us`, and
+  `layout.engine_solve=0/0`. Root phase p95/max reports request-build total/take/phase1/phase2/proof/compute/put
+  `420/12/83/314/313/0/9us` and roots total/apply/flush `277/276/0us`.
+- r34 repeat bundle:
+  `target/fret-diag/text-clean-geometry-current-20260522-r34-clean-geometry-inline-apply-repeat/sessions/1779426690797-256808/1779426737560-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r34 reports p50/p95 total `134/949us`, layout `39/490us`, prepaint `39/52us`, paint `44/426us`, and
+  `layout.engine_solve=0/0`. Root phase p95/max reports request-build total/take/phase1/phase2/proof/compute/put
+  `241/13/42/181/180/0/14us` and roots total/apply/flush `207/206/0us`.
+- r34 clean-geometry counts at p95/max are proof nodes/boundaries `124/3 / 124/3` and
+  apply nodes/fallback-layouts `118/7 / 118/7`.
+
+Interpretation:
+- This is a traversal-shape cleanup with a direct correctness gate, not a broad p95 win claim. It keeps the important
+  resize invariant (`layout.engine_solve=0`) and removes root/widget relayout for pure clean-geometry roots, while the
+  gallery scenario still spends time in side-effect-boundary fallback layout plus paint-fingerprint refresh.
+- The next measured owner should be the `7` fallback layouts and pure-node paint-fingerprint refresh cost. Do not widen
+  the Scroll fast path or renderer text path from this evidence.
+
+## 2026-05-22 14:33:03 +08:00 (clean-geometry apply phase split)
+
+Question:
+- Is the post-inline root apply residual dominated by side-effect-boundary fallback child layouts or by pure-node
+  paint-geometry fingerprint refresh?
+
+Change:
+- Added two additive clean-geometry apply timing counters to `UiDebugFrameStats`:
+  `layout_clean_geometry_apply_fallback_layouts_time_us` and
+  `layout_clean_geometry_apply_paint_fingerprint_time_us`.
+- Wired both counters through `fret-bootstrap` diagnostics snapshots, `fret-diag` perf keys, JSON summary buckets,
+  and the default `diag stats --top` human output.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui -p fret-diag -p fret-bootstrap --check
+cargo check -p fret-ui --lib
+cargo check -p fret-bootstrap
+cargo check -p fret-diag
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields trace_exported_perf_key_registry_contains_core_timeline_keys registered_perf_key_units_match_names --no-fail-fast
+cargo build -p fretboard-dev
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260522-r35-clean-geometry-apply-phase-split --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260522-r35-clean-geometry-apply-phase-split\sessions\1779431405490-261580\1779431447543-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+```
+
+Notes:
+- `cargo check` / build still report the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Evidence:
+- r35 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260522-r35-clean-geometry-apply-phase-split/sessions/1779431405490-261580/1779431447543-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r35 reports p50/p95 total `158/892us`, layout `50/488us`, prepaint `35/73us`, paint `47/445us`, and
+  `layout.engine_solve=0/0`.
+- Root phase p95/max reports request-build total/take/phase1/phase2/proof/compute/put
+  `224/9/43/163/162/0/6us` and roots total/apply/flush `231/230/0us`.
+- Clean-geometry counts at p95/max are proof nodes/boundaries `124/3 / 124/3` and
+  apply nodes/fallback-layouts `118/7 / 118/7`.
+- The new split reports `apply_us(fallback/fingerprint)=225/4 / 225/4`.
+
+Interpretation:
+- The post-inline root apply residual is dominated by side-effect-boundary fallback child layouts. Pure-node
+  paint-fingerprint refresh is measurable but not the owner in this repro.
+- The next clean-geometry optimization should either reduce those fallback child layouts or specialize a proven
+  side-effect boundary with focused gates. Do not target paint fingerprints, Scroll layout, or renderer text from this
+  evidence.
+
+## 2026-05-22 15:31:00 +08:00 (clean-geometry fallback owner diagnostics)
+
+Question:
+- Which element kind owns the slowest side-effect-boundary fallback layout after clean-geometry pure-node application
+  has been inlined and fallback/fingerprint timing has been split?
+
+Change:
+- Added additive frame stats for the slowest clean-geometry fallback-layout owner:
+  `layout_clean_geometry_apply_fallback_layouts_top_time_us` and
+  `layout_clean_geometry_apply_fallback_layouts_top_kind`.
+- Wired both fields through `fret-bootstrap` diagnostics snapshots, `fret-diag` perf-key registration, bundle stats
+  aggregation, JSON summary buckets, and `diag stats` human output.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui -p fret-diag -p fret-bootstrap --check
+cargo check -p fret-ui --lib
+cargo check -p fret-bootstrap
+cargo check -p fret-diag
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields trace_exported_perf_key_registry_contains_core_timeline_keys registered_perf_key_units_match_names --no-fail-fast
+cargo build -p fretboard-dev
+cargo build -p fret-ui-gallery --features gallery-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260522-r37-fallback-owner-field --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260522-r37-fallback-owner-field\sessions\1779434829335-184884\1779434900632-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+```
+
+Notes:
+- An initial parallel `cargo build -p fretboard-dev` / `cargo build -p fret-ui-gallery --features gallery-dev`
+  exceeded the outer command timeout while the underlying cargo/rustc processes continued. The processes exited
+  naturally, and both builds were rerun serially for explicit success.
+- `cargo check` / build still report the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Evidence:
+- r37 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260522-r37-fallback-owner-field/sessions/1779434829335-184884/1779434900632-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r37 reports p50/p95 total `120/1624us`, layout `37/670us`, prepaint `40/52us`, paint `42/905us`, and
+  `layout.engine_solve=0/0`.
+- Root phase p95/max reports request-build total/take/phase1/phase2/proof/compute/put
+  `330/25/47/265/264/0/6us` and roots total/apply/flush `291/291/0us`.
+- Clean-geometry counts at p95/max are proof nodes/boundaries `124/3 / 124/3` and
+  apply nodes/fallback-layouts `118/7 / 118/7`.
+- The owner split reports `apply_us(fallback/top/fingerprint)=283/277/6 / 283/277/6 top_kind=Scroll`.
+
+Interpretation:
+- The residual clean-geometry root-apply cost is almost entirely the slowest fallback layout, and that fallback owner
+  is `Scroll` in this repro.
+- The next optimization should be a narrow `Scroll` side-effect-boundary path for clean resize, not a broad Scroll skip.
+  The gate surface must cover scroll extent, scrollbar/handle state, hit-test bounds, semantics bounds, and layout-query
+  correctness.
+
+## 2026-05-22 18:10:00 +08:00 (clean-geometry Scroll side-effect fast path)
+
+Question:
+- Can the measured `Scroll` fallback owner from r37 publish its required clean-resize side effects without walking a
+  clean child subtree?
+
+Change:
+- Added a node-scoped clean-geometry `Scroll` side-effect fallback marker around
+  `apply_clean_geometry_plan(...)` fallback layouts whose owner kind is `Scroll`.
+- Added a narrow `Scroll` layout fast path that only triggers during final-layout, vertical `probe_unbounded`
+  post-layout extent mode, with a definite viewport, known previous content extent, no pending grow probe, no forced
+  barrier child-root relayout, and no dirty clean subtree.
+- The fast path still publishes the imperative scroll handle viewport/content/offset side effects and optional scroll
+  layout telemetry, but skips the clean child-subtree layout walk.
+- Added `layout_clean_geometry_scroll_side_effect_fast_paths` through `UiDebugFrameStats`, `UiFrameStatsV1`,
+  `fret-diag` perf keys, bundle stats summary buckets, top-frame JSON rows, and human `diag stats` output.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check
+cargo check -p fret-ui --tests
+cargo nextest run -p fret-ui clean_parent_geometry_skip_still_runs_scroll_layout_side_effects --no-fail-fast
+cargo check -p fret-bootstrap
+cargo check -p fret-diag
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_units_match_names --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+cargo build -p fretboard-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260522-r38-scroll-side-effect-fast-path --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260522-r38-scroll-side-effect-fast-path\sessions\1779447493259-260648\1779447524397-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12
+```
+
+Runtime evidence:
+- r38 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260522-r38-scroll-side-effect-fast-path/sessions/1779447493259-260648/1779447524397-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+- r38 result: p50/p95 total `91/615us`, layout `27/275us`, prepaint `33/52us`, paint `32/323us`.
+- Clean-geometry counts at p95/max are proof nodes/boundaries `101/3 / 101/3` and
+  apply nodes/fallback-layouts/scroll-fast-paths `95/7/1 / 95/7/1`.
+- The split reports `apply_us(fallback/top/fingerprint)=46/42/4 / 46/42/4 top_kind=Scroll`.
+- The top resize frames with `scroll_fast_paths=1` report `layout.solve_us=0`, preserving the clean-resize no-solve
+  contract while still publishing the `Scroll` side-effect boundary.
+
+Notes:
+- `cargo check -p fret-ui --tests` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+- The focused source gate now executes successfully with
+  `cargo nextest run -p fret-ui clean_parent_geometry_skip_still_runs_scroll_layout_side_effects --no-fail-fast`.
+  The test fixture was kept on the window-root clean-apply path; the earlier hand-written barrier-root shape only
+  proved barrier solve-skipping and did not execute the `Scroll` fallback fast path.
+- The rebuilt-gallery r38 diagnostics passed after the large `fret-ui-gallery` and `fretboard-dev` binary builds
+  completed.
+
+Interpretation:
+- This is deliberately narrower than a broad `Scroll` skip: it only handles the already-attributed clean-geometry
+  side-effect fallback where the previous scroll extent is authoritative and the child subtree is clean.
+- The focused source gate now covers scroll content extent, in-range offset preservation, `top_kind=Scroll`,
+  `layout_engine_solves=0`, and the new fast-path counter; runtime r38 evidence proves the gallery resize path hits
+  that counter and keeps fallback frames at `layout.solve_us=0`.
+
+## 2026-05-22 22:26:34 +08:00 (clean-geometry Scroll side-effect repeat confirmation)
+
+Question:
+- Does the narrow `Scroll` clean-geometry side-effect fast path remain stable across repeat=3 on the Windows RTX4090
+  host, and does it preserve the no-solve resize shape?
+
+Validation:
+```powershell
+cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check
+cargo check -p fret-ui --tests
+cargo nextest run -p fret-ui clean_parent_geometry_skip_still_runs_scroll_layout_side_effects --no-fail-fast
+cargo check -p fret-bootstrap
+cargo check -p fret-diag
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_units_match_names --no-fail-fast
+cargo nextest run -p fret-diag trace_exported_perf_key_registry_contains_core_timeline_keys --no-fail-fast
+target\debug\fretboard-dev.exe diag perf tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260522-r39-scroll-side-effect-fast-path-r3 --timeout-ms 360000 --repeat 3 --warmup-frames 0 --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260522-r39-scroll-side-effect-fast-path-r3\1779459935399\bundle.schema2.json --sort time --top 12
+```
+
+Notes:
+- `cargo check -p fret-ui --tests` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+- The repeat run used the existing debug gallery binary from the r38 validation pass.
+
+Evidence:
+- Repeat=3 worst bundle:
+  `target/fret-diag/text-clean-geometry-current-20260522-r39-scroll-side-effect-fast-path-r3/1779459935399/bundle.schema2.json`.
+- `diag perf` repeat summary reported p50/p95/max total/layout/solve/prepaint/paint
+  `569/644/644us`, `274/321/321us`, `0/0/0us`, `27/29/29us`, and `268/294/294us`.
+- Worst-bundle `diag stats` reported p50/p95 total `72/644us`, layout `19/321us`, prepaint `27/37us`, paint
+  `25/294us`, and `layout.engine_solve=0/0`.
+- Clean-geometry counts stayed at proof nodes/boundaries `101/3 / 101/3` and
+  apply nodes/fallback-layouts/scroll-fast-paths `95/7/1 / 95/7/1`.
+- The split reported `apply_us(fallback/top/fingerprint)=72/68/6 / 72/68/6` with `top_kind=Scroll`.
+
+Interpretation:
+- The narrow Scroll side-effect fallback path is repeat-stable on this host and preserves the no-solve clean-resize
+  contract. This is local RTX4090 evidence for the mechanism slice, not a checked-in baseline promotion.
+- Next work should inspect the remaining request-build clean-geometry proof and paint/cache costs only if they become
+  the measured owner in a formal editor or resize contract gate. Do not widen this into a broad Scroll skip, renderer
+  rewrite, or baseline update from this local repeat alone.
+
+## 2026-05-23 01:01:38 +08:00 (clean-geometry Scroll source-gate hardening)
+
+Question:
+- Does the focused `Scroll` clean-geometry side-effect gate cover the non-negotiable side effects called out by the
+  r37 owner decision, not just the new fast-path counter?
+
+Change:
+- Hardened `clean_parent_geometry_skip_still_runs_scroll_layout_side_effects` so the fixture contains real scrollable
+  content and remains on the window-root clean-geometry apply path.
+- The source gate now verifies:
+  - scroll handle viewport/content/offset publication,
+  - `layout_engine_solves=0`,
+  - `layout_clean_geometry_apply_fallback_layouts_top_kind=Scroll`,
+  - `layout_clean_geometry_scroll_side_effect_fast_paths=1`,
+  - `current_bounds_for_element(...)` returns the resized `Scroll` bounds,
+  - semantics bounds and scroll `y`/`y_max` values are current, and
+  - hit-testing routes through the resized `Scroll` viewport to child content while clipping just below the viewport.
+- The fixture intentionally starts from `ScrollProps::default().layout` so the `Scroll` node keeps its default
+  `overflow=Clip`; using `LayoutStyle::default()` would make the fixture overflow-visible and would not prove viewport
+  hit-test clipping.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui --check
+cargo nextest run -p fret-ui clean_parent_geometry_skip_still_runs_scroll_layout_side_effects --no-fail-fast
+cargo check -p fret-ui --tests
+cargo check -p fret-bootstrap
+cargo check -p fret-diag
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_units_match_names trace_exported_perf_key_registry_contains_core_timeline_keys --no-fail-fast
+```
+
+Notes:
+- `cargo check -p fret-ui --tests` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+- A transient local assertion compared a hit-test result to a semantics `test_id` node id and was too implementation-
+  coupled; the final assertion checks the routed node path and viewport clipping behavior instead.
+
+Interpretation:
+- The narrow `Scroll` fast path now has a source-level guard for the key layout-query, semantics, and hit-test side
+  effects in addition to the runtime r38/r39 perf evidence. This reduces the risk that the clean child-subtree skip
+  silently regresses editor input or accessibility geometry.
+
+## 2026-05-23 01:01:38 +08:00 (r39 local repeat re-attribute)
+
+Observation:
+- Re-reading the r39 repeat=3 worst bundle confirms the `Scroll` fast path stays stable with `layout.solve_us=0`
+  and `layout_clean_geometry_scroll_side_effect_fast_paths=1`, so `Scroll` is no longer the measured owner for the
+  local repeat evidence.
+- Re-attribution must keep UI-frame timing separate from renderer perf samples. The top UI frame remains
+  `total/layout/prepaint/paint=644/321/29/294us`; inside layout, request-build clean-geometry proof is `175us`,
+  roots apply is `81us`, and clean-geometry fallback apply is `72us` with `top_kind=Scroll` and
+  `scroll_fast_paths=1`.
+- Paint remains visible in the same top UI frames (`paint_widget_time_us=104..107us`,
+  `paint_observation_record_time_us=21..25us`), but the sampled Canvas hotspot itself is only `16..19us`
+  exclusive on this text-measure overlay script.
+- Renderer sample sort modes show a separate renderer lane: `--sort encoder_finish` / `upload` / `prepare_text`
+  select frame `213` with `renderer_encoder_finish/upload/prepare_text=865/245/96us`, while that frame's UI
+  `total/layout/prepaint/paint` is only `72/19/28/25us`. Do not treat renderer finish/upload as a component of
+  `total_time_us` or as the UI-frame owner from this bundle alone.
+
+Decision:
+- Do not widen the `Scroll` fast path further from this local repeat.
+- If this text-measure resize script is pursued further, the next evidence target is narrower clean-geometry proof
+  attribution or paint/widget observation bookkeeping, not another Scroll skip. Keep any renderer work tied to a
+  renderer-specific gate or a formal editor/resize contract failure where renderer metrics are the selected owner.
+
+## 2026-05-23 02:55:00 +08:00 (clean-geometry proof attribution and leaf shortcut collapse)
+
+Question:
+- After the narrow `Scroll` side-effect fast path, where does the remaining clean-geometry proof time go in the
+  text-measure overlay resize repro?
+
+Change:
+- Added internal clean-geometry proof phase counters and surfaced them through `UiDebugFrameStats`,
+  `UiFrameStatsV1`, `fret-diag` perf-key registration, JSON summaries/top rows, and human `diag stats` output:
+  `leaf_shortcut`, `node_state`, `contract`, `child_bounds`, `text_metrics`, `child_prev_bounds`, and `emit`.
+- Collapsed duplicate leaf-shortcut element-record lookups in the apply-plan proof path. The proof now reads node
+  state and the element record once per visited node, evaluates absent `InteractivityGate` and explicit-zero
+  leaf shortcuts from that existing record, then continues to the normal contract path only when needed.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check
+cargo check -p fret-ui --tests
+cargo check -p fret-diag
+cargo check -p fret-bootstrap
+cargo nextest run -p fret-ui clean_parent_geometry_skip_still_runs_scroll_layout_side_effects --no-fail-fast
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_units_match_names trace_exported_perf_key_registry_contains_core_timeline_keys --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+cargo build -p fretboard-dev
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260523-r40-proof-breakdown --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260523-r41-proof-breakdown-expanded --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260523-r42-proof-leaf-query-collapse --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+```
+
+Notes:
+- A pair of early parallel `nextest` invocations exceeded the outer shell timeout while the underlying
+  `cargo`/`rustc` work continued. The processes exited naturally and the same focused `nextest` commands were rerun
+  serially for explicit passing evidence.
+- While checking local processes, an unrelated `cargo fmt --check` was observed in
+  `F:\SourceCodes\Rust\fret-worktrees\improve-shadcn`; it was not part of this lane and was not touched.
+- `cargo check -p fret-ui --tests` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Evidence:
+- r40 pre-expanded proof bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r40-proof-breakdown/sessions/1779472225753-78424/1779472237756-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+  It reports p50/p95 total `71/534us`, layout `18/235us`, prepaint `26/29us`, paint `24/281us`,
+  `layout.engine_solve=0/0`, proof nodes/boundaries `101/3`, apply nodes/fallbacks/scroll-fast-paths `95/7/1`,
+  and proof split `contract/child_bounds/text_metrics=32/31/4us`.
+- r41 expanded proof bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r41-proof-breakdown-expanded/sessions/1779473899238-74516/1779473912021-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+  It reports p50/p95 total `70/589us`, layout `18/246us`, prepaint `26/51us`, paint `24/319us`,
+  `layout.engine_solve=0/0`, request-build proof `160us`, and
+  `proof_us(leaf/node_state/contract/child_bounds/text_metrics/child_prev/emit)=57/9/30/28/4/2/9`.
+- r42 after leaf-query collapse:
+  `target/fret-diag/text-clean-geometry-current-20260523-r42-proof-leaf-query-collapse/sessions/1779475066869-77516/1779475079040-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`.
+  It reports p50/p95 total `72/541us`, layout `19/236us`, prepaint `27/30us`, paint `25/278us`,
+  `layout.engine_solve=0/0`, request-build proof `137us`, proof nodes/boundaries `101/3`, and
+  `proof_us(leaf/node_state/contract/child_bounds/text_metrics/child_prev/emit)=3/10/55/32/5/2/8`.
+  Clean-geometry apply remains `nodes/fallbacks/scroll-fast-paths=95/7/1` with
+  `apply_us(fallback/top/fingerprint)=35/32/4` and `top_kind=Scroll`.
+
+Interpretation:
+- `text_metrics` is not the owner (`4..5us`), so a text-specific fast path would be evidence-misaligned.
+- The first phase split showed the largest proof sub-cost was duplicate leaf-shortcut element-record lookup/clone.
+  Collapsing that work reduced `leaf_shortcut` from `57us` to `3us` and reduced request-build proof p95 from
+  `160us` to `137us` while preserving the no-solve clean-resize shape and the `Scroll` side-effect fast-path hit.
+- The remaining local owner is now contract record/contract handling plus child-bounds derivation, with paint-widget
+  still visible in top UI frames. Further optimization should either avoid broader element-record cloning in the
+  proof path or target paint/widget observation bookkeeping, but only if a formal editor/resize contract gate makes
+  this repro the selected owner. Do not widen `Scroll` or chase renderer upload/finish from this UI-frame evidence.
+
+## 2026-05-23 03:24:00 +08:00 (proof record snapshot and contract-owner collapse)
+
+Question:
+- Can the clean-geometry proof path avoid cloning full `ElementRecord` values when the evidence already shows
+  `record` lookup/clone dominates the remaining proof cost?
+
+Change:
+- Reworked the proof-path attribution to use a borrowed record snapshot during apply-plan construction.
+- The snapshot keeps only the data actually needed by the proof path:
+  - `kind`
+  - leaf-shortcut booleans
+  - optional contract result
+  - optional apply-element target
+  - optional cloned text instance for the text cache check
+- Added split counters for `record_time_us` versus `contract_eval_time_us` while keeping the combined
+  `contract_time_us` for compatibility.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check
+cargo check -p fret-ui --tests
+cargo check -p fret-diag
+cargo check -p fret-bootstrap
+cargo nextest run -p fret-ui clean_parent_geometry_skip_still_runs_scroll_layout_side_effects --no-fail-fast
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_units_match_names trace_exported_perf_key_registry_contains_core_timeline_keys --no-fail-fast
+cargo build -p fret-ui-gallery --features gallery-dev
+cargo build -p fretboard-dev
+target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\text-wrap\\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\\fret-diag\\text-clean-geometry-current-20260523-r44-proof-record-snapshot --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\\debug\\fret-ui-gallery.exe
+target\\debug\\fretboard-dev.exe diag stats target\\fret-diag\\text-clean-geometry-current-20260523-r44-proof-record-snapshot\\sessions\\1779477851052-57216\\1779477863146-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\\bundle.schema2.json --sort time --top 12 --json
+```
+
+Evidence:
+- r44 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r44-proof-record-snapshot/sessions/1779477851052-57216/1779477863146-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+- p95:
+  - total `496us`
+  - layout `208us`
+  - paint `264us`
+  - `layout_request_build_roots_phase2_clean_geometry_proof_time_us=122`
+  - `layout_clean_geometry_proof_nodes/boundaries=101/3`
+  - `proof_us(leaf/node_state/contract_total/record/contract_eval/child_bounds/text_metrics/child_prev/emit)=2/9/48/33/17/28/4/2/8`
+  - `apply(nodes/fallback_layouts/scroll_fast_paths)=95/7/1`
+  - `apply_us(fallback/top/fingerprint)=31/28/3`
+- Top frame `frame_id=212` shows `record=31us`, `contract_eval=16us`, `layout_engine_solve=0`, and
+  `top_kind=Scroll`.
+
+Interpretation:
+- The proof path no longer spends its time in full `ElementRecord` cloning.
+- The remaining owner is split between contract evaluation and child-bounds derivation, while the no-solve
+  scroll fast path still holds.
+- This is still not evidence for widening the Scroll fast path or for touching renderer upload/finish. Next work,
+  if continued, should target the remaining proof/child-bounds cost or separate paint-widget observation bookkeeping
+  only if a fresh formal gate makes that the selected owner.
+
+## 2026-05-23 04:48:09 +08:00 (negative child-bounds SmallVec experiment)
+
+Question:
+- Can stack-backed child-bounds storage reduce the remaining `child_bounds` proof owner?
+
+Experiment:
+- Temporarily changed `clean_geometry` child-bounds containers from `Vec<(NodeId, Rect)>` to
+  `SmallVec<[(NodeId, Rect); 8]>`, then to `SmallVec<[(NodeId, Rect); 1]>`.
+- The candidate was removed after repeat evidence showed no p95 win and a worse tail. No code from this storage
+  experiment is retained.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check
+cargo check -p fret-ui --tests
+cargo nextest run -p fret-ui clean_parent_geometry_skip_still_runs_scroll_layout_side_effects --no-fail-fast
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260523-r47-proof-child-bounds-smallvec --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260523-r48-proof-child-bounds-smallvec-repeat --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260523-r49-proof-child-bounds-smallvec1 --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+```
+
+Notes:
+- The first `cargo nextest run` invocation hit the outer shell timeout while compiling behind a build-directory lock;
+  the underlying processes exited naturally and the command was rerun after the build queue cleared.
+- `cargo check -p fret-ui --tests` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Evidence:
+- r47 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r47-proof-child-bounds-smallvec/sessions/1779481373359-72848/1779481385884-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+  with stats at:
+  `target/fret-diag/text-clean-geometry-current-20260523-r47-proof-child-bounds-smallvec/sessions/1779481373359-72848/1779481385884-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/stats-time-top12.json`.
+  It reports p50/p95/max total `65/517/517us`, layout `17/223/223us`, solve `0/0/0us`, prepaint `25/39/39us`,
+  paint `23/271/271us`, proof `137us`, and
+  `proof_us(contract_total/record/contract_eval/child_bounds/text_metrics)=49/33/15/45/4`.
+- r48 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r48-proof-child-bounds-smallvec-repeat/sessions/1779481427085-82512/1779481439075-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+  with stats at:
+  `target/fret-diag/text-clean-geometry-current-20260523-r48-proof-child-bounds-smallvec-repeat/sessions/1779481427085-82512/1779481439075-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/stats-time-top12.json`.
+  It reports p50/p95/max total `61/508/508us`, layout `15/214/214us`, solve `0/0/0us`, prepaint `24/26/26us`,
+  paint `22/271/271us`, proof `125us`, and
+  `proof_us(contract_total/record/contract_eval/child_bounds/text_metrics)=50/34/16/29/4`.
+- r49 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r49-proof-child-bounds-smallvec1/sessions/1779482091823-2756/1779482103938-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+  with stats at:
+  `target/fret-diag/text-clean-geometry-current-20260523-r49-proof-child-bounds-smallvec1/sessions/1779482091823-2756/1779482103938-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/stats-time-top12.json`.
+  It reports p50/p95/max total `71/530/530us`, layout `19/230/230us`, solve `0/0/0us`, prepaint `26/28/28us`,
+  paint `25/280/280us`, proof `134us`, and
+  `proof_us(contract_total/record/contract_eval/child_bounds/text_metrics)=51/34/18/36/4`.
+- For comparison, retained r44 reports p50/p95/max total `70/496/496us`, layout `19/208/208us`, solve `0/0/0us`,
+  prepaint `25/28/28us`, paint `24/264/264us`, proof `122us`, and
+  `proof_us(contract_total/record/contract_eval/child_bounds/text_metrics)=48/33/17/28/4`.
+
+Interpretation:
+- `SmallVec` improves some p50s but does not beat retained r44 p95 and worsens tail behavior in r49, so the
+  storage/container choice is not the remaining owner.
+- Keep `Vec` and move the next local candidate toward per-strategy child-bounds attribution or contract snapshot
+  construction. Do not retry a container swap without new per-strategy allocation evidence.
+
+## 2026-05-23 05:47:50 +08:00 (child-bounds strategy attribution)
+
+Question:
+- Which clean-geometry child-bounds subpath still owns the remaining proof cost after the contract-snapshot split?
+
+Experiment:
+- Added per-strategy timers for `clean_geometry` child-bounds paths: origin-only, PreserveLocalOrigins,
+  VerticalNoWrapFlex, HorizontalFixedFlex, ContainerPxInsets, and SingleColumnAutoRowsGrid.
+- No functional behavior change; this was instrumentation only.
+
+Validation:
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check`
+- `cargo check -p fret-ui --tests`
+- `cargo check -p fret-bootstrap`
+- `cargo check -p fret-diag`
+- `cargo nextest run -p fret-ui clean_parent_geometry_skip_still_runs_scroll_layout_side_effects --no-fail-fast`
+- `cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_units_match_names trace_exported_perf_key_registry_contains_core_timeline_keys --no-fail-fast`
+- `cargo build -p fret-ui-gallery --features gallery-dev`
+- `cargo build -p fretboard-dev`
+- `target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\text-wrap\\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\\fret-diag\\text-clean-geometry-current-20260523-r51-proof-child-bounds-strategy-attribution --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\\debug\\fret-ui-gallery.exe`
+- `target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\text-wrap\\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\\fret-diag\\text-clean-geometry-current-20260523-r52-proof-child-bounds-strategy-attribution-repeat --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\\debug\\fret-ui-gallery.exe`
+
+Evidence:
+- r51 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r51-proof-child-bounds-strategy-attribution/sessions/1779486200002-82888/1779486212190-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+  JSON stats report:
+  `total_p95=478us`, `layout_p95=211us`, `proof_total_p95=124us`, `proof_child_bounds_p95=31us`
+  with `origin_only/preserve/vertical/horizontal/container/grid = 3/6/3/3/4/0us`.
+- r52 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r52-proof-child-bounds-strategy-attribution-repeat/sessions/1779486325756-83212/1779486337424-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+  JSON stats report:
+  `total_p95=565us`, `layout_p95=240us`, `proof_total_p95=145us`, `proof_child_bounds_p95=34us`
+  with `origin_only/preserve/vertical/horizontal/container/grid = 5/6/3/4/4/0us`.
+- For comparison, retained r44 reported `total_p95=496us`, `layout_p95=208us`, `proof_total_p95=122us`, and
+  `proof_child_bounds_p95=28us`.
+
+Interpretation:
+- The `PreserveLocalOrigins` branch is the most persistent child-bounds contributor in the new split; `origin_only`
+  is also non-trivial, while the flex/container/grid branches stay small.
+- The remaining follow-on should inspect `clean_preserved_origin_width_delta_child_bounds_checked` internals
+  (style lookup, previous-bounds lookup, absolute-child handling), not another storage swap or a wider contract
+  rewrite.
+
+## 2026-05-23 03:58:00 +08:00 (negative leaf child-bounds fast-path experiment)
+
+Question:
+- Would routing `CleanGeometryChildBoundsStrategy::None` through a leaf-specific child-bounds path reduce the
+  remaining `child_bounds` proof owner?
+
+Experiment:
+- Temporarily split `CleanGeometryChildBoundsStrategy::None` away from the generic child-bounds dispatcher.
+- The candidate kept the existing text cached-metrics validation and only avoided the generic child-bounds match/empty
+  result path for leaf contracts.
+- The candidate was removed after repeated runtime evidence showed no measurable improvement and worse tail behavior in
+  one run. No code from this leaf fast-path experiment is retained.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui -p fret-bootstrap -p fret-diag --check
+cargo check -p fret-ui --tests
+cargo nextest run -p fret-ui clean_parent_geometry_skip_still_runs_scroll_layout_side_effects --no-fail-fast
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260523-r45-proof-leaf-child-bounds-fast-path --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260523-r46-proof-leaf-child-bounds-fast-path-repeat --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+```
+
+Notes:
+- The focused `nextest` command twice exceeded the outer shell timeout while compiling behind a build-directory lock;
+  the underlying processes exited naturally and the command was rerun serially for explicit passing evidence.
+- `cargo check -p fret-ui --tests` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Evidence:
+- r45 candidate bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r45-proof-leaf-child-bounds-fast-path/sessions/1779479150287-75660/1779479162312-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+  with stats at:
+  `target/fret-diag/text-clean-geometry-current-20260523-r45-proof-leaf-child-bounds-fast-path/sessions/1779479150287-75660/1779479162312-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/stats-time-top12.json`.
+  It reports p95/max total `613us`, layout `291us`, `layout.engine_solve=0`, prepaint `48us`, paint `295us`,
+  request-build proof `176us`, and
+  `proof_us(contract_total/record/contract_eval/child_bounds/text_metrics)=75/52/22/43/6`.
+  Clean-geometry apply remains `scroll_fast_paths=1` with `apply_us(fallback/top)=37/34`.
+- r46 repeat bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r46-proof-leaf-child-bounds-fast-path-repeat/sessions/1779479479052-74412/1779479492601-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+  with stats at:
+  `target/fret-diag/text-clean-geometry-current-20260523-r46-proof-leaf-child-bounds-fast-path-repeat/sessions/1779479479052-74412/1779479492601-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/stats-time-top12.json`.
+  It reports p95/max total `542us`, layout `225us`, `layout.engine_solve=0`, prepaint `46us`, paint `300us`,
+  request-build proof `128us`, and
+  `proof_us(contract_total/record/contract_eval/child_bounds/text_metrics)=51/33/17/30/5`.
+  Clean-geometry apply remains `scroll_fast_paths=1` with `apply_us(fallback/top)=33/30`.
+- For comparison, retained r44 reports p95/max total `496us`, layout `208us`, request-build proof `122us`, and
+  `proof_us(contract_total/record/contract_eval/child_bounds/text_metrics)=48/33/17/28/4`.
+
+Interpretation:
+- The leaf `None` child-bounds split does not reduce `child_bounds`; the best repeat (`30us`) is worse than retained
+  r44 (`28us`), and one run regressed the full proof path to `176us`.
+- This rules out the empty-leaf dispatcher as the remaining owner. The next local candidate should inspect the
+  non-leaf child-bounds strategies or contract snapshot construction more directly, with a repeat run before retaining
+  code.
+
+## 2026-05-23 09:30:00 +08:00 (PreserveLocalOrigins internals ruled out as next owner)
+
+Question:
+- After r51/r52 showed `PreserveLocalOrigins` as the largest child-bounds strategy bucket, is the work inside
+  `clean_preserved_origin_width_delta_child_bounds_checked` still large enough to justify another optimization slice?
+
+Change:
+- Kept the per-strategy child-bounds instrumentation and added an internal split for the `PreserveLocalOrigins` path:
+  style lookup, previous-bounds lookup, absolute-child handling, and relative-child handling.
+- Corrected the existing `layout_clean_geometry_proof_contract_eval_time_us` measurement so it only wraps the
+  `clean_geometry_node_contract(...)` match/eval work instead of the whole record-snapshot construction path.
+- No layout behavior or baseline thresholds changed.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui --check
+cargo check -p fret-ui --tests
+cargo nextest run -p fret-ui clean_parent_geometry_skip_still_runs_scroll_layout_side_effects --no-fail-fast
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260523-r53-preserve-internals --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260523-r54-contract-eval-split --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+```
+
+Notes:
+- The first focused `nextest` attempt hit the outer shell timeout while waiting on a build lock; the rerun completed
+  and passed.
+- `cargo check -p fret-ui --tests` still reports the pre-existing `current_effective_opacity` dead-code warning in
+  `crates\fret-ui\src\elements\runtime.rs`.
+
+Evidence:
+- r53 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r53-preserve-internals/sessions/1779498659734-48684/1779498678312-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+  with stats:
+  `target/fret-diag/text-clean-geometry-current-20260523-r53-preserve-internals/stats-time-top12.json`.
+  It reports p95 `total/layout/solve/paint/proof=532/227/0/283/135us` and
+  `proof_us(contract_total/record/contract_eval/child_bounds/preserve/style/absolute)=52/35/17/35/9/5/1`.
+- r54 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r54-contract-eval-split/sessions/1779499839534-86192/1779499852702-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+  with stats:
+  `target/fret-diag/text-clean-geometry-current-20260523-r54-contract-eval-split/stats-time-top12.json`.
+  It reports p95 `total/layout/solve/paint/proof=556/249/0/280/153us` and
+  `proof_us(contract_total/record/contract_eval/child_bounds/preserve/style/absolute)=67/49/18/37/9/5/1`.
+
+Interpretation:
+- `PreserveLocalOrigins` internals are visible but too small to be the next optimization owner: style lookup is only
+  about `5us`, absolute-child handling is about `1us`, and previous-bounds/relative-child handling are effectively
+  zero in this repro.
+- The corrected split keeps the dominant local proof cost in record/snapshot access plus general proof bookkeeping,
+  not in the contract match itself and not in PreserveLocalOrigins geometry math.
+- Next retained code slice should target the record/snapshot access path only if it can stay narrow and reversible.
+  Otherwise keep this as attribution evidence and move to paint/widget observation bookkeeping if a fresh formal gate
+  selects that owner.
+
+## 2026-05-23 10:14:43 +08:00 (record/snapshot access path confirmed on gallery-dev rerun)
+
+Question:
+- After the read-only `ElementFrame` lookup and node-state snapshot cleanup, is the remaining clean-geometry proof
+  cost still concentrated in record/snapshot access and general bookkeeping?
+
+Change:
+- Switched `element_record_for_node` and `with_element_record_for_node` to read through `global::<ElementFrame>()`
+  instead of taking a mutable global lease.
+- Folded the per-node clean-geometry state read into a local snapshot so the proof path validates
+  layout-invalidated, subtree-dirty, measured-size, and dirty-children-suppressed from one lookup.
+- No layout behavior, fallback policy, or baseline thresholds changed.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui -p fret-diag -p fret-bootstrap --check
+cargo check -p fret-ui --tests
+cargo check -p fret-diag
+cargo check -p fret-bootstrap
+cargo nextest run -p fret-ui clean_parent_geometry_skip_still_runs_scroll_layout_side_effects --no-fail-fast
+cargo nextest run -p fret-diag full_registered_perf_key_registry_covers_consumed_debug_stats_fields registered_perf_key_units_match_names trace_exported_perf_key_registry_contains_core_timeline_keys --no-fail-fast
+```
+
+Evidence:
+- r57 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r57-gallery-dev-full/sessions/1779502460512-90368/1779502472937-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+  with stats at:
+  `target/fret-diag/text-clean-geometry-current-20260523-r57-gallery-dev-full/stats-time-top12.json`.
+- It reports p95 `total/layout/proof=543/205/106us` and
+  `proof(record/contract_eval/child_bounds/text_metrics/node_state/emit)=24/7/29/4/10/9us`.
+- Clean-geometry apply remains `scroll_fast_paths=1` with
+  `apply_us(fallback/top)=30/28` and `fallback_top_kind=Scroll`.
+
+Interpretation:
+- The narrower record/snapshot path is still the main local proof bucket, but contract evaluation is now small and
+  the remaining work is mostly bookkeeping around the record/state read.
+- Keep any follow-up slice helper-level and reversible. Do not widen into Scroll policy or child-bounds strategy
+  dispatch from this evidence alone.
+
+## 2026-05-23 10:39:54 +08:00 (fallback kind threaded through clean-geometry plan)
+
+Question:
+- Can the clean-geometry fallback apply path keep the element kind discovered during the proof phase instead of
+  re-reading the element record during fallback layout?
+
+Change:
+- Made `CleanGeometryFallbackLayout.kind` a required build-time value.
+- Threaded the already-known `kind` into all clean-geometry fallback plan entries.
+- `apply_clean_geometry_plan` now uses the fallback's carried kind directly, so debug attribution and the Scroll
+  side-effect fallback no longer need an apply-stage element-record lookup.
+- No layout behavior, fallback policy, or baseline thresholds changed.
+
+Validation:
+```powershell
+cargo fmt -p fret-ui --check
+cargo check -p fret-ui --tests
+cargo build -p fret-ui-gallery --features gallery-dev
+cargo nextest run -p fret-ui clean_parent_geometry_skip_still_runs_scroll_layout_side_effects --no-fail-fast
+target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\text-wrap\ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady.json --dir target\fret-diag\text-clean-geometry-current-20260523-r58-fallback-kind-inline --timeout-ms 360000 --session-auto --exit-after-run --env FRET_DIAG_SCRIPT_AUTO_DUMP=0 --env FRET_UI_GALLERY_START_PAGE=text_measure_overlay --env FRET_SCROLL_LAYOUT_PROFILE=1 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_US=0 --env FRET_SCROLL_LAYOUT_PROFILE_MIN_MEASURE_US=0 --env FRET_LAYOUT_NODE_PROFILE=1 --env FRET_LAYOUT_NODE_PROFILE_TOP=20 --env FRET_LAYOUT_NODE_PROFILE_MIN_US=1 --launch -- target\debug\fret-ui-gallery.exe
+target\debug\fretboard-dev.exe diag stats target\fret-diag\text-clean-geometry-current-20260523-r58-fallback-kind-inline\sessions\1779503981180-97340\1779503994471-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady\bundle.schema2.json --sort time --top 12 --json
+```
+
+Evidence:
+- r58 bundle:
+  `target/fret-diag/text-clean-geometry-current-20260523-r58-fallback-kind-inline/sessions/1779503981180-97340/1779503994471-ui-gallery-text-measure-overlay-window-resize-drag-jitter-steady/bundle.schema2.json`
+  with stats at:
+  `target/fret-diag/text-clean-geometry-current-20260523-r58-fallback-kind-inline/stats-time-top12.json`.
+- It reports p95 `total/layout/solve/proof=496/204/0/106us` and
+  `proof(record/contract_eval/child_bounds/text_metrics/node_state/emit)=23/7/27/4/9/8us`.
+- Clean-geometry apply remains `scroll_fast_paths=1`, `fallback_top_kind=Scroll`, and
+  `apply_us(fallback/top)=45/44`.
+
+Interpretation:
+- The helper-level cleanup kept the no-solve clean-resize shape and slightly reduced the proof sub-buckets versus
+  r57 (`record 24 -> 23us`, `child_bounds 29 -> 27us`, `node_state 10 -> 9us`, `emit 9 -> 8us`).
+- The fallback apply time is still run-variant and not the current proof owner; this change is retained because it
+  removes an avoidable record lookup and improves attribution, not because it proves a new broad optimization owner.
+- Keep the next slice inside record/snapshot bookkeeping unless a fresh formal gate selects a different owner.
+
+## 2026-05-23 13:40:26 +08:00 (Windows RTX4090 editor paint closeout pass)
+
+Question:
+- Does the target-machine Windows RTX4090 editor-paint contract now provide the formal owner decision that the local
+  clean-geometry and editor-paint slices were waiting for?
+
+Change:
+- No runtime code change in this entry.
+- Recorded the formal `20260523-r58` Windows handoff result in `WORKSTREAM.json` and the TODO ledger.
+- Resolved the stale "Windows RTX4090 deferred" state: the target-machine closeout is now complete, and the next
+  implementation-heavy slice should open or reuse a narrow `canvas-paint-replay` lane.
+- Opened the follow-on execution lane:
+  `docs/workstreams/editor-canvas-paint-replay-slice-v1/WORKSTREAM.json`.
+- Completed its first source audit:
+  `docs/workstreams/editor-canvas-paint-replay-slice-v1/ECPR_010_SOURCE_AUDIT_2026-05-23.md`.
+
+Validation:
+```powershell
+python tools/perf/diag_editor_paint_contract_windows_handoff.py --date-tag 20260523-r58
+```
+
+Evidence:
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r58/summary.json` (`ok=true`, `failures=0`).
+- Attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r58-attrib/summary.json` (`ok=true`, `failures=0`).
+- Artifact verifier:
+  `target/fret-diag/editor-paint-contract-windows-handoff-20260523-r58/verify/artifact-verification.summary.json`
+  (`ok=true`).
+- Closeout:
+  `target/fret-diag/editor-paint-contract-windows-handoff-20260523-r58/closeout/editor-paint-contract-closeout.summary.json`
+  (`ok=true`, `owner_decision.status=decided`).
+- Closeout repo gates also passed inside the closeout output: perf baseline matrix audit, `WORKSTREAM.json` JSON
+  validation, workstream catalog check, and `git diff --check`.
+
+Owner decision:
+- `owner=canvas-paint-replay`
+- `action=open-canvas-paint-replay-slice`
+- Reason: `paint.widget / Canvas remains the dominant verified attribution owner`.
+- Attribution scores:
+  - resize-jitter: `paint_widget_p95_us=912`, `canvas_exclusive_p95_us=494`,
+    `renderer_prepare_text_p95_us=153`, `renderer_encode_scene_p95_us=778`,
+    `renderer_upload_p95_us=155`, `code_editor_total_p95_us=417`;
+  - typical-autoscroll: `697/458/140/560/218/377`;
+  - complex-wheel: `631/419/168/486/104/327`.
+
+Interpretation:
+- This formal gate supersedes the previous deferred Windows state and the local-only owner reads.
+- Do not keep extending the text clean-geometry proof slice as the primary lane owner after this decision.
+- Do not reopen the closed historical `ui-gallery-code-editor-canvas-paint-tail-attribution-v1` lane by default; open
+  or reuse a narrow follow-on only if its scope matches the `20260523-r58` Canvas paint replay owner.
+- The first implementation owner in the follow-on is row-scene replay bookkeeping: prepaint replay-plan probing plus
+  hosted-resource touch/replay work. Existing r58 summaries are enough for the first attempt, so no new diagnostic
+  field is required before implementation.
+- Keep checked-in baselines unchanged unless the follow-on produces deliberate baseline evidence from the target
+  machine profile.
+
+## 2026-05-23 15:48:22 +08:00 (ECPR-030 replay bookkeeping landed and r59 validated)
+
+The narrow Canvas replay bookkeeping slice in
+`docs/workstreams/editor-canvas-paint-replay-slice-v1/` is now implemented and validated on the Windows RTX4090
+profile. The planner now uses a single cache lookup per hit, updates the LRU tick in place, and compares plain rows
+by paint key without cloning `RowSceneKey`.
+
+Focused replay tests passed:
+
+```powershell
+cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay prepaint_row_scene_replay_plan_handles_plain_cached_rows prepaint_row_scene_replay_plan_uses_cached_syntax_replay_context prepaint_row_scene_replay_plan_rejects_plain_rows_when_fg_changes --features syntax-rust --no-fail-fast
+```
+
+Formal three-probe validation passed:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260523-r59 --with-paint-perf
+```
+
+Key r59 p95 evidence:
+
+- resize-jitter: `total/layout/paint/paint_widget=4102/2199/1358/838us`, `plan/probe/key/touch/ops=261/190/52/102/139`, `rows=289`.
+- typical-autoscroll: `1797/91/1028/599us`, `203/147/35/71/101`, `rows=289`.
+- complex-wheel: `1896/379/1072/567us`, `193/127/31/70/49`, `rows=288`.
+
+That is enough to move the next owner decision to ECPR-040 target-machine validation and baseline policy.
+
+## 2026-05-23 16:10:00 +08:00 (Editor Canvas Paint Replay Slice v1 closed)
+
+The follow-on lane `docs/workstreams/editor-canvas-paint-replay-slice-v1/` completed its target-machine closeout and
+is now closed. The final closeout kept the baseline policy unchanged and retained `canvas-paint-replay` as the
+verified owner.
+
+Final evidence:
+
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r59/summary.json`
+- Attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r59-attrib/summary.json`
+- Artifact verifier:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r59/artifact-verification.summary.json`
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r59/editor-paint-contract-closeout.summary.json`
+
+## 2026-05-23 17:35:00 +08:00 (Overlapping-window replay-plan cache slice)
+
+Question:
+- Can the remaining `canvas-paint-replay` owner reduce repeated row-scene prepaint plan/probe/key-compare work
+  without broadening into Canvas display-list caching or renderer text residency?
+
+Change:
+- Opened `docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/`.
+- Added a `fret-code-editor` row-scene replay plan cache keyed by buffer/display/cache epochs, row geometry, content
+  width/height, text style, theme, font stack, and foreground color.
+- Reuse returns a fresh `RowSceneReplayPlan` for the current frame sequence while preserving the existing paint-time
+  `local_bounds` consumption guard.
+- Whole-cache clears and syntax-key refreshes clear the replay-plan cache; ordinary row replacement/eviction is
+  guarded by retained fragment pointer identity before reuse, which allows sliding-window overlap reuse.
+- No checked-in baselines changed.
+
+Validation:
+
+```powershell
+cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_reuses_stable_window_plan prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast
+cargo check -p fret-code-editor --tests --features syntax-rust
+cargo fmt -p fret-code-editor --check
+git diff --check
+```
+
+Result:
+- Focused tests passed.
+- `cargo check` passed with the pre-existing `fret-ui` warning for `current_effective_opacity`.
+
+Interpretation:
+- The mechanism-level gate proves the reuse path skips per-row prepaint candidate probing, cache probes, and key
+  comparisons on stable and overlapping validated windows.
+- This is local/focused evidence only. The target-machine editor-paint validation/attribution run is still required
+  before any baseline policy decision.
+
+## 2026-05-23 21:51:54 +08:00 (Replay-plan cache r61 closeout)
+
+The `docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/` lane completed target-machine validation,
+attribution, artifact verification, closeout, and refreshed stats after rebuilding `fretboard-dev`.
+
+Validation:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260523-r61-plan-cache-baseline --keep-going
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260523-r61-plan-cache-attrib --with-paint-perf --keep-going
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-attrib
+python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-attrib --out-report target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline/editor-paint-contract-closeout.summary.json
+```
+
+Evidence:
+
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline/summary.json`
+- Attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-attrib/summary.json`
+- Artifact verifier:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline/artifact-verification.summary.json`
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r61-plan-cache-baseline/editor-paint-contract-closeout.summary.json`
+
+Plan-cache stats:
+
+- resize-jitter: frames `10`, sum `plan_cache_hits=2885`, `candidates=5`, `probe=0us`, `key_compare=0us`,
+  p95 `plan=95us`.
+- typical-autoscroll: frames `180`, sum `plan_cache_hits=51930`, `candidates=90`, `probe=0us`,
+  `key_compare=0us`, p95 `plan=62us`.
+- complex-wheel: frames `35`, sum `plan_cache_hits=0`, `candidates=10115`, `probe=2800us`,
+  `key_compare=323us`, p95 `plan=204us`.
+
+Closeout decision:
+
+- `owner=canvas-paint-replay`
+- `action=open-canvas-paint-replay-slice`
+- Baseline policy unchanged.
+
+Interpretation:
+
+- The overlapping-window plan cache is a real mechanism win for stable resize/autoscroll row windows.
+- It does not close the broader Canvas replay owner because the complex-wheel/preedit-heavy scenario still performs
+  visible per-row planning/probing work and the verified p95 attribution remains under `paint.widget` / `Canvas`.
+- Close `editor-canvas-paint-replay-plan-cache-v1`; open a new bounded follow-on only for the remaining Canvas replay
+  owner or complex-wheel/preedit path.
+
+## 2026-05-23 23:58:00 +08:00 (Preedit replay-plan cache r62 closeout)
+
+The `docs/workstreams/editor-canvas-paint-replay-preedit-plan-cache-v1/` lane closed after target-machine validation,
+attribution, artifact verification, and closeout.
+
+Validation:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260523-r62-preedit-plan-cache-baseline --keep-going
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260523-r62-preedit-plan-cache-attrib --with-paint-perf --keep-going
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-attrib
+python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-attrib --out-report target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline/editor-paint-contract-closeout.summary.json
+```
+
+Evidence:
+
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline/summary.json`
+- Attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-attrib/summary.json`
+- Artifact verifier:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline/artifact-verification.summary.json`
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260523-r62-preedit-plan-cache-baseline/editor-paint-contract-closeout.summary.json`
+
+Plan-cache stats:
+
+- resize-jitter: frames `10`, sum `plan_cache_hits=2885`, `candidates=5`, `probe=0us`, `key_compare=0us`,
+  p95 `plan=85us`.
+- typical-autoscroll: frames `180`, sum `plan_cache_hits=51930`, `candidates=90`, `probe=0us`,
+  `key_compare=0us`, p95 `plan=68us`.
+- complex-wheel: frames `35`, sum `plan_cache_hits=10041`, `candidates=74`, `skip_preedit=35`, `probe=7us`,
+  `key_compare=0us`, p95 `plan=64us`.
+
+Closeout decision:
+
+- `owner=canvas-paint-replay`
+- `action=open-canvas-paint-replay-slice`
+- Baseline policy unchanged.
+
+Interpretation:
+
+- The preedit-specific fix successfully removed the complex-wheel all-row prepaint probe/key-compare cost.
+- The parent owner remains Canvas replay/touch/row-paint overhead, not row-scene prepaint planning.
+- Close `editor-canvas-paint-replay-preedit-plan-cache-v1`; open a new bounded follow-on only for the remaining
+  Canvas replay owner.
+
+## 2026-05-24 02:10:00 +08:00 (Resource-touch r63 closeout)
+
+The `docs/workstreams/editor-canvas-paint-replay-resource-touch-v1/` lane closed after focused local gates, target
+machine validation, attribution, artifact verification, and closeout.
+
+Validation:
+
+```powershell
+cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_aggregates_hosted_resources_once prepaint_row_scene_replay_plan_reuses_stable_window_plan prepaint_row_scene_replay_plan_reuses_cached_non_preedit_rows_during_preedit row_scene_replay_plan_rejects_stale_frame_and_skipped_rows --features syntax-rust --no-fail-fast
+cargo fmt -p fret-ui -p fret-code-editor --check
+cargo check -p fret-code-editor --tests --features syntax-rust
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r63-resource-touch-baseline-rerun --keep-going
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r63-resource-touch-attrib-rerun --with-paint-perf --keep-going
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-baseline-rerun --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-attrib-rerun
+python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-baseline-rerun --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-attrib-rerun --out-report target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-baseline-rerun/editor-paint-contract-closeout.summary.json
+```
+
+Evidence:
+
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-baseline-rerun/summary.json`
+- Attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-attrib-rerun/summary.json`
+- Artifact verifier:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-baseline-rerun/artifact-verification.summary.json`
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r63-resource-touch-baseline-rerun/editor-paint-contract-closeout.summary.json`
+- Closeout audit:
+  `docs/workstreams/editor-canvas-paint-replay-resource-touch-v1/CLOSEOUT_AUDIT_2026-05-24.md`
+
+One initial baseline run failed `typical-autoscroll` once with `frame_p95_total_time_us=4229us` over the effective
+`3460us` threshold. An immediate standalone rerun passed with `0` failures and worst top total `1965us`; the final
+full `baseline-rerun` directory passed and is the closeout evidence.
+
+Mechanism stats:
+
+- resize-jitter moved from r62 `touch_p95/sum=59/431us`, `row_paint_p95=404us` to r63 `44/415us`,
+  `row_paint_p95=254us`.
+- typical-autoscroll moved from r62 `touch_p95/sum=65/9109us` to r63 `58/8736us`; row paint stayed roughly flat
+  (`318us -> 327us` p95).
+- complex-wheel stayed Canvas-replay-owned: r63 reports `touch_p95/sum=63/1610us`, `row_paint_p95=335us`,
+  and `code_editor_total_p95=314us`.
+
+Closeout decision:
+
+- `owner=canvas-paint-replay`
+- `action=open-canvas-paint-replay-slice`
+- Baseline policy unchanged.
+
+Interpretation:
+
+- Resource-touch aggregation is a valid planned replay cleanup, but it does not close the parent Canvas owner.
+- The next bounded follow-on should inspect remaining Canvas replay/row-paint overhead. Do not reopen plan-cache or
+  resource-touch lanes unless fresh evidence shows a mechanism regression.
+
+## 2026-05-24 03:05:00 +08:00 (Row setup attribution lane opened)
+
+Opened `docs/workstreams/editor-canvas-paint-replay-row-setup-v1/` from the r63 closeout. The first
+slice is diagnostics-only: add `us_row_scene_replay_setup` / `ns_row_scene_replay_setup` to the
+code-editor paint perf frame, gallery app snapshot schema `14`, and `fret-diag stats` extraction,
+aggregation, percentile JSON, and human output.
+
+Local validation passed so far:
+
+```powershell
+cargo nextest run -p fret-diag bundle_stats_extracts_code_editor_paint_perf_from_app_snapshot --no-fail-fast
+cargo nextest run -p fret-code-editor prepaint_row_scene_replay_plan_moves_row_text_work_out_of_paint prepaint_row_scene_replay_plan_aggregates_hosted_resources_once prepaint_row_scene_replay_plan_reuses_stable_window_plan prepaint_row_scene_replay_plan_reuses_cached_non_preedit_rows_during_preedit planned_replay_rows_with_selection_still_paint_overlay --features syntax-rust --no-fail-fast
+cargo check -p fret-code-editor --tests --features syntax-rust
+cargo check -p fret-diag --tests
+cargo fmt -p fret-code-editor -p fret-diag -p fret-ui-gallery --check
+python -m json.tool docs/workstreams/editor-canvas-paint-replay-row-setup-v1/WORKSTREAM.json
+python -m json.tool docs/workstreams/ui-perf-zed-smoothness-v1/WORKSTREAM.json
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Decision:
+
+- Baseline policy remains unchanged.
+- Run the full local gate set, then target-machine attribution with paint perf before selecting the
+  next implementation owner.
+
+## 2026-05-24 04:10:00 +08:00 (Row setup attribution closeout)
+
+Closed `docs/workstreams/editor-canvas-paint-replay-row-setup-v1/` after target-machine validation
+and rebuilt attribution.
+
+Validation:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r64-row-setup-baseline --keep-going
+cargo build -p fretboard-dev -p fret-ui-gallery --release --features fret-ui-gallery/gallery-full
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r64-row-setup-attrib-rebuilt --with-paint-perf --keep-going
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt
+python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt --out-report target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/editor-paint-contract-closeout.summary.json
+```
+
+Evidence:
+
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/summary.json`
+- Rebuilt attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-attrib-rebuilt/summary.json`
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r64-row-setup-baseline/editor-paint-contract-closeout.summary.json`
+- Closeout audit:
+  `docs/workstreams/editor-canvas-paint-replay-row-setup-v1/CLOSEOUT_AUDIT_2026-05-24.md`
+
+The first attribution run with tag `20260524-r64-row-setup-attrib` used an older
+`target/release/fretboard-dev.exe` from 2026-05-23, so it did not contain the new schema `14`
+counter. The final evidence uses the rebuilt attribution directory.
+
+Key stats:
+
+- typical-autoscroll: `setup_p95/sum=62/9418us`, `touch_p95/sum=57/7798us`,
+  `ops_p95/sum=83/12960us`, `row_paint_p95/sum=295/47555us`.
+- complex-wheel: `setup_p95/sum=44/1280us`, `touch_p95/sum=53/1516us`,
+  `ops_p95/sum=45/1194us`, `row_paint_p95/sum=272/7531us`.
+
+Closeout decision:
+
+- `owner=canvas-paint-replay`
+- `action=open-canvas-paint-replay-slice`
+- Baseline policy unchanged.
+
+Interpretation:
+
+- Setup is material but belongs to the same remaining replay overhead cluster as touch and ops.
+- The next follow-on should be an implementation lane for planned row replay overhead, not another
+  diagnostics-only lane.
+
+## 2026-05-24 04:30:00 +08:00 (Planned replay fast-path lane opened)
+
+Opened `docs/workstreams/editor-canvas-paint-replay-fast-path-v1/` as the implementation follow-on
+from the r64 row-setup attribution closeout.
+
+Planned first slice:
+
+- Keep captured row bounds in `RowSceneRetainedFragment`.
+- For a matching planned replay row with no caret/selection overlay, derive the replay target
+  origin by preserving the retained origin-to-bounds offset against the current row rect.
+- Replay and return before the general row text baseline/key/constraint setup.
+- Keep overlay-touched and preedit rows on the existing paint-time path.
+
+Baseline policy remains unchanged. The local implementation commit must pass focused planned replay
+tests and workstream gates before any target-machine validation or baseline decision.
+
+## 2026-05-24 05:18:00 +08:00 (Planned replay fast-path closeout)
+
+Closed `docs/workstreams/editor-canvas-paint-replay-fast-path-v1/` after target-machine validation
+and closeout.
+
+Validation:
+
+```powershell
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r65-row-fast-path-baseline --keep-going
+cargo build -p fretboard-dev -p fret-ui-gallery --release --features fret-ui-gallery/gallery-full
+python tools/perf/diag_editor_paint_contract_validate.py --date-tag 20260524-r65-row-fast-path-attrib --with-paint-perf --keep-going
+python tools/perf/diag_editor_paint_contract_verify_artifacts.py target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib
+python tools/perf/diag_editor_paint_contract_closeout.py target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline --attribution-dir target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib --out-report target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/editor-paint-contract-closeout.summary.json
+```
+
+Evidence:
+
+- Baseline validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/summary.json`
+- Attribution validation:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib/summary.json`
+- Artifact verifier:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/artifact-verification.summary.json`
+- Closeout:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/editor-paint-contract-closeout.summary.json`
+- Typical-autoscroll stats:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib/runner-logs/typical-autoscroll/stats.stdout.json`
+- Complex-wheel stats:
+  `target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib/runner-logs/complex-wheel/stats.stdout.json`
+
+Key stats:
+
+- typical-autoscroll: `setup_p95/sum=30/4368us`, `touch_p95/sum=57/8350us`,
+  `ops_p95/sum=70/10651us`, `row_paint_p95/sum=250/40632us`, `total_p95/sum=227/37011us`.
+- complex-wheel: `setup_p95/sum=15/442us`, `touch_p95/sum=39/983us`,
+  `ops_p95/sum=28/1005us`, `row_paint_p95/sum=327/5186us`, `total_p95/sum=313/4688us`.
+
+Closeout decision:
+
+- `owner=canvas-paint-replay`
+- `action=open-canvas-paint-replay-slice`
+- Baseline policy unchanged.
+
+Interpretation:
+
+- The no-overlay planned replay fast path is closed. The next follow-on should target the remaining
+  Canvas exclusive / paint-widget overhead outside row setup, not row setup again.
+
+## 2026-05-24 05:45:00 +08:00 (Canvas-exclusive lane opened)
+
+Opened `docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/` as the next bounded
+follow-on after the r65 fast-path closeout.
+
+Initial focus:
+
+- source audit of the remaining `paint.widget` / `Canvas` hot path
+- target-machine attribution for the residual Canvas exclusive owner outside row setup
+
+Evidence:
+
+- `docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/WORKSTREAM.json`
+- `docs/workstreams/editor-canvas-paint-replay-fast-path-v1/CLOSEOUT_AUDIT_2026-05-24.md`
+
+Decision:
+
+- Keep row-setup, resource-touch, and plan-cache lanes closed.
+- Do not widen this lane beyond the remaining Canvas exclusive / paint-widget owner until the
+  source audit proves a narrower boundary.

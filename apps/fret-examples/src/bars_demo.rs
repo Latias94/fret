@@ -1,24 +1,29 @@
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::Context as _;
+use delinea::data::{Column, DataTable};
+use delinea::ids::{AxisId, DatasetId, FieldId, GridId, SeriesId};
+use delinea::{
+    AxisKind, AxisPointerTrigger, AxisPointerType, AxisScale, ChartEngine, ChartSpec, DatasetSpec,
+    FieldSpec, GridSpec, SeriesEncode, SeriesKind, SeriesSpec,
+};
 use fret_app::{App, Effect, WindowRequest};
+use fret_chart::{ChartCanvasOutput, ChartCanvasPanelProps, chart_canvas_panel};
 use fret_core::{AppWindowId, Event};
+#[cfg(not(target_arch = "wasm32"))]
+use fret_launch::run_app;
 use fret_launch::{
-    FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
+    FnDriver, FnDriverHooks, WinitEventContext, WinitHotReloadContext, WinitRenderContext,
+    WinitRunnerConfig,
 };
-use fret_plot::cartesian::DataPoint;
-use fret_plot::retained::{
-    BarSeries, BarsPlotCanvas, BarsPlotModel, LinePlotStyle, PlotOutput, PlotState,
-};
-use fret_plot::series::Series;
-use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
+use fret_runtime::{Model, PlatformCapabilities};
+use fret_ui::{UiTree, declarative};
 
 pub struct BarsDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<BarsPlotModel>,
-    plot_state: fret_runtime::Model<PlotState>,
-    plot_output: fret_runtime::Model<PlotOutput>,
+    engine: Model<ChartEngine>,
+    spec: ChartSpec,
+    output: Model<ChartCanvasOutput>,
     last_logged_output_revision: u64,
 }
 
@@ -26,31 +31,121 @@ pub struct BarsDemoWindowState {
 pub struct BarsDemoDriver;
 
 impl BarsDemoDriver {
-    fn build_ui(app: &mut App, window: AppWindowId) -> BarsDemoWindowState {
-        let n = 512usize;
+    fn build_chart() -> (ChartEngine, ChartSpec) {
+        let dataset_id = DatasetId::new(1);
+        let grid_id = GridId::new(1);
+        let x_axis = AxisId::new(1);
+        let y_axis = AxisId::new(2);
+        let x_field = FieldId::new(1);
+        let y_field = FieldId::new(2);
+        let series_id = SeriesId::new(1);
 
-        let mut points: Vec<DataPoint> = Vec::with_capacity(n);
+        let categories: Vec<String> = (0..12).map(|i| format!("Category {i}")).collect();
+
+        let spec = ChartSpec {
+            id: delinea::ids::ChartId::new(1),
+            viewport: None,
+            datasets: vec![DatasetSpec {
+                id: dataset_id,
+                fields: vec![
+                    FieldSpec {
+                        id: x_field,
+                        column: 0,
+                    },
+                    FieldSpec {
+                        id: y_field,
+                        column: 1,
+                    },
+                ],
+                ..Default::default()
+            }],
+            grids: vec![GridSpec { id: grid_id }],
+            axes: vec![
+                delinea::AxisSpec {
+                    id: x_axis,
+                    name: Some("Category".to_string()),
+                    kind: AxisKind::X,
+                    grid: grid_id,
+                    position: None,
+                    scale: AxisScale::Category(delinea::CategoryAxisScale { categories }),
+                    range: None,
+                },
+                delinea::AxisSpec {
+                    id: y_axis,
+                    name: Some("Value".to_string()),
+                    kind: AxisKind::Y,
+                    grid: grid_id,
+                    position: None,
+                    scale: AxisScale::Value(Default::default()),
+                    range: Some(delinea::AxisRange::Auto),
+                },
+            ],
+            data_zoom_x: vec![],
+            data_zoom_y: vec![],
+            tooltip: None,
+            axis_pointer: Some(delinea::AxisPointerSpec {
+                enabled: true,
+                trigger: AxisPointerTrigger::Axis,
+                pointer_type: AxisPointerType::Shadow,
+                label: Default::default(),
+                snap: false,
+                trigger_distance_px: 12.0,
+                throttle_px: 0.75,
+            }),
+            visual_maps: vec![],
+            series: vec![SeriesSpec {
+                id: series_id,
+                name: Some("Bars".to_string()),
+                kind: SeriesKind::Bar,
+                dataset: dataset_id,
+                encode: SeriesEncode {
+                    x: x_field,
+                    y: y_field,
+                    y2: None,
+                },
+                x_axis,
+                y_axis,
+                stack: None,
+                stack_strategy: Default::default(),
+                bar_layout: Default::default(),
+                area_baseline: None,
+                lod: None,
+            }],
+        };
+
+        let mut engine = ChartEngine::new(spec.clone()).expect("chart spec should be valid");
+
+        let n = 12usize;
+        let mut x: Vec<f64> = Vec::with_capacity(n);
+        let mut y: Vec<f64> = Vec::with_capacity(n);
         for i in 0..n {
-            let x = i as f64;
-            let y = (x * 0.05).sin() * 1.25 + (x * 0.015).cos() * 0.25;
-            points.push(DataPoint { x, y });
+            let t = i as f64 / (n - 1).max(1) as f64;
+            x.push(i as f64);
+            y.push((t * 7.0).sin() * 40.0 + (t * 3.0).cos() * 15.0 + 60.0);
         }
 
-        let plot = app.models_mut().insert(BarsPlotModel::from_series(vec![
-            BarSeries::new("bars", Series::from_points_sorted(points, true)).width(0.9),
-        ]));
-        let plot_state = app.models_mut().insert(PlotState::default());
-        let plot_output = app.models_mut().insert(PlotOutput::default());
+        let mut table = DataTable::default();
+        table.push_column(Column::F64(x));
+        table.push_column(Column::F64(y));
+        engine.datasets_mut().insert(dataset_id, table);
 
+        (engine, spec)
+    }
+
+    fn build_ui(app: &mut App, window: AppWindowId) -> BarsDemoWindowState {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
+
+        let (engine, spec) = Self::build_chart();
+        let engine = app.models_mut().insert(engine);
+        let output = app.models_mut().insert(ChartCanvasOutput::default());
 
         BarsDemoWindowState {
             ui,
             root: None,
-            plot,
-            plot_state,
-            plot_output,
+            engine,
+            spec,
+            output,
             last_logged_output_revision: 0,
         }
     }
@@ -76,9 +171,7 @@ fn hot_reload_window(
     state.root = None;
 }
 
-fn configure_fn_driver_hooks(
-    hooks: &mut fret_launch::FnDriverHooks<BarsDemoDriver, BarsDemoWindowState>,
-) {
+fn configure_fn_driver_hooks(hooks: &mut FnDriverHooks<BarsDemoDriver, BarsDemoWindowState>) {
     hooks.hot_reload_window = Some(hot_reload_window);
 }
 
@@ -111,19 +204,20 @@ fn handle_event(
                 Event::Pointer(fret_core::PointerEvent::Up { .. }) | Event::KeyDown { .. }
             ) {
                 let output = state
-                    .plot_output
-                    .read(app, |_app, o| *o)
+                    .output
+                    .read(app, |_app, o| o.clone())
                     .unwrap_or_default();
                 if output.revision != state.last_logged_output_revision {
                     state.last_logged_output_revision = output.revision;
-                    if let Some(query) = output.snapshot.query {
-                        tracing::info!(
-                            "query: x=[{:.3}, {:.3}], y=[{:.3}, {:.3}]",
-                            query.x_min,
-                            query.x_max,
-                            query.y_min,
-                            query.y_max
-                        );
+                    if !output.snapshot.tooltip_lines.is_empty() {
+                        let tooltip = output
+                            .snapshot
+                            .tooltip_lines
+                            .iter()
+                            .map(|line| line.text.as_str())
+                            .collect::<Vec<_>>()
+                            .join(" | ");
+                        tracing::info!("tooltip: {tooltip}");
                     }
                 }
             }
@@ -142,18 +236,26 @@ fn render(_driver: &mut BarsDemoDriver, context: WinitRenderContext<'_, BarsDemo
         scene,
     } = context;
 
-    let root = state.root.get_or_insert_with(|| {
-        let style = LinePlotStyle::default();
-        let canvas = BarsPlotCanvas::new(state.plot.clone())
-            .style(style)
-            .state(state.plot_state.clone())
-            .output(state.plot_output.clone());
-        let node = BarsPlotCanvas::create_node(&mut state.ui, canvas);
-        state.ui.set_root(node);
-        node
-    });
+    let engine = state.engine.clone();
+    let spec = state.spec.clone();
+    let output = state.output.clone();
+    let root = declarative::render_root(
+        &mut state.ui,
+        app,
+        services,
+        window,
+        bounds,
+        "bars-demo-root",
+        move |cx| {
+            cx.observe_model(&engine, fret_ui::Invalidation::Paint);
+            let mut props = ChartCanvasPanelProps::new(spec).output_model(output);
+            props.engine = Some(engine);
+            vec![chart_canvas_panel(cx, props)]
+        },
+    );
+    state.root = Some(root);
 
-    state.ui.set_root(*root);
+    state.ui.set_root(root);
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
 
@@ -187,7 +289,9 @@ pub fn build_fn_driver() -> FnDriver<BarsDemoDriver, BarsDemoWindowState> {
         handle_event,
         render,
     )
-    .with_hooks(configure_fn_driver_hooks)
+    .with_hooks(|hooks| {
+        hooks.hot_reload_window = Some(hot_reload_window);
+    })
 }
 
 #[cfg(not(target_arch = "wasm32"))]

@@ -6,19 +6,19 @@ use fret_core::{AppWindowId, Event};
 use fret_launch::{
     FnDriver, WinitEventContext, WinitHotReloadContext, WinitRenderContext, WinitRunnerConfig,
 };
+use fret_plot::declarative::{LinePlotPanelProps, line_plot_panel_in};
+use fret_plot::models::{LinePlotModel, LineSeries, YAxis};
 use fret_plot::plot::axis::AxisLabelFormatter;
-use fret_plot::retained::{
-    InfLineX, InfLineY, LinePlotCanvas, LinePlotStyle, LineSeries, PlotOutput, PlotOverlays,
-    PlotState, SeriesTooltipMode, YAxis,
-};
 use fret_plot::series::Series;
+use fret_plot::state::{InfLineX, InfLineY, PlotOutput, PlotOverlays, PlotState};
+use fret_plot::style::{LinePlotStyle, SeriesTooltipMode};
 use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
+use fret_ui::{UiTree, declarative};
 
 struct InfLinesDemoWindowState {
     ui: UiTree<App>,
     root: Option<fret_core::NodeId>,
-    plot: fret_runtime::Model<fret_plot::retained::LinePlotModel>,
+    plot: fret_runtime::Model<LinePlotModel>,
     plot_state: fret_runtime::Model<PlotState>,
     plot_output: fret_runtime::Model<PlotOutput>,
     last_logged_output_revision: u64,
@@ -53,26 +53,24 @@ impl InfLinesDemoDriver {
             push(&mut series3, x, (u * 0.25).sin() * 1_500.0 + 2_000.0);
         }
 
-        let plot = app
-            .models_mut()
-            .insert(fret_plot::retained::LinePlotModel::from_series(vec![
-                LineSeries::new("signal A (left)", Series::from_points_sorted(series0, true)),
-                LineSeries::new(
-                    "signal B (right)",
-                    Series::from_points_sorted(series1, true),
-                )
-                .y_axis(YAxis::Right),
-                LineSeries::new(
-                    "signal C (right2)",
-                    Series::from_points_sorted(series2, true),
-                )
-                .y_axis(YAxis::Right2),
-                LineSeries::new(
-                    "signal D (right3)",
-                    Series::from_points_sorted(series3, true),
-                )
-                .y_axis(YAxis::Right3),
-            ]));
+        let plot = app.models_mut().insert(LinePlotModel::from_series(vec![
+            LineSeries::new("signal A (left)", Series::from_points_sorted(series0, true)),
+            LineSeries::new(
+                "signal B (right)",
+                Series::from_points_sorted(series1, true),
+            )
+            .y_axis(YAxis::Right),
+            LineSeries::new(
+                "signal C (right2)",
+                Series::from_points_sorted(series2, true),
+            )
+            .y_axis(YAxis::Right2),
+            LineSeries::new(
+                "signal D (right3)",
+                Series::from_points_sorted(series3, true),
+            )
+            .y_axis(YAxis::Right3),
+        ]));
 
         let mut state = PlotState::default();
         state.overlays = PlotOverlays {
@@ -190,57 +188,60 @@ fn render(
         scene,
     } = context;
 
-    let root = state.root.get_or_insert_with(|| {
-        let style = LinePlotStyle {
-            series_tooltip: SeriesTooltipMode::NearestAtCursor,
-            ..Default::default()
-        };
-        let canvas = LinePlotCanvas::new(state.plot.clone())
-            .style(style)
-            .y_axis_labels(AxisLabelFormatter::custom(
-                0x494e464c_5900u64,
-                |v, _span| {
-                    if !v.is_finite() {
-                        return "NA".to_string();
-                    }
-                    format!("{v:.2} V")
-                },
-            ))
-            .y2_axis_labels(AxisLabelFormatter::custom(
-                0x494e464c_5902u64,
-                |v, _span| {
-                    if !v.is_finite() {
-                        return "NA".to_string();
-                    }
-                    format!("{v:.1} A")
-                },
-            ))
-            .y3_axis_labels(AxisLabelFormatter::custom(
-                0x494e464c_5903u64,
-                |v, _span| {
-                    if !v.is_finite() {
-                        return "NA".to_string();
-                    }
-                    format!("{v:.0} mA")
-                },
-            ))
-            .y4_axis_labels(AxisLabelFormatter::custom(
-                0x494e464c_5904u64,
-                |v, _span| {
-                    if !v.is_finite() {
-                        return "NA".to_string();
-                    }
-                    format!("{v:.0} Pa")
-                },
-            ))
-            .state(state.plot_state.clone())
-            .output(state.plot_output.clone());
-        let node = LinePlotCanvas::create_node(&mut state.ui, canvas);
-        state.ui.set_root(node);
-        node
-    });
+    let plot = state.plot.clone();
+    let plot_state = state.plot_state.clone();
+    let plot_output = state.plot_output.clone();
+    let root = declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+        .render_root("inf-lines-demo", move |cx| {
+            let style = LinePlotStyle {
+                series_tooltip: SeriesTooltipMode::NearestAtCursor,
+                ..Default::default()
+            };
+            let props = LinePlotPanelProps::new(plot.clone())
+                .style(style)
+                .y_axis_labels(AxisLabelFormatter::custom(
+                    0x494e464c_5900u64,
+                    |v, _span| {
+                        if !v.is_finite() {
+                            return "NA".to_string();
+                        }
+                        format!("{v:.2} V")
+                    },
+                ))
+                .y2_axis_labels(AxisLabelFormatter::custom(
+                    0x494e464c_5902u64,
+                    |v, _span| {
+                        if !v.is_finite() {
+                            return "NA".to_string();
+                        }
+                        format!("{v:.1} A")
+                    },
+                ))
+                .y3_axis_labels(AxisLabelFormatter::custom(
+                    0x494e464c_5903u64,
+                    |v, _span| {
+                        if !v.is_finite() {
+                            return "NA".to_string();
+                        }
+                        format!("{v:.0} mA")
+                    },
+                ))
+                .y4_axis_labels(AxisLabelFormatter::custom(
+                    0x494e464c_5904u64,
+                    |v, _span| {
+                        if !v.is_finite() {
+                            return "NA".to_string();
+                        }
+                        format!("{v:.0} Pa")
+                    },
+                ))
+                .state(plot_state.clone())
+                .output(plot_output.clone());
+            vec![line_plot_panel_in(cx, props)]
+        });
 
-    state.ui.set_root(*root);
+    state.root = Some(root);
+    state.ui.set_root(root);
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
 

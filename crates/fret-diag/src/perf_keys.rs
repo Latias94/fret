@@ -258,11 +258,114 @@ pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_BOUNDARIES: PerfKey = count_key(
     "layout_clean_geometry_proof_boundaries",
     PerfKeyAggregate::Max,
 );
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_LEAF_SHORTCUT_TIME_US: PerfKey = timing_key(
+    "layout_clean_geometry_proof_leaf_shortcut_time_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_NODE_STATE_TIME_US: PerfKey = timing_key(
+    "layout_clean_geometry_proof_node_state_time_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CONTRACT_TIME_US: PerfKey = timing_key(
+    "layout_clean_geometry_proof_contract_time_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_RECORD_TIME_US: PerfKey = timing_key(
+    "layout_clean_geometry_proof_record_time_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CONTRACT_EVAL_TIME_US: PerfKey = timing_key(
+    "layout_clean_geometry_proof_contract_eval_time_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_TIME_US: PerfKey = timing_key(
+    "layout_clean_geometry_proof_child_bounds_time_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_ORIGIN_ONLY_TIME_US: PerfKey = timing_key(
+    "layout_clean_geometry_proof_child_bounds_origin_only_time_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_TIME_US: PerfKey =
+    timing_key(
+        "layout_clean_geometry_proof_child_bounds_preserve_local_origins_time_us",
+        PerfKeyAggregate::P95,
+    );
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_STYLE_LOOKUP_TIME_US: PerfKey =
+    timing_key(
+        "layout_clean_geometry_proof_child_bounds_preserve_local_origins_style_lookup_time_us",
+        PerfKeyAggregate::P95,
+    );
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_PREV_BOUNDS_LOOKUP_TIME_US: PerfKey =
+    timing_key(
+        "layout_clean_geometry_proof_child_bounds_preserve_local_origins_prev_bounds_lookup_time_us",
+        PerfKeyAggregate::P95,
+    );
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_ABSOLUTE_CHILD_TIME_US: PerfKey =
+    timing_key(
+        "layout_clean_geometry_proof_child_bounds_preserve_local_origins_absolute_child_time_us",
+        PerfKeyAggregate::P95,
+    );
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_RELATIVE_CHILD_TIME_US: PerfKey =
+    timing_key(
+        "layout_clean_geometry_proof_child_bounds_preserve_local_origins_relative_child_time_us",
+        PerfKeyAggregate::P95,
+    );
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_VERTICAL_NO_WRAP_FLEX_TIME_US: PerfKey =
+    timing_key(
+        "layout_clean_geometry_proof_child_bounds_vertical_no_wrap_flex_time_us",
+        PerfKeyAggregate::P95,
+    );
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_HORIZONTAL_FIXED_FLEX_TIME_US: PerfKey =
+    timing_key(
+        "layout_clean_geometry_proof_child_bounds_horizontal_fixed_flex_time_us",
+        PerfKeyAggregate::P95,
+    );
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_CONTAINER_PX_INSETS_TIME_US: PerfKey =
+    timing_key(
+        "layout_clean_geometry_proof_child_bounds_container_px_insets_time_us",
+        PerfKeyAggregate::P95,
+    );
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_SINGLE_COLUMN_AUTO_ROWS_GRID_TIME_US:
+    PerfKey = timing_key(
+    "layout_clean_geometry_proof_child_bounds_single_column_auto_rows_grid_time_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_TEXT_METRICS_TIME_US: PerfKey = timing_key(
+    "layout_clean_geometry_proof_text_metrics_time_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_PREV_BOUNDS_TIME_US: PerfKey = timing_key(
+    "layout_clean_geometry_proof_child_prev_bounds_time_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_PROOF_EMIT_TIME_US: PerfKey = timing_key(
+    "layout_clean_geometry_proof_emit_time_us",
+    PerfKeyAggregate::P95,
+);
 pub(crate) const LAYOUT_CLEAN_GEOMETRY_APPLY_NODES: PerfKey =
     count_key("layout_clean_geometry_apply_nodes", PerfKeyAggregate::Max);
 pub(crate) const LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS: PerfKey = count_key(
     "layout_clean_geometry_apply_fallback_layouts",
     PerfKeyAggregate::Max,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS_TIME_US: PerfKey = timing_key(
+    "layout_clean_geometry_apply_fallback_layouts_time_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS_TOP_TIME_US: PerfKey = timing_key(
+    "layout_clean_geometry_apply_fallback_layouts_top_time_us",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS_TOP_KIND: PerfKey =
+    label_key("layout_clean_geometry_apply_fallback_layouts_top_kind");
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_SCROLL_SIDE_EFFECT_FAST_PATHS: PerfKey = count_key(
+    "layout_clean_geometry_scroll_side_effect_fast_paths",
+    PerfKeyAggregate::Max,
+);
+pub(crate) const LAYOUT_CLEAN_GEOMETRY_APPLY_PAINT_FINGERPRINT_TIME_US: PerfKey = timing_key(
+    "layout_clean_geometry_apply_paint_fingerprint_time_us",
+    PerfKeyAggregate::P95,
 );
 pub(crate) const LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_COMPUTE_TIME_US: PerfKey = trace_timing_key(
     "layout_request_build_roots_phase2_compute_time_us",
@@ -430,6 +533,12 @@ pub(crate) const PAINT_CACHE_BOUNDS_TRANSLATE_TIME_US: PerfKey = trace_timing_ke
 pub(crate) const PAINT_WIDGET_TIME_US: PerfKey = trace_timing_key(
     "paint_widget_time_us",
     "paint.widget",
+    "paint",
+    PerfKeyAggregate::P95,
+);
+pub(crate) const PAINT_CANVAS_ON_PAINT_TIME_US: PerfKey = trace_timing_key(
+    "paint_canvas_on_paint_time_us",
+    "paint.canvas_on_paint",
     "paint",
     PerfKeyAggregate::P95,
 );
@@ -926,8 +1035,32 @@ pub(crate) const TRACE_EXPORTED_FRAME_KEYS: &[PerfKey] = &[
     LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_CLEAN_GEOMETRY_PROOF_TIME_US,
     LAYOUT_CLEAN_GEOMETRY_PROOF_NODES,
     LAYOUT_CLEAN_GEOMETRY_PROOF_BOUNDARIES,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_LEAF_SHORTCUT_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_NODE_STATE_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CONTRACT_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_RECORD_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CONTRACT_EVAL_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_ORIGIN_ONLY_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_STYLE_LOOKUP_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_PREV_BOUNDS_LOOKUP_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_ABSOLUTE_CHILD_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_RELATIVE_CHILD_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_VERTICAL_NO_WRAP_FLEX_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_HORIZONTAL_FIXED_FLEX_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_CONTAINER_PX_INSETS_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_SINGLE_COLUMN_AUTO_ROWS_GRID_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_TEXT_METRICS_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_PREV_BOUNDS_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_EMIT_TIME_US,
     LAYOUT_CLEAN_GEOMETRY_APPLY_NODES,
     LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS,
+    LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS_TOP_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS_TOP_KIND,
+    LAYOUT_CLEAN_GEOMETRY_SCROLL_SIDE_EFFECT_FAST_PATHS,
+    LAYOUT_CLEAN_GEOMETRY_APPLY_PAINT_FINGERPRINT_TIME_US,
     LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_COMPUTE_TIME_US,
     LAYOUT_REQUEST_BUILD_ROOTS_PUT_ENGINE_TIME_US,
     LAYOUT_ROOTS_TIME_US,
@@ -978,8 +1111,32 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_CLEAN_GEOMETRY_PROOF_TIME_US,
     LAYOUT_CLEAN_GEOMETRY_PROOF_NODES,
     LAYOUT_CLEAN_GEOMETRY_PROOF_BOUNDARIES,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_LEAF_SHORTCUT_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_NODE_STATE_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CONTRACT_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_RECORD_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CONTRACT_EVAL_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_ORIGIN_ONLY_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_STYLE_LOOKUP_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_PREV_BOUNDS_LOOKUP_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_ABSOLUTE_CHILD_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_PRESERVE_LOCAL_ORIGINS_RELATIVE_CHILD_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_VERTICAL_NO_WRAP_FLEX_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_HORIZONTAL_FIXED_FLEX_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_CONTAINER_PX_INSETS_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_BOUNDS_SINGLE_COLUMN_AUTO_ROWS_GRID_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_TEXT_METRICS_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_CHILD_PREV_BOUNDS_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_PROOF_EMIT_TIME_US,
     LAYOUT_CLEAN_GEOMETRY_APPLY_NODES,
     LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS,
+    LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS_TOP_TIME_US,
+    LAYOUT_CLEAN_GEOMETRY_APPLY_FALLBACK_LAYOUTS_TOP_KIND,
+    LAYOUT_CLEAN_GEOMETRY_SCROLL_SIDE_EFFECT_FAST_PATHS,
+    LAYOUT_CLEAN_GEOMETRY_APPLY_PAINT_FINGERPRINT_TIME_US,
     LAYOUT_REQUEST_BUILD_ROOTS_PHASE2_COMPUTE_TIME_US,
     LAYOUT_REQUEST_BUILD_ROOTS_PUT_ENGINE_TIME_US,
     LAYOUT_PENDING_BARRIER_RELAYOUTS_TIME_US,
@@ -1013,6 +1170,7 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     PAINT_CACHE_KEY_TIME_US,
     PAINT_CACHE_HIT_CHECK_TIME_US,
     PAINT_WIDGET_TIME_US,
+    PAINT_CANVAS_ON_PAINT_TIME_US,
     PAINT_OBSERVATION_RECORD_TIME_US,
     PAINT_HOST_WIDGET_OBSERVED_MODELS_TIME_US,
     PAINT_HOST_WIDGET_OBSERVED_MODELS_ITEMS,

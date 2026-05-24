@@ -5,12 +5,13 @@ mod retained_picker_cx;
 use fret_core::Point;
 use fret_ui::UiHost;
 
+pub(super) use self::picker::StickyWireTargetPickerCx;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::ViewSnapshot;
 
 pub(super) fn handle_sticky_wire_non_port_target<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut fret_ui::retained_bridge::EventCx<'_, H>,
+    cx: &mut impl StickyWireTargetPickerCx<H>,
     snapshot: &ViewSnapshot,
     geom: &crate::ui::canvas::CanvasGeometry,
     index: &crate::ui::canvas::CanvasSpatialDerived,
@@ -20,7 +21,7 @@ pub(super) fn handle_sticky_wire_non_port_target<H: UiHost, M: NodeGraphCanvasMi
 ) -> bool {
     let at = canvas.interaction.last_canvas_pos.unwrap_or_default();
     let target =
-        inspect::inspect_non_port_target(canvas, cx.app, snapshot, geom, index, position, zoom);
+        inspect::inspect_non_port_target(canvas, cx.host(), snapshot, geom, index, position, zoom);
 
     reset_sticky_wire_state(canvas);
     cx.release_pointer_capture();

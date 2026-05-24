@@ -2,7 +2,7 @@ use crate::ui::canvas::widget::*;
 
 pub(super) fn handle_close_button_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl pointer_down_close_button_cx::PointerDownCloseButtonCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     button: MouseButton,
@@ -20,7 +20,7 @@ pub(super) fn handle_close_button_pointer_down<H: UiHost, M: NodeGraphCanvasMidd
         return false;
     }
 
-    cx.dispatch_command(command);
+    cx.dispatch_close_command(command);
     cx.stop_propagation();
     true
 }

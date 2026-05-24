@@ -1,19 +1,16 @@
-use fret_ui::retained_bridge::EventCx;
-
 use super::InsertNodeDragPayload;
 use super::prelude::*;
 
 pub(in super::super) fn handle_internal_drag_event<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::super::internal_drag_cx::InternalDragCx<H>,
     snapshot: &ViewSnapshot,
     event: &InternalDragEvent,
     zoom: f32,
 ) -> bool {
     let pointer_id = event.pointer_id;
     let payload = cx
-        .app
-        .drag(pointer_id)
+        .drag_session(pointer_id)
         .and_then(|d| d.payload::<InsertNodeDragPayload>())
         .cloned();
     let Some(payload) = payload else {

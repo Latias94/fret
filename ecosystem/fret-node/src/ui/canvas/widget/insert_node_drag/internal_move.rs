@@ -1,10 +1,8 @@
-use fret_ui::retained_bridge::EventCx;
-
 use super::prelude::*;
 
 pub(super) fn handle_enter_over<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::super::internal_drag_cx::InternalDragCx<H>,
     snapshot: &ViewSnapshot,
     event: &InternalDragEvent,
     payload: &super::InsertNodeDragPayload,
@@ -12,10 +10,10 @@ pub(super) fn handle_enter_over<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) -> bool {
     let pos = event.position;
 
-    let (geom, index) = canvas.canvas_derived(&*cx.app, snapshot);
+    let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
     let edge_hit: Option<EdgeId> = canvas
         .graph
-        .read_ref(cx.app, |graph| {
+        .read_ref(cx.host(), |graph| {
             let mut scratch = HitTestScratch::default();
             let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);
             canvas.hit_edge(graph, snapshot, &mut ctx, pos)
@@ -25,7 +23,7 @@ pub(super) fn handle_enter_over<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
     let can_split_edge: Option<EdgeId> = edge_hit.and_then(|edge_id| {
         canvas
-            .can_split_edge_insert_candidate(cx.app, edge_id, &payload.candidate, pos)
+            .can_split_edge_insert_candidate(cx.host(), edge_id, &payload.candidate, pos)
             .and_then(|accepted| accepted.then_some(edge_id))
     });
 

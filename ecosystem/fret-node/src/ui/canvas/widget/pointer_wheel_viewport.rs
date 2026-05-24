@@ -43,15 +43,16 @@ where
 pub(super) fn handle_scroll_pan<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
     cx: &mut Cx,
+    platform: fret_runtime::Platform,
     snapshot: &ViewSnapshot,
     delta: Point,
     modifiers: fret_core::Modifiers,
 ) -> bool
 where
     M: NodeGraphCanvasMiddleware,
-    Cx: pointer_wheel_cx::PointerWheelViewportCx<H>,
+    Cx: viewport_motion_cx::ViewportMotionCx<H>,
 {
-    super::pointer_wheel_pan::handle_scroll_pan(canvas, cx, snapshot, delta, modifiers)
+    super::pointer_wheel_pan::handle_scroll_pan(canvas, cx, platform, snapshot, delta, modifiers)
 }
 
 pub(super) fn handle_pinch_zoom<H: UiHost, M, Cx>(

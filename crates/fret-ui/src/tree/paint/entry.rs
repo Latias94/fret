@@ -59,6 +59,7 @@ impl<H: UiHost> UiTree<H> {
                     self.debug_stats.paint_cache_key_time = Duration::default();
                     self.debug_stats.paint_cache_hit_check_time = Duration::default();
                     self.debug_stats.paint_widget_time = Duration::default();
+                    self.debug_stats.paint_canvas_on_paint_time = Duration::default();
                     self.debug_stats.paint_observation_record_time = Duration::default();
                     self.debug_stats.paint_host_widget_observed_models_time = Duration::default();
                     self.debug_stats.paint_host_widget_observed_models_items = 0;

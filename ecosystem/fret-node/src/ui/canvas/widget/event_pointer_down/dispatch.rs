@@ -2,7 +2,7 @@ use super::*;
 
 pub(super) fn route_pointer_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl super::super::event_pointer_down_route_cx::PointerDownRouteCx<H, M>,
     snapshot: &ViewSnapshot,
     position: Point,
     button: MouseButton,

@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use fret_core::{Event, Modifiers, MouseButton, Point, PointerEvent, PointerType, Px, Rect, Size};
-use fret_ui::retained_bridge::Widget as _;
+use fret_ui::Widget as _;
 
 use crate::core::Graph;
 use crate::rules::EdgeEndpoint;

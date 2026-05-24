@@ -3,8 +3,10 @@
 //! This is an incremental migration surface: it renders `delinea::ChartEngine` marks via the
 //! declarative `Canvas` element while wiring input through the `fret-ui-kit` canvas tool router.
 
+pub(crate) mod data_zoom_overlay;
 mod legend_overlay;
 mod panel;
 mod tooltip_overlay;
+pub(crate) mod visual_map_overlay;
 
 pub use panel::*;

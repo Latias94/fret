@@ -2,14 +2,14 @@
 use anyhow::Context as _;
 use fret_app::{App, Effect, WindowRequest};
 use fret_core::{AppWindowId, Event};
-#[cfg(not(target_arch = "wasm32"))]
-use fret_launch::run_app;
 use fret_launch::{FnDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
-use fret_plot::plot::axis::AxisLabelFormatter;
+use fret_plot::declarative::{Histogram2DPlotPanelProps, histogram2d_plot_panel_in};
+use fret_plot::models::Histogram2DPlotModel;
+use fret_plot::plot::axis::{AxisLabelFormatter, AxisNumberFormat};
 use fret_plot::plot::histogram2d::{Histogram2DConfig, histogram2d_counts};
-use fret_plot::retained::{Histogram2DPlotCanvas, Histogram2DPlotModel, PlotOutput, PlotState};
+use fret_plot::state::{PlotOutput, PlotState};
 use fret_runtime::PlatformCapabilities;
-use fret_ui::UiTree;
+use fret_ui::{UiTree, declarative};
 
 struct Histogram2DDemoWindowState {
     ui: UiTree<App>,
@@ -109,22 +109,31 @@ fn render(
         scene,
     } = context;
 
-    let root = state.root.get_or_insert_with(|| {
-        let canvas = Histogram2DPlotCanvas::new(state.plot.clone())
-            .x_axis_labels(AxisLabelFormatter::number(
-                fret_plot::plot::axis::AxisNumberFormat::Fixed(2),
-            ))
-            .y_axis_labels(AxisLabelFormatter::number(
-                fret_plot::plot::axis::AxisNumberFormat::Fixed(2),
-            ))
-            .state(state.plot_state.clone())
-            .output(state.plot_output.clone());
-        let node = Histogram2DPlotCanvas::create_node(&mut state.ui, canvas);
+    if state.root.is_none() {
+        let node =
+            declarative::RenderRootContext::new(&mut state.ui, app, services, window, bounds)
+                .render_root("histogram2d-demo", {
+                    let plot = state.plot.clone();
+                    let plot_state = state.plot_state.clone();
+                    let plot_output = state.plot_output.clone();
+                    move |cx| {
+                        let props = Histogram2DPlotPanelProps::new(plot.clone())
+                            .x_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))
+                            .y_axis_labels(AxisLabelFormatter::number(AxisNumberFormat::Fixed(2)))
+                            .state(plot_state.clone())
+                            .output(plot_output.clone());
+                        vec![histogram2d_plot_panel_in(cx, props)]
+                    }
+                });
         state.ui.set_root(node);
-        node
-    });
+        state.ui.set_focus(Some(node));
+        state.ui.publish_window_runtime_snapshots(app);
+        state.root = Some(node);
+    }
 
-    state.ui.set_root(*root);
+    if let Some(root) = state.root {
+        state.ui.set_root(root);
+    }
     state.ui.request_semantics_snapshot();
     state.ui.ingest_paint_cache_source(scene);
 
@@ -174,9 +183,7 @@ pub fn run() -> anyhow::Result<()> {
     let config = build_runner_config();
     let driver = build_fn_driver();
 
-    run_app(config, app, driver)
-        .context("run histogram2d_demo app")
-        .map_err(anyhow::Error::from)
+    crate::run_native_with_compat_driver(config, app, driver).context("run histogram2d_demo app")
 }
 
 #[cfg(target_arch = "wasm32")]

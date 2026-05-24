@@ -4,7 +4,7 @@ use super::{finish, target};
 
 pub(super) fn handle_edge_reroute_double_click<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut EventCx<'_, H>,
+    cx: &mut impl pointer_down_double_click_cx::PointerDownDoubleClickCx<H>,
     snapshot: &ViewSnapshot,
     position: Point,
     click_count: u8,
@@ -22,8 +22,9 @@ pub(super) fn handle_edge_reroute_double_click<H: UiHost, M: NodeGraphCanvasMidd
         return false;
     };
 
-    let outcome = canvas.plan_canvas_split_edge_reroute(cx.app, edge_id, position);
-    canvas.execute_split_edge_reroute_outcome(cx.app, cx.window, Some("Insert Reroute"), outcome);
+    let window = cx.window();
+    let outcome = canvas.plan_canvas_split_edge_reroute(cx.host(), edge_id, position);
+    canvas.execute_split_edge_reroute_outcome(cx.host(), window, Some("Insert Reroute"), outcome);
     finish::finish_double_click(cx);
     true
 }
