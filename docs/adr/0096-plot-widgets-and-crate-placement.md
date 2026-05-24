@@ -157,8 +157,7 @@ should remain retained and cache-driven.
 
 ## Follow-ups (P0)
 
-- Implement `fret-plot` as a policy-heavy retained widget first (via `fret-ui`'s
-  `unstable-retained-bridge`), to avoid expanding the declarative element contract prematurely.
+- Implemented `fret-plot` initially as a retained widget, then migrated the first-party/default path to declarative plot panels and removed the `fret-ui/unstable-retained-bridge` dependency.
 - Start with a line plot that supports one or more series (the single-series case should stay
   frictionless), plus axes + pan/zoom + tooltip.
 - Validate correctness under clip/transform/strict ordering.

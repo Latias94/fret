@@ -439,7 +439,7 @@ Notes:
 
 **Use it when:** you are rendering UI (apps or portable component libraries).
 
-**Notes:** feature flags include `unstable-retained-bridge` (compat retained widgets). The window-scoped layout engine v2 is the default layout engine in `fret-ui` (no feature flag).
+**Notes:** the former `unstable-retained-bridge` compatibility feature has been removed. The window-scoped layout engine v2 is the default layout engine in `fret-ui` (no feature flag).
 
 ### `fret-app`
 

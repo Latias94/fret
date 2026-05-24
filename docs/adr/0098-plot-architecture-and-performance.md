@@ -228,8 +228,11 @@ internals, plots should expose:
 
 - `Plot3dCanvas` that emits `SceneOp::ViewportSurface { target, ... }`,
 - viewport input forwarding helpers built on `ViewportMapping` -> `ViewportInputEvent` (ADR 0132):
-  - retained: `crates/fret-ui/src/retained_bridge.rs` (`viewport_surface::handle_viewport_surface_input`)
+  - shared mapping: `crates/fret-core/src/input.rs` (`ViewportInputEvent::from_mapping_window_point*`)
   - declarative: `ecosystem/fret-ui-kit/src/declarative/viewport_surface.rs` (`viewport_surface_panel`)
+  - retained bridge note: the no-user retained viewport forwarding helper was removed during the
+    retained-bridge exit workstream; retained compatibility islands should use the core mapping
+    helpers directly if they still need viewport forwarding.
 - optional overlay primitives (axes gizmo, HUD text) implemented as regular `SceneOp::Text/Path/Quad`
   above the surface.
 
