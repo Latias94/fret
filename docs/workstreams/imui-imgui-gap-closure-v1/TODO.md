@@ -1296,4 +1296,44 @@ opening the slice.
       Result: `floating_window_resize.rs` now owns the resize-state clamp/snap/update logic via
       `prepare_resize_state(...)`, while `floating_window_on_area.rs` only wires the resulting
       state into the shell, chrome, and stack assembly.
-- [ ] Use that evidence to choose the next cleanup slice.
+- [x] Split the floating-window resize drag snapshot read out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into the resize owner without
+      changing the public IMUI surface.
+      Result: `floating_window_resize.rs` now owns the handle enumeration, drag-kind lookup, drag
+      snapshot shape, and collapsed-aware resizing signal, while `floating_window_on_area.rs`
+      consumes `current_resize_snapshot(...)` / `prepare_resize_state(...)` as owner outputs.
+- [x] Split the floating-window shell/container composition out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into a dedicated internal helper
+      without changing the public IMUI surface.
+      Result: `floating_window_shell.rs` now owns the window frame, title-bar container, clipped
+      body, blocker, and resize stack assembly, while `floating_window_on_area.rs` only wires the
+      prepared owner outputs together.
+- [x] Split the floating-window resize-handle layout mapping out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` into a private helper without
+      changing the public IMUI surface.
+      Result: `resize_handle_layout(...)` now owns the repeated cursor/inset/size mapping, and
+      `resize_handle_element(...)` only wires that layout into the pointer-region behavior.
+- [x] Split the floating-window resize drag application out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs::prepare_resize_state(...)` into a
+      private helper without changing the public IMUI surface.
+      Result: `apply_resize_drag(...)` now owns the handle-driven size/position mutation, and
+      `prepare_resize_state(...)` only handles snapshot selection, collapse checks, and pixel snap.
+- [x] Split the floating-window shell `ContainerProps` / `ColumnProps` construction out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_shell.rs::floating_window_shell_element(...)`
+      into private helpers without changing the public IMUI surface.
+      Result: `window_frame_props(...)`, `shell_column_props(...)`,
+      `title_bar_container_props(...)`, and `clipped_body_props(...)` now own shell frame/layout
+      properties while the shell element only composes owner outputs.
+- [x] Split the floating-window title-bar `RowProps` / drag-surface `PointerRegionProps` /
+      close-button props construction out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs::floating_window_title_bar_row(...)`
+      into a dedicated internal helper module without changing the public IMUI surface.
+      Result: `floating_window_title_bar_props.rs` now owns the title-row layout, drag-surface
+      layout, and close-button accessibility/size props, while `floating_window_title_bar.rs`
+      keeps title-bar behavior orchestration and text-role helpers.
+- [x] Split the floating-window content scroll/container layout construction out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_content.rs::floating_window_content_element(...)`
+      into private helpers without changing the public IMUI surface.
+      Result: `floating_window_content_props.rs` now owns the content surface layout, scroll
+      layout, and container props, while `floating_window_content.rs` keeps the pointer/focus
+      orchestration and consumes the prepared owner outputs.

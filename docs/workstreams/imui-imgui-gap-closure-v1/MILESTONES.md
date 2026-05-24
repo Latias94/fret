@@ -1121,3 +1121,34 @@ blocker, resize flags, activation policy, and handle test ids into the resize ow
 `prepare_resize_state(...)` inside `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs`.
 `floating_window_on_area.rs` no longer owns the `FloatWindowState` clamp/snap loop or the resize
 handle test-id tuple assembly.
+
+2026-05-24 resize-snapshot owner split result: the resize owner now also owns active resize handle
+discovery through `current_resize_snapshot(...)`. `floating_window_on_area.rs` no longer enumerates
+`FloatWindowResizeHandle` values, reads drag runtime snapshots directly, or derives the chrome
+`resizing` signal from tuple-shaped resize state.
+
+2026-05-24 shell owner split result: the remaining floating-window frame/container composition now
+lives in `ecosystem/fret-ui-kit/src/imui/floating_window_shell.rs`. `floating_window_on_area.rs`
+no longer owns the title-bar container, clipped body, blocker, or resize stack assembly.
+
+2026-05-24 resize-handle layout helper result: the repeated cursor/inset/size mapping now lives in
+`resize_handle_layout(...)` inside `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs`.
+`resize_handle_element(...)` now just consumes that helper and keeps the pointer-region wiring.
+
+2026-05-24 resize-drag application helper result: the handle-driven size/position mutation now
+lives in `apply_resize_drag(...)` inside `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs`.
+`prepare_resize_state(...)` now keeps the snapshot/collapse/snap orchestration only.
+
+2026-05-24 shell props helper result: `window_frame_props(...)`, `shell_column_props(...)`,
+`title_bar_container_props(...)`, and `clipped_body_props(...)` now own the frame/container property
+construction inside `ecosystem/fret-ui-kit/src/imui/floating_window_shell.rs`. The public shell
+helper now only composes the prepared title row, content, blocker, and resize stack.
+
+2026-05-24 title-bar props helper result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_title_bar_props.rs` now owns title-row layout,
+drag-surface layout, and close-button accessibility/size props. `floating_window_title_bar.rs`
+keeps keyboard/click behavior orchestration plus the close-glyph text-role helper.
+
+2026-05-24 content props helper result: `ecosystem/fret-ui-kit/src/imui/floating_window_content_props.rs`
+now owns content surface layout, scroll layout, and container props. `floating_window_content.rs`
+keeps the pointer/focus orchestration and consumes the prepared content owner outputs.

@@ -1,15 +1,12 @@
 use std::sync::Arc;
 
 use fret_authoring::UiWriter as _;
-use fret_core::{KeyCode, Px, SemanticsRole};
+use fret_core::KeyCode;
 use fret_runtime::Model;
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHostExt as _;
-use fret_ui::element::{
-    AnyElement, LayoutStyle, Length, PointerRegionProps, PressableA11y, PressableProps, RowProps,
-    SpacingLength,
-};
+use fret_ui::element::AnyElement;
 
 pub(super) fn floating_window_title_bar_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -21,15 +18,7 @@ pub(super) fn floating_window_title_bar_row<H: UiHost>(
     resizable_layout: bool,
     options: super::FloatingWindowOptions,
 ) -> AnyElement {
-    let mut row = RowProps::default();
-    row.layout.size.width = if resizable_layout {
-        Length::Fill
-    } else {
-        Length::Auto
-    };
-    row.layout.size.height = Length::Fill;
-    row.gap = SpacingLength::Px(Px(4.0));
-    row.align = fret_ui::element::CrossAlign::Center;
+    let row = super::floating_window_title_bar_props::title_bar_row_props(resizable_layout);
 
     let title = title.clone();
     let title_bar_test_id = title_bar_test_id.clone();
@@ -53,29 +42,10 @@ pub(super) fn floating_window_title_bar_row<H: UiHost>(
     let drag_surface = super::floating_area_drag_surface_element(
         cx,
         area,
-        PointerRegionProps {
-            layout: {
-                let mut layout = LayoutStyle::default();
-                layout.size.width = if resizable_layout {
-                    Length::Fill
-                } else {
-                    Length::Auto
-                };
-                layout.size.height = Length::Fill;
-                if resizable_layout {
-                    // Ensure the drag surface claims remaining row space (and can shrink)
-                    // instead of being measured in min-content mode (which can force wrapped
-                    // titles like "Window" + "A").
-                    layout.flex.grow = 1.0;
-                    layout.flex.shrink = 1.0;
-                    layout.flex.basis = Length::Px(Px(0.0));
-                    layout.size.min_width = Some(Length::Px(Px(0.0)));
-                }
-                layout
-            },
-            enabled: can_interact,
-            ..Default::default()
-        },
+        super::floating_window_title_bar_props::title_bar_drag_surface_props(
+            resizable_layout,
+            can_interact,
+        ),
         on_left_double_click,
         can_move,
         options.activate_on_click,
@@ -117,16 +87,9 @@ pub(super) fn floating_window_title_bar_row<H: UiHost>(
         .then(|| open_model.clone())
         .flatten()
         .map(|open| {
-            let mut props = PressableProps::default();
-            props.a11y = PressableA11y {
-                role: Some(SemanticsRole::Button),
-                label: Some(Arc::from("Close")),
-                test_id: Some(close_button_test_id.clone()),
-                ..Default::default()
-            };
-            props.layout.size.width = Length::Px(Px(20.0));
-            props.layout.size.height = Length::Px(Px(20.0));
-            props.layout.flex.shrink = 0.0;
+            let props = super::floating_window_title_bar_props::title_bar_close_button_props(
+                close_button_test_id.clone(),
+            );
             cx.pressable(props, move |cx, _state| {
                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
                     let _ = host.update_model(&open, |v: &mut bool| {
@@ -158,8 +121,8 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Rect, Size, TextOverflow, TextWrap};
-    use fret_ui::element::ElementKind;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size, TextOverflow, TextWrap};
+    use fret_ui::element::{ElementKind, Length};
     use fret_ui::elements;
 
     fn test_bounds() -> Rect {

@@ -3941,6 +3941,144 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
+2026-05-24 floating resize snapshot owner split:
+
+- Source gap before fix: `floating_window_on_area.rs` still enumerated each
+  `FloatWindowResizeHandle`, looked up resize drag kinds, read active drag snapshots, and derived
+  the chrome `resizing` signal from a tuple before calling the resize owner.
+- `floating_window_resize.rs` now owns `FloatingWindowResizeSnapshot` and
+  `current_resize_snapshot(...)`, keeping handle discovery and drag snapshot shape in the same
+  owner as `prepare_resize_state(...)`, `resize_stack_element(...)`, and the resize handle elements.
+- `FloatingWindowResizeStateOutput` now carries the collapsed-aware `resizing` signal, so
+  `floating_window_on_area.rs` consumes resize owner outputs instead of knowing tuple fields.
+- `tools/gate_imui_workstream_source.py` now requires the snapshot helper/owner shape and forbids
+  resize handle enumeration, resize-kind lookup, and direct drag snapshot reads from returning to
+  `floating_window_on_area.rs`.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-kit --check`,
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo nextest run -p fret-imui floating --no-fail-fast`,
+  `python tools/gate_imui_workstream_source.py`,
+  `python tools/gate_imui_facade_teaching_source.py`,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
+
+2026-05-24 floating resize handle layout helper:
+
+- Source gap before fix: `resize_handle_element(...)` still repeated the same cursor/inset/size
+  assembly across all eight resize handles.
+- `resize_handle_layout(...)` now owns that repeated mapping, and
+  `resize_handle_element(...)` only consumes the helper output before wiring the pointer-region
+  behavior.
+- `tools/gate_imui_workstream_source.py` now requires the helper and forbids the old inline
+  `match handle` layout assembly from returning to `resize_handle_element(...)`.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-kit --check`,
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo test -p fret-ui-kit --features imui --lib
+  floating_window_close_glyph_uses_shared_chrome_glyph_text_role`,
+  `cargo nextest run -p fret-imui floating --no-fail-fast`,
+  `python tools/gate_imui_workstream_source.py`,
+  `python tools/gate_imui_facade_teaching_source.py`,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
+
+2026-05-24 floating resize drag application helper:
+
+- Source gap before fix: `prepare_resize_state(...)` still owned the handle-driven size/position
+  mutation loop directly.
+- `apply_resize_drag(...)` now owns that mutation loop, and `prepare_resize_state(...)` keeps only
+  snapshot selection, collapse checks, and pixel snapping.
+- `tools/gate_imui_workstream_source.py` now requires the helper and the delegated call site, so
+  the drag mutation block cannot quietly move back into `prepare_resize_state(...)`.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-kit --check`,
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo test -p fret-ui-kit --features imui --lib
+  floating_window_close_glyph_uses_shared_chrome_glyph_text_role`,
+  `cargo nextest run -p fret-imui floating --no-fail-fast`,
+  `python tools/gate_imui_workstream_source.py`,
+  `python tools/gate_imui_facade_teaching_source.py`,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
+
+2026-05-24 floating shell owner split:
+
+- Source gap before fix: `floating_window_on_area.rs` still owned the window frame, title-bar
+  container, clipped body, blocker, and resize stack assembly even after the resize snapshot/state
+  logic had been extracted.
+- `floating_window_shell.rs` now owns that remaining frame/container composition and consumes the
+  prepared title row, content, resize size, resize flags, and handle ids.
+- `floating_window_on_area.rs` now only wires the prepared owner outputs together and no longer
+  builds the shell container tree inline.
+- `tools/gate_imui_workstream_source.py` now requires the shell helper and forbids the remaining
+  frame/container assembly from returning to `floating_window_on_area.rs`.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-kit --check`,
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo test -p fret-ui-kit --features imui --lib
+  floating_window_close_glyph_uses_shared_chrome_glyph_text_role`,
+  `cargo nextest run -p fret-imui floating --no-fail-fast`,
+  `python tools/gate_imui_workstream_source.py`,
+  `python tools/gate_imui_facade_teaching_source.py`,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
+
+2026-05-24 floating shell props helper:
+
+- Source gap before fix: `floating_window_shell_element(...)` still built window frame, shell
+  column, title-bar container, and clipped-body props inline even after the shell composition moved
+  out of `floating_window_on_area.rs`.
+- `floating_window_shell.rs` now keeps those construction details behind
+  `window_frame_props(...)`, `shell_column_props(...)`, `title_bar_container_props(...)`, and
+  `clipped_body_props(...)`; the shell element only composes already-prepared owner outputs.
+- `tools/gate_imui_workstream_source.py` now requires those private helpers, so the shell helper
+  cannot drift back into one large inline property block unnoticed.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-kit --check`,
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo test -p fret-ui-kit --features imui --lib
+  floating_window_close_glyph_uses_shared_chrome_glyph_text_role`,
+  `cargo nextest run -p fret-imui floating --no-fail-fast`,
+  `python tools/gate_imui_workstream_source.py`,
+  `python tools/gate_imui_facade_teaching_source.py`,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
+
+2026-05-24 floating title-bar props helper:
+
+- Source gap before fix: `floating_window_title_bar_row(...)` still built row layout,
+  drag-surface `PointerRegionProps`, and close-button accessibility/size props inline while also
+  owning keyboard, double-click, movement, and close behavior orchestration.
+- `floating_window_title_bar_props.rs` now owns `title_bar_row_props(...)`,
+  `title_bar_drag_surface_props(...)`, `title_bar_drag_surface_layout(...)`, and
+  `title_bar_close_button_props(...)`. `floating_window_title_bar.rs` consumes those helpers while
+  retaining the title/close behavior wiring and the shared close-glyph text role.
+- `tools/gate_imui_workstream_source.py` now requires the title-bar props helper module and forbids
+  the old inline prop builders from returning to `floating_window_title_bar.rs`.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-kit --check`,
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo test -p fret-ui-kit --features imui --lib
+  floating_window_close_glyph_uses_shared_chrome_glyph_text_role`,
+  `cargo nextest run -p fret-imui floating --no-fail-fast`,
+  `python tools/gate_imui_workstream_source.py`,
+  `python tools/gate_imui_facade_teaching_source.py`,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
+
+2026-05-24 floating content props helper:
+
+- Source gap before fix: `floating_window_content_element(...)` still built the scroll layout,
+  content container props, and surface layout inline after the content/blocker orchestration moved
+  out of `floating_window_on_area.rs`.
+- `floating_window_content_props.rs` now owns `content_surface_layout(...)`,
+  `content_scroll_layout(...)`, and `content_container_props(...)`; the content element consumes
+  those helpers while keeping the pointer/focus orchestration and the public IMUI surface stable.
+- `tools/gate_imui_workstream_source.py` now requires the content props helper module and forbids
+  the old inline layout/property builders from returning to `floating_window_content.rs`.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-kit --check`,
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo nextest run -p fret-imui floating --no-fail-fast`,
+  `python tools/gate_imui_workstream_source.py`,
+  `python tools/gate_imui_facade_teaching_source.py`,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
+
 ## P5 Fearless Refactor Execution
 
 - Internal owner split landed for floating-window resize/chrome orchestration:

@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use fret_ui::UiHost;
-use fret_ui::element::{
-    AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, ScrollAxis,
-    ScrollProps,
-};
+use fret_ui::element::{AnyElement, PointerRegionProps, ScrollAxis, ScrollProps};
 use fret_ui::{ElementContext, GlobalElementId};
 
 pub(super) fn floating_window_content_element<H: UiHost, Build>(
@@ -19,15 +16,8 @@ where
 {
     let content_container = move |cx: &mut ElementContext<'_, H>| {
         let handle = cx.slot_state(fret_ui::scroll::ScrollHandle::default, |h| h.clone());
-        let mut scroll_layout = LayoutStyle::default();
-        if resizable_layout {
-            scroll_layout.size.width = Length::Fill;
-            scroll_layout.size.height = Length::Fill;
-        } else {
-            scroll_layout.size.width = Length::Auto;
-            scroll_layout.size.height = Length::Auto;
-        }
-        scroll_layout.overflow = Overflow::Clip;
+        let scroll_layout =
+            super::floating_window_content_props::content_scroll_layout(resizable_layout);
 
         cx.scroll(
             ScrollProps {
@@ -38,16 +28,7 @@ where
             },
             move |cx| {
                 vec![cx.container(
-                    {
-                        let mut props = ContainerProps::default();
-                        props.layout.size.width = if resizable_layout {
-                            Length::Fill
-                        } else {
-                            Length::Auto
-                        };
-                        props.padding = fret_core::Edges::all(fret_core::Px(6.0)).into();
-                        props
-                    },
+                    super::floating_window_content_props::content_container_props(resizable_layout),
                     move |cx| {
                         let mut out = Vec::new();
                         let mut ui = super::ImUiFacade {
@@ -64,17 +45,7 @@ where
     };
 
     if options.inputs_enabled && (options.activate_on_click || options.focus_on_click) {
-        let layout = {
-            let mut layout = LayoutStyle::default();
-            if resizable_layout {
-                layout.size.width = Length::Fill;
-                layout.size.height = Length::Fill;
-            } else {
-                layout.size.width = Length::Auto;
-                layout.size.height = Length::Auto;
-            }
-            layout
-        };
+        let layout = super::floating_window_content_props::content_surface_layout(resizable_layout);
         let focus_on_click = options.focus_on_click;
         let activate_on_click = options.activate_on_click;
         cx.pointer_region(
