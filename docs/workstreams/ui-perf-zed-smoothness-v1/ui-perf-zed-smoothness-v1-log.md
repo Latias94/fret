@@ -17706,3 +17706,24 @@ Interpretation:
 
 - The no-overlay planned replay fast path is closed. The next follow-on should target the remaining
   Canvas exclusive / paint-widget overhead outside row setup, not row setup again.
+
+## 2026-05-24 05:45:00 +08:00 (Canvas-exclusive lane opened)
+
+Opened `docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/` as the next bounded
+follow-on after the r65 fast-path closeout.
+
+Initial focus:
+
+- source audit of the remaining `paint.widget` / `Canvas` hot path
+- target-machine attribution for the residual Canvas exclusive owner outside row setup
+
+Evidence:
+
+- `docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/WORKSTREAM.json`
+- `docs/workstreams/editor-canvas-paint-replay-fast-path-v1/CLOSEOUT_AUDIT_2026-05-24.md`
+
+Decision:
+
+- Keep row-setup, resource-touch, and plan-cache lanes closed.
+- Do not widen this lane beyond the remaining Canvas exclusive / paint-widget owner until the
+  source audit proves a narrower boundary.

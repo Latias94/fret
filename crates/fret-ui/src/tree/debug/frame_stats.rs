@@ -193,6 +193,8 @@ pub struct UiDebugFrameStats {
     pub paint_cache_hit_check_time: Duration,
     /// Total wall time spent executing `Widget::paint()` (including push/pop transforms).
     pub paint_widget_time: Duration,
+    /// Total wall time spent executing Canvas `on_paint` callbacks inside `Widget::paint()`.
+    pub paint_canvas_on_paint_time: Duration,
     /// Total wall time spent recording paint observations (`observed_in_paint` + globals).
     pub paint_observation_record_time: Duration,
     /// Total wall time spent iterating element-runtime observed models inside `ElementHostWidget::paint_impl`.

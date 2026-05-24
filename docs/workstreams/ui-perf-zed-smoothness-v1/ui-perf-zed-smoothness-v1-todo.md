@@ -28,13 +28,14 @@ Conventions:
 - “Perf gate” items should land with a runnable `fretboard-dev diag perf` command and a baseline/threshold update.
 - “Fearless refactor” items should include: (1) perf evidence, (2) correctness evidence, (3) rollback plan.
 
-## Current local checkpoint (updated 2026-05-24; r62 closeout passed, r63 resource-touch active)
+## Current local checkpoint (updated 2026-05-24; r65 fast-path closeout passed, r66 canvas-exclusive active)
 
 The target-machine Windows RTX4090 editor-paint closeout has passed and selected `canvas-paint-replay` as the
-next owner. The first replay-bookkeeping slice and the overlapping-window replay-plan cache slice are both closed.
-Continue baseline-neutral local work only when it has its own evidence and does not update checked-in baselines; the
-next implementation-heavy slice should target the remaining Canvas replay owner rather than continue treating
-clean-geometry micro-optimizations or the closed plan-cache lanes as the primary owner.
+next owner. The replay-bookkeeping, overlapping-window replay-plan cache, preedit, resource-touch, row-setup, and
+fast-path slices are closed. Continue baseline-neutral local work only when it has its own evidence and does not
+update checked-in baselines; the next implementation-heavy slice should target the remaining Canvas exclusive /
+paint.widget owner rather than continue treating clean-geometry micro-optimizations or the closed plan-cache lanes as
+the primary owner.
 
 - [x] Open and land the baseline-neutral overlapping-window replay-plan cache follow-on.
   - Lane: `docs/workstreams/editor-canvas-paint-replay-plan-cache-v1/WORKSTREAM.json`.
@@ -107,10 +108,17 @@ clean-geometry micro-optimizations or the closed plan-cache lanes as the primary
     `setup_p95/sum=62/9418us`, complex-wheel reports `44/1280us`, and closeout still selects
     `owner=canvas-paint-replay`.
   - Guardrail: do not reopen plan-cache or resource-touch lanes unless fresh evidence shows a mechanism regression.
-- [ ] Open the next bounded Canvas replay implementation follow-on from the r64 closeout.
+- [x] Open the next bounded Canvas replay implementation follow-on from the r64 closeout.
   - Candidate owner shape: remaining planned row replay setup/touch/ops cluster. Treat these as one row replay
     overhead owner rather than chasing a single sub-counter in isolation.
   - Guardrail: no checked-in baseline changes without target-machine closeout artifacts.
+  - Result: opened `docs/workstreams/editor-canvas-paint-replay-fast-path-v1/WORKSTREAM.json` and closed it after
+    the r65 target-machine closeout.
+- [x] Open the next bounded Canvas replay implementation follow-on from the r65 closeout.
+  - Candidate owner shape: remaining Canvas exclusive / paint.widget overhead outside row setup.
+  - Guardrail: keep row-setup, hosted-resource touch, and replay-plan cache lanes closed.
+  - Result: opened `docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/WORKSTREAM.json` as the next
+    bounded lane.
 - [x] Complete the formal Windows RTX4090 editor-paint closeout when the target machine is available.
   - Required shape: run the validation directory without `--allow-non-windows`, run the attribution directory with
     `--with-paint-perf`, then pass artifact verifier and closeout without `--allow-non-windows`.

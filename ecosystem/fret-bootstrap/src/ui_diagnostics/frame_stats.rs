@@ -154,6 +154,8 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub paint_widget_time_us: u64,
     #[serde(default)]
+    pub paint_canvas_on_paint_time_us: u64,
+    #[serde(default)]
     pub paint_observation_record_time_us: u64,
     #[serde(default)]
     pub paint_host_widget_observed_models_time_us: u64,
@@ -1049,6 +1051,9 @@ impl UiFrameStatsV1 {
             paint_cache_key_time_us: stats.paint_cache_key_time.as_micros() as u64,
             paint_cache_hit_check_time_us: stats.paint_cache_hit_check_time.as_micros() as u64,
             paint_widget_time_us: stats.paint_widget_time.as_micros() as u64,
+            paint_canvas_on_paint_time_us: stats
+                .paint_canvas_on_paint_time
+                .as_micros() as u64,
             paint_observation_record_time_us: stats.paint_observation_record_time.as_micros()
                 as u64,
             paint_host_widget_observed_models_time_us: stats

@@ -536,6 +536,12 @@ pub(crate) const PAINT_WIDGET_TIME_US: PerfKey = trace_timing_key(
     "paint",
     PerfKeyAggregate::P95,
 );
+pub(crate) const PAINT_CANVAS_ON_PAINT_TIME_US: PerfKey = trace_timing_key(
+    "paint_canvas_on_paint_time_us",
+    "paint.canvas_on_paint",
+    "paint",
+    PerfKeyAggregate::P95,
+);
 pub(crate) const PAINT_INPUT_CONTEXT_TIME_US: PerfKey = trace_timing_key(
     "paint_input_context_time_us",
     "paint.input_context",
@@ -1164,6 +1170,7 @@ pub(crate) const REGISTERED_FRAME_STATS_KEYS: &[PerfKey] = &[
     PAINT_CACHE_KEY_TIME_US,
     PAINT_CACHE_HIT_CHECK_TIME_US,
     PAINT_WIDGET_TIME_US,
+    PAINT_CANVAS_ON_PAINT_TIME_US,
     PAINT_OBSERVATION_RECORD_TIME_US,
     PAINT_HOST_WIDGET_OBSERVED_MODELS_TIME_US,
     PAINT_HOST_WIDGET_OBSERVED_MODELS_ITEMS,

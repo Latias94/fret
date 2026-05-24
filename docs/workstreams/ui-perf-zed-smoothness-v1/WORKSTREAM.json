@@ -135,6 +135,7 @@
     "docs/workstreams/editor-canvas-paint-replay-row-setup-v1/CLOSEOUT_AUDIT_2026-05-24.md",
     "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/WORKSTREAM.json",
     "docs/workstreams/editor-canvas-paint-replay-fast-path-v1/CLOSEOUT_AUDIT_2026-05-24.md",
+    "docs/workstreams/editor-canvas-paint-replay-canvas-exclusive-v1/WORKSTREAM.json",
     "target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/summary.json",
     "target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-attrib/summary.json",
     "target/fret-diag/editor-paint-contract-validate-20260524-r65-row-fast-path-baseline/artifact-verification.summary.json",

@@ -25,6 +25,16 @@ impl<H: UiHost> UiTree<H> {
         true
     }
 
+    pub(crate) fn debug_record_paint_canvas_on_paint(&mut self, elapsed: Duration) {
+        if !self.debug_enabled {
+            return;
+        }
+        self.debug_stats.paint_canvas_on_paint_time = self
+            .debug_stats
+            .paint_canvas_on_paint_time
+            .saturating_add(elapsed);
+    }
+
     pub(crate) fn debug_record_paint_host_widget_observed_models(
         &mut self,
         elapsed: Duration,
