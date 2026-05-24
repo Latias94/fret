@@ -374,6 +374,13 @@ date: 2026-05-12
     The slice found a mechanism observability gap: `SemanticsDecoration` and `SemanticsProps`
     could not stamp collection metadata, so non-pressable retained rows were not queryable without
     policy-layer workarounds.
+- [x] Add retained selected/action-state bounce coverage for Virtual List row-cache freshness.
+  - Result: `ui-gallery-virtual-list-retained-selected-action-state-bounce.json` now starts on the
+    dev-only Virtual List Torture page, selects row 2, clears selection while the row is detached,
+    and reattaches the row with `selected=false` and `invoke=true` under retained keep-alive plus
+    row-cache. The first attempt exposed a suite-contract mismatch: the minimal retained
+    window-boundary suite forces `FRET_UI_GALLERY_VLIST_MINIMAL=1`, so this gate moved into its own
+    `ui-gallery-vlist-retained-action-state` suite instead of sharing the minimal boundary row.
 - [x] Add a retained/windowed non-list semantics mutation gate, such as tree hierarchy
   `level`/expanded metadata on FileTree/Tree torture or row action-state mutation on retained
   DataTable rows.
@@ -1210,6 +1217,15 @@ date: 2026-05-12
     The focused run and suite run both pass without manually setting the environment variable,
     proving the promoted gate is self-contained for the non-retained view-cache
     `inputs_change` invalidation-detail path.
+- [x] Promote provider-sensitive ViewCache lifecycle coverage and Direction docs runtime evidence.
+  - Result: `view_cache_lifecycle_v1.json` now includes provider-state cases that document the
+    contract split for DirectionProvider-like inherited state: a provider-sensitive cache rerenders
+    only when the recipe includes the provider value in `ViewCacheProps::cache_key`; an unkeyed
+    provider-sensitive cache intentionally keeps reusing the first rendered subtree. Focused
+    `fret-ui` tests cover both the explicit-cache-key and documented-unkeyed paths. The existing
+    Direction docs smoke script is now promoted into the `ui-gallery-direction` runtime suite with
+    protocol roundtrip coverage, proving the public shadcn Direction page and provider docs surface
+    remain reachable in diagnostics. No new mechanism or recipe defect was reproduced.
 - [x] Add protocol coverage to the UI Gallery View Cache model-mutation gate.
   - Result: `ui-gallery-view-cache-model-mutation-through-cache.json` now has direct
     `fret-diag-protocol` roundtrip coverage. Fresh focused and suite runtime runs still prove
@@ -1313,6 +1329,14 @@ date: 2026-05-12
     this policy mismatch: all three scripts passed, but the suite failed a retained-only
     non-retained-shift tail check. After rebuilding `fretboard-dev`, the suite passed 3/3 with no
     retained-tail check file.
+- [x] Add an AI transcript append-window refresh companion.
+  - Result: `ui-gallery-ai-transcript-append-window-refresh.json` starts on the non-retained AI
+    Transcript Torture page with an 8-message transcript, proves row 8 is absent before append,
+    appends 100 messages, scrolls the transcript root, and proves rows 8 and 9 materialize in the
+    final bundle. Focused runtime passed with run id `1779479217864`; bounded `diag query test-id`
+    found row 8 and row 9 once each in the focused bundle, and the refreshed
+    `ui-gallery-ai-transcript-retained` suite passed 4/4 with summary
+    `target/fret-diag-ai-transcript-retained-suite-append-window-refresh-v3/sessions/1779479378187-25176/suite.summary.json`.
 - [x] Gate screenshot-corrected Combobox RTL Long Text startup intro overlap.
   - Result:
     `ui-gallery-combobox-rtl-long-text-doc-intro-logical1083-startup-non-overlap.json` starts
@@ -1465,6 +1489,17 @@ date: 2026-05-12
     widget while the stale lower-child path records a cache miss. A third move proves the refreshed
     higher-z dispatch path is cache-reusable. Focused checks passed with Nextest run id
     `093b8a5d-e67a-4b35-ab82-e02389f63173`.
+- [x] Promote higher-z stale hit-path coverage into a UI Gallery runtime gate.
+  - Result:
+    `ui-gallery-hit-test-only-stale-path-cover-move.json` extends the hidden HitTestOnly
+    Paint-Cache Probe page with a cached-root stale-path surface. The first pointer-move over a
+    lower target moves a higher-z cover over the same point from inside the move handler, keeping
+    the move-only path-cache scenario live. The gate then proves the stale cached target path
+    records `hit_test_path_cache_misses_ge(min=1)`, refreshes into a reusable cover path with
+    `hit_test_path_cache_hits_ge(min=1)`, and updates the visible status to
+    `stale_path_hit=cover`. The dedicated `ui-gallery-hit-test-only-paint-cache` suite now passes
+    2/2 with summary
+    `target/fret-diag-hit-test-only-paint-cache-suite-stale-path-v1/sessions/1779415674198-166024/suite.summary.json`.
 - [x] Add a Switch choice-card checked-state semantics runtime gate.
   - Result:
     `ui-gallery-switch-choice-card-checked-state-mutation.json` now starts directly on the Switch
@@ -1752,7 +1787,145 @@ Next slice recommendation:
 
 Next slice recommendation:
 
-- Move from action-state/semantics into a retained or cached root-boundary surface where stale paint,
-  hit-test, or relation state can survive visual success. Avoid adding another Command action-state
-  row unless a new runtime bundle shows filtering or virtualization desynchronizing selection,
+- Move from retained Virtual List row semantics into a cached overlay/root-boundary surface where
+  stale relation edges or hit-test/paint replay can survive visual success. The row-cache selected
+  state path is now covered; prefer a trigger/content or moving cached-source relation gate over
+  adding another list row unless a fresh bundle shows stale `labelled_by`, `controls`, selection,
   disabled semantics, or invoke suppression.
+
+- [x] Add a cached Resizable Combobox relation-bounce root-boundary runtime gate.
+  - Result:
+    `ui-gallery-resizable-view-cache-moving-combobox-relation-bounce.json` now closes a cached
+    Combobox, asserts `controls`/`labelled_by` endpoints are absent while closed, moves the cached
+    source between Resizable panels, reopens, and proves the moved relation edges plus top-side
+    panel-root placement. The first full `ui-gallery-resizable` refresh exposed a real `fret-ui`
+    mechanism regression in the existing multi-viewport Combobox placement row: the overlay fell
+    back to the window outer bounds and chose `bottom`. The fix stores viewport-root bounds with
+    their direct registration owner and preserves them across ancestor/overlay-only frames while
+    still pruning when the registering owner relayouts without the root. Focused Combobox runtime
+    passed with run id `1779465182657`; the four-row `ui-gallery-resizable` suite passed with
+    summary
+    `target/fret-diag-resizable-suite-owner-fix-v1/sessions/1779465226892-77780/suite.summary.json`.
+
+Next slice recommendation:
+
+- Continue cached/root-boundary stale-state discovery outside relation edges: prefer cached overlay
+  dismissal/focus-restore, moving cached action-state/disabled metadata, or another surface where
+  visual placement can pass while stale state survives.
+
+- [x] Add a cached Resizable Combobox Escape focus-restore companion.
+  - Result:
+    `ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore.json` moves the same
+    cached Combobox source from the left Resizable root to the right root, opens the popup, proves
+    focus is in the popup input, presses Escape, and verifies the popup unmounts with focus restored
+    to the live moved trigger. No new defect reproduced. Focused runtime passed with run id
+    `1779466372607`; the five-row `ui-gallery-resizable` suite passed with summary
+    `target/fret-diag-resizable-suite-focus-restore-v1/sessions/1779466397357-72132/suite.summary.json`.
+
+Next slice recommendation:
+
+- Continue cached/root-boundary stale-state discovery on moving cached action-state/disabled
+  metadata or another dismissal-policy surface; relation edges and Escape focus restore are now
+  covered for the moving cached Combobox fixture.
+
+- [x] Add a moving cached Combobox disabled/action-state companion.
+  - Result:
+    `ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state.json` toggles the
+    diagnostics-only `In Review` option to disabled, moves the cached Combobox source from the left
+    Resizable root to the right root, reopens the popup, and proves the moved item exports
+    `disabled=true` and `invoke=false`. The fixture now includes the disabled state in an explicit
+    cached-subtree key, which is the intended contract for state-sensitive cached contents. No new
+    defect reproduced. Focused runtime passed with run id `1779467419798`; the six-row
+    `ui-gallery-resizable` suite passed with summary
+    `target/fret-diag-resizable-suite-disabled-action-state-v1/sessions/1779467543831-72756/suite.summary.json`.
+
+Next slice recommendation:
+
+- Leave the moving cached Combobox cluster for now. Relation edges, Escape focus restore, placement,
+  and disabled action-state are covered; next prefer a different overlay family with root-boundary
+  dismissal policy after source/root movement, or an authoring/contract guard for state-sensitive
+  cached subtrees that must carry explicit cache keys.
+
+- [x] Add a moving cached Popover outside-press root-boundary companion.
+  - Result:
+    `ui-gallery-resizable-view-cache-moving-popover-outside-press.json` opens and closes a cached
+    Popover in the left Resizable root, moves the cached source to the right root, reopens it, then
+    clicks the opposite-panel underlay. The gate proves both Popover opens use top-side placement
+    against the panel viewport root and the outside press both dismisses the moved Popover and
+    activates the underlay. No new defect reproduced. Focused runtime passed with run id
+    `1779469463236`; the seven-row `ui-gallery-resizable` suite passed with summary
+    `target/fret-diag-resizable-suite-popover-outside-press-v1/sessions/1779469537437-26788/suite.summary.json`.
+
+Next slice recommendation:
+
+- Resizable now covers multi-viewport placement, moving cached Combobox relation/focus/action-state,
+  and moving cached Popover outside-press click-through. Prefer leaving this cluster unless a fresh
+  bundle shows family-specific root-boundary drift.
+
+- [x] Add ContextMenu Basic typeahead plus no-match/buffer-timeout recipe fixture coverage.
+  - Result:
+    the recipe typeahead fixture now includes ContextMenu open-menu printable-key matching,
+    no-match focus preservation, and buffer-timeout stale-prefix reset cases. The UI Gallery
+    `ui-gallery-context-menu-basic-typeahead-reload.json` gate opens Basic by right click, proves
+    ArrowDown enters `Back`, printable `r` focuses `Reload`, Enter dispatches
+    `ui_gallery.context_menu.basic.reload`, and the menu closes. No ContextMenu recipe/runtime
+    defect was reproduced. Focused runtime passed with run id `1779472143821`; the refreshed
+    `ui-gallery-context-menu` suite passed 5/5 with summary
+    `target/fret-diag-context-menu-suite-typeahead-reload-v1/sessions/1779472199452-77576/suite.summary.json`.
+
+Next slice recommendation:
+
+- Leave the ContextMenu Basic cluster unless submenu-specific typeahead parity evidence appears.
+  If continuing recipe typeahead, the remaining narrow companion is nested submenu typeahead;
+  otherwise prefer a fresh retained/cached relation or action-state mutation surface.
+
+- [x] Add a ContextMenu nested submenu typeahead companion.
+  - Result:
+    the recipe typeahead fixture now includes ContextMenu submenu-open printable-key matching after
+    keyboard submenu focus transfer. The UI Gallery
+    `ui-gallery-context-menu-submenu-typeahead-name-window.json` gate opens the Submenu example by
+    right click, enters root roving focus, moves to `More Tools`, opens the submenu with
+    `ArrowRight`, proves focus lands on `Save Page...`, uses printable `n` to focus
+    `Name Window...`, dispatches `ui_gallery.context_menu.submenu.name_window` with Enter, and
+    observes menu closure. No ContextMenu recipe/runtime defect was reproduced. Focused runtime
+    passed with run id `1779473864097`; the refreshed `ui-gallery-context-menu` suite passed 6/6
+    with summary
+    `target/fret-diag-context-menu-suite-submenu-typeahead-v1/sessions/1779473909388-74436/suite.summary.json`.
+
+Next slice recommendation:
+
+- Leave recipe typeahead for now. Select trigger, DropdownMenu, Menubar, ContextMenu Basic, and
+  ContextMenu nested submenu typeahead are covered; next prefer a fresh retained/cached relation or
+  action-state mutation surface, or a narrow contract guard for state-sensitive cached subtrees that
+  must carry explicit cache keys.
+
+- [x] Add a state-sensitive cached subtree cache-key authoring guard.
+  - Result:
+    `fret_ui::cache_key::bool_key(...)` and `CachedSubtreeProps::cache_key_bool(...)` now make
+    boolean render inputs explicit in cached-subtree keys. The moving cached Combobox fixture uses
+    `.cache_key_bool(review_disabled_now)` instead of ad-hoc integer coercion, the Resizable docs
+    surface rejects the old `u64::from(review_disabled_now)` pattern, and the component author guide
+    documents typed cache-key helpers for state-sensitive cached content. Focused nextest gates
+    passed for `fret-ui`, `fret-ui-kit`, and `fret-ui-gallery`; no new runtime defect was
+    reproduced because the real disabled/action-state runtime path was already covered by F268.
+
+Next slice recommendation:
+
+- Move to a fresh retained/cached relation or action-state mutation surface outside the current
+  Resizable and ContextMenu clusters unless new evidence shows concrete drift there.
+
+- [x] Add a retained Table row-pinning selected/action-state companion.
+  - Result:
+    `ui-gallery-table-retained-row-pinning-keep-pinned-true.json` now pins selected row 0, advances
+    to page 2, and asserts the pinned retained row still exists with `selected=true` and
+    `invoke=true`. The previous gate only proved row existence after pagination; the strengthened
+    gate closes the stale selected/invoke semantics risk for a retained row that survives a
+    pagination/window boundary. No retained Table defect was reproduced. Focused runtime passed with
+    run id `1779480725739`; the seven-row `ui-gallery-table-retained` suite passed with summary
+    `target/fret-diag-table-retained-suite-row-pinning-selected-action-v1/sessions/1779480750237-48512/suite.summary.json`.
+
+Next slice recommendation:
+
+- Treat retained Table row-pinning selected/invoke semantics as covered. Move to another
+  retained/cached relation or action-state mutation surface outside the Resizable, ContextMenu, AI
+  transcript, and retained Table clusters unless a fresh bundle shows concrete drift there.

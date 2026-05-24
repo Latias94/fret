@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("moving_cached_combobox.rs");
+pub const SOURCE: &str = include_str!("moving_cached_popover.rs");
 
 // region: example
 use fret::{AppComponentCx, UiChild};
@@ -11,16 +11,7 @@ use fret_ui_kit::{IntoUiElement, ui};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 use std::sync::Arc;
 
-const TEST_ID_PREFIX: &str = "ui-gallery-resizable-view-cache-moving-combobox";
-
-fn deployment_items(review_disabled: bool) -> Vec<shadcn::ComboboxItem> {
-    vec![
-        shadcn::ComboboxItem::new("draft", "Draft"),
-        shadcn::ComboboxItem::new("review", "In Review").disabled(review_disabled),
-        shadcn::ComboboxItem::new("staged", "Staged"),
-        shadcn::ComboboxItem::new("release", "Release Ready"),
-    ]
-}
+const TEST_ID_PREFIX: &str = "ui-gallery-resizable-view-cache-moving-popover";
 
 fn frame<H: UiHost, B>(
     cx: &mut ElementContext<'_, H>,
@@ -48,8 +39,6 @@ fn controls<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     place_right: Model<bool>,
     place_right_now: bool,
-    review_disabled: Model<bool>,
-    review_disabled_now: bool,
 ) -> AnyElement {
     let target_label = if place_right_now {
         "Move source left"
@@ -71,30 +60,7 @@ fn controls<H: UiHost>(
         .test_id(format!("{TEST_ID_PREFIX}-move-source"))
         .into_element(cx);
 
-    let review_state = if review_disabled_now {
-        "disabled"
-    } else {
-        "enabled"
-    };
-    let review_status = cx
-        .text(format!("review item: {review_state}"))
-        .attach_semantics(state_value(
-            review_state,
-            format!("{TEST_ID_PREFIX}-review-disabled-state"),
-        ));
-    let review_toggle_label = if review_disabled_now {
-        "Enable Review item"
-    } else {
-        "Disable Review item"
-    };
-    let review_toggle = shadcn::Button::new(review_toggle_label)
-        .variant(shadcn::ButtonVariant::Outline)
-        .size(shadcn::ButtonSize::Sm)
-        .toggle_model(review_disabled)
-        .test_id(format!("{TEST_ID_PREFIX}-toggle-review-disabled"))
-        .into_element(cx);
-
-    ui::h_flex(|_cx| vec![status, toggle, review_status, review_toggle])
+    ui::h_flex(|_cx| vec![status, toggle])
         .gap(Space::N2)
         .items_center()
         .wrap()
@@ -103,12 +69,9 @@ fn controls<H: UiHost>(
         .test_id(format!("{TEST_ID_PREFIX}-controls"))
 }
 
-fn cached_combobox_source<H: UiHost>(
+fn cached_popover_source<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-    value: Model<Option<Arc<str>>>,
     open: Model<bool>,
-    query: Model<String>,
-    review_disabled_now: bool,
 ) -> AnyElement {
     let cache_layout = decl_style::layout_style(
         cx.theme(),
@@ -116,18 +79,15 @@ fn cached_combobox_source<H: UiHost>(
     );
 
     cx.cached_subtree_with(
-        CachedSubtreeProps::default()
-            .layout(cache_layout)
-            .cache_key(0x7a59_d111_6a1d_c0de)
-            .cache_key_bool(review_disabled_now),
+        CachedSubtreeProps::default().layout(cache_layout),
         move |cx| {
             let header = ui::h_flex(|cx| {
                 vec![
-                    shadcn::Badge::new("Cached source")
+                    shadcn::Badge::new("Cached popover source")
                         .variant(shadcn::BadgeVariant::Secondary)
                         .into_element(cx),
                     shadcn::raw::typography::muted(
-                        "The source element keeps one callsite identity while the parent panel changes.",
+                        "Open in one root, close, move, then reopen before outside press.",
                     )
                     .into_element(cx),
                 ]
@@ -144,46 +104,55 @@ fn cached_combobox_source<H: UiHost>(
                 .into_element(cx)
                 .test_id(format!("{TEST_ID_PREFIX}-top-gap"));
 
-            let combo = shadcn::Combobox::new(value.clone(), open.clone())
-                .a11y_label("Deployment status")
-                .query_model(query.clone())
-                .test_id_prefix(TEST_ID_PREFIX)
-                .trigger(
-                    shadcn::ComboboxTrigger::new()
-                        .variant(shadcn::ComboboxTriggerVariant::Button)
-                        .width_px(Px(224.0)),
+            let popover = shadcn::Popover::from_open(open.clone())
+                .side(shadcn::PopoverSide::Bottom)
+                .align(shadcn::PopoverAlign::Start)
+                .side_offset(Px(6.0))
+                .into_element_with(
+                    cx,
+                    |cx| {
+                        shadcn::PopoverTrigger::build(
+                            shadcn::Button::new("Open cached popover")
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .test_id(format!("{TEST_ID_PREFIX}-trigger")),
+                        )
+                        .into_element(cx)
+                    },
+                    |cx| {
+                        let title = shadcn::PopoverTitle::new("Cached Popover").into_element(cx);
+                        let description = shadcn::PopoverDescription::new(
+                            "Outside press should dismiss after the cached source moves roots.",
+                        )
+                        .into_element(cx);
+                        let header = shadcn::PopoverHeader::new([title, description])
+                            .into_element(cx)
+                            .test_id(format!("{TEST_ID_PREFIX}-content-header"));
+                        let action = shadcn::Button::new("Inner action")
+                            .variant(shadcn::ButtonVariant::Secondary)
+                            .size(shadcn::ButtonSize::Sm)
+                            .test_id(format!("{TEST_ID_PREFIX}-inner-action"))
+                            .into_element(cx);
+
+                        shadcn::PopoverContent::new([header, action])
+                            .refine_layout(LayoutRefinement::default().w_px(Px(280.0)).min_w_0())
+                            .test_id(format!("{TEST_ID_PREFIX}-content"))
+                            .into_element(cx)
+                    },
                 )
-                .input(shadcn::ComboboxInput::new().placeholder("Pick status"))
-                .content(
-                    shadcn::ComboboxContent::new([
-                        shadcn::ComboboxContentPart::input(
-                            shadcn::ComboboxInput::new().placeholder("Filter status..."),
-                        ),
-                        shadcn::ComboboxContentPart::empty(shadcn::ComboboxEmpty::new(
-                            "No status found.",
-                        )),
-                        shadcn::ComboboxContentPart::list(
-                            shadcn::ComboboxList::new().items(deployment_items(
-                                review_disabled_now,
-                            )),
-                        ),
-                    ])
-                    .width_px(Px(260.0))
-                    .side_offset_px(Px(6.0))
-                    .test_id(format!("{TEST_ID_PREFIX}-content")),
-                )
-                .into_element(cx);
+                .test_id(format!("{TEST_ID_PREFIX}-popover"));
 
             let bottom_probe = ui::container(|_cx| Vec::<AnyElement>::new())
                 .layout(LayoutRefinement::default().w_full().h_px(Px(20.0)))
                 .into_element(cx)
                 .test_id(format!("{TEST_ID_PREFIX}-bottom-probe"));
 
-            [ui::v_flex(|_cx| vec![header, top_gap, combo, bottom_probe])
-                .gap(Space::N2)
-                .items_start()
-                .layout(LayoutRefinement::default().w_full().h_full().min_w_0())
-                .into_element(cx)]
+            [
+                ui::v_flex(|_cx| vec![header, top_gap, popover, bottom_probe])
+                    .gap(Space::N2)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().h_full().min_w_0())
+                    .into_element(cx),
+            ]
         },
     )
     .test_id(format!("{TEST_ID_PREFIX}-cache-root"))
@@ -203,7 +172,30 @@ fn source_panel<H: UiHost>(
     .test_id(format!("{TEST_ID_PREFIX}-{side}-panel"))
 }
 
-fn parking_panel<H: UiHost>(cx: &mut ElementContext<'_, H>, side: &'static str) -> AnyElement {
+fn parking_panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    side: &'static str,
+    underlay_activated: Model<bool>,
+    underlay_activated_now: bool,
+) -> AnyElement {
+    let underlay_state = if underlay_activated_now {
+        "activated"
+    } else {
+        "idle"
+    };
+    let status = cx
+        .text(format!("underlay: {underlay_state}"))
+        .attach_semantics(state_value(
+            underlay_state,
+            format!("{TEST_ID_PREFIX}-underlay-state"),
+        ));
+    let underlay = shadcn::Button::new("Activate underlay")
+        .variant(shadcn::ButtonVariant::Outline)
+        .size(shadcn::ButtonSize::Sm)
+        .toggle_model(underlay_activated)
+        .test_id(format!("{TEST_ID_PREFIX}-underlay"))
+        .into_element(cx);
+
     let body = ui::v_flex(move |cx| {
         vec![
             shadcn::raw::typography::small(if side == "left" {
@@ -213,12 +205,14 @@ fn parking_panel<H: UiHost>(cx: &mut ElementContext<'_, H>, side: &'static str) 
             })
             .into_element(cx),
             shadcn::raw::typography::muted(
-                "The cached Combobox source is parked in the other panel.",
+                "This underlay button must still receive click-through outside press.",
             )
             .into_element(cx),
+            status,
+            underlay,
         ]
     })
-    .gap(Space::N1)
+    .gap(Space::N2)
     .items_center()
     .justify_center()
     .layout(LayoutRefinement::default().w_full().h_full().min_w_0())
@@ -236,56 +230,52 @@ fn parking_panel<H: UiHost>(cx: &mut ElementContext<'_, H>, side: &'static str) 
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
     let fractions = cx.local_model_keyed(
-        "ui-gallery-resizable-view-cache-moving-combobox-fractions",
+        "ui-gallery-resizable-view-cache-moving-popover-fractions",
         || vec![0.5, 0.5],
     );
     let place_right = cx.local_model_keyed(
-        "ui-gallery-resizable-view-cache-moving-combobox-place-right",
+        "ui-gallery-resizable-view-cache-moving-popover-place-right",
         || false,
-    );
-    let value = cx.local_model_keyed(
-        "ui-gallery-resizable-view-cache-moving-combobox-value",
-        || None::<Arc<str>>,
     );
     let open = cx.local_model_keyed(
-        "ui-gallery-resizable-view-cache-moving-combobox-open",
+        "ui-gallery-resizable-view-cache-moving-popover-open",
         || false,
     );
-    let query = cx.local_model_keyed(
-        "ui-gallery-resizable-view-cache-moving-combobox-query",
-        String::new,
-    );
-    let review_disabled = cx.local_model_keyed(
-        "ui-gallery-resizable-view-cache-moving-combobox-review-disabled",
+    let underlay_activated = cx.local_model_keyed(
+        "ui-gallery-resizable-view-cache-moving-popover-underlay-activated",
         || false,
     );
 
     let place_right_now = cx
         .get_model_copied(&place_right, Invalidation::Layout)
         .unwrap_or(false);
-    let review_disabled_now = cx
-        .get_model_copied(&review_disabled, Invalidation::Layout)
+    let underlay_activated_now = cx
+        .get_model_copied(&underlay_activated, Invalidation::Layout)
         .unwrap_or(false);
-    let controls = controls(
-        cx,
-        place_right.clone(),
-        place_right_now,
-        review_disabled.clone(),
-        review_disabled_now,
-    );
+    let controls = controls(cx, place_right.clone(), place_right_now);
 
     let group = shadcn::resizable_panel_group(cx, fractions, move |cx| {
-        let source = cached_combobox_source(
-            cx,
-            value.clone(),
-            open.clone(),
-            query.clone(),
-            review_disabled_now,
-        );
+        let source = cached_popover_source(cx, open.clone());
         let (left, right) = if place_right_now {
-            (parking_panel(cx, "left"), source_panel(cx, "right", source))
+            (
+                parking_panel(
+                    cx,
+                    "left",
+                    underlay_activated.clone(),
+                    underlay_activated_now,
+                ),
+                source_panel(cx, "right", source),
+            )
         } else {
-            (source_panel(cx, "left", source), parking_panel(cx, "right"))
+            (
+                source_panel(cx, "left", source),
+                parking_panel(
+                    cx,
+                    "right",
+                    underlay_activated.clone(),
+                    underlay_activated_now,
+                ),
+            )
         };
 
         [

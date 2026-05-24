@@ -1,0 +1,186 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: ContextMenu Submenu typeahead Name Window",
+    "required_capabilities": ["diag.script_v2", "diag.overlay_placement_trace"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "context_menu",
+      "FRET_UI_GALLERY_START_SECTION": "Submenu",
+      "FRET_UI_GALLERY_STATUS_BAR": "1"
+    },
+    "tags": [
+      "ui_gallery",
+      "shadcn",
+      "context_menu",
+      "submenu",
+      "keyboard",
+      "typeahead",
+      "roving_focus",
+      "regression_pack"
+    ],
+    "target_hints": [
+      "Starts directly on the Context Menu Submenu section with the global status bar visible.",
+      "Opens the root ContextMenu by right click, navigates to More Tools, opens the submenu with ArrowRight, then uses printable-key typeahead to focus Name Window.",
+      "Activates Name Window with Enter and proves the submenu command dispatches while the menu closes."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-theme-preset-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "set_window_inner_size", "width_px": 960.0, "height_px": 720.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "window_inner_size_approx_equal",
+        "width_px": 960.0,
+        "height_px": 740.0,
+        "eps_px": 2.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-context-menu" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-trigger" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-status-last-action" },
+        "text": "last action: ready"
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-trigger" },
+      "button": "right",
+      "stable_frames": 3,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-overlay-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-overlay-content" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "arrow_down" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-overlay-content" },
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-copy" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "arrow_down" },
+    { "type": "press_key", "key": "arrow_down" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-overlay-content" },
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-more-tools" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "press_key", "key": "arrow_right" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-save-page" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": {
+        "kind": "placed_rect",
+        "anchor_test_id": "ui-gallery-context-menu-submenu-more-tools",
+        "chosen_side": "right"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-save-page" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "press_key", "key": "n" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-name-window" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_key", "key": "enter" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/shell/last_action",
+        "value": "ui_gallery.context_menu.submenu.name_window"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-context-menu-submenu-name-window" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-context-menu-submenu-typeahead-name-window",
+      "max_snapshots": 1
+    }
+  ]
+}

@@ -88,6 +88,116 @@
         "upstream_ref": "Radix menubar roving typeahead moves focus to the matching item",
         "note": "Open menubar typeahead should move focus to the matching menu item without closing the menu bar path."
       }
+    },
+    {
+      "id": "context-menu-open-typeahead-focuses-reload",
+      "scenario": { "kind": "context_menu_open_typeahead", "key": "key_r" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "context-menu-item-reload" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix ContextMenu uses menu roving typeahead while content remains open",
+        "note": "Open context-menu typeahead should move roving focus from Back to Reload without closing the overlay."
+      }
+    },
+    {
+      "id": "context-menu-open-no-match-keeps-current-focus",
+      "scenario": { "kind": "context_menu_open_no_match", "key": "key_x" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "context-menu-item-back" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix menu typeahead leaves focus unchanged when no item matches",
+        "note": "A no-match key should not move focus or dismiss the ContextMenu."
+      }
+    },
+    {
+      "id": "context-menu-open-typeahead-buffer-timeout-resets-query",
+      "scenario": {
+        "kind": "context_menu_open_buffer_timeout",
+        "stale_key": "key_x",
+        "match_key": "key_r",
+        "timeout_ticks": 2,
+        "advance_ticks": 3
+      },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "context-menu-item-reload" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix menu typeahead clears stale prefix input after the timeout",
+        "note": "A stale no-match prefix should not poison the next matching ContextMenu typeahead key after timeout."
+      }
+    },
+    {
+      "id": "context-menu-submenu-open-typeahead-focuses-name-window",
+      "scenario": { "kind": "context_menu_submenu_open_typeahead", "key": "key_n" },
+      "oracle": {
+        "predicates": [
+          {
+            "kind": "ui_predicate",
+            "predicate": {
+              "kind": "focus_is",
+              "target": { "kind": "test_id", "id": "context-menu-submenu-item-name-window" }
+            }
+          },
+          {
+            "kind": "mechanism_metric",
+            "metric_id": "recipe.open",
+            "comparison": "eq",
+            "value": 1.0,
+            "eps": 0.0
+          }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Radix submenu content uses the same menu roving typeahead semantics as root menu content",
+        "note": "After keyboard-opening a ContextMenu submenu, printable typeahead should search the submenu content only, move focus from Save Page to Name Window, and keep the root menu path open."
+      }
     }
   ]
 }

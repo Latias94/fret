@@ -47,6 +47,54 @@
       }
     },
     {
+      "id": "provider-state-change-with-explicit-cache-key-rerenders",
+      "scenario": {
+        "kind": "view_cache_lifecycle",
+        "frames": 4,
+        "dependency": "provider_state",
+        "provider_values": [0, 0, 1, 1],
+        "provider_cache_key": "provider_value"
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.cache_root", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.provider_values", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.provider_unique_values", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.first_mount", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.marked_reuse_root", "comparison": "eq", "value": 2.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.cache_key_mismatch", "comparison": "eq", "value": 1.0 }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "DirectionProvider-like inherited state is recipe policy; provider-sensitive cached subtrees need an explicit cache key.",
+        "note": "Changing provider state should rebuild a direction-sensitive cache root when the recipe includes that provider value in ViewCacheProps::cache_key."
+      }
+    },
+    {
+      "id": "provider-state-change-without-cache-key-keeps-reusing",
+      "scenario": {
+        "kind": "view_cache_lifecycle",
+        "frames": 4,
+        "dependency": "provider_state",
+        "provider_values": [0, 0, 1, 1],
+        "provider_cache_key": "constant"
+      },
+      "oracle": {
+        "predicates": [
+          { "kind": "mechanism_metric", "metric_id": "renders.cache_root", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.provider_values", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "observed.provider_unique_values", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.first_mount", "comparison": "eq", "value": 1.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.marked_reuse_root", "comparison": "eq", "value": 3.0 },
+          { "kind": "mechanism_metric", "metric_id": "cache.reason.cache_key_mismatch", "comparison": "eq", "value": 0.0 }
+        ]
+      },
+      "evidence": {
+        "upstream_ref": "Provider state is inherited authoring policy, not an implicit mechanism-layer external dependency.",
+        "note": "This documents the stale-state hazard: an unkeyed provider-sensitive cache keeps replaying the first rendered subtree."
+      }
+    },
+    {
       "id": "request-animation-frame-keeps-cache-root-dirty",
       "scenario": {
         "kind": "view_cache_lifecycle",

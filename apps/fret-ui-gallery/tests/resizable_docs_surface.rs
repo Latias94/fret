@@ -181,6 +181,8 @@ fn resizable_snippets_stay_copyable_and_docs_aligned() {
     for needle in [
         "ui-gallery-resizable-view-cache-moving-combobox",
         "cx.cached_subtree_with(",
+        ".cache_key(0x7a59_d111_6a1d_c0de)",
+        ".cache_key_bool(review_disabled_now)",
         "Move source right",
         "The source element keeps one callsite identity while the parent panel changes.",
         "source_panel(cx, \"right\", source)",
@@ -191,12 +193,18 @@ fn resizable_snippets_stay_copyable_and_docs_aligned() {
         );
     }
 
+    assert!(
+        !moving_cached_combobox.contains("u64::from(review_disabled_now)"),
+        "state-sensitive cached content should use the explicit boolean cache-key helper instead of ad-hoc integer coercion",
+    );
+
     for needle in [
         "Adaptive Panel Proof",
         "tools/diag-scripts/ui-gallery/resizable/",
         "ui-gallery-resizable-adaptive-panel-proof.json",
         "ui-gallery-resizable-multi-viewport-combobox-placement.json",
         "ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json",
+        "cache_key_bool(review_disabled_now)",
         "No extra generic children API is planned unless a real authoring cliff appears",
     ] {
         assert!(

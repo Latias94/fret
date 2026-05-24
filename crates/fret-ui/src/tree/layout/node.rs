@@ -141,6 +141,9 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.layout_nodes_performed =
                 self.debug_stats.layout_nodes_performed.saturating_add(1);
         }
+        if pass_kind == LayoutPassKind::Final {
+            self.layout_performed_nodes.push(node);
+        }
         let sf = scale_factor;
 
         let skip_observation_recording =

@@ -1,0 +1,212 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-hit-test-only-stale-path-cover-move",
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "required_launch_features": [
+      "gallery-dev"
+    ],
+    "tags": [
+      "ui_gallery",
+      "hit_test",
+      "hit_test_only",
+      "path_cache",
+      "stale_path",
+      "mechanism_harness",
+      "runtime"
+    ],
+    "env_defaults": {
+      "FRET_UI_GALLERY_PAINT_CACHE": "1",
+      "FRET_UI_HIT_TEST_BOUNDS_TREE_DISABLE": "1"
+    },
+    "target_hints": [
+      "Navigates to the gallery-dev HitTestOnly Paint-Cache Probe page.",
+      "Sweeps pointer movement over a lower target that moves a higher-z cover over itself from inside the first move handler.",
+      "Disables the hit-test bounds tree so the runtime oracle deterministically exercises cached-path reject and fallback counters."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "text": "paint cache",
+      "clear_before_type": true,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-nav-hit-test-only-paint-cache-probe"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-hit-test-only-paint-cache-probe"
+      },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-nav-hit-test-only-paint-cache-probe"
+      },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-page-hit-test-only-paint-cache-probe"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "app_snapshot_field_equals",
+        "pointer": "/selected_page",
+        "value": "hit_test_only_paint_cache_probe"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-hit-test-only-stale-path-probe"
+        }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-hit-test-only-stale-path-target"
+      },
+      "delta_y": 260.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-hit-test-only-stale-path-reset"
+      },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-hit-test-only-stale-path-status"
+        },
+        "text": "stale_path_hit=none"
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "reset_diagnostics" },
+
+    {
+      "type": "move_pointer_sweep",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-hit-test-only-stale-path-target"
+      },
+      "delta_x": 24.0,
+      "delta_y": 0.0,
+      "steps": 24,
+      "frames_per_step": 1
+    },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-hit-test-only-stale-path-status"
+        },
+        "text": "stale_path_hit=cover"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "hit_test_path_cache_misses_ge",
+        "min": 1
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "hit_test_path_cache_hits_ge",
+        "min": 1
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-hit-test-only-stale-path-stage"
+        },
+        "min_w_px": 700.0,
+        "min_h_px": 200.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-hit-test-only-stale-path-cover-move"
+    },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 }
+  ]
+}

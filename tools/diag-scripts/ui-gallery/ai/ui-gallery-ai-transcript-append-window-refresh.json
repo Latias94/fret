@@ -1,0 +1,104 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: AI transcript append window refresh",
+    "required_capabilities": ["diag.script_v2"],
+    "required_launch_features": ["gallery-ai", "gallery-chart", "gallery-dev", "gallery-web-ime-harness"],
+    "tags": ["ui-gallery", "ai-elements", "transcript", "non-retained", "virtual-list", "mechanism-harness"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "ai_transcript_torture",
+      "FRET_UI_GALLERY_AI_TRANSCRIPT_LEN": "8",
+      "FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT": "1"
+    },
+    "target_hints": [
+      "Starts directly on the AI Transcript Torture page.",
+      "Uses a tiny initial transcript so row 8 can only exist after the append mutation.",
+      "Proves the non-retained transcript surface materializes newly appended virtual-list rows after a stable scroll refresh."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-messages-len" },
+        "field": "value",
+        "value": 8.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-7" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-8" }
+      }
+    },
+    { "type": "reset_diagnostics" },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-append" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-messages-len" },
+        "field": "value",
+        "value": 108.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wheel",
+      "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-root" },
+      "delta_y": -720.0,
+      "pointer_kind": "touch"
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-8" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-ai-transcript-row-9" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-ai-transcript-append-window-refresh.layout"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-ai-transcript-append-window-refresh"
+    }
+  ]
+}

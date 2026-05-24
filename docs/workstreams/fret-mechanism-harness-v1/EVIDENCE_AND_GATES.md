@@ -162,6 +162,83 @@ Current synthetic evidence anchors:
     passed, 66/66 tests, with Nextest run id `a49ebb69-7e9a-4b66-bc83-7f5f52d35a0e`.
   - formatting:
     `cargo fmt -p fret-ui --check` passed.
+- Element root-bounds cache owner gates:
+  `crates/fret-ui/src/declarative/tests/layout/viewport_roots.rs`
+  - proof:
+    `element_root_bounds_cache_*` covers fast-path frames, overlay-only frames, retained overlay
+    parent pointers, ancestor-only relayout while the viewport registration owner is stable, owner
+    relayout without viewport-root registration, nearest nested viewport precedence, same-element
+    movement between viewport roots, and view-cache-hit movement.
+  - first red command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui element_root_bounds_cache_survives_ancestor_layout_when_viewport_owner_is_stable --no-fail-fast --no-capture`
+  - first red result:
+    failed before the owner fix: the descendant anchor fell back to the 900x1000 window bounds
+    instead of the 336x378 Resizable-style viewport bounds.
+  - current focused command:
+    `cargo nextest run --cargo-profile dev-fast -p fret-ui element_root_bounds_cache --no-fail-fast --no-capture`
+  - current focused result:
+    passed, 9/9 tests, with Nextest run id `0aff4730-a191-44fb-8ae5-ba7083497ee6`.
+- Resizable cached Combobox relation-bounce runtime gate:
+  `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-relation-bounce.json`
+  - proof:
+    starts on the moving cached Combobox Resizable page, proves the popup relation endpoints are gone
+    after close, moves the cached source across panels, then reopens and proves `controls` and
+    `labelled_by` relation edges plus top-side panel-root placement.
+  - focused protocol gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_relation_bounce --no-fail-fast`
+  - protocol result:
+    passed with Nextest run id `453ab3da-32c4-49aa-9f36-e16f77889572`.
+  - focused runtime repair proof:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-multi-viewport-combobox-placement.json --dir target/fret-diag-resizable-multi-viewport-combobox-placement-owner-fix-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1779465182657`; AI packet:
+    `target/fret-diag-resizable-multi-viewport-combobox-placement-owner-fix-v1/sessions/1779465172267-75620/1779465182657/ai.packet`.
+  - suite command:
+    `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-resizable/suite.json --dir target/fret-diag-resizable-suite-owner-fix-v1 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    passed 4/4; relation-bounce row run id `1779465331803`; summary:
+    `target/fret-diag-resizable-suite-owner-fix-v1/sessions/1779465226892-77780/suite.summary.json`.
+- Resizable cached Combobox Escape focus-restore runtime gate:
+  `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore.json`
+  - proof:
+    moves the cached Combobox source across Resizable viewport roots before opening the popup,
+    asserts focus enters the popup input, then presses Escape and proves the popup unmounts with
+    focus restored to the live moved trigger.
+  - focused protocol gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_escape_focus_restore --no-fail-fast`
+  - protocol result:
+    passed with Nextest run id `90fead2d-9ef6-4f9f-be6c-682569713906`.
+  - focused runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore.json --dir target/fret-diag-resizable-moving-combobox-escape-focus-restore-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1779466372607`; AI packet:
+    `target/fret-diag-resizable-moving-combobox-escape-focus-restore-v1/sessions/1779466364091-64312/1779466372607/ai.packet`.
+  - suite command:
+    `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-resizable/suite.json --dir target/fret-diag-resizable-suite-focus-restore-v1 --session-auto --timeout-ms 1000000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    passed 5/5; focus-restore row run id `1779466506265`; summary:
+    `target/fret-diag-resizable-suite-focus-restore-v1/sessions/1779466397357-72132/suite.summary.json`.
+- Resizable cached Combobox disabled action-state runtime gate:
+  `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state.json`
+  - proof:
+    toggles the diagnostics-only `In Review` option to disabled, moves the cached Combobox source
+    across Resizable viewport roots, reopens the popup, and proves the moved item exports
+    `disabled=true` and `invoke=false` with the updated subtree keyed explicitly on the disabled
+    state.
+  - focused protocol gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_disabled_action_state --no-fail-fast`
+  - protocol result:
+    passed with Nextest run id `1088c679-b0ad-4e52-9a14-6d0c4bd8dc09`.
+  - focused runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state.json --dir target/fret-diag-resizable-moving-combobox-disabled-action-state-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1779467419798`; AI packet:
+    `target/fret-diag-resizable-moving-combobox-disabled-action-state-v1/sessions/1779467403958-68712/1779467419798/ai.packet`.
+  - suite command:
+    `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-resizable/suite.json --dir target/fret-diag-resizable-suite-disabled-action-state-v1 --session-auto --timeout-ms 1000000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    passed 6/6; disabled-action-state row run id `1779467737769`; summary:
+    `target/fret-diag-resizable-suite-disabled-action-state-v1/sessions/1779467543831-72756/suite.summary.json`.
 
 ## Timer Dispatch Lifecycle Gates
 
@@ -259,6 +336,30 @@ Current runtime evidence anchors:
   - proof:
     bundle frame 54 recorded an `escape` retained reconcile with
     `reused_from_keep_alive_items=9` and `keep_alive_pool_len_after=9`.
+- Virtual-list retained selected/action-state bounce gate:
+  `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-selected-action-state-bounce.json`
+  - suite membership:
+    `tools/diag-scripts/suites/ui-gallery-vlist-retained-action-state/suite.json`
+  - proof:
+    drives the dev-only Virtual List Torture page with retained keep-alive plus row-cache enabled,
+    selects row 2, boundary-scrolls until row 2 detaches, clears the editing/selection model while
+    the row is detached, then bounces back and asserts row 2 reattaches with `selected=false` while
+    preserving `semantics_action_is(invoke)=true`.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/ui/previews/pages/harness/virtual_list_torture.rs`,
+    `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-selected-action-state-bounce.json`,
+    `tools/diag-scripts/suites/ui-gallery-vlist-retained-action-state/suite.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - focused runtime evidence:
+    `target/fret-diag-vlist-retained-selected-action-state-bounce-v2/sessions/1779431631089-228876/1779431677188/ai.packet`;
+    share pack
+    `target/fret-diag-vlist-retained-selected-action-state-bounce-v2/sessions/1779431631089-228876/share/1779431677188.zip`.
+  - dedicated suite evidence:
+    `target/fret-diag-vlist-retained-action-state-v1/sessions/1779433457108-255908/suite.summary.json`
+    passed 1/1 with row run id `1779433613838`.
+  - retained boundary suite refresh:
+    `target/fret-diag-vlist-window-boundary-retained-selected-action-state-v3/sessions/1779433457127-264980/suite.summary.json`
+    passed 2/2 after the action-state row moved out of the minimal boundary suite.
 - Synthetic retained-host reconcile fixture:
   `crates/fret-ui/src/declarative/tests/fixtures/retained_virtual_list_reconcile_v1.json`
   - runner:
@@ -2497,6 +2598,33 @@ cargo fmt --package fret-mechanism-harness --package fret-ui --package fret-ui-s
     `target/fret-diag-resizable-suite-after-moving-cached-combobox-v1/sessions/1779029073205-16452/suite.summary.json`
     reports `status=passed`, 2/2 rows, `scripts_with_evidence=2`,
     `overlay_chosen_side_counts.top=2`, and zero lint errors/warnings.
+- Moving cached Popover outside-press root-boundary gate:
+  `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-popover-outside-press.json`
+  - invariant:
+    a cached Popover source that moves between Resizable panel viewport roots must keep panel-root
+    overlay placement and non-modal outside-press dismissal/click-through policy after the move.
+  - implementation anchors:
+    `apps/fret-ui-gallery/src/ui/snippets/resizable/moving_cached_popover.rs`,
+    `apps/fret-ui-gallery/src/ui/pages/resizable.rs`,
+    `tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-popover-outside-press.json`,
+    `tools/diag-scripts/suites/ui-gallery-resizable/suite.json`, and
+    `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+  - focused protocol gate:
+    `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_popover_outside_press --no-fail-fast`
+  - protocol result:
+    passed with Nextest run id `0f8d9478-ca11-405d-842a-ffa81738151c`.
+  - focused runtime command:
+    `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-popover-outside-press.json --dir target/fret-diag-resizable-moving-popover-outside-press-v3 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - focused runtime result:
+    passed with run id `1779469463236`; AI packet:
+    `target/fret-diag-resizable-moving-popover-outside-press-v3/sessions/1779469453540-79064/1779469463236/ai.packet`.
+  - focused runtime pack:
+    `target/fret-diag-resizable-moving-popover-outside-press-v3/sessions/1779469453540-79064/share/1779469463236.zip`.
+  - suite command:
+    `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-resizable/suite.json --dir target/fret-diag-resizable-suite-popover-outside-press-v1 --session-auto --timeout-ms 1200000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - suite result:
+    passed 7/7; Popover row run id `1779469704952`; summary:
+    `target/fret-diag-resizable-suite-popover-outside-press-v1/sessions/1779469537437-26788/suite.summary.json`.
 - Non-modal overlay underlay activation-status gates:
   `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-click-through-outside-press-focus-underlay.json`
   and
@@ -5786,6 +5914,50 @@ Next slice recommendation:
   - result: passed after rebuilding `fretboard-dev`; 3/3 scripts; torture run id
     `1779203465969`; no `check.vlist_window_shifts_non_retained_max.json` tail file was produced.
 
+## AI Transcript Append Window Refresh Gate
+
+- invariant:
+  the AI transcript torture page must materialize appended transcript rows in the final diagnostics
+  bundle after the append mutation and a stable scroll refresh. The surface remains non-retained,
+  so this gate must not rely on retained-window reconcile tail policy.
+- finding:
+  no AI transcript mechanism defect was reproduced. The new companion gate proves row-8 and row-9
+  both appear in the final bundle after appending messages to the small transcript, then scrolling
+  the transcript root and capturing the layout/bundle pair.
+- diagnostics surface:
+  `ui-gallery-ai-transcript-append-window-refresh.json` starts on `ai_transcript_torture`, uses an
+  8-message variable-height transcript, appends 100 messages, scrolls the root, waits for
+  `ui-gallery-ai-transcript-row-8` and `ui-gallery-ai-transcript-row-9`, and captures a layout
+  sidecar plus bundle evidence.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcript-append-window-refresh.json`,
+  `tools/diag-scripts/suites/ui-gallery-ai-transcript-retained/suite.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`, and
+  `tools/diag-scripts/index.json`.
+- evidence anchors:
+  focused AI packet
+  `target/fret-diag-ai-transcript-append-window-refresh-v2/sessions/1779479206565-76328/1779479217864/ai.packet`;
+  focused pack
+  `target/fret-diag-ai-transcript-append-window-refresh-v2/sessions/1779479206565-76328/share/1779479217864.zip`;
+  suite summary
+  `target/fret-diag-ai-transcript-retained-suite-append-window-refresh-v3/sessions/1779479378187-25176/suite.summary.json`.
+- runtime proof:
+  `diag query test-id` on the focused bundle returns `ui-gallery-ai-transcript-row-8` and
+  `ui-gallery-ai-transcript-row-9` once each; `diag slice` for `ui-gallery-ai-transcript-row-8`
+  shows the row in frame 28 under `ui-gallery-ai-transcript-root`.
+- format/registry/protocol:
+  `python -m json.tool tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcript-append-window-refresh.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-ai-transcript-retained/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_ai_transcript_append_window_refresh --no-fail-fast --no-capture`
+  - result: passed; Nextest run id `4140c0a8-8c78-4ad5-a5b2-39c42ed57bd1`.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcript-append-window-refresh.json --dir target/fret-diag-ai-transcript-append-window-refresh-v2 --session-auto --pack --ai-packet --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed; run id `1779479217864`.
+- runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-ai-transcript-retained --dir target/fret-diag-ai-transcript-retained-suite-append-window-refresh-v3 --session-auto --include-triage --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-ai,gallery-chart,gallery-dev,gallery-web-ime-harness --bin fret-ui-gallery`
+  - result: passed 4/4; the new append-window-refresh row run id was `1779479605022`.
+
 ## Combobox RTL Long Text Startup Intro Non-Overlap Gate
 
 - invariant:
@@ -6337,6 +6509,52 @@ Next slice recommendation:
 - suite runtime diagnostics:
   `target\dev-fast\fretboard-dev.exe diag suite ui-gallery-view-cache --dir target\fret-diag-ui-gallery-view-cache-suite-dynamic-text-v1 --session-auto --timeout-ms 600000 --launch -- target\dev-fast\fret-ui-gallery.exe`
   - result: passed; 2/2 rows; new script run id `1779244796106`.
+
+
+## Provider-Sensitive ViewCache and Direction Runtime Gate
+
+- invariant:
+  provider-style inherited state such as shadcn/Radix `DirectionProvider` is recipe policy, not an
+  implicit mechanism-layer external dependency. A cached subtree that reads provider state must use
+  an explicit `ViewCacheProps::cache_key` when provider changes should rebuild that subtree; an
+  unkeyed cached subtree keeps replaying the first rendered provider-sensitive output.
+- finding:
+  no new mechanism or recipe defect was reproduced. The gap was contract evidence: the ViewCache
+  lifecycle fixture covered cache keys and external environment/layout deps, while Direction had a
+  docs smoke script but no promoted runtime suite. The new fixture cases document both the safe
+  explicit-key path and the intentional unkeyed reuse hazard for DirectionProvider-like state.
+- implementation anchors:
+  `crates/fret-ui/src/declarative/tests/fixtures/view_cache_lifecycle_v1.json`,
+  `crates/fret-ui/src/declarative/tests/view_cache_lifecycle_harness.rs`,
+  `crates/fret-ui/src/declarative/tests/view_cache.rs`,
+  `tools/diag-scripts/ui-gallery/direction/ui-gallery-direction-docs-smoke.json`,
+  `tools/diag-scripts/suites/ui-gallery-direction/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  Direction suite summary:
+  `target/fret-diag-ui-gallery-direction-suite-provider-v1/sessions/1779420909017-199712/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool crates/fret-ui/src/declarative/tests/fixtures/view_cache_lifecycle_v1.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/direction/ui-gallery-direction-docs-smoke.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-direction/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/index.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check crates/fret-core/src/layout_direction.rs crates/fret-ui/src/declarative/tests/view_cache.rs crates/fret-ui/src/declarative/tests/view_cache_lifecycle_harness.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui mechanism_harness_view_cache_lifecycle_matches_oracles view_cache_explicit_cache_key_tracks_provider_state_changes view_cache_provider_state_changes_without_cache_key_keep_reusing_documented_contract --no-fail-fast`
+  - result: passed; run id `af739255-9dbe-4cd7-b397-673b7dc1415e`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_direction_docs_smoke --no-fail-fast`
+  - result: passed; run id `fac17852-1fe3-43f3-99e3-f371a17b889e`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- dedicated runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-direction --dir target/fret-diag-ui-gallery-direction-suite-provider-v1 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed 1/1; Direction docs-smoke run id `1779421149267`.
 
 ## HitTestOnly Paint-Cache Replay Runtime Gate
 
@@ -7933,3 +8151,238 @@ Next slice recommendation:
   - result: passed 1/1; `stage_counts={"passed":1}`.
   `target/dev-fast/fretboard-dev.exe diag suite tools/diag-scripts/suites/ui-gallery-context-menu/suite.json --dir target/fret-diag-context-menu-suite-keyboard-entry-v2 --session-auto --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
   - result: passed 4/4; `stage_counts={"passed":4}`; keyboard-nav row run id `1779404347719`.
+
+## ContextMenu Basic Typeahead Runtime Gate
+
+- invariant:
+  shadcn/Radix ContextMenu typeahead should run through the same menu roving path as keyboard
+  navigation: after pointer-open focuses the content panel and ArrowDown enters the first enabled
+  item, a printable matching key should move focus to the matching menu item, keep the overlay open
+  until activation, and activation should dispatch the enabled row command. No-match input should
+  preserve current focus, and stale prefix input should clear after the configured timeout.
+- finding:
+  no ContextMenu recipe/runtime defect was reproduced. The new synthetic fixture proves
+  ContextMenu typeahead, no-match preservation, and buffer-timeout reset. The new UI Gallery runtime
+  gate proves the Basic page's right-click path enters `Back`, `r` focuses `Reload`, Enter dispatches
+  `ui_gallery.context_menu.basic.reload`, and the menu closes.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/tests/fixtures/recipe_typeahead_cases_v1.json`,
+  `ecosystem/fret-ui-shadcn/tests/recipe_typeahead_mechanism_harness.rs`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-typeahead-reload.json`,
+  `tools/diag-scripts/suites/ui-gallery-context-menu/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  Radix menu typeahead searches enabled items in the active menu content without dismissing the
+  overlay. Fret maps that to `fret-ui-kit` menu roving prefix typeahead and a ContextMenu
+  recipe-owned content panel entry path.
+- evidence anchors:
+  focused typeahead AI packet:
+  `target/fret-diag-context-menu-basic-typeahead-reload-v1/sessions/1779472134533-73472/1779472143821/ai.packet`;
+  focused typeahead pack:
+  `target/fret-diag-context-menu-basic-typeahead-reload-v1/sessions/1779472134533-73472/share/1779472143821.zip`;
+  refreshed ContextMenu suite summary:
+  `target/fret-diag-context-menu-suite-typeahead-reload-v1/sessions/1779472199452-77576/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool ecosystem/fret-ui-shadcn/tests/fixtures/recipe_typeahead_cases_v1.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-typeahead-reload.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-context-menu/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/test_check_diag_scripts_registry.py`;
+  `cargo fmt -p fret-ui-shadcn -p fret-diag-protocol`
+  - result: passed.
+- focused Rust/protocol gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanism_harness mechanism_harness_recipe_typeahead_cases_match_oracles --no-fail-fast --no-capture`
+  - result: passed; run id `91e6eccf-10ba-4899-8ef5-44add5f22ff7`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_context_menu_basic_typeahead_reload --no-fail-fast --no-capture`
+  - result: passed; run id `46268cd8-c84a-4cdd-a195-6b6517b8caa3`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-typeahead-reload.json --dir target/fret-diag-context-menu-basic-typeahead-reload-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779472143821`.
+- runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-context-menu --dir target/fret-diag-context-menu-suite-typeahead-reload-v1 --session-auto --include-triage --timeout-ms 900000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed 5/5; typeahead row run id `1779472350644`.
+
+## ContextMenu Submenu Typeahead Runtime Gate
+
+- invariant:
+  nested ContextMenu content should use the same Radix/menu roving typeahead semantics as root menu
+  content after keyboard-open focus transfer: once `ArrowRight` opens the submenu and focus moves
+  to the first submenu item, a printable matching key should search that submenu content, keep the
+  menu path open until activation, and activation should dispatch the focused submenu action.
+- finding:
+  no ContextMenu recipe/runtime defect was reproduced. The synthetic fixture proves submenu-open
+  typeahead moves focus from `Save Page...` to `Name Window...` while keeping the ContextMenu open.
+  The new UI Gallery runtime gate proves the Submenu page's right-click path enters root roving
+  focus, opens `More Tools`, typeahead-focuses `Name Window...`, dispatches
+  `ui_gallery.context_menu.submenu.name_window`, and closes the menu.
+- implementation anchors:
+  `ecosystem/fret-ui-shadcn/tests/fixtures/recipe_typeahead_cases_v1.json`,
+  `ecosystem/fret-ui-shadcn/tests/recipe_typeahead_mechanism_harness.rs`,
+  `tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json`,
+  `tools/diag-scripts/suites/ui-gallery-context-menu/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- source-alignment anchor:
+  Radix menu submenu content participates in the same menu roving/typeahead model after focus is
+  transferred into the submenu. Fret maps that to `fret-ui-kit::menu::sub_content` roving prefix
+  typeahead and ContextMenu recipe-owned submenu panel rendering.
+- evidence anchors:
+  focused typeahead AI packet:
+  `target/fret-diag-context-menu-submenu-typeahead-name-window-v1/sessions/1779473854793-15920/1779473864097/ai.packet`;
+  focused typeahead pack:
+  `target/fret-diag-context-menu-submenu-typeahead-name-window-v1/sessions/1779473854793-15920/share/1779473864097.zip`;
+  refreshed ContextMenu suite summary:
+  `target/fret-diag-context-menu-suite-submenu-typeahead-v1/sessions/1779473909388-74436/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool ecosystem/fret-ui-shadcn/tests/fixtures/recipe_typeahead_cases_v1.json > $null`;
+  `python -m json.tool tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-context-menu/suite.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `cargo fmt -p fret-ui-shadcn -p fret-diag-protocol --check`
+  - result: passed.
+- focused Rust/protocol gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-shadcn --test recipe_typeahead_mechanism_harness mechanism_harness_recipe_typeahead_cases_match_oracles --no-fail-fast --no-capture`
+  - result: passed; run id `2137d669-1531-477e-a957-7dcee779c2ff`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_context_menu_submenu_typeahead_name_window --no-fail-fast --no-capture`
+  - result: passed; run id `0d475764-1f1d-4c86-b08d-c2e514192df2`.
+- build:
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json --dir target/fret-diag-context-menu-submenu-typeahead-name-window-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed; run id `1779473864097`.
+- runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-context-menu --dir target/fret-diag-context-menu-suite-submenu-typeahead-v1 --session-auto --include-triage --timeout-ms 1000000 --launch -- target/dev-fast/fret-ui-gallery.exe`
+  - result: passed 6/6; submenu typeahead row run id `1779474106732`;
+    `focus_mismatch_total=0`.
+
+## HitTestOnly Stale Path-Cache Runtime Gate
+
+- invariant:
+  a move-only hit-test path-cache entry must be rejected when a higher-z sibling moves under the
+  pointer across a cached/root boundary; fallback hit testing must route to the higher-z sibling
+  and refresh the path cache for subsequent moves.
+- finding:
+  no new `fret-ui` mechanism defect was reproduced. The gap was runtime evidence: synthetic tests
+  already covered the stale lower-child path and dispatch-level pointer moves, but UI Gallery did
+  not have a cached-root surface that produced a stale path-cache miss plus a refreshed hit in a
+  deterministic diagnostics run.
+- implementation anchors:
+  `apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_only_paint_cache_probe.rs`,
+  `tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-stale-path-cover-move.json`,
+  `tools/diag-scripts/suites/ui-gallery-hit-test-only-paint-cache/suite.json`,
+  `tools/diag-scripts/index.json`, and
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-hit-test-only-stale-path-cover-move-v1/sessions/1779415325602-253012/1779415611375/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-hit-test-only-stale-path-cover-move-v1/sessions/1779415325602-253012/share/1779415611375.zip`;
+  dedicated suite summary:
+  `target/fret-diag-hit-test-only-paint-cache-suite-stale-path-v1/sessions/1779415674198-166024/suite.summary.json`.
+- JSON/registry/formatting:
+  `python -m json.tool tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-stale-path-cover-move.json > $null`;
+  `python -m json.tool tools/diag-scripts/suites/ui-gallery-hit-test-only-paint-cache/suite.json > $null`;
+  `python -m json.tool tools/diag-scripts/index.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`;
+  `python tools/check_diag_scripts_registry.py`;
+  `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/previews/pages/harness/hit_test_only_paint_cache_probe.rs crates/fret-diag-protocol/tests/script_json_roundtrip.rs`;
+  `git diff --check`
+  - result: passed.
+- focused Rust gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep script_v2_roundtrip_ui_gallery_hit_test_only_stale_path_cover_move`
+  - result: passed; 2 tests; run id `967b9ba4-5eb8-4a7c-847e-9310162471fa`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui hit_test_layers_cached_rejects_stale_path_when_higher_z_sibling_moves_under_pointer pointer_move_dispatch_rejects_stale_path_when_higher_z_sibling_moves_under_pointer prepaint_interaction_cache_root_move_invalidates_stale_root_only_hit_path`
+  - result: passed; 3 tests; run id `3214e28c-f4c6-45a9-b838-ae016e824ede`.
+- build/check:
+  `cargo check --profile dev-fast -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+  `cargo build --profile dev-fast -p fretboard-dev -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-stale-path-cover-move.json --dir target/fret-diag-hit-test-only-stale-path-cover-move-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; run id `1779415611375`.
+- dedicated runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-hit-test-only-paint-cache --dir target/fret-diag-hit-test-only-paint-cache-suite-stale-path-v1 --session-auto --timeout-ms 600000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed 2/2; `stage_counts={"passed":2}`; stale-path row run id `1779416013201`.
+
+## State-sensitive CachedSubtree Cache-Key Authoring Guard
+
+- invariant:
+  cached subtree output that depends on caller state while the callsite identity stays stable must
+  encode that state in the explicit cache key. Boolean state should use a typed helper instead of
+  ad-hoc integer coercion so stale retained/replayed metadata risks are visible in review.
+- finding:
+  no new mechanism or recipe defect was reproduced. The runtime disabled/action-state path was
+  already covered by the moving cached Combobox gate; this slice closes the authoring/API gap that
+  made the boolean dependency less reviewable.
+- implementation anchors:
+  `crates/fret-ui/src/cache_key.rs`,
+  `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/resizable/moving_cached_combobox.rs`,
+  `apps/fret-ui-gallery/src/ui/snippets/resizable/notes.rs`,
+  `apps/fret-ui-gallery/tests/resizable_docs_surface.rs`, and
+  `docs/component-author-guide.md`.
+- focused Rust gates:
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui bool_key_tracks_boolean_state --no-fail-fast --no-capture`
+  - result: passed; run id `d1cd6ef8-cf4a-4b66-8123-fb469db4ceaf`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-kit cached_subtree_props_bool_key_tracks_state_sensitive_cached_content --no-fail-fast --no-capture`
+  - result: passed; run id `1b49d112-fa2c-41cb-868a-51984555a007`.
+  `cargo nextest run --cargo-profile dev-fast -p fret-ui-gallery --features gallery-dev resizable_snippets_stay_copyable_and_docs_aligned --no-fail-fast --no-capture`
+  - result: passed; run id `e9808d7f-2af3-41a3-bf4d-ceeb03b858bc`.
+- build:
+  `cargo build --profile dev-fast -p fret-ui-gallery --features gallery-dev`
+  - result: passed.
+
+## Retained Table Row-Pinning Selected/Action-State Gate
+
+- invariant:
+  a pinned retained Table row that survives a pagination/window boundary must keep fresh semantics
+  metadata. Presence alone is insufficient; the row must still expose `selected=true` after pointer
+  selection and `invoke=true` after it is pinned and page 2 is shown.
+- finding:
+  no retained Table stale selected/invoke defect was reproduced. The slice closes the diagnostics
+  gap where the existing keep-pinned row gate asserted row existence but did not verify retained
+  row semantics/action-state freshness after pagination.
+- diagnostics surface:
+  `tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-true.json`
+  now starts directly on the retained Table Torture page, selects row 0, verifies selected/invoke
+  semantics, pins row 0, advances to page 2, and verifies row 0 still exists with fresh
+  selected/invoke semantics.
+- implementation anchors:
+  `tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-true.json`,
+  `tools/diag-scripts/suites/ui-gallery-table-retained/suite.json`,
+  `tools/diag-scripts/index.json`,
+  `crates/fret-diag-protocol/tests/script_json_roundtrip.rs`, and
+  `apps/fret-ui-gallery/src/ui/previews/gallery/torture/table_retained_torture.rs`.
+- evidence anchors:
+  focused runtime AI packet:
+  `target/fret-diag-table-retained-row-pinning-selected-action-v1/sessions/1779480713460-19924/1779480725739/ai.packet`;
+  focused runtime pack:
+  `target/fret-diag-table-retained-row-pinning-selected-action-v1/sessions/1779480713460-19924/share/1779480725739.zip`;
+  full retained Table suite summary:
+  `target/fret-diag-table-retained-suite-row-pinning-selected-action-v1/sessions/1779480750237-48512/suite.summary.json`.
+- JSON/registry:
+  `python -m json.tool tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-true.json > $null`;
+  `python tools/check_diag_scripts_registry.py --write`
+  - result: passed.
+- protocol roundtrip:
+  `cargo nextest run --cargo-profile dev-fast -p fret-diag-protocol --test script_json_roundtrip script_v2_roundtrip_ui_gallery_table_retained_row_pinning_keep_pinned_true --no-fail-fast --no-capture`
+  - result: passed; run id `8dbf737e-559d-4dfd-b340-15def5ed7771`.
+- focused runtime diagnostics:
+  `target/dev-fast/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/table/ui-gallery-table-retained-row-pinning-keep-pinned-true.json --dir target/fret-diag-table-retained-row-pinning-selected-action-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed; run id `1779480725739`.
+- retained Table runtime suite:
+  `target/dev-fast/fretboard-dev.exe diag suite ui-gallery-table-retained --dir target/fret-diag-table-retained-suite-row-pinning-selected-action-v1 --session-auto --include-triage --timeout-ms 900000 --launch -- cargo run --profile dev-fast -p fret-ui-gallery --features gallery-dev --bin fret-ui-gallery`
+  - result: passed 7/7; strengthened keep-pinned row run id `1779480853485`.
+- bounded evidence:
+  `target/dev-fast/fretboard-dev.exe diag query test-id target/fret-diag-table-retained-row-pinning-selected-action-v1/sessions/1779480713460-19924 ui-gallery-table-retained-row-0 --json --top 10`
+  found row 0 and its visible cells once in the final focused bundle.
+  `target/dev-fast/fretboard-dev.exe diag slice target/fret-diag-table-retained-row-pinning-selected-action-v1/sessions/1779480713460-19924 --test-id ui-gallery-table-retained-row-0 --json --max-matches 2 --max-ancestors 6`
+  shows row 0 under `ui-gallery-table-retained-torture-root` with role `list_item`,
+  `flags.selected=true`, and `actions.invoke=true`.

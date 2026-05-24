@@ -9,6 +9,7 @@ const ENV_RESIZABLE_MULTI_VIEWPORT_COMBOBOX: &str =
 const ENV_RESIZABLE_MULTI_VIEWPORT_SELECT: &str = "FRET_UI_GALLERY_RESIZABLE_MULTI_VIEWPORT_SELECT";
 const ENV_RESIZABLE_MOVING_CACHED_COMBOBOX: &str =
     "FRET_UI_GALLERY_RESIZABLE_MOVING_CACHED_COMBOBOX";
+const ENV_RESIZABLE_MOVING_CACHED_POPOVER: &str = "FRET_UI_GALLERY_RESIZABLE_MOVING_CACHED_POPOVER";
 
 fn should_build_resizable_section(
     focus_filters: Option<&[String]>,
@@ -29,6 +30,8 @@ pub(super) fn preview_resizable(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> 
     let multi_viewport_select_enabled = std::env::var_os(ENV_RESIZABLE_MULTI_VIEWPORT_SELECT)
         .is_some_and(|value| !value.is_empty());
     let moving_cached_combobox_enabled = std::env::var_os(ENV_RESIZABLE_MOVING_CACHED_COMBOBOX)
+        .is_some_and(|value| !value.is_empty());
+    let moving_cached_popover_enabled = std::env::var_os(ENV_RESIZABLE_MOVING_CACHED_POPOVER)
         .is_some_and(|value| !value.is_empty());
     let mut sections = Vec::new();
 
@@ -218,6 +221,25 @@ pub(super) fn preview_resizable(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> 
         sections.push(moving_cached_combobox);
     }
 
+    if moving_cached_popover_enabled
+        && should_build_resizable_section(
+            focus_filters.as_deref(),
+            "Moving Cached Popover",
+            "ui-gallery-resizable-view-cache-moving-popover-docsec",
+        )
+    {
+        let moving_cached_popover = snippets::moving_cached_popover::render(cx);
+        let moving_cached_popover =
+            DocSection::build(cx, "Moving Cached Popover", moving_cached_popover)
+                .description(
+                    "Diagnostics fixture for moving one cached Popover source between Resizable panel viewport roots before outside-press dismissal.",
+                )
+                .max_w(Px(1120.0))
+                .test_id_prefix("ui-gallery-resizable-view-cache-moving-popover-docsec")
+                .no_shell();
+        sections.push(moving_cached_popover);
+    }
+
     if should_build_resizable_section(
         focus_filters.as_deref(),
         "Notes",
@@ -235,7 +257,7 @@ pub(super) fn preview_resizable(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`. `Adaptive Panel Proof`, `Multi-Viewport Combobox`, `Multi-Viewport Select`, and `Moving Cached Combobox` are diagnostics opt-in follow-ups for fixed-window container-query behavior, viewport-root overlay ownership, cross-family overlay ownership, and cached overlay-source movement before `Notes` closes on parity conclusions and diagnostics anchors.",
+            "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`. `Adaptive Panel Proof`, `Multi-Viewport Combobox`, `Multi-Viewport Select`, `Moving Cached Combobox`, and `Moving Cached Popover` are diagnostics opt-in follow-ups for fixed-window container-query behavior, viewport-root overlay ownership, cross-family overlay ownership, cached overlay-source movement, and cached Popover outside-press dismissal before `Notes` closes on parity conclusions and diagnostics anchors.",
         ),
         sections,
     );

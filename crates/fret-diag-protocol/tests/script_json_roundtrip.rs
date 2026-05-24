@@ -112,6 +112,13 @@ fn script_v2_roundtrip_ui_gallery_platform_preferences_runtime_environment_mutat
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_direction_docs_smoke() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/direction/ui-gallery-direction-docs-smoke.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_item_vs_field_doc_intro_client721_startup_non_overlap() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/item/ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap.json"
@@ -335,6 +342,20 @@ fn script_v2_roundtrip_ui_gallery_context_menu_disabled_item_action_state() {
 fn script_v2_roundtrip_ui_gallery_context_menu_basic_keyboard_nav() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_context_menu_basic_typeahead_reload() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-typeahead-reload.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_context_menu_submenu_typeahead_name_window() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-submenu-typeahead-name-window.json"
     ));
 }
 
@@ -711,7 +732,14 @@ fn script_v2_roundtrip_ui_gallery_data_table_default_pagination_collection_metad
 #[test]
 fn script_v2_roundtrip_ui_gallery_virtual_list_retained_collection_metadata_bounce() {
     assert_script_v2_roundtrip(include_str!(
-        "../../../tools/diag-scripts/ui-gallery-virtual-list-retained-collection-metadata-bounce.json"
+        "../../../tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-collection-metadata-bounce.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_virtual_list_retained_selected_action_state_bounce() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-retained-selected-action-state-bounce.json"
     ));
 }
 
@@ -768,6 +796,13 @@ fn script_v2_roundtrip_ui_gallery_ai_conversation_demo_scroll_button() {
 fn script_v2_roundtrip_ui_gallery_ai_transcript_torture_scroll() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-ai-transcript-torture-scroll.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_ai_transcript_append_window_refresh() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/ai/ui-gallery-ai-transcript-append-window-refresh.json"
     ));
 }
 
@@ -989,6 +1024,13 @@ fn script_v2_roundtrip_ui_gallery_hit_test_only_paint_cache_probe_sweep() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_hit_test_only_stale_path_cover_move() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/diag/ui-gallery-hit-test-only-stale-path-cover-move.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_listlike_pointer_selection() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-listlike-pointer-selection.json"
@@ -1132,6 +1174,34 @@ fn script_v2_roundtrip_ui_gallery_resizable_multi_viewport_select_placement() {
 fn script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_root_boundary() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_relation_bounce() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-relation-bounce.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_escape_focus_restore() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-escape-focus-restore.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_combobox_disabled_action_state() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-combobox-disabled-action-state.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_resizable_view_cache_moving_popover_outside_press() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-view-cache-moving-popover-outside-press.json"
     ));
 }
 

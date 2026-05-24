@@ -415,6 +415,10 @@ Rules of thumb:
 - Keep the cached subtree's render closure as pure as possible: avoid hidden side effects that must run every frame.
 - If the subtree emits per-frame requests/registries (overlays, observers, frame-local caches), ensure the contract
   is closed under cache-hit frames (either by cached synthesis or by moving the side effect outside the cached region).
+- If cached output depends on state that can change while the callsite stays stable, include that state in
+  `CachedSubtreeProps::cache_key(...)`. Prefer typed helpers such as `cache_key_bool(...)`,
+  `cache_key_text_style(...)`, `cache_key_clip_rect(...)`, and `cache_key_clip_rrect(...)` over ad-hoc integer
+  coercions so state-sensitive cached content is reviewable.
 
 ## References
 
