@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "slug": "component-parity-fact-harness-v1",
+  "title": "Component Parity Fact Harness v1",
+  "status": "active",
+  "updated": "2026-05-25",
+  "scope_kind": "execution",
+  "problem": "Self-drawn component parity work still relies too much on humans or agents visually interpreting screenshots. This lane turns shadcn, Radix/Base UI, and future Material sources into unified source facts, Fret evidence facts, agent repair packets, and promotion queues that can expose recipe, policy, mechanism, and diagnostics defects before broad component ports drift.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/component-parity-fact-harness-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/component-parity-fact-harness-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/component-parity-fact-harness-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/component-parity-fact-harness-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/component-parity-fact-harness-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Generate the Button Group pilot report with an agent_packet from upstream DOM snapshots plus Fret layout sidecars, then validate the report and workstream state.",
+    "commands": [
+      "python -m py_compile tools/parity-discovery/shadcn_parity_discovery.py",
+      "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json",
+      "python -m json.tool docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/component-parity-fact-harness-v1/WORKSTREAM.json | Out-Null",
+      "python tools/check_workstream_catalog.py"
+    ]
+  },
+  "gates": [
+    {
+      "name": "parity-discovery-python-compile",
+      "command": "python -m py_compile tools/parity-discovery/shadcn_parity_discovery.py"
+    },
+    {
+      "name": "button-group-agent-packet-pilot",
+      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json"
+    },
+    {
+      "name": "pilot-json",
+      "command": "python -m json.tool docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json | Out-Null"
+    },
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/component-parity-fact-harness-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "tools/parity-discovery/shadcn_parity_discovery.py",
+    "tools/parity-discovery/README.md",
+    "tools/parity-discovery/fixtures/button_group_parts_v1.json",
+    "docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json",
+    "docs/workstreams/shadcn-parity-harness-v1/README.md",
+    "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640214741/ai.packet"
+  ],
+  "upstream_refs": [
+    "repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx",
+    "repo-ref/ui/apps/v4/registry/new-york-v4/examples/button-group-input.tsx",
+    "repo-ref/ui/apps/v4/registry/new-york-v4/examples/button-group-dropdown.tsx",
+    "repo-ref/ui/apps/v4/registry/new-york-v4/examples/button-group-select.tsx",
+    "repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-group-button-group.tsx",
+    "repo-ref/primitives",
+    "repo-ref/base-ui"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue by promoting the agent_packet shape from shadcn Button Group into the v2 discovery suite, then add live source-fact extraction and a Material adapter without widening crates/fret-ui. Mechanism defects discovered by component packets should be promoted into fret-mechanism-harness-v1 or a narrower mechanism follow-on."
+  }
+}

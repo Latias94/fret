@@ -1653,6 +1653,204 @@ def _top_findings(report_parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return findings[:10]
 
 
+def _source_ref_index(mapping: dict[str, Any]) -> dict[str, dict[str, str]]:
+    refs: dict[str, dict[str, str]] = {}
+    source_refs = mapping.get("source_refs", {})
+    if not isinstance(source_refs, dict):
+        return refs
+    for bucket in ("upstream", "fret"):
+        raw_refs = source_refs.get(bucket, [])
+        if not isinstance(raw_refs, list):
+            continue
+        for ref in raw_refs:
+            if not isinstance(ref, dict):
+                continue
+            ref_id = ref.get("id")
+            path = ref.get("path")
+            if not isinstance(ref_id, str) or not isinstance(path, str):
+                continue
+            refs[ref_id] = {
+                "id": ref_id,
+                "bucket": bucket,
+                "path": path.replace("\\", "/"),
+            }
+    return refs
+
+
+def _resolve_source_refs(
+    source_ref_index: dict[str, dict[str, str]], ids: list[str]
+) -> list[dict[str, str]]:
+    resolved = []
+    for ref_id in ids:
+        ref = source_ref_index.get(ref_id)
+        if ref is None:
+            resolved.append({"id": ref_id, "bucket": "unknown", "path": ""})
+        else:
+            resolved.append(ref)
+    return resolved
+
+
+def _part_source_ref_ids(part: dict[str, Any], bucket: str) -> list[str]:
+    source = part.get(bucket, {})
+    if not isinstance(source, dict):
+        return []
+    source_ref_ids = source.get("source_ref_ids", [])
+    if not isinstance(source_ref_ids, list):
+        return []
+    return [item for item in source_ref_ids if isinstance(item, str)]
+
+
+def _agent_next_step(check: dict[str, Any]) -> str:
+    status = check["status"]
+    target = check["promotion"]["target"]
+    owner = check["owner"]
+    layer = check["layer"]
+    if status == "mismatch":
+        return (
+            f"Repair the {layer}/{owner} owner until the measured predicate passes, "
+            f"then promote or refresh the {target} gate."
+        )
+    if status == "blocked":
+        return (
+            "Capture or wire the missing source/Fret evidence first; do not edit recipes "
+            "until the missing fact is measurable."
+        )
+    if status == "needs_live_measurement":
+        return (
+            "Replace the curated or fixture-only fact with live upstream/Fret measurement, "
+            f"then decide whether it belongs in a {target} gate."
+        )
+    return (
+        f"Keep this as a regression lock for the {layer}/{owner} owner; harden only if "
+        "confidence or coverage gaps remain."
+    )
+
+
+def _agent_queue_item(
+    source_part: dict[str, Any],
+    report_part: dict[str, Any],
+    check: dict[str, Any],
+    source_ref_index: dict[str, dict[str, str]],
+) -> dict[str, Any]:
+    upstream_ref_ids = _part_source_ref_ids(source_part, "upstream")
+    fret_ref_ids = _part_source_ref_ids(source_part, "fret")
+    return {
+        "part_id": report_part["id"],
+        "part_label": report_part["label"],
+        "check_id": check["id"],
+        "status": check["status"],
+        "axis": report_part["axis"],
+        "owner": check["owner"],
+        "layer": check["layer"],
+        "promotion_target": check["promotion"]["target"],
+        "confidence": check["confidence"],
+        "triage": check["triage"],
+        "expected": check["expected"],
+        "observed": check["observed"],
+        "observed_source": check["observed_source"],
+        "test_ids": report_part["test_ids"],
+        "source_refs": {
+            "upstream": _resolve_source_refs(source_ref_index, upstream_ref_ids),
+            "fret": _resolve_source_refs(source_ref_index, fret_ref_ids),
+        },
+        "evidence_refs": check["evidence_refs"],
+        "next_step": _agent_next_step(check),
+    }
+
+
+def _generate_agent_packet(
+    mapping: dict[str, Any],
+    mapping_path: Path,
+    report: dict[str, Any],
+) -> dict[str, Any]:
+    source_ref_index = _source_ref_index(mapping)
+    source_parts_by_id = {
+        part["id"]: part
+        for part in mapping.get("parts", [])
+        if isinstance(part, dict) and isinstance(part.get("id"), str)
+    }
+    repair_queue: list[dict[str, Any]] = []
+    hardening_queue: list[dict[str, Any]] = []
+    gate_queue: list[dict[str, Any]] = []
+
+    for report_part in report["parts"]:
+        source_part = source_parts_by_id.get(report_part["id"], {})
+        for check in report_part["checks"]:
+            item = _agent_queue_item(
+                source_part, report_part, check, source_ref_index
+            )
+            if check["status"] != "pass_known":
+                repair_queue.append(item)
+            elif check["confidence"] != "high" or report_part["confidence"] != "high":
+                hardening_queue.append(item)
+
+            target = check["promotion"]["target"]
+            if target != "none":
+                gate_queue.append(
+                    {
+                        "part_id": report_part["id"],
+                        "check_id": check["id"],
+                        "target": target,
+                        "reason": check["promotion"]["reason"],
+                        "status": check["status"],
+                        "owner": check["owner"],
+                        "layer": check["layer"],
+                    }
+                )
+
+    if repair_queue:
+        status = "needs_repair"
+    elif hardening_queue:
+        status = "needs_hardening"
+    else:
+        status = "regression_locked"
+
+    upstream_refs = [
+        ref for ref in source_ref_index.values() if ref["bucket"] == "upstream"
+    ]
+    fret_refs = [ref for ref in source_ref_index.values() if ref["bucket"] == "fret"]
+
+    return {
+        "schema_version": 1,
+        "status": status,
+        "component": report["component"],
+        "style": report["style"],
+        "source_mapping": str(mapping_path).replace("\\", "/"),
+        "goal": (
+            "Give a repair agent the minimum source truth, Fret wiring, evidence, "
+            "and promotion queues needed to turn parity findings into gates."
+        ),
+        "truth": {
+            "upstream_refs": upstream_refs,
+            "upstream_contexts": report["upstream_contexts"],
+            "limitations": report["limitations"],
+        },
+        "fret_wiring": {
+            "refs": fret_refs,
+            "test_ids": sorted(
+                {
+                    test_id
+                    for part in report["parts"]
+                    for test_id in part.get("test_ids", [])
+                }
+            ),
+        },
+        "evidence": report["evidence_contexts"],
+        "summary": {
+            "status_counts": report["summary"]["status_counts"],
+            "owner_status_counts": report["summary"]["owner_status_counts"],
+            "layer_status_counts": report["summary"]["layer_status_counts"],
+            "top_findings": report["summary"]["top_findings"],
+            "repair_queue_count": len(repair_queue),
+            "hardening_queue_count": len(hardening_queue),
+            "gate_queue_count": len(gate_queue),
+        },
+        "repair_queue": repair_queue,
+        "hardening_queue": hardening_queue,
+        "gate_queue": gate_queue,
+    }
+
+
 def _triage_level_counts(report_parts: list[dict[str, Any]]) -> dict[str, int]:
     counts = {level: 0 for level in TRIAGE_LEVEL_ORDER}
     for part in report_parts:
@@ -1743,7 +1941,7 @@ def generate_report(
 
     top_findings = _top_findings(report_parts)
 
-    return {
+    report = {
         "schema_version": SUPPORTED_SCHEMA_VERSION,
         "component": mapping["component"],
         "style": mapping["style"],
@@ -1779,6 +1977,8 @@ def generate_report(
         "parts": report_parts,
         "limitations": mapping["report"]["limitations"],
     }
+    report["agent_packet"] = _generate_agent_packet(mapping, mapping_path, report)
+    return report
 
 
 def _require_path_list(value: Any, path: str) -> list[Path]:
@@ -1940,6 +2140,7 @@ def generate_suite_report(
 ) -> dict[str, Any]:
     report_rows = []
     top_findings = []
+    agent_rows = []
     for report_spec, report in zip(suite["reports"], reports, strict=True):
         report_id = report_spec["id"]
         output = str(Path(report_spec["output"])).replace("\\", "/")
@@ -1953,6 +2154,20 @@ def generate_suite_report(
                 "layer_status_counts": report["summary"]["layer_status_counts"],
                 "triage_level_counts": report["summary"]["triage_level_counts"],
                 "top_findings": report["summary"]["top_findings"],
+            }
+        )
+        agent_packet = report["agent_packet"]
+        agent_rows.append(
+            {
+                "id": report_id,
+                "component": report["component"],
+                "output": output,
+                "status": agent_packet["status"],
+                "repair_queue_count": agent_packet["summary"]["repair_queue_count"],
+                "hardening_queue_count": agent_packet["summary"][
+                    "hardening_queue_count"
+                ],
+                "gate_queue_count": agent_packet["summary"]["gate_queue_count"],
             }
         )
         for finding in report["summary"]["top_findings"]:
@@ -1971,6 +2186,9 @@ def generate_suite_report(
         )
     )
 
+    repair_count = sum(item["repair_queue_count"] for item in agent_rows)
+    hardening_count = sum(item["hardening_queue_count"] for item in agent_rows)
+
     return {
         "schema_version": SUPPORTED_SCHEMA_VERSION,
         "suite_id": suite["id"],
@@ -1985,6 +2203,25 @@ def generate_suite_report(
             "triage_level_counts": _merge_counts(
                 reports, "triage_level_counts", TRIAGE_LEVEL_ORDER
             ),
+            "top_findings": top_findings[:20],
+        },
+        "agent_packet": {
+            "schema_version": 1,
+            "status": (
+                "needs_repair"
+                if repair_count
+                else "needs_hardening"
+                if hardening_count
+                else "regression_locked"
+            ),
+            "suite_id": suite["id"],
+            "goal": (
+                "Summarize per-component repair readiness without duplicating each "
+                "component report's full agent packet."
+            ),
+            "repair_queue_count": repair_count,
+            "hardening_queue_count": hardening_count,
+            "reports": agent_rows,
             "top_findings": top_findings[:20],
         },
         "reports": report_rows,

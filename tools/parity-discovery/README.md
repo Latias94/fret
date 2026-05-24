@@ -26,6 +26,21 @@ Coverage manifests live in `tools/parity-discovery/manifests/`. The v2 manifest 
 coverage-driven sweep order for the highest-risk shadcn surfaces and keeps the existing v1 lock
 rows available as regression anchors.
 
+Each generated report also contains an `agent_packet` section. This packet is intentionally derived
+from the same fixture/report data instead of introducing a second source of truth. It gives repair
+agents a stable queue:
+
+- `repair_queue`: non-passing rows with owner, layer, promotion target, source refs, Fret refs,
+  test ids, evidence refs, and a next-step hint.
+- `hardening_queue`: passing rows that are still medium/low confidence and should become stronger
+  live measurements before broad reuse.
+- `gate_queue`: rows that can be promoted into diag scripts, component fixtures, or mechanism
+  harness cases once the owner/layer classification is confirmed.
+
+The first packet-focused lane is
+`docs/workstreams/component-parity-fact-harness-v1/`; the Button Group pilot artifact lives at
+`docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json`.
+
 ## Current Seeds
 
 - Context Menu:

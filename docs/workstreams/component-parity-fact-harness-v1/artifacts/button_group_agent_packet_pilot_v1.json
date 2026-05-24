@@ -1,0 +1,2313 @@
+{
+  "schema_version": 1,
+  "component": "button-group",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-09",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/button_group_parts_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "upstream.button_group.input_demo.light.vp1440x900",
+      "snapshot": "button-group-input",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    },
+    {
+      "id": "upstream.button_group.select_demo.light.vp1440x900",
+      "snapshot": "button-group-select",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "fret_layout_sidecar": [
+      "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+      "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/layout.taffy.v1.json",
+      "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/layout.taffy.v1.json",
+      "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/layout.taffy.v1.json"
+    ],
+    "fret_bundle_schema2": [
+      "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/bundle.schema2.json",
+      "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/bundle.schema2.json",
+      "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/bundle.schema2.json",
+      "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/bundle.schema2.json"
+    ],
+    "upstream_dom": [
+      {
+        "snapshot": "button-group-input",
+        "theme": "light",
+        "mode": "",
+        "variant": "",
+        "context_id": "upstream.button_group.input_demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json"
+      },
+      {
+        "snapshot": "button-group-select",
+        "theme": "light",
+        "mode": "",
+        "variant": "",
+        "context_id": "upstream.button_group.select_demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 7,
+    "status_counts": {
+      "pass_known": 7,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 2,
+      "gallery_composition": 4,
+      "mechanism_core": 1,
+      "diagnostics_surface": 2,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 4,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 2,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 2,
+      "app_demo": 4,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 4,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 7
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 2,
+      "component_fixture": 6,
+      "mechanism_harness": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 4,
+    "bundle_schema2_count": 4,
+    "layout_test_id_count": 559,
+    "bundle_semantics_test_id_count": 559,
+    "measured_test_id_count": 559,
+    "upstream_dom_snapshot_count": 2,
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 2,
+    "upstream_dom_context_count": 2
+  },
+  "parts": [
+    {
+      "id": "button_group_root",
+      "label": "ButtonGroup root layout contract",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "medium",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "root_source_facts_need_live_layout_extractor",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-button-group-input",
+        "ui-gallery-button-group-dropdown",
+        "ui-gallery-button-group-text"
+      ],
+      "upstream_facts": [
+        "ButtonGroup root uses flex layout.",
+        "ButtonGroup root is w-fit by default.",
+        "ButtonGroup root uses items-stretch.",
+        "Direct input children become flex-1.",
+        "Nested button groups add gap-2."
+      ],
+      "fret_facts": [
+        "Fret has stable Button Group root selectors in the UI Gallery seed snippets.",
+        "The existing seed gates assert selected child bounds but do not yet mechanically compare every root source fact."
+      ],
+      "checks": [
+        {
+          "id": "root_source_facts_need_live_layout_extractor",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Automatically compare root fit/stretch/direct-input flex behavior against Fret layout sidecars.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics",
+          "confidence": "medium",
+          "owner": "mechanism_core",
+          "layer": "mechanism",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+            "target/fret-diag/shadcn-parity-harness-v1/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "mechanism_harness",
+            "reason": "If direct child flex/stretch semantics drift across components, the owner is layout vocabulary or layout-tree interpretation rather than a Button Group-only recipe."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics",
+            "status": "pass",
+            "sidecar_paths": [
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/layout.taffy.v1.json"
+            ],
+            "bundle_schema2_paths": [
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/bundle.schema2.json"
+            ],
+            "predicate_count": 5,
+            "predicates": [
+              {
+                "kind": "bounds_metric_delta",
+                "status": "pass",
+                "a": "ui-gallery-button-group-input",
+                "b": "ui-gallery-button-group-input-search-button",
+                "metric": "height",
+                "comparison": "eq",
+                "expected": "== 0",
+                "eps_px": 1.0,
+                "observed_px": 0.0,
+                "a_bounds": {
+                  "x": 114.0,
+                  "y": 1906.667,
+                  "w": 420.0,
+                  "h": 36.0
+                },
+                "b_bounds": {
+                  "x": 489.333,
+                  "y": 1906.667,
+                  "w": 45.333,
+                  "h": 36.0
+                },
+                "a_raw_bounds": {
+                  "x": 114.0,
+                  "y": 1906.667,
+                  "w": 420.0,
+                  "h": 36.0
+                },
+                "b_raw_bounds": {
+                  "x": 489.333,
+                  "y": 1906.667,
+                  "w": 45.333,
+                  "h": 36.0
+                },
+                "scale_factors": [
+                  1.5
+                ],
+                "coordinate_units": [
+                  "logical_px"
+                ],
+                "a_node": "NodeId(1308v1)",
+                "b_node": "NodeId(1311v1)",
+                "evidence_sources": [
+                  "layout_sidecar"
+                ],
+                "evidence_paths": [
+                  "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json"
+                ],
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "a_duplicate_count": 4,
+                "b_duplicate_count": 4
+              },
+              {
+                "kind": "bounds_metric_delta",
+                "status": "pass",
+                "a": "ui-gallery-button-group-dropdown",
+                "b": "ui-gallery-button-group-dropdown-trigger",
+                "metric": "height",
+                "comparison": "eq",
+                "expected": "== 0",
+                "eps_px": 1.0,
+                "observed_px": 0.0,
+                "a_bounds": {
+                  "x": 114.0,
+                  "y": 2238.667,
+                  "w": 110.667,
+                  "h": 36.0
+                },
+                "b_bounds": {
+                  "x": 188.0,
+                  "y": 2238.667,
+                  "w": 36.667,
+                  "h": 36.0
+                },
+                "a_raw_bounds": {
+                  "x": 114.0,
+                  "y": 2238.667,
+                  "w": 110.667,
+                  "h": 36.0
+                },
+                "b_raw_bounds": {
+                  "x": 188.0,
+                  "y": 2238.667,
+                  "w": 36.667,
+                  "h": 36.0
+                },
+                "scale_factors": [
+                  1.5
+                ],
+                "coordinate_units": [
+                  "logical_px"
+                ],
+                "a_node": "NodeId(1369v1)",
+                "b_node": "NodeId(1374v1)",
+                "evidence_sources": [
+                  "layout_sidecar"
+                ],
+                "evidence_paths": [
+                  "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json"
+                ],
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "a_duplicate_count": 4,
+                "b_duplicate_count": 4
+              },
+              {
+                "kind": "bounds_metric_delta",
+                "status": "pass",
+                "a": "ui-gallery-button-group-text",
+                "b": "ui-gallery-button-group-text-prefix",
+                "metric": "height",
+                "comparison": "eq",
+                "expected": "== 0",
+                "eps_px": 1.0,
+                "observed_px": 0.0,
+                "a_bounds": {
+                  "x": 114.0,
+                  "y": 3176.667,
+                  "w": 726.0,
+                  "h": 36.0
+                },
+                "b_bounds": {
+                  "x": 114.0,
+                  "y": 3176.667,
+                  "w": 79.333,
+                  "h": 36.0
+                },
+                "a_raw_bounds": {
+                  "x": 114.0,
+                  "y": 3176.667,
+                  "w": 726.0,
+                  "h": 36.0
+                },
+                "b_raw_bounds": {
+                  "x": 114.0,
+                  "y": 3176.667,
+                  "w": 79.333,
+                  "h": 36.0
+                },
+                "scale_factors": [
+                  1.5
+                ],
+                "coordinate_units": [
+                  "logical_px"
+                ],
+                "a_node": "NodeId(1518v1)",
+                "b_node": "NodeId(1519v1)",
+                "evidence_sources": [
+                  "layout_sidecar"
+                ],
+                "evidence_paths": [
+                  "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json"
+                ],
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "a_duplicate_count": 4,
+                "b_duplicate_count": 4
+              },
+              {
+                "kind": "bounds_metric_delta",
+                "status": "pass",
+                "a": "ui-gallery-button-group-text",
+                "b": "ui-gallery-button-group-text-control",
+                "metric": "height",
+                "comparison": "eq",
+                "expected": "== 0",
+                "eps_px": 1.0,
+                "observed_px": 0.0,
+                "a_bounds": {
+                  "x": 114.0,
+                  "y": 3176.667,
+                  "w": 726.0,
+                  "h": 36.0
+                },
+                "b_bounds": {
+                  "x": 193.333,
+                  "y": 3176.667,
+                  "w": 583.333,
+                  "h": 36.0
+                },
+                "a_raw_bounds": {
+                  "x": 114.0,
+                  "y": 3176.667,
+                  "w": 726.0,
+                  "h": 36.0
+                },
+                "b_raw_bounds": {
+                  "x": 193.333,
+                  "y": 3176.667,
+                  "w": 583.333,
+                  "h": 36.0
+                },
+                "scale_factors": [
+                  1.5
+                ],
+                "coordinate_units": [
+                  "logical_px"
+                ],
+                "a_node": "NodeId(1518v1)",
+                "b_node": "NodeId(1527v1)",
+                "evidence_sources": [
+                  "layout_sidecar"
+                ],
+                "evidence_paths": [
+                  "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json"
+                ],
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "a_duplicate_count": 4,
+                "b_duplicate_count": 4
+              },
+              {
+                "kind": "bounds_metric_delta",
+                "status": "pass",
+                "a": "ui-gallery-button-group-text",
+                "b": "ui-gallery-button-group-text-suffix",
+                "metric": "height",
+                "comparison": "eq",
+                "expected": "== 0",
+                "eps_px": 1.0,
+                "observed_px": 0.0,
+                "a_bounds": {
+                  "x": 114.0,
+                  "y": 3176.667,
+                  "w": 726.0,
+                  "h": 36.0
+                },
+                "b_bounds": {
+                  "x": 777.333,
+                  "y": 3176.667,
+                  "w": 63.333,
+                  "h": 36.0
+                },
+                "a_raw_bounds": {
+                  "x": 114.0,
+                  "y": 3176.667,
+                  "w": 726.0,
+                  "h": 36.0
+                },
+                "b_raw_bounds": {
+                  "x": 777.333,
+                  "y": 3176.667,
+                  "w": 63.333,
+                  "h": 36.0
+                },
+                "scale_factors": [
+                  1.5
+                ],
+                "coordinate_units": [
+                  "logical_px"
+                ],
+                "a_node": "NodeId(1518v1)",
+                "b_node": "NodeId(1528v1)",
+                "evidence_sources": [
+                  "layout_sidecar"
+                ],
+                "evidence_paths": [
+                  "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json"
+                ],
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "a_duplicate_count": 4,
+                "b_duplicate_count": 4
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "input_search_button",
+      "label": "Button Group input example search button",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "search_button_compact_default_size",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-button-group-input-search-button"
+      ],
+      "upstream_facts": [
+        "The example renders Input followed by an outline Button containing SearchIcon.",
+        "ButtonGroup direct input participates in flex-1 sizing.",
+        "The icon-only default-size Button keeps compact inline padding rather than becoming size=icon."
+      ],
+      "fret_facts": [
+        "The UI Gallery snippet exposes a stable search button test id.",
+        "The render-flow seed gate asserts search button width between 36px and 56px and height at least 32px.",
+        "The diagnostics seed script repeats min and max bounds assertions and captures layout and screenshot evidence."
+      ],
+      "checks": [
+        {
+          "id": "search_button_compact_default_size",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Search icon button keeps compact default Button inline padding inside ButtonGroup.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+            "docs/workstreams/shadcn-parity-harness-v1/README.md",
+            "target/fret-diag/shadcn-parity-harness-v1/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The invariant is shadcn Button recipe sizing inside a ButtonGroup docs-path composition."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics",
+            "status": "pass",
+            "sidecar_paths": [
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/layout.taffy.v1.json"
+            ],
+            "bundle_schema2_paths": [
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/bundle.schema2.json"
+            ],
+            "predicate_count": 2,
+            "predicates": [
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery-button-group-input-search-button",
+                "metric": "width",
+                "comparison": "between",
+                "expected": "36..56",
+                "eps_px": 1.0,
+                "observed_px": 45.333,
+                "bounds": {
+                  "x": 489.333,
+                  "y": 1906.667,
+                  "w": 45.333,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 489.333,
+                  "y": 1906.667,
+                  "w": 45.333,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1311v1)",
+                "kind_hint": "Pressable",
+                "evidence_source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "duplicate_count": 4
+              },
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery-button-group-input-search-button",
+                "metric": "height",
+                "comparison": "gte",
+                "expected": ">= 32",
+                "eps_px": 1.0,
+                "observed_px": 36.0,
+                "bounds": {
+                  "x": 489.333,
+                  "y": 1906.667,
+                  "w": 45.333,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 489.333,
+                  "y": 1906.667,
+                  "w": 45.333,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1311v1)",
+                "kind_hint": "Pressable",
+                "evidence_source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "duplicate_count": 4
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "select_composition",
+      "label": "Button Group select example composition",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "select_currency_trigger_compact_default_size",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-button-group-select",
+        "ui-gallery-button-group-select-currency-trigger",
+        "ui-gallery-button-group-select-amount",
+        "ui-gallery-button-group-select-send-button"
+      ],
+      "upstream_facts": [
+        "The example renders a monospace currency Select trigger, an amount Input, and an icon-only send Button.",
+        "The Select trigger keeps compact control chrome instead of collapsing to text width.",
+        "The amount input stretches in the shared lane while the send button stays compact."
+      ],
+      "fret_facts": [
+        "The UI Gallery snippet exposes stable test ids for the select trigger, amount input, and send button.",
+        "The render-flow gate can assert each sub-control after scrolling the Button Group select section into view.",
+        "The diagnostics seed script captures a select-specific layout sidecar and screenshot."
+      ],
+      "checks": [
+        {
+          "id": "select_currency_trigger_compact_default_size",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Currency trigger keeps compact monospace select trigger sizing inside ButtonGroup.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
+            "apps/fret-ui-gallery/src/ui/snippets/button_group/button_group_select.rs",
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The currency trigger sizing is recipe-level select chrome inside the ButtonGroup select docs-path example."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/layout.taffy.v1.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/layout.taffy.v1.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/bundle.schema2.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/bundle.schema2.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/bundle.schema2.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-button-group-select-currency-trigger",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 58.219",
+                  "eps_px": 1.0,
+                  "observed_px": 58.0,
+                  "bounds": {
+                    "x": 114.0,
+                    "y": 2404.667,
+                    "w": 58.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 114.0,
+                    "y": 2404.667,
+                    "w": 58.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1398v1)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "duplicate_count": 4
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-button-group-select-currency-trigger",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 114.0,
+                    "y": 2404.667,
+                    "w": 58.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 114.0,
+                    "y": 2404.667,
+                    "w": 58.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1398v1)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "duplicate_count": 4
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json",
+                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.button_group.select_demo.currency_trigger",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 58.219",
+                  "eps_px": 1.0,
+                  "observed_px": 58.219,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 58.219,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
+                  "snapshot_name": "button-group-select",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": null,
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.0",
+                  "tag": "button",
+                  "attrs": {
+                    "role": "combobox",
+                    "aria-expanded": "false",
+                    "aria-controls": "radix-_R_alubsnpfiuplb_",
+                    "data-state": "closed"
+                  },
+                  "class_name": "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 font-mono"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.button_group.select_demo.currency_trigger",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "w": 58.219,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
+                  "snapshot_name": "button-group-select",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": null,
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.0",
+                  "tag": "button",
+                  "attrs": {
+                    "role": "combobox",
+                    "aria-expanded": "false",
+                    "aria-controls": "radix-_R_alubsnpfiuplb_",
+                    "data-state": "closed"
+                  },
+                  "class_name": "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 font-mono"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 58.219,
+                "fret_logical_observed_px": 58.0,
+                "logical_delta_px": -0.219,
+                "fret_raw_observed_px": 58.0,
+                "raw_delta_px": -0.219
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "select_amount_fill_width",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Amount input keeps fill width and default input height in the shared ButtonGroup lane.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
+            "apps/fret-ui-gallery/src/ui/snippets/button_group/button_group_select.rs",
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The amount input fill behavior is a docs-path composition invariant for the ButtonGroup select example."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/layout.taffy.v1.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/layout.taffy.v1.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/bundle.schema2.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/bundle.schema2.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/bundle.schema2.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-button-group-select-amount",
+                  "metric": "width",
+                  "comparison": "gte",
+                  "expected": ">= 120",
+                  "eps_px": 1.0,
+                  "observed_px": 318.0,
+                  "bounds": {
+                    "x": 172.0,
+                    "y": 2404.667,
+                    "w": 318.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 172.0,
+                    "y": 2404.667,
+                    "w": 318.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1406v1)",
+                  "kind_hint": "TextInput",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "duplicate_count": 4
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-button-group-select-amount",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 172.0,
+                    "y": 2404.667,
+                    "w": 318.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 172.0,
+                    "y": 2404.667,
+                    "w": 318.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1406v1)",
+                  "kind_hint": "TextInput",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "duplicate_count": 4
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json",
+                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.button_group.select_demo.amount",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 180",
+                  "eps_px": 1.0,
+                  "observed_px": 180.0,
+                  "bounds": {
+                    "x": 58.219,
+                    "y": 0.0,
+                    "w": 180.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
+                  "snapshot_name": "button-group-select",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": null,
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.1",
+                  "tag": "input",
+                  "attrs": {},
+                  "class_name": "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.button_group.select_demo.amount",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 58.219,
+                    "y": 0.0,
+                    "w": 180.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
+                  "snapshot_name": "button-group-select",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": null,
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.0.1",
+                  "tag": "input",
+                  "attrs": {},
+                  "class_name": "file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input h-9 w-full min-w-0 rounded-md border bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 180.0,
+                "fret_logical_observed_px": 318.0,
+                "logical_delta_px": 138.0,
+                "fret_raw_observed_px": 318.0,
+                "raw_delta_px": 138.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        },
+        {
+          "id": "select_send_button_compact_default_size",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Send icon button keeps compact default Button inline padding in the ButtonGroup lane.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+          "confidence": "high",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
+            "apps/fret-ui-gallery/src/ui/snippets/button_group/button_group_select.rs",
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The send button sizing is shadcn Button recipe chrome inside the ButtonGroup select docs-path example."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics+upstream_dom_snapshot",
+            "status": "pass",
+            "fret": {
+              "source": "fret_layout_sidecar+bundle_schema2_semantics",
+              "status": "pass",
+              "sidecar_paths": [
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/layout.taffy.v1.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/layout.taffy.v1.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/layout.taffy.v1.json"
+              ],
+              "bundle_schema2_paths": [
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/bundle.schema2.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/bundle.schema2.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/bundle.schema2.json",
+                "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/bundle.schema2.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-button-group-select-send-button",
+                  "metric": "width",
+                  "comparison": "between",
+                  "expected": "32..56",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 498.0,
+                    "y": 2404.667,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 498.0,
+                    "y": 2404.667,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1408v1)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "duplicate_count": 4
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "ui-gallery-button-group-select-send-button",
+                  "metric": "height",
+                  "comparison": "gte",
+                  "expected": ">= 32",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 498.0,
+                    "y": 2404.667,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 498.0,
+                    "y": 2404.667,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1408v1)",
+                  "kind_hint": "Pressable",
+                  "evidence_source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "duplicate_count": 4
+                }
+              ]
+            },
+            "upstream_dom": {
+              "source": "upstream_dom_snapshot",
+              "status": "pass",
+              "snapshot_paths": [
+                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json",
+                "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json"
+              ],
+              "predicate_count": 2,
+              "predicates": [
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.button_group.select_demo.send_button",
+                  "metric": "width",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 246.219,
+                    "y": 0.0,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
+                  "snapshot_name": "button-group-select",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": null,
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.1.0",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-label": "Send"
+                  },
+                  "class_name": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 size-9"
+                },
+                {
+                  "kind": "bounds_metric",
+                  "status": "pass",
+                  "target": "upstream.button_group.select_demo.send_button",
+                  "metric": "height",
+                  "comparison": "eq",
+                  "expected": "== 36",
+                  "eps_px": 1.0,
+                  "observed_px": 36.0,
+                  "bounds": {
+                    "x": 246.219,
+                    "y": 0.0,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "device_pixel_ratio": 2.0,
+                  "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
+                  "snapshot_name": "button-group-select",
+                  "theme": "light",
+                  "mode": "",
+                  "variant": "",
+                  "context_id": null,
+                  "viewport": {
+                    "w": 1440,
+                    "h": 900
+                  },
+                  "path": "0.1.0",
+                  "tag": "button",
+                  "attrs": {
+                    "aria-label": "Send"
+                  },
+                  "class_name": "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 size-9"
+                }
+              ]
+            },
+            "comparisons": [
+              {
+                "metric": "width",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              },
+              {
+                "metric": "height",
+                "upstream_observed_px": 36.0,
+                "fret_logical_observed_px": 36.0,
+                "logical_delta_px": 0.0,
+                "fret_raw_observed_px": 36.0,
+                "raw_delta_px": 0.0
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "dropdown_trigger",
+      "label": "Button Group dropdown trigger chevron button",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "dropdown_trigger_compact_default_size",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-button-group-dropdown-trigger"
+      ],
+      "upstream_facts": [
+        "The example uses DropdownMenuTrigger asChild over an outline Button.",
+        "The trigger Button has className !pl-2.",
+        "The chevron trigger keeps compact default Button sizing and does not collapse around the icon."
+      ],
+      "fret_facts": [
+        "The UI Gallery snippet exposes a stable dropdown trigger test id.",
+        "The render-flow seed gate asserts trigger width between 32px and 56px and height at least 32px.",
+        "The diagnostics seed script repeats min and max bounds assertions and captures layout and screenshot evidence."
+      ],
+      "checks": [
+        {
+          "id": "dropdown_trigger_compact_default_size",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "Dropdown chevron trigger keeps compact default Button sizing after the !pl-2 override.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics",
+          "confidence": "high",
+          "owner": "diagnostics_surface",
+          "layer": "runner",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+            "docs/workstreams/shadcn-parity-harness-v1/README.md",
+            "target/fret-diag/shadcn-parity-harness-v1/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "This part is best guarded in a running gallery because it combines recipe sizing, dropdown trigger substitution, and layout sidecar evidence."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics",
+            "status": "pass",
+            "sidecar_paths": [
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/layout.taffy.v1.json"
+            ],
+            "bundle_schema2_paths": [
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/bundle.schema2.json"
+            ],
+            "predicate_count": 2,
+            "predicates": [
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery-button-group-dropdown-trigger",
+                "metric": "width",
+                "comparison": "between",
+                "expected": "32..56",
+                "eps_px": 1.0,
+                "observed_px": 36.667,
+                "bounds": {
+                  "x": 188.0,
+                  "y": 2238.667,
+                  "w": 36.667,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 188.0,
+                  "y": 2238.667,
+                  "w": 36.667,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1374v1)",
+                "kind_hint": "Pressable",
+                "evidence_source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "duplicate_count": 4
+              },
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery-button-group-dropdown-trigger",
+                "metric": "height",
+                "comparison": "gte",
+                "expected": ">= 32",
+                "eps_px": 1.0,
+                "observed_px": 36.0,
+                "bounds": {
+                  "x": 188.0,
+                  "y": 2238.667,
+                  "w": 36.667,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 188.0,
+                  "y": 2238.667,
+                  "w": 36.667,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1374v1)",
+                "kind_hint": "Pressable",
+                "evidence_source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "duplicate_count": 4
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "text_prefix",
+      "label": "ButtonGroupText prefix addon",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "text_prefix_vertical_center",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-button-group-text-prefix",
+        "ui-gallery-button-group-text-control"
+      ],
+      "upstream_facts": [
+        "ButtonGroupText uses bg-muted flex items-center gap-2 rounded-md border px-4 text-sm font-medium shadow-xs.",
+        "The example wraps Label text https:// through ButtonGroupText asChild.",
+        "The prefix addon participates in the stretched ButtonGroup row and centers vertically with the adjacent input."
+      ],
+      "fret_facts": [
+        "The UI Gallery snippet exposes stable prefix and control test ids.",
+        "The render-flow seed gate asserts prefix height at least 32px and center-y delta within 2px of the control.",
+        "The diagnostics seed script repeats min-size and center-y assertions."
+      ],
+      "checks": [
+        {
+          "id": "text_prefix_vertical_center",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "ButtonGroupText prefix stays vertically centered with the adjacent input control.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+            "docs/workstreams/shadcn-parity-harness-v1/README.md",
+            "target/fret-diag/shadcn-parity-harness-v1/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The invariant belongs to ButtonGroupText recipe chrome and child alignment unless it repeats across unrelated flex wrappers."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics",
+            "status": "pass",
+            "sidecar_paths": [
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/layout.taffy.v1.json"
+            ],
+            "bundle_schema2_paths": [
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/bundle.schema2.json"
+            ],
+            "predicate_count": 2,
+            "predicates": [
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery-button-group-text-prefix",
+                "metric": "height",
+                "comparison": "gte",
+                "expected": ">= 32",
+                "eps_px": 1.0,
+                "observed_px": 36.0,
+                "bounds": {
+                  "x": 114.0,
+                  "y": 3176.667,
+                  "w": 79.333,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 114.0,
+                  "y": 3176.667,
+                  "w": 79.333,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1519v1)",
+                "kind_hint": "Container",
+                "evidence_source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "duplicate_count": 4
+              },
+              {
+                "kind": "bounds_metric_delta",
+                "status": "pass",
+                "a": "ui-gallery-button-group-text-prefix",
+                "b": "ui-gallery-button-group-text-control",
+                "metric": "center_y",
+                "comparison": "eq",
+                "expected": "== 0",
+                "eps_px": 2.0,
+                "observed_px": 0.0,
+                "a_bounds": {
+                  "x": 114.0,
+                  "y": 3176.667,
+                  "w": 79.333,
+                  "h": 36.0
+                },
+                "b_bounds": {
+                  "x": 193.333,
+                  "y": 3176.667,
+                  "w": 583.333,
+                  "h": 36.0
+                },
+                "a_raw_bounds": {
+                  "x": 114.0,
+                  "y": 3176.667,
+                  "w": 79.333,
+                  "h": 36.0
+                },
+                "b_raw_bounds": {
+                  "x": 193.333,
+                  "y": 3176.667,
+                  "w": 583.333,
+                  "h": 36.0
+                },
+                "scale_factors": [
+                  1.5
+                ],
+                "coordinate_units": [
+                  "logical_px"
+                ],
+                "a_node": "NodeId(1519v1)",
+                "b_node": "NodeId(1527v1)",
+                "evidence_sources": [
+                  "layout_sidecar"
+                ],
+                "evidence_paths": [
+                  "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json"
+                ],
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "a_duplicate_count": 4,
+                "b_duplicate_count": 4
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "text_control",
+      "label": "Button Group text example input control",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "text_control_seed_anchor",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-button-group-text-control"
+      ],
+      "upstream_facts": [
+        "The text example places the input-like control between prefix and suffix addons.",
+        "The surrounding ButtonGroup uses items-stretch and direct input flex behavior."
+      ],
+      "fret_facts": [
+        "The UI Gallery snippet exposes a stable control test id.",
+        "The diagnostics seed script asserts control min width 180px and min height 32px.",
+        "The render-flow gate uses the control as the center-y anchor for prefix and suffix."
+      ],
+      "checks": [
+        {
+          "id": "text_control_seed_anchor",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "The text example control remains a measurable anchor for addon centering and keeps control height.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics",
+          "confidence": "high",
+          "owner": "diagnostics_surface",
+          "layer": "runner",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+            "target/fret-diag/shadcn-parity-harness-v1/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "The control is most useful as a selector and layout-sidecar anchor for gallery-level checks."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics",
+            "status": "pass",
+            "sidecar_paths": [
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/layout.taffy.v1.json"
+            ],
+            "bundle_schema2_paths": [
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/bundle.schema2.json"
+            ],
+            "predicate_count": 2,
+            "predicates": [
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery-button-group-text-control",
+                "metric": "width",
+                "comparison": "gte",
+                "expected": ">= 180",
+                "eps_px": 1.0,
+                "observed_px": 583.333,
+                "bounds": {
+                  "x": 193.333,
+                  "y": 3176.667,
+                  "w": 583.333,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 193.333,
+                  "y": 3176.667,
+                  "w": 583.333,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1527v1)",
+                "kind_hint": "TextInput",
+                "evidence_source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "duplicate_count": 4
+              },
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery-button-group-text-control",
+                "metric": "height",
+                "comparison": "gte",
+                "expected": ">= 32",
+                "eps_px": 1.0,
+                "observed_px": 36.0,
+                "bounds": {
+                  "x": 193.333,
+                  "y": 3176.667,
+                  "w": 583.333,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 193.333,
+                  "y": 3176.667,
+                  "w": 583.333,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1527v1)",
+                "kind_hint": "TextInput",
+                "evidence_source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "duplicate_count": 4
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "text_suffix",
+      "label": "ButtonGroupText suffix addon",
+      "axis": "layout",
+      "status": "pass_known",
+      "confidence": "high",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "text_suffix_vertical_center",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-button-group-text-suffix",
+        "ui-gallery-button-group-text-control"
+      ],
+      "upstream_facts": [
+        "ButtonGroupText suffix renders .com with the same flex items-center chrome.",
+        "The suffix addon participates in the stretched ButtonGroup row and centers vertically with the adjacent input."
+      ],
+      "fret_facts": [
+        "The UI Gallery snippet exposes stable suffix and control test ids.",
+        "The render-flow seed gate asserts suffix height at least 32px and center-y delta within 2px of the control.",
+        "The diagnostics seed script repeats min-size and center-y assertions."
+      ],
+      "checks": [
+        {
+          "id": "text_suffix_vertical_center",
+          "kind": "fret_layout_sidecar",
+          "status": "pass_known",
+          "expected": "ButtonGroupText suffix stays vertically centered with the adjacent input control.",
+          "observed": "pass",
+          "observed_source": "fret_layout_sidecar+bundle_schema2_semantics",
+          "confidence": "high",
+          "owner": "gallery_composition",
+          "layer": "app_demo",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "apps/fret-ui-gallery/src/driver/render_flow.rs",
+            "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+            "docs/workstreams/shadcn-parity-harness-v1/README.md",
+            "target/fret-diag/shadcn-parity-harness-v1/**/layout.taffy.v1.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The invariant belongs to ButtonGroupText recipe chrome and child alignment unless it repeats across unrelated flex wrappers."
+          },
+          "measurement": {
+            "source": "fret_layout_sidecar+bundle_schema2_semantics",
+            "status": "pass",
+            "sidecar_paths": [
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/layout.taffy.v1.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/layout.taffy.v1.json"
+            ],
+            "bundle_schema2_paths": [
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/bundle.schema2.json",
+              "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/bundle.schema2.json"
+            ],
+            "predicate_count": 2,
+            "predicates": [
+              {
+                "kind": "bounds_metric",
+                "status": "pass",
+                "target": "ui-gallery-button-group-text-suffix",
+                "metric": "height",
+                "comparison": "gte",
+                "expected": ">= 32",
+                "eps_px": 1.0,
+                "observed_px": 36.0,
+                "bounds": {
+                  "x": 777.333,
+                  "y": 3176.667,
+                  "w": 63.333,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 777.333,
+                  "y": 3176.667,
+                  "w": 63.333,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1528v1)",
+                "kind_hint": "Container",
+                "evidence_source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "duplicate_count": 4
+              },
+              {
+                "kind": "bounds_metric_delta",
+                "status": "pass",
+                "a": "ui-gallery-button-group-text-suffix",
+                "b": "ui-gallery-button-group-text-control",
+                "metric": "center_y",
+                "comparison": "eq",
+                "expected": "== 0",
+                "eps_px": 2.0,
+                "observed_px": 0.0,
+                "a_bounds": {
+                  "x": 777.333,
+                  "y": 3176.667,
+                  "w": 63.333,
+                  "h": 36.0
+                },
+                "b_bounds": {
+                  "x": 193.333,
+                  "y": 3176.667,
+                  "w": 583.333,
+                  "h": 36.0
+                },
+                "a_raw_bounds": {
+                  "x": 777.333,
+                  "y": 3176.667,
+                  "w": 63.333,
+                  "h": 36.0
+                },
+                "b_raw_bounds": {
+                  "x": 193.333,
+                  "y": 3176.667,
+                  "w": 583.333,
+                  "h": 36.0
+                },
+                "scale_factors": [
+                  1.5
+                ],
+                "coordinate_units": [
+                  "logical_px"
+                ],
+                "a_node": "NodeId(1528v1)",
+                "b_node": "NodeId(1527v1)",
+                "evidence_sources": [
+                  "layout_sidecar"
+                ],
+                "evidence_paths": [
+                  "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json"
+                ],
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "a_duplicate_count": 4,
+                "b_duplicate_count": 4
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "M2 can read Fret layout sidecars and evaluate structured geometry predicates by test_id.",
+    "M2 does not run a live browser extractor; upstream facts are still curated from the upstream registry files.",
+    "M2 does not parse Tailwind selectors mechanically; source facts are curated from the upstream registry files."
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "needs_hardening",
+    "component": "button-group",
+    "style": "new-york-v4",
+    "source_mapping": "tools/parity-discovery/fixtures/button_group_parts_v1.json",
+    "goal": "Give a repair agent the minimum source truth, Fret wiring, evidence, and promotion queues needed to turn parity findings into gates.",
+    "truth": {
+      "upstream_refs": [
+        {
+          "id": "upstream.button_group.source",
+          "bucket": "upstream",
+          "path": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx"
+        },
+        {
+          "id": "upstream.button_group.input_example",
+          "bucket": "upstream",
+          "path": "repo-ref/ui/apps/v4/registry/new-york-v4/examples/button-group-input.tsx"
+        },
+        {
+          "id": "upstream.button_group.dropdown_example",
+          "bucket": "upstream",
+          "path": "repo-ref/ui/apps/v4/registry/new-york-v4/examples/button-group-dropdown.tsx"
+        },
+        {
+          "id": "upstream.button_group.select_example",
+          "bucket": "upstream",
+          "path": "repo-ref/ui/apps/v4/registry/new-york-v4/examples/button-group-select.tsx"
+        },
+        {
+          "id": "upstream.button_group.text_example",
+          "bucket": "upstream",
+          "path": "repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-group-button-group.tsx"
+        }
+      ],
+      "upstream_contexts": [
+        {
+          "id": "upstream.button_group.input_demo.light.vp1440x900",
+          "snapshot": "button-group-input",
+          "theme": "light",
+          "viewport": {
+            "width_px": 1440,
+            "height_px": 900
+          },
+          "device_pixel_ratio": 2
+        },
+        {
+          "id": "upstream.button_group.select_demo.light.vp1440x900",
+          "snapshot": "button-group-select",
+          "theme": "light",
+          "viewport": {
+            "width_px": 1440,
+            "height_px": 900
+          },
+          "device_pixel_ratio": 2
+        }
+      ],
+      "limitations": [
+        "M2 can read Fret layout sidecars and evaluate structured geometry predicates by test_id.",
+        "M2 does not run a live browser extractor; upstream facts are still curated from the upstream registry files.",
+        "M2 does not parse Tailwind selectors mechanically; source facts are curated from the upstream registry files."
+      ]
+    },
+    "fret_wiring": {
+      "refs": [
+        {
+          "id": "fret.button_group.recipe",
+          "bucket": "fret",
+          "path": "ecosystem/fret-ui-shadcn/src/button_group.rs"
+        },
+        {
+          "id": "fret.gallery.input_snippet",
+          "bucket": "fret",
+          "path": "apps/fret-ui-gallery/src/ui/snippets/button_group/input.rs"
+        },
+        {
+          "id": "fret.gallery.dropdown_snippet",
+          "bucket": "fret",
+          "path": "apps/fret-ui-gallery/src/ui/snippets/button_group/dropdown_menu.rs"
+        },
+        {
+          "id": "fret.gallery.select_snippet",
+          "bucket": "fret",
+          "path": "apps/fret-ui-gallery/src/ui/snippets/button_group/button_group_select.rs"
+        },
+        {
+          "id": "fret.gallery.text_snippet",
+          "bucket": "fret",
+          "path": "apps/fret-ui-gallery/src/ui/snippets/button_group/text.rs"
+        },
+        {
+          "id": "fret.gallery.render_flow",
+          "bucket": "fret",
+          "path": "apps/fret-ui-gallery/src/driver/render_flow.rs"
+        },
+        {
+          "id": "fret.diag.seed_layout",
+          "bucket": "fret",
+          "path": "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json"
+        },
+        {
+          "id": "fret.seed_lane",
+          "bucket": "fret",
+          "path": "docs/workstreams/shadcn-parity-harness-v1/README.md"
+        }
+      ],
+      "test_ids": [
+        "ui-gallery-button-group-dropdown",
+        "ui-gallery-button-group-dropdown-trigger",
+        "ui-gallery-button-group-input",
+        "ui-gallery-button-group-input-search-button",
+        "ui-gallery-button-group-select",
+        "ui-gallery-button-group-select-amount",
+        "ui-gallery-button-group-select-currency-trigger",
+        "ui-gallery-button-group-select-send-button",
+        "ui-gallery-button-group-text",
+        "ui-gallery-button-group-text-control",
+        "ui-gallery-button-group-text-prefix",
+        "ui-gallery-button-group-text-suffix"
+      ]
+    },
+    "evidence": {
+      "fret_layout_sidecar": [
+        "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+        "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/layout.taffy.v1.json",
+        "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/layout.taffy.v1.json",
+        "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/layout.taffy.v1.json"
+      ],
+      "fret_bundle_schema2": [
+        "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/bundle.schema2.json",
+        "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640340558-ui-gallery-shadcn-parity-seed.button-group-dropdown.layout/bundle.schema2.json",
+        "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640353928-ui-gallery-shadcn-parity-seed.button-group-select.layout/bundle.schema2.json",
+        "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640385876-ui-gallery-shadcn-parity-seed.button-group-text.layout/bundle.schema2.json"
+      ],
+      "upstream_dom": [
+        {
+          "snapshot": "button-group-input",
+          "theme": "light",
+          "mode": "",
+          "variant": "",
+          "context_id": "upstream.button_group.input_demo.light.vp1440x900",
+          "viewport": {
+            "width_px": 1440,
+            "height_px": 900
+          },
+          "device_pixel_ratio": 2.0,
+          "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json"
+        },
+        {
+          "snapshot": "button-group-select",
+          "theme": "light",
+          "mode": "",
+          "variant": "",
+          "context_id": "upstream.button_group.select_demo.light.vp1440x900",
+          "viewport": {
+            "width_px": 1440,
+            "height_px": 900
+          },
+          "device_pixel_ratio": 2.0,
+          "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json"
+        }
+      ]
+    },
+    "summary": {
+      "status_counts": {
+        "pass_known": 7,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "owner_status_counts": {
+        "component_recipe": {
+          "pass_known": 2,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "gallery_composition": {
+          "pass_known": 4,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism_core": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "diagnostics_surface": {
+          "pass_known": 2,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream_reference": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 2,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 2,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 4,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "top_findings": [],
+      "repair_queue_count": 0,
+      "hardening_queue_count": 1,
+      "gate_queue_count": 9
+    },
+    "repair_queue": [],
+    "hardening_queue": [
+      {
+        "part_id": "button_group_root",
+        "part_label": "ButtonGroup root layout contract",
+        "check_id": "root_source_facts_need_live_layout_extractor",
+        "status": "pass_known",
+        "axis": "layout",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "promotion_target": "mechanism_harness",
+        "confidence": "medium",
+        "triage": {
+          "score": 0,
+          "level": "none",
+          "reasons": [
+            "passing evidence"
+          ]
+        },
+        "expected": "Automatically compare root fit/stretch/direct-input flex behavior against Fret layout sidecars.",
+        "observed": "pass",
+        "observed_source": "fret_layout_sidecar+bundle_schema2_semantics",
+        "test_ids": [
+          "ui-gallery-button-group-input",
+          "ui-gallery-button-group-dropdown",
+          "ui-gallery-button-group-text"
+        ],
+        "source_refs": {
+          "upstream": [
+            {
+              "id": "upstream.button_group.source",
+              "bucket": "upstream",
+              "path": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx"
+            }
+          ],
+          "fret": [
+            {
+              "id": "fret.button_group.recipe",
+              "bucket": "fret",
+              "path": "ecosystem/fret-ui-shadcn/src/button_group.rs"
+            },
+            {
+              "id": "fret.gallery.render_flow",
+              "bucket": "fret",
+              "path": "apps/fret-ui-gallery/src/driver/render_flow.rs"
+            }
+          ]
+        },
+        "evidence_refs": [
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx",
+          "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+          "target/fret-diag/shadcn-parity-harness-v1/**/layout.taffy.v1.json"
+        ],
+        "next_step": "Keep this as a regression lock for the mechanism/mechanism_core owner; harden only if confidence or coverage gaps remain."
+      }
+    ],
+    "gate_queue": [
+      {
+        "part_id": "button_group_root",
+        "check_id": "root_source_facts_need_live_layout_extractor",
+        "target": "mechanism_harness",
+        "reason": "If direct child flex/stretch semantics drift across components, the owner is layout vocabulary or layout-tree interpretation rather than a Button Group-only recipe.",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism"
+      },
+      {
+        "part_id": "input_search_button",
+        "check_id": "search_button_compact_default_size",
+        "target": "component_fixture",
+        "reason": "The invariant is shadcn Button recipe sizing inside a ButtonGroup docs-path composition.",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo"
+      },
+      {
+        "part_id": "select_composition",
+        "check_id": "select_currency_trigger_compact_default_size",
+        "target": "component_fixture",
+        "reason": "The currency trigger sizing is recipe-level select chrome inside the ButtonGroup select docs-path example.",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe"
+      },
+      {
+        "part_id": "select_composition",
+        "check_id": "select_amount_fill_width",
+        "target": "component_fixture",
+        "reason": "The amount input fill behavior is a docs-path composition invariant for the ButtonGroup select example.",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo"
+      },
+      {
+        "part_id": "select_composition",
+        "check_id": "select_send_button_compact_default_size",
+        "target": "component_fixture",
+        "reason": "The send button sizing is shadcn Button recipe chrome inside the ButtonGroup select docs-path example.",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe"
+      },
+      {
+        "part_id": "dropdown_trigger",
+        "check_id": "dropdown_trigger_compact_default_size",
+        "target": "diag_script",
+        "reason": "This part is best guarded in a running gallery because it combines recipe sizing, dropdown trigger substitution, and layout sidecar evidence.",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner"
+      },
+      {
+        "part_id": "text_prefix",
+        "check_id": "text_prefix_vertical_center",
+        "target": "component_fixture",
+        "reason": "The invariant belongs to ButtonGroupText recipe chrome and child alignment unless it repeats across unrelated flex wrappers.",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo"
+      },
+      {
+        "part_id": "text_control",
+        "check_id": "text_control_seed_anchor",
+        "target": "diag_script",
+        "reason": "The control is most useful as a selector and layout-sidecar anchor for gallery-level checks.",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner"
+      },
+      {
+        "part_id": "text_suffix",
+        "check_id": "text_suffix_vertical_center",
+        "target": "component_fixture",
+        "reason": "The invariant belongs to ButtonGroupText recipe chrome and child alignment unless it repeats across unrelated flex wrappers.",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo"
+      }
+    ]
+  }
+}
