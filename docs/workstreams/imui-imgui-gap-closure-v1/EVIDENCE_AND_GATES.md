@@ -4004,6 +4004,20 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   - `python tools/check_workstream_catalog.py`
   - `git diff --check`
 
+- 2026-05-24 resize-state owner split:
+  `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` now owns the resize-state
+  clamp/snap/update logic through `prepare_resize_state(...)`. `floating_window_on_area.rs` only
+  threads the resulting state into the shell, chrome, and resize-stack owner.
+  Validation passed:
+  - `cargo fmt -p fret-ui-kit --check`
+  - `cargo test -p fret-ui-kit --features imui --lib floating_window_close_glyph_uses_shared_chrome_glyph_text_role`
+  - `cargo nextest run -p fret-imui floating --no-fail-fast`
+  - `cargo check -p fret-ui-kit --features imui --lib`
+  - `python tools/gate_imui_workstream_source.py`
+  - `python tools/gate_imui_facade_teaching_source.py`
+  - `python tools/check_workstream_catalog.py`
+  - `git diff --check`
+
 2026-05-19 shadcn ItemTitle role-preservation slice:
 
 - Source gap before fix: `ItemTitle::new_children(...)` intentionally patched child text leaves to

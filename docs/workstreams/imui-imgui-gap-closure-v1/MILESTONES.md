@@ -1116,3 +1116,8 @@ together, with the public IMUI surface still unchanged.
 now owns the body/blocker/resize-handle stack assembly through an internal
 `resize_stack_element(...)` helper. `floating_window_on_area.rs` now only passes the clipped body,
 blocker, resize flags, activation policy, and handle test ids into the resize owner.
+
+2026-05-24 resize-state owner split result: the resize clamp/snap/update logic now lives in
+`prepare_resize_state(...)` inside `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs`.
+`floating_window_on_area.rs` no longer owns the `FloatWindowState` clamp/snap loop or the resize
+handle test-id tuple assembly.

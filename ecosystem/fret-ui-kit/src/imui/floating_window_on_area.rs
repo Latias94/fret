@@ -74,148 +74,19 @@ where
             .and_then(|svc| svc.scale_factor(cx.window))
             .unwrap_or(1.0);
 
-        let (
-            position_after_resize,
-            size,
-            title_bar_test_id,
-            close_button_test_id,
-            resize_left_test_id,
-            resize_right_test_id,
-            resize_top_test_id,
-            resize_bottom_test_id,
-            resize_top_left_test_id,
-            resize_top_right_test_id,
-            resize_bottom_left_test_id,
-            resize_corner_test_id,
-        ) = cx.state_for(
+        let resize_state = super::floating_window_resize::prepare_resize_state(
+            cx,
             window_id,
-            || super::FloatWindowState {
-                size: initial_size.unwrap_or_else(|| Size::new(Px(0.0), Px(0.0))),
-                last_resize_position: None,
-                title_bar_test_id: Arc::from(format!("imui.float_window.title_bar:{id}")),
-                close_button_test_id: Arc::from(format!("imui.float_window.close:{id}")),
-                resize_left_test_id: Arc::from(format!("imui.float_window.resize.left:{id}")),
-                resize_right_test_id: Arc::from(format!("imui.float_window.resize.right:{id}")),
-                resize_top_test_id: Arc::from(format!("imui.float_window.resize.top:{id}")),
-                resize_bottom_test_id: Arc::from(format!("imui.float_window.resize.bottom:{id}")),
-                resize_top_left_test_id: Arc::from(format!(
-                    "imui.float_window.resize.top_left:{id}"
-                )),
-                resize_top_right_test_id: Arc::from(format!(
-                    "imui.float_window.resize.top_right:{id}"
-                )),
-                resize_bottom_left_test_id: Arc::from(format!(
-                    "imui.float_window.resize.bottom_left:{id}"
-                )),
-                resize_corner_test_id: Arc::from(format!("imui.float_window.resize.corner:{id}")),
-            },
-            |st| {
-                let mut position = area.position;
-
-                let resize_cfg = resize.unwrap_or_default();
-                let min = resize_cfg.min_size;
-                let max = resize_cfg.max_size;
-                let clamp_width = |value: f32| -> Px {
-                    let mut out = value.max(min.width.0);
-                    if let Some(max) = max {
-                        out = out.min(max.width.0);
-                    }
-                    Px(out)
-                };
-                let clamp_height = |value: f32| -> Px {
-                    let mut out = value.max(min.height.0);
-                    if let Some(max) = max {
-                        out = out.min(max.height.0);
-                    }
-                    Px(out)
-                };
-
-                if collapsed {
-                    st.last_resize_position = None;
-                } else if let Some((handle, dragging, current, start)) = resize_snapshot {
-                    if dragging {
-                        let prev = st.last_resize_position.unwrap_or(start);
-                        let delta = super::point_sub(current, prev);
-
-                        match handle {
-                            super::FloatWindowResizeHandle::Left => {
-                                let right = Px(position.x.0 + st.size.width.0);
-                                let width = clamp_width(st.size.width.0 - delta.x.0);
-                                st.size.width = width;
-                                position.x = Px(right.0 - width.0);
-                            }
-                            super::FloatWindowResizeHandle::Right => {
-                                st.size.width = clamp_width(st.size.width.0 + delta.x.0);
-                            }
-                            super::FloatWindowResizeHandle::Top => {
-                                let bottom = Px(position.y.0 + st.size.height.0);
-                                let height = clamp_height(st.size.height.0 - delta.y.0);
-                                st.size.height = height;
-                                position.y = Px(bottom.0 - height.0);
-                            }
-                            super::FloatWindowResizeHandle::Bottom => {
-                                st.size.height = clamp_height(st.size.height.0 + delta.y.0);
-                            }
-                            super::FloatWindowResizeHandle::TopLeft => {
-                                let right = Px(position.x.0 + st.size.width.0);
-                                let bottom = Px(position.y.0 + st.size.height.0);
-
-                                let width = clamp_width(st.size.width.0 - delta.x.0);
-                                let height = clamp_height(st.size.height.0 - delta.y.0);
-                                st.size.width = width;
-                                st.size.height = height;
-                                position.x = Px(right.0 - width.0);
-                                position.y = Px(bottom.0 - height.0);
-                            }
-                            super::FloatWindowResizeHandle::TopRight => {
-                                let bottom = Px(position.y.0 + st.size.height.0);
-                                st.size.width = clamp_width(st.size.width.0 + delta.x.0);
-                                let height = clamp_height(st.size.height.0 - delta.y.0);
-                                st.size.height = height;
-                                position.y = Px(bottom.0 - height.0);
-                            }
-                            super::FloatWindowResizeHandle::BottomLeft => {
-                                let right = Px(position.x.0 + st.size.width.0);
-                                let width = clamp_width(st.size.width.0 - delta.x.0);
-                                st.size.width = width;
-                                position.x = Px(right.0 - width.0);
-                                st.size.height = clamp_height(st.size.height.0 + delta.y.0);
-                            }
-                            super::FloatWindowResizeHandle::BottomRight => {
-                                st.size.width = clamp_width(st.size.width.0 + delta.x.0);
-                                st.size.height = clamp_height(st.size.height.0 + delta.y.0);
-                            }
-                        }
-
-                        st.last_resize_position = Some(current);
-                    } else {
-                        st.last_resize_position = None;
-                    }
-                } else {
-                    st.last_resize_position = None;
-                }
-
-                st.size = super::snap_size_to_device_pixels(scale_factor, st.size);
-                position = super::snap_point_to_device_pixels(scale_factor, position);
-
-                (
-                    position,
-                    st.size,
-                    st.title_bar_test_id.clone(),
-                    st.close_button_test_id.clone(),
-                    st.resize_left_test_id.clone(),
-                    st.resize_right_test_id.clone(),
-                    st.resize_top_test_id.clone(),
-                    st.resize_bottom_test_id.clone(),
-                    st.resize_top_left_test_id.clone(),
-                    st.resize_top_right_test_id.clone(),
-                    st.resize_bottom_left_test_id.clone(),
-                    st.resize_corner_test_id.clone(),
-                )
-            },
+            id,
+            area.position,
+            initial_size,
+            resize,
+            resize_snapshot,
+            collapsed,
+            scale_factor,
         );
 
-        if position_after_resize != area.position {
+        if resize_state.position_after_resize != area.position {
             cx.state_for(
                 window_id,
                 || super::FloatingAreaState {
@@ -224,13 +95,13 @@ where
                     test_id: Arc::from(format!("imui.float_window.window:{id}")),
                 },
                 |st| {
-                    st.position = position_after_resize;
+                    st.position = resize_state.position_after_resize;
                 },
             );
         }
 
         let chrome = super::FloatingWindowChromeResponse {
-            size: resizable_layout.then_some(size),
+            size: resizable_layout.then_some(resize_state.size),
             resizing: resizing && !collapsed,
             collapsed,
         };
@@ -246,9 +117,9 @@ where
 
         let mut window_props = ContainerProps::default();
         if resizable_layout {
-            window_props.layout.size.width = Length::Px(size.width);
+            window_props.layout.size.width = Length::Px(resize_state.size.width);
             if !collapsed {
-                window_props.layout.size.height = Length::Px(size.height);
+                window_props.layout.size.height = Length::Px(resize_state.size.height);
             }
         }
         window_props.background = Some(popover);
@@ -314,8 +185,8 @@ where
                             area,
                             title_for_window.clone(),
                             open_for_window.clone(),
-                            title_bar_test_id.clone(),
-                            close_button_test_id.clone(),
+                            resize_state.title_bar_test_id.clone(),
+                            resize_state.close_button_test_id.clone(),
                             resizable_layout,
                             options,
                         ),
@@ -374,16 +245,7 @@ where
                 collapsed,
                 resize_enabled,
                 options.activate_on_click,
-                super::floating_window_resize::FloatingWindowResizeHandleTestIds {
-                    left: resize_left_test_id.clone(),
-                    right: resize_right_test_id.clone(),
-                    top: resize_top_test_id.clone(),
-                    bottom: resize_bottom_test_id.clone(),
-                    top_left: resize_top_left_test_id.clone(),
-                    top_right: resize_top_right_test_id.clone(),
-                    bottom_left: resize_bottom_left_test_id.clone(),
-                    bottom_right: resize_corner_test_id.clone(),
-                },
+                resize_state.handle_test_ids,
             );
 
             vec![stacked_body]

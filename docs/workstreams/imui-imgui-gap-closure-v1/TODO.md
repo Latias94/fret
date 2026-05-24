@@ -1290,4 +1290,10 @@ opening the slice.
       Result: `floating_window_resize.rs` now owns the body/blocker/resize-handle stack assembly,
       while `floating_window_on_area.rs` passes a clipped body, blocker, resize flags, and handle
       test ids into that owner.
+- [x] Split the floating-window resize-state calculation out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_on_area.rs` into the resize owner without
+      changing the public IMUI surface.
+      Result: `floating_window_resize.rs` now owns the resize-state clamp/snap/update logic via
+      `prepare_resize_state(...)`, while `floating_window_on_area.rs` only wires the resulting
+      state into the shell, chrome, and stack assembly.
 - [ ] Use that evidence to choose the next cleanup slice.
