@@ -295,9 +295,6 @@ pub enum ElementKind {
     /// A mechanism-only managed surface that can place and paint child roots from runtime-computed
     /// geometry without exposing the retained `Widget` API.
     ManagedSurface(ManagedSurfaceProps),
-    /// Unstable bridge element for hosting a retained subtree under declarative mount.
-    #[cfg(feature = "unstable-retained-bridge")]
-    RetainedSubtree(crate::retained_bridge::RetainedSubtreeProps),
     /// Composites an app-owned render target (Tier A; ADR 0007 / ADR 0038 / ADR 0123).
     ViewportSurface(ViewportSurfaceProps),
     SvgIcon(SvgIconProps),

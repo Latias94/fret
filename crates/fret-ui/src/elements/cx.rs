@@ -3886,18 +3886,6 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
         });
     }
 
-    #[cfg(feature = "unstable-retained-bridge")]
-    #[track_caller]
-    pub fn retained_subtree(
-        &mut self,
-        props: crate::retained_bridge::RetainedSubtreeProps,
-    ) -> AnyElement {
-        self.scope(|cx| {
-            let id = cx.root_id();
-            cx.new_any_element(id, ElementKind::RetainedSubtree(props), Vec::new())
-        })
-    }
-
     #[track_caller]
     pub fn viewport_surface(&mut self, target: fret_core::RenderTargetId) -> AnyElement {
         self.viewport_surface_props(ViewportSurfaceProps::new(target))

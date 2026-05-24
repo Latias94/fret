@@ -7,7 +7,7 @@ It validates:
 
 - Core portability boundaries (no backend leakage into portable crates).
 - Core vs ecosystem vs apps dependency direction.
-- Feature allowlist for `fret-ui/unstable-retained-bridge`.
+- Guardrail preventing deleted `fret-ui/unstable-retained-bridge` mappings from regrowing.
 
 Intended usage:
     python3 tools/check_layering.py
@@ -131,12 +131,13 @@ def _assert_no_external_deps(
             )
 
 
-def _check_unstable_retained_bridge_allowlist(
+def _check_unstable_retained_bridge_dependency_allowlist(
     metadata: dict[str, Any],
     *,
     allowlist: set[str],
     violations: list[Violation],
 ) -> None:
+    """Reject packages that enable the retained bridge directly on their `fret-ui` dependency."""
     workspace_ids = set(metadata["workspace_members"])
     for pkg in metadata["packages"]:
         if pkg["id"] not in workspace_ids:
@@ -149,13 +150,51 @@ def _check_unstable_retained_bridge_allowlist(
             if "unstable-retained-bridge" in features and from_name not in allowlist:
                 violations.append(
                     Violation(
-                        rule="unstable-retained-bridge-allowlist",
+                        rule="unstable-retained-bridge-dependency-allowlist",
                         message=(
-                            "Layering violation (unstable-retained-bridge-allowlist): "
-                            f"{from_name} must not enable fret-ui/unstable-retained-bridge"
+                            "Layering violation (unstable-retained-bridge-dependency-allowlist): "
+                            f"{from_name} must not enable fret-ui/unstable-retained-bridge "
+                            "directly from its fret-ui dependency"
                         ),
                     )
                 )
+
+
+def _check_unstable_retained_bridge_feature_mapping_allowlist(
+    metadata: dict[str, Any],
+    *,
+    allowlist: dict[str, set[str]],
+    violations: list[Violation],
+) -> None:
+    """Reject package feature mappings that grow the retained bridge compatibility island.
+
+    `cargo metadata` records direct dependency features separately from package feature mappings.
+    A crate can keep `fret-ui = { ... }` feature-free while still exposing a feature such as
+    `compat-retained-canvas = ["fret-ui/unstable-retained-bridge"]`. This check keeps those
+    mappings explicit and narrow.
+    """
+    workspace_ids = set(metadata["workspace_members"])
+    target = "fret-ui/unstable-retained-bridge"
+    for pkg in metadata["packages"]:
+        if pkg["id"] not in workspace_ids:
+            continue
+        from_name = str(pkg["name"])
+        allowed_features = allowlist.get(from_name, set())
+        for feature_name, mapped_features in (pkg.get("features") or {}).items():
+            if target not in mapped_features:
+                continue
+            if feature_name in allowed_features:
+                continue
+            violations.append(
+                Violation(
+                    rule="unstable-retained-bridge-feature-mapping-allowlist",
+                    message=(
+                        "Layering violation "
+                        "(unstable-retained-bridge-feature-mapping-allowlist): "
+                        f"{from_name}/{feature_name} must not map to {target}"
+                    ),
+                )
+            )
 
 
 def main(argv: list[str]) -> int:
@@ -303,15 +342,17 @@ def main(argv: list[str]) -> int:
         violations=violations,
     )
 
-    # Feature usage policy: retained bridge must remain explicitly opt-in and tightly scoped.
-    unstable_retained_bridge_allowlist = {
-        "fret-chart",
-        "fret-node",
-        "fret-plot",
-    }
-    _check_unstable_retained_bridge_allowlist(
+    # Feature usage policy: the retained bridge has been deleted; no crate may re-enable it.
+    unstable_retained_bridge_dependency_allowlist: set[str] = set()
+    unstable_retained_bridge_feature_mapping_allowlist: dict[str, set[str]] = {}
+    _check_unstable_retained_bridge_dependency_allowlist(
         metadata,
-        allowlist=unstable_retained_bridge_allowlist,
+        allowlist=unstable_retained_bridge_dependency_allowlist,
+        violations=violations,
+    )
+    _check_unstable_retained_bridge_feature_mapping_allowlist(
+        metadata,
+        allowlist=unstable_retained_bridge_feature_mapping_allowlist,
         violations=violations,
     )
 
