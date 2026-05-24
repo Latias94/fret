@@ -14,6 +14,8 @@ Validate the Python tool, Button Group pilot artifact, workstream state, and cat
 python -m py_compile tools/parity-discovery/shadcn_parity_discovery.py
 python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json
 python -m json.tool docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json | Out-Null
+python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v2.json --suite-from-existing-reports --suite-output docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json
+python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json | Out-Null
 python -m json.tool docs/workstreams/component-parity-fact-harness-v1/WORKSTREAM.json | Out-Null
 python tools/check_workstream_catalog.py
 ```
@@ -40,6 +42,18 @@ Fret evidence:
 Generated artifact:
 
 - `docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json`
+- `docs/workstreams/component-parity-fact-harness-v1/artifacts/shadcn_parity_suite_report_v2_agent_summary.json`
+- `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json`
+
+Live fact coverage:
+
+- Button Group pilot now records 6 upstream live DOM/CSS facts from `computedStyle`.
+- Button Group pilot now records 14 Fret facts from layout sidecars and bundle schema2 semantics.
+- Upstream facts include class tokens, layout CSS, text metrics, paint colors, border widths,
+  corner radii, and icon descendant bounds.
+- Fret facts include bounds, raw bounds, coordinate units, kind/role hints, and related `.chrome` /
+  `-icon` nodes. Fret paint/text facts remain hints until diagnostics exports first-class paint/text
+  tables.
 
 ## Gate Policy
 
@@ -77,6 +91,20 @@ Pilot packet summary:
 - `gate_queue_count`: 9
 - First hardening row: `root_source_facts_need_live_layout_extractor`
 - Fret wiring: 12 stable `test_id`s
+
+2026-05-25 CPF-050/CPF-060/CPF-090 validation:
+
+- `python -m py_compile tools/parity-discovery/shadcn_parity_discovery.py`: PASS.
+- `python -m json.tool tools/parity-discovery/fixtures/button_group_parts_v1.json | Out-Null`:
+  PASS.
+- Button Group pilot generation after live facts: PASS.
+- Pilot summary: 6 upstream live facts, 14 Fret live facts, 0 repair rows, 1 hardening row, and 9
+  gate rows.
+- `python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v2.json --suite-from-existing-reports --suite-output docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json`:
+  PASS, 9 reports, 17 parts, 0 top findings.
+- v2 suite agent summary: `regression_locked`, 0 repair rows, 0 hardening rows.
+- `tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json` now records the suite agent
+  summary artifact and refresh command under `agent_summary`.
 
 Suite smoke:
 

@@ -31,14 +31,34 @@ Exit criteria:
 
 ## M2 - Live Source Facts
 
-Status: pending.
+Status: complete on 2026-05-25 for the first shadcn DOM/CSS extractor slice.
 
-Exit criteria:
+Completed criteria:
 
-- shadcn source facts can be extracted or measured mechanically from upstream DOM/CSS/golden
-  artifacts.
-- Curated prose remains useful context but is not the only source for layout/chrome truth.
-- At least one prior Button Group curated fact becomes a live measured predicate.
+- shadcn source facts can be extracted mechanically from upstream DOM snapshots for mapped
+  `upstream.dom_target_ids`.
+- The Button Group pilot now records 6 upstream DOM/CSS facts and 14 Fret layout/semantics facts.
+- Extracted facts include class tokens, computed layout values, text metrics, paint values,
+  border/radius values, and icon descendant bounds.
+
+Remaining hardening:
+
+- Curated prose is still retained as context.
+- Fret paint/text facts are currently layout/bundle hints until diagnostics exports first-class
+  paint/text tables.
+
+## M2b - Shadcn v2 Agent Summary
+
+Status: complete on 2026-05-25.
+
+Completed criteria:
+
+- `tools/parity-discovery` can generate suite summaries from already generated report artifacts via
+  `--suite-from-existing-reports`.
+- `docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json`
+  now contains a suite-level `agent_packet`.
+- The component parity lane also archives the generated summary at
+  `docs/workstreams/component-parity-fact-harness-v1/artifacts/shadcn_parity_suite_report_v2_agent_summary.json`.
 
 ## M3 - Material Adapter
 

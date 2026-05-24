@@ -17,6 +17,11 @@ Current state:
 - The pilot currently reports `needs_hardening`, not `needs_repair`: all 7 Button Group parts pass,
   repair queue is empty, and the single hardening row is
   `root_source_facts_need_live_layout_extractor`.
+- CPF-050 and CPF-060 are complete for the first shadcn slice: the pilot records 6 upstream
+  DOM/CSS facts and 14 Fret layout/semantics facts.
+- CPF-090 is complete for suite summary generation: the shadcn v2 suite report now has an
+  `agent_packet`, and it can be refreshed from existing report artifacts with
+  `--suite-from-existing-reports` when historical target sidecars are not available.
 
 How to continue:
 
@@ -32,7 +37,8 @@ Residual risk:
 
 - Button Group is already a mostly closed shadcn seed, so the pilot proves packet shape more than it
   proves discovery power.
-- Current source facts still include curated prose. CPF-050 should replace the highest-value curated
-  facts with live extraction.
-- Current facts are layout-heavy. CPF-060 and CPF-070 should add text/paint/interaction/semantics
-  evidence families before claiming full component parity.
+- Current source facts still include curated prose as context; future rows should prefer
+  `upstream.dom_target_ids` when upstream DOM/CSS evidence exists.
+- Fret paint/text facts are still hints from layout sidecar labels and bundle semantics. Diagnostics
+  needs first-class paint/text tables before claiming full rendered paint parity.
+- CPF-070 should add interaction/semantics facts next.

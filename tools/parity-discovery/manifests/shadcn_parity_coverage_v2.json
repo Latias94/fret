@@ -3,6 +3,11 @@
   "manifest_id": "shadcn-parity-coverage-v2",
   "generated_date": "2026-05-11",
   "source_baseline": "tools/parity-discovery/suites/shadcn_parity_discovery_v1.json",
+  "agent_summary": {
+    "suite_report": "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json",
+    "component_fact_harness_archive": "docs/workstreams/component-parity-fact-harness-v1/artifacts/shadcn_parity_suite_report_v2_agent_summary.json",
+    "refresh_command": "python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v2.json --suite-from-existing-reports --suite-output docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json"
+  },
   "purpose": "Prioritized sweep order for the next coverage-driven shadcn parity pass. Locked rows stay as regression gates. Gap rows are the next discovery targets for fixtures and diagnostics scripts.",
   "layer_order": [
     "runner",

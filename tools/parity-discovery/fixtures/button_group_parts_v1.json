@@ -94,6 +94,20 @@
   ],
   "upstream_dom_targets": [
     {
+      "id": "upstream.button_group.input_demo.root",
+      "snapshot": "button-group-input",
+      "theme": "light",
+      "path": "0",
+      "source_ref_id": "upstream.button_group.input_example"
+    },
+    {
+      "id": "upstream.button_group.input_demo.input",
+      "snapshot": "button-group-input",
+      "theme": "light",
+      "path": "0.0",
+      "source_ref_id": "upstream.button_group.input_example"
+    },
+    {
       "id": "upstream.button_group.input_demo.search_button",
       "snapshot": "button-group-input",
       "theme": "light",
@@ -130,6 +144,9 @@
       "upstream": {
         "source_ref_ids": [
           "upstream.button_group.source"
+        ],
+        "dom_target_ids": [
+          "upstream.button_group.input_demo.root"
         ],
         "facts": [
           "ButtonGroup root uses flex layout.",
@@ -229,6 +246,10 @@
           "upstream.button_group.source",
           "upstream.button_group.input_example"
         ],
+        "dom_target_ids": [
+          "upstream.button_group.input_demo.input",
+          "upstream.button_group.input_demo.search_button"
+        ],
         "facts": [
           "The example renders Input followed by an outline Button containing SearchIcon.",
           "ButtonGroup direct input participates in flex-1 sizing.",
@@ -297,6 +318,11 @@
         "source_ref_ids": [
           "upstream.button_group.source",
           "upstream.button_group.select_example"
+        ],
+        "dom_target_ids": [
+          "upstream.button_group.select_demo.currency_trigger",
+          "upstream.button_group.select_demo.amount",
+          "upstream.button_group.select_demo.send_button"
         ],
         "facts": [
           "The example renders a monospace currency Select trigger, an amount Input, and an icon-only send Button.",

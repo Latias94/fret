@@ -79,6 +79,7 @@ SUPPORTED_COMPARISONS = {
 STATUS_ORDER = ["pass_known", "needs_live_measurement", "mismatch", "blocked"]
 TRIAGE_LEVEL_ORDER = ["critical", "high", "medium", "low", "none"]
 TEST_ID_LABEL_RE = re.compile(r"\[test_id=([^\]]+)\]")
+PX_VALUE_RE = re.compile(r"^-?\d+(?:\.\d+)?px$")
 OWNER_BY_PROMOTION_TARGET = {
     "diag_script": "diagnostics_surface",
     "component_fixture": "gallery_composition",
@@ -190,6 +191,7 @@ class LayoutNode:
     sidecar_path: str
     root_index: int
     kind: str | None
+    label: str | None = None
     source: str = "layout_sidecar"
 
 
@@ -219,6 +221,9 @@ class DomNode:
     tag: str
     attrs: dict[str, Any]
     class_name: str | None
+    text: str | None
+    computed_style: dict[str, Any]
+    child_count: int
 
 
 @dataclass
@@ -285,15 +290,31 @@ class LayoutEvidence:
 @dataclass
 class DomEvidence:
     nodes_by_target_id: dict[str, DomNode]
+    nodes_by_snapshot_path: dict[tuple[str, str, str, str, str], DomNode]
     snapshot_paths: list[str]
     contexts: list[dict[str, Any]]
 
     @classmethod
     def empty(cls) -> "DomEvidence":
-        return cls(nodes_by_target_id={}, snapshot_paths=[], contexts=[])
+        return cls(
+            nodes_by_target_id={},
+            nodes_by_snapshot_path={},
+            snapshot_paths=[],
+            contexts=[],
+        )
 
     def find(self, target_id: str) -> DomNode | None:
         return self.nodes_by_target_id.get(target_id)
+
+    def find_path(
+        self,
+        snapshot: str,
+        theme: str,
+        path: str,
+        mode: str = "",
+        variant: str = "",
+    ) -> DomNode | None:
+        return self.nodes_by_snapshot_path.get((snapshot, theme, mode, variant, path))
 
 
 def _require_object(value: Any, path: str) -> dict[str, Any]:
@@ -383,6 +404,18 @@ def _validate_upstream_predicates(check: dict[str, Any], check_path: str) -> Non
     shadow_check = dict(check)
     shadow_check["predicates"] = raw_predicates
     _validate_predicates(shadow_check, check_path)
+
+
+def _validate_upstream_dom_target_refs(
+    value: Any, target_ids: set[str], path: str
+) -> list[str]:
+    if value is None:
+        return []
+    refs = _require_str_list(value, path)
+    for ref_id in refs:
+        if ref_id not in target_ids:
+            raise FixtureError(f"{path} references unknown upstream DOM target id {ref_id!r}")
+    return refs
 
 
 def _require_float(value: Any, path: str) -> float:
@@ -528,6 +561,7 @@ def load_mapping(path: Path) -> dict[str, Any]:
         )
     ]
     _require_unique_ids(dom_targets, "$.upstream_dom_targets")
+    dom_target_ids = {target["id"] for target in dom_targets}
     for index, target in enumerate(dom_targets):
         target_path = f"$.upstream_dom_targets[{index}]"
         _require_str(target.get("snapshot"), f"{target_path}.snapshot")
@@ -566,6 +600,11 @@ def load_mapping(path: Path) -> dict[str, Any]:
             upstream.get("source_ref_ids"), f"{part_path}.upstream.source_ref_ids"
         )
         _require_str_list(upstream.get("facts"), f"{part_path}.upstream.facts")
+        _validate_upstream_dom_target_refs(
+            upstream.get("dom_target_ids"),
+            dom_target_ids,
+            f"{part_path}.upstream.dom_target_ids",
+        )
         _require_str_list(
             fret.get("source_ref_ids"), f"{part_path}.fret.source_ref_ids"
         )
@@ -788,6 +827,7 @@ def load_layout_evidence(
                         kind=debug.get("instance_kind")
                         if isinstance(debug.get("instance_kind"), str)
                         else None,
+                        label=node.get("label") if isinstance(node.get("label"), str) else None,
                         source="layout_sidecar",
                     )
                 )
@@ -832,6 +872,7 @@ def load_layout_evidence(
                         kind=str(node.get("role"))
                         if isinstance(node.get("role"), str)
                         else None,
+                        label=node.get("label") if isinstance(node.get("label"), str) else None,
                         source="bundle_schema2_semantics",
                     )
                 )
@@ -902,6 +943,50 @@ def _dom_context_from_snapshot(
         "device_pixel_ratio": float(theme_data.get("devicePixelRatio") or 1.0),
         "snapshot_path": snapshot_path,
     }
+
+
+def _dom_node_from_snapshot_node(
+    node: dict[str, Any],
+    target_id: str,
+    snapshot_path: str,
+    snapshot_name: str,
+    theme: str,
+    snapshot_mode: str,
+    snapshot_variant: str,
+    context_id: str | None,
+    device_pixel_ratio: float,
+    viewport: dict[str, Any],
+    path: str,
+) -> DomNode | None:
+    rect = node.get("rect")
+    if not isinstance(rect, dict):
+        return None
+    attrs = node.get("attrs") if isinstance(node.get("attrs"), dict) else {}
+    class_name = node.get("className")
+    text = node.get("text")
+    computed_style = (
+        node.get("computedStyle") if isinstance(node.get("computedStyle"), dict) else {}
+    )
+    children = node.get("children") if isinstance(node.get("children"), list) else []
+    return DomNode(
+        target_id=target_id,
+        bounds=Bounds.from_rect(rect),
+        device_pixel_ratio=device_pixel_ratio,
+        snapshot_path=snapshot_path,
+        snapshot_name=snapshot_name,
+        theme=theme,
+        mode=snapshot_mode,
+        variant=snapshot_variant,
+        context_id=context_id,
+        viewport=viewport,
+        path=path,
+        tag=str(node.get("tag", "")),
+        attrs=attrs,
+        class_name=class_name if isinstance(class_name, str) else None,
+        text=text if isinstance(text, str) else None,
+        computed_style=computed_style,
+        child_count=len(children),
+    )
 
 
 def load_dom_evidence(
@@ -1012,33 +1097,49 @@ def load_dom_evidence(
                 )
             nodes_by_path = _snapshot_dom_nodes(raw_theme_data)
             device_pixel_ratio = float(raw_theme_data.get("devicePixelRatio") or 1.0)
+            viewport = (
+                raw_theme_data.get("viewport")
+                if isinstance(raw_theme_data.get("viewport"), dict)
+                else {}
+            )
+            for node_path, node in nodes_by_path.items():
+                dom_node = _dom_node_from_snapshot_node(
+                    node,
+                    f"{snapshot_name}:{theme}:{snapshot_mode}:{snapshot_variant}:{node_path}",
+                    snapshot_path,
+                    snapshot_name,
+                    theme,
+                    snapshot_mode,
+                    snapshot_variant,
+                    None,
+                    device_pixel_ratio,
+                    viewport,
+                    node_path,
+                )
+                if dom_node is not None:
+                    evidence.nodes_by_snapshot_path[
+                        (snapshot_name, theme, snapshot_mode, snapshot_variant, node_path)
+                    ] = dom_node
             for target in matched_targets:
                 node = nodes_by_path.get(target["path"])
                 if node is None:
                     continue
-                rect = node.get("rect")
-                if not isinstance(rect, dict):
-                    continue
-                attrs = node.get("attrs") if isinstance(node.get("attrs"), dict) else {}
-                class_name = node.get("className")
-                evidence.nodes_by_target_id[target["id"]] = DomNode(
-                    target_id=target["id"],
-                    bounds=Bounds.from_rect(rect),
-                    device_pixel_ratio=device_pixel_ratio,
-                    snapshot_path=snapshot_path,
-                    snapshot_name=snapshot_name,
-                    theme=theme,
-                    mode=snapshot_mode,
-                    variant=snapshot_variant,
-                    context_id=target.get("context_id"),
-                    viewport=raw_theme_data.get("viewport")
-                    if isinstance(raw_theme_data.get("viewport"), dict)
-                    else {},
-                    path=target["path"],
-                    tag=str(node.get("tag", "")),
-                    attrs=attrs,
-                    class_name=class_name if isinstance(class_name, str) else None,
+                dom_node = _dom_node_from_snapshot_node(
+                    node,
+                    target["id"],
+                    snapshot_path,
+                    snapshot_name,
+                    theme,
+                    snapshot_mode,
+                    snapshot_variant,
+                    target.get("context_id"),
+                    device_pixel_ratio,
+                    viewport,
+                    target["path"],
                 )
+                if dom_node is None:
+                    continue
+                evidence.nodes_by_target_id[target["id"]] = dom_node
     return evidence
 
 
@@ -1453,6 +1554,301 @@ def combine_measurements(
     }
 
 
+def _px_value(value: Any) -> float | None:
+    if not isinstance(value, str) or PX_VALUE_RE.match(value) is None:
+        return None
+    return round(float(value[:-2]), 3)
+
+
+def _style_px_map(style: dict[str, Any], names: list[str]) -> dict[str, float]:
+    result: dict[str, float] = {}
+    for name in names:
+        value = _px_value(style.get(name))
+        if value is not None:
+            result[name] = value
+    return result
+
+
+def _style_string_map(style: dict[str, Any], names: list[str]) -> dict[str, str]:
+    result: dict[str, str] = {}
+    for name in names:
+        value = style.get(name)
+        if isinstance(value, str):
+            result[name] = value
+    return result
+
+
+def _class_tokens(class_name: str | None) -> list[str]:
+    if not class_name:
+        return []
+    return [token for token in class_name.split() if token]
+
+
+def _dom_descendants(evidence: DomEvidence, node: DomNode) -> list[DomNode]:
+    prefix = f"{node.path}."
+    descendants = [
+        candidate
+        for key, candidate in evidence.nodes_by_snapshot_path.items()
+        if key[0] == node.snapshot_name
+        and key[1] == node.theme
+        and key[2] == node.mode
+        and key[3] == node.variant
+        and key[4].startswith(prefix)
+    ]
+    descendants.sort(key=lambda item: item.path)
+    return descendants
+
+
+def _dom_target_facts(node: DomNode, evidence: DomEvidence) -> dict[str, Any]:
+    style = node.computed_style
+    descendants = _dom_descendants(evidence, node)
+    svg_descendants = [item for item in descendants if item.tag.lower() == "svg"]
+    text_descendants = [
+        item for item in descendants if isinstance(item.text, str) and item.text
+    ]
+    facts: dict[str, Any] = {
+        "target_id": node.target_id,
+        "snapshot": node.snapshot_name,
+        "theme": node.theme,
+        "mode": node.mode,
+        "variant": node.variant,
+        "context_id": node.context_id,
+        "path": node.path,
+        "tag": node.tag,
+        "attrs": node.attrs,
+        "class_tokens": _class_tokens(node.class_name),
+        "bounds": node.bounds.to_json(),
+        "device_pixel_ratio": node.device_pixel_ratio,
+        "child_count": node.child_count,
+        "layout": {
+            **_style_string_map(
+                style,
+                [
+                    "display",
+                    "position",
+                    "boxSizing",
+                    "alignItems",
+                    "justifyContent",
+                    "flexDirection",
+                    "flexWrap",
+                    "flex",
+                    "flexGrow",
+                    "flexShrink",
+                    "gap",
+                    "rowGap",
+                    "columnGap",
+                    "overflow",
+                    "whiteSpace",
+                ],
+            ),
+            **_style_px_map(
+                style,
+                [
+                    "width",
+                    "height",
+                    "minWidth",
+                    "minHeight",
+                    "maxWidth",
+                    "maxHeight",
+                    "paddingTop",
+                    "paddingRight",
+                    "paddingBottom",
+                    "paddingLeft",
+                    "marginTop",
+                    "marginRight",
+                    "marginBottom",
+                    "marginLeft",
+                    "gap",
+                    "rowGap",
+                    "columnGap",
+                ],
+            ),
+        },
+        "text": {
+            **({"text": node.text} if node.text else {}),
+            **_style_string_map(
+                style,
+                ["fontFamily", "fontWeight", "textAlign", "textTransform", "whiteSpace"],
+            ),
+            **_style_px_map(style, ["fontSize", "lineHeight", "letterSpacing"]),
+        },
+        "paint": {
+            **_style_string_map(
+                style,
+                [
+                    "color",
+                    "backgroundColor",
+                    "borderTopColor",
+                    "borderRightColor",
+                    "borderBottomColor",
+                    "borderLeftColor",
+                    "boxShadow",
+                    "opacity",
+                ],
+            ),
+            "border_widths_px": _style_px_map(
+                style,
+                [
+                    "borderTopWidth",
+                    "borderRightWidth",
+                    "borderBottomWidth",
+                    "borderLeftWidth",
+                ],
+            ),
+            "corner_radii_px": _style_px_map(
+                style,
+                [
+                    "borderTopLeftRadius",
+                    "borderTopRightRadius",
+                    "borderBottomRightRadius",
+                    "borderBottomLeftRadius",
+                ],
+            ),
+        },
+        "descendant_summary": {
+            "count": len(descendants),
+            "svg_count": len(svg_descendants),
+            "text_count": len(text_descendants),
+        },
+        "source": "upstream_dom_computed_style",
+    }
+    if svg_descendants:
+        facts["icon"] = {
+            "first_svg_bounds": svg_descendants[0].bounds.to_json(),
+            "first_svg_class_tokens": _class_tokens(svg_descendants[0].class_name),
+            "svg_count": len(svg_descendants),
+        }
+    if text_descendants:
+        facts["text"]["descendant_text"] = [item.text for item in text_descendants]
+    return facts
+
+
+def _fret_node_fact(node: LayoutNode) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "test_id": node.test_id,
+        "bounds": node.bounds.to_json(),
+        "raw_bounds": node.raw_bounds.to_json(),
+        "scale_factor": node.scale_factor,
+        "coordinate_units": node.coordinate_units,
+        "node": node.node,
+        "kind_hint": node.kind,
+        "source": node.source,
+    }
+    if node.source == "layout_sidecar":
+        result["sidecar_path"] = node.sidecar_path
+    else:
+        result["bundle_schema2_path"] = node.sidecar_path
+    if node.label:
+        label = node.label
+        result["label_preview"] = label[:500]
+        if "padding:" in label:
+            result["has_chrome_padding_hint"] = True
+        if "border:" in label or "border_color:" in label:
+            result["has_chrome_border_hint"] = True
+        if "corner_radii:" in label:
+            result["has_corner_radii_hint"] = True
+        if "SvgIconProps" in label:
+            result["has_icon_hint"] = True
+    return result
+
+
+def _related_test_ids(test_id: str, evidence: LayoutEvidence) -> list[str]:
+    candidates = [
+        f"{test_id}.chrome",
+        f"{test_id}-icon",
+        f"{test_id}-content",
+        f"{test_id}-label",
+    ]
+    return [
+        candidate
+        for candidate in candidates
+        if candidate in evidence.nodes_by_test_id
+        or candidate in evidence.bundle_nodes_by_test_id
+    ]
+
+
+def _fret_test_id_facts(test_id: str, evidence: LayoutEvidence) -> dict[str, Any]:
+    primary = evidence.find(test_id)
+    facts: dict[str, Any] = {"test_id": test_id}
+    if primary is not None:
+        facts["primary"] = _fret_node_fact(primary)
+    related = []
+    for related_test_id in _related_test_ids(test_id, evidence):
+        related_node = evidence.find(related_test_id)
+        if related_node is not None:
+            related.append(_fret_node_fact(related_node))
+    if related:
+        facts["related"] = related
+    if primary is None and not related:
+        facts["status"] = "missing"
+    return facts
+
+
+def _part_live_facts(
+    source_part: dict[str, Any],
+    report_part: dict[str, Any],
+    layout_evidence: LayoutEvidence,
+    dom_evidence: DomEvidence,
+) -> dict[str, Any]:
+    upstream = source_part.get("upstream", {}) if isinstance(source_part, dict) else {}
+    dom_target_ids = (
+        upstream.get("dom_target_ids") if isinstance(upstream.get("dom_target_ids"), list) else []
+    )
+    upstream_facts = []
+    for target_id in dom_target_ids:
+        if not isinstance(target_id, str):
+            continue
+        node = dom_evidence.find(target_id)
+        if node is not None:
+            upstream_facts.append(_dom_target_facts(node, dom_evidence))
+
+    fret_facts = [
+        _fret_test_id_facts(test_id, layout_evidence)
+        for test_id in report_part.get("test_ids", [])
+        if isinstance(test_id, str)
+    ]
+    return {
+        "part_id": report_part["id"],
+        "upstream_dom_target_count": len(upstream_facts),
+        "fret_test_id_count": len(fret_facts),
+        "upstream": upstream_facts,
+        "fret": fret_facts,
+    }
+
+
+def _generate_live_facts(
+    mapping: dict[str, Any],
+    report_parts: list[dict[str, Any]],
+    layout_evidence: LayoutEvidence,
+    dom_evidence: DomEvidence,
+) -> dict[str, Any]:
+    source_parts_by_id = {
+        part["id"]: part
+        for part in mapping.get("parts", [])
+        if isinstance(part, dict) and isinstance(part.get("id"), str)
+    }
+    parts = [
+        _part_live_facts(
+            source_parts_by_id.get(report_part["id"], {}),
+            report_part,
+            layout_evidence,
+            dom_evidence,
+        )
+        for report_part in report_parts
+    ]
+    return {
+        "schema_version": 1,
+        "upstream_source": "upstream_dom_computed_style",
+        "fret_source": "layout_sidecar+bundle_schema2_semantics",
+        "part_count": len(parts),
+        "upstream_dom_target_count": sum(
+            part["upstream_dom_target_count"] for part in parts
+        ),
+        "fret_test_id_count": sum(part["fret_test_id_count"] for part in parts),
+        "parts": parts,
+    }
+
+
 def check_status(check: dict[str, Any], measurement: dict[str, Any] | None) -> str:
     if measurement is not None:
         observed = measurement["status"]
@@ -1823,6 +2219,7 @@ def _generate_agent_packet(
         "truth": {
             "upstream_refs": upstream_refs,
             "upstream_contexts": report["upstream_contexts"],
+            "live_facts": report.get("live_facts", {}),
             "limitations": report["limitations"],
         },
         "fret_wiring": {
@@ -1841,6 +2238,10 @@ def _generate_agent_packet(
             "owner_status_counts": report["summary"]["owner_status_counts"],
             "layer_status_counts": report["summary"]["layer_status_counts"],
             "top_findings": report["summary"]["top_findings"],
+            "upstream_live_fact_count": report["summary"].get(
+                "upstream_live_fact_count", 0
+            ),
+            "fret_live_fact_count": report["summary"].get("fret_live_fact_count", 0),
             "repair_queue_count": len(repair_queue),
             "hardening_queue_count": len(hardening_queue),
             "gate_queue_count": len(gate_queue),
@@ -1940,6 +2341,9 @@ def generate_report(
         report_parts.append(report_part)
 
     top_findings = _top_findings(report_parts)
+    live_facts = _generate_live_facts(
+        mapping, report_parts, layout_evidence, dom_evidence
+    )
 
     report = {
         "schema_version": SUPPORTED_SCHEMA_VERSION,
@@ -1973,7 +2377,10 @@ def generate_report(
             "upstream_dom_target_count": len(dom_evidence.nodes_by_target_id),
             "upstream_context_count": len(mapping.get("upstream_contexts", [])),
             "upstream_dom_context_count": len(dom_evidence.contexts),
+            "upstream_live_fact_count": live_facts["upstream_dom_target_count"],
+            "fret_live_fact_count": live_facts["fret_test_id_count"],
         },
+        "live_facts": live_facts,
         "parts": report_parts,
         "limitations": mapping["report"]["limitations"],
     }
@@ -2123,6 +2530,77 @@ def generate_report_from_spec(report_spec: dict[str, Any]) -> dict[str, Any]:
     return report
 
 
+def load_generated_report(path: Path) -> dict[str, Any]:
+    try:
+        report = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise FixtureError(f"{path}: invalid generated report JSON: {exc}") from exc
+    report = _require_object(report, str(path))
+    if report.get("schema_version") != SUPPORTED_SCHEMA_VERSION:
+        raise FixtureError(
+            f"{path}: report schema_version must be {SUPPORTED_SCHEMA_VERSION}, "
+            f"got {report.get('schema_version')!r}"
+        )
+    _require_str(report.get("component"), f"{path}.component")
+    _require_object(report.get("summary"), f"{path}.summary")
+    _require_list(report.get("parts"), f"{path}.parts")
+    if "agent_packet" not in report:
+        report["agent_packet"] = _legacy_agent_packet(report, path)
+    return report
+
+
+def _legacy_agent_packet(report: dict[str, Any], path: Path) -> dict[str, Any]:
+    top_findings = report["summary"].get("top_findings", [])
+    status_counts = report["summary"].get("status_counts", {})
+    non_passing = sum(
+        int(status_counts.get(status, 0))
+        for status in ("needs_live_measurement", "mismatch", "blocked")
+    )
+    return {
+        "schema_version": 1,
+        "status": "needs_repair" if non_passing else "regression_locked",
+        "component": report["component"],
+        "style": report.get("style"),
+        "source_mapping": report.get("source_mapping"),
+        "goal": "Legacy packet synthesized from a generated report without embedded agent_packet.",
+        "truth": {
+            "upstream_refs": [],
+            "upstream_contexts": report.get("upstream_contexts", []),
+            "live_facts": report.get("live_facts", {}),
+            "limitations": report.get("limitations", []),
+        },
+        "fret_wiring": {
+            "refs": [],
+            "test_ids": sorted(
+                {
+                    test_id
+                    for part in report.get("parts", [])
+                    for test_id in part.get("test_ids", [])
+                    if isinstance(test_id, str)
+                }
+            ),
+        },
+        "evidence": report.get("evidence_contexts", {}),
+        "summary": {
+            "status_counts": status_counts,
+            "owner_status_counts": report["summary"].get("owner_status_counts", {}),
+            "layer_status_counts": report["summary"].get("layer_status_counts", {}),
+            "top_findings": top_findings,
+            "upstream_live_fact_count": report["summary"].get(
+                "upstream_live_fact_count", 0
+            ),
+            "fret_live_fact_count": report["summary"].get("fret_live_fact_count", 0),
+            "repair_queue_count": non_passing,
+            "hardening_queue_count": 0,
+            "gate_queue_count": 0,
+        },
+        "repair_queue": top_findings if non_passing else [],
+        "hardening_queue": [],
+        "gate_queue": [],
+        "legacy_source_report": str(path).replace("\\", "/"),
+    }
+
+
 def _merge_counts(
     reports: list[dict[str, Any]], summary_key: str, ordered_keys: list[str]
 ) -> dict[str, int]:
@@ -2257,6 +2735,15 @@ def parse_args() -> argparse.Namespace:
         help="Path to write the generated suite summary JSON artifact.",
     )
     parser.add_argument(
+        "--suite-from-existing-reports",
+        action="store_true",
+        help=(
+            "Build only the suite summary from each report output path instead of "
+            "regenerating component reports. Useful when archived sidecars are not "
+            "available in the current worktree."
+        ),
+    )
+    parser.add_argument(
         "--fret-layout-sidecar",
         action="append",
         type=Path,
@@ -2334,7 +2821,13 @@ def main() -> int:
             if args.suite_output is None:
                 raise FixtureError("--suite requires --suite-output")
             suite = load_suite(args.suite)
-            reports = [generate_report_from_spec(item) for item in suite["reports"]]
+            if args.suite_from_existing_reports:
+                reports = [
+                    load_generated_report(Path(item["output"]))
+                    for item in suite["reports"]
+                ]
+            else:
+                reports = [generate_report_from_spec(item) for item in suite["reports"]]
             suite_report = generate_suite_report(suite, args.suite, reports)
             write_report(suite_report, args.suite_output)
             print(

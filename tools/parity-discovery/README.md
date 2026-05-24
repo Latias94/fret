@@ -41,6 +41,13 @@ The first packet-focused lane is
 `docs/workstreams/component-parity-fact-harness-v1/`; the Button Group pilot artifact lives at
 `docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json`.
 
+Reports may also include `live_facts`. The first fact extractor reads upstream DOM snapshots and
+records class tokens, computed layout values, text metrics, paint values, border/radius values, and
+icon descendant bounds for `upstream.dom_target_ids`. Fret facts currently come from layout
+sidecars and bundle schema2 semantics: bounds, raw bounds, kind/role hints, and related `.chrome`
+or `-icon` test ids. This is deliberately conservative; the report should say when Fret paint/text
+facts are only hints instead of claiming pixel-complete paint parity.
+
 ## Current Seeds
 
 - Context Menu:
@@ -195,6 +202,13 @@ Generate the current v2 suite and cross-component summary:
 
 ```powershell
 python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v2.json --suite-output docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json
+```
+
+Generate only the v2 suite summary from already generated report artifacts when archived Fret
+sidecars are not present in the current worktree:
+
+```powershell
+python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v2.json --suite-from-existing-reports --suite-output docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json
 ```
 
 Generate the v1 regression suite and cross-component summary:

@@ -196,9 +196,1492 @@
     "bundle_semantics_test_id_count": 559,
     "measured_test_id_count": 559,
     "upstream_dom_snapshot_count": 2,
-    "upstream_dom_target_count": 4,
+    "upstream_dom_target_count": 6,
     "upstream_context_count": 2,
-    "upstream_dom_context_count": 2
+    "upstream_dom_context_count": 2,
+    "upstream_live_fact_count": 6,
+    "fret_live_fact_count": 14
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "upstream_dom_computed_style",
+    "fret_source": "layout_sidecar+bundle_schema2_semantics",
+    "part_count": 7,
+    "upstream_dom_target_count": 6,
+    "fret_test_id_count": 14,
+    "parts": [
+      {
+        "part_id": "button_group_root",
+        "upstream_dom_target_count": 1,
+        "fret_test_id_count": 3,
+        "upstream": [
+          {
+            "target_id": "upstream.button_group.input_demo.root",
+            "snapshot": "button-group-input",
+            "theme": "light",
+            "mode": "",
+            "variant": "",
+            "context_id": null,
+            "path": "0",
+            "tag": "div",
+            "attrs": {
+              "role": "group"
+            },
+            "class_tokens": [
+              "flex",
+              "w-fit",
+              "items-stretch",
+              "[&>*]:focus-visible:z-10",
+              "[&>*]:focus-visible:relative",
+              "[&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit",
+              "[&>input]:flex-1",
+              "has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-md",
+              "has-[>[data-slot=button-group]]:gap-2",
+              "[&>*:not(:first-child)]:rounded-l-none",
+              "[&>*:not(:first-child)]:border-l-0",
+              "[&>*:not(:last-child)]:rounded-r-none"
+            ],
+            "bounds": {
+              "x": 0.0,
+              "y": 0.0,
+              "w": 222.0,
+              "h": 36.0
+            },
+            "device_pixel_ratio": 2.0,
+            "child_count": 2,
+            "layout": {
+              "display": "flex",
+              "position": "static",
+              "boxSizing": "border-box",
+              "alignItems": "stretch",
+              "justifyContent": "normal",
+              "flexDirection": "row",
+              "flexWrap": "nowrap",
+              "flexGrow": "0",
+              "flexShrink": "1",
+              "gap": "normal",
+              "rowGap": "normal",
+              "columnGap": "normal",
+              "whiteSpace": "normal",
+              "width": 222.0,
+              "height": 36.0,
+              "minWidth": 0.0,
+              "minHeight": 0.0,
+              "paddingTop": 0.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 0.0,
+              "marginTop": 0.0,
+              "marginRight": 0.0,
+              "marginBottom": 0.0,
+              "marginLeft": 0.0
+            },
+            "text": {
+              "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+              "fontWeight": "400",
+              "textAlign": "start",
+              "textTransform": "none",
+              "whiteSpace": "normal",
+              "fontSize": 16.0,
+              "lineHeight": 24.0
+            },
+            "paint": {
+              "color": "rgb(0, 0, 0)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "oklch(0.922 0 0)",
+              "borderRightColor": "oklch(0.922 0 0)",
+              "borderBottomColor": "oklch(0.922 0 0)",
+              "borderLeftColor": "oklch(0.922 0 0)",
+              "boxShadow": "none",
+              "opacity": "1",
+              "border_widths_px": {
+                "borderTopWidth": 0.0,
+                "borderRightWidth": 0.0,
+                "borderBottomWidth": 0.0,
+                "borderLeftWidth": 0.0
+              },
+              "corner_radii_px": {
+                "borderTopLeftRadius": 0.0,
+                "borderTopRightRadius": 0.0,
+                "borderBottomRightRadius": 0.0,
+                "borderBottomLeftRadius": 0.0
+              }
+            },
+            "descendant_summary": {
+              "count": 5,
+              "svg_count": 1,
+              "text_count": 0
+            },
+            "source": "upstream_dom_computed_style",
+            "icon": {
+              "first_svg_bounds": {
+                "x": 193.0,
+                "y": 10.0,
+                "w": 16.0,
+                "h": 16.0
+              },
+              "first_svg_class_tokens": [
+                "lucide",
+                "lucide-search"
+              ],
+              "svg_count": 1
+            }
+          }
+        ],
+        "fret": [
+          {
+            "test_id": "ui-gallery-button-group-input",
+            "primary": {
+              "test_id": "ui-gallery-button-group-input",
+              "bounds": {
+                "x": 114.0,
+                "y": 1906.667,
+                "w": 420.0,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 114.0,
+                "y": 1906.667,
+                "w": 420.0,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1308v1)",
+              "kind_hint": "Flex",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "Flex(FlexProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: Some(Px(Px(420.0))), max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: No",
+              "has_chrome_padding_hint": true
+            },
+            "related": [
+              {
+                "test_id": "ui-gallery-button-group-input-content",
+                "bounds": {
+                  "x": 96.667,
+                  "y": 1845.333,
+                  "w": 760.0,
+                  "h": 114.0
+                },
+                "raw_bounds": {
+                  "x": 96.667,
+                  "y": 1845.333,
+                  "w": 760.0,
+                  "h": 114.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1293v1)",
+                "kind_hint": "Container",
+                "source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, g",
+                "has_chrome_padding_hint": true,
+                "has_chrome_border_hint": true,
+                "has_corner_radii_hint": true
+              }
+            ]
+          },
+          {
+            "test_id": "ui-gallery-button-group-dropdown",
+            "primary": {
+              "test_id": "ui-gallery-button-group-dropdown",
+              "bounds": {
+                "x": 114.0,
+                "y": 2238.667,
+                "w": 110.667,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 114.0,
+                "y": 2238.667,
+                "w": 110.667,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1369v1)",
+              "kind_hint": "Flex",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "Flex(FlexProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Auto, min_width: None, min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: Some(Start) }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid: GridItemSty",
+              "has_chrome_padding_hint": true
+            },
+            "related": [
+              {
+                "test_id": "ui-gallery-button-group-dropdown-content",
+                "bounds": {
+                  "x": 96.667,
+                  "y": 2177.333,
+                  "w": 760.0,
+                  "h": 114.0
+                },
+                "raw_bounds": {
+                  "x": 96.667,
+                  "y": 2177.333,
+                  "w": 760.0,
+                  "h": 114.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1354v1)",
+                "kind_hint": "Container",
+                "source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, g",
+                "has_chrome_padding_hint": true,
+                "has_chrome_border_hint": true,
+                "has_corner_radii_hint": true
+              }
+            ]
+          },
+          {
+            "test_id": "ui-gallery-button-group-text",
+            "primary": {
+              "test_id": "ui-gallery-button-group-text",
+              "bounds": {
+                "x": 114.0,
+                "y": 3176.667,
+                "w": 726.0,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 114.0,
+                "y": 3176.667,
+                "w": 726.0,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1518v1)",
+              "kind_hint": "Flex",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "Flex(FlexProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid: GridI",
+              "has_chrome_padding_hint": true
+            },
+            "related": [
+              {
+                "test_id": "ui-gallery-button-group-text-content",
+                "bounds": {
+                  "x": 96.667,
+                  "y": 3115.333,
+                  "w": 760.0,
+                  "h": 114.0
+                },
+                "raw_bounds": {
+                  "x": 96.667,
+                  "y": 3115.333,
+                  "w": 760.0,
+                  "h": 114.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1503v1)",
+                "kind_hint": "Container",
+                "source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, g",
+                "has_chrome_padding_hint": true,
+                "has_chrome_border_hint": true,
+                "has_corner_radii_hint": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_id": "input_search_button",
+        "upstream_dom_target_count": 2,
+        "fret_test_id_count": 1,
+        "upstream": [
+          {
+            "target_id": "upstream.button_group.input_demo.input",
+            "snapshot": "button-group-input",
+            "theme": "light",
+            "mode": "",
+            "variant": "",
+            "context_id": null,
+            "path": "0.0",
+            "tag": "input",
+            "attrs": {},
+            "class_tokens": [
+              "file:text-foreground",
+              "placeholder:text-muted-foreground",
+              "selection:bg-primary",
+              "selection:text-primary-foreground",
+              "dark:bg-input/30",
+              "border-input",
+              "h-9",
+              "w-full",
+              "min-w-0",
+              "rounded-md",
+              "border",
+              "bg-transparent",
+              "px-3",
+              "py-1",
+              "text-base",
+              "shadow-xs",
+              "transition-[color,box-shadow]",
+              "outline-none",
+              "file:inline-flex",
+              "file:h-7",
+              "file:border-0",
+              "file:bg-transparent",
+              "file:text-sm",
+              "file:font-medium",
+              "disabled:pointer-events-none",
+              "disabled:cursor-not-allowed",
+              "disabled:opacity-50",
+              "md:text-sm",
+              "focus-visible:border-ring",
+              "focus-visible:ring-ring/50",
+              "focus-visible:ring-[3px]",
+              "aria-invalid:ring-destructive/20",
+              "dark:aria-invalid:ring-destructive/40",
+              "aria-invalid:border-destructive"
+            ],
+            "bounds": {
+              "x": 0.0,
+              "y": 0.0,
+              "w": 181.0,
+              "h": 36.0
+            },
+            "device_pixel_ratio": 2.0,
+            "child_count": 0,
+            "layout": {
+              "display": "block",
+              "position": "static",
+              "boxSizing": "border-box",
+              "alignItems": "normal",
+              "justifyContent": "normal",
+              "flexDirection": "row",
+              "flexWrap": "nowrap",
+              "flexGrow": "1",
+              "flexShrink": "1",
+              "gap": "normal",
+              "rowGap": "normal",
+              "columnGap": "normal",
+              "whiteSpace": "normal",
+              "width": 181.0,
+              "height": 36.0,
+              "minWidth": 0.0,
+              "paddingTop": 4.0,
+              "paddingRight": 12.0,
+              "paddingBottom": 4.0,
+              "paddingLeft": 12.0,
+              "marginTop": 0.0,
+              "marginRight": 0.0,
+              "marginBottom": 0.0,
+              "marginLeft": 0.0
+            },
+            "text": {
+              "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+              "fontWeight": "400",
+              "textAlign": "start",
+              "textTransform": "none",
+              "whiteSpace": "normal",
+              "fontSize": 14.0,
+              "lineHeight": 20.0
+            },
+            "paint": {
+              "color": "rgb(0, 0, 0)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "oklch(0.922 0 0)",
+              "borderRightColor": "oklch(0.922 0 0)",
+              "borderBottomColor": "oklch(0.922 0 0)",
+              "borderLeftColor": "oklch(0.922 0 0)",
+              "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+              "opacity": "1",
+              "border_widths_px": {
+                "borderTopWidth": 1.0,
+                "borderRightWidth": 1.0,
+                "borderBottomWidth": 1.0,
+                "borderLeftWidth": 1.0
+              },
+              "corner_radii_px": {
+                "borderTopLeftRadius": 8.0,
+                "borderTopRightRadius": 0.0,
+                "borderBottomRightRadius": 0.0,
+                "borderBottomLeftRadius": 8.0
+              }
+            },
+            "descendant_summary": {
+              "count": 0,
+              "svg_count": 0,
+              "text_count": 0
+            },
+            "source": "upstream_dom_computed_style"
+          },
+          {
+            "target_id": "upstream.button_group.input_demo.search_button",
+            "snapshot": "button-group-input",
+            "theme": "light",
+            "mode": "",
+            "variant": "",
+            "context_id": null,
+            "path": "0.1",
+            "tag": "button",
+            "attrs": {
+              "aria-label": "Search"
+            },
+            "class_tokens": [
+              "inline-flex",
+              "items-center",
+              "justify-center",
+              "gap-2",
+              "whitespace-nowrap",
+              "rounded-md",
+              "text-sm",
+              "font-medium",
+              "transition-all",
+              "disabled:pointer-events-none",
+              "disabled:opacity-50",
+              "[&_svg]:pointer-events-none",
+              "[&_svg:not([class*='size-'])]:size-4",
+              "shrink-0",
+              "[&_svg]:shrink-0",
+              "outline-none",
+              "focus-visible:border-ring",
+              "focus-visible:ring-ring/50",
+              "focus-visible:ring-[3px]",
+              "aria-invalid:ring-destructive/20",
+              "dark:aria-invalid:ring-destructive/40",
+              "aria-invalid:border-destructive",
+              "border",
+              "bg-background",
+              "shadow-xs",
+              "hover:bg-accent",
+              "hover:text-accent-foreground",
+              "dark:bg-input/30",
+              "dark:border-input",
+              "dark:hover:bg-input/50",
+              "h-9",
+              "px-4",
+              "py-2",
+              "has-[>svg]:px-3"
+            ],
+            "bounds": {
+              "x": 181.0,
+              "y": 0.0,
+              "w": 41.0,
+              "h": 36.0
+            },
+            "device_pixel_ratio": 2.0,
+            "child_count": 1,
+            "layout": {
+              "display": "flex",
+              "position": "static",
+              "boxSizing": "border-box",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "flexDirection": "row",
+              "flexWrap": "nowrap",
+              "flexGrow": "0",
+              "flexShrink": "0",
+              "gap": 8.0,
+              "rowGap": 8.0,
+              "columnGap": 8.0,
+              "whiteSpace": "nowrap",
+              "width": 41.0,
+              "height": 36.0,
+              "paddingTop": 8.0,
+              "paddingRight": 12.0,
+              "paddingBottom": 8.0,
+              "paddingLeft": 12.0,
+              "marginTop": 0.0,
+              "marginRight": 0.0,
+              "marginBottom": 0.0,
+              "marginLeft": 0.0
+            },
+            "text": {
+              "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+              "fontWeight": "500",
+              "textAlign": "center",
+              "textTransform": "none",
+              "whiteSpace": "nowrap",
+              "fontSize": 14.0,
+              "lineHeight": 20.0
+            },
+            "paint": {
+              "color": "rgb(0, 0, 0)",
+              "backgroundColor": "oklch(1 0 0)",
+              "borderTopColor": "oklch(0.922 0 0)",
+              "borderRightColor": "oklch(0.922 0 0)",
+              "borderBottomColor": "oklch(0.922 0 0)",
+              "borderLeftColor": "oklch(0.922 0 0)",
+              "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+              "opacity": "1",
+              "border_widths_px": {
+                "borderTopWidth": 1.0,
+                "borderRightWidth": 1.0,
+                "borderBottomWidth": 1.0,
+                "borderLeftWidth": 0.0
+              },
+              "corner_radii_px": {
+                "borderTopLeftRadius": 0.0,
+                "borderTopRightRadius": 8.0,
+                "borderBottomRightRadius": 8.0,
+                "borderBottomLeftRadius": 0.0
+              }
+            },
+            "descendant_summary": {
+              "count": 3,
+              "svg_count": 1,
+              "text_count": 0
+            },
+            "source": "upstream_dom_computed_style",
+            "icon": {
+              "first_svg_bounds": {
+                "x": 193.0,
+                "y": 10.0,
+                "w": 16.0,
+                "h": 16.0
+              },
+              "first_svg_class_tokens": [
+                "lucide",
+                "lucide-search"
+              ],
+              "svg_count": 1
+            }
+          }
+        ],
+        "fret": [
+          {
+            "test_id": "ui-gallery-button-group-input-search-button",
+            "primary": {
+              "test_id": "ui-gallery-button-group-input-search-button",
+              "bounds": {
+                "x": 489.333,
+                "y": 1906.667,
+                "w": 45.333,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 489.333,
+                "y": 1906.667,
+                "w": 45.333,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1311v1)",
+              "kind_hint": "Pressable",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "Pressable(PressableProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Px(Px(36.0)), min_width: None, min_height: Some(Px(Px(36.0))), max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 0.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio",
+              "has_corner_radii_hint": true
+            },
+            "related": [
+              {
+                "test_id": "ui-gallery-button-group-input-search-button.chrome",
+                "bounds": {
+                  "x": 489.333,
+                  "y": 1906.667,
+                  "w": 45.333,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 489.333,
+                  "y": 1906.667,
+                  "w": 45.333,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1312v1)",
+                "kind_hint": "Container",
+                "source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Fill, min_width: None, min_height: Some(Px(Px(18.0))), max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, gri",
+                "has_chrome_padding_hint": true,
+                "has_chrome_border_hint": true,
+                "has_corner_radii_hint": true
+              },
+              {
+                "test_id": "ui-gallery-button-group-input-search-button-icon",
+                "bounds": {
+                  "x": 501.333,
+                  "y": 1917.333,
+                  "w": 16.0,
+                  "h": 16.0
+                },
+                "raw_bounds": {
+                  "x": 501.333,
+                  "y": 1917.333,
+                  "w": 16.0,
+                  "h": 16.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1314v1)",
+                "kind_hint": "SvgIcon",
+                "source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "label_preview": "SvgIcon(SvgIconProps { layout: LayoutStyle { size: SizeStyle { width: Px(Px(16.0)), height: Px(Px(16.0)), min_width: None, min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 0.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, gr",
+                "has_icon_hint": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_id": "select_composition",
+        "upstream_dom_target_count": 3,
+        "fret_test_id_count": 4,
+        "upstream": [
+          {
+            "target_id": "upstream.button_group.select_demo.currency_trigger",
+            "snapshot": "button-group-select",
+            "theme": "light",
+            "mode": "",
+            "variant": "",
+            "context_id": null,
+            "path": "0.0.0",
+            "tag": "button",
+            "attrs": {
+              "role": "combobox",
+              "aria-expanded": "false",
+              "aria-controls": "radix-_R_alubsnpfiuplb_",
+              "data-state": "closed"
+            },
+            "class_tokens": [
+              "border-input",
+              "data-[placeholder]:text-muted-foreground",
+              "[&_svg:not([class*='text-'])]:text-muted-foreground",
+              "focus-visible:border-ring",
+              "focus-visible:ring-ring/50",
+              "aria-invalid:ring-destructive/20",
+              "dark:aria-invalid:ring-destructive/40",
+              "aria-invalid:border-destructive",
+              "dark:bg-input/30",
+              "dark:hover:bg-input/50",
+              "flex",
+              "w-fit",
+              "items-center",
+              "justify-between",
+              "gap-2",
+              "rounded-md",
+              "border",
+              "bg-transparent",
+              "px-3",
+              "py-2",
+              "text-sm",
+              "whitespace-nowrap",
+              "shadow-xs",
+              "transition-[color,box-shadow]",
+              "outline-none",
+              "focus-visible:ring-[3px]",
+              "disabled:cursor-not-allowed",
+              "disabled:opacity-50",
+              "data-[size=default]:h-9",
+              "data-[size=sm]:h-8",
+              "*:data-[slot=select-value]:line-clamp-1",
+              "*:data-[slot=select-value]:flex",
+              "*:data-[slot=select-value]:items-center",
+              "*:data-[slot=select-value]:gap-2",
+              "[&_svg]:pointer-events-none",
+              "[&_svg]:shrink-0",
+              "[&_svg:not([class*='size-'])]:size-4",
+              "font-mono"
+            ],
+            "bounds": {
+              "x": 0.0,
+              "y": 0.0,
+              "w": 58.219,
+              "h": 36.0
+            },
+            "device_pixel_ratio": 2.0,
+            "child_count": 1,
+            "layout": {
+              "display": "flex",
+              "position": "static",
+              "boxSizing": "border-box",
+              "alignItems": "center",
+              "justifyContent": "space-between",
+              "flexDirection": "row",
+              "flexWrap": "nowrap",
+              "flexGrow": "0",
+              "flexShrink": "1",
+              "gap": 8.0,
+              "rowGap": 8.0,
+              "columnGap": 8.0,
+              "whiteSpace": "nowrap",
+              "width": 58.219,
+              "height": 36.0,
+              "paddingTop": 8.0,
+              "paddingRight": 12.0,
+              "paddingBottom": 8.0,
+              "paddingLeft": 12.0,
+              "marginTop": 0.0,
+              "marginRight": 0.0,
+              "marginBottom": 0.0,
+              "marginLeft": 0.0
+            },
+            "text": {
+              "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+              "fontWeight": "400",
+              "textAlign": "center",
+              "textTransform": "none",
+              "whiteSpace": "nowrap",
+              "fontSize": 14.0,
+              "lineHeight": 20.0
+            },
+            "paint": {
+              "color": "rgb(0, 0, 0)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "oklch(0.922 0 0)",
+              "borderRightColor": "oklch(0.922 0 0)",
+              "borderBottomColor": "oklch(0.922 0 0)",
+              "borderLeftColor": "oklch(0.922 0 0)",
+              "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+              "opacity": "1",
+              "border_widths_px": {
+                "borderTopWidth": 1.0,
+                "borderRightWidth": 1.0,
+                "borderBottomWidth": 1.0,
+                "borderLeftWidth": 1.0
+              },
+              "corner_radii_px": {
+                "borderTopLeftRadius": 8.0,
+                "borderTopRightRadius": 0.0,
+                "borderBottomRightRadius": 0.0,
+                "borderBottomLeftRadius": 8.0
+              }
+            },
+            "descendant_summary": {
+              "count": 2,
+              "svg_count": 1,
+              "text_count": 0
+            },
+            "source": "upstream_dom_computed_style",
+            "icon": {
+              "first_svg_bounds": {
+                "x": 29.219,
+                "y": 10.0,
+                "w": 16.0,
+                "h": 16.0
+              },
+              "first_svg_class_tokens": [
+                "lucide",
+                "lucide-chevron-down",
+                "size-4",
+                "opacity-50"
+              ],
+              "svg_count": 1
+            }
+          },
+          {
+            "target_id": "upstream.button_group.select_demo.amount",
+            "snapshot": "button-group-select",
+            "theme": "light",
+            "mode": "",
+            "variant": "",
+            "context_id": null,
+            "path": "0.0.1",
+            "tag": "input",
+            "attrs": {},
+            "class_tokens": [
+              "file:text-foreground",
+              "placeholder:text-muted-foreground",
+              "selection:bg-primary",
+              "selection:text-primary-foreground",
+              "dark:bg-input/30",
+              "border-input",
+              "h-9",
+              "w-full",
+              "min-w-0",
+              "rounded-md",
+              "border",
+              "bg-transparent",
+              "px-3",
+              "py-1",
+              "text-base",
+              "shadow-xs",
+              "transition-[color,box-shadow]",
+              "outline-none",
+              "file:inline-flex",
+              "file:h-7",
+              "file:border-0",
+              "file:bg-transparent",
+              "file:text-sm",
+              "file:font-medium",
+              "disabled:pointer-events-none",
+              "disabled:cursor-not-allowed",
+              "disabled:opacity-50",
+              "md:text-sm",
+              "focus-visible:border-ring",
+              "focus-visible:ring-ring/50",
+              "focus-visible:ring-[3px]",
+              "aria-invalid:ring-destructive/20",
+              "dark:aria-invalid:ring-destructive/40",
+              "aria-invalid:border-destructive"
+            ],
+            "bounds": {
+              "x": 58.219,
+              "y": 0.0,
+              "w": 180.0,
+              "h": 36.0
+            },
+            "device_pixel_ratio": 2.0,
+            "child_count": 0,
+            "layout": {
+              "display": "block",
+              "position": "static",
+              "boxSizing": "border-box",
+              "alignItems": "normal",
+              "justifyContent": "normal",
+              "flexDirection": "row",
+              "flexWrap": "nowrap",
+              "flexGrow": "1",
+              "flexShrink": "1",
+              "gap": "normal",
+              "rowGap": "normal",
+              "columnGap": "normal",
+              "whiteSpace": "normal",
+              "width": 180.0,
+              "height": 36.0,
+              "minWidth": 0.0,
+              "paddingTop": 4.0,
+              "paddingRight": 12.0,
+              "paddingBottom": 4.0,
+              "paddingLeft": 12.0,
+              "marginTop": 0.0,
+              "marginRight": 0.0,
+              "marginBottom": 0.0,
+              "marginLeft": 0.0
+            },
+            "text": {
+              "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+              "fontWeight": "400",
+              "textAlign": "start",
+              "textTransform": "none",
+              "whiteSpace": "normal",
+              "fontSize": 14.0,
+              "lineHeight": 20.0
+            },
+            "paint": {
+              "color": "rgb(0, 0, 0)",
+              "backgroundColor": "rgba(0, 0, 0, 0)",
+              "borderTopColor": "oklch(0.922 0 0)",
+              "borderRightColor": "oklch(0.922 0 0)",
+              "borderBottomColor": "oklch(0.922 0 0)",
+              "borderLeftColor": "oklch(0.922 0 0)",
+              "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+              "opacity": "1",
+              "border_widths_px": {
+                "borderTopWidth": 1.0,
+                "borderRightWidth": 1.0,
+                "borderBottomWidth": 1.0,
+                "borderLeftWidth": 0.0
+              },
+              "corner_radii_px": {
+                "borderTopLeftRadius": 0.0,
+                "borderTopRightRadius": 8.0,
+                "borderBottomRightRadius": 8.0,
+                "borderBottomLeftRadius": 0.0
+              }
+            },
+            "descendant_summary": {
+              "count": 0,
+              "svg_count": 0,
+              "text_count": 0
+            },
+            "source": "upstream_dom_computed_style"
+          },
+          {
+            "target_id": "upstream.button_group.select_demo.send_button",
+            "snapshot": "button-group-select",
+            "theme": "light",
+            "mode": "",
+            "variant": "",
+            "context_id": null,
+            "path": "0.1.0",
+            "tag": "button",
+            "attrs": {
+              "aria-label": "Send"
+            },
+            "class_tokens": [
+              "inline-flex",
+              "items-center",
+              "justify-center",
+              "gap-2",
+              "whitespace-nowrap",
+              "rounded-md",
+              "text-sm",
+              "font-medium",
+              "transition-all",
+              "disabled:pointer-events-none",
+              "disabled:opacity-50",
+              "[&_svg]:pointer-events-none",
+              "[&_svg:not([class*='size-'])]:size-4",
+              "shrink-0",
+              "[&_svg]:shrink-0",
+              "outline-none",
+              "focus-visible:border-ring",
+              "focus-visible:ring-ring/50",
+              "focus-visible:ring-[3px]",
+              "aria-invalid:ring-destructive/20",
+              "dark:aria-invalid:ring-destructive/40",
+              "aria-invalid:border-destructive",
+              "border",
+              "bg-background",
+              "shadow-xs",
+              "hover:bg-accent",
+              "hover:text-accent-foreground",
+              "dark:bg-input/30",
+              "dark:border-input",
+              "dark:hover:bg-input/50",
+              "size-9"
+            ],
+            "bounds": {
+              "x": 246.219,
+              "y": 0.0,
+              "w": 36.0,
+              "h": 36.0
+            },
+            "device_pixel_ratio": 2.0,
+            "child_count": 1,
+            "layout": {
+              "display": "flex",
+              "position": "static",
+              "boxSizing": "border-box",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "flexDirection": "row",
+              "flexWrap": "nowrap",
+              "flexGrow": "0",
+              "flexShrink": "0",
+              "gap": 8.0,
+              "rowGap": 8.0,
+              "columnGap": 8.0,
+              "whiteSpace": "nowrap",
+              "width": 36.0,
+              "height": 36.0,
+              "paddingTop": 0.0,
+              "paddingRight": 0.0,
+              "paddingBottom": 0.0,
+              "paddingLeft": 0.0,
+              "marginTop": 0.0,
+              "marginRight": 0.0,
+              "marginBottom": 0.0,
+              "marginLeft": 0.0
+            },
+            "text": {
+              "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+              "fontWeight": "500",
+              "textAlign": "center",
+              "textTransform": "none",
+              "whiteSpace": "nowrap",
+              "fontSize": 14.0,
+              "lineHeight": 20.0
+            },
+            "paint": {
+              "color": "rgb(0, 0, 0)",
+              "backgroundColor": "oklch(1 0 0)",
+              "borderTopColor": "oklch(0.922 0 0)",
+              "borderRightColor": "oklch(0.922 0 0)",
+              "borderBottomColor": "oklch(0.922 0 0)",
+              "borderLeftColor": "oklch(0.922 0 0)",
+              "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+              "opacity": "1",
+              "border_widths_px": {
+                "borderTopWidth": 1.0,
+                "borderRightWidth": 1.0,
+                "borderBottomWidth": 1.0,
+                "borderLeftWidth": 1.0
+              },
+              "corner_radii_px": {
+                "borderTopLeftRadius": 8.0,
+                "borderTopRightRadius": 8.0,
+                "borderBottomRightRadius": 8.0,
+                "borderBottomLeftRadius": 8.0
+              }
+            },
+            "descendant_summary": {
+              "count": 3,
+              "svg_count": 1,
+              "text_count": 0
+            },
+            "source": "upstream_dom_computed_style",
+            "icon": {
+              "first_svg_bounds": {
+                "x": 256.219,
+                "y": 10.0,
+                "w": 16.0,
+                "h": 16.0
+              },
+              "first_svg_class_tokens": [
+                "lucide",
+                "lucide-arrow-right"
+              ],
+              "svg_count": 1
+            }
+          }
+        ],
+        "fret": [
+          {
+            "test_id": "ui-gallery-button-group-select",
+            "primary": {
+              "test_id": "ui-gallery-button-group-select",
+              "bounds": {
+                "x": 114.0,
+                "y": 2404.667,
+                "w": 420.0,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 114.0,
+                "y": 2404.667,
+                "w": 420.0,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1396v1)",
+              "kind_hint": "Flex",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "Flex(FlexProps { layout: LayoutStyle { size: SizeStyle { width: Px(Px(420.0)), height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, gr",
+              "has_chrome_padding_hint": true
+            },
+            "related": [
+              {
+                "test_id": "ui-gallery-button-group-select-content",
+                "bounds": {
+                  "x": 96.667,
+                  "y": 2343.333,
+                  "w": 760.0,
+                  "h": 114.0
+                },
+                "raw_bounds": {
+                  "x": 96.667,
+                  "y": 2343.333,
+                  "w": 760.0,
+                  "h": 114.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1381v1)",
+                "kind_hint": "Container",
+                "source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, g",
+                "has_chrome_padding_hint": true,
+                "has_chrome_border_hint": true,
+                "has_corner_radii_hint": true
+              }
+            ]
+          },
+          {
+            "test_id": "ui-gallery-button-group-select-currency-trigger",
+            "primary": {
+              "test_id": "ui-gallery-button-group-select-currency-trigger",
+              "bounds": {
+                "x": 114.0,
+                "y": 2404.667,
+                "w": 58.0,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 114.0,
+                "y": 2404.667,
+                "w": 58.0,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1398v1)",
+              "kind_hint": "Pressable",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "Pressable(PressableProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Px(Px(36.0)), min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: Some(Start) }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect",
+              "has_corner_radii_hint": true
+            },
+            "related": [
+              {
+                "test_id": "ui-gallery-button-group-select-currency-trigger.chrome",
+                "bounds": {
+                  "x": 114.0,
+                  "y": 2404.667,
+                  "w": 58.0,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 114.0,
+                  "y": 2404.667,
+                  "w": 58.0,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1399v1)",
+                "kind_hint": "Container",
+                "source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Fill, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid",
+                "has_chrome_padding_hint": true,
+                "has_chrome_border_hint": true,
+                "has_corner_radii_hint": true
+              }
+            ]
+          },
+          {
+            "test_id": "ui-gallery-button-group-select-amount",
+            "primary": {
+              "test_id": "ui-gallery-button-group-select-amount",
+              "bounds": {
+                "x": 172.0,
+                "y": 2404.667,
+                "w": 318.0,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 172.0,
+                "y": 2404.667,
+                "w": 318.0,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1406v1)",
+              "kind_hint": "TextInput",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "TextInput(TextInputProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Fill, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid",
+              "has_chrome_padding_hint": true,
+              "has_chrome_border_hint": true,
+              "has_corner_radii_hint": true
+            }
+          },
+          {
+            "test_id": "ui-gallery-button-group-select-send-button",
+            "primary": {
+              "test_id": "ui-gallery-button-group-select-send-button",
+              "bounds": {
+                "x": 498.0,
+                "y": 2404.667,
+                "w": 36.0,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 498.0,
+                "y": 2404.667,
+                "w": 36.0,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1408v1)",
+              "kind_hint": "Pressable",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "Pressable(PressableProps { layout: LayoutStyle { size: SizeStyle { width: Px(Px(36.0)), height: Px(Px(36.0)), min_width: Some(Px(Px(36.0))), min_height: Some(Px(Px(36.0))), max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 0.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left",
+              "has_corner_radii_hint": true
+            },
+            "related": [
+              {
+                "test_id": "ui-gallery-button-group-select-send-button.chrome",
+                "bounds": {
+                  "x": 498.0,
+                  "y": 2404.667,
+                  "w": 36.0,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 498.0,
+                  "y": 2404.667,
+                  "w": 36.0,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1409v1)",
+                "kind_hint": "Container",
+                "source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Fill, min_width: Some(Px(Px(34.0))), min_height: Some(Px(Px(34.0))), max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ra",
+                "has_chrome_padding_hint": true,
+                "has_chrome_border_hint": true,
+                "has_corner_radii_hint": true
+              },
+              {
+                "test_id": "ui-gallery-button-group-select-send-button-icon",
+                "bounds": {
+                  "x": 508.667,
+                  "y": 2415.333,
+                  "w": 16.0,
+                  "h": 16.0
+                },
+                "raw_bounds": {
+                  "x": 508.667,
+                  "y": 2415.333,
+                  "w": 16.0,
+                  "h": 16.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1411v1)",
+                "kind_hint": "SvgIcon",
+                "source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "label_preview": "SvgIcon(SvgIconProps { layout: LayoutStyle { size: SizeStyle { width: Px(Px(16.0)), height: Px(Px(16.0)), min_width: None, min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 0.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, gr",
+                "has_icon_hint": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_id": "dropdown_trigger",
+        "upstream_dom_target_count": 0,
+        "fret_test_id_count": 1,
+        "upstream": [],
+        "fret": [
+          {
+            "test_id": "ui-gallery-button-group-dropdown-trigger",
+            "primary": {
+              "test_id": "ui-gallery-button-group-dropdown-trigger",
+              "bounds": {
+                "x": 188.0,
+                "y": 2238.667,
+                "w": 36.667,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 188.0,
+                "y": 2238.667,
+                "w": 36.667,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1374v1)",
+              "kind_hint": "Pressable",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "Pressable(PressableProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Px(Px(36.0)), min_width: None, min_height: Some(Px(Px(36.0))), max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 0.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio",
+              "has_corner_radii_hint": true
+            },
+            "related": [
+              {
+                "test_id": "ui-gallery-button-group-dropdown-trigger.chrome",
+                "bounds": {
+                  "x": 188.0,
+                  "y": 2238.667,
+                  "w": 36.667,
+                  "h": 36.0
+                },
+                "raw_bounds": {
+                  "x": 188.0,
+                  "y": 2238.667,
+                  "w": 36.667,
+                  "h": 36.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1375v1)",
+                "kind_hint": "Container",
+                "source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Fill, min_width: None, min_height: Some(Px(Px(18.0))), max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, gri",
+                "has_chrome_padding_hint": true,
+                "has_chrome_border_hint": true,
+                "has_corner_radii_hint": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_id": "text_prefix",
+        "upstream_dom_target_count": 0,
+        "fret_test_id_count": 2,
+        "upstream": [],
+        "fret": [
+          {
+            "test_id": "ui-gallery-button-group-text-prefix",
+            "primary": {
+              "test_id": "ui-gallery-button-group-text-prefix",
+              "bounds": {
+                "x": 114.0,
+                "y": 3176.667,
+                "w": 79.333,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 114.0,
+                "y": 3176.667,
+                "w": 79.333,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1519v1)",
+              "kind_hint": "Container",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Auto, min_width: None, min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: Some(Stretch) }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid:",
+              "has_chrome_padding_hint": true,
+              "has_chrome_border_hint": true,
+              "has_corner_radii_hint": true
+            },
+            "related": [
+              {
+                "test_id": "ui-gallery-button-group-text-prefix-label",
+                "bounds": {
+                  "x": 131.333,
+                  "y": 3188.0,
+                  "w": 45.333,
+                  "h": 14.0
+                },
+                "raw_bounds": {
+                  "x": 131.333,
+                  "y": 3188.0,
+                  "w": 45.333,
+                  "h": 14.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "NodeId(1521v1)",
+                "kind_hint": "Semantics",
+                "source": "layout_sidecar",
+                "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                "label_preview": "Semantics(SemanticsProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Auto, min_width: None, min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid: GridItem"
+              }
+            ]
+          },
+          {
+            "test_id": "ui-gallery-button-group-text-control",
+            "primary": {
+              "test_id": "ui-gallery-button-group-text-control",
+              "bounds": {
+                "x": 193.333,
+                "y": 3176.667,
+                "w": 583.333,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 193.333,
+                "y": 3176.667,
+                "w": 583.333,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1527v1)",
+              "kind_hint": "TextInput",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "TextInput(TextInputProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Fill, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid",
+              "has_chrome_padding_hint": true,
+              "has_chrome_border_hint": true,
+              "has_corner_radii_hint": true
+            }
+          }
+        ]
+      },
+      {
+        "part_id": "text_control",
+        "upstream_dom_target_count": 0,
+        "fret_test_id_count": 1,
+        "upstream": [],
+        "fret": [
+          {
+            "test_id": "ui-gallery-button-group-text-control",
+            "primary": {
+              "test_id": "ui-gallery-button-group-text-control",
+              "bounds": {
+                "x": 193.333,
+                "y": 3176.667,
+                "w": 583.333,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 193.333,
+                "y": 3176.667,
+                "w": 583.333,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1527v1)",
+              "kind_hint": "TextInput",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "TextInput(TextInputProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Fill, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid",
+              "has_chrome_padding_hint": true,
+              "has_chrome_border_hint": true,
+              "has_corner_radii_hint": true
+            }
+          }
+        ]
+      },
+      {
+        "part_id": "text_suffix",
+        "upstream_dom_target_count": 0,
+        "fret_test_id_count": 2,
+        "upstream": [],
+        "fret": [
+          {
+            "test_id": "ui-gallery-button-group-text-suffix",
+            "primary": {
+              "test_id": "ui-gallery-button-group-text-suffix",
+              "bounds": {
+                "x": 777.333,
+                "y": 3176.667,
+                "w": 63.333,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 777.333,
+                "y": 3176.667,
+                "w": 63.333,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1528v1)",
+              "kind_hint": "Container",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Auto, min_width: None, min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: Some(Stretch) }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid:",
+              "has_chrome_padding_hint": true,
+              "has_chrome_border_hint": true,
+              "has_corner_radii_hint": true
+            }
+          },
+          {
+            "test_id": "ui-gallery-button-group-text-control",
+            "primary": {
+              "test_id": "ui-gallery-button-group-text-control",
+              "bounds": {
+                "x": 193.333,
+                "y": 3176.667,
+                "w": 583.333,
+                "h": 36.0
+              },
+              "raw_bounds": {
+                "x": 193.333,
+                "y": 3176.667,
+                "w": 583.333,
+                "h": 36.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "NodeId(1527v1)",
+              "kind_hint": "TextInput",
+              "source": "layout_sidecar",
+              "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+              "label_preview": "TextInput(TextInputProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Fill, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid",
+              "has_chrome_padding_hint": true,
+              "has_chrome_border_hint": true,
+              "has_corner_radii_hint": true
+            }
+          }
+        ]
+      }
+    ]
   },
   "parts": [
     {
@@ -1970,6 +3453,1487 @@
           "device_pixel_ratio": 2
         }
       ],
+      "live_facts": {
+        "schema_version": 1,
+        "upstream_source": "upstream_dom_computed_style",
+        "fret_source": "layout_sidecar+bundle_schema2_semantics",
+        "part_count": 7,
+        "upstream_dom_target_count": 6,
+        "fret_test_id_count": 14,
+        "parts": [
+          {
+            "part_id": "button_group_root",
+            "upstream_dom_target_count": 1,
+            "fret_test_id_count": 3,
+            "upstream": [
+              {
+                "target_id": "upstream.button_group.input_demo.root",
+                "snapshot": "button-group-input",
+                "theme": "light",
+                "mode": "",
+                "variant": "",
+                "context_id": null,
+                "path": "0",
+                "tag": "div",
+                "attrs": {
+                  "role": "group"
+                },
+                "class_tokens": [
+                  "flex",
+                  "w-fit",
+                  "items-stretch",
+                  "[&>*]:focus-visible:z-10",
+                  "[&>*]:focus-visible:relative",
+                  "[&>[data-slot=select-trigger]:not([class*='w-'])]:w-fit",
+                  "[&>input]:flex-1",
+                  "has-[select[aria-hidden=true]:last-child]:[&>[data-slot=select-trigger]:last-of-type]:rounded-r-md",
+                  "has-[>[data-slot=button-group]]:gap-2",
+                  "[&>*:not(:first-child)]:rounded-l-none",
+                  "[&>*:not(:first-child)]:border-l-0",
+                  "[&>*:not(:last-child)]:rounded-r-none"
+                ],
+                "bounds": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "w": 222.0,
+                  "h": 36.0
+                },
+                "device_pixel_ratio": 2.0,
+                "child_count": 2,
+                "layout": {
+                  "display": "flex",
+                  "position": "static",
+                  "boxSizing": "border-box",
+                  "alignItems": "stretch",
+                  "justifyContent": "normal",
+                  "flexDirection": "row",
+                  "flexWrap": "nowrap",
+                  "flexGrow": "0",
+                  "flexShrink": "1",
+                  "gap": "normal",
+                  "rowGap": "normal",
+                  "columnGap": "normal",
+                  "whiteSpace": "normal",
+                  "width": 222.0,
+                  "height": 36.0,
+                  "minWidth": 0.0,
+                  "minHeight": 0.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "marginTop": 0.0,
+                  "marginRight": 0.0,
+                  "marginBottom": 0.0,
+                  "marginLeft": 0.0
+                },
+                "text": {
+                  "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+                  "fontWeight": "400",
+                  "textAlign": "start",
+                  "textTransform": "none",
+                  "whiteSpace": "normal",
+                  "fontSize": 16.0,
+                  "lineHeight": 24.0
+                },
+                "paint": {
+                  "color": "rgb(0, 0, 0)",
+                  "backgroundColor": "rgba(0, 0, 0, 0)",
+                  "borderTopColor": "oklch(0.922 0 0)",
+                  "borderRightColor": "oklch(0.922 0 0)",
+                  "borderBottomColor": "oklch(0.922 0 0)",
+                  "borderLeftColor": "oklch(0.922 0 0)",
+                  "boxShadow": "none",
+                  "opacity": "1",
+                  "border_widths_px": {
+                    "borderTopWidth": 0.0,
+                    "borderRightWidth": 0.0,
+                    "borderBottomWidth": 0.0,
+                    "borderLeftWidth": 0.0
+                  },
+                  "corner_radii_px": {
+                    "borderTopLeftRadius": 0.0,
+                    "borderTopRightRadius": 0.0,
+                    "borderBottomRightRadius": 0.0,
+                    "borderBottomLeftRadius": 0.0
+                  }
+                },
+                "descendant_summary": {
+                  "count": 5,
+                  "svg_count": 1,
+                  "text_count": 0
+                },
+                "source": "upstream_dom_computed_style",
+                "icon": {
+                  "first_svg_bounds": {
+                    "x": 193.0,
+                    "y": 10.0,
+                    "w": 16.0,
+                    "h": 16.0
+                  },
+                  "first_svg_class_tokens": [
+                    "lucide",
+                    "lucide-search"
+                  ],
+                  "svg_count": 1
+                }
+              }
+            ],
+            "fret": [
+              {
+                "test_id": "ui-gallery-button-group-input",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-input",
+                  "bounds": {
+                    "x": 114.0,
+                    "y": 1906.667,
+                    "w": 420.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 114.0,
+                    "y": 1906.667,
+                    "w": 420.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1308v1)",
+                  "kind_hint": "Flex",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "Flex(FlexProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: Some(Px(Px(420.0))), max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: No",
+                  "has_chrome_padding_hint": true
+                },
+                "related": [
+                  {
+                    "test_id": "ui-gallery-button-group-input-content",
+                    "bounds": {
+                      "x": 96.667,
+                      "y": 1845.333,
+                      "w": 760.0,
+                      "h": 114.0
+                    },
+                    "raw_bounds": {
+                      "x": 96.667,
+                      "y": 1845.333,
+                      "w": 760.0,
+                      "h": 114.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "NodeId(1293v1)",
+                    "kind_hint": "Container",
+                    "source": "layout_sidecar",
+                    "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                    "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, g",
+                    "has_chrome_padding_hint": true,
+                    "has_chrome_border_hint": true,
+                    "has_corner_radii_hint": true
+                  }
+                ]
+              },
+              {
+                "test_id": "ui-gallery-button-group-dropdown",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-dropdown",
+                  "bounds": {
+                    "x": 114.0,
+                    "y": 2238.667,
+                    "w": 110.667,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 114.0,
+                    "y": 2238.667,
+                    "w": 110.667,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1369v1)",
+                  "kind_hint": "Flex",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "Flex(FlexProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Auto, min_width: None, min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: Some(Start) }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid: GridItemSty",
+                  "has_chrome_padding_hint": true
+                },
+                "related": [
+                  {
+                    "test_id": "ui-gallery-button-group-dropdown-content",
+                    "bounds": {
+                      "x": 96.667,
+                      "y": 2177.333,
+                      "w": 760.0,
+                      "h": 114.0
+                    },
+                    "raw_bounds": {
+                      "x": 96.667,
+                      "y": 2177.333,
+                      "w": 760.0,
+                      "h": 114.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "NodeId(1354v1)",
+                    "kind_hint": "Container",
+                    "source": "layout_sidecar",
+                    "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                    "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, g",
+                    "has_chrome_padding_hint": true,
+                    "has_chrome_border_hint": true,
+                    "has_corner_radii_hint": true
+                  }
+                ]
+              },
+              {
+                "test_id": "ui-gallery-button-group-text",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-text",
+                  "bounds": {
+                    "x": 114.0,
+                    "y": 3176.667,
+                    "w": 726.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 114.0,
+                    "y": 3176.667,
+                    "w": 726.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1518v1)",
+                  "kind_hint": "Flex",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "Flex(FlexProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid: GridI",
+                  "has_chrome_padding_hint": true
+                },
+                "related": [
+                  {
+                    "test_id": "ui-gallery-button-group-text-content",
+                    "bounds": {
+                      "x": 96.667,
+                      "y": 3115.333,
+                      "w": 760.0,
+                      "h": 114.0
+                    },
+                    "raw_bounds": {
+                      "x": 96.667,
+                      "y": 3115.333,
+                      "w": 760.0,
+                      "h": 114.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "NodeId(1503v1)",
+                    "kind_hint": "Container",
+                    "source": "layout_sidecar",
+                    "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                    "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, g",
+                    "has_chrome_padding_hint": true,
+                    "has_chrome_border_hint": true,
+                    "has_corner_radii_hint": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "part_id": "input_search_button",
+            "upstream_dom_target_count": 2,
+            "fret_test_id_count": 1,
+            "upstream": [
+              {
+                "target_id": "upstream.button_group.input_demo.input",
+                "snapshot": "button-group-input",
+                "theme": "light",
+                "mode": "",
+                "variant": "",
+                "context_id": null,
+                "path": "0.0",
+                "tag": "input",
+                "attrs": {},
+                "class_tokens": [
+                  "file:text-foreground",
+                  "placeholder:text-muted-foreground",
+                  "selection:bg-primary",
+                  "selection:text-primary-foreground",
+                  "dark:bg-input/30",
+                  "border-input",
+                  "h-9",
+                  "w-full",
+                  "min-w-0",
+                  "rounded-md",
+                  "border",
+                  "bg-transparent",
+                  "px-3",
+                  "py-1",
+                  "text-base",
+                  "shadow-xs",
+                  "transition-[color,box-shadow]",
+                  "outline-none",
+                  "file:inline-flex",
+                  "file:h-7",
+                  "file:border-0",
+                  "file:bg-transparent",
+                  "file:text-sm",
+                  "file:font-medium",
+                  "disabled:pointer-events-none",
+                  "disabled:cursor-not-allowed",
+                  "disabled:opacity-50",
+                  "md:text-sm",
+                  "focus-visible:border-ring",
+                  "focus-visible:ring-ring/50",
+                  "focus-visible:ring-[3px]",
+                  "aria-invalid:ring-destructive/20",
+                  "dark:aria-invalid:ring-destructive/40",
+                  "aria-invalid:border-destructive"
+                ],
+                "bounds": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "w": 181.0,
+                  "h": 36.0
+                },
+                "device_pixel_ratio": 2.0,
+                "child_count": 0,
+                "layout": {
+                  "display": "block",
+                  "position": "static",
+                  "boxSizing": "border-box",
+                  "alignItems": "normal",
+                  "justifyContent": "normal",
+                  "flexDirection": "row",
+                  "flexWrap": "nowrap",
+                  "flexGrow": "1",
+                  "flexShrink": "1",
+                  "gap": "normal",
+                  "rowGap": "normal",
+                  "columnGap": "normal",
+                  "whiteSpace": "normal",
+                  "width": 181.0,
+                  "height": 36.0,
+                  "minWidth": 0.0,
+                  "paddingTop": 4.0,
+                  "paddingRight": 12.0,
+                  "paddingBottom": 4.0,
+                  "paddingLeft": 12.0,
+                  "marginTop": 0.0,
+                  "marginRight": 0.0,
+                  "marginBottom": 0.0,
+                  "marginLeft": 0.0
+                },
+                "text": {
+                  "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+                  "fontWeight": "400",
+                  "textAlign": "start",
+                  "textTransform": "none",
+                  "whiteSpace": "normal",
+                  "fontSize": 14.0,
+                  "lineHeight": 20.0
+                },
+                "paint": {
+                  "color": "rgb(0, 0, 0)",
+                  "backgroundColor": "rgba(0, 0, 0, 0)",
+                  "borderTopColor": "oklch(0.922 0 0)",
+                  "borderRightColor": "oklch(0.922 0 0)",
+                  "borderBottomColor": "oklch(0.922 0 0)",
+                  "borderLeftColor": "oklch(0.922 0 0)",
+                  "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+                  "opacity": "1",
+                  "border_widths_px": {
+                    "borderTopWidth": 1.0,
+                    "borderRightWidth": 1.0,
+                    "borderBottomWidth": 1.0,
+                    "borderLeftWidth": 1.0
+                  },
+                  "corner_radii_px": {
+                    "borderTopLeftRadius": 8.0,
+                    "borderTopRightRadius": 0.0,
+                    "borderBottomRightRadius": 0.0,
+                    "borderBottomLeftRadius": 8.0
+                  }
+                },
+                "descendant_summary": {
+                  "count": 0,
+                  "svg_count": 0,
+                  "text_count": 0
+                },
+                "source": "upstream_dom_computed_style"
+              },
+              {
+                "target_id": "upstream.button_group.input_demo.search_button",
+                "snapshot": "button-group-input",
+                "theme": "light",
+                "mode": "",
+                "variant": "",
+                "context_id": null,
+                "path": "0.1",
+                "tag": "button",
+                "attrs": {
+                  "aria-label": "Search"
+                },
+                "class_tokens": [
+                  "inline-flex",
+                  "items-center",
+                  "justify-center",
+                  "gap-2",
+                  "whitespace-nowrap",
+                  "rounded-md",
+                  "text-sm",
+                  "font-medium",
+                  "transition-all",
+                  "disabled:pointer-events-none",
+                  "disabled:opacity-50",
+                  "[&_svg]:pointer-events-none",
+                  "[&_svg:not([class*='size-'])]:size-4",
+                  "shrink-0",
+                  "[&_svg]:shrink-0",
+                  "outline-none",
+                  "focus-visible:border-ring",
+                  "focus-visible:ring-ring/50",
+                  "focus-visible:ring-[3px]",
+                  "aria-invalid:ring-destructive/20",
+                  "dark:aria-invalid:ring-destructive/40",
+                  "aria-invalid:border-destructive",
+                  "border",
+                  "bg-background",
+                  "shadow-xs",
+                  "hover:bg-accent",
+                  "hover:text-accent-foreground",
+                  "dark:bg-input/30",
+                  "dark:border-input",
+                  "dark:hover:bg-input/50",
+                  "h-9",
+                  "px-4",
+                  "py-2",
+                  "has-[>svg]:px-3"
+                ],
+                "bounds": {
+                  "x": 181.0,
+                  "y": 0.0,
+                  "w": 41.0,
+                  "h": 36.0
+                },
+                "device_pixel_ratio": 2.0,
+                "child_count": 1,
+                "layout": {
+                  "display": "flex",
+                  "position": "static",
+                  "boxSizing": "border-box",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "flexDirection": "row",
+                  "flexWrap": "nowrap",
+                  "flexGrow": "0",
+                  "flexShrink": "0",
+                  "gap": 8.0,
+                  "rowGap": 8.0,
+                  "columnGap": 8.0,
+                  "whiteSpace": "nowrap",
+                  "width": 41.0,
+                  "height": 36.0,
+                  "paddingTop": 8.0,
+                  "paddingRight": 12.0,
+                  "paddingBottom": 8.0,
+                  "paddingLeft": 12.0,
+                  "marginTop": 0.0,
+                  "marginRight": 0.0,
+                  "marginBottom": 0.0,
+                  "marginLeft": 0.0
+                },
+                "text": {
+                  "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+                  "fontWeight": "500",
+                  "textAlign": "center",
+                  "textTransform": "none",
+                  "whiteSpace": "nowrap",
+                  "fontSize": 14.0,
+                  "lineHeight": 20.0
+                },
+                "paint": {
+                  "color": "rgb(0, 0, 0)",
+                  "backgroundColor": "oklch(1 0 0)",
+                  "borderTopColor": "oklch(0.922 0 0)",
+                  "borderRightColor": "oklch(0.922 0 0)",
+                  "borderBottomColor": "oklch(0.922 0 0)",
+                  "borderLeftColor": "oklch(0.922 0 0)",
+                  "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+                  "opacity": "1",
+                  "border_widths_px": {
+                    "borderTopWidth": 1.0,
+                    "borderRightWidth": 1.0,
+                    "borderBottomWidth": 1.0,
+                    "borderLeftWidth": 0.0
+                  },
+                  "corner_radii_px": {
+                    "borderTopLeftRadius": 0.0,
+                    "borderTopRightRadius": 8.0,
+                    "borderBottomRightRadius": 8.0,
+                    "borderBottomLeftRadius": 0.0
+                  }
+                },
+                "descendant_summary": {
+                  "count": 3,
+                  "svg_count": 1,
+                  "text_count": 0
+                },
+                "source": "upstream_dom_computed_style",
+                "icon": {
+                  "first_svg_bounds": {
+                    "x": 193.0,
+                    "y": 10.0,
+                    "w": 16.0,
+                    "h": 16.0
+                  },
+                  "first_svg_class_tokens": [
+                    "lucide",
+                    "lucide-search"
+                  ],
+                  "svg_count": 1
+                }
+              }
+            ],
+            "fret": [
+              {
+                "test_id": "ui-gallery-button-group-input-search-button",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-input-search-button",
+                  "bounds": {
+                    "x": 489.333,
+                    "y": 1906.667,
+                    "w": 45.333,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 489.333,
+                    "y": 1906.667,
+                    "w": 45.333,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1311v1)",
+                  "kind_hint": "Pressable",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "Pressable(PressableProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Px(Px(36.0)), min_width: None, min_height: Some(Px(Px(36.0))), max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 0.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio",
+                  "has_corner_radii_hint": true
+                },
+                "related": [
+                  {
+                    "test_id": "ui-gallery-button-group-input-search-button.chrome",
+                    "bounds": {
+                      "x": 489.333,
+                      "y": 1906.667,
+                      "w": 45.333,
+                      "h": 36.0
+                    },
+                    "raw_bounds": {
+                      "x": 489.333,
+                      "y": 1906.667,
+                      "w": 45.333,
+                      "h": 36.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "NodeId(1312v1)",
+                    "kind_hint": "Container",
+                    "source": "layout_sidecar",
+                    "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                    "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Fill, min_width: None, min_height: Some(Px(Px(18.0))), max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, gri",
+                    "has_chrome_padding_hint": true,
+                    "has_chrome_border_hint": true,
+                    "has_corner_radii_hint": true
+                  },
+                  {
+                    "test_id": "ui-gallery-button-group-input-search-button-icon",
+                    "bounds": {
+                      "x": 501.333,
+                      "y": 1917.333,
+                      "w": 16.0,
+                      "h": 16.0
+                    },
+                    "raw_bounds": {
+                      "x": 501.333,
+                      "y": 1917.333,
+                      "w": 16.0,
+                      "h": 16.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "NodeId(1314v1)",
+                    "kind_hint": "SvgIcon",
+                    "source": "layout_sidecar",
+                    "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                    "label_preview": "SvgIcon(SvgIconProps { layout: LayoutStyle { size: SizeStyle { width: Px(Px(16.0)), height: Px(Px(16.0)), min_width: None, min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 0.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, gr",
+                    "has_icon_hint": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "part_id": "select_composition",
+            "upstream_dom_target_count": 3,
+            "fret_test_id_count": 4,
+            "upstream": [
+              {
+                "target_id": "upstream.button_group.select_demo.currency_trigger",
+                "snapshot": "button-group-select",
+                "theme": "light",
+                "mode": "",
+                "variant": "",
+                "context_id": null,
+                "path": "0.0.0",
+                "tag": "button",
+                "attrs": {
+                  "role": "combobox",
+                  "aria-expanded": "false",
+                  "aria-controls": "radix-_R_alubsnpfiuplb_",
+                  "data-state": "closed"
+                },
+                "class_tokens": [
+                  "border-input",
+                  "data-[placeholder]:text-muted-foreground",
+                  "[&_svg:not([class*='text-'])]:text-muted-foreground",
+                  "focus-visible:border-ring",
+                  "focus-visible:ring-ring/50",
+                  "aria-invalid:ring-destructive/20",
+                  "dark:aria-invalid:ring-destructive/40",
+                  "aria-invalid:border-destructive",
+                  "dark:bg-input/30",
+                  "dark:hover:bg-input/50",
+                  "flex",
+                  "w-fit",
+                  "items-center",
+                  "justify-between",
+                  "gap-2",
+                  "rounded-md",
+                  "border",
+                  "bg-transparent",
+                  "px-3",
+                  "py-2",
+                  "text-sm",
+                  "whitespace-nowrap",
+                  "shadow-xs",
+                  "transition-[color,box-shadow]",
+                  "outline-none",
+                  "focus-visible:ring-[3px]",
+                  "disabled:cursor-not-allowed",
+                  "disabled:opacity-50",
+                  "data-[size=default]:h-9",
+                  "data-[size=sm]:h-8",
+                  "*:data-[slot=select-value]:line-clamp-1",
+                  "*:data-[slot=select-value]:flex",
+                  "*:data-[slot=select-value]:items-center",
+                  "*:data-[slot=select-value]:gap-2",
+                  "[&_svg]:pointer-events-none",
+                  "[&_svg]:shrink-0",
+                  "[&_svg:not([class*='size-'])]:size-4",
+                  "font-mono"
+                ],
+                "bounds": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "w": 58.219,
+                  "h": 36.0
+                },
+                "device_pixel_ratio": 2.0,
+                "child_count": 1,
+                "layout": {
+                  "display": "flex",
+                  "position": "static",
+                  "boxSizing": "border-box",
+                  "alignItems": "center",
+                  "justifyContent": "space-between",
+                  "flexDirection": "row",
+                  "flexWrap": "nowrap",
+                  "flexGrow": "0",
+                  "flexShrink": "1",
+                  "gap": 8.0,
+                  "rowGap": 8.0,
+                  "columnGap": 8.0,
+                  "whiteSpace": "nowrap",
+                  "width": 58.219,
+                  "height": 36.0,
+                  "paddingTop": 8.0,
+                  "paddingRight": 12.0,
+                  "paddingBottom": 8.0,
+                  "paddingLeft": 12.0,
+                  "marginTop": 0.0,
+                  "marginRight": 0.0,
+                  "marginBottom": 0.0,
+                  "marginLeft": 0.0
+                },
+                "text": {
+                  "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+                  "fontWeight": "400",
+                  "textAlign": "center",
+                  "textTransform": "none",
+                  "whiteSpace": "nowrap",
+                  "fontSize": 14.0,
+                  "lineHeight": 20.0
+                },
+                "paint": {
+                  "color": "rgb(0, 0, 0)",
+                  "backgroundColor": "rgba(0, 0, 0, 0)",
+                  "borderTopColor": "oklch(0.922 0 0)",
+                  "borderRightColor": "oklch(0.922 0 0)",
+                  "borderBottomColor": "oklch(0.922 0 0)",
+                  "borderLeftColor": "oklch(0.922 0 0)",
+                  "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+                  "opacity": "1",
+                  "border_widths_px": {
+                    "borderTopWidth": 1.0,
+                    "borderRightWidth": 1.0,
+                    "borderBottomWidth": 1.0,
+                    "borderLeftWidth": 1.0
+                  },
+                  "corner_radii_px": {
+                    "borderTopLeftRadius": 8.0,
+                    "borderTopRightRadius": 0.0,
+                    "borderBottomRightRadius": 0.0,
+                    "borderBottomLeftRadius": 8.0
+                  }
+                },
+                "descendant_summary": {
+                  "count": 2,
+                  "svg_count": 1,
+                  "text_count": 0
+                },
+                "source": "upstream_dom_computed_style",
+                "icon": {
+                  "first_svg_bounds": {
+                    "x": 29.219,
+                    "y": 10.0,
+                    "w": 16.0,
+                    "h": 16.0
+                  },
+                  "first_svg_class_tokens": [
+                    "lucide",
+                    "lucide-chevron-down",
+                    "size-4",
+                    "opacity-50"
+                  ],
+                  "svg_count": 1
+                }
+              },
+              {
+                "target_id": "upstream.button_group.select_demo.amount",
+                "snapshot": "button-group-select",
+                "theme": "light",
+                "mode": "",
+                "variant": "",
+                "context_id": null,
+                "path": "0.0.1",
+                "tag": "input",
+                "attrs": {},
+                "class_tokens": [
+                  "file:text-foreground",
+                  "placeholder:text-muted-foreground",
+                  "selection:bg-primary",
+                  "selection:text-primary-foreground",
+                  "dark:bg-input/30",
+                  "border-input",
+                  "h-9",
+                  "w-full",
+                  "min-w-0",
+                  "rounded-md",
+                  "border",
+                  "bg-transparent",
+                  "px-3",
+                  "py-1",
+                  "text-base",
+                  "shadow-xs",
+                  "transition-[color,box-shadow]",
+                  "outline-none",
+                  "file:inline-flex",
+                  "file:h-7",
+                  "file:border-0",
+                  "file:bg-transparent",
+                  "file:text-sm",
+                  "file:font-medium",
+                  "disabled:pointer-events-none",
+                  "disabled:cursor-not-allowed",
+                  "disabled:opacity-50",
+                  "md:text-sm",
+                  "focus-visible:border-ring",
+                  "focus-visible:ring-ring/50",
+                  "focus-visible:ring-[3px]",
+                  "aria-invalid:ring-destructive/20",
+                  "dark:aria-invalid:ring-destructive/40",
+                  "aria-invalid:border-destructive"
+                ],
+                "bounds": {
+                  "x": 58.219,
+                  "y": 0.0,
+                  "w": 180.0,
+                  "h": 36.0
+                },
+                "device_pixel_ratio": 2.0,
+                "child_count": 0,
+                "layout": {
+                  "display": "block",
+                  "position": "static",
+                  "boxSizing": "border-box",
+                  "alignItems": "normal",
+                  "justifyContent": "normal",
+                  "flexDirection": "row",
+                  "flexWrap": "nowrap",
+                  "flexGrow": "1",
+                  "flexShrink": "1",
+                  "gap": "normal",
+                  "rowGap": "normal",
+                  "columnGap": "normal",
+                  "whiteSpace": "normal",
+                  "width": 180.0,
+                  "height": 36.0,
+                  "minWidth": 0.0,
+                  "paddingTop": 4.0,
+                  "paddingRight": 12.0,
+                  "paddingBottom": 4.0,
+                  "paddingLeft": 12.0,
+                  "marginTop": 0.0,
+                  "marginRight": 0.0,
+                  "marginBottom": 0.0,
+                  "marginLeft": 0.0
+                },
+                "text": {
+                  "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+                  "fontWeight": "400",
+                  "textAlign": "start",
+                  "textTransform": "none",
+                  "whiteSpace": "normal",
+                  "fontSize": 14.0,
+                  "lineHeight": 20.0
+                },
+                "paint": {
+                  "color": "rgb(0, 0, 0)",
+                  "backgroundColor": "rgba(0, 0, 0, 0)",
+                  "borderTopColor": "oklch(0.922 0 0)",
+                  "borderRightColor": "oklch(0.922 0 0)",
+                  "borderBottomColor": "oklch(0.922 0 0)",
+                  "borderLeftColor": "oklch(0.922 0 0)",
+                  "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+                  "opacity": "1",
+                  "border_widths_px": {
+                    "borderTopWidth": 1.0,
+                    "borderRightWidth": 1.0,
+                    "borderBottomWidth": 1.0,
+                    "borderLeftWidth": 0.0
+                  },
+                  "corner_radii_px": {
+                    "borderTopLeftRadius": 0.0,
+                    "borderTopRightRadius": 8.0,
+                    "borderBottomRightRadius": 8.0,
+                    "borderBottomLeftRadius": 0.0
+                  }
+                },
+                "descendant_summary": {
+                  "count": 0,
+                  "svg_count": 0,
+                  "text_count": 0
+                },
+                "source": "upstream_dom_computed_style"
+              },
+              {
+                "target_id": "upstream.button_group.select_demo.send_button",
+                "snapshot": "button-group-select",
+                "theme": "light",
+                "mode": "",
+                "variant": "",
+                "context_id": null,
+                "path": "0.1.0",
+                "tag": "button",
+                "attrs": {
+                  "aria-label": "Send"
+                },
+                "class_tokens": [
+                  "inline-flex",
+                  "items-center",
+                  "justify-center",
+                  "gap-2",
+                  "whitespace-nowrap",
+                  "rounded-md",
+                  "text-sm",
+                  "font-medium",
+                  "transition-all",
+                  "disabled:pointer-events-none",
+                  "disabled:opacity-50",
+                  "[&_svg]:pointer-events-none",
+                  "[&_svg:not([class*='size-'])]:size-4",
+                  "shrink-0",
+                  "[&_svg]:shrink-0",
+                  "outline-none",
+                  "focus-visible:border-ring",
+                  "focus-visible:ring-ring/50",
+                  "focus-visible:ring-[3px]",
+                  "aria-invalid:ring-destructive/20",
+                  "dark:aria-invalid:ring-destructive/40",
+                  "aria-invalid:border-destructive",
+                  "border",
+                  "bg-background",
+                  "shadow-xs",
+                  "hover:bg-accent",
+                  "hover:text-accent-foreground",
+                  "dark:bg-input/30",
+                  "dark:border-input",
+                  "dark:hover:bg-input/50",
+                  "size-9"
+                ],
+                "bounds": {
+                  "x": 246.219,
+                  "y": 0.0,
+                  "w": 36.0,
+                  "h": 36.0
+                },
+                "device_pixel_ratio": 2.0,
+                "child_count": 1,
+                "layout": {
+                  "display": "flex",
+                  "position": "static",
+                  "boxSizing": "border-box",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "flexDirection": "row",
+                  "flexWrap": "nowrap",
+                  "flexGrow": "0",
+                  "flexShrink": "0",
+                  "gap": 8.0,
+                  "rowGap": 8.0,
+                  "columnGap": 8.0,
+                  "whiteSpace": "nowrap",
+                  "width": 36.0,
+                  "height": 36.0,
+                  "paddingTop": 0.0,
+                  "paddingRight": 0.0,
+                  "paddingBottom": 0.0,
+                  "paddingLeft": 0.0,
+                  "marginTop": 0.0,
+                  "marginRight": 0.0,
+                  "marginBottom": 0.0,
+                  "marginLeft": 0.0
+                },
+                "text": {
+                  "fontFamily": "ui-sans-serif, system-ui, sans-serif, \"Apple Color Emoji\", \"Segoe UI Emoji\", \"Segoe UI Symbol\", \"Noto Color Emoji\"",
+                  "fontWeight": "500",
+                  "textAlign": "center",
+                  "textTransform": "none",
+                  "whiteSpace": "nowrap",
+                  "fontSize": 14.0,
+                  "lineHeight": 20.0
+                },
+                "paint": {
+                  "color": "rgb(0, 0, 0)",
+                  "backgroundColor": "oklch(1 0 0)",
+                  "borderTopColor": "oklch(0.922 0 0)",
+                  "borderRightColor": "oklch(0.922 0 0)",
+                  "borderBottomColor": "oklch(0.922 0 0)",
+                  "borderLeftColor": "oklch(0.922 0 0)",
+                  "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+                  "opacity": "1",
+                  "border_widths_px": {
+                    "borderTopWidth": 1.0,
+                    "borderRightWidth": 1.0,
+                    "borderBottomWidth": 1.0,
+                    "borderLeftWidth": 1.0
+                  },
+                  "corner_radii_px": {
+                    "borderTopLeftRadius": 8.0,
+                    "borderTopRightRadius": 8.0,
+                    "borderBottomRightRadius": 8.0,
+                    "borderBottomLeftRadius": 8.0
+                  }
+                },
+                "descendant_summary": {
+                  "count": 3,
+                  "svg_count": 1,
+                  "text_count": 0
+                },
+                "source": "upstream_dom_computed_style",
+                "icon": {
+                  "first_svg_bounds": {
+                    "x": 256.219,
+                    "y": 10.0,
+                    "w": 16.0,
+                    "h": 16.0
+                  },
+                  "first_svg_class_tokens": [
+                    "lucide",
+                    "lucide-arrow-right"
+                  ],
+                  "svg_count": 1
+                }
+              }
+            ],
+            "fret": [
+              {
+                "test_id": "ui-gallery-button-group-select",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-select",
+                  "bounds": {
+                    "x": 114.0,
+                    "y": 2404.667,
+                    "w": 420.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 114.0,
+                    "y": 2404.667,
+                    "w": 420.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1396v1)",
+                  "kind_hint": "Flex",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "Flex(FlexProps { layout: LayoutStyle { size: SizeStyle { width: Px(Px(420.0)), height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, gr",
+                  "has_chrome_padding_hint": true
+                },
+                "related": [
+                  {
+                    "test_id": "ui-gallery-button-group-select-content",
+                    "bounds": {
+                      "x": 96.667,
+                      "y": 2343.333,
+                      "w": 760.0,
+                      "h": 114.0
+                    },
+                    "raw_bounds": {
+                      "x": 96.667,
+                      "y": 2343.333,
+                      "w": 760.0,
+                      "h": 114.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "NodeId(1381v1)",
+                    "kind_hint": "Container",
+                    "source": "layout_sidecar",
+                    "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                    "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Auto, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, g",
+                    "has_chrome_padding_hint": true,
+                    "has_chrome_border_hint": true,
+                    "has_corner_radii_hint": true
+                  }
+                ]
+              },
+              {
+                "test_id": "ui-gallery-button-group-select-currency-trigger",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-select-currency-trigger",
+                  "bounds": {
+                    "x": 114.0,
+                    "y": 2404.667,
+                    "w": 58.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 114.0,
+                    "y": 2404.667,
+                    "w": 58.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1398v1)",
+                  "kind_hint": "Pressable",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "Pressable(PressableProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Px(Px(36.0)), min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: Some(Start) }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect",
+                  "has_corner_radii_hint": true
+                },
+                "related": [
+                  {
+                    "test_id": "ui-gallery-button-group-select-currency-trigger.chrome",
+                    "bounds": {
+                      "x": 114.0,
+                      "y": 2404.667,
+                      "w": 58.0,
+                      "h": 36.0
+                    },
+                    "raw_bounds": {
+                      "x": 114.0,
+                      "y": 2404.667,
+                      "w": 58.0,
+                      "h": 36.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "NodeId(1399v1)",
+                    "kind_hint": "Container",
+                    "source": "layout_sidecar",
+                    "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                    "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Fill, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid",
+                    "has_chrome_padding_hint": true,
+                    "has_chrome_border_hint": true,
+                    "has_corner_radii_hint": true
+                  }
+                ]
+              },
+              {
+                "test_id": "ui-gallery-button-group-select-amount",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-select-amount",
+                  "bounds": {
+                    "x": 172.0,
+                    "y": 2404.667,
+                    "w": 318.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 172.0,
+                    "y": 2404.667,
+                    "w": 318.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1406v1)",
+                  "kind_hint": "TextInput",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "TextInput(TextInputProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Fill, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid",
+                  "has_chrome_padding_hint": true,
+                  "has_chrome_border_hint": true,
+                  "has_corner_radii_hint": true
+                }
+              },
+              {
+                "test_id": "ui-gallery-button-group-select-send-button",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-select-send-button",
+                  "bounds": {
+                    "x": 498.0,
+                    "y": 2404.667,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 498.0,
+                    "y": 2404.667,
+                    "w": 36.0,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1408v1)",
+                  "kind_hint": "Pressable",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "Pressable(PressableProps { layout: LayoutStyle { size: SizeStyle { width: Px(Px(36.0)), height: Px(Px(36.0)), min_width: Some(Px(Px(36.0))), min_height: Some(Px(Px(36.0))), max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 0.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left",
+                  "has_corner_radii_hint": true
+                },
+                "related": [
+                  {
+                    "test_id": "ui-gallery-button-group-select-send-button.chrome",
+                    "bounds": {
+                      "x": 498.0,
+                      "y": 2404.667,
+                      "w": 36.0,
+                      "h": 36.0
+                    },
+                    "raw_bounds": {
+                      "x": 498.0,
+                      "y": 2404.667,
+                      "w": 36.0,
+                      "h": 36.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "NodeId(1409v1)",
+                    "kind_hint": "Container",
+                    "source": "layout_sidecar",
+                    "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                    "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Fill, min_width: Some(Px(Px(34.0))), min_height: Some(Px(Px(34.0))), max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ra",
+                    "has_chrome_padding_hint": true,
+                    "has_chrome_border_hint": true,
+                    "has_corner_radii_hint": true
+                  },
+                  {
+                    "test_id": "ui-gallery-button-group-select-send-button-icon",
+                    "bounds": {
+                      "x": 508.667,
+                      "y": 2415.333,
+                      "w": 16.0,
+                      "h": 16.0
+                    },
+                    "raw_bounds": {
+                      "x": 508.667,
+                      "y": 2415.333,
+                      "w": 16.0,
+                      "h": 16.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "NodeId(1411v1)",
+                    "kind_hint": "SvgIcon",
+                    "source": "layout_sidecar",
+                    "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                    "label_preview": "SvgIcon(SvgIconProps { layout: LayoutStyle { size: SizeStyle { width: Px(Px(16.0)), height: Px(Px(16.0)), min_width: None, min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 0.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, gr",
+                    "has_icon_hint": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "part_id": "dropdown_trigger",
+            "upstream_dom_target_count": 0,
+            "fret_test_id_count": 1,
+            "upstream": [],
+            "fret": [
+              {
+                "test_id": "ui-gallery-button-group-dropdown-trigger",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-dropdown-trigger",
+                  "bounds": {
+                    "x": 188.0,
+                    "y": 2238.667,
+                    "w": 36.667,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 188.0,
+                    "y": 2238.667,
+                    "w": 36.667,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1374v1)",
+                  "kind_hint": "Pressable",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "Pressable(PressableProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Px(Px(36.0)), min_width: None, min_height: Some(Px(Px(36.0))), max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 0.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio",
+                  "has_corner_radii_hint": true
+                },
+                "related": [
+                  {
+                    "test_id": "ui-gallery-button-group-dropdown-trigger.chrome",
+                    "bounds": {
+                      "x": 188.0,
+                      "y": 2238.667,
+                      "w": 36.667,
+                      "h": 36.0
+                    },
+                    "raw_bounds": {
+                      "x": 188.0,
+                      "y": 2238.667,
+                      "w": 36.667,
+                      "h": 36.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "NodeId(1375v1)",
+                    "kind_hint": "Container",
+                    "source": "layout_sidecar",
+                    "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                    "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Fill, min_width: None, min_height: Some(Px(Px(18.0))), max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, gri",
+                    "has_chrome_padding_hint": true,
+                    "has_chrome_border_hint": true,
+                    "has_corner_radii_hint": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "part_id": "text_prefix",
+            "upstream_dom_target_count": 0,
+            "fret_test_id_count": 2,
+            "upstream": [],
+            "fret": [
+              {
+                "test_id": "ui-gallery-button-group-text-prefix",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-text-prefix",
+                  "bounds": {
+                    "x": 114.0,
+                    "y": 3176.667,
+                    "w": 79.333,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 114.0,
+                    "y": 3176.667,
+                    "w": 79.333,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1519v1)",
+                  "kind_hint": "Container",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Auto, min_width: None, min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: Some(Stretch) }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid:",
+                  "has_chrome_padding_hint": true,
+                  "has_chrome_border_hint": true,
+                  "has_corner_radii_hint": true
+                },
+                "related": [
+                  {
+                    "test_id": "ui-gallery-button-group-text-prefix-label",
+                    "bounds": {
+                      "x": 131.333,
+                      "y": 3188.0,
+                      "w": 45.333,
+                      "h": 14.0
+                    },
+                    "raw_bounds": {
+                      "x": 131.333,
+                      "y": 3188.0,
+                      "w": 45.333,
+                      "h": 14.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "NodeId(1521v1)",
+                    "kind_hint": "Semantics",
+                    "source": "layout_sidecar",
+                    "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                    "label_preview": "Semantics(SemanticsProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Auto, min_width: None, min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid: GridItem"
+                  }
+                ]
+              },
+              {
+                "test_id": "ui-gallery-button-group-text-control",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-text-control",
+                  "bounds": {
+                    "x": 193.333,
+                    "y": 3176.667,
+                    "w": 583.333,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 193.333,
+                    "y": 3176.667,
+                    "w": 583.333,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1527v1)",
+                  "kind_hint": "TextInput",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "TextInput(TextInputProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Fill, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid",
+                  "has_chrome_padding_hint": true,
+                  "has_chrome_border_hint": true,
+                  "has_corner_radii_hint": true
+                }
+              }
+            ]
+          },
+          {
+            "part_id": "text_control",
+            "upstream_dom_target_count": 0,
+            "fret_test_id_count": 1,
+            "upstream": [],
+            "fret": [
+              {
+                "test_id": "ui-gallery-button-group-text-control",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-text-control",
+                  "bounds": {
+                    "x": 193.333,
+                    "y": 3176.667,
+                    "w": 583.333,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 193.333,
+                    "y": 3176.667,
+                    "w": 583.333,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1527v1)",
+                  "kind_hint": "TextInput",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "TextInput(TextInputProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Fill, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid",
+                  "has_chrome_padding_hint": true,
+                  "has_chrome_border_hint": true,
+                  "has_corner_radii_hint": true
+                }
+              }
+            ]
+          },
+          {
+            "part_id": "text_suffix",
+            "upstream_dom_target_count": 0,
+            "fret_test_id_count": 2,
+            "upstream": [],
+            "fret": [
+              {
+                "test_id": "ui-gallery-button-group-text-suffix",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-text-suffix",
+                  "bounds": {
+                    "x": 777.333,
+                    "y": 3176.667,
+                    "w": 63.333,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 777.333,
+                    "y": 3176.667,
+                    "w": 63.333,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1528v1)",
+                  "kind_hint": "Container",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "Container(ContainerProps { layout: LayoutStyle { size: SizeStyle { width: Auto, height: Auto, min_width: None, min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: Some(Stretch) }, overflow: Visible, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid:",
+                  "has_chrome_padding_hint": true,
+                  "has_chrome_border_hint": true,
+                  "has_corner_radii_hint": true
+                }
+              },
+              {
+                "test_id": "ui-gallery-button-group-text-control",
+                "primary": {
+                  "test_id": "ui-gallery-button-group-text-control",
+                  "bounds": {
+                    "x": 193.333,
+                    "y": 3176.667,
+                    "w": 583.333,
+                    "h": 36.0
+                  },
+                  "raw_bounds": {
+                    "x": 193.333,
+                    "y": 3176.667,
+                    "w": 583.333,
+                    "h": 36.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "NodeId(1527v1)",
+                  "kind_hint": "TextInput",
+                  "source": "layout_sidecar",
+                  "sidecar_path": "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640323189-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json",
+                  "label_preview": "TextInput(TextInputProps { layout: LayoutStyle { size: SizeStyle { width: Fill, height: Fill, min_width: Some(Px(Px(0.0))), min_height: None, max_width: None, max_height: None }, flex: FlexItemStyle { order: 0, grow: 0.0, shrink: 1.0, basis: Auto, align_self: None }, overflow: Clip, margin: MarginEdges { top: Px(Px(0.0)), right: Px(Px(0.0)), bottom: Px(Px(0.0)), left: Px(Px(0.0)) }, position: Static, inset: InsetStyle { top: Auto, right: Auto, bottom: Auto, left: Auto }, aspect_ratio: None, grid",
+                  "has_chrome_padding_hint": true,
+                  "has_chrome_border_hint": true,
+                  "has_corner_radii_hint": true
+                }
+              }
+            ]
+          }
+        ]
+      },
       "limitations": [
         "M2 can read Fret layout sidecars and evaluate structured geometry predicates by test_id.",
         "M2 does not run a live browser extractor; upstream facts are still curated from the upstream registry files.",
@@ -2166,6 +5130,8 @@
         }
       },
       "top_findings": [],
+      "upstream_live_fact_count": 6,
+      "fret_live_fact_count": 14,
       "repair_queue_count": 0,
       "hardening_queue_count": 1,
       "gate_queue_count": 9
