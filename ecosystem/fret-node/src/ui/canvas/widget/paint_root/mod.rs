@@ -6,6 +6,8 @@ mod edge_anchor;
 mod frame;
 mod frame_clip_adapter;
 mod frame_clip_retained_cx;
+mod frame_diagnostics_adapter;
+mod frame_diagnostics_retained_cx;
 mod frame_viewport_adapter;
 mod frame_viewport_retained_cx;
 mod immediate;

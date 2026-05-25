@@ -120,10 +120,16 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/cache_plan_retained_cx.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_RS: &str =
         include_str!("ui/canvas/widget/paint_root/frame.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CACHE_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame/cache.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_ADAPTER_RS: &str =
         include_str!("ui/canvas/widget/paint_root/frame_clip_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_RETAINED_CX_RS: &str =
         include_str!("ui/canvas/widget/paint_root/frame_clip_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_diagnostics_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_diagnostics_retained_cx.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_ADAPTER_RS: &str =
         include_str!("ui/canvas/widget/paint_root/frame_viewport_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_RETAINED_CX_RS: &str =
@@ -3207,6 +3213,82 @@ mod surface_policy_tests {
             UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_RETAINED_CX_RS.contains("SceneOp::PushClipRect"),
             "retained frame clip binding should own the root clip SceneOp emission"
         );
+    }
+
+    #[test]
+    fn paint_root_frame_diagnostics_adapter_keeps_path_cache_stats_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "CanvasCacheStatsRegistry",
+            "CanvasCacheKey",
+            "frame_id()",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_ADAPTER_RS.contains(forbidden),
+                "paint-root frame diagnostics adapter must stay retained-Cx and registry agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_ADAPTER_RS
+                .contains("trait PaintRootFrameDiagnosticsCx"),
+            "frame path-cache diagnostics should live behind a named adapter seam"
+        );
+        for required in ["record_paint_root_path_cache_stats", "CacheStats"] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_ADAPTER_RS.contains(required),
+                "frame diagnostics adapter is missing required contract `{required}`"
+            );
+        }
+
+        for forbidden in [
+            "cx.window",
+            "cx.node",
+            "cx.app.frame_id()",
+            "cx.app.with_global_mut",
+            "CanvasCacheKey",
+            "CanvasCacheStatsRegistry",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CACHE_RS.contains(forbidden),
+                "paint-root frame cache diagnostics should not read retained PaintCx fields directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CACHE_RS
+                .contains("frame_diagnostics_adapter::record_paint_root_path_cache_stats"),
+            "paint-root frame cache diagnostics should delegate path-cache stats to the adapter"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::frame_diagnostics_adapter::PaintRootFrameDiagnosticsCx<H>"
+            ),
+            "retained frame diagnostics binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained frame diagnostics binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in [
+            "self.window",
+            "self.node",
+            "self.app.frame_id()",
+            "self.app",
+            "CanvasCacheKey",
+            "CanvasCacheStatsRegistry",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_RETAINED_CX_RS.contains(required),
+                "retained frame diagnostics binding should own retained diagnostics read/write `{required}`"
+            );
+        }
     }
 
     #[test]
