@@ -1,13 +1,18 @@
 # Fret Node Low-Level Adapter v1 - Handoff
 
+Status: Closed
 Updated: 2026-05-25
 
 ## Current State
 
 This lane has landed its first low-level adapter seam, shrunk one wire-commit retained edge, added
 the first command dispatch adapter seam, and migrated keyboard shortcut command dispatch onto that
-adapter. It follows ADR 0330 and the retained public-surface exit. The retained canvas island is
-still compatibility-gated, but common host operations now live behind named adapter contracts:
+adapter. It follows ADR 0330 and the retained public-surface exit.
+
+This lane is now closed. See `CLOSEOUT_AUDIT_2026-05-25.md` for shipped evidence and gates.
+
+The retained canvas island is still compatibility-gated, but common host operations now live behind
+named adapter contracts:
 
 - `ecosystem/fret-node/src/ui/canvas/widget/low_level_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_low_level_adapter.rs`
@@ -34,9 +39,13 @@ deleted.
 
 ## Next Step
 
-Either continue the command-dispatch shrink with `NLA-060` on context-menu command activation, or
-split event routing and paint/prepaint into separate follow-on lanes. Keep those behavior families
-separate from command dispatch.
+Continue in follow-on lanes:
+
+- `docs/workstreams/fret-node-event-runtime-adapter-v1/`
+- `docs/workstreams/fret-node-paint-prepaint-adapter-v1/`
+
+Do not reopen this lane for event routing or paint/prepaint. Future command-dispatch cleanup can
+start as a narrow follow-on if still useful.
 
 Expected gates:
 

@@ -1,6 +1,6 @@
 # Fret Node Low-Level Adapter v1 - Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## M0 - Retained Island Audit
@@ -80,3 +80,19 @@ Evidence:
 - `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts_commands.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard_route.rs`
 - `ecosystem/fret-node/src/lib.rs`
+
+## M5 - Closeout And Follow-On Split
+
+Exit criteria:
+
+- Event runtime adapter work is split into its own lane.
+- Paint/prepaint adapter work is split into its own lane.
+- This lane has a closeout audit and no remaining active tasks.
+
+Status: Complete.
+
+Evidence:
+
+- `docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
+- `docs/workstreams/fret-node-event-runtime-adapter-v1/`
+- `docs/workstreams/fret-node-paint-prepaint-adapter-v1/`

@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "slug": "fret-node-paint-prepaint-adapter-v1",
+  "title": "Fret Node Paint Prepaint Adapter v1",
+  "status": "active",
+  "updated": "2026-05-25",
+  "scope_kind": "execution",
+  "follow_on_of": "fret-node-low-level-adapter-v1",
+  "problem": "Split node graph paint and prepaint retained lifecycle entrypoints behind named adapter seams without rewriting the entire retained paint module tree.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-node-paint-prepaint-adapter-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-paint-prepaint-adapter-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-paint-prepaint-adapter-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/fret-node-paint-prepaint-adapter-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/fret-node-paint-prepaint-adapter-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use focused paint/prepaint source-policy tests plus `fret-node` checks to move one scene or cull-window operation behind an adapter seam.",
+    "commands": [
+      "cargo check -p fret-node",
+      "cargo check -p fret-node --features compat-retained-canvas"
+    ]
+  },
+  "gates": [
+    {
+      "name": "node-default-check",
+      "command": "cargo check -p fret-node"
+    },
+    {
+      "name": "node-retained-compat-check",
+      "command": "cargo check -p fret-node --features compat-retained-canvas"
+    },
+    {
+      "name": "paint-prepaint-source-policy",
+      "command": "cargo test -p fret-node --features compat-retained-canvas paint_prepaint_adapter"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/fret-node-paint-prepaint-adapter-v1/DESIGN.md",
+    "docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
+    "ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_paint.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window_shift.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root_helpers.rs",
+    "ecosystem/fret-node/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
+    "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md",
+    "docs/adr/0175-prepaint-windowed-virtual-surfaces.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue only for node graph paint/prepaint adapter work. Keep event routing and command dispatch in their own lanes."
+  }
+}

@@ -1,6 +1,6 @@
 # Fret Node Low-Level Adapter v1 - Evidence and Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## Canonical Gates
@@ -142,3 +142,24 @@ Notes:
 - The fresh commands still emit the existing `fret-ui` warnings for unexpected cfg
   `unstable-retained-bridge` and dead code `current_effective_opacity`; those are tracked as a
   separate cleanup item in the current goal.
+
+## 2026-05-25 - Lane closeout and follow-on split
+
+Claim to verify:
+
+- The low-level adapter lane closes after low-level host operation and command dispatch proofs.
+- Event runtime adapter work is split into `fret-node-event-runtime-adapter-v1`.
+- Paint/prepaint adapter work is split into `fret-node-paint-prepaint-adapter-v1`.
+
+Fresh validation:
+
+- Passed on 2026-05-25:
+  - `python3 -m json.tool docs/workstreams/fret-node-low-level-adapter-v1/WORKSTREAM.json`
+  - `python3 -m json.tool docs/workstreams/fret-node-event-runtime-adapter-v1/WORKSTREAM.json`
+  - `python3 -m json.tool docs/workstreams/fret-node-paint-prepaint-adapter-v1/WORKSTREAM.json`
+  - `python3 tools/check_workstream_catalog.py`
+  - `git diff --check`
+
+Notes:
+
+- `CLOSEOUT_AUDIT_2026-05-25.md` records the shipped surface and follow-on policy.

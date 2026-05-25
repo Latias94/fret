@@ -1,6 +1,6 @@
 # Fret Node Low-Level Adapter v1 - TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## NLA-M0 - Adapter Target Audit
@@ -45,8 +45,10 @@ Last updated: 2026-05-25
 
 ## Follow-On Candidates
 
-- [ ] NLA-060 [owner=unassigned] [deps=NLA-050] [scope=ecosystem/fret-node/src/ui/canvas/widget/context_menu]
-  Goal: Migrate context-menu command activation or split the next behavior-family adapter lane.
-  Validation: narrow source-policy test plus `cargo check -p fret-node --features compat-retained-canvas`
-  Evidence: follow-on task or workstream.
-  Handoff: Keep command dispatch migration separate from event routing and paint/prepaint.
+- [x] NLA-060 [owner=codex] [deps=NLA-050] [scope=docs/workstreams]
+  Goal: Split event routing and paint/prepaint into dedicated follow-on lanes, then close this lane.
+  Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
+  Evidence: `docs/workstreams/fret-node-event-runtime-adapter-v1/`,
+  `docs/workstreams/fret-node-paint-prepaint-adapter-v1/`,
+  `docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
+  Handoff: This lane is closed. Do not reopen it for event routing or paint/prepaint.

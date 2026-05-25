@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "fret-node-low-level-adapter-v1",
   "title": "Fret Node Low-Level Adapter v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-25",
   "scope_kind": "execution",
   "follow_on_of": "fret-node-declarative-fearless-refactor-v1",
@@ -27,6 +27,10 @@
     {
       "role": "next",
       "path": "docs/workstreams/fret-node-low-level-adapter-v1/HANDOFF.md"
+    },
+    {
+      "role": "status",
+      "path": "docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md"
     }
   ],
   "repro": {
@@ -48,6 +52,7 @@
   ],
   "evidence": [
     "docs/workstreams/fret-node-low-level-adapter-v1/DESIGN.md",
+    "docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
     "docs/workstreams/retained-public-surface-exit-v1/DESIGN.md",
     "ecosystem/fret-node/Cargo.toml",
     "ecosystem/fret-node/src/ui/canvas/widget.rs",
@@ -67,7 +72,7 @@
     "docs/adr/0321-node-graph-per-entity-geometry-overrides-v1.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue with one adapter seam at a time. Do not broaden this lane into a full node graph product rewrite."
+    "default_action": "split_follow_on",
+    "notes": "This lane is closed after low-level host operations and command dispatch adapter proofs. Continue event runtime work in fret-node-event-runtime-adapter-v1 and paint/prepaint work in fret-node-paint-prepaint-adapter-v1."
   }
 }

@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 443
+- Dedicated directories: 445
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2019,7 +2019,9 @@ Rule:
 - `docs/workstreams/fret-launch-runner-scheduling-fearless-refactor-v1/` — first 2026-03-13, latest 2026-04-26, 5 markdown docs (maintenance lane for launch runner scheduling semantics and first-frame bootstrap evidence; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-mechanism-harness-v1/` — first 2026-05-11, latest 2026-05-11, 6 markdown docs (active mechanism-first harness lane for self-drawn UI layout/invalidation coverage, UI Gallery diag gates, findings evidence, and next-slice selection)
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/` — first 2026-03-01, latest 2026-03-06, 3 markdown docs
-- `docs/workstreams/fret-node-low-level-adapter-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on for replacing the remaining retained node graph canvas/editor island with a named low-level canvas/viewport adapter; includes `WORKSTREAM.json`)
+- `docs/workstreams/fret-node-event-runtime-adapter-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on for splitting retained node graph event runtime entrypoint wiring behind a named adapter; includes `WORKSTREAM.json`)
+- `docs/workstreams/fret-node-low-level-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed lane that proved low-level host operations and command dispatch adapter seams for the retained node graph compatibility island; includes `WORKSTREAM.json`)
+- `docs/workstreams/fret-node-paint-prepaint-adapter-v1/` — first n/a, latest n/a, 5 markdown docs (active follow-on for splitting retained node graph paint/prepaint lifecycle entrypoints behind named adapter seams; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-style-skinning-v1/` — first 2026-02-27, latest 2026-03-01, 7 markdown docs
 - `docs/workstreams/fret-node-style-skinning-v2/` — first 2026-03-01, latest 2026-03-01, 3 markdown docs
 - `docs/workstreams/fret-node-style-skinning-v3/` — first 2026-03-02, latest 2026-03-02, 6 markdown docs
