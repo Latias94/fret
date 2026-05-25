@@ -340,6 +340,7 @@ mod pointer_up_pending;
 mod pointer_up_release_cx;
 mod pointer_up_release_retained_cx;
 mod pointer_up_state;
+mod prepaint_cull_window_adapter;
 mod preview;
 mod primary_pointer_move_cx;
 mod reconnect;

@@ -31,6 +31,15 @@ Primary gates:
 - `cargo check -p fret-node --features compat-retained-canvas`
 - `cargo test -p fret-node --features compat-retained-canvas paint_prepaint_adapter`
 
+Status: Complete.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/prepaint_cull_window_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window_shift.rs`
+- `ecosystem/fret-node/src/lib.rs`
+
 ## M2 - Paint Root Adapter Candidate
 
 Exit criteria:

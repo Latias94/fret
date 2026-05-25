@@ -110,6 +110,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pan_zoom_move.rs");
     const UI_CANVAS_WIDGET_PAINT_INVALIDATION_RS: &str =
         include_str!("ui/canvas/widget/paint_invalidation.rs");
+    const UI_CANVAS_WIDGET_PREPAINT_CULL_WINDOW_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/prepaint_cull_window_adapter.rs");
     const UI_CANVAS_WIDGET_REDRAW_REQUEST_RS: &str =
         include_str!("ui/canvas/widget/redraw_request.rs");
     const UI_CANVAS_COMMAND_ADAPTER_RS: &str = include_str!("ui/canvas/widget/command_adapter.rs");
@@ -548,6 +550,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/timer_motion_viewport/debounce.rs");
     const UI_CANVAS_WIDGET_RETAINED_RUNTIME_EVENT_RS: &str =
         include_str!("ui/canvas/widget/retained_widget_runtime_event.rs");
+    const UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_RS: &str =
+        include_str!("ui/canvas/widget/retained_widget_cull_window.rs");
+    const UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_SHIFT_RS: &str =
+        include_str!("ui/canvas/widget/retained_widget_cull_window_shift.rs");
     const UI_CANVAS_WIDGET_VIEWPORT_MOTION_CX_RS: &str =
         include_str!("ui/canvas/widget/viewport_motion_cx.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
@@ -2923,6 +2929,84 @@ mod surface_policy_tests {
                 "retained event entrypoint should only bind and forward, not own route preparation; found `{forbidden}`"
             );
         }
+    }
+
+    #[test]
+    fn paint_prepaint_adapter_keeps_cull_window_route_preparation_off_retained_cx() {
+        let prepaint_sources = [
+            UI_CANVAS_WIDGET_PREPAINT_CULL_WINDOW_ADAPTER_RS,
+            UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_SHIFT_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !prepaint_sources.contains(forbidden),
+                "prepaint cull-window adapter helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PREPAINT_CULL_WINDOW_ADAPTER_RS.contains("trait PrepaintCullWindowCx"),
+            "prepaint cull-window route preparation should live behind a named adapter seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PREPAINT_CULL_WINDOW_ADAPTER_RS.contains("sync_prepaint_cull_window"),
+            "prepaint cull-window route preparation should use the adapter entrypoint"
+        );
+        for required in [
+            "prepaint_cull_window_host()",
+            "prepaint_cull_window_bounds()",
+            "record_node_graph_cull_window_shift",
+            "sync_view_state(cx.prepaint_cull_window_host())",
+            "build_cull_window_key(",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PREPAINT_CULL_WINDOW_ADAPTER_RS.contains(required),
+                "prepaint cull-window adapter is missing route-preparation contract `{required}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_RS
+                .contains("impl<H: UiHost> prepaint_cull_window_adapter::PrepaintCullWindowCx<H>"),
+            "retained prepaint entrypoint should bind the adapter to the retained context explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_RS
+                .contains("prepaint_cull_window_adapter::sync_prepaint_cull_window"),
+            "retained prepaint entrypoint should delegate cull-window route preparation"
+        );
+        for forbidden in [
+            "sync_view_state(",
+            "should_track_cull_window(",
+            "build_cull_window_key(",
+            "apply_cull_window_key(",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_RS.contains(forbidden),
+                "retained prepaint entrypoint should only bind and forward, not own route preparation; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_SHIFT_RS
+                .contains("record_node_graph_cull_window_shift"),
+            "cull-window key shift debug recording should go through the adapter seam"
+        );
+        assert!(
+            !UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_SHIFT_RS
+                .contains("debug_record_node_graph_cull_window_shift"),
+            "cull-window key shift should not call retained debug recording directly"
+        );
     }
 
     #[test]

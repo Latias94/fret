@@ -54,6 +54,7 @@
     "docs/workstreams/fret-node-paint-prepaint-adapter-v1/DESIGN.md",
     "docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
     "ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_paint.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/prepaint_cull_window_adapter.rs",
     "ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window.rs",
     "ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window_shift.rs",
     "ecosystem/fret-node/src/ui/canvas/widget/paint_root_helpers.rs",

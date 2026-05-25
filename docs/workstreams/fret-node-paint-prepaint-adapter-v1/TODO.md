@@ -13,13 +13,13 @@ Last updated: 2026-05-25
 
 ## NPA-M1 - Prepaint Cull-Window Adapter Proof
 
-- [ ] NPA-020 [owner=unassigned] [deps=NPA-010] [scope=ecosystem/fret-node/src/ui/canvas/widget]
+- [x] NPA-020 [owner=codex] [deps=NPA-010] [scope=ecosystem/fret-node/src/ui/canvas/widget]
   Goal: Introduce a named prepaint adapter seam for cull-window bounds, view-state sync, and debug
   recording, isolating retained `PrepaintCx` binding.
   Validation: `cargo check -p fret-node --features compat-retained-canvas`; narrow source-policy test.
-  Evidence: `retained_widget_cull_window.rs`, `retained_widget_cull_window_shift.rs`,
-  source-policy test in `ecosystem/fret-node/src/lib.rs`
-  Handoff: Do not migrate the full paint tree in this task.
+  Evidence: `prepaint_cull_window_adapter.rs`, `retained_widget_cull_window.rs`,
+  `retained_widget_cull_window_shift.rs`, source-policy test in `ecosystem/fret-node/src/lib.rs`
+  Handoff: Complete. Full paint tree migration remains out of scope for this task.
 
 ## NPA-M2 - Paint Root Adapter Candidate
 
