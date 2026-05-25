@@ -23,11 +23,13 @@ Last updated: 2026-05-25
 
 ## NEA-M2 - Retained Edge Shrink
 
-- [ ] NEA-030 [owner=unassigned] [deps=NEA-020] [scope=ecosystem/fret-node/src/ui/canvas/widget]
+- [x] NEA-030 [owner=codex] [deps=NEA-020] [scope=ecosystem/fret-node/src/ui/canvas/widget]
   Goal: Delete or quarantine one old retained event runtime edge replaced by the adapter proof.
   Validation: `cargo check -p fret-node`; `cargo check -p fret-node --features compat-retained-canvas`
-  Evidence: source-policy test plus retained adapter module.
-  Handoff: If route internals expand beyond event runtime entrypoint wiring, split a narrower lane.
+  Evidence: Audit found no additional old event runtime edge after `NEA-020`; source-policy test plus
+  retained adapter module continue to quarantine the retained binding.
+  Handoff: Move to `NEA-040` closeout; do not expand this lane into layout, semantics, command, or
+  paint/prepaint retained runtime work.
 
 ## NEA-M3 - Closeout Or Follow-On Split
 

@@ -51,6 +51,16 @@ Primary gates:
 - `cargo check -p fret-node`
 - `cargo check -p fret-node --features compat-retained-canvas`
 
+Status: Complete.
+
+Evidence:
+
+- `NEA-030` audit found no remaining old retained event runtime edge beyond the intended retained
+  binding and runtime facade.
+- `ecosystem/fret-node/src/ui/canvas/widget/event_runtime_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_event.rs`
+- `ecosystem/fret-node/src/lib.rs`
+
 ## M3 - Closeout
 
 Exit criteria:

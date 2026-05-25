@@ -97,3 +97,31 @@ Evidence:
 - `ecosystem/fret-node/src/ui/canvas/widget/event_runtime_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_event.rs`
 - `ecosystem/fret-node/src/lib.rs`
+
+## NEA-030 Retained Edge Audit - 2026-05-25
+
+Claim:
+
+- After `NEA-020`, the event runtime entrypoint has no additional old retained event runtime edge to
+  delete without crossing into layout, semantics, command, paint/prepaint, or route policy work.
+- The remaining retained event path is the intended facade-to-binding-to-adapter chain:
+  `retained_widget.rs` -> `retained_widget_runtime.rs` -> `retained_widget_runtime_event.rs` ->
+  `event_runtime_adapter.rs`.
+- Remaining retained `EventCx` impl files are policy-specific bindings for existing route traits,
+  not owners of runtime event preparation.
+
+Audit evidence:
+
+- `rg -n "retained_widget_runtime_event|event_runtime_adapter|handle_retained_event|CanvasEventRuntimeCx|dispatch_canvas_event|sync_runtime_theme\\(|sync_view_state\\(|handle_event\\(cx, event|last_bounds" ecosystem/fret-node/src/ui/canvas/widget ecosystem/fret-node/src/lib.rs -S`
+- `rg -n "EventCx|CommandCx|LayoutCx|PaintCx|PrepaintCx|retained_bridge|compat_retained_canvas" ecosystem/fret-node/src/ui/canvas/widget/event_runtime_adapter.rs ecosystem/fret-node/src/ui/canvas/widget/event_router.rs ecosystem/fret-node/src/ui/canvas/widget/event_router_cx.rs ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer.rs ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_button.rs ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_button/down.rs -S`
+
+Fresh validation:
+
+- `cargo fmt --check --package fret-node` passed.
+- `cargo test -p fret-node --features compat-retained-canvas event_runtime_adapter` passed.
+- `cargo check -p fret-node` passed.
+- `cargo check -p fret-node --features compat-retained-canvas` passed.
+- `python3 -m json.tool docs/workstreams/fret-node-event-runtime-adapter-v1/WORKSTREAM.json` passed.
+- `python3 tools/check_layering.py` passed.
+- `python3 tools/check_workstream_catalog.py` passed.
+- `git diff --check` passed.
