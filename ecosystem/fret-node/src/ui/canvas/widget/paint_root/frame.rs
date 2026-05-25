@@ -29,9 +29,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let viewport_rect = frame.viewport_rect;
         let render_cull_rect = frame.render_cull_rect;
 
-        cx.scene.push(SceneOp::PushClipRect {
-            rect: viewport_rect,
-        });
+        super::frame_clip_adapter::push_paint_root_frame_clip(cx, viewport_rect);
 
         background::paint_canvas_background(self, cx, viewport_rect);
 

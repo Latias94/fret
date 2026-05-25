@@ -120,6 +120,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/cache_plan_retained_cx.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_RS: &str =
         include_str!("ui/canvas/widget/paint_root/frame.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_clip_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_clip_retained_cx.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_ADAPTER_RS: &str =
         include_str!("ui/canvas/widget/paint_root/frame_viewport_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_RETAINED_CX_RS: &str =
@@ -3142,6 +3146,66 @@ mod surface_policy_tests {
             UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_RETAINED_CX_RS
                 .contains("for PaintCx<'_, H>"),
             "retained frame viewport binding should isolate PaintCx to the retained adapter module"
+        );
+    }
+
+    #[test]
+    fn paint_root_frame_clip_adapter_keeps_root_clip_emission_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "SceneOp",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_ADAPTER_RS.contains(forbidden),
+                "paint-root frame clip adapter must stay retained-Cx and scene-op agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_ADAPTER_RS
+                .contains("trait PaintRootFrameClipCx"),
+            "frame clip emission should live behind a named adapter seam"
+        );
+        for required in [
+            "push_paint_root_frame_clip",
+            "push_paint_root_frame_clip_rect",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_ADAPTER_RS.contains(required),
+                "frame clip adapter is missing scene-emission contract `{required}`"
+            );
+        }
+
+        for forbidden in ["cx.scene", "SceneOp::PushClipRect", "PushClipRect {"] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_RS.contains(forbidden),
+                "paint-root frame setup should not emit the root frame clip directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_RS
+                .contains("frame_clip_adapter::push_paint_root_frame_clip"),
+            "paint-root frame setup should delegate root clip emission to the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_RETAINED_CX_RS
+                .contains("impl<H: UiHost> super::frame_clip_adapter::PaintRootFrameClipCx<H>"),
+            "retained frame clip binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_RETAINED_CX_RS.contains("for PaintCx<'_, H>"),
+            "retained frame clip binding should isolate PaintCx to the retained adapter module"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_RETAINED_CX_RS.contains("SceneOp::PushClipRect"),
+            "retained frame clip binding should own the root clip SceneOp emission"
         );
     }
 

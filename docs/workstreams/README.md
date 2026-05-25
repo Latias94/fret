@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 447
+- Dedicated directories: 448
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2023,7 +2023,8 @@ Rule:
 - `docs/workstreams/fret-node-low-level-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed lane that proved low-level host operations and command dispatch adapter seams for the retained node graph compatibility island; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-prepaint-adapter-v1/` — first n/a, latest n/a, 7 markdown docs (closed follow-on that proved the retained node graph prepaint cull-window adapter seam and split paint-root cache-plan work into a new lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that split node graph paint-root cache-plan host/bounds/scale-factor route inputs behind a named adapter seam; includes `WORKSTREAM.json`)
-- `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/` — first n/a, latest n/a, 5 markdown docs (active narrow follow-on for auditing and splitting node graph paint-root frame setup before adding a frame adapter seam; includes `WORKSTREAM.json`)
+- `docs/workstreams/fret-node-paint-root-frame-clip-adapter-v1/` — first n/a, latest n/a, 5 markdown docs (active narrow follow-on for isolating node graph paint-root frame clip scene emission behind a minimal adapter seam; includes `WORKSTREAM.json`)
+- `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/` — first n/a, latest n/a, 7 markdown docs (closed narrow follow-on that audited paint-root frame setup and split bounds/viewport/render-cull route inputs behind a frame viewport adapter seam; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-style-skinning-v1/` — first 2026-02-27, latest 2026-03-01, 7 markdown docs
 - `docs/workstreams/fret-node-style-skinning-v2/` — first 2026-03-01, latest 2026-03-01, 3 markdown docs
 - `docs/workstreams/fret-node-style-skinning-v3/` — first 2026-03-02, latest 2026-03-02, 6 markdown docs
