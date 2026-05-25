@@ -30,10 +30,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let edge_anchor_target =
             self.resolve_edge_anchor_target_from_render(&render, edge_anchor_target_id);
 
-        self.paint_groups_static(cx.scene, cx.services, cx.scale_factor, &render.groups, zoom);
-        self.paint_groups_selected_overlay(cx.scene, &render.groups, zoom);
+        super::pass_scene_adapter::paint_root_pass_groups_static(cx, self, &render.groups, zoom);
+        super::pass_scene_adapter::paint_root_pass_groups_selected_overlay(
+            cx,
+            self,
+            &render.groups,
+            zoom,
+        );
         self.paint_edges(cx, snapshot, &render, geom, zoom, view_interacting);
-        self.paint_nodes_static(cx.scene, cx.services, cx.scale_factor, &render, zoom);
+        super::pass_scene_adapter::paint_root_pass_nodes_static(cx, self, &render, zoom);
         self.paint_root_node_overlay_layers(cx, snapshot, geom, render_cull_rect, zoom);
 
         (edge_anchor_target_id, edge_anchor_target)

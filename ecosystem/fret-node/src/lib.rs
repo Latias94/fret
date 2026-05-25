@@ -154,6 +154,14 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/frame_viewport_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_RETAINED_CX_RS: &str =
         include_str!("ui/canvas/widget/paint_root/frame_viewport_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_IMMEDIATE_PASS_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/immediate_pass.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_PASS_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_pass.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/pass_scene_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/pass_scene_retained_cx.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_RS: &str =
         include_str!("ui/canvas/widget/paint_root/tail.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_ADAPTER_RS: &str =
@@ -3597,6 +3605,82 @@ mod surface_policy_tests {
             UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_RETAINED_CX_RS.contains("SceneOp::PopClip"),
             "retained tail cleanup binding should own root PopClip scene emission"
         );
+    }
+
+    #[test]
+    fn paint_root_pass_scene_adapter_keeps_immediate_scene_sink_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "SceneOp",
+            "cx.scene",
+            "cx.services",
+            "cx.scale_factor",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_ADAPTER_RS.contains(forbidden),
+                "paint-root pass scene adapter must stay retained-Cx and scene-op agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_ADAPTER_RS
+                .contains("trait PaintRootPassSceneCx"),
+            "pass scene routing should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_root_pass_groups_static",
+            "paint_root_pass_groups_selected_overlay",
+            "paint_root_pass_nodes_static",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_ADAPTER_RS.contains(required),
+                "pass scene adapter is missing static scene routing contract `{required}`"
+            );
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_IMMEDIATE_PASS_RS.contains(required),
+                "immediate pass should delegate static scene routing through `{required}`"
+            );
+        }
+
+        for forbidden in ["cx.scene", "cx.services", "cx.scale_factor"] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_IMMEDIATE_PASS_RS.contains(forbidden),
+                "immediate paint-root pass should not read retained scene sink fields directly; found `{forbidden}`"
+            );
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_PASS_RS.contains(forbidden),
+                "cached paint-root pass should stay direct-scene-free at the pass-router level; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_RETAINED_CX_RS
+                .contains("impl<H: UiHost> super::pass_scene_adapter::PaintRootPassSceneCx<H>"),
+            "retained pass scene binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_RETAINED_CX_RS.contains("for PaintCx<'_, H>"),
+            "retained pass scene binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in [
+            "self.scene",
+            "self.services",
+            "self.scale_factor",
+            "paint_groups_static",
+            "paint_groups_selected_overlay",
+            "paint_nodes_static",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_RETAINED_CX_RS.contains(required),
+                "retained pass scene binding should own static scene routing detail `{required}`"
+            );
+        }
     }
 
     #[test]

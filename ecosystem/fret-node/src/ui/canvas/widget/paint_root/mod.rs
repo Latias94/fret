@@ -15,6 +15,8 @@ mod frame_viewport_retained_cx;
 mod immediate;
 mod immediate_pass;
 mod node_layers;
+mod pass_scene_adapter;
+mod pass_scene_retained_cx;
 mod prune;
 mod tail;
 mod tail_cleanup_adapter;
