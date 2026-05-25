@@ -1,7 +1,10 @@
 # Fret Node Event Runtime Adapter v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
+
+Closed on 2026-05-25 after the event runtime adapter seam shipped, the retained event edge audit
+found no additional event-runtime edge to delete, and follow-ons were split by behavior family.
 
 ## Why This Lane Exists
 
@@ -18,6 +21,8 @@ This lane owns that entrypoint split.
 - `docs/adr/0330-retained-runtime-internal-and-compat-surface.md`
 - `docs/adr/0128-canvas-widgets-and-interactive-surfaces.md`
 - `docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
+- `docs/workstreams/fret-node-event-runtime-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_runtime_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_cx.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_event.rs`
@@ -71,3 +76,12 @@ modules should remain expressed in node graph terms.
 This lane can close when one retained event runtime entrypoint is replaced or quarantined behind a
 named adapter, source-policy gates lock the retained split, and follow-on event route migrations are
 either completed or split into narrower lanes.
+
+## Closeout Outcome
+
+- The retained event runtime entrypoint is behind `event_runtime_adapter.rs`.
+- Source-policy tests lock the adapter and top-level router away from retained Cx terms.
+- `NEA-030` found no further old event runtime edge to delete without crossing into other behavior
+  families.
+- Remaining work is split to `fret-node-paint-prepaint-adapter-v1` or a future route-policy audit
+  lane.

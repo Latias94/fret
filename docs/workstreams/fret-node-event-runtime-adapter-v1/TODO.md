@@ -1,6 +1,6 @@
 # Fret Node Event Runtime Adapter v1 - TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## NEA-M0 - Scope And Evidence Freeze
@@ -33,8 +33,9 @@ Last updated: 2026-05-25
 
 ## NEA-M3 - Closeout Or Follow-On Split
 
-- [ ] NEA-040 [owner=planner] [deps=NEA-030] [scope=docs/workstreams/fret-node-event-runtime-adapter-v1]
+- [x] NEA-040 [owner=codex] [deps=NEA-030] [scope=docs/workstreams/fret-node-event-runtime-adapter-v1]
   Goal: Close this event runtime adapter lane or split the next route-family follow-on.
   Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
-  Evidence: `EVIDENCE_AND_GATES.md`, `HANDOFF.md`, optional closeout audit.
-  Handoff: Event route policy rewrites require a fresh scoped lane.
+  Evidence: `EVIDENCE_AND_GATES.md`, `HANDOFF.md`, `CLOSEOUT_AUDIT_2026-05-25.md`.
+  Handoff: Event route policy rewrites require a fresh scoped lane; paint/prepaint remains in
+  `fret-node-paint-prepaint-adapter-v1`.

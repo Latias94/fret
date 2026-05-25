@@ -1,6 +1,6 @@
 # Fret Node Event Runtime Adapter v1 - Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## M0 - Scope And Evidence Freeze
@@ -68,3 +68,11 @@ Exit criteria:
 - Evidence gates are fresh.
 - Remaining event route work is either complete, deferred, or split into a follow-on.
 - `WORKSTREAM.json` status is updated.
+
+Status: Complete.
+
+Evidence:
+
+- `docs/workstreams/fret-node-event-runtime-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
+- `docs/workstreams/fret-node-event-runtime-adapter-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/fret-node-event-runtime-adapter-v1/HANDOFF.md`

@@ -1,6 +1,6 @@
 # Fret Node Event Runtime Adapter v1 - Evidence And Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## Smallest Current Repro
@@ -46,6 +46,27 @@ git diff --check
 - `ecosystem/fret-node/src/ui/canvas/widget/event_router_cx.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_event.rs`
 - `ecosystem/fret-node/src/lib.rs`
+
+## Closeout Evidence - 2026-05-25
+
+Claim:
+
+- The event runtime adapter lane is complete and closed.
+- The shipped adapter satisfies the target state without expanding into command dispatch,
+  paint/prepaint, layout, semantics, or route-policy rewrites.
+- Follow-ons are split to `fret-node-paint-prepaint-adapter-v1` and a future narrow route-policy
+  audit lane if needed.
+
+Fresh validation:
+
+- `cargo fmt --check --package fret-node` passed.
+- `cargo test -p fret-node --features compat-retained-canvas event_runtime_adapter` passed.
+- `cargo check -p fret-node` passed.
+- `cargo check -p fret-node --features compat-retained-canvas` passed.
+- `python3 -m json.tool docs/workstreams/fret-node-event-runtime-adapter-v1/WORKSTREAM.json` passed.
+- `python3 tools/check_layering.py` passed.
+- `python3 tools/check_workstream_catalog.py` passed.
+- `git diff --check` passed.
 
 ## Initial Scope Evidence - 2026-05-25
 

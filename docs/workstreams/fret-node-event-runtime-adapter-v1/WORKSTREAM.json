@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "fret-node-event-runtime-adapter-v1",
   "title": "Fret Node Event Runtime Adapter v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-25",
   "scope_kind": "execution",
   "follow_on_of": "fret-node-low-level-adapter-v1",
@@ -27,6 +27,10 @@
     {
       "role": "next",
       "path": "docs/workstreams/fret-node-event-runtime-adapter-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fret-node-event-runtime-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md"
     }
   ],
   "repro": {
@@ -52,6 +56,7 @@
   ],
   "evidence": [
     "docs/workstreams/fret-node-event-runtime-adapter-v1/DESIGN.md",
+    "docs/workstreams/fret-node-event-runtime-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
     "docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
     "ecosystem/fret-node/src/ui/canvas/widget/event_runtime_adapter.rs",
     "ecosystem/fret-node/src/ui/canvas/widget/event_router.rs",
@@ -64,7 +69,7 @@
     "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue only for event runtime entrypoint and routing adapter work. Keep command dispatch and paint/prepaint in their own lanes."
+    "default_action": "closed",
+    "notes": "Do not reopen this lane. Use fret-node-paint-prepaint-adapter-v1 for paint/prepaint, or open a fresh route-policy audit lane for pointer/keyboard/context-menu route trait cleanup."
   }
 }

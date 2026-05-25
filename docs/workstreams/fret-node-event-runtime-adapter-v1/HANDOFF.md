@@ -1,6 +1,6 @@
 # Fret Node Event Runtime Adapter v1 - Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## Current State
@@ -18,14 +18,14 @@ bindings, and layout/semantics/paint retained runtime paths are outside this eve
 
 ## Active Task
 
+- None. This lane is closed.
+
+## Closeout
+
 - Task ID: NEA-040
-- Owner: planner
-- Files: `docs/workstreams/fret-node-event-runtime-adapter-v1/EVIDENCE_AND_GATES.md`,
-  `docs/workstreams/fret-node-event-runtime-adapter-v1/HANDOFF.md`,
-  `docs/workstreams/fret-node-event-runtime-adapter-v1/WORKSTREAM.json`
-- Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
-- Status: READY
-- Review: not started
+- Owner: codex
+- Status: DONE
+- Closeout audit: `docs/workstreams/fret-node-event-runtime-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
 - Evidence: `docs/workstreams/fret-node-event-runtime-adapter-v1/EVIDENCE_AND_GATES.md`
 
 ## Decisions Since Last Update
@@ -43,5 +43,6 @@ bindings, and layout/semantics/paint retained runtime paths are outside this eve
 
 ## Next Recommended Action
 
-- Execute NEA-040 closeout: either close this lane or split a new route-family follow-on. Do not
-  reopen command dispatch or paint/prepaint here.
+- Start `fret-node-paint-prepaint-adapter-v1` for retained paint/prepaint runtime preparation, or
+  open a fresh route-policy audit lane if pointer/keyboard/context-menu route trait binding cleanup
+  is still useful. Do not reopen this closed event runtime adapter lane.
