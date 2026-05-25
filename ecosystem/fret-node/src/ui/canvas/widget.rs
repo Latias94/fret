@@ -282,6 +282,8 @@ mod paint_grid;
 mod paint_grid_cache;
 mod paint_grid_cache_adapter;
 mod paint_grid_cache_retained_cx;
+mod paint_grid_diagnostics_adapter;
+mod paint_grid_diagnostics_retained_cx;
 mod paint_grid_plan;
 mod paint_grid_plan_support;
 mod paint_grid_stats;

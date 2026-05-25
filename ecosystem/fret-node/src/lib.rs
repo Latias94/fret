@@ -120,6 +120,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_grid_cache_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RETAINED_CX_RS: &str =
         include_str!("ui/canvas/widget/paint_grid_cache_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_diagnostics_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_diagnostics_retained_cx.rs");
     const UI_CANVAS_WIDGET_PAINT_GRID_STATS_RS: &str =
         include_str!("ui/canvas/widget/paint_grid_stats.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RS: &str =
@@ -3448,10 +3452,88 @@ mod surface_policy_tests {
             UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RETAINED_CX_RS.contains("&mut *self.scene"),
             "retained grid cache binding should own retained scene sink access"
         );
+    }
+
+    #[test]
+    fn paint_grid_diagnostics_adapter_keeps_tile_cache_stats_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "CanvasCacheStatsRegistry",
+            "CanvasCacheKey",
+            "frame_id()",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_ADAPTER_RS.contains(forbidden),
+                "paint grid diagnostics adapter must stay retained-Cx and registry agnostic; found `{forbidden}`"
+            );
+        }
+
         assert!(
-            UI_CANVAS_WIDGET_PAINT_GRID_STATS_RS.contains("CanvasCacheStatsRegistry"),
-            "grid diagnostics should remain in paint_grid_stats.rs for a separate follow-on"
+            UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_ADAPTER_RS
+                .contains("trait PaintGridDiagnosticsCx"),
+            "grid diagnostics recording should live behind a named adapter seam"
         );
+        for required in [
+            "record_grid_tile_cache_stats",
+            "GridTileCacheStatsSnapshot",
+            "SceneOpTileCacheStats",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_ADAPTER_RS.contains(required),
+                "grid diagnostics adapter is missing required contract `{required}`"
+            );
+        }
+
+        for forbidden in [
+            "PaintCx",
+            "cx.window",
+            "cx.node",
+            "cx.app.frame_id()",
+            "cx.app.with_global_mut",
+            "CanvasCacheKey",
+            "CanvasCacheStatsRegistry",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_GRID_STATS_RS.contains(forbidden),
+                "grid diagnostics stats collection should not read retained PaintCx fields directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_STATS_RS
+                .contains("paint_grid_diagnostics_adapter::record_grid_tile_cache_stats"),
+            "grid diagnostics stats collection should delegate registry recording to the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::paint_grid_diagnostics_adapter::PaintGridDiagnosticsCx<H>"
+            ),
+            "retained grid diagnostics binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_RETAINED_CX_RS.contains("for PaintCx<'_, H>"),
+            "retained grid diagnostics binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in [
+            "self.window",
+            "self.node",
+            "self.app.frame_id()",
+            "self.app",
+            "CanvasCacheKey",
+            "CanvasCacheStatsRegistry",
+            "record_scene_op_tile_cache_with_budget",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_RETAINED_CX_RS.contains(required),
+                "retained grid diagnostics binding should own retained diagnostics read/write `{required}`"
+            );
+        }
     }
 
     #[test]
