@@ -6,6 +6,8 @@
 pub mod cartesian;
 pub mod chart;
 pub mod declarative;
+#[cfg(feature = "imui")]
+pub mod imui;
 pub mod input_map;
 pub mod linking;
 pub mod models;
@@ -34,11 +36,24 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn no_public_imui_facade_survives() {
+    fn imui_adapter_stays_opt_in_and_declarative_only() {
         let public_surface = public_surface();
-        assert!(!public_surface.contains("pub mod imui;"));
-        assert!(!CARGO_TOML.contains("\nimui = ["));
-        assert!(!CARGO_TOML.contains("fret-authoring"));
+        let cargo_toml = cargo_toml_without_comments();
+        let imui_rs = include_str!("imui.rs");
+
+        assert!(public_surface.contains("#[cfg(feature = \"imui\")]"));
+        assert!(public_surface.contains("pub mod imui;"));
+        assert!(cargo_toml.contains("default = []"));
+        assert!(cargo_toml.contains("imui = [\"ui\", \"dep:fret-authoring\"]"));
+        assert!(
+            cargo_toml
+                .contains("fret-authoring = { path = \"../fret-authoring\", optional = true }")
+        );
+        assert!(!cargo_toml.contains("default = [\"imui\"]"));
+        assert!(imui_rs.contains("use fret_authoring::UiWriter;"));
+        assert!(imui_rs.contains("crate::declarative::line_plot_panel(cx, props)"));
+        assert!(!imui_rs.contains("LinePlotCanvas"));
+        assert!(!imui_rs.contains("retained"));
     }
 
     #[test]

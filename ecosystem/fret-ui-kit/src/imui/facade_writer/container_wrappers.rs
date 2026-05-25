@@ -82,6 +82,34 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         self.add(element);
     }
 
+    pub fn list_box(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        self.list_box_with_options(
+            id,
+            ListBoxOptions {
+                label: Some(label.into()),
+                ..Default::default()
+            },
+            f,
+        );
+    }
+
+    pub fn list_box_with_options(
+        &mut self,
+        id: &str,
+        options: ListBoxOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let build_focus = self.build_focus.clone();
+        let element = self
+            .with_cx_mut(|cx| list_box_controls::list_box_element(cx, id, build_focus, options, f));
+        self.add(element);
+    }
+
     pub fn table(
         &mut self,
         id: &str,

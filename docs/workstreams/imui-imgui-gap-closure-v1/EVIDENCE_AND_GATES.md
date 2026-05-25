@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-24
+Last updated: 2026-05-26
 
 ## Evidence Anchors
 
@@ -22,6 +22,7 @@ Last updated: 2026-05-24
   - `docs/workstreams/imui-imgui-gap-closure-v1/P4_PERFORMANCE_ALIGNMENT_REVIEW_2026-05-06.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md`
   - `docs/workstreams/imui-imgui-gap-closure-v1/MILESTONES.md`
+  - `docs/workstreams/imui-imgui-gap-closure-v1/WORKTREE_CONVERGENCE_PLAN_2026-05-26.md`
 - Current Fret IMUI source:
   - `ecosystem/fret-imui/src/lib.rs`
   - `ecosystem/fret-imui/src/frontend.rs`
@@ -58,7 +59,19 @@ Last updated: 2026-05-24
   - `ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs`
   - `ecosystem/fret-ui-kit/src/imui/table_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs`
+  - `ecosystem/fret-ui-kit/src/imui/table_controls/body.rs`
+  - `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs`
+  - `ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger.rs`
+  - `ecosystem/fret-ui-kit/src/imui/table_controls/header/resize.rs`
+  - `ecosystem/fret-plot/Cargo.toml`
+  - `ecosystem/fret-plot/src/lib.rs`
+  - `ecosystem/fret-plot/src/imui.rs`
+  - `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/options/containers.rs`
+  - `ecosystem/fret-imui/src/tests/composition/layout_collections.rs`
   - `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/facade_writer/basic_items.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs`
   - `ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs`
@@ -3940,6 +3953,131 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
+
+2026-05-25 IMUI table render/body/header owner split:
+
+- Source gap before fix: `ecosystem/fret-ui-kit/src/imui/table_controls.rs` still owned table
+  render policy, row/cell layout helpers, pinned row grouping, horizontal scroll wrapping, sortable
+  header behavior, and resize interaction. That kept independent table owners coupled in one large
+  IMUI implementation file.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` now owns table assembly, test-id
+  suffixing, palette resolution, and shared cell layout/packing helpers.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/body.rs` now owns prepared table cells, pinned row
+  grouping, horizontal center-scroll wrapping, and table cell wrapping.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs`,
+  `table_controls/header/trigger.rs`, and `table_controls/header/resize.rs` now own sortable/plain
+  header behavior, text-role helpers, active-trigger wiring, and column resize interaction.
+- No public IMUI table surface changed; the root `table_controls.rs` keeps only table authoring
+  collection plus `ImUiTable` / `ImUiTableRow` facade wiring.
+- `tools/gate_imui_workstream_source.py` now checks the root/render/body/header module boundaries
+  and keeps the horizontal-scroll/header text-role/hidden-column source markers covered.
+- Focused gates passed:
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo nextest run -p fret-ui-kit --features imui --lib
+  table_header_label_uses_shared_table_cell_text_role
+  table_sort_indicator_uses_shared_chrome_glyph_text_role
+  hidden_table_columns_do_not_render_header_body_or_response
+  horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`,
+  `python tools/gate_imui_workstream_source.py`,
+  `python tools/gate_imui_facade_teaching_source.py`,
+  `python tools/check_workstream_catalog.py`, and `git diff --check`.
+- Related gate drift repair: `apps/fret-ui-gallery/src/ui/previews/pages/harness/ui_kit_list_torture.rs`
+  now carries the expected scroll-boundary paragraph text required by the IMUI source gate. The
+  focused gallery authoring-surface test passed with
+  `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_internal_previews
+  harness_ui_kit_list_torture_uses_fixed_row_text_roles --no-fail-fast`.
+
+2026-05-25 IMUI plot adapter proof:
+
+- Source gap before fix: the old retained IMUI plot facade had been deleted correctly, but there was
+  no narrow opt-in authoring adapter for current declarative `fret-plot` panels. That kept plot
+  authoring pressure unresolved without a safe dependency boundary.
+- `ecosystem/fret-plot/Cargo.toml` now exposes `imui = ["ui", "dep:fret-authoring"]`; default
+  features remain empty.
+- `ecosystem/fret-plot/src/imui.rs` adds thin `UiWriter` helpers that call the existing declarative
+  plot panel constructors and immediately `ui.add(element)`.
+- `fret-imui` stays thin and does not depend on `fret-plot`; `fret-ui-kit::imui` also does not
+  depend on `fret-plot`.
+- `tools/gate_imui_workstream_source.py` now freezes the opt-in adapter boundary and forbids plot
+  dependencies from the IMUI facade/kit layers.
+- Focused gates passed:
+  `cargo fmt --check -p fret-ui-kit -p fret-plot`,
+  `cargo check -p fret-plot`,
+  `cargo check -p fret-plot --features imui`,
+  `cargo nextest run -p fret-plot imui_adapter_stays_opt_in_and_declarative_only --no-fail-fast`,
+  `python tools/gate_imui_workstream_source.py`,
+  `python tools/check_workstream_catalog.py`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`, and `git diff --check`.
+- `Cargo.lock` now records `fret-authoring` in the `fret-plot` dependency list because the opt-in
+  `fret-plot/imui` feature uses `dep:fret-authoring`.
+
+2026-05-25 IMUI ListBox container proof:
+
+- Red run before fix: `cargo nextest run -p fret-imui
+  list_box_container_stamps_semantics_scroll_and_hosts_selectables --no-fail-fast` failed because
+  `fret-ui-kit::imui` did not expose `ListBoxOptions` or `list_box_with_options`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers.rs` now defines `ListBoxOptions` with only
+  layout, scroll, label, multiselectable semantics, and diagnostics ids.
+- `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the private semantic scroll host
+  and stamps `SemanticsRole::ListBox` without owning selection, filtering, command package, or
+  active-descendant policy.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` and
+  `facade_writer/container_wrappers.rs` expose `list_box` / `list_box_with_options` for root writer
+  and nested facade usage.
+- `ecosystem/fret-imui/src/tests/composition/layout_collections.rs` proves ListBox semantics,
+  forwarded scroll/test ids, vertically stacked selectable rows, selected child semantics, real
+  vertical scroll range, and no container-owned active descendant.
+- Focused gate passed:
+  `cargo nextest run -p fret-imui
+  list_box_container_stamps_semantics_scroll_and_hosts_selectables --no-fail-fast`.
+
+2026-05-25 IMUI facade basic-items owner split:
+
+- Source gap before fix: `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` still carried the trait
+  default bodies for basic text, wrapped text, bullet text, plain separators, and separator text,
+  even though similar focused wrapper clusters already lived under `facade_writer/`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/basic_items.rs` now owns those private default
+  implementations and delegates text-role policy to `declarative::text`, bullet text policy to
+  `bullet_text_controls`, and section separator policy to `separator_text_controls`.
+- The public `UiWriterImUiFacadeExt` method names and signatures stayed in
+  `facade_writer.rs`; the root trait now only forwards basic-item calls to the owner module.
+- `tools/gate_imui_workstream_source.py` now requires the root-forwarding shape and the
+  `basic_items.rs` owner markers while forbidding response/focusable policy from drifting into the
+  basic-item owner.
+
+2026-05-26 IMUI facade image-items owner split:
+
+- Source gap before fix: `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` still carried the trait
+  default body for image-button normalization even though interactive image item policy already
+  lived in `image_item_controls.rs`.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/image_items.rs` now owns the private
+  `image_item_with_options` and `image_button_with_options` facade forwarding helpers.
+- `image_items.rs` keeps only forwarding/default-normalization logic. It does not own pressable
+  chrome, response population, or interaction policy; those stay in `image_item_controls.rs`.
+- `tools/gate_imui_workstream_source.py` now requires the root forwarding shape and the
+  `image_items.rs` owner markers while forbidding pressable/chrome policy from drifting into the
+  facade owner.
+
+2026-05-26 worktree convergence plan:
+
+- Situation before convergence: `F:/SourceCodes/Rust/fret` is on `main` at `09e568ed`, ahead of
+  `origin/main` by six shadcn/parity commits, while
+  `F:/SourceCodes/Rust/fret-worktrees/imui-imgui-editor-grade-refactor` is at merge-base
+  `901aa6bdfd` with a larger dirty IMUI implementation set.
+- The integration strategy is recorded in
+  `docs/workstreams/imui-imgui-gap-closure-v1/WORKTREE_CONVERGENCE_PLAN_2026-05-26.md`.
+- Review outcome: use `main` as the history/integration base, but resolve IMUI content by topic.
+  Prefer the IMUI worktree for the completed facade owner split, layout sugar, canonical workbench,
+  Demo/Metrics/Debug, style/theme picker, and source-gate closeout coverage. Keep identical
+  `fret-plot/imui` and most table owner split files as-is. Treat `facade_writer/image_items.rs` as a
+  follow-up unless completed with gate and workstream evidence before checkpointing. The image-items
+  slice was completed with gate and evidence coverage before checkpointing.
+- Planned convergence checkpoints:
+  1. checkpoint closed `main` slices while excluding incomplete `image_items.rs` unless completed,
+  2. checkpoint the IMUI worktree,
+  3. merge the IMUI branch into `main`,
+  4. run the focused gates listed in the convergence plan.
+
 
 2026-05-24 floating resize snapshot owner split:
 

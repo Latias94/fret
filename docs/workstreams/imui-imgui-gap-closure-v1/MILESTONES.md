@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-24
+Last updated: 2026-05-26
 
 ## M0 - Current Source Baseline
 
@@ -1152,3 +1152,45 @@ keeps keyboard/click behavior orchestration plus the close-glyph text-role helpe
 2026-05-24 content props helper result: `ecosystem/fret-ui-kit/src/imui/floating_window_content_props.rs`
 now owns content surface layout, scroll layout, and container props. `floating_window_content.rs`
 keeps the pointer/focus orchestration and consumes the prepared content owner outputs.
+
+2026-05-25 table render/body/header owner split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` now owns table assembly, test-id suffixing,
+palette resolution, and shared cell helpers. `table_controls/body.rs` owns prepared cells, pinned row
+grouping, horizontal center-scroll wrapping, and cell wrapping. `table_controls/header.rs` plus
+`header/{trigger,resize}.rs` own sortable/plain header behavior and resize interaction. The root
+`table_controls.rs` keeps authoring collection and row/cell facade wiring only. The public IMUI
+table API stayed stable.
+
+2026-05-25 plot adapter proof result:
+`ecosystem/fret-plot/src/imui.rs` now provides opt-in `UiWriter` helpers that delegate to the
+existing declarative plot panels. `fret-plot` default features remain empty, `fret-imui` and
+`fret-ui-kit::imui` do not depend on `fret-plot`, and the retained plot bridge stays deleted.
+
+2026-05-25 ListBox container proof result:
+`ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
+semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,
+diagnostics ids, label, and multiselectable semantics only. Selection rows remain ordinary
+`selectable_with_options(...)` children, and the container does not own active-descendant,
+filtering, command, or collection policy.
+
+2026-05-25 facade basic-items owner split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/basic_items.rs` now owns the private
+`UiWriterImUiFacadeExt` default bodies for basic text, wrapped text, bullet text, plain separators,
+and separator text. `facade_writer.rs` remains the public trait hub and forwards those methods to
+the owner module without changing public names or behavior.
+
+2026-05-26 facade image-items owner split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/image_items.rs` now owns the private
+`UiWriterImUiFacadeExt` default bodies for image item/button forwarding, including the
+`ImageItemVariant::Button` normalization used by `image_button_with_options`. The interactive image
+item policy stays in `image_item_controls.rs`; the public facade method names and signatures stay
+unchanged.
+
+2026-05-26 worktree convergence decision:
+`WORKTREE_CONVERGENCE_PLAN_2026-05-26.md` records the integration strategy for the dirty `main` and
+`imui-imgui-editor-grade-refactor` worktrees. `main` remains the final integration base because it
+already contains the six committed shadcn/parity foundation commits. IMUI content is resolved by
+topic: keep identical plot/table slices, prefer the IMUI worktree's more complete facade owner split,
+layout sugar, canonical workbench, Demo/Metrics/Debug, and style/theme picker work, and leave the
+`main`-only `facade_writer/image_items.rs` slice for a separate evidenced follow-up unless completed
+before checkpointing. The image-items slice was completed before the `main` checkpoint.

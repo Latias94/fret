@@ -3,11 +3,13 @@
 use super::*;
 use std::any::Any;
 
+mod basic_items;
 mod boolean_wrappers;
 mod button_actions;
 mod container_wrappers;
 mod disclosure;
 mod floating_popup;
+mod image_items;
 mod menu_items;
 mod selection_combo;
 mod text_models;
@@ -251,17 +253,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     }
 
     fn text(&mut self, text: impl Into<Arc<str>>) {
-        let text = text.into();
-        let element =
-            self.with_cx_mut(|cx| crate::declarative::text::text_section_chrome_label(cx, text));
-        self.add(element);
+        basic_items::text(self, text.into());
     }
 
     fn text_wrapped(&mut self, text: impl Into<Arc<str>>) {
-        let text = text.into();
-        let element =
-            self.with_cx_mut(|cx| crate::declarative::text::text_compact_paragraph(cx, text));
-        self.add(element);
+        basic_items::text_wrapped(self, text.into());
     }
 
     fn bullet_text(&mut self, text: impl Into<Arc<str>>) {
@@ -269,7 +265,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     }
 
     fn bullet_text_with_options(&mut self, text: impl Into<Arc<str>>, options: BulletTextOptions) {
-        bullet_text_controls::bullet_text_with_options(self, text.into(), options);
+        basic_items::bullet_text_with_options(self, text.into(), options);
     }
 
     fn debug_draw<K: Hash>(
@@ -290,15 +286,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     }
 
     fn separator(&mut self) {
-        let element = self.with_cx_mut(|cx| {
-            let mut props = fret_ui::element::ContainerProps::default();
-            let theme = fret_ui::Theme::global(&*cx.app);
-            props.background = Some(theme.color_token("border"));
-            props.layout.size.width = fret_ui::element::Length::Fill;
-            props.layout.size.height = fret_ui::element::Length::Px(fret_core::Px(1.0));
-            cx.container(props, |_| Vec::new())
-        });
-        self.add(element);
+        basic_items::separator(self);
     }
 
     fn separator_text(&mut self, label: impl Into<Arc<str>>) {
@@ -310,7 +298,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         label: impl Into<Arc<str>>,
         options: SeparatorTextOptions,
     ) {
-        separator_text_controls::separator_text_with_options(self, label.into(), options);
+        basic_items::separator_text_with_options(self, label.into(), options);
     }
 
     fn horizontal(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
@@ -383,6 +371,33 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
         let element = self.with_cx_mut(|cx| grid_container_element(cx, None, options, f));
+        self.add(element);
+    }
+
+    fn list_box(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        self.list_box_with_options(
+            id,
+            ListBoxOptions {
+                label: Some(label.into()),
+                ..Default::default()
+            },
+            f,
+        );
+    }
+
+    fn list_box_with_options(
+        &mut self,
+        id: &str,
+        options: ListBoxOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        let element =
+            self.with_cx_mut(|cx| list_box_controls::list_box_element(cx, id, None, options, f));
         self.add(element);
     }
 
@@ -969,7 +984,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         size: Size,
         options: ImageItemOptions,
     ) -> ResponseExt {
-        image_item_controls::image_item_with_options(self, id, image, size, options)
+        image_items::image_item_with_options(self, id, image, size, options)
     }
 
     fn image_button(&mut self, id: &str, image: fret_core::ImageId, size: Size) -> ResponseExt {
@@ -981,14 +996,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         id: &str,
         image: fret_core::ImageId,
         size: Size,
-        mut options: ImageItemOptions,
+        options: ImageItemOptions,
     ) -> ResponseExt {
-        let was_plain_image_options = matches!(options.variant, ImageItemVariant::Image);
-        options.variant = ImageItemVariant::Button;
-        if was_plain_image_options {
-            options.focusable = true;
-        }
-        image_item_controls::image_item_with_options(self, id, image, size, options)
+        image_items::image_button_with_options(self, id, image, size, options)
     }
 
     fn button_with_options(

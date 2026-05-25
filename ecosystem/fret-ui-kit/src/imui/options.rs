@@ -12,7 +12,7 @@ pub use collections::{
 };
 pub use containers::{
     ChildRegionChrome, ChildRegionOptions, ChildRegionResizeXOptions, ChildRegionResizeYOptions,
-    GridOptions, HorizontalOptions, ScrollOptions, VerticalOptions,
+    GridOptions, HorizontalOptions, ListBoxOptions, ScrollOptions, VerticalOptions,
 };
 pub use controls::{
     ButtonArrowDirection, ButtonOptions, ButtonVariant, CheckboxOptions, CollapsingHeaderOptions,

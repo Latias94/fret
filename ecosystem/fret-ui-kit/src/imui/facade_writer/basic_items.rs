@@ -1,0 +1,43 @@
+use super::*;
+
+pub(super) fn text<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(ui: &mut W, text: Arc<str>) {
+    let element =
+        ui.with_cx_mut(|cx| crate::declarative::text::text_section_chrome_label(cx, text));
+    ui.add(element);
+}
+
+pub(super) fn text_wrapped<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    text: Arc<str>,
+) {
+    let element = ui.with_cx_mut(|cx| crate::declarative::text::text_compact_paragraph(cx, text));
+    ui.add(element);
+}
+
+pub(super) fn bullet_text_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    text: Arc<str>,
+    options: BulletTextOptions,
+) {
+    bullet_text_controls::bullet_text_with_options(ui, text, options);
+}
+
+pub(super) fn separator<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(ui: &mut W) {
+    let element = ui.with_cx_mut(|cx| {
+        let mut props = fret_ui::element::ContainerProps::default();
+        let theme = fret_ui::Theme::global(&*cx.app);
+        props.background = Some(theme.color_token("border"));
+        props.layout.size.width = fret_ui::element::Length::Fill;
+        props.layout.size.height = fret_ui::element::Length::Px(fret_core::Px(1.0));
+        cx.container(props, |_| Vec::new())
+    });
+    ui.add(element);
+}
+
+pub(super) fn separator_text_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
+    ui: &mut W,
+    label: Arc<str>,
+    options: SeparatorTextOptions,
+) {
+    separator_text_controls::separator_text_with_options(ui, label, options);
+}

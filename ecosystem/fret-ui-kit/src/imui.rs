@@ -50,6 +50,7 @@ mod image_item_controls;
 mod interaction_runtime;
 mod item_behavior;
 mod label_identity;
+mod list_box_controls;
 mod menu_controls;
 mod menu_family_controls;
 mod multi_select;
@@ -127,12 +128,13 @@ pub use options::{
     ChildRegionResizeXOptions, ChildRegionResizeYOptions, CollapsingHeaderOptions,
     ComboModelOptions, ComboOptions, DragSourceOptions, DropTargetOptions, GridOptions,
     HorizontalOptions, ImageItemOptions, ImageItemVariant, InputTextCustomFilter, InputTextFilters,
-    InputTextMode, InputTextOptions, InputTextPickerFilter, InputTextPickerOptions, MenuBarOptions,
-    MenuItemOptions, PopupMenuOptions, PopupModalOptions, RadioOptions, ScrollOptions,
-    SelectableOptions, SeparatorTextOptions, SliderOptions, SwitchOptions, TabBarOptions,
-    TabItemOptions, TableCellOptions, TableColumn, TableColumnPin, TableColumnResizeOptions,
-    TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection, TextAreaOptions,
-    TextAreaSubmitKey, TooltipOptions, TreeNodeOptions, VerticalOptions, VirtualListOptions,
+    InputTextMode, InputTextOptions, InputTextPickerFilter, InputTextPickerOptions, ListBoxOptions,
+    MenuBarOptions, MenuItemOptions, PopupMenuOptions, PopupModalOptions, RadioOptions,
+    ScrollOptions, SelectableOptions, SeparatorTextOptions, SliderOptions, SwitchOptions,
+    TabBarOptions, TabItemOptions, TableCellOptions, TableColumn, TableColumnPin,
+    TableColumnResizeOptions, TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection,
+    TextAreaOptions, TextAreaSubmitKey, TooltipOptions, TreeNodeOptions, VerticalOptions,
+    VirtualListOptions,
 };
 use popup_store::{
     drop_popup_scope_for_id, popup_render_generation_for_window, with_popup_store_for_id,

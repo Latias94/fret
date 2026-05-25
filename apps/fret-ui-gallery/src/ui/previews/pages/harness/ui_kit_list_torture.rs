@@ -23,7 +23,7 @@ pub(in crate::ui) fn preview_ui_kit_list_torture(
                 doc_layout::paragraph_text(cx,
                     "Goal: validate fret-ui-kit list virtualization under view-cache + shell reuse (ADR 0177).",
                 ),
-                doc_layout::paragraph_text(cx, "Expect: row-root semantics, collection metadata, and action-state stay stable while the list scrolls under view-cache."),
+                doc_layout::paragraph_text(cx, "Expect: scroll boundary shifts reconcile without scroll-window dirty views."),
             ]
         })
             .layout(LayoutRefinement::default().w_full())
