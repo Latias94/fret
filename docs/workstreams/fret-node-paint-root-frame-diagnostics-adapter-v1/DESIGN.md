@@ -1,6 +1,6 @@
 # Fret Node Paint Root Frame Diagnostics Adapter v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## Why This Lane Exists
@@ -72,3 +72,10 @@ the retained binding should own window checks, key construction, frame id, and r
 
 This lane can close when path-cache diagnostics recording is isolated behind the adapter,
 source-policy coverage locks the seam, and the validation gates pass.
+
+## Closeout State
+
+Closed on 2026-05-25 with `CLOSEOUT_AUDIT_2026-05-25.md`. Path-cache diagnostics recording now uses
+the frame diagnostics adapter seam. Background paint, grid paint, tail cleanup, cached/immediate
+pass clip emission, grid tile diagnostics, and edge label budget diagnostics remain separate
+follow-on candidates.

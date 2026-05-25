@@ -1,24 +1,22 @@
 # Fret Node Paint Root Frame Diagnostics Adapter v1 - Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## Current State
 
-This lane is a narrow follow-on from `fret-node-paint-root-frame-clip-adapter-v1`. The parent lane
-closed after proving root frame clip scene emission behind a frame clip adapter and split
-path-cache diagnostics as a next candidate.
+This lane is closed. It is a narrow follow-on from
+`fret-node-paint-root-frame-clip-adapter-v1`. The parent lane closed after proving root frame clip
+scene emission behind a frame clip adapter and split path-cache diagnostics as a next candidate.
 
-## Active Task
+## Final State
 
-- Task ID: FDA-020
+- Task ID: FDA-030
 - Owner: codex
-- Files: `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame/cache.rs`, new frame
-  diagnostics adapter modules, `ecosystem/fret-node/src/lib.rs`
-- Validation: `cargo test -p fret-node --features compat-retained-canvas paint_root_frame_diagnostics_adapter`
+- Files: `CLOSEOUT_AUDIT_2026-05-25.md`, workstream status docs
+- Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
 - Status: DONE
-- Review: final gates passed; ready for commit
-- Evidence: `docs/workstreams/fret-node-paint-root-frame-diagnostics-adapter-v1/EVIDENCE_AND_GATES.md`
+- Evidence: `docs/workstreams/fret-node-paint-root-frame-diagnostics-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
 
 ## Decisions Since Open
 
@@ -30,6 +28,7 @@ path-cache diagnostics as a next candidate.
 - Grid tile diagnostics and edge label budget diagnostics remain outside this lane.
 - Background paint, grid paint, viewport, clip, tail cleanup, and cached/immediate passes are
   explicit non-goals.
+- FDA-030 closed this lane and routes future work to separate operation-family follow-ons.
 
 ## Blockers
 
@@ -37,5 +36,6 @@ path-cache diagnostics as a next candidate.
 
 ## Next Recommended Action
 
-- Commit FDA-020.
-- After commit, close this lane or split a narrow follow-on for background paint or grid paint.
+- Do not reopen this lane for more implementation.
+- Start a narrow follow-on for background paint next, unless fresh evidence shows grid paint or tail
+  cleanup is the smaller honest seam.

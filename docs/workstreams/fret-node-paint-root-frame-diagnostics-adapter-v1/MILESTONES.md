@@ -1,6 +1,6 @@
 # Fret Node Paint Root Frame Diagnostics Adapter v1 - Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## M0 - Scope Freeze
@@ -37,3 +37,17 @@ Evidence:
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame_diagnostics_retained_cx.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame/cache.rs`
 - `ecosystem/fret-node/src/lib.rs`
+
+## M2 - Closeout
+
+Exit criteria:
+
+- The shipped frame diagnostics seam is recorded as closed evidence.
+- Residual operation families are named as follow-on candidates rather than appended to this lane.
+- Workstream status is closed.
+
+Status: Complete.
+
+Evidence:
+
+- `docs/workstreams/fret-node-paint-root-frame-diagnostics-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`

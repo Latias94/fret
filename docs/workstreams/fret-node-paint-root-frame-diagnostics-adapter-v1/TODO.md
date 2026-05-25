@@ -1,6 +1,6 @@
 # Fret Node Paint Root Frame Diagnostics Adapter v1 - TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## FDA-M0 - Scope Freeze
@@ -22,3 +22,12 @@ Last updated: 2026-05-25
   cached/immediate passes out of scope. Complete; path-cache diagnostics snapshot collection stays
   in `frame/cache.rs`, while retained window/node/frame-id/registry recording lives in
   `frame_diagnostics_retained_cx.rs`.
+
+## Closeout
+
+- [x] FDA-030 [owner=codex] [deps=FDA-020] [scope=docs/workstreams/fret-node-paint-root-frame-diagnostics-adapter-v1]
+  Goal: Close the lane and split residual frame paint operation families into follow-on candidates.
+  Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
+  Evidence: `CLOSEOUT_AUDIT_2026-05-25.md`
+  Handoff: This lane is closed. Start a separate follow-on for background paint, grid paint, tail
+  cleanup, cached/immediate pass clip emission, or other diagnostics families.
