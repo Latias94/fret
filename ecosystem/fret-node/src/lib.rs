@@ -132,6 +132,14 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/cache_plan_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RETAINED_CX_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cache_plan_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_GROUPS_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_groups.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_NODES_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_nodes.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_static_scene_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_static_scene_retained_cx.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_RS: &str =
         include_str!("ui/canvas/widget/paint_root/frame.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CACHE_RS: &str =
@@ -162,6 +170,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/pass_scene_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_RETAINED_CX_RS: &str =
         include_str!("ui/canvas/widget/paint_root/pass_scene_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_STATIC_CACHE_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/static_cache.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_STATIC_LAYER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/static_layer.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_RS: &str =
         include_str!("ui/canvas/widget/paint_root/tail.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_ADAPTER_RS: &str =
@@ -3679,6 +3691,107 @@ mod surface_policy_tests {
             assert!(
                 UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_RETAINED_CX_RS.contains(required),
                 "retained pass scene binding should own static scene routing detail `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_cached_static_scene_adapter_keeps_replay_scene_sink_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "SceneOp",
+            "cx.scene",
+            "cx.services",
+            "cx.scale_factor",
+            "cx.app",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_ADAPTER_RS.contains(forbidden),
+                "paint-root cached static scene adapter must stay retained-Cx and scene-op agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_ADAPTER_RS
+                .contains("trait PaintRootCachedStaticSceneCx"),
+            "cached static scene replay should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_root_cached_static_host",
+            "paint_root_cached_static_services",
+            "paint_root_cached_static_scale_factor",
+            "paint_root_cached_static_scene",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_ADAPTER_RS.contains(required),
+                "cached static scene adapter is missing retained route-input contract `{required}`"
+            );
+        }
+
+        let static_cache_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_STATIC_CACHE_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_STATIC_LAYER_RS,
+        ]
+        .join("\n");
+        for forbidden in ["PaintCx", "cx.scene"] {
+            assert!(
+                !static_cache_sources.contains(forbidden),
+                "cached static replay helpers should not depend on retained PaintCx scene fields directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            static_cache_sources.contains("paint_root_cached_static_scene"),
+            "cached static replay helpers should obtain scene replay access through the adapter"
+        );
+
+        let cached_static_build_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_GROUPS_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_NODES_RS,
+        ]
+        .join("\n");
+        for forbidden in ["cx.scene", "cx.services", "cx.scale_factor", "cx.app"] {
+            assert!(
+                !cached_static_build_sources.contains(forbidden),
+                "cached static group/node builders should not read retained PaintCx fields directly; found `{forbidden}`"
+            );
+        }
+        for required in [
+            "paint_root_cached_static_host",
+            "paint_root_cached_static_services",
+            "paint_root_cached_static_scale_factor",
+        ] {
+            assert!(
+                cached_static_build_sources.contains(required),
+                "cached static group/node builders should use adapter route input `{required}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::cached_static_scene_adapter::PaintRootCachedStaticSceneCx<H>"
+            ),
+            "retained cached static scene binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained cached static scene binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in [
+            "self.app",
+            "self.services",
+            "self.scale_factor",
+            "self.scene",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_RETAINED_CX_RS.contains(required),
+                "retained cached static scene binding should own retained field access `{required}`"
             );
         }
     }

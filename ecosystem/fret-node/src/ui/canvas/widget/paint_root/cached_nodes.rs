@@ -26,8 +26,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cache_rect,
             |paint_cache, ops| paint_cache.touch_text_blobs_in_scene_ops(ops),
             |canvas, cx| {
+                let host = super::cached_static_scene_adapter::paint_root_cached_static_host(&*cx);
                 let render_nodes: RenderData = canvas.collect_render_data(
-                    &*cx.app,
+                    host,
                     snapshot,
                     Arc::clone(geom),
                     Arc::clone(index),
@@ -41,13 +42,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
                 let mut tmp = fret_core::Scene::default();
                 tmp.push(SceneOp::PushClipRect { rect: cache_rect });
-                canvas.paint_nodes_static(
-                    &mut tmp,
-                    cx.services,
-                    cx.scale_factor,
-                    &render_nodes,
-                    zoom,
-                );
+                let scale_factor =
+                    super::cached_static_scene_adapter::paint_root_cached_static_scale_factor(&*cx);
+                let services =
+                    super::cached_static_scene_adapter::paint_root_cached_static_services(cx);
+                canvas.paint_nodes_static(&mut tmp, services, scale_factor, &render_nodes, zoom);
                 tmp.push(SceneOp::PopClip);
                 tmp.ops().to_vec()
             },
