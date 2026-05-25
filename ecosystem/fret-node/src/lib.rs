@@ -136,6 +136,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/cached_groups.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_NODES_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_nodes.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/anchor_target.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/anchor_target_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/anchor_target_retained_cx.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_ADAPTER_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_edges/replay_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RETAINED_CX_RS: &str =
@@ -4182,6 +4188,89 @@ mod surface_policy_tests {
             assert!(
                 UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_OPS_RS.contains(required),
                 "build-state ops facade should retain completion bookkeeping and delegate clip policy; missing `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_cached_edge_anchor_target_adapter_keeps_direct_anchor_route_off_cached_helper() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+            "self.app",
+            "self.services",
+            "self.scale_factor",
+            "self.scene",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_ADAPTER_RS
+                    .contains(forbidden),
+                "paint-root cached edge anchor target adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_ADAPTER_RS
+                .contains("trait PaintRootCachedEdgeAnchorTargetCx"),
+            "cached edge anchor target routing should live behind a named adapter seam"
+        );
+        for required in [
+            "PaintRootCachedEdgeAnchorTarget",
+            "resolve_paint_root_cached_edge_anchor_target",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_ADAPTER_RS
+                    .contains(required),
+                "cached edge anchor target adapter is missing route contract `{required}`"
+            );
+        }
+
+        for forbidden in [
+            "PaintCx",
+            "resolve_edge_anchor_target_id",
+            "resolve_edge_anchor_target_from_geometry",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RS.contains(forbidden),
+                "cached edge anchor target helper should not depend on retained Cx or shared edge-anchor helpers directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RS
+                .contains("resolve_paint_root_cached_edge_anchor_target"),
+            "cached edge anchor target helper should route through the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::anchor_target_adapter::PaintRootCachedEdgeAnchorTargetCx<H>"
+            ),
+            "retained cached edge anchor target binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained cached edge anchor target binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in [
+            "resolve_edge_anchor_target_id",
+            "resolve_edge_anchor_target_from_geometry",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RETAINED_CX_RS
+                    .contains(required),
+                "retained cached edge anchor target binding should own direct shared edge-anchor helper call `{required}`"
             );
         }
     }
