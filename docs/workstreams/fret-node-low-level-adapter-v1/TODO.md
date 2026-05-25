@@ -21,8 +21,16 @@ Last updated: 2026-05-25
 
 ## NLA-M2 - Delete Or Quarantine One Retained Edge
 
-- [ ] NLA-030 [owner=unassigned] [deps=NLA-020] [scope=ecosystem/fret-node/src/ui/canvas/widget]
+- [x] NLA-030 [owner=codex] [deps=NLA-020] [scope=ecosystem/fret-node/src/ui/canvas/widget/wire_drag]
   Goal: Delete or quarantine the old retained edge replaced by the first adapter proof.
-  Validation: `cargo check -p fret-node`; `cargo check -p fret-node --features compat-retained-canvas`
-  Evidence: source-policy test in `ecosystem/fret-node/src/lib.rs`
-  Handoff: Split follow-ons per behavior family.
+  Validation: `cargo check -p fret-node`; `cargo check -p fret-node --features compat-retained-canvas`; `cargo test -p fret-node --features compat-retained-canvas retained_canvas_low_level_adapter_policy_helpers_stay_off_retained_bridge`
+  Evidence: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs`, `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/retained_commit_cx.rs`, source-policy test in `ecosystem/fret-node/src/lib.rs`
+  Handoff: `WireCommitCx` now inherits low-level redraw / paint invalidation / pointer-capture release operations from `low_level_adapter`.
+
+## Follow-On Candidates
+
+- [ ] NLA-040 [owner=unassigned] [deps=NLA-030] [scope=ecosystem/fret-node/src/ui/canvas/widget]
+  Goal: Choose the next behavior-family adapter split for event routing, command dispatch, or paint/prepaint.
+  Validation: narrow task-specific source-policy test plus `cargo check -p fret-node --features compat-retained-canvas`
+  Evidence: follow-on task or workstream.
+  Handoff: Keep this as one behavior family, not a broad retained canvas rewrite.

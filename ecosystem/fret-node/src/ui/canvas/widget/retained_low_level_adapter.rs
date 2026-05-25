@@ -44,6 +44,10 @@ impl<H: UiHost> low_level_adapter::CanvasHandledCx<H> for CommandCx<'_, H> {
     }
 }
 
+impl<H: UiHost> low_level_adapter::CanvasPointerCaptureReleaseCx<H> for CommandCx<'_, H> {
+    fn release_pointer_capture(&mut self) {}
+}
+
 impl<H: UiHost> low_level_adapter::CanvasRedrawCx<H> for LayoutCx<'_, H> {
     fn request_redraw(&mut self) {
         LayoutCx::request_redraw(self);

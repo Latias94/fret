@@ -4,10 +4,10 @@ Updated: 2026-05-25
 
 ## Current State
 
-This lane has landed its first adapter seam. It follows ADR 0330 and the retained public-surface
-exit. The retained canvas island is still compatibility-gated, but the common redraw / paint
-invalidation / handled / pointer-capture release operations now live behind a named low-level
-adapter contract:
+This lane has landed its first adapter seam and shrunk one retained edge. It follows ADR 0330 and
+the retained public-surface exit. The retained canvas island is still compatibility-gated, but the
+common redraw / paint invalidation / handled / pointer-capture release operations now live behind a
+named low-level adapter contract:
 
 - `ecosystem/fret-node/src/ui/canvas/widget/low_level_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_low_level_adapter.rs`
@@ -17,10 +17,15 @@ adapter contract:
 `retained_low_level_adapter.rs` is the only file in this first seam that binds those traits to
 retained `EventCx`, `CommandCx`, `LayoutCx`, and `PaintCx`.
 
+`WireCommitCx` now inherits low-level redraw / paint invalidation / pointer-capture release
+operations from `CanvasPointerCaptureReleaseCx`; `wire_drag/retained_commit_cx.rs` only binds the
+wire-commit-specific host, window, and bounds accessors.
+
 ## Next Step
 
-Continue with `NLA-030`: delete or quarantine one retained edge now covered by the adapter seam, or
-split a new behavior-family task for event routing, command dispatch, or paint/prepaint adapters.
+Continue with `NLA-040`: choose the next behavior-family adapter split. Good candidates are event
+routing, command dispatch, or paint/prepaint. Keep the next slice narrow: one behavior family, one
+adapter seam, one source-policy gate.
 
 Expected gates:
 

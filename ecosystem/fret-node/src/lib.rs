@@ -681,9 +681,30 @@ mod surface_policy_tests {
         assert!(UI_CANVAS_LOW_LEVEL_ADAPTER_RS.contains("trait CanvasHandledCx"));
         assert!(UI_CANVAS_LOW_LEVEL_ADAPTER_RS.contains("trait CanvasPointerCaptureReleaseCx"));
         assert!(
+            UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS
+                .contains("trait WireCommitCx<H>:\n    CanvasPointerCaptureReleaseCx<H>")
+        );
+        for forbidden in [
+            "    fn release_pointer_capture(",
+            "    fn request_redraw(",
+            "    fn invalidate_paint(",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS
+                    .split("#[cfg(test)]")
+                    .next()
+                    .unwrap_or(UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS)
+                    .contains(forbidden),
+                "wire commit low-level operations must stay inherited from low_level_adapter; found `{forbidden}`"
+            );
+        }
+        assert!(
             UI_CANVAS_RETAINED_LOW_LEVEL_ADAPTER_RS
                 .contains("impl<H: UiHost> low_level_adapter::CanvasRedrawCx<H> for EventCx")
         );
+        assert!(UI_CANVAS_RETAINED_LOW_LEVEL_ADAPTER_RS.contains(
+            "impl<H: UiHost> low_level_adapter::CanvasPointerCaptureReleaseCx<H> for CommandCx"
+        ));
     }
 
     #[test]

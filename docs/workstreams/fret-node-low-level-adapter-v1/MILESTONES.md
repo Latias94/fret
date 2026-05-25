@@ -39,4 +39,10 @@ Exit criteria:
 - At least one retained edge is deleted or quarantined with a source-policy gate.
 - Next behavior family is split as a narrow task.
 
-Status: Pending.
+Status: Complete.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/retained_commit_cx.rs`
+- `ecosystem/fret-node/src/lib.rs`

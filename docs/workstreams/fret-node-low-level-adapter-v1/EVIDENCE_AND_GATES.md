@@ -17,6 +17,8 @@ Last updated: 2026-05-25
 - `ecosystem/fret-node/src/ui/canvas/widget.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/low_level_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_low_level_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/retained_commit_cx.rs`
 - `docs/workstreams/retained-public-surface-exit-v1/EVIDENCE_AND_GATES.md`
 
 ## 2026-05-25 - NLA-010/NLA-020 first low-level adapter seam
@@ -49,3 +51,32 @@ Notes:
 - `cargo check` / `cargo test` still emit existing `fret-ui` warnings for unexpected cfg
   `unstable-retained-bridge` in `crates/fret-ui/src/tree/layout/clean_geometry.rs` and dead code
   `current_effective_opacity`.
+
+## 2026-05-25 - NLA-030 wire commit retained edge shrink
+
+Claim to verify:
+
+- `WireCommitCx` no longer declares low-level `release_pointer_capture`, `request_redraw`, or
+  `invalidate_paint` methods.
+- Wire commit now inherits those operations from `CanvasPointerCaptureReleaseCx`.
+- `wire_drag/retained_commit_cx.rs` no longer directly calls retained redraw / invalidation /
+  pointer-capture release APIs for this behavior family.
+- The source-policy test prevents the low-level methods from re-entering `WireCommitCx`.
+
+Fresh validation:
+
+- Passed on 2026-05-25:
+  - `cargo fmt --package fret-node --check`
+  - `python3 -m json.tool docs/workstreams/fret-node-low-level-adapter-v1/WORKSTREAM.json`
+  - `python3 tools/check_layering.py`
+  - `python3 tools/check_workstream_catalog.py`
+  - `git diff --check`
+  - `cargo check -p fret-node`
+  - `cargo check -p fret-node --features compat-retained-canvas`
+  - `cargo test -p fret-node --features compat-retained-canvas retained_compatibility_surface_stays_declarative_only`
+  - `cargo test -p fret-node --features compat-retained-canvas retained_canvas_low_level_adapter_policy_helpers_stay_off_retained_bridge`
+
+Notes:
+
+- `CommandCx` preserves the previous no-op pointer-capture release behavior through
+  `retained_low_level_adapter.rs`.
