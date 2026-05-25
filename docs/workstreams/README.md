@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 458
+- Dedicated directories: 459
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2024,6 +2024,7 @@ Rule:
 - `docs/workstreams/fret-node-paint-prepaint-adapter-v1/` — first n/a, latest n/a, 7 markdown docs (closed follow-on that proved the retained node graph prepaint cull-window adapter seam and split paint-root cache-plan work into a new lane; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that split node graph paint-root cache-plan host/bounds/scale-factor route inputs behind a named adapter seam; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-root-cached-edge-build-state-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that isolated node graph paint-root cached edge build-state host/services/scale route inputs behind an adapter seam; includes `WORKSTREAM.json`)
+- `docs/workstreams/fret-node-paint-root-cached-edge-build-state-temp-scene-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that isolated node graph paint-root cached edge/edge-label build-state temporary scene construction behind a build-state helper seam; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-root-cached-edge-label-build-state-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that isolated node graph paint-root cached edge-label build-state host/services/scale route inputs behind an adapter seam; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-root-cached-edge-replay-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that isolated node graph paint-root cached edge and edge-label replay scene sink access behind a cached edge replay adapter seam; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-root-cached-static-scene-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that isolated node graph paint-root cached static group/node scene replay retained field access behind a cached static scene adapter seam; includes `WORKSTREAM.json`)

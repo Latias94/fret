@@ -73,14 +73,12 @@ pub(super) fn paint_tiled_edges_cache<H, M, Cx>(
                 )
             });
 
-        let mut tmp = fret_core::Scene::default();
         let needs_more = {
             let inputs =
                 super::super::build_state_adapter::paint_root_cached_edge_build_state_step_inputs(
                     cx,
                 );
             canvas.paint_edges_build_state_step(
-                &mut tmp,
                 inputs.host,
                 inputs.services,
                 zoom,

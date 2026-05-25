@@ -4,6 +4,8 @@ mod init;
 mod ops;
 #[path = "build_state/step.rs"]
 mod step;
+#[path = "build_state/temp_scene.rs"]
+mod temp_scene;
 
 use crate::ui::canvas::widget::*;
 
@@ -41,7 +43,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     pub(super) fn paint_edges_build_state_step<H: UiHost>(
         &mut self,
-        tmp: &mut fret_core::Scene,
         host: &H,
         services: &mut dyn fret_core::UiServices,
         zoom: f32,
@@ -52,7 +53,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> bool {
         step::paint_edges_build_state_step(
             self,
-            tmp,
             host,
             services,
             zoom,
@@ -65,7 +65,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     pub(super) fn paint_edge_labels_build_state_step<H: UiHost>(
         &mut self,
-        tmp: &mut fret_core::Scene,
         host: &H,
         services: &mut dyn fret_core::UiServices,
         scale_factor: f32,
@@ -76,7 +75,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> bool {
         step::paint_edge_labels_build_state_step(
             self,
-            tmp,
             host,
             services,
             scale_factor,

@@ -78,12 +78,10 @@ pub(super) fn paint_tiled_edge_labels_cache<H, M, Cx>(
             continue;
         }
 
-        let mut tmp = fret_core::Scene::default();
         let needs_more = {
             let inputs = super::super::label_build_state_adapter::
                 paint_root_cached_edge_label_build_state_step_inputs(cx);
             canvas.paint_edge_labels_build_state_step(
-                &mut tmp,
                 inputs.host,
                 inputs.services,
                 inputs.scale_factor,

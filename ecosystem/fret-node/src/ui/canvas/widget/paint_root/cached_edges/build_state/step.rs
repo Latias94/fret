@@ -2,7 +2,6 @@ use super::*;
 
 pub(super) fn paint_edges_build_state_step<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    tmp: &mut fret_core::Scene,
     host: &H,
     services: &mut dyn fret_core::UiServices,
     zoom: f32,
@@ -11,8 +10,9 @@ pub(super) fn paint_edges_build_state_step<H: UiHost, M: NodeGraphCanvasMiddlewa
     wire_budget: &mut WorkBudget,
     marker_budget: &mut WorkBudget,
 ) -> bool {
+    let mut tmp = super::temp_scene::paint_root_cached_edge_build_state_temp_scene();
     let (next_edge, skipped) = canvas.paint_edges_cached_budgeted(
-        tmp,
+        &mut tmp,
         host,
         services,
         &state.edges,
@@ -26,7 +26,7 @@ pub(super) fn paint_edges_build_state_step<H: UiHost, M: NodeGraphCanvasMiddlewa
         &mut state.ops,
         state.edges.len(),
         &mut state.next_edge,
-        tmp,
+        &tmp,
         next_edge,
         skipped,
     )
@@ -34,7 +34,6 @@ pub(super) fn paint_edges_build_state_step<H: UiHost, M: NodeGraphCanvasMiddlewa
 
 pub(super) fn paint_edge_labels_build_state_step<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    tmp: &mut fret_core::Scene,
     host: &H,
     services: &mut dyn fret_core::UiServices,
     scale_factor: f32,
@@ -43,8 +42,9 @@ pub(super) fn paint_edge_labels_build_state_step<H: UiHost, M: NodeGraphCanvasMi
     state: &mut EdgeLabelsBuildState,
     budget: &mut WorkBudget,
 ) -> bool {
+    let mut tmp = super::temp_scene::paint_root_cached_edge_build_state_temp_scene();
     let (next_edge, skipped) = canvas.paint_edge_labels_static_budgeted_cached(
-        tmp,
+        &mut tmp,
         host,
         services,
         scale_factor,
@@ -58,7 +58,7 @@ pub(super) fn paint_edge_labels_build_state_step<H: UiHost, M: NodeGraphCanvasMi
         &mut state.ops,
         state.edges.len(),
         &mut state.next_edge,
-        tmp,
+        &tmp,
         next_edge,
         skipped,
     )

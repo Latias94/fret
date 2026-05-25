@@ -47,12 +47,10 @@ pub(super) fn build_single_rect_edges_cache<H, M, Cx>(
     let mut wire_budget = WorkBudget::new(wire_budget_limit);
     let mut marker_budget = WorkBudget::new(marker_budget_limit);
 
-    let mut tmp = fret_core::Scene::default();
     let needs_more = {
         let inputs =
             super::super::build_state_adapter::paint_root_cached_edge_build_state_step_inputs(cx);
         canvas.paint_edges_build_state_step(
-            &mut tmp,
             inputs.host,
             inputs.services,
             zoom,

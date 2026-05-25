@@ -148,6 +148,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/cached_edges/build_state_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_RETAINED_CX_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_edges/build_state_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_STEP_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/build_state/step.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_TEMP_SCENE_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/build_state/temp_scene.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_SINGLE_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_edges/edges/single.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_TILED_RS: &str =
@@ -4057,6 +4061,66 @@ mod surface_policy_tests {
                 "retained cached edge-label build-state binding should own retained field access `{required}`"
             );
         }
+    }
+
+    #[test]
+    fn paint_root_cached_edge_build_state_temp_scene_adapter_keeps_construction_out_of_route_helpers()
+     {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_TEMP_SCENE_RS
+                    .contains(forbidden),
+                "paint-root cached edge build-state temp scene helper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_TEMP_SCENE_RS
+                .contains("paint_root_cached_edge_build_state_temp_scene"),
+            "cached edge build-state temp scene construction should live behind a named helper"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_TEMP_SCENE_RS
+                .contains("fret_core::Scene::default()"),
+            "cached edge build-state temp scene helper should own fresh scene construction"
+        );
+
+        let route_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_SINGLE_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_TILED_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_SINGLE_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_TILED_RS,
+        ]
+        .join("\n");
+        for forbidden in [
+            "fret_core::Scene::default",
+            "Scene::default",
+            "let mut tmp",
+            "&mut tmp",
+        ] {
+            assert!(
+                !route_sources.contains(forbidden),
+                "cached edge/label route helpers should not construct temporary scenes directly; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_STEP_RS
+                .contains("paint_root_cached_edge_build_state_temp_scene"),
+            "build-state step helpers should obtain temporary scenes through the temp scene helper"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_STEP_RS
+                .contains("finish_build_state_step"),
+            "build-state step helpers should keep existing finish-step op merging"
+        );
     }
 
     #[test]

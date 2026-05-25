@@ -45,12 +45,10 @@ pub(super) fn build_single_rect_edge_labels_cache<H, M, Cx>(
     let mut budget = WorkBudget::new(budget_limit);
     let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
 
-    let mut tmp = fret_core::Scene::default();
     let needs_more = {
         let inputs = super::super::label_build_state_adapter::
             paint_root_cached_edge_label_build_state_step_inputs(cx);
         canvas.paint_edge_labels_build_state_step(
-            &mut tmp,
             inputs.host,
             inputs.services,
             inputs.scale_factor,
