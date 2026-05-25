@@ -1,6 +1,6 @@
 # Fret Node Paint Root Frame Clip Adapter v1 - TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## FCA-M0 - Scope Freeze
@@ -21,3 +21,12 @@ Last updated: 2026-05-25
   Handoff: Keep path-cache diagnostics, background paint, grid paint, cached/immediate passes, and
   tail cleanup out of scope. Complete; root frame clip emission now delegates through the frame clip
   adapter while the retained `PaintCx::scene` binding lives in `frame_clip_retained_cx.rs`.
+
+## Closeout
+
+- [x] FCA-030 [owner=codex] [deps=FCA-020] [scope=docs/workstreams/fret-node-paint-root-frame-clip-adapter-v1]
+  Goal: Close the lane and split residual frame paint operation families into follow-on candidates.
+  Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
+  Evidence: `CLOSEOUT_AUDIT_2026-05-25.md`
+  Handoff: This lane is closed. Start a separate follow-on for path-cache diagnostics, background
+  paint, grid paint, tail cleanup, or cached/immediate pass clip emission.

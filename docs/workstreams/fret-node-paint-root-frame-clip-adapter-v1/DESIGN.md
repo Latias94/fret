@@ -1,6 +1,6 @@
 # Fret Node Paint Root Frame Clip Adapter v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## Why This Lane Exists
@@ -68,3 +68,9 @@ not compute viewport geometry, read diagnostics state, or paint background/grid 
 
 This lane can close when the root frame clip push is isolated behind the adapter, source-policy
 coverage locks the seam, and the validation gates pass.
+
+## Closeout State
+
+Closed on 2026-05-25 with `CLOSEOUT_AUDIT_2026-05-25.md`. Root frame clip push now uses the frame
+clip adapter seam. Path-cache diagnostics, background paint, grid paint, tail cleanup, and
+cached/immediate pass clip emission remain separate follow-on candidates.

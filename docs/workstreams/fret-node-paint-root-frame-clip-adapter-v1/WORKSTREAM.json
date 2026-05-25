@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "fret-node-paint-root-frame-clip-adapter-v1",
   "title": "Fret Node Paint Root Frame Clip Adapter v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-25",
   "scope_kind": "execution",
   "follow_on_of": "fret-node-paint-root-frame-setup-adapter-v1",
@@ -27,6 +27,10 @@
     {
       "role": "next",
       "path": "docs/workstreams/fret-node-paint-root-frame-clip-adapter-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fret-node-paint-root-frame-clip-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md"
     }
   ],
   "repro": {
@@ -55,6 +59,7 @@
   ],
   "evidence": [
     "docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
+    "docs/workstreams/fret-node-paint-root-frame-clip-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
     "docs/workstreams/fret-node-paint-root-frame-clip-adapter-v1/DESIGN.md",
     "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame.rs",
     "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame_clip_adapter.rs",
@@ -66,7 +71,7 @@
     "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue only for the root frame clip emission seam. Keep path-cache diagnostics, background paint, grid paint, cached/immediate passes, and tail cleanup separate."
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed. Start a separate operation-family follow-on for path-cache diagnostics, background paint, grid paint, tail cleanup, or cached/immediate pass clip emission; do not reopen this lane for a broad scene adapter."
   }
 }

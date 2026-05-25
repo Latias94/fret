@@ -1,24 +1,23 @@
 # Fret Node Paint Root Frame Clip Adapter v1 - Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## Current State
 
-This lane is a narrow follow-on from `fret-node-paint-root-frame-setup-adapter-v1`. The parent lane
-closed after proving bounds/viewport/render-cull route inputs behind a frame viewport adapter and
-split root frame clip scene emission as the smallest next candidate.
+This lane is closed. It is a narrow follow-on from
+`fret-node-paint-root-frame-setup-adapter-v1`. The parent lane closed after proving
+bounds/viewport/render-cull route inputs behind a frame viewport adapter and split root frame clip
+scene emission as the smallest next candidate.
 
-## Active Task
+## Final State
 
-- Task ID: FCA-020
+- Task ID: FCA-030
 - Owner: codex
-- Files: `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame.rs`, new frame clip adapter
-  modules, `ecosystem/fret-node/src/lib.rs`
-- Validation: `cargo test -p fret-node --features compat-retained-canvas paint_root_frame_clip_adapter`
+- Files: `CLOSEOUT_AUDIT_2026-05-25.md`, workstream status docs
+- Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
 - Status: DONE
-- Review: final gates passed; ready for commit
-- Evidence: `docs/workstreams/fret-node-paint-root-frame-clip-adapter-v1/EVIDENCE_AND_GATES.md`
+- Evidence: `docs/workstreams/fret-node-paint-root-frame-clip-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
 
 ## Decisions Since Open
 
@@ -29,6 +28,7 @@ split root frame clip scene emission as the smallest next candidate.
 - Tail `SceneOp::PopClip` remains outside this slice.
 - Background paint, grid paint, path-cache diagnostics, and cached/immediate pass clip emission are
   explicit non-goals.
+- FCA-030 closed this lane and routes future work to separate operation-family follow-ons.
 
 ## Blockers
 
@@ -36,6 +36,6 @@ split root frame clip scene emission as the smallest next candidate.
 
 ## Next Recommended Action
 
-- Commit FCA-020.
-- After commit, close this lane or split a narrow follow-on for path-cache diagnostics, background
-  paint, grid paint, or tail cleanup.
+- Do not reopen this lane for more implementation.
+- Start a narrow follow-on for path-cache diagnostics or background paint next, unless fresh
+  evidence shows grid paint or tail cleanup is the smaller honest seam.

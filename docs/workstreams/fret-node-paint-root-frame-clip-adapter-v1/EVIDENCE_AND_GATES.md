@@ -1,6 +1,6 @@
 # Fret Node Paint Root Frame Clip Adapter v1 - Evidence And Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## Smallest Current Repro
@@ -37,6 +37,7 @@ git diff --check
 
 - `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
 - `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/FRAME_SETUP_SCOPE_AUDIT_2026-05-25.md`
+- `docs/workstreams/fret-node-paint-root-frame-clip-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame_clip_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame_clip_retained_cx.rs`
@@ -62,4 +63,11 @@ Fresh validation:
 - `python3 tools/check_workstream_catalog.py` - passed; validated 448 dedicated directories and 47
   standalone markdown files.
 - `python3 tools/check_layering.py` - passed.
+- `git diff --check` - passed.
+
+Closeout validation:
+
+- `python3 -m json.tool docs/workstreams/fret-node-paint-root-frame-clip-adapter-v1/WORKSTREAM.json` -
+  passed.
+- `python3 tools/check_workstream_catalog.py` - passed.
 - `git diff --check` - passed.
