@@ -112,6 +112,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_invalidation.rs");
     const UI_CANVAS_WIDGET_PREPAINT_CULL_WINDOW_ADAPTER_RS: &str =
         include_str!("ui/canvas/widget/prepaint_cull_window_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cache_plan.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cache_plan_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cache_plan_retained_cx.rs");
     const UI_CANVAS_WIDGET_REDRAW_REQUEST_RS: &str =
         include_str!("ui/canvas/widget/redraw_request.rs");
     const UI_CANVAS_COMMAND_ADAPTER_RS: &str = include_str!("ui/canvas/widget/command_adapter.rs");
@@ -3006,6 +3012,67 @@ mod surface_policy_tests {
             !UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_SHIFT_RS
                 .contains("debug_record_node_graph_cull_window_shift"),
             "cull-window key shift should not call retained debug recording directly"
+        );
+    }
+
+    #[test]
+    fn paint_root_cache_plan_adapter_keeps_route_inputs_off_retained_cx() {
+        let cache_plan_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_ADAPTER_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !cache_plan_sources.contains(forbidden),
+                "paint-root cache-plan adapter helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_ADAPTER_RS
+                .contains("trait PaintRootCachePlanCx"),
+            "paint-root cache-plan preparation should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_root_cache_plan_host",
+            "paint_root_cache_plan_bounds",
+            "paint_root_cache_plan_scale_factor",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_ADAPTER_RS.contains(required),
+                "paint-root cache-plan adapter is missing route-input contract `{required}`"
+            );
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RS.contains(required),
+                "paint-root cache-plan preparation should use adapter route input `{required}`"
+            );
+        }
+
+        for forbidden in ["cx.app", "cx.bounds", "cx.scale_factor"] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RS.contains(forbidden),
+                "paint-root cache-plan preparation should not read retained PaintCx fields directly; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RETAINED_CX_RS
+                .contains("impl<H: UiHost> super::cache_plan_adapter::PaintRootCachePlanCx<H>"),
+            "retained cache-plan binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RETAINED_CX_RS.contains("for PaintCx<'_, H>"),
+            "retained cache-plan binding should isolate PaintCx to the retained adapter module"
         );
     }
 

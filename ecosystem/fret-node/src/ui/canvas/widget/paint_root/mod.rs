@@ -1,4 +1,6 @@
 mod cache_plan;
+mod cache_plan_adapter;
+mod cache_plan_retained_cx;
 mod cached;
 mod edge_anchor;
 mod frame;

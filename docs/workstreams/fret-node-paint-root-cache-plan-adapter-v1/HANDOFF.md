@@ -13,10 +13,12 @@ The first implementation slice should target `paint_root/cache_plan.rs` only.
 
 ## Active Task
 
-- Task ID: CPA-010
-- Owner: unassigned
-- Files: `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1`
-- Validation: `python3 -m json.tool docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/WORKSTREAM.json`
+- Task ID: CPA-030
+- Owner: planner
+- Files: `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/EVIDENCE_AND_GATES.md`,
+  `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/HANDOFF.md`,
+  optional closeout audit
+- Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
 - Status: NEEDS_CONTEXT
 - Review: not started
 - Evidence: `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/EVIDENCE_AND_GATES.md`
@@ -26,6 +28,9 @@ The first implementation slice should target `paint_root/cache_plan.rs` only.
 - Cache-plan preparation is the first paint-root adapter proof.
 - Frame setup, static layer replay/store, cached/immediate passes, and tail cleanup are explicit
   non-goals for the first implementation slice.
+- CPA-010 froze the cache-plan-only scope.
+- CPA-020 introduced `PaintRootCachePlanCx` and isolated retained `PaintCx` binding in
+  `cache_plan_retained_cx.rs`.
 
 ## Blockers
 
@@ -33,4 +38,5 @@ The first implementation slice should target `paint_root/cache_plan.rs` only.
 
 ## Next Recommended Action
 
-- Execute CPA-010 to freeze scope, then CPA-020 to introduce the cache-plan context seam.
+- Execute CPA-030: close this lane or split the next paint family. Candidate follow-ons are frame
+  setup, static layer replay/store, or scene pass emission.

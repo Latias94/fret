@@ -11,6 +11,13 @@ Exit criteria:
 - Non-goals exclude frame setup and scene emission.
 - Gate set is recorded.
 
+Status: Complete.
+
+Evidence:
+
+- `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/DESIGN.md`
+- `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/EVIDENCE_AND_GATES.md`
+
 ## M1 - Cache-Plan Adapter Proof
 
 Exit criteria:
@@ -24,6 +31,15 @@ Primary gates:
 - `cargo test -p fret-node --features compat-retained-canvas paint_root_cache_plan_adapter`
 - `cargo check -p fret-node`
 - `cargo check -p fret-node --features compat-retained-canvas`
+
+Status: Complete.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan.rs`
+- `ecosystem/fret-node/src/lib.rs`
 
 ## M2 - Closeout Or Follow-On Split
 

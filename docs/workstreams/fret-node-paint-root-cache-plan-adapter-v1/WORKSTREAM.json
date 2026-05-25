@@ -54,6 +54,8 @@
     "docs/workstreams/fret-node-paint-prepaint-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
     "docs/workstreams/fret-node-paint-prepaint-adapter-v1/PAINT_ROOT_SCOPE_AUDIT_2026-05-25.md",
     "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan_adapter.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan_retained_cx.rs",
     "ecosystem/fret-node/src/lib.rs"
   ],
   "adr_refs": [
