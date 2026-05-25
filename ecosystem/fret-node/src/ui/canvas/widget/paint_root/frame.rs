@@ -24,13 +24,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cache::begin_paint_root_caches(self);
         cache::record_path_cache_stats(self, cx);
 
-        let viewport = Self::viewport_from_pan_zoom(cx.bounds, snapshot.pan, snapshot.zoom);
-        let viewport_rect = viewport.visible_canvas_rect();
-        let viewport_w = viewport_rect.size.width.0;
-        let viewport_h = viewport_rect.size.height.0;
-        let viewport_origin_x = viewport_rect.origin.x.0;
-        let viewport_origin_y = viewport_rect.origin.y.0;
-        let render_cull_rect = self.compute_render_cull_rect(snapshot, cx.bounds);
+        let frame =
+            super::frame_viewport_adapter::prepare_paint_root_frame_viewport(self, &*cx, snapshot);
+        let viewport_rect = frame.viewport_rect;
+        let render_cull_rect = frame.render_cull_rect;
 
         cx.scene.push(SceneOp::PushClipRect {
             rect: viewport_rect,
@@ -46,13 +43,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             view_interacting,
         );
 
-        PaintRootFrameViewport {
-            viewport_rect,
-            viewport_w,
-            viewport_h,
-            viewport_origin_x,
-            viewport_origin_y,
-            render_cull_rect,
-        }
+        frame
     }
 }

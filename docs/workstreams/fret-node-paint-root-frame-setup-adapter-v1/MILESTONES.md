@@ -47,3 +47,12 @@ Exit criteria:
 - Bounds/viewport route inputs no longer require direct retained `PaintCx` reads in frame setup.
 - Source-policy coverage locks the frame viewport adapter boundary.
 - Diagnostics, clip emission, background paint, and grid paint remain out of scope.
+
+Status: Complete.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame_viewport_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame_viewport_retained_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame.rs`
+- `ecosystem/fret-node/src/lib.rs`

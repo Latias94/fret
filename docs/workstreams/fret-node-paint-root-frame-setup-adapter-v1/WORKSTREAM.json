@@ -49,8 +49,11 @@
     "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
     "docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/FRAME_SETUP_SCOPE_AUDIT_2026-05-25.md",
     "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame_viewport_adapter.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame_viewport_retained_cx.rs",
     "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame/cache.rs",
-    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame/background.rs"
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame/background.rs",
+    "ecosystem/fret-node/src/lib.rs"
   ],
   "adr_refs": [
     "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",

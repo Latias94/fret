@@ -23,10 +23,11 @@ Last updated: 2026-05-25
 
 ## FSA-M2 - First Frame Seam Or Closeout
 
-- [ ] FSA-030 [owner=planner] [deps=FSA-020] [scope=docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1]
+- [x] FSA-030 [owner=codex] [deps=FSA-020] [scope=ecosystem/fret-node/src/ui/canvas/widget/paint_root]
   Goal: Implement the first narrow frame seam for bounds/viewport route inputs.
   Validation: `cargo test -p fret-node --features compat-retained-canvas paint_root_frame_viewport_adapter`
   Evidence: frame viewport adapter modules, `paint_root/frame.rs`, source-policy test in
   `ecosystem/fret-node/src/lib.rs`
   Handoff: Keep cache stats diagnostics, clip emission, background paint, and grid paint out of
-  scope.
+  scope. Complete; frame setup now delegates bounds/viewport/render-cull preparation through the
+  frame viewport adapter while retaining diagnostics and scene emission in `frame.rs`.

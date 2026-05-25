@@ -118,6 +118,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/cache_plan_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RETAINED_CX_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cache_plan_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_viewport_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_viewport_retained_cx.rs");
     const UI_CANVAS_WIDGET_REDRAW_REQUEST_RS: &str =
         include_str!("ui/canvas/widget/redraw_request.rs");
     const UI_CANVAS_COMMAND_ADAPTER_RS: &str = include_str!("ui/canvas/widget/command_adapter.rs");
@@ -3073,6 +3079,69 @@ mod surface_policy_tests {
         assert!(
             UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RETAINED_CX_RS.contains("for PaintCx<'_, H>"),
             "retained cache-plan binding should isolate PaintCx to the retained adapter module"
+        );
+    }
+
+    #[test]
+    fn paint_root_frame_viewport_adapter_keeps_bounds_route_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_ADAPTER_RS.contains(forbidden),
+                "paint-root frame viewport adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_ADAPTER_RS
+                .contains("trait PaintRootFrameViewportCx"),
+            "frame viewport preparation should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_root_frame_bounds",
+            "prepare_paint_root_frame_viewport",
+            "viewport_from_pan_zoom",
+            "compute_render_cull_rect",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_ADAPTER_RS.contains(required),
+                "frame viewport adapter is missing route-preparation contract `{required}`"
+            );
+        }
+
+        for forbidden in [
+            "cx.bounds",
+            "viewport_from_pan_zoom(cx.",
+            "compute_render_cull_rect(snapshot, cx.",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_RS.contains(forbidden),
+                "paint-root frame setup should not read retained PaintCx bounds for viewport preparation directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_RS
+                .contains("frame_viewport_adapter::prepare_paint_root_frame_viewport"),
+            "paint-root frame setup should delegate viewport preparation to the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::frame_viewport_adapter::PaintRootFrameViewportCx<H>"
+            ),
+            "retained frame viewport binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained frame viewport binding should isolate PaintCx to the retained adapter module"
         );
     }
 

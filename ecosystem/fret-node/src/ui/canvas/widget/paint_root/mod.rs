@@ -4,6 +4,8 @@ mod cache_plan_retained_cx;
 mod cached;
 mod edge_anchor;
 mod frame;
+mod frame_viewport_adapter;
+mod frame_viewport_retained_cx;
 mod immediate;
 mod immediate_pass;
 mod node_layers;
