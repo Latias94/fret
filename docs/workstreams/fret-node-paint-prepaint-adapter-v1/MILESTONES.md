@@ -52,6 +52,14 @@ Primary gates:
 - `cargo check -p fret-node`
 - `cargo check -p fret-node --features compat-retained-canvas`
 
+Status: Complete.
+
+Evidence:
+
+- `docs/workstreams/fret-node-paint-prepaint-adapter-v1/PAINT_ROOT_SCOPE_AUDIT_2026-05-25.md`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_paint.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root_helpers.rs`
+
 ## M3 - Closeout
 
 Exit criteria:

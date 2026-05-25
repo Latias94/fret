@@ -47,6 +47,7 @@ git diff --check
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window_shift.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_root_helpers.rs`
 - `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/fret-node-paint-prepaint-adapter-v1/PAINT_ROOT_SCOPE_AUDIT_2026-05-25.md`
 
 ## Initial Scope Evidence - 2026-05-25
 
@@ -85,6 +86,39 @@ Evidence:
 - `surface_policy_tests::paint_prepaint_adapter_keeps_cull_window_route_preparation_off_retained_cx`
   locks the adapter/helper source away from retained Cx names and keeps retained route preparation
   out of the lifecycle entrypoint.
+
+Fresh validation:
+
+- `cargo test -p fret-node --features compat-retained-canvas paint_prepaint_adapter` - passed; 1
+  test passed, 1161 filtered out.
+- `cargo check -p fret-node` - passed.
+- `cargo check -p fret-node --features compat-retained-canvas` - passed.
+- `python3 -m json.tool docs/workstreams/fret-node-paint-prepaint-adapter-v1/WORKSTREAM.json` -
+  passed.
+- `python3 tools/check_layering.py` - passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 445 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+## NPA-030 Paint Root Scope Audit - 2026-05-25
+
+Claim:
+
+- Paint root scene emission is not one small adapter seam.
+- A broad `PaintCx` adapter for `canvas.paint_root(cx)` would hide multiple retained-context
+  operation families behind one large trait.
+- The next paint follow-on should target cache-plan preparation first because it needs host access,
+  bounds, and scale factor but does not directly mutate the scene.
+
+Evidence:
+
+- `retained_widget_runtime_paint.rs` only owns lifecycle theme sync and root paint dispatch.
+- `paint_root/cached.rs` combines observation, view-state sync, frame prep, cache-plan prep,
+  cached/immediate pass selection, and tail cleanup.
+- `paint_root/frame.rs` mixes bounds, scene mutation, cache diagnostics, background, and grid paint.
+- `paint_root/cache_plan.rs` is the best next slice: it uses `app`, `bounds`, and `scale_factor`
+  for derived output and cache-plan preparation without directly emitting scene ops.
+- `PAINT_ROOT_SCOPE_AUDIT_2026-05-25.md` records the split table and follow-on recommendation.
 
 Fresh validation:
 

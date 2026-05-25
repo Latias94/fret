@@ -14,13 +14,18 @@ NPA-020 completed the first slice by moving prepaint cull-window route preparati
 the adapter and forwards; `retained_widget_cull_window_shift.rs` records debug output through the
 adapter seam.
 
+NPA-030 audited paint root scene emission and decided not to introduce a broad paint-root adapter in
+this lane. The paint root has multiple retained-context operation families. The recommended
+follow-on is a narrower cache-plan adapter lane: `fret-node-paint-root-cache-plan-adapter-v1`.
+
 ## Active Task
 
-- Task ID: NPA-030
-- Owner: unassigned
-- Files: `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_paint.rs`,
-  `ecosystem/fret-node/src/ui/canvas/widget/paint_root_helpers.rs`
-- Validation: source audit plus `cargo check -p fret-node --features compat-retained-canvas`
+- Task ID: NPA-040
+- Owner: planner
+- Files: `docs/workstreams/fret-node-paint-prepaint-adapter-v1/EVIDENCE_AND_GATES.md`,
+  `docs/workstreams/fret-node-paint-prepaint-adapter-v1/HANDOFF.md`,
+  optional closeout audit
+- Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
 - Status: NEEDS_CONTEXT
 - Review: not started
 - Evidence: `docs/workstreams/fret-node-paint-prepaint-adapter-v1/EVIDENCE_AND_GATES.md`
@@ -30,6 +35,8 @@ adapter seam.
 - Paint/prepaint is split from event routing and command dispatch.
 - The first proof should target prepaint cull-window operations, not the full paint tree.
 - NPA-020 proved the prepaint cull-window seam without migrating paint root scene emission.
+- NPA-030 found that paint root scene emission is not a single operation family and should split
+  into a narrower cache-plan adapter follow-on before frame or scene-emission adapters.
 
 ## Blockers
 
@@ -37,5 +44,5 @@ adapter seam.
 
 ## Next Recommended Action
 
-- Execute NPA-030 as a source audit of paint root scene emission. If the audit finds more than one
-  operation family, split the next task instead of broadening this lane.
+- Execute NPA-040: close this lane or scaffold the recommended
+  `fret-node-paint-root-cache-plan-adapter-v1` follow-on.

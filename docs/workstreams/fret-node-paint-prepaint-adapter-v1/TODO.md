@@ -23,11 +23,13 @@ Last updated: 2026-05-25
 
 ## NPA-M2 - Paint Root Adapter Candidate
 
-- [ ] NPA-030 [owner=unassigned] [deps=NPA-020] [scope=ecosystem/fret-node/src/ui/canvas/widget]
+- [x] NPA-030 [owner=codex] [deps=NPA-020] [scope=ecosystem/fret-node/src/ui/canvas/widget]
   Goal: Audit whether paint root scene emission has one small adapter seam or should split again.
   Validation: source audit plus `cargo check -p fret-node --features compat-retained-canvas`
-  Evidence: `retained_widget_runtime_paint.rs`, `paint_root_helpers.rs`, follow-on note if split.
-  Handoff: If more than one operation family is involved, create a narrower follow-on instead.
+  Evidence: `retained_widget_runtime_paint.rs`, `paint_root_helpers.rs`,
+  `PAINT_ROOT_SCOPE_AUDIT_2026-05-25.md`
+  Handoff: Complete. Paint root must split; recommended follow-on is
+  `fret-node-paint-root-cache-plan-adapter-v1`.
 
 ## NPA-M3 - Closeout Or Follow-On Split
 
@@ -35,4 +37,5 @@ Last updated: 2026-05-25
   Goal: Close this paint/prepaint adapter lane or split the next paint-family follow-on.
   Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
   Evidence: `EVIDENCE_AND_GATES.md`, `HANDOFF.md`, optional closeout audit.
-  Handoff: Broad paint tree migration remains explicitly out of scope unless split.
+  Handoff: Use the NPA-030 audit to close this lane and optionally scaffold
+  `fret-node-paint-root-cache-plan-adapter-v1`.
