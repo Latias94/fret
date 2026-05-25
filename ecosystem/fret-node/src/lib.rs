@@ -144,6 +144,14 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/cached_edges/edges/replay.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_REPLAY_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_edges/labels/replay.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/build_state_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/build_state_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_SINGLE_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/edges/single.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_TILED_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/edges/tiled.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_ADAPTER_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_static_scene_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_RETAINED_CX_RS: &str =
@@ -3864,6 +3872,94 @@ mod surface_policy_tests {
             UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RETAINED_CX_RS.contains("self.scene"),
             "retained cached edge replay binding should own retained scene access"
         );
+    }
+
+    #[test]
+    fn paint_root_cached_edge_build_state_adapter_keeps_route_inputs_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+            "self.app",
+            "self.services",
+            "self.scale_factor",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_ADAPTER_RS
+                    .contains(forbidden),
+                "paint-root cached edge build-state adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_ADAPTER_RS
+                .contains("trait PaintRootCachedEdgeBuildStateCx"),
+            "cached edge build-state route inputs should live behind a named adapter seam"
+        );
+        for required in [
+            "PaintRootCachedEdgeBuildStateStepInputs",
+            "paint_root_cached_edge_build_state_host",
+            "paint_root_cached_edge_build_state_step_inputs",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_ADAPTER_RS.contains(required),
+                "cached edge build-state adapter is missing route-input contract `{required}`"
+            );
+        }
+
+        let edge_build_state_route_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_SINGLE_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_TILED_RS,
+        ]
+        .join("\n");
+        for forbidden in [
+            "PaintCx",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+            "init_edge_labels_build_state",
+            "paint_edge_labels_build_state_step",
+        ] {
+            assert!(
+                !edge_build_state_route_sources.contains(forbidden),
+                "cached edge build-state route helpers should not depend on retained fields or label build-state; found `{forbidden}`"
+            );
+        }
+        for required in [
+            "paint_root_cached_edge_build_state_host",
+            "paint_root_cached_edge_build_state_step_inputs",
+        ] {
+            assert!(
+                edge_build_state_route_sources.contains(required),
+                "cached edge build-state route helpers should obtain route inputs through the adapter; missing `{required}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::build_state_adapter::PaintRootCachedEdgeBuildStateCx<H>"
+            ),
+            "retained cached edge build-state binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained cached edge build-state binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in ["self.app", "self.services", "self.scale_factor"] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_RETAINED_CX_RS
+                    .contains(required),
+                "retained cached edge build-state binding should own retained field access `{required}`"
+            );
+        }
     }
 
     #[test]
