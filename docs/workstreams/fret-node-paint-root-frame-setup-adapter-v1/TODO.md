@@ -1,6 +1,6 @@
 # Fret Node Paint Root Frame Setup Adapter v1 - TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## FSA-M0 - Scope And Evidence Freeze
@@ -31,3 +31,12 @@ Last updated: 2026-05-25
   Handoff: Keep cache stats diagnostics, clip emission, background paint, and grid paint out of
   scope. Complete; frame setup now delegates bounds/viewport/render-cull preparation through the
   frame viewport adapter while retaining diagnostics and scene emission in `frame.rs`.
+
+## Closeout
+
+- [x] FSA-040 [owner=codex] [deps=FSA-030] [scope=docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1]
+  Goal: Close the lane and split residual frame setup operation families into follow-on candidates.
+  Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
+  Evidence: `CLOSEOUT_AUDIT_2026-05-25.md`
+  Handoff: This lane is closed. Start a separate follow-on for clip scene emission, diagnostics,
+  background paint, or grid paint.

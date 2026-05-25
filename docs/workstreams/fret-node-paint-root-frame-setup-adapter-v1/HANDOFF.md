@@ -1,6 +1,6 @@
 # Fret Node Paint Root Frame Setup Adapter v1 - Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## Current State
@@ -8,19 +8,18 @@ Last updated: 2026-05-25
 This lane is a narrow follow-on from `fret-node-paint-root-cache-plan-adapter-v1`. The parent lane
 proved cache-plan host/bounds/scale-factor route inputs behind an adapter seam.
 
-The frame setup operation-family audit is complete, and the first implementation seam is complete:
-bounds/viewport/render-cull route inputs now go through a frame viewport adapter.
+This lane is closed. The frame setup operation-family audit is complete, and the first
+implementation seam is complete: bounds/viewport/render-cull route inputs now go through a frame
+viewport adapter.
 
-## Active Task
+## Final State
 
-- Task ID: FSA-030
+- Task ID: FSA-040
 - Owner: codex
-- Files: `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame.rs`,
-  new frame viewport adapter modules, `ecosystem/fret-node/src/lib.rs`
-- Validation: `cargo test -p fret-node --features compat-retained-canvas paint_root_frame_viewport_adapter`
+- Files: `CLOSEOUT_AUDIT_2026-05-25.md`, workstream status docs
+- Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
 - Status: DONE
-- Review: final gates passed; ready for closeout or a narrow follow-on split after commit
-- Evidence: `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/EVIDENCE_AND_GATES.md`
+- Evidence: `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
 
 ## Decisions Since Open
 
@@ -33,6 +32,7 @@ bounds/viewport/render-cull route inputs now go through a frame viewport adapter
   `frame_viewport_retained_cx.rs`.
 - Cache stats diagnostics, clip emission, background paint, and grid paint deliberately remain in
   `frame.rs`.
+- FSA-040 closed this lane and routes future work to separate operation-family follow-ons.
 
 ## Blockers
 
@@ -40,6 +40,6 @@ bounds/viewport/render-cull route inputs now go through a frame viewport adapter
 
 ## Next Recommended Action
 
-- Run final lane gates and commit FSA-030.
-- After that, close this lane or split a new follow-on for one operation family only:
-  cache stats diagnostics, clip emission, background paint, or grid paint.
+- Do not reopen this lane for more implementation.
+- Start a narrow follow-on for clip scene emission first, unless fresh evidence shows diagnostics,
+  background paint, or grid paint is the smaller honest seam.

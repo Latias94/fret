@@ -1,6 +1,6 @@
 # Fret Node Paint Root Frame Setup Adapter v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## Why This Lane Exists
@@ -64,3 +64,9 @@ Audit first. If a first implementation is selected, prefer route-input seams tha
 
 This lane can close when frame setup has either one narrow adapter proof or a documented split into
 the next paint-root follow-on.
+
+## Closeout State
+
+Closed on 2026-05-25 with `CLOSEOUT_AUDIT_2026-05-25.md`. Bounds/viewport/render-cull route inputs
+now use the frame viewport adapter seam. Diagnostics, clip scene emission, background paint, and
+grid paint remain split follow-on candidates.
