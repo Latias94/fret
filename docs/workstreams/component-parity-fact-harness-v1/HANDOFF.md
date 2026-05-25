@@ -22,6 +22,15 @@ Current state:
 - CPF-090 is complete for suite summary generation: the shadcn v2 suite report now has an
   `agent_packet`, and it can be refreshed from existing report artifacts with
   `--suite-from-existing-reports` when historical target sidecars are not available.
+- CPF-065 is complete for the exporter slice: new diagnostics bundle schema2 output includes a
+  first-class `tables.text_paint` table for text input, renderer text perf, widget measure, paint
+  widget, and text prepare rows.
+- CPF-070 is complete for the packet slice: upstream DOM role/name/state/relation/focusability
+  facts and Fret bundle semantics flags/actions/relations are now included in agent packets.
+- CPF-080 is complete for the first adapter slice:
+  `docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json`
+  maps Material spec, MUI, Compose Material3, and Fret Material3 Button references into the same
+  packet shape.
 
 How to continue:
 
@@ -30,8 +39,8 @@ How to continue:
 3. If only `hardening_queue` is non-empty, add live source/Fret facts before broadening coverage.
 4. Promote stable rows through `gate_queue` into component fixtures, diag scripts, or mechanism
    harness cases.
-5. Keep Material 3 support as a source adapter into the same packet shape; do not fork a separate
-   harness unless the fact model proves incompatible.
+5. For Material 3, attach a real Material Button diagnostics bundle and an upstream DOM snapshot
+   next; the adapter already emits the right repair/gate queues.
 
 Residual risk:
 
@@ -39,6 +48,9 @@ Residual risk:
   proves discovery power.
 - Current source facts still include curated prose as context; future rows should prefer
   `upstream.dom_target_ids` when upstream DOM/CSS evidence exists.
-- Fret paint/text facts are still hints from layout sidecar labels and bundle semantics. Diagnostics
-  needs first-class paint/text tables before claiming full rendered paint parity.
-- CPF-070 should add interaction/semantics facts next.
+- Historical Button Group bundles predate `tables.text_paint`, so the pilot has 0 Fret text/paint
+  table rows even though new diagnostics exports the table. Refresh the Button Group diag evidence
+  before claiming rendered text/paint parity.
+- The Material 3 pilot intentionally reports `needs_repair` because it has no live upstream DOM or
+  Fret diagnostics evidence attached yet; treat that as the next evidence-capture slice, not as a
+  component defect.

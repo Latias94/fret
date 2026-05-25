@@ -62,11 +62,31 @@ Completed criteria:
 
 ## M3 - Material Adapter
 
-Status: pending.
+Status: complete for the first adapter slice on 2026-05-25.
 
-Exit criteria:
+Completed criteria:
 
 - A Material 3 component slice maps spec, MUI, and Compose facts into the same report/agent packet
   shape.
 - The adapter keeps Material policy in the ecosystem layer and promotes only reusable mechanism
   gaps inward.
+
+Evidence:
+
+- `tools/parity-discovery/fixtures/material3_button_adapter_v1.json`
+- `docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json`
+- `ecosystem/fret-ui-material3/src/button.rs`
+- `ecosystem/fret-ui-material3/src/tokens/button.rs`
+
+## M4 - Semantics and Text/Paint Facts
+
+Status: complete for the first schema2 + packet slice on 2026-05-25.
+
+Completed criteria:
+
+- Agent packets now include upstream DOM semantics/interaction facts from role/name/state/relation
+  attributes and implicit control roles.
+- Agent packets now include Fret semantics/interaction facts from bundle schema2 role, label,
+  flags, actions, relations, active-descendant, and scroll fields.
+- Fret diagnostics schema2 now exports a first-class `tables.text_paint` table with text input,
+  renderer text perf, widget measure, paint widget, and text prepare rows.

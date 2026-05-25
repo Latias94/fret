@@ -29,7 +29,7 @@
     }
   ],
   "repro": {
-    "summary": "Generate the Button Group pilot report with an agent_packet from upstream DOM snapshots plus Fret layout sidecars, then validate the report and workstream state.",
+    "summary": "Generate shadcn and Material adapter reports, validate JSON, and verify schema2 text/paint table export.",
     "commands": [
       "python -m py_compile tools/parity-discovery/shadcn_parity_discovery.py",
       "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json",
@@ -37,7 +37,10 @@
       "python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v2.json --suite-from-existing-reports --suite-output docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json",
       "python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json | Out-Null",
       "python -m json.tool docs/workstreams/component-parity-fact-harness-v1/WORKSTREAM.json | Out-Null",
-      "python tools/check_workstream_catalog.py"
+      "python tools/check_workstream_catalog.py",
+      "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/material3_button_adapter_v1.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json",
+      "python -m json.tool docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json | Out-Null",
+      "cargo test -p fret-bootstrap --lib --features \"ui-app-driver diagnostics\" schema2_exports_text_paint_facts_table_from_debug_snapshots"
     ]
   },
   "gates": [
@@ -68,6 +71,18 @@
     {
       "name": "workstream-catalog",
       "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "material3-button-adapter-pilot",
+      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/material3_button_adapter_v1.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json"
+    },
+    {
+      "name": "material3-button-adapter-json",
+      "command": "python -m json.tool docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json | Out-Null"
+    },
+    {
+      "name": "schema2-text-paint-table",
+      "command": "cargo test -p fret-bootstrap --lib --features \"ui-app-driver diagnostics\" schema2_exports_text_paint_facts_table_from_debug_snapshots"
     }
   ],
   "evidence": [
@@ -78,7 +93,10 @@
     "docs/workstreams/component-parity-fact-harness-v1/artifacts/shadcn_parity_suite_report_v2_agent_summary.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json",
     "docs/workstreams/shadcn-parity-harness-v1/README.md",
-    "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640214741/ai.packet"
+    "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640214741/ai.packet",
+    "ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs",
+    "tools/parity-discovery/fixtures/material3_button_adapter_v1.json",
+    "docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json"
   ],
   "upstream_refs": [
     "repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx",
@@ -87,7 +105,10 @@
     "repo-ref/ui/apps/v4/registry/new-york-v4/examples/button-group-select.tsx",
     "repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-group-button-group.tsx",
     "repo-ref/primitives",
-    "repo-ref/base-ui"
+    "repo-ref/base-ui",
+    "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js",
+    "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Button.kt",
+    "https://m3.material.io/components/buttons/overview"
   ],
   "continue_policy": {
     "default_action": "continue",

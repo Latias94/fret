@@ -1,0 +1,165 @@
+{
+  "schema_version": 1,
+  "component": "button",
+  "style": "material3",
+  "source_family": "material3",
+  "adapter": {
+    "schema_version": 1,
+    "id": "material3.button.adapter.v1",
+    "goal": "Map Material spec, Material UI, Compose Material3, and Fret Material3 button facts into the shared component parity fact packet.",
+    "source_precedence": [
+      "Material spec for normative outcomes and token names",
+      "Material UI for web DOM and state-class outcomes",
+      "Compose Material3 for non-DOM state and motion semantics",
+      "Fret ecosystem implementation for current measurable wiring"
+    ]
+  },
+  "report": {
+    "id": "material3_button_adapter_report_v1",
+    "schema_version": 1,
+    "generated_date": "2026-05-25",
+    "limitations": [
+      "This is the first Material adapter slice; it proves shared packet shape and source mapping, not full Material parity.",
+      "No upstream browser DOM snapshot is attached yet, so Material UI web geometry is source-referenced but not live-measured.",
+      "Fret Material 3 headless goldens exist in Rust tests and should be promoted into bundle/sidecar evidence in the next slice."
+    ]
+  },
+  "source_refs": {
+    "upstream": [
+      {
+        "id": "material.spec.button",
+        "path": "https://m3.material.io/components/buttons/overview"
+      },
+      {
+        "id": "material_ui.button",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js"
+      },
+      {
+        "id": "compose_material3.button",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Button.kt"
+      }
+    ],
+    "fret": [
+      {
+        "id": "fret.material3.button",
+        "path": "ecosystem/fret-ui-material3/src/button.rs"
+      },
+      {
+        "id": "fret.material3.button_tokens",
+        "path": "ecosystem/fret-ui-material3/src/tokens/button.rs"
+      },
+      {
+        "id": "fret.material3.headless_goldens",
+        "path": "ecosystem/fret-ui-material3/tests/radio_alignment.rs"
+      }
+    ]
+  },
+  "upstream_contexts": [],
+  "upstream_dom_targets": [],
+  "parts": [
+    {
+      "id": "material3_button_semantics",
+      "label": "Material 3 Button semantics and activation",
+      "axis": "semantics",
+      "upstream": {
+        "source_ref_ids": [
+          "material.spec.button",
+          "material_ui.button",
+          "compose_material3.button"
+        ],
+        "facts": [
+          "Material buttons expose a button activation role with a label-derived accessible name.",
+          "Disabled buttons remain non-invokable and must report disabled state.",
+          "Focus, hover, and press are interaction states that influence state-layer visuals without becoming core mechanism policy."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.button",
+          "fret.material3.headless_goldens"
+        ],
+        "test_ids": [
+          "btn-filled",
+          "btn-filled-disabled"
+        ],
+        "facts": [
+          "Fret Material3 Button sets SemanticsRole::Button through PressableA11y.",
+          "Fret Material3 Button disables activation when disabled or when the bound action is unavailable.",
+          "The existing headless suite renders enabled and disabled Material buttons with stable test IDs."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_button_semantics_bundle_gate",
+          "kind": "live_measurement_required",
+          "expected": "Bundle schema2 semantics should expose role=button, label, disabled flag, and invoke/focus action state for enabled and disabled Material buttons.",
+          "observed": "unknown",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/button.rs",
+            "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+            "target/fret-diag/**/bundle.schema2.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The invariant is Material Button recipe semantics; only missing portable semantics fields should be promoted inward."
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_button_text_paint",
+      "label": "Material 3 Button token-driven text and paint facts",
+      "axis": "chrome",
+      "upstream": {
+        "source_ref_ids": [
+          "material.spec.button",
+          "material_ui.button",
+          "compose_material3.button"
+        ],
+        "facts": [
+          "Button height, shape, state-layer opacity, label text style, and container/label colors are token-driven Material outcomes.",
+          "Pressed shape and state layer are policy-layer interaction visuals.",
+          "Icon and label spacing is a component recipe token, not a core layout mechanism."
+        ]
+      },
+      "fret": {
+        "source_ref_ids": [
+          "fret.material3.button",
+          "fret.material3.button_tokens",
+          "fret.material3.headless_goldens"
+        ],
+        "test_ids": [
+          "btn-filled",
+          "btn-filled-disabled"
+        ],
+        "facts": [
+          "Fret Material3 Button resolves container height, padding, shape, text style, and state-layer colors through Material token keys.",
+          "Bundle schema2 text_paint tables provide first-class text/paint diagnostics for promotion into future Material parity gates."
+        ]
+      },
+      "checks": [
+        {
+          "id": "material3_button_text_paint_table_gate",
+          "kind": "live_measurement_required",
+          "expected": "Material Button diagnostics should attach bundle schema2 text_paint rows for text prepare, widget measure, and paint widget hotspots when a Material button is captured.",
+          "observed": "unknown",
+          "confidence": "medium",
+          "owner": "diagnostics_surface",
+          "layer": "runner",
+          "evidence_refs": [
+            "ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs",
+            "ecosystem/fret-ui-material3/src/button.rs",
+            "ecosystem/fret-ui-material3/src/tokens/button.rs"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "The first Material adapter needs diagnostics evidence before broad token parity claims."
+          }
+        }
+      ]
+    }
+  ]
+}

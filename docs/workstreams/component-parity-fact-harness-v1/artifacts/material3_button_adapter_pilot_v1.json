@@ -1,0 +1,818 @@
+{
+  "schema_version": 1,
+  "component": "button",
+  "style": "material3",
+  "generated_date": "2026-05-25",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/material3_button_adapter_v1.json",
+  "upstream_contexts": [],
+  "evidence_contexts": {
+    "fret_layout_sidecar": [],
+    "fret_bundle_schema2": [],
+    "upstream_dom": []
+  },
+  "summary": {
+    "part_count": 2,
+    "status_counts": {
+      "pass_known": 0,
+      "needs_live_measurement": 2,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "gallery_composition": 0,
+      "mechanism_core": 0,
+      "diagnostics_surface": 1,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 0,
+        "needs_live_measurement": 1,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 0,
+        "needs_live_measurement": 1,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 1,
+      "app_demo": 0,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 0,
+        "needs_live_measurement": 1,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 0,
+        "needs_live_measurement": 1,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 2,
+      "low": 0,
+      "none": 0
+    },
+    "top_findings": [
+      {
+        "part_id": "material3_button_text_paint",
+        "check_id": "material3_button_text_paint_table_gate",
+        "status": "needs_live_measurement",
+        "axis": "chrome",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "promotion_target": "diag_script",
+        "triage": {
+          "score": 57,
+          "level": "medium",
+          "reasons": [
+            "status:needs_live_measurement",
+            "layer:runner",
+            "promotion:diag_script",
+            "axis:chrome",
+            "confidence:medium",
+            "source fact is not yet live-measured"
+          ]
+        }
+      },
+      {
+        "part_id": "material3_button_semantics",
+        "check_id": "material3_button_semantics_bundle_gate",
+        "status": "needs_live_measurement",
+        "axis": "semantics",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "promotion_target": "component_fixture",
+        "triage": {
+          "score": 52,
+          "level": "medium",
+          "reasons": [
+            "status:needs_live_measurement",
+            "layer:recipe",
+            "promotion:component_fixture",
+            "axis:semantics",
+            "confidence:medium",
+            "source fact is not yet live-measured"
+          ]
+        }
+      }
+    ],
+    "promotion_target_counts": {
+      "diag_script": 1,
+      "component_fixture": 1,
+      "mechanism_harness": 0,
+      "none": 0
+    },
+    "layout_sidecar_count": 0,
+    "bundle_schema2_count": 0,
+    "layout_test_id_count": 0,
+    "bundle_semantics_test_id_count": 0,
+    "measured_test_id_count": 0,
+    "upstream_dom_snapshot_count": 0,
+    "upstream_dom_target_count": 0,
+    "upstream_context_count": 0,
+    "upstream_dom_context_count": 0,
+    "upstream_live_fact_count": 0,
+    "fret_live_fact_count": 4,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 0,
+    "fret_interaction_fact_count": 0,
+    "fret_text_paint_fact_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "upstream_dom_computed_style",
+    "fret_source": "layout_sidecar+bundle_schema2_semantics",
+    "part_count": 2,
+    "upstream_dom_target_count": 0,
+    "fret_test_id_count": 4,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 0,
+    "fret_interaction_fact_count": 0,
+    "fret_text_paint_fact_count": 0,
+    "parts": [
+      {
+        "part_id": "material3_button_semantics",
+        "upstream_dom_target_count": 0,
+        "fret_test_id_count": 2,
+        "upstream_semantics_fact_count": 0,
+        "upstream_interaction_fact_count": 0,
+        "fret_semantics_fact_count": 0,
+        "fret_interaction_fact_count": 0,
+        "fret_text_paint_fact_count": 0,
+        "upstream": [],
+        "fret": [
+          {
+            "test_id": "btn-filled",
+            "status": "missing"
+          },
+          {
+            "test_id": "btn-filled-disabled",
+            "status": "missing"
+          }
+        ]
+      },
+      {
+        "part_id": "material3_button_text_paint",
+        "upstream_dom_target_count": 0,
+        "fret_test_id_count": 2,
+        "upstream_semantics_fact_count": 0,
+        "upstream_interaction_fact_count": 0,
+        "fret_semantics_fact_count": 0,
+        "fret_interaction_fact_count": 0,
+        "fret_text_paint_fact_count": 0,
+        "upstream": [],
+        "fret": [
+          {
+            "test_id": "btn-filled",
+            "status": "missing"
+          },
+          {
+            "test_id": "btn-filled-disabled",
+            "status": "missing"
+          }
+        ]
+      }
+    ]
+  },
+  "parts": [
+    {
+      "id": "material3_button_semantics",
+      "label": "Material 3 Button semantics and activation",
+      "axis": "semantics",
+      "status": "needs_live_measurement",
+      "confidence": "medium",
+      "triage": {
+        "score": 52,
+        "level": "medium",
+        "highest_check_id": "material3_button_semantics_bundle_gate",
+        "reasons": [
+          "status:needs_live_measurement",
+          "layer:recipe",
+          "promotion:component_fixture",
+          "axis:semantics",
+          "confidence:medium",
+          "source fact is not yet live-measured"
+        ]
+      },
+      "test_ids": [
+        "btn-filled",
+        "btn-filled-disabled"
+      ],
+      "upstream_facts": [
+        "Material buttons expose a button activation role with a label-derived accessible name.",
+        "Disabled buttons remain non-invokable and must report disabled state.",
+        "Focus, hover, and press are interaction states that influence state-layer visuals without becoming core mechanism policy."
+      ],
+      "fret_facts": [
+        "Fret Material3 Button sets SemanticsRole::Button through PressableA11y.",
+        "Fret Material3 Button disables activation when disabled or when the bound action is unavailable.",
+        "The existing headless suite renders enabled and disabled Material buttons with stable test IDs."
+      ],
+      "checks": [
+        {
+          "id": "material3_button_semantics_bundle_gate",
+          "kind": "live_measurement_required",
+          "status": "needs_live_measurement",
+          "expected": "Bundle schema2 semantics should expose role=button, label, disabled flag, and invoke/focus action state for enabled and disabled Material buttons.",
+          "observed": "unknown",
+          "observed_source": "fixture",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 52,
+            "level": "medium",
+            "reasons": [
+              "status:needs_live_measurement",
+              "layer:recipe",
+              "promotion:component_fixture",
+              "axis:semantics",
+              "confidence:medium",
+              "source fact is not yet live-measured"
+            ]
+          },
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/button.rs",
+            "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+            "target/fret-diag/**/bundle.schema2.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The invariant is Material Button recipe semantics; only missing portable semantics fields should be promoted inward."
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_button_text_paint",
+      "label": "Material 3 Button token-driven text and paint facts",
+      "axis": "chrome",
+      "status": "needs_live_measurement",
+      "confidence": "medium",
+      "triage": {
+        "score": 57,
+        "level": "medium",
+        "highest_check_id": "material3_button_text_paint_table_gate",
+        "reasons": [
+          "status:needs_live_measurement",
+          "layer:runner",
+          "promotion:diag_script",
+          "axis:chrome",
+          "confidence:medium",
+          "source fact is not yet live-measured"
+        ]
+      },
+      "test_ids": [
+        "btn-filled",
+        "btn-filled-disabled"
+      ],
+      "upstream_facts": [
+        "Button height, shape, state-layer opacity, label text style, and container/label colors are token-driven Material outcomes.",
+        "Pressed shape and state layer are policy-layer interaction visuals.",
+        "Icon and label spacing is a component recipe token, not a core layout mechanism."
+      ],
+      "fret_facts": [
+        "Fret Material3 Button resolves container height, padding, shape, text style, and state-layer colors through Material token keys.",
+        "Bundle schema2 text_paint tables provide first-class text/paint diagnostics for promotion into future Material parity gates."
+      ],
+      "checks": [
+        {
+          "id": "material3_button_text_paint_table_gate",
+          "kind": "live_measurement_required",
+          "status": "needs_live_measurement",
+          "expected": "Material Button diagnostics should attach bundle schema2 text_paint rows for text prepare, widget measure, and paint widget hotspots when a Material button is captured.",
+          "observed": "unknown",
+          "observed_source": "fixture",
+          "confidence": "medium",
+          "owner": "diagnostics_surface",
+          "layer": "runner",
+          "triage": {
+            "score": 57,
+            "level": "medium",
+            "reasons": [
+              "status:needs_live_measurement",
+              "layer:runner",
+              "promotion:diag_script",
+              "axis:chrome",
+              "confidence:medium",
+              "source fact is not yet live-measured"
+            ]
+          },
+          "evidence_refs": [
+            "ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs",
+            "ecosystem/fret-ui-material3/src/button.rs",
+            "ecosystem/fret-ui-material3/src/tokens/button.rs"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "The first Material adapter needs diagnostics evidence before broad token parity claims."
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This is the first Material adapter slice; it proves shared packet shape and source mapping, not full Material parity.",
+    "No upstream browser DOM snapshot is attached yet, so Material UI web geometry is source-referenced but not live-measured.",
+    "Fret Material 3 headless goldens exist in Rust tests and should be promoted into bundle/sidecar evidence in the next slice."
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "needs_repair",
+    "component": "button",
+    "style": "material3",
+    "source_mapping": "tools/parity-discovery/fixtures/material3_button_adapter_v1.json",
+    "goal": "Give a repair agent the minimum source truth, Fret wiring, evidence, and promotion queues needed to turn parity findings into gates.",
+    "truth": {
+      "upstream_refs": [
+        {
+          "id": "material.spec.button",
+          "bucket": "upstream",
+          "path": "https://m3.material.io/components/buttons/overview"
+        },
+        {
+          "id": "material_ui.button",
+          "bucket": "upstream",
+          "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js"
+        },
+        {
+          "id": "compose_material3.button",
+          "bucket": "upstream",
+          "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Button.kt"
+        }
+      ],
+      "upstream_contexts": [],
+      "live_facts": {
+        "schema_version": 1,
+        "upstream_source": "upstream_dom_computed_style",
+        "fret_source": "layout_sidecar+bundle_schema2_semantics",
+        "part_count": 2,
+        "upstream_dom_target_count": 0,
+        "fret_test_id_count": 4,
+        "upstream_semantics_fact_count": 0,
+        "upstream_interaction_fact_count": 0,
+        "fret_semantics_fact_count": 0,
+        "fret_interaction_fact_count": 0,
+        "fret_text_paint_fact_count": 0,
+        "parts": [
+          {
+            "part_id": "material3_button_semantics",
+            "upstream_dom_target_count": 0,
+            "fret_test_id_count": 2,
+            "upstream_semantics_fact_count": 0,
+            "upstream_interaction_fact_count": 0,
+            "fret_semantics_fact_count": 0,
+            "fret_interaction_fact_count": 0,
+            "fret_text_paint_fact_count": 0,
+            "upstream": [],
+            "fret": [
+              {
+                "test_id": "btn-filled",
+                "status": "missing"
+              },
+              {
+                "test_id": "btn-filled-disabled",
+                "status": "missing"
+              }
+            ]
+          },
+          {
+            "part_id": "material3_button_text_paint",
+            "upstream_dom_target_count": 0,
+            "fret_test_id_count": 2,
+            "upstream_semantics_fact_count": 0,
+            "upstream_interaction_fact_count": 0,
+            "fret_semantics_fact_count": 0,
+            "fret_interaction_fact_count": 0,
+            "fret_text_paint_fact_count": 0,
+            "upstream": [],
+            "fret": [
+              {
+                "test_id": "btn-filled",
+                "status": "missing"
+              },
+              {
+                "test_id": "btn-filled-disabled",
+                "status": "missing"
+              }
+            ]
+          }
+        ]
+      },
+      "limitations": [
+        "This is the first Material adapter slice; it proves shared packet shape and source mapping, not full Material parity.",
+        "No upstream browser DOM snapshot is attached yet, so Material UI web geometry is source-referenced but not live-measured.",
+        "Fret Material 3 headless goldens exist in Rust tests and should be promoted into bundle/sidecar evidence in the next slice."
+      ]
+    },
+    "fret_wiring": {
+      "refs": [
+        {
+          "id": "fret.material3.button",
+          "bucket": "fret",
+          "path": "ecosystem/fret-ui-material3/src/button.rs"
+        },
+        {
+          "id": "fret.material3.button_tokens",
+          "bucket": "fret",
+          "path": "ecosystem/fret-ui-material3/src/tokens/button.rs"
+        },
+        {
+          "id": "fret.material3.headless_goldens",
+          "bucket": "fret",
+          "path": "ecosystem/fret-ui-material3/tests/radio_alignment.rs"
+        }
+      ],
+      "test_ids": [
+        "btn-filled",
+        "btn-filled-disabled"
+      ]
+    },
+    "evidence": {
+      "fret_layout_sidecar": [],
+      "fret_bundle_schema2": [],
+      "upstream_dom": []
+    },
+    "summary": {
+      "status_counts": {
+        "pass_known": 0,
+        "needs_live_measurement": 2,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "owner_status_counts": {
+        "component_recipe": {
+          "pass_known": 0,
+          "needs_live_measurement": 1,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "gallery_composition": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism_core": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "diagnostics_surface": {
+          "pass_known": 0,
+          "needs_live_measurement": 1,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream_reference": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 0,
+          "needs_live_measurement": 1,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 0,
+          "needs_live_measurement": 1,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "top_findings": [
+        {
+          "part_id": "material3_button_text_paint",
+          "check_id": "material3_button_text_paint_table_gate",
+          "status": "needs_live_measurement",
+          "axis": "chrome",
+          "owner": "diagnostics_surface",
+          "layer": "runner",
+          "promotion_target": "diag_script",
+          "triage": {
+            "score": 57,
+            "level": "medium",
+            "reasons": [
+              "status:needs_live_measurement",
+              "layer:runner",
+              "promotion:diag_script",
+              "axis:chrome",
+              "confidence:medium",
+              "source fact is not yet live-measured"
+            ]
+          }
+        },
+        {
+          "part_id": "material3_button_semantics",
+          "check_id": "material3_button_semantics_bundle_gate",
+          "status": "needs_live_measurement",
+          "axis": "semantics",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "promotion_target": "component_fixture",
+          "triage": {
+            "score": 52,
+            "level": "medium",
+            "reasons": [
+              "status:needs_live_measurement",
+              "layer:recipe",
+              "promotion:component_fixture",
+              "axis:semantics",
+              "confidence:medium",
+              "source fact is not yet live-measured"
+            ]
+          }
+        }
+      ],
+      "upstream_live_fact_count": 0,
+      "fret_live_fact_count": 4,
+      "upstream_semantics_fact_count": 0,
+      "upstream_interaction_fact_count": 0,
+      "fret_semantics_fact_count": 0,
+      "fret_interaction_fact_count": 0,
+      "fret_text_paint_fact_count": 0,
+      "repair_queue_count": 2,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 2
+    },
+    "repair_queue": [
+      {
+        "part_id": "material3_button_semantics",
+        "part_label": "Material 3 Button semantics and activation",
+        "check_id": "material3_button_semantics_bundle_gate",
+        "status": "needs_live_measurement",
+        "axis": "semantics",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "promotion_target": "component_fixture",
+        "confidence": "medium",
+        "triage": {
+          "score": 52,
+          "level": "medium",
+          "reasons": [
+            "status:needs_live_measurement",
+            "layer:recipe",
+            "promotion:component_fixture",
+            "axis:semantics",
+            "confidence:medium",
+            "source fact is not yet live-measured"
+          ]
+        },
+        "expected": "Bundle schema2 semantics should expose role=button, label, disabled flag, and invoke/focus action state for enabled and disabled Material buttons.",
+        "observed": "unknown",
+        "observed_source": "fixture",
+        "test_ids": [
+          "btn-filled",
+          "btn-filled-disabled"
+        ],
+        "source_refs": {
+          "upstream": [
+            {
+              "id": "material.spec.button",
+              "bucket": "upstream",
+              "path": "https://m3.material.io/components/buttons/overview"
+            },
+            {
+              "id": "material_ui.button",
+              "bucket": "upstream",
+              "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js"
+            },
+            {
+              "id": "compose_material3.button",
+              "bucket": "upstream",
+              "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Button.kt"
+            }
+          ],
+          "fret": [
+            {
+              "id": "fret.material3.button",
+              "bucket": "fret",
+              "path": "ecosystem/fret-ui-material3/src/button.rs"
+            },
+            {
+              "id": "fret.material3.headless_goldens",
+              "bucket": "fret",
+              "path": "ecosystem/fret-ui-material3/tests/radio_alignment.rs"
+            }
+          ]
+        },
+        "evidence_refs": [
+          "ecosystem/fret-ui-material3/src/button.rs",
+          "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+          "target/fret-diag/**/bundle.schema2.json"
+        ],
+        "next_step": "Replace the curated or fixture-only fact with live upstream/Fret measurement, then decide whether it belongs in a component_fixture gate."
+      },
+      {
+        "part_id": "material3_button_text_paint",
+        "part_label": "Material 3 Button token-driven text and paint facts",
+        "check_id": "material3_button_text_paint_table_gate",
+        "status": "needs_live_measurement",
+        "axis": "chrome",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "promotion_target": "diag_script",
+        "confidence": "medium",
+        "triage": {
+          "score": 57,
+          "level": "medium",
+          "reasons": [
+            "status:needs_live_measurement",
+            "layer:runner",
+            "promotion:diag_script",
+            "axis:chrome",
+            "confidence:medium",
+            "source fact is not yet live-measured"
+          ]
+        },
+        "expected": "Material Button diagnostics should attach bundle schema2 text_paint rows for text prepare, widget measure, and paint widget hotspots when a Material button is captured.",
+        "observed": "unknown",
+        "observed_source": "fixture",
+        "test_ids": [
+          "btn-filled",
+          "btn-filled-disabled"
+        ],
+        "source_refs": {
+          "upstream": [
+            {
+              "id": "material.spec.button",
+              "bucket": "upstream",
+              "path": "https://m3.material.io/components/buttons/overview"
+            },
+            {
+              "id": "material_ui.button",
+              "bucket": "upstream",
+              "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js"
+            },
+            {
+              "id": "compose_material3.button",
+              "bucket": "upstream",
+              "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Button.kt"
+            }
+          ],
+          "fret": [
+            {
+              "id": "fret.material3.button",
+              "bucket": "fret",
+              "path": "ecosystem/fret-ui-material3/src/button.rs"
+            },
+            {
+              "id": "fret.material3.button_tokens",
+              "bucket": "fret",
+              "path": "ecosystem/fret-ui-material3/src/tokens/button.rs"
+            },
+            {
+              "id": "fret.material3.headless_goldens",
+              "bucket": "fret",
+              "path": "ecosystem/fret-ui-material3/tests/radio_alignment.rs"
+            }
+          ]
+        },
+        "evidence_refs": [
+          "ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs",
+          "ecosystem/fret-ui-material3/src/button.rs",
+          "ecosystem/fret-ui-material3/src/tokens/button.rs"
+        ],
+        "next_step": "Replace the curated or fixture-only fact with live upstream/Fret measurement, then decide whether it belongs in a diag_script gate."
+      }
+    ],
+    "hardening_queue": [],
+    "gate_queue": [
+      {
+        "part_id": "material3_button_semantics",
+        "check_id": "material3_button_semantics_bundle_gate",
+        "target": "component_fixture",
+        "reason": "The invariant is Material Button recipe semantics; only missing portable semantics fields should be promoted inward.",
+        "status": "needs_live_measurement",
+        "owner": "component_recipe",
+        "layer": "recipe"
+      },
+      {
+        "part_id": "material3_button_text_paint",
+        "check_id": "material3_button_text_paint_table_gate",
+        "target": "diag_script",
+        "reason": "The first Material adapter needs diagnostics evidence before broad token parity claims.",
+        "status": "needs_live_measurement",
+        "owner": "diagnostics_surface",
+        "layer": "runner"
+      }
+    ]
+  }
+}

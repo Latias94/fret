@@ -192,6 +192,7 @@ class LayoutNode:
     root_index: int
     kind: str | None
     label: str | None = None
+    semantics: dict[str, Any] | None = None
     source: str = "layout_sidecar"
 
 
@@ -233,6 +234,7 @@ class LayoutEvidence:
     sidecar_paths: list[str]
     bundle_paths: list[str]
     roots: list[LayoutRoot]
+    text_paint_facts_by_node: dict[str, list[dict[str, Any]]]
 
     @classmethod
     def empty(cls) -> "LayoutEvidence":
@@ -242,6 +244,7 @@ class LayoutEvidence:
             sidecar_paths=[],
             bundle_paths=[],
             roots=[],
+            text_paint_facts_by_node={},
         )
 
     def find(
@@ -720,6 +723,105 @@ def _bundle_semantics_entries(data: dict[str, Any]) -> list[tuple[int, dict[str,
     return results
 
 
+def _non_empty_dict(value: Any) -> dict[str, Any]:
+    if not isinstance(value, dict):
+        return {}
+    return {k: v for k, v in value.items() if v not in (None, False, [], {})}
+
+
+def _semantics_fact_from_bundle_node(node: dict[str, Any]) -> dict[str, Any]:
+    flags = _non_empty_dict(node.get("flags"))
+    actions = _non_empty_dict(node.get("actions"))
+    relations: dict[str, Any] = {}
+    for key in ("labelled_by", "described_by", "controls"):
+        value = node.get(key)
+        if isinstance(value, list) and value:
+            relations[key] = value
+
+    fact: dict[str, Any] = {
+        "role": node.get("role"),
+        "label": node.get("label"),
+        "value": node.get("value"),
+        "flags": flags,
+        "actions": actions,
+        "relations": relations,
+        "active_descendant": node.get("active_descendant"),
+        "text_selection": node.get("text_selection"),
+        "text_composition": node.get("text_composition"),
+        "pos_in_set": node.get("pos_in_set"),
+        "set_size": node.get("set_size"),
+        "level": node.get("level"),
+        "scroll": _non_empty_dict(node.get("scroll")),
+        "source": "bundle_schema2_semantics",
+    }
+    return {k: v for k, v in fact.items() if v not in (None, [], {})}
+
+
+def _bundle_text_paint_entries(data: dict[str, Any]) -> list[dict[str, Any]]:
+    tables = data.get("tables")
+    if not isinstance(tables, dict):
+        return []
+    text_paint_table = tables.get("text_paint")
+    if not isinstance(text_paint_table, dict):
+        return []
+    entries = text_paint_table.get("entries", [])
+    if not isinstance(entries, list):
+        raise FixtureError("$.tables.text_paint.entries must be a list")
+    return [entry for entry in entries if isinstance(entry, dict)]
+
+
+def _bundle_text_paint_fact_rows(
+    data: dict[str, Any], bundle_path: str
+) -> dict[str, list[dict[str, Any]]]:
+    rows_by_node: dict[str, list[dict[str, Any]]] = {}
+    for entry in _bundle_text_paint_entries(data):
+        base = {
+            "window": entry.get("window"),
+            "frame_id": entry.get("frame_id"),
+            "window_snapshot_seq": entry.get("window_snapshot_seq"),
+            "bundle_schema2_path": bundle_path,
+            "source": "bundle_schema2_text_paint",
+        }
+        for key in (
+            "widget_measure_hotspots",
+            "paint_widget_hotspots",
+            "paint_text_prepare_hotspots",
+        ):
+            items = entry.get(key)
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                node_id = item.get("node")
+                if not isinstance(node_id, int | str):
+                    continue
+                fact = dict(base)
+                fact["kind"] = key
+                fact.update(item)
+                rows_by_node.setdefault(str(node_id), []).append(fact)
+        text_input = entry.get("text_input")
+        if isinstance(text_input, dict):
+            fact = dict(base)
+            fact["kind"] = "text_input"
+            fact.update(text_input)
+            rows_by_node.setdefault("window_text_input", []).append(fact)
+        render_text = entry.get("render_text")
+        if isinstance(render_text, dict):
+            fact = dict(base)
+            fact["kind"] = "render_text"
+            fact.update(render_text)
+            rows_by_node.setdefault("window_render_text", []).append(fact)
+    return rows_by_node
+
+
+def _merge_text_paint_facts(
+    target: dict[str, list[dict[str, Any]]], rows: dict[str, list[dict[str, Any]]]
+) -> None:
+    for node_id, facts in rows.items():
+        target.setdefault(node_id, []).extend(facts)
+
+
 def _bundle_semantics_roots(
     data: dict[str, Any],
     bundle_path: str,
@@ -854,6 +956,10 @@ def load_layout_evidence(
         evidence.roots.extend(
             _bundle_semantics_roots(data, bundle_path, scale_factor, coordinate_units)
         )
+        _merge_text_paint_facts(
+            evidence.text_paint_facts_by_node,
+            _bundle_text_paint_fact_rows(data, bundle_path),
+        )
         for root_index, node in _bundle_semantics_entries(data):
             rect = node.get("bounds")
             if not isinstance(rect, dict):
@@ -873,6 +979,7 @@ def load_layout_evidence(
                         if isinstance(node.get("role"), str)
                         else None,
                         label=node.get("label") if isinstance(node.get("label"), str) else None,
+                        semantics=_semantics_fact_from_bundle_node(node),
                         source="bundle_schema2_semantics",
                     )
                 )
@@ -1584,6 +1691,107 @@ def _class_tokens(class_name: str | None) -> list[str]:
     return [token for token in class_name.split() if token]
 
 
+def _attr_string(attrs: dict[str, Any], key: str) -> str | None:
+    value = attrs.get(key)
+    if isinstance(value, str) and value:
+        return value
+    if isinstance(value, bool):
+        return str(value).lower()
+    return None
+
+
+def _dom_implicit_role(node: DomNode) -> str | None:
+    tag = node.tag.lower()
+    if tag == "button":
+        return "button"
+    if tag == "input":
+        input_type = str(node.attrs.get("type") or "text").lower()
+        if input_type in {"button", "submit", "reset"}:
+            return "button"
+        if input_type == "checkbox":
+            return "checkbox"
+        if input_type == "radio":
+            return "radio"
+        return "textbox"
+    if tag == "select":
+        return "combobox"
+    if tag == "textarea":
+        return "textbox"
+    if tag == "a" and node.attrs.get("href"):
+        return "link"
+    return None
+
+
+def _dom_focusable(node: DomNode) -> bool:
+    tabindex = _attr_string(node.attrs, "tabindex")
+    if tabindex is not None and tabindex != "-1":
+        return True
+    tag = node.tag.lower()
+    if tag in {"button", "input", "select", "textarea"}:
+        return not _dom_disabled(node)
+    if tag == "a":
+        return bool(node.attrs.get("href"))
+    role = _attr_string(node.attrs, "role")
+    return role in {"button", "checkbox", "combobox", "menuitem", "option", "radio", "switch", "tab"}
+
+
+def _dom_disabled(node: DomNode) -> bool:
+    disabled_attr = node.attrs.get("disabled")
+    aria_disabled = _attr_string(node.attrs, "aria-disabled")
+    return disabled_attr is True or aria_disabled == "true"
+
+
+def _dom_semantics_fact(node: DomNode) -> dict[str, Any]:
+    attrs = node.attrs
+    states = {
+        key: _attr_string(attrs, key)
+        for key in (
+            "aria-expanded",
+            "aria-selected",
+            "aria-checked",
+            "aria-pressed",
+            "aria-disabled",
+            "aria-invalid",
+            "aria-required",
+            "aria-current",
+        )
+        if _attr_string(attrs, key) is not None
+    }
+    relations = {
+        key: _attr_string(attrs, key)
+        for key in ("aria-controls", "aria-describedby", "aria-labelledby", "aria-owns")
+        if _attr_string(attrs, key) is not None
+    }
+    accessible_name = (
+        _attr_string(attrs, "aria-label")
+        or _attr_string(attrs, "placeholder")
+        or _attr_string(attrs, "value")
+        or node.text
+    )
+    return {
+        "role": _attr_string(attrs, "role") or _dom_implicit_role(node),
+        "implicit_role": _dom_implicit_role(node),
+        "accessible_name": accessible_name,
+        "states": states,
+        "relations": relations,
+        "tab_index": _attr_string(attrs, "tabindex"),
+        "source": "upstream_dom_accessibility_attrs",
+    }
+
+
+def _dom_interaction_fact(node: DomNode) -> dict[str, Any]:
+    attrs = node.attrs
+    return {
+        "focusable": _dom_focusable(node),
+        "disabled": _dom_disabled(node),
+        "has_popup": _attr_string(attrs, "aria-haspopup"),
+        "cursor": node.computed_style.get("cursor"),
+        "pointer_events": node.computed_style.get("pointerEvents"),
+        "keyboard_target": _dom_focusable(node),
+        "source": "upstream_dom_accessibility_attrs",
+    }
+
+
 def _dom_descendants(evidence: DomEvidence, node: DomNode) -> list[DomNode]:
     prefix = f"{node.path}."
     descendants = [
@@ -1705,6 +1913,8 @@ def _dom_target_facts(node: DomNode, evidence: DomEvidence) -> dict[str, Any]:
                 ],
             ),
         },
+        "semantics": _dom_semantics_fact(node),
+        "interaction": _dom_interaction_fact(node),
         "descendant_summary": {
             "count": len(descendants),
             "svg_count": len(svg_descendants),
@@ -1749,6 +1959,16 @@ def _fret_node_fact(node: LayoutNode) -> dict[str, Any]:
             result["has_corner_radii_hint"] = True
         if "SvgIconProps" in label:
             result["has_icon_hint"] = True
+    if node.semantics:
+        result["semantics"] = node.semantics
+        result["interaction"] = {
+            "focusable": bool(node.semantics.get("actions", {}).get("focus")),
+            "invokable": bool(node.semantics.get("actions", {}).get("invoke")),
+            "set_value": bool(node.semantics.get("actions", {}).get("set_value")),
+            "disabled": bool(node.semantics.get("flags", {}).get("disabled")),
+            "focused": bool(node.semantics.get("flags", {}).get("focused")),
+            "source": "bundle_schema2_semantics_actions",
+        }
     return result
 
 
@@ -1772,14 +1992,31 @@ def _fret_test_id_facts(test_id: str, evidence: LayoutEvidence) -> dict[str, Any
     facts: dict[str, Any] = {"test_id": test_id}
     if primary is not None:
         facts["primary"] = _fret_node_fact(primary)
+        text_paint_facts = evidence.text_paint_facts_by_node.get(primary.node, [])
+        if text_paint_facts:
+            facts["text_paint"] = text_paint_facts[:12]
+    semantics_nodes = [
+        _fret_node_fact(node)
+        for node in evidence.bundle_nodes_by_test_id.get(test_id, [])
+        if node.semantics
+    ]
+    if semantics_nodes:
+        facts["semantics_nodes"] = semantics_nodes
     related = []
     for related_test_id in _related_test_ids(test_id, evidence):
         related_node = evidence.find(related_test_id)
         if related_node is not None:
-            related.append(_fret_node_fact(related_node))
+            related_fact = _fret_node_fact(related_node)
+            text_paint_facts = evidence.text_paint_facts_by_node.get(related_node.node, [])
+            if text_paint_facts:
+                related_fact["text_paint"] = text_paint_facts[:12]
+            related.append(related_fact)
+        for semantics_node in evidence.bundle_nodes_by_test_id.get(related_test_id, []):
+            if semantics_node.semantics:
+                related.append(_fret_node_fact(semantics_node))
     if related:
         facts["related"] = related
-    if primary is None and not related:
+    if primary is None and not related and not semantics_nodes:
         facts["status"] = "missing"
     return facts
 
@@ -1811,6 +2048,31 @@ def _part_live_facts(
         "part_id": report_part["id"],
         "upstream_dom_target_count": len(upstream_facts),
         "fret_test_id_count": len(fret_facts),
+        "upstream_semantics_fact_count": sum(
+            1 for fact in upstream_facts if fact.get("semantics")
+        ),
+        "upstream_interaction_fact_count": sum(
+            1 for fact in upstream_facts if fact.get("interaction")
+        ),
+        "fret_semantics_fact_count": sum(
+            1
+            for fact in fret_facts
+            if fact.get("primary", {}).get("semantics")
+            or any(item.get("semantics") for item in fact.get("semantics_nodes", []))
+            or any(item.get("semantics") for item in fact.get("related", []))
+        ),
+        "fret_interaction_fact_count": sum(
+            1
+            for fact in fret_facts
+            if fact.get("primary", {}).get("interaction")
+            or any(item.get("interaction") for item in fact.get("semantics_nodes", []))
+            or any(item.get("interaction") for item in fact.get("related", []))
+        ),
+        "fret_text_paint_fact_count": sum(
+            len(fact.get("text_paint", []))
+            + sum(len(item.get("text_paint", [])) for item in fact.get("related", []))
+            for fact in fret_facts
+        ),
         "upstream": upstream_facts,
         "fret": fret_facts,
     }
@@ -1845,6 +2107,21 @@ def _generate_live_facts(
             part["upstream_dom_target_count"] for part in parts
         ),
         "fret_test_id_count": sum(part["fret_test_id_count"] for part in parts),
+        "upstream_semantics_fact_count": sum(
+            part["upstream_semantics_fact_count"] for part in parts
+        ),
+        "upstream_interaction_fact_count": sum(
+            part["upstream_interaction_fact_count"] for part in parts
+        ),
+        "fret_semantics_fact_count": sum(
+            part["fret_semantics_fact_count"] for part in parts
+        ),
+        "fret_interaction_fact_count": sum(
+            part["fret_interaction_fact_count"] for part in parts
+        ),
+        "fret_text_paint_fact_count": sum(
+            part["fret_text_paint_fact_count"] for part in parts
+        ),
         "parts": parts,
     }
 
@@ -2242,6 +2519,21 @@ def _generate_agent_packet(
                 "upstream_live_fact_count", 0
             ),
             "fret_live_fact_count": report["summary"].get("fret_live_fact_count", 0),
+            "upstream_semantics_fact_count": report["summary"].get(
+                "upstream_semantics_fact_count", 0
+            ),
+            "upstream_interaction_fact_count": report["summary"].get(
+                "upstream_interaction_fact_count", 0
+            ),
+            "fret_semantics_fact_count": report["summary"].get(
+                "fret_semantics_fact_count", 0
+            ),
+            "fret_interaction_fact_count": report["summary"].get(
+                "fret_interaction_fact_count", 0
+            ),
+            "fret_text_paint_fact_count": report["summary"].get(
+                "fret_text_paint_fact_count", 0
+            ),
             "repair_queue_count": len(repair_queue),
             "hardening_queue_count": len(hardening_queue),
             "gate_queue_count": len(gate_queue),
@@ -2379,6 +2671,17 @@ def generate_report(
             "upstream_dom_context_count": len(dom_evidence.contexts),
             "upstream_live_fact_count": live_facts["upstream_dom_target_count"],
             "fret_live_fact_count": live_facts["fret_test_id_count"],
+            "upstream_semantics_fact_count": live_facts[
+                "upstream_semantics_fact_count"
+            ],
+            "upstream_interaction_fact_count": live_facts[
+                "upstream_interaction_fact_count"
+            ],
+            "fret_semantics_fact_count": live_facts["fret_semantics_fact_count"],
+            "fret_interaction_fact_count": live_facts[
+                "fret_interaction_fact_count"
+            ],
+            "fret_text_paint_fact_count": live_facts["fret_text_paint_fact_count"],
         },
         "live_facts": live_facts,
         "parts": report_parts,
@@ -2590,6 +2893,21 @@ def _legacy_agent_packet(report: dict[str, Any], path: Path) -> dict[str, Any]:
                 "upstream_live_fact_count", 0
             ),
             "fret_live_fact_count": report["summary"].get("fret_live_fact_count", 0),
+            "upstream_semantics_fact_count": report["summary"].get(
+                "upstream_semantics_fact_count", 0
+            ),
+            "upstream_interaction_fact_count": report["summary"].get(
+                "upstream_interaction_fact_count", 0
+            ),
+            "fret_semantics_fact_count": report["summary"].get(
+                "fret_semantics_fact_count", 0
+            ),
+            "fret_interaction_fact_count": report["summary"].get(
+                "fret_interaction_fact_count", 0
+            ),
+            "fret_text_paint_fact_count": report["summary"].get(
+                "fret_text_paint_fact_count", 0
+            ),
             "repair_queue_count": non_passing,
             "hardening_queue_count": 0,
             "gate_queue_count": 0,
@@ -2711,6 +3029,7 @@ def write_report(report: dict[str, Any], output_path: Path) -> None:
     output_path.write_text(
         json.dumps(report, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
 

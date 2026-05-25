@@ -18,9 +18,12 @@ date: 2026-05-25
       on curated prose.
 - [x] CPF-060: Add text and paint facts to the packet model: rendered text bounds, baseline/center
       alignment, border radii, border widths, icon size, and color/token slots.
-- [ ] CPF-070: Add interaction and semantics facts to the packet model using Radix/Base UI/APG
+- [x] CPF-065: Promote Fret diagnostics bundle text/paint evidence into a first-class
+      `tables.text_paint` schema2 table so future component packets do not have to scrape
+      per-snapshot debug arrays.
+- [x] CPF-070: Add interaction and semantics facts to the packet model using Radix/Base UI/APG
       outcomes and existing diagnostics bundle semantics.
-- [ ] CPF-080: Add the first Material 3 adapter design slice that maps Material spec/MUI/Compose
+- [x] CPF-080: Add the first Material 3 adapter design slice that maps Material spec/MUI/Compose
       references into the same fact packet shape.
 - [x] CPF-090: Promote agent packet summaries into the shadcn v2 suite report and coverage
       manifest workflow.
