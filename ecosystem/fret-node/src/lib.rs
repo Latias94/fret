@@ -168,6 +168,14 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/cached_edges/labels/single.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_TILED_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_edges/labels/tiled.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/overlay_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/overlay_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_SINGLE_RECT_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/single_rect.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_TILE_PATH_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/tile_path.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_ADAPTER_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_static_scene_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_RETAINED_CX_RS: &str =
@@ -4176,6 +4184,74 @@ mod surface_policy_tests {
                 "build-state ops facade should retain completion bookkeeping and delegate clip policy; missing `{required}`"
             );
         }
+    }
+
+    #[test]
+    fn paint_root_cached_edge_overlay_adapter_keeps_direct_overlay_route_off_cached_paths() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+            "self.app",
+            "self.services",
+            "self.scale_factor",
+            "self.scene",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_ADAPTER_RS.contains(forbidden),
+                "paint-root cached edge overlay adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_ADAPTER_RS
+                .contains("trait PaintRootCachedEdgeOverlayCx"),
+            "cached edge overlay routing should live behind a named adapter seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_ADAPTER_RS
+                .contains("paint_root_cached_edge_overlays_selected_hovered"),
+            "cached edge overlay adapter should expose a selected/hovered overlay route"
+        );
+
+        let cached_path_route_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_SINGLE_RECT_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_TILE_PATH_RS,
+        ]
+        .join("\n");
+        assert!(
+            !cached_path_route_sources.contains("paint_edge_overlays_selected_hovered"),
+            "cached edge routes should not call the retained selected/hovered overlay paint helper directly"
+        );
+        assert!(
+            cached_path_route_sources
+                .contains("overlay_adapter::paint_root_cached_edge_overlays_selected_hovered"),
+            "cached edge routes should call selected/hovered overlays through the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::overlay_adapter::PaintRootCachedEdgeOverlayCx<H>"
+            ),
+            "retained cached edge overlay binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained cached edge overlay binding should isolate PaintCx to the retained adapter module"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_RETAINED_CX_RS
+                .contains("paint_edge_overlays_selected_hovered"),
+            "retained cached edge overlay binding should own the direct overlay paint helper call"
+        );
     }
 
     #[test]

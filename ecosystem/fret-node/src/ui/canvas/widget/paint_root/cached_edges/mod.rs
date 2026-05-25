@@ -12,6 +12,8 @@ mod keys;
 mod label_build_state_adapter;
 mod label_build_state_retained_cx;
 mod labels;
+mod overlay_adapter;
+mod overlay_retained_cx;
 mod replay_adapter;
 mod replay_retained_cx;
 mod single_rect;
