@@ -2,7 +2,7 @@ use super::*;
 
 pub(in crate::ui::canvas::widget) trait KeyboardRouteCx<H: UiHost, M: NodeGraphCanvasMiddleware>:
     super::keyboard_shortcuts_overlay::KeyboardOverlayCx<H, M>
-    + super::keyboard_shortcuts::KeyboardShortcutCommandSink
+    + super::keyboard_shortcuts::KeyboardShortcutDispatchCx<H>
     + super::low_level_adapter::CanvasHandledCx<H>
 {
 }
@@ -11,7 +11,7 @@ impl<H: UiHost, M, T> KeyboardRouteCx<H, M> for T
 where
     M: NodeGraphCanvasMiddleware,
     T: super::keyboard_shortcuts_overlay::KeyboardOverlayCx<H, M>
-        + super::keyboard_shortcuts::KeyboardShortcutCommandSink
+        + super::keyboard_shortcuts::KeyboardShortcutDispatchCx<H>
         + super::low_level_adapter::CanvasHandledCx<H>,
 {
 }

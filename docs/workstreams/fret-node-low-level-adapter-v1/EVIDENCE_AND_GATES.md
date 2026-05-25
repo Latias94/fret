@@ -17,6 +17,9 @@ Last updated: 2026-05-25
 - `ecosystem/fret-node/src/ui/canvas/widget.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/command_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_command_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts_commands.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard_route.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/low_level_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_low_level_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_close_button_cx.rs`
@@ -107,3 +110,35 @@ Fresh validation:
   - `cargo test -p fret-node --features compat-retained-canvas retained_compatibility_surface_stays_declarative_only`
   - `cargo test -p fret-node --features compat-retained-canvas retained_canvas_command_dispatch_adapter_replaces_close_button_retained_edge`
   - `cargo test -p fret-node --features compat-retained-canvas command_adapter`
+
+## 2026-05-25 - NLA-050 keyboard shortcut command dispatch migration
+
+Claim to verify:
+
+- Keyboard shortcut command dispatch no longer uses a dedicated retained command sink.
+- `KeyboardShortcutDispatchCx` inherits command dispatch from `CanvasCommandDispatchCx` and handled
+  semantics from `CanvasHandledCx`.
+- `keyboard_shortcuts_commands.rs` dispatches through `command_adapter::dispatch_canvas_command`
+  and then stops propagation through the low-level handled adapter.
+- `keyboard_shortcuts_retained_cx.rs` is deleted and `widget.rs` no longer declares that module.
+
+Fresh validation:
+
+- Passed on 2026-05-25:
+  - `cargo fmt --package fret-node --check`
+  - `python3 -m json.tool docs/workstreams/fret-node-low-level-adapter-v1/WORKSTREAM.json`
+  - `python3 tools/check_layering.py`
+  - `python3 tools/check_workstream_catalog.py`
+  - `git diff --check`
+  - `cargo check -p fret-node`
+  - `cargo check -p fret-node --features compat-retained-canvas`
+  - `cargo test -p fret-node --features compat-retained-canvas retained_compatibility_surface_stays_declarative_only`
+  - `cargo test -p fret-node --features compat-retained-canvas keyboard_shortcut_command_helpers_use_command_adapter`
+  - `cargo test -p fret-node --features compat-retained-canvas retained_canvas_command_dispatch_adapter_replaces_close_button_retained_edge`
+  - `cargo test -p fret-node --features compat-retained-canvas command_adapter`
+
+Notes:
+
+- The fresh commands still emit the existing `fret-ui` warnings for unexpected cfg
+  `unstable-retained-bridge` and dead code `current_effective_opacity`; those are tracked as a
+  separate cleanup item in the current goal.

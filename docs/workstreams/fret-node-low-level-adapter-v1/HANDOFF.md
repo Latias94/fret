@@ -4,10 +4,10 @@ Updated: 2026-05-25
 
 ## Current State
 
-This lane has landed its first low-level adapter seam, shrunk one wire-commit retained edge, and
-added the first command dispatch adapter seam. It follows ADR 0330 and the retained public-surface
-exit. The retained canvas island is still compatibility-gated, but common host operations now live
-behind named adapter contracts:
+This lane has landed its first low-level adapter seam, shrunk one wire-commit retained edge, added
+the first command dispatch adapter seam, and migrated keyboard shortcut command dispatch onto that
+adapter. It follows ADR 0330 and the retained public-surface exit. The retained canvas island is
+still compatibility-gated, but common host operations now live behind named adapter contracts:
 
 - `ecosystem/fret-node/src/ui/canvas/widget/low_level_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_low_level_adapter.rs`
@@ -26,15 +26,22 @@ wire-commit-specific host, window, and bounds accessors.
 `PointerDownCloseButtonCx` now inherits command dispatch from `CanvasCommandDispatchCx`; the old
 `pointer_down_close_button_retained_cx.rs` dedicated retained adapter has been deleted.
 
+Keyboard shortcuts now use `KeyboardShortcutDispatchCx`, which composes
+`CanvasCommandDispatchCx` with `CanvasHandledCx`. `keyboard_shortcuts_commands.rs` dispatches
+through `command_adapter::dispatch_canvas_command` and then stops propagation through the low-level
+handled adapter. The old `keyboard_shortcuts_retained_cx.rs` dedicated retained adapter has been
+deleted.
+
 ## Next Step
 
-Continue with `NLA-050`: migrate one more command dispatch consumer, such as keyboard shortcuts or
-context-menu command activation, onto `command_adapter`. Keep event routing and paint/prepaint as
-separate follow-on lanes.
+Either continue the command-dispatch shrink with `NLA-060` on context-menu command activation, or
+split event routing and paint/prepaint into separate follow-on lanes. Keep those behavior families
+separate from command dispatch.
 
 Expected gates:
 
 - `cargo check -p fret-node`
 - `cargo check -p fret-node --features compat-retained-canvas`
 - `cargo test -p fret-node --features compat-retained-canvas retained_compatibility_surface_stays_declarative_only`
+- `cargo test -p fret-node --features compat-retained-canvas keyboard_shortcut_command_helpers_use_command_adapter`
 - `python3 tools/check_layering.py`

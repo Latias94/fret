@@ -355,8 +355,6 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/group_preview_move_cx.rs");
     const UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS: &str =
         include_str!("ui/canvas/widget/keyboard_shortcuts.rs");
-    const UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RETAINED_CX_RS: &str =
-        include_str!("ui/canvas/widget/keyboard_shortcuts_retained_cx.rs");
     const UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_COMMANDS_RS: &str =
         include_str!("ui/canvas/widget/keyboard_shortcuts_commands.rs");
     const UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_OVERLAY_RS: &str =
@@ -1675,7 +1673,7 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn keyboard_shortcut_command_helpers_stay_off_retained_cx() {
+    fn keyboard_shortcut_command_helpers_use_command_adapter() {
         for forbidden in [
             "retained_bridge",
             "EventCx",
@@ -1690,8 +1688,25 @@ mod surface_policy_tests {
         }
 
         assert!(
-            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS.contains("trait KeyboardShortcutCommandSink"),
-            "keyboard shortcut retained adapter should stay isolated behind a named command seam"
+            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS.contains("trait KeyboardShortcutDispatchCx"),
+            "keyboard shortcut command route should stay behind a named command seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS.contains("CanvasCommandDispatchCx"),
+            "keyboard shortcut command route must inherit command dispatch from command_adapter"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS.contains("CanvasHandledCx"),
+            "keyboard shortcut command route must keep handled semantics on the low-level adapter"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_COMMANDS_RS
+                .contains("command_adapter::dispatch_canvas_command"),
+            "keyboard shortcut command helpers must dispatch through command_adapter"
+        );
+        assert!(
+            !UI_CANVAS_RS.contains("keyboard_shortcuts_retained_cx"),
+            "keyboard shortcuts must not keep a dedicated retained command adapter"
         );
     }
 
@@ -1712,8 +1727,12 @@ mod surface_policy_tests {
         }
 
         assert!(
-            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RETAINED_CX_RS.contains("EventCx"),
-            "keyboard shortcut retained adapter should stay explicit and isolated"
+            !UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS
+                .split("#[cfg(test)]")
+                .next()
+                .unwrap_or(UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS)
+                .contains("dispatch_keyboard_command"),
+            "keyboard shortcut wrapper must inherit dispatch from command_adapter"
         );
     }
 

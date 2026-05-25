@@ -63,3 +63,20 @@ Evidence:
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_command_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_close_button_cx.rs`
 - `ecosystem/fret-node/src/lib.rs`
+
+## M4 - Second Command Dispatch Consumer
+
+Exit criteria:
+
+- One additional command dispatch consumer inherits `CanvasCommandDispatchCx`.
+- Its dedicated retained command adapter edge is deleted.
+- A source-policy gate prevents the retained edge from returning.
+
+Status: Complete.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts_commands.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_keyboard_route.rs`
+- `ecosystem/fret-node/src/lib.rs`

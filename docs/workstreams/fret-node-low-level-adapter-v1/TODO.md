@@ -35,10 +35,18 @@ Last updated: 2026-05-25
   Evidence: `ecosystem/fret-node/src/ui/canvas/widget/command_adapter.rs`, `ecosystem/fret-node/src/ui/canvas/widget/retained_command_adapter.rs`, `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_close_button_cx.rs`, source-policy test in `ecosystem/fret-node/src/lib.rs`
   Handoff: Command dispatch now has a named adapter seam; close-button no longer has a dedicated retained command adapter.
 
+## NLA-M4 - Second Command Dispatch Consumer
+
+- [x] NLA-050 [owner=codex] [deps=NLA-040] [scope=ecosystem/fret-node/src/ui/canvas/widget]
+  Goal: Migrate one more command dispatch consumer, such as keyboard shortcuts or context-menu command activation, onto `command_adapter`.
+  Validation: `cargo test -p fret-node --features compat-retained-canvas keyboard_shortcut_command_helpers_use_command_adapter`; `cargo check -p fret-node --features compat-retained-canvas`
+  Evidence: `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts.rs`, `ecosystem/fret-node/src/ui/canvas/widget/keyboard_shortcuts_commands.rs`, source-policy test in `ecosystem/fret-node/src/lib.rs`
+  Handoff: Keyboard shortcut command dispatch now inherits `CanvasCommandDispatchCx`; `keyboard_shortcuts_retained_cx.rs` is deleted.
+
 ## Follow-On Candidates
 
-- [ ] NLA-050 [owner=unassigned] [deps=NLA-040] [scope=ecosystem/fret-node/src/ui/canvas/widget]
-  Goal: Migrate one more command dispatch consumer, such as keyboard shortcuts or context-menu command activation, onto `command_adapter`.
+- [ ] NLA-060 [owner=unassigned] [deps=NLA-050] [scope=ecosystem/fret-node/src/ui/canvas/widget/context_menu]
+  Goal: Migrate context-menu command activation or split the next behavior-family adapter lane.
   Validation: narrow source-policy test plus `cargo check -p fret-node --features compat-retained-canvas`
   Evidence: follow-on task or workstream.
   Handoff: Keep command dispatch migration separate from event routing and paint/prepaint.
