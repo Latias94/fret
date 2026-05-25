@@ -1,0 +1,281 @@
+use std::sync::Arc;
+
+use fret_core::{Edges, KeyCode, Modifiers, Px, SemanticsRole};
+use fret_runtime::ActionId;
+use fret_ui::action::ActivateReason;
+use fret_ui::action::UiActionHostExt as _;
+use fret_ui::element::{
+    AnyElement, ContainerProps, Length, PressableA11y, PressableProps, PressableState, RowProps,
+    SemanticsDecoration, SpacerProps, SpacingLength,
+};
+use fret_ui::elements::GlobalElementId;
+use fret_ui::{ElementContext, UiHost};
+
+use crate::command::ElementCommandGatingExt as _;
+use crate::imui::menu_family_controls::ImUiMenubarPolicyState;
+use crate::imui::{
+    KEY_CLICKED, MenuItemOptions, ResponseExt, active_trigger_behavior, imui_is_disabled,
+    mark_lifecycle_instant_if_inactive,
+};
+use crate::primitives::menubar::trigger_row as menubar_trigger_row;
+
+use super::visual;
+
+pub(super) fn menu_item_element_with_pressable_hook_inner<H: UiHost, F>(
+    cx: &mut ElementContext<'_, H>,
+    label: Arc<str>,
+    options: MenuItemOptions,
+    role: SemanticsRole,
+    checked: Option<bool>,
+    action: Option<ActionId>,
+    pressable_hook: F,
+    response: &mut ResponseExt,
+) -> AnyElement
+where
+    F: Clone
+        + for<'cx> Fn(&mut fret_ui::ElementContext<'cx, H>, PressableState, GlobalElementId, bool),
+{
+    let pressable_hook = pressable_hook.clone();
+    let mut panel = ContainerProps::default();
+    panel.layout.size.width = Length::Fill;
+    panel.layout.size.height = Length::Auto;
+    panel.padding = Edges {
+        left: Px(6.0),
+        right: Px(6.0),
+        top: Px(2.0),
+        bottom: Px(2.0),
+    }
+    .into();
+
+    let close_popup = options.close_popup.clone();
+    let test_id = options.test_id.clone();
+    let shortcut = options.shortcut.clone();
+    let shortcut_test_id = options.shortcut_test_id.clone().or_else(|| {
+        test_id
+            .as_ref()
+            .map(|test_id| Arc::from(format!("{test_id}.shortcut")))
+    });
+    let submenu = options.submenu;
+    let expanded = options.expanded;
+    let activate_shortcut = options.activate_shortcut;
+    let shortcut_repeat = options.shortcut_repeat;
+    let menubar_policy = cx.provided::<ImUiMenubarPolicyState>().cloned();
+    let mut enabled = options.enabled && !imui_is_disabled(cx);
+    if let Some(action) = action.as_ref() {
+        enabled = enabled && cx.action_is_enabled(action);
+    }
+    let label_for_visuals = label.clone();
+
+    let mut props = PressableProps::default();
+    props.enabled = enabled;
+    props.focusable = enabled;
+    props.layout.size.width = Length::Fill;
+    props.layout.size.height = Length::Auto;
+    props.a11y = PressableA11y {
+        role: Some(role),
+        label: Some(label.clone()),
+        test_id: test_id.clone(),
+        checked,
+        expanded,
+        ..Default::default()
+    };
+
+    cx.pressable_with_id(props, move |cx, state, id| {
+        let pressable_hook = pressable_hook.clone();
+        let menubar_policy = menubar_policy.clone();
+        let behavior = active_trigger_behavior::install_active_trigger_behavior(
+            cx,
+            id,
+            active_trigger_behavior::ActiveTriggerBehaviorOptions::default(),
+        );
+        let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
+
+        if enabled {
+            let close_popup_for_activate = close_popup.clone();
+            let action_for_activate = action.clone();
+            cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
+                if reason == ActivateReason::Keyboard {
+                    mark_lifecycle_instant_if_inactive(
+                        host,
+                        acx,
+                        &lifecycle_model_for_activate,
+                        false,
+                    );
+                }
+                if let Some(open) = close_popup_for_activate.as_ref() {
+                    let _ = host.update_model(open, |v| *v = false);
+                }
+                host.record_transient_event(acx, KEY_CLICKED);
+                if let Some(action) = action_for_activate.clone() {
+                    host.record_pending_command_dispatch_source(acx, &action, reason);
+                    host.dispatch_command(Some(acx.window), action);
+                }
+                host.notify(acx);
+            }));
+
+            let nav_items = cx
+                .inherited_state::<crate::imui::popup_overlay::ImUiMenuNavState>()
+                .map(|st| st.items.clone());
+            if let Some(nav_items) = nav_items.as_ref() {
+                nav_items.borrow_mut().push(id);
+            }
+            if let Some(nav_items) = nav_items {
+                let item_id = id;
+                let close_popup_for_key = close_popup.clone();
+                let action_for_shortcut = action.clone();
+                let lifecycle_model_for_shortcut = behavior.lifecycle_model.clone();
+                cx.key_on_key_down_for(
+                    id,
+                    Arc::new(move |host, acx, down| {
+                        if let Some(shortcut) = activate_shortcut {
+                            let matches_shortcut =
+                                down.key == shortcut.key && down.modifiers == shortcut.mods;
+                            if matches_shortcut
+                                && (!down.repeat || shortcut_repeat)
+                                && !down.ime_composing
+                            {
+                                mark_lifecycle_instant_if_inactive(
+                                    host,
+                                    acx,
+                                    &lifecycle_model_for_shortcut,
+                                    false,
+                                );
+                                if let Some(open) = close_popup_for_key.as_ref() {
+                                    let _ = host.update_model(open, |v| *v = false);
+                                }
+                                host.record_transient_event(acx, KEY_CLICKED);
+                                if let Some(action) = action_for_shortcut.clone() {
+                                    host.record_pending_command_dispatch_source(
+                                        acx,
+                                        &action,
+                                        ActivateReason::Keyboard,
+                                    );
+                                    host.dispatch_command(Some(acx.window), action);
+                                }
+                                host.notify(acx);
+                                return true;
+                            }
+                        }
+
+                        if down.repeat {
+                            return false;
+                        }
+                        if down.modifiers != Modifiers::default() {
+                            return false;
+                        }
+
+                        let (dir, jump_to) = match down.key {
+                            KeyCode::ArrowDown => (1isize, None),
+                            KeyCode::ArrowUp => (-1isize, None),
+                            KeyCode::Home => (0isize, Some(0usize)),
+                            KeyCode::End => (0isize, Some(usize::MAX)),
+                            _ => return false,
+                        };
+
+                        let items = nav_items.borrow();
+                        if items.is_empty() {
+                            return false;
+                        }
+                        let len = items.len();
+                        let idx = items.iter().position(|id| *id == item_id);
+                        let next_idx = if let Some(jump) = jump_to {
+                            if jump == usize::MAX {
+                                len - 1
+                            } else {
+                                jump.min(len - 1)
+                            }
+                        } else {
+                            let current = idx.unwrap_or_else(|| if dir < 0 { len - 1 } else { 0 });
+                            ((current as isize + dir + len as isize) % len as isize) as usize
+                        };
+
+                        host.request_focus(items[next_idx]);
+                        host.notify(acx);
+                        true
+                    }),
+                );
+            }
+            if let Some(menubar_policy) = menubar_policy.as_ref() {
+                let suppress_close_auto_focus =
+                    menubar_policy.suppress_close_auto_focus_once.clone();
+                cx.key_prepend_on_key_down_for(
+                    id,
+                    Arc::new(move |host, _acx, down| {
+                        if down.repeat || down.modifiers != Modifiers::default() {
+                            return false;
+                        }
+                        if matches!(down.key, KeyCode::ArrowLeft | KeyCode::ArrowRight) {
+                            let _ = host
+                                .models_mut()
+                                .update(&suppress_close_auto_focus, |value| *value = true);
+                        }
+                        false
+                    }),
+                );
+                menubar_trigger_row::wire_switch_open_menu_on_horizontal_arrows(
+                    cx,
+                    id,
+                    menubar_policy.group_active.clone(),
+                    menubar_policy.registry.clone(),
+                );
+            }
+        }
+
+        pressable_hook(cx, state, id, enabled);
+
+        let clicked = cx.take_transient_for(id, KEY_CLICKED);
+        active_trigger_behavior::populate_active_trigger_response(
+            cx,
+            id,
+            state,
+            &behavior,
+            active_trigger_behavior::ActiveTriggerResponseInput {
+                enabled,
+                clicked,
+                changed: false,
+                lifecycle_edited: false,
+            },
+            response,
+        );
+
+        let visuals = cx.container(panel, move |cx| {
+            let mut row = RowProps::default();
+            row.layout.size.width = Length::Fill;
+            row.layout.size.height = Length::Auto;
+            row.gap = SpacingLength::Px(Px(6.0));
+
+            let indicator = match (role, checked) {
+                (SemanticsRole::MenuItemCheckbox, Some(true)) => Some(Arc::from("\u{2713}")),
+                (SemanticsRole::MenuItemCheckbox, Some(false)) => Some(Arc::from(" ")),
+                (SemanticsRole::MenuItemRadio, Some(true)) => Some(Arc::from("\u{25CF}")),
+                (SemanticsRole::MenuItemRadio, Some(false)) => Some(Arc::from(" ")),
+                _ => None,
+            };
+
+            vec![cx.row(row, move |cx| {
+                let mut out: Vec<AnyElement> = Vec::new();
+                if let Some(indicator) = indicator.clone() {
+                    out.push(visual::menu_item_indicator_text(cx, indicator));
+                }
+                out.push(visual::menu_item_label_text(cx, label_for_visuals.clone()));
+
+                if let Some(shortcut) = shortcut.clone() {
+                    out.push(cx.spacer(SpacerProps::default()));
+
+                    let mut shortcut = visual::menu_item_shortcut_text(cx, shortcut);
+                    if let Some(test_id) = shortcut_test_id.clone() {
+                        shortcut = shortcut
+                            .attach_semantics(SemanticsDecoration::default().test_id(test_id));
+                    }
+                    out.push(shortcut);
+                } else if submenu {
+                    out.push(cx.spacer(SpacerProps::default()));
+                    out.push(visual::menu_item_indicator_text(cx, Arc::from("\u{203A}")));
+                }
+                out
+            })]
+        });
+
+        vec![visuals]
+    })
+}

@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "slug": "imui-demo-metrics-debug-devtools-v1",
+  "title": "IMUI Demo Metrics Debug DevTools v1",
+  "status": "closed",
+  "updated": "2026-05-25",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-editor-workbench-golden-path-v1",
+  "problem": "Fret has the canonical IMUI editor workbench route and supporting diagnostics commands, but the Dear ImGui-style ShowDemoWindow / Metrics / Debug equivalent still needs one product owner lane so CLI, DevTools GUI, and MCP expose the same always-available route without moving diagnostics UI into fret-imui.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-demo-metrics-debug-devtools-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-demo-metrics-debug-devtools-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-demo-metrics-debug-devtools-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-demo-metrics-debug-devtools-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-demo-metrics-debug-devtools-v1/CLOSEOUT_AUDIT_2026-05-25.md"
+    },
+    {
+      "role": "upstream_route",
+      "path": "docs/workstreams/imui-editor-workbench-golden-path-v1/WORKSTREAM.json"
+    }
+  ],
+  "repro": {
+    "summary": "Inspect the shared Demo/Metrics/Debug discovery route exposed by CLI, DevTools GUI, and MCP.",
+    "commands": [
+      "cargo run -p fretboard-dev -- list tool-apps",
+      "cargo run -p fretboard-dev -- list tool-apps --json"
+    ]
+  },
+  "gates": [
+    {
+      "name": "fretboard-route-source",
+      "command": "cargo nextest run -p fretboard-dev demos::tests::tool_apps_list_names_first_open_routes demos::tests::tool_apps_json_value_exposes_stable_machine_readable_shape --no-fail-fast"
+    },
+    {
+      "name": "devtools-route-source",
+      "command": "cargo nextest run -p fret-devtools devtools_demo_metrics_debug_lines_surface_canonical_routes demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates --no-fail-fast"
+    },
+    {
+      "name": "mcp-route-source",
+      "command": "cargo nextest run -p fret-devtools-mcp mcp_first_open_resource_text_surfaces_imui_product_chain --no-fail-fast"
+    },
+    {
+      "name": "product-chain-discovery",
+      "command": "python tools/diag_gate_imui_product_chain.py --only discovery"
+    },
+    {
+      "name": "first-open-discovery",
+      "command": "python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only --reuse-built"
+    },
+    {
+      "name": "workstream-source",
+      "command": "python tools/gate_imui_workstream_source.py"
+    }
+  ],
+  "evidence": [
+    "apps/fretboard/src/demos.rs",
+    "apps/fret-devtools/src/native.rs",
+    "apps/fret-devtools-mcp/src/native.rs",
+    "docs/diagnostics-first-open.md",
+    "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json",
+    "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md",
+    "tools/diag_gate_imui_product_chain.py",
+    "tools/diag_gate_imui_p2_devtools_first_open.py"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This DevTools/diagnostics route lane is closed for the DMD-010 through DMD-030 product action surface. Keep ShowDemoWindow/Metrics/Debug productization in DevTools and diagnostics; start a new follow-on for richer GUI execution controls or shared command-palette contracts."
+  }
+}

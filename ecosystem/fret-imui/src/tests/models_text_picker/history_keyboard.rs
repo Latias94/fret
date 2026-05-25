@@ -105,7 +105,19 @@ fn input_text_history_picker_keyboard_navigation_wraps_up_to_last_candidate() {
         "imui-input-text-history-picker-keyboard",
         |cx| render(cx, &picked_index_out, &picked_out),
     );
-    assert!(picker_option_selected(
+    app.advance_frame();
+    let picked_index_out = picked_index.clone();
+    let picked_out = picked.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-input-text-history-picker-keyboard",
+        |cx| render(cx, &picked_index_out, &picked_out),
+    );
+    assert!(picker_option_active(
         &mut ui,
         &mut app,
         &mut services,
@@ -132,7 +144,19 @@ fn input_text_history_picker_keyboard_navigation_wraps_up_to_last_candidate() {
         "imui-input-text-history-picker-keyboard",
         |cx| render(cx, &picked_index_out, &picked_out),
     );
-    assert!(picker_option_selected(
+    app.advance_frame();
+    let picked_index_out = picked_index.clone();
+    let picked_out = picked.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-input-text-history-picker-keyboard",
+        |cx| render(cx, &picked_index_out, &picked_out),
+    );
+    assert!(picker_option_active(
         &mut ui,
         &mut app,
         &mut services,

@@ -235,13 +235,15 @@ It complements (but does not replace) ADRs:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/DESIGN.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/M0_BASELINE_AUDIT_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-15.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-25.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_NEXT_FOLLOW_ON_PRIORITY_AUDIT_2026-04-23.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/TODO.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/MILESTONES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/EVIDENCE_AND_GATES.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
-  - Current status: not complete; keep execution in narrow owner lanes for real-host Wayland
-    hand-feel, DevTools GUI productization, and broader perf attribution/smoothness.
+  - Current status: latest IMUI-side implementation slices are closed, but the umbrella is still
+    not complete; keep execution in narrow owner lanes for real-host Wayland hand-feel, broader
+    DevTools GUI productization, and broader perf attribution/smoothness.
     Latest docking evidence includes the M18 Windows plus Linux/X11 local policy-skip matrix, which
     does not replace real-host Wayland compositor acceptance.
 - Closed narrow follow-on for IMUI text input policy depth (read-only, select-all-on-focus, and

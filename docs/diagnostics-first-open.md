@@ -208,9 +208,16 @@ The `fretboard_tool_apps` JSON includes `product_workflows`; today that names th
 product-chain gate, its focused discovery-only form, the launched docking perf form, and the
 expected `perf-docking/regression.summary.json`, `perf-docking/check.perf_thresholds.json`, and
 `perf-docking/*/trace.chrome.json` artifacts that DevTools-style consumers should surface first.
-The same JSON also includes `first_open_routes`; today that names `demo-metrics-debug`, its editor
-proof/editor notes/device shell demos, and the current `diag stats`, `diag layout-perf-summary`,
-`diag memory-summary`, `diag triage`, `diag hotspots`, and `diag trace` commands.
+The same JSON also includes `first_open_routes`; today that names `demo-metrics-debug`, its
+owner workstream at `docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json`, its
+canonical editor workbench demo, supporting editor proof/editor notes/device shell demos, and the
+current `diag stats`, `diag layout-perf-summary`, `diag memory-summary`, `diag triage`,
+`diag hotspots`, and `diag trace` commands. The route also carries the docking handoff owner
+`docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json`, the bounded
+`imui-p3-multiwindow-parity` campaign validation command, and the real-host Wayland acceptance
+runbook at
+`docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md`.
+Local Wayland policy-skip evidence stays explicitly separate from compositor acceptance.
 
 Open:
 
@@ -229,8 +236,12 @@ cargo run -p fret-devtools
 ```
 
 The GUI shell keeps both the `First-open Evidence Path` and the same `demo-metrics-debug` route
-visible: editor proof demos, current metrics commands, and debug drill-down commands stay
-discoverable from the same top-level workspace and the shared `list tool-apps --json` index.
+visible: the route owner workstream, canonical editor workbench, supporting editor proof demos,
+current action bundle, metrics commands, debug drill-down commands, docking handoff owner,
+bounded campaign validation, and Wayland acceptance runbook stay discoverable from the same
+top-level workspace and the shared `list tool-apps --json` index. The GUI surface intentionally
+uses a dedicated guide panel and copyable action bundle; a shared command palette contract is
+still deferred.
 
 Launch the MCP adapter directly with:
 
@@ -239,7 +250,8 @@ cargo run -p fret-devtools-mcp
 ```
 
 The MCP adapter also exposes `fret-diag://first-open.md` as a text resource for the same shared
-first-open evidence path, including the IMUI product-chain route.
+first-open evidence path, including the IMUI product-chain route and the same copyable action
+bundle.
 
 ### Maintainer/workstream branch
 
