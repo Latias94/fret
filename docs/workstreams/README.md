@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 437
+- Dedicated directories: 438
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2256,6 +2256,7 @@ Rule:
 - `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/` — first 2026-03-20, latest 2026-03-20, 6 markdown docs
 - `docs/workstreams/select-combobox-deep-redesign-v1/` — first 2026-03-02, latest 2026-03-03, 3 markdown docs
 - `docs/workstreams/shadcn-component-surface-audit-v1/` — first 2026-03-02, latest 2026-03-03, 3 markdown docs
+- `docs/workstreams/shadcn-component-parity-matrix-v1/` — first 2026-05-25, latest 2026-05-25, 5 markdown docs (active matrix lane for tracking how far shadcn component parity can be proven by self-rendered harness evidence; includes `WORKSTREAM.json`)
 - `docs/workstreams/shadcn-extras/` — first 2026-02-09, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/shadcn-motion-parity-audit-v1/` — first 2026-03-03, latest 2026-03-04, 5 markdown docs
 - `docs/workstreams/shadcn-parity-discovery-harness-v1/` — first 2026-05-09, latest 2026-05-09, 4 markdown docs (active discovery lane for mapping upstream shadcn facts to Fret evidence and classifying parity drift before manual screenshot reports)

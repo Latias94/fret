@@ -28,12 +28,17 @@ Related trackers:
 - Mechanism harness v2 shared runtime oracle: `docs/mechanism-harness-v2.md`
 - new-york-v4 coverage snapshot: `docs/audits/shadcn-new-york-v4-coverage.md`
 - new-york-v4 alignment notes: `docs/audits/shadcn-new-york-v4-alignment.md`
+- Machine harness matrix: `docs/workstreams/shadcn-component-parity-matrix-v1/MATRIX.md`
 
 Current golden parity snapshot (new-york-v4):
 
 - Keys referenced by tests: `578/578` (`100%`, tracked-only, normalized `.open`) as of 2026-02-03
   - Note: this is **breadth coverage** (every golden key is gated somewhere), not full 1:1 parity across
   viewports, DPIs, fonts, and interaction state machines.
+- Machine harness matrix as of 2026-05-25: 59 shadcn registry/non-registry surfaces tracked, 9
+  current suite slices `regression_locked`, 1 component-fact slice in `harness_hardening`, 8
+  manifest targets waiting promotion into current suite reports, and 36 implemented surfaces still
+  `inventory_only`.
 
 ## Near-Term Roadmap (shadcn-web v4/new-york-v4)
 

@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "slug": "shadcn-component-parity-matrix-v1",
+  "title": "Shadcn Component Parity Matrix v1",
+  "status": "active",
+  "updated": "2026-05-25",
+  "scope_kind": "execution",
+  "problem": "Fret's shadcn parity tracking still mixes human visual review with automated harness evidence. This lane records how far self-rendered component parity can be proven automatically across source refs, upstream DOM/CSS snapshots, Fret layout, semantics, text/paint, behavior scripts, responsive coverage, and repair queues.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/shadcn-component-parity-matrix-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/shadcn-component-parity-matrix-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/shadcn-component-parity-matrix-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/shadcn-component-parity-matrix-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "matrix",
+      "path": "docs/workstreams/shadcn-component-parity-matrix-v1/MATRIX.md"
+    }
+  ],
+  "repro": {
+    "summary": "Regenerate the shadcn component harness matrix from repo-local progress, manifest, suite, and packet evidence.",
+    "commands": [
+      "python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py",
+      "python tools/parity-discovery/shadcn_component_harness_matrix.py",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/WORKSTREAM.json | Out-Null",
+      "python tools/check_workstream_catalog.py",
+      "git diff --check"
+    ]
+  },
+  "gates": [
+    {
+      "name": "matrix-python-compile",
+      "command": "python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py"
+    },
+    {
+      "name": "matrix-generate",
+      "command": "python tools/parity-discovery/shadcn_component_harness_matrix.py"
+    },
+    {
+      "name": "matrix-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json | Out-Null"
+    },
+    {
+      "name": "workstream-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "diff-hygiene",
+      "command": "git diff --check"
+    }
+  ],
+  "evidence": [
+    "tools/parity-discovery/shadcn_component_harness_matrix.py",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/MATRIX.md",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json",
+    "docs/shadcn-declarative-progress.md",
+    "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json",
+    "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json",
+    "docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json"
+  ],
+  "upstream_refs": [
+    "repo-ref/ui/apps/v4/registry/new-york-v4/ui",
+    "repo-ref/ui/apps/v4/content/docs/components",
+    "repo-ref/primitives",
+    "repo-ref/base-ui"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue by selecting the next high-risk inventory-only or coverage-targeted shadcn component, then promote it into a full harness seed with upstream source refs, Fret diagnostics evidence, behavior scripts, and packet checks. Do not use HTML tree equality as proof; compare self-rendered outcomes."
+  }
+}
