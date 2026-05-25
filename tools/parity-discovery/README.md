@@ -43,10 +43,27 @@ The first packet-focused lane is
 
 Reports may also include `live_facts`. The first fact extractor reads upstream DOM snapshots and
 records class tokens, computed layout values, text metrics, paint values, border/radius values, and
-icon descendant bounds for `upstream.dom_target_ids`. Fret facts currently come from layout
-sidecars and bundle schema2 semantics: bounds, raw bounds, kind/role hints, and related `.chrome`
-or `-icon` test ids. This is deliberately conservative; the report should say when Fret paint/text
-facts are only hints instead of claiming pixel-complete paint parity.
+icon descendant bounds for `upstream.dom_target_ids`. Fret facts come from layout sidecars, bundle
+schema2 semantics, and bundle schema2 `tables.text_paint` rows. Semantics/text-paint packet rows are
+compacted by stable fact signatures and keep observed counts plus bounded evidence-path samples
+instead of repeating every captured snapshot node. This is deliberately conservative; `tables.text_paint`
+is a sparse diagnostics table, so bundle-level table presence is distinct from per-node paint/text
+association.
+
+`live_measurement_required` checks may declare `live_fact_requirements` as a map from live-fact
+summary field to minimum count, for example:
+
+```json
+{
+  "live_fact_requirements": {
+    "fret_semantics_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 1
+  }
+}
+```
+
+When those counts are satisfied, the row becomes `pass_known` with `observed_source:
+live_fact_requirements`; otherwise it stays in the repair queue.
 
 ## Current Seeds
 
@@ -293,7 +310,9 @@ Supported `kind` values:
   `layout.taffy.v1.json` sidecars.
 - `upstream_dom_snapshot`: evaluate structured geometry predicates from one or more shadcn web DOM
   snapshot JSON files.
-- `live_measurement_required`: the source fact is known but the prototype cannot measure it live yet.
+- `live_measurement_required`: the source fact needs live evidence. Without
+  `live_fact_requirements` it remains `needs_live_measurement`; with satisfied requirements it
+  becomes `pass_known`.
 - `expected_mismatch`: a known mismatch imported from a prior report or failing gate.
 - `blocked`: the mapping cannot run because selectors or evidence are missing.
 

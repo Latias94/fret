@@ -235,6 +235,8 @@ class LayoutEvidence:
     bundle_paths: list[str]
     roots: list[LayoutRoot]
     text_paint_facts_by_node: dict[str, list[dict[str, Any]]]
+    text_paint_bundle_entry_count: int
+    text_paint_fact_row_count: int
 
     @classmethod
     def empty(cls) -> "LayoutEvidence":
@@ -245,6 +247,8 @@ class LayoutEvidence:
             bundle_paths=[],
             roots=[],
             text_paint_facts_by_node={},
+            text_paint_bundle_entry_count=0,
+            text_paint_fact_row_count=0,
         )
 
     def find(
@@ -956,9 +960,14 @@ def load_layout_evidence(
         evidence.roots.extend(
             _bundle_semantics_roots(data, bundle_path, scale_factor, coordinate_units)
         )
+        text_paint_rows = _bundle_text_paint_fact_rows(data, bundle_path)
+        evidence.text_paint_bundle_entry_count += len(_bundle_text_paint_entries(data))
+        evidence.text_paint_fact_row_count += sum(
+            len(rows) for rows in text_paint_rows.values()
+        )
         _merge_text_paint_facts(
             evidence.text_paint_facts_by_node,
-            _bundle_text_paint_fact_rows(data, bundle_path),
+            text_paint_rows,
         )
         for root_index, node in _bundle_semantics_entries(data):
             rect = node.get("bounds")
@@ -1661,6 +1670,39 @@ def combine_measurements(
     }
 
 
+def evaluate_live_fact_measurement(
+    check: dict[str, Any], live_facts: dict[str, Any]
+) -> dict[str, Any] | None:
+    requirements = check.get("live_fact_requirements")
+    if not isinstance(requirements, dict):
+        return None
+
+    results = []
+    for field, minimum in sorted(requirements.items()):
+        if not isinstance(field, str) or not isinstance(minimum, int | float):
+            continue
+        observed = live_facts.get(field, 0)
+        if not isinstance(observed, int | float):
+            observed = 0
+        results.append(
+            {
+                "field": field,
+                "observed": observed,
+                "minimum": minimum,
+                "status": "pass" if observed >= minimum else "missing",
+            }
+        )
+
+    if not results:
+        return None
+    return {
+        "source": "live_fact_requirements",
+        "status": _measurement_status(results),
+        "part_id": live_facts["part_id"],
+        "requirements": results,
+    }
+
+
 def _px_value(value: Any) -> float | None:
     if not isinstance(value, str) or PX_VALUE_RE.match(value) is None:
         return None
@@ -1972,6 +2014,259 @@ def _fret_node_fact(node: LayoutNode) -> dict[str, Any]:
     return result
 
 
+COMPACT_EVIDENCE_PATH_LIMIT = 3
+COMPACT_NODE_SAMPLE_LIMIT = 3
+COMPACT_NODE_FACT_LIMIT = 6
+COMPACT_TEXT_PAINT_FACT_LIMIT = 8
+
+
+def _stable_json_key(value: Any) -> str:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+
+
+def _append_unique_sample(items: list[Any], value: Any, limit: int) -> None:
+    if value is None or value in items or len(items) >= limit:
+        return
+    items.append(value)
+
+
+TEXT_PAINT_VOLATILE_KEYS = {
+    "window",
+    "frame_id",
+    "window_snapshot_seq",
+    "bundle_schema2_path",
+    "node",
+    "element",
+    "measure_time_us",
+    "paint_time_us",
+    "prepare_time_us",
+    "inclusive_time_us",
+}
+
+
+def _compact_text_paint_fact(row: dict[str, Any]) -> dict[str, Any]:
+    fact = {
+        key: value
+        for key, value in row.items()
+        if key not in TEXT_PAINT_VOLATILE_KEYS and value not in (None, [], {})
+    }
+    fact["source"] = "bundle_schema2_text_paint"
+    return fact
+
+
+def _compact_text_paint_facts(
+    rows: list[dict[str, Any]], limit: int = COMPACT_TEXT_PAINT_FACT_LIMIT
+) -> list[dict[str, Any]]:
+    compact_by_key: dict[str, dict[str, Any]] = {}
+    ordered_keys: list[str] = []
+    for row in rows:
+        fact = _compact_text_paint_fact(row)
+        key = _stable_json_key(fact)
+        existing = compact_by_key.get(key)
+        if existing is None:
+            existing = dict(fact)
+            existing["observed_count"] = 0
+            compact_by_key[key] = existing
+            ordered_keys.append(key)
+        existing["observed_count"] += 1
+        _append_unique_sample(
+            existing.setdefault("evidence_paths", []),
+            row.get("bundle_schema2_path"),
+            COMPACT_EVIDENCE_PATH_LIMIT,
+        )
+        _append_unique_sample(
+            existing.setdefault("node_samples", []),
+            str(row.get("node")) if row.get("node") is not None else None,
+            COMPACT_NODE_SAMPLE_LIMIT,
+        )
+
+    compact = [compact_by_key[key] for key in ordered_keys[:limit]]
+    omitted = max(0, len(ordered_keys) - limit)
+    if omitted and compact:
+        compact[-1]["omitted_compact_fact_count"] = omitted
+    return compact
+
+
+def _merge_compact_text_paint_facts(
+    existing_rows: list[dict[str, Any]], incoming_rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    merged_by_key: dict[str, dict[str, Any]] = {}
+    ordered_keys: list[str] = []
+    for row in [*existing_rows, *incoming_rows]:
+        stable = {
+            key: value
+            for key, value in row.items()
+            if key
+            not in {
+                "observed_count",
+                "evidence_paths",
+                "node_samples",
+                "omitted_compact_fact_count",
+            }
+        }
+        key = _stable_json_key(stable)
+        current = merged_by_key.get(key)
+        if current is None:
+            current = dict(stable)
+            current["observed_count"] = 0
+            merged_by_key[key] = current
+            ordered_keys.append(key)
+        current["observed_count"] += int(row.get("observed_count", 1))
+        for path in row.get("evidence_paths", []):
+            _append_unique_sample(
+                current.setdefault("evidence_paths", []),
+                path,
+                COMPACT_EVIDENCE_PATH_LIMIT,
+            )
+        for sample in row.get("node_samples", []):
+            _append_unique_sample(
+                current.setdefault("node_samples", []),
+                sample,
+                COMPACT_NODE_SAMPLE_LIMIT,
+            )
+
+    return [merged_by_key[key] for key in ordered_keys[:COMPACT_TEXT_PAINT_FACT_LIMIT]]
+
+
+def _fret_node_fact_with_text_paint(
+    node: LayoutNode, evidence: LayoutEvidence
+) -> dict[str, Any]:
+    fact = _fret_node_fact(node)
+    text_paint_facts = _compact_text_paint_facts(
+        evidence.text_paint_facts_by_node.get(node.node, [])
+    )
+    if text_paint_facts:
+        fact["text_paint"] = text_paint_facts
+    return fact
+
+
+def _compact_fret_node_facts(
+    facts: list[dict[str, Any]], limit: int = COMPACT_NODE_FACT_LIMIT
+) -> list[dict[str, Any]]:
+    compact_by_key: dict[str, dict[str, Any]] = {}
+    ordered_keys: list[str] = []
+    for fact in facts:
+        signature = {
+            "test_id": fact.get("test_id"),
+            "kind_hint": fact.get("kind_hint"),
+            "coordinate_units": fact.get("coordinate_units"),
+            "scale_factor": fact.get("scale_factor"),
+            "source": fact.get("source"),
+            "semantics": fact.get("semantics"),
+            "interaction": fact.get("interaction"),
+        }
+        key = _stable_json_key(signature)
+        existing = compact_by_key.get(key)
+        source_path = fact.get("sidecar_path") or fact.get("bundle_schema2_path")
+        if existing is None:
+            existing = dict(fact)
+            existing.pop("sidecar_path", None)
+            existing.pop("bundle_schema2_path", None)
+            existing.pop("text_paint", None)
+            existing["observed_count"] = 0
+            compact_by_key[key] = existing
+            ordered_keys.append(key)
+
+        existing["observed_count"] += 1
+        _append_unique_sample(
+            existing.setdefault("evidence_paths", []),
+            source_path,
+            COMPACT_EVIDENCE_PATH_LIMIT,
+        )
+        _append_unique_sample(
+            existing.setdefault("node_samples", []),
+            fact.get("node"),
+            COMPACT_NODE_SAMPLE_LIMIT,
+        )
+        _append_unique_sample(
+            existing.setdefault("bounds_samples", []),
+            fact.get("bounds"),
+            COMPACT_NODE_SAMPLE_LIMIT,
+        )
+        if fact.get("text_paint"):
+            existing["text_paint"] = _merge_compact_text_paint_facts(
+                existing.get("text_paint", []), fact["text_paint"]
+            )
+
+    compact = [compact_by_key[key] for key in ordered_keys[:limit]]
+    omitted = max(0, len(ordered_keys) - limit)
+    if omitted and compact:
+        compact[-1]["omitted_compact_fact_count"] = omitted
+    return compact
+
+
+def _fret_semantics_facts_for_test_id(
+    test_id: str, evidence: LayoutEvidence
+) -> list[dict[str, Any]]:
+    return _compact_fret_node_facts(
+        [
+            _fret_node_fact_with_text_paint(node, evidence)
+            for node in evidence.bundle_nodes_by_test_id.get(test_id, [])
+            if node.semantics
+        ]
+    )
+
+
+def _semantics_summary(
+    test_id: str, evidence: LayoutEvidence, compact_facts: list[dict[str, Any]]
+) -> dict[str, Any]:
+    observed_count = sum(
+        1 for node in evidence.bundle_nodes_by_test_id.get(test_id, []) if node.semantics
+    )
+    return {
+        "observed_node_count": observed_count,
+        "compact_node_count": len(compact_facts),
+        "omitted_node_count": max(
+            0, observed_count - sum(fact.get("observed_count", 1) for fact in compact_facts)
+        ),
+    }
+
+
+def _fact_has_semantics(fact: dict[str, Any]) -> bool:
+    if fact.get("semantics"):
+        return True
+    primary = fact.get("primary")
+    if isinstance(primary, dict) and _fact_has_semantics(primary):
+        return True
+    return any(
+        isinstance(item, dict) and _fact_has_semantics(item)
+        for key in ("semantics_nodes", "related")
+        for item in fact.get(key, [])
+    )
+
+
+def _fact_has_interaction(fact: dict[str, Any]) -> bool:
+    if fact.get("interaction"):
+        return True
+    primary = fact.get("primary")
+    if isinstance(primary, dict) and _fact_has_interaction(primary):
+        return True
+    return any(
+        isinstance(item, dict) and _fact_has_interaction(item)
+        for key in ("semantics_nodes", "related")
+        for item in fact.get(key, [])
+    )
+
+
+def _fact_text_paint_count(fact: dict[str, Any]) -> int:
+    count = len(fact.get("text_paint", []))
+    primary = fact.get("primary")
+    if isinstance(primary, dict):
+        count += _fact_text_paint_count(primary)
+    for key in ("semantics_nodes", "related"):
+        count += sum(
+            _fact_text_paint_count(item)
+            for item in fact.get(key, [])
+            if isinstance(item, dict)
+        )
+    return count
+
+
 def _related_test_ids(test_id: str, evidence: LayoutEvidence) -> list[str]:
     candidates = [
         f"{test_id}.chrome",
@@ -1991,29 +2286,32 @@ def _fret_test_id_facts(test_id: str, evidence: LayoutEvidence) -> dict[str, Any
     primary = evidence.find(test_id)
     facts: dict[str, Any] = {"test_id": test_id}
     if primary is not None:
-        facts["primary"] = _fret_node_fact(primary)
-        text_paint_facts = evidence.text_paint_facts_by_node.get(primary.node, [])
-        if text_paint_facts:
-            facts["text_paint"] = text_paint_facts[:12]
-    semantics_nodes = [
-        _fret_node_fact(node)
-        for node in evidence.bundle_nodes_by_test_id.get(test_id, [])
-        if node.semantics
-    ]
+        facts["primary"] = _fret_node_fact_with_text_paint(primary, evidence)
+    semantics_nodes = _fret_semantics_facts_for_test_id(test_id, evidence)
     if semantics_nodes:
         facts["semantics_nodes"] = semantics_nodes
+        facts["semantics_summary"] = _semantics_summary(
+            test_id, evidence, semantics_nodes
+        )
     related = []
     for related_test_id in _related_test_ids(test_id, evidence):
         related_node = evidence.find(related_test_id)
         if related_node is not None:
-            related_fact = _fret_node_fact(related_node)
-            text_paint_facts = evidence.text_paint_facts_by_node.get(related_node.node, [])
-            if text_paint_facts:
-                related_fact["text_paint"] = text_paint_facts[:12]
-            related.append(related_fact)
-        for semantics_node in evidence.bundle_nodes_by_test_id.get(related_test_id, []):
-            if semantics_node.semantics:
-                related.append(_fret_node_fact(semantics_node))
+            related.append(_fret_node_fact_with_text_paint(related_node, evidence))
+        related_semantics_nodes = _fret_semantics_facts_for_test_id(
+            related_test_id, evidence
+        )
+        if related_semantics_nodes:
+            related.append(
+                {
+                    "test_id": related_test_id,
+                    "semantics_nodes": related_semantics_nodes,
+                    "semantics_summary": _semantics_summary(
+                        related_test_id, evidence, related_semantics_nodes
+                    ),
+                    "source": "bundle_schema2_semantics",
+                }
+            )
     if related:
         facts["related"] = related
     if primary is None and not related and not semantics_nodes:
@@ -2055,24 +2353,16 @@ def _part_live_facts(
             1 for fact in upstream_facts if fact.get("interaction")
         ),
         "fret_semantics_fact_count": sum(
-            1
-            for fact in fret_facts
-            if fact.get("primary", {}).get("semantics")
-            or any(item.get("semantics") for item in fact.get("semantics_nodes", []))
-            or any(item.get("semantics") for item in fact.get("related", []))
+            1 for fact in fret_facts if _fact_has_semantics(fact)
         ),
         "fret_interaction_fact_count": sum(
-            1
-            for fact in fret_facts
-            if fact.get("primary", {}).get("interaction")
-            or any(item.get("interaction") for item in fact.get("semantics_nodes", []))
-            or any(item.get("interaction") for item in fact.get("related", []))
+            1 for fact in fret_facts if _fact_has_interaction(fact)
         ),
         "fret_text_paint_fact_count": sum(
-            len(fact.get("text_paint", []))
-            + sum(len(item.get("text_paint", [])) for item in fact.get("related", []))
-            for fact in fret_facts
+            _fact_text_paint_count(fact) for fact in fret_facts
         ),
+        "fret_text_paint_bundle_entry_count": layout_evidence.text_paint_bundle_entry_count,
+        "fret_text_paint_row_count": layout_evidence.text_paint_fact_row_count,
         "upstream": upstream_facts,
         "fret": fret_facts,
     }
@@ -2122,6 +2412,8 @@ def _generate_live_facts(
         "fret_text_paint_fact_count": sum(
             part["fret_text_paint_fact_count"] for part in parts
         ),
+        "fret_text_paint_bundle_entry_count": layout_evidence.text_paint_bundle_entry_count,
+        "fret_text_paint_row_count": layout_evidence.text_paint_fact_row_count,
         "parts": parts,
     }
 
@@ -2534,6 +2826,12 @@ def _generate_agent_packet(
             "fret_text_paint_fact_count": report["summary"].get(
                 "fret_text_paint_fact_count", 0
             ),
+            "fret_text_paint_bundle_entry_count": report["summary"].get(
+                "fret_text_paint_bundle_entry_count", 0
+            ),
+            "fret_text_paint_row_count": report["summary"].get(
+                "fret_text_paint_row_count", 0
+            ),
             "repair_queue_count": len(repair_queue),
             "hardening_queue_count": len(hardening_queue),
             "gate_queue_count": len(gate_queue),
@@ -2578,11 +2876,28 @@ def generate_report(
     for part in mapping["parts"]:
         checks = []
         check_statuses = []
+        part_live_facts = _part_live_facts(
+            part,
+            {"id": part["id"], "test_ids": part["fret"]["test_ids"]},
+            layout_evidence,
+            dom_evidence,
+        )
         for check in part["checks"]:
             measurement = combine_measurements(
                 evaluate_fret_measurement(check, layout_evidence),
                 evaluate_upstream_dom_measurement(check, dom_evidence),
             )
+            live_measurement = evaluate_live_fact_measurement(check, part_live_facts)
+            if live_measurement is not None:
+                measurement = live_measurement if measurement is None else {
+                    "source": f"{measurement['source']}+{live_measurement['source']}",
+                    "status": "pass"
+                    if measurement["status"] == "pass"
+                    and live_measurement["status"] == "pass"
+                    else live_measurement["status"],
+                    "predicate_measurement": measurement,
+                    "live_fact_measurement": live_measurement,
+                }
             status = check_status(check, measurement)
             owner = _resolve_owner(check)
             layer = _resolve_layer(check, owner)
@@ -2682,6 +2997,10 @@ def generate_report(
                 "fret_interaction_fact_count"
             ],
             "fret_text_paint_fact_count": live_facts["fret_text_paint_fact_count"],
+            "fret_text_paint_bundle_entry_count": live_facts[
+                "fret_text_paint_bundle_entry_count"
+            ],
+            "fret_text_paint_row_count": live_facts["fret_text_paint_row_count"],
         },
         "live_facts": live_facts,
         "parts": report_parts,
@@ -2907,6 +3226,12 @@ def _legacy_agent_packet(report: dict[str, Any], path: Path) -> dict[str, Any]:
             ),
             "fret_text_paint_fact_count": report["summary"].get(
                 "fret_text_paint_fact_count", 0
+            ),
+            "fret_text_paint_bundle_entry_count": report["summary"].get(
+                "fret_text_paint_bundle_entry_count", 0
+            ),
+            "fret_text_paint_row_count": report["summary"].get(
+                "fret_text_paint_row_count", 0
             ),
             "repair_queue_count": non_passing,
             "hardening_queue_count": 0,

@@ -90,3 +90,19 @@ Completed criteria:
   flags, actions, relations, active-descendant, and scroll fields.
 - Fret diagnostics schema2 now exports a first-class `tables.text_paint` table with text input,
   renderer text perf, widget measure, paint widget, and text prepare rows.
+
+## M5 - Live Diagnostics Packet Closure
+
+Status: complete for the Button Group and first Material 3 Button live slices on 2026-05-25.
+
+Completed criteria:
+
+- Agent packets compact repeated bundle semantics/text-paint observations into stable facts with
+  observed counts, node samples, and bounded evidence paths.
+- Button Group pilot evidence was refreshed from a current UI Gallery seed diagnostics run, and the
+  pilot now records both per-node text/paint facts and bundle-level `tables.text_paint` row counts.
+- Material 3 Button gallery rows now expose stable live `test_id`s for filled/default and
+  filled/disabled buttons.
+- Material 3 Button adapter checks can use `live_fact_requirements` so live semantics and
+  bundle-level text/paint evidence move checks out of repair queues without pretending sparse
+  hotspot rows are per-button paint geometry.

@@ -31,6 +31,16 @@ Current state:
   `docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json`
   maps Material spec, MUI, Compose Material3, and Fret Material3 Button references into the same
   packet shape.
+- CPF-092/CPF-094/CPF-096 are complete for the live diagnostics closure slice: bundle semantics and
+  text/paint facts are compacted before entering the packet, Button Group now consumes current
+  `tables.text_paint` evidence, and Material 3 Button uses live UI Gallery bundle facts through
+  explicit `live_fact_requirements`.
+- The current Button Group pilot records 6 per-node Fret text/paint facts, 160 bundle
+  `tables.text_paint` entries, and 5532 compactable text/paint rows from session
+  `target/fret-diag-component-parity-button-group-text-paint-v1/sessions/1779671244627-41048`.
+- The current Material 3 Button adapter pilot records 4 Fret semantics facts, 4 Fret interaction
+  facts, 180 bundle `tables.text_paint` entries, and 3746 text/paint rows from session
+  `target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708`.
 
 How to continue:
 
@@ -39,8 +49,8 @@ How to continue:
 3. If only `hardening_queue` is non-empty, add live source/Fret facts before broadening coverage.
 4. Promote stable rows through `gate_queue` into component fixtures, diag scripts, or mechanism
    harness cases.
-5. For Material 3, attach a real Material Button diagnostics bundle and an upstream DOM snapshot
-   next; the adapter already emits the right repair/gate queues.
+5. For Material 3, attach an upstream Material UI DOM snapshot next. The Fret live side is now
+   hardening-only, not repair-only.
 
 Residual risk:
 
@@ -48,9 +58,8 @@ Residual risk:
   proves discovery power.
 - Current source facts still include curated prose as context; future rows should prefer
   `upstream.dom_target_ids` when upstream DOM/CSS evidence exists.
-- Historical Button Group bundles predate `tables.text_paint`, so the pilot has 0 Fret text/paint
-  table rows even though new diagnostics exports the table. Refresh the Button Group diag evidence
-  before claiming rendered text/paint parity.
-- The Material 3 pilot intentionally reports `needs_repair` because it has no live upstream DOM or
-  Fret diagnostics evidence attached yet; treat that as the next evidence-capture slice, not as a
-  component defect.
+- `tables.text_paint` is a sparse diagnostics/hotspot table. The Material 3 Button pilot proves
+  bundle-level table availability while per-button text/paint row association remains a hardening
+  target, not a proven component defect.
+- The Material 3 pilot still has no upstream Material UI DOM snapshot attached; use the local
+  Material UI repo-ref source and a future DOM extractor before claiming cross-stack visual parity.

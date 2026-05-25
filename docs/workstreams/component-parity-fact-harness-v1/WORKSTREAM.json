@@ -32,13 +32,15 @@
     "summary": "Generate shadcn and Material adapter reports, validate JSON, and verify schema2 text/paint table export.",
     "commands": [
       "python -m py_compile tools/parity-discovery/shadcn_parity_discovery.py",
-      "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json",
+      "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json --dir target/fret-diag-component-parity-button-group-text-paint-v1 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target/debug/fret-ui-gallery.exe",
+      "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag-component-parity-button-group-text-paint-v1/sessions/1779671244627-41048 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json",
       "python -m json.tool docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json | Out-Null",
       "python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v2.json --suite-from-existing-reports --suite-output docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json",
       "python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json | Out-Null",
       "python -m json.tool docs/workstreams/component-parity-fact-harness-v1/WORKSTREAM.json | Out-Null",
       "python tools/check_workstream_catalog.py",
-      "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/material3_button_adapter_v1.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json",
+      "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/material3/button/ui-gallery-material3-button-sizes-screenshots.json --dir target/fret-diag-component-parity-material3-button-live-v1 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery --features gallery-full",
+      "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/material3_button_adapter_v1.json --fret-bundle-schema2-dir target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708 --output docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json",
       "python -m json.tool docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json | Out-Null",
       "cargo test -p fret-bootstrap --lib --features \"ui-app-driver diagnostics\" schema2_exports_text_paint_facts_table_from_debug_snapshots"
     ]
@@ -50,7 +52,7 @@
     },
     {
       "name": "button-group-agent-packet-pilot",
-      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json"
+      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/button_group_parts_v1.json --fret-layout-sidecar-dir target/fret-diag-component-parity-button-group-text-paint-v1/sessions/1779671244627-41048 --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json --upstream-dom-snapshot docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json"
     },
     {
       "name": "pilot-json",
@@ -74,7 +76,7 @@
     },
     {
       "name": "material3-button-adapter-pilot",
-      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/material3_button_adapter_v1.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json"
+      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/material3_button_adapter_v1.json --fret-bundle-schema2-dir target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708 --output docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json"
     },
     {
       "name": "material3-button-adapter-json",
@@ -93,10 +95,12 @@
     "docs/workstreams/component-parity-fact-harness-v1/artifacts/shadcn_parity_suite_report_v2_agent_summary.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json",
     "docs/workstreams/shadcn-parity-harness-v1/README.md",
-    "target/fret-diag-shadcn-parity-seed-codex/sessions/1779639738088-60664/1779640214741/ai.packet",
+    "target/fret-diag-component-parity-button-group-text-paint-v1/sessions/1779671244627-41048/1779671250995/ai.packet",
     "ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs",
+    "apps/fret-ui-gallery/src/ui/snippets/material3/button.rs",
     "tools/parity-discovery/fixtures/material3_button_adapter_v1.json",
-    "docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json"
+    "docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json",
+    "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/ai.packet"
   ],
   "upstream_refs": [
     "repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx",

@@ -27,5 +27,12 @@ date: 2026-05-25
       references into the same fact packet shape.
 - [x] CPF-090: Promote agent packet summaries into the shadcn v2 suite report and coverage
       manifest workflow.
+- [x] CPF-092: Compact bundle semantics and text/paint evidence in agent packets by stable fact
+      signatures, preserving observed counts and evidence-path samples instead of duplicating every
+      captured snapshot node.
+- [x] CPF-094: Refresh the Button Group seed diagnostics evidence with current schema2 bundles so
+      `tables.text_paint` rows enter the pilot packet.
+- [x] CPF-096: Attach the Material 3 Button adapter to its first live UI Gallery diagnostics slice
+      using stable gallery `test_id`s and explicit `live_fact_requirements`.
 - [ ] CPF-100: Split any confirmed mechanism-level defect found by component packets into
       `fret-mechanism-harness-v1` or a narrower mechanism follow-on.

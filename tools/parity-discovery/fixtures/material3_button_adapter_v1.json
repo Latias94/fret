@@ -79,8 +79,8 @@
           "fret.material3.headless_goldens"
         ],
         "test_ids": [
-          "btn-filled",
-          "btn-filled-disabled"
+          "ui-gallery-material3-button-filled-default",
+          "ui-gallery-material3-button-filled-disabled"
         ],
         "facts": [
           "Fret Material3 Button sets SemanticsRole::Button through PressableA11y.",
@@ -94,6 +94,10 @@
           "kind": "live_measurement_required",
           "expected": "Bundle schema2 semantics should expose role=button, label, disabled flag, and invoke/focus action state for enabled and disabled Material buttons.",
           "observed": "unknown",
+          "live_fact_requirements": {
+            "fret_semantics_fact_count": 2,
+            "fret_interaction_fact_count": 2
+          },
           "confidence": "medium",
           "owner": "component_recipe",
           "layer": "recipe",
@@ -132,8 +136,8 @@
           "fret.material3.headless_goldens"
         ],
         "test_ids": [
-          "btn-filled",
-          "btn-filled-disabled"
+          "ui-gallery-material3-button-filled-default",
+          "ui-gallery-material3-button-filled-disabled"
         ],
         "facts": [
           "Fret Material3 Button resolves container height, padding, shape, text style, and state-layer colors through Material token keys.",
@@ -144,8 +148,12 @@
         {
           "id": "material3_button_text_paint_table_gate",
           "kind": "live_measurement_required",
-          "expected": "Material Button diagnostics should attach bundle schema2 text_paint rows for text prepare, widget measure, and paint widget hotspots when a Material button is captured.",
+          "expected": "Material Button diagnostics should export bundle schema2 text_paint rows while the Material button page is captured; per-button node association is a follow-up hardening target because the table is sparse.",
           "observed": "unknown",
+          "live_fact_requirements": {
+            "fret_text_paint_bundle_entry_count": 1,
+            "fret_text_paint_row_count": 1
+          },
           "confidence": "medium",
           "owner": "diagnostics_surface",
           "layer": "runner",
