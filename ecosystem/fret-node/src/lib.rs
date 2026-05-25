@@ -122,6 +122,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/frame.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CACHE_RS: &str =
         include_str!("ui/canvas/widget/paint_root/frame/cache.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame/background.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_background_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_background_retained_cx.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_ADAPTER_RS: &str =
         include_str!("ui/canvas/widget/paint_root/frame_clip_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_RETAINED_CX_RS: &str =
@@ -3287,6 +3293,80 @@ mod surface_policy_tests {
             assert!(
                 UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_RETAINED_CX_RS.contains(required),
                 "retained frame diagnostics binding should own retained diagnostics read/write `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_frame_background_adapter_keeps_background_quad_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "SceneOp",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_ADAPTER_RS.contains(forbidden),
+                "paint-root frame background adapter must stay retained-Cx and scene-op agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_ADAPTER_RS
+                .contains("trait PaintRootFrameBackgroundCx"),
+            "frame background emission should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_root_frame_background",
+            "viewport_rect: Rect",
+            "background: Color",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_ADAPTER_RS.contains(required),
+                "frame background adapter is missing scene-emission contract `{required}`"
+            );
+        }
+
+        for forbidden in ["cx.scene", "SceneOp::Quad", "Quad {"] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RS.contains(forbidden),
+                "paint-root frame background should not emit the background quad directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RS
+                .contains("frame_background_adapter::paint_root_frame_background"),
+            "paint-root frame background should delegate background quad emission to the adapter"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RS.contains("resolve_canvas_chrome_hint"),
+            "paint-root frame background should retain chrome hint policy in this lane"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::frame_background_adapter::PaintRootFrameBackgroundCx<H>"
+            ),
+            "retained frame background binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained frame background binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in [
+            "self.scene",
+            "SceneOp::Quad",
+            "DrawOrder(0)",
+            "Paint::Solid",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RETAINED_CX_RS.contains(required),
+                "retained frame background binding should own background scene emission `{required}`"
             );
         }
     }

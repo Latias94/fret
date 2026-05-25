@@ -4,6 +4,8 @@ mod cache_plan_retained_cx;
 mod cached;
 mod edge_anchor;
 mod frame;
+mod frame_background_adapter;
+mod frame_background_retained_cx;
 mod frame_clip_adapter;
 mod frame_clip_retained_cx;
 mod frame_diagnostics_adapter;
