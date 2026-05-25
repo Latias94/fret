@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "fret-node-paint-prepaint-adapter-v1",
   "title": "Fret Node Paint Prepaint Adapter v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-25",
   "scope_kind": "execution",
   "follow_on_of": "fret-node-low-level-adapter-v1",
@@ -27,6 +27,10 @@
     {
       "role": "next",
       "path": "docs/workstreams/fret-node-paint-prepaint-adapter-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fret-node-paint-prepaint-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md"
     }
   ],
   "repro": {
@@ -59,6 +63,8 @@
     "ecosystem/fret-node/src/ui/canvas/widget/retained_widget_cull_window_shift.rs",
     "ecosystem/fret-node/src/ui/canvas/widget/paint_root_helpers.rs",
     "docs/workstreams/fret-node-paint-prepaint-adapter-v1/PAINT_ROOT_SCOPE_AUDIT_2026-05-25.md",
+    "docs/workstreams/fret-node-paint-prepaint-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
+    "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/",
     "ecosystem/fret-node/src/lib.rs"
   ],
   "adr_refs": [
@@ -67,7 +73,7 @@
     "docs/adr/0175-prepaint-windowed-virtual-surfaces.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue only for node graph paint/prepaint adapter work. Keep event routing and command dispatch in their own lanes."
+    "default_action": "follow_on",
+    "notes": "This lane is closed. Continue cache-plan paint adapter work in docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/."
   }
 }

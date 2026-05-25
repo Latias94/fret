@@ -1,6 +1,6 @@
 # Fret Node Paint Prepaint Adapter v1 - Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## M0 - Scope And Evidence Freeze
@@ -67,3 +67,10 @@ Exit criteria:
 - Evidence gates are fresh.
 - Remaining paint/prepaint work is either complete, deferred, or split into a follow-on.
 - `WORKSTREAM.json` status is updated.
+
+Status: Complete.
+
+Evidence:
+
+- `docs/workstreams/fret-node-paint-prepaint-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
+- `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/`

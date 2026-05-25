@@ -1,6 +1,6 @@
 # Fret Node Paint Prepaint Adapter v1 - TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## NPA-M0 - Scope And Evidence Freeze
@@ -33,9 +33,9 @@ Last updated: 2026-05-25
 
 ## NPA-M3 - Closeout Or Follow-On Split
 
-- [ ] NPA-040 [owner=planner] [deps=NPA-030] [scope=docs/workstreams/fret-node-paint-prepaint-adapter-v1]
+- [x] NPA-040 [owner=codex] [deps=NPA-030] [scope=docs/workstreams/fret-node-paint-prepaint-adapter-v1]
   Goal: Close this paint/prepaint adapter lane or split the next paint-family follow-on.
   Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
-  Evidence: `EVIDENCE_AND_GATES.md`, `HANDOFF.md`, optional closeout audit.
-  Handoff: Use the NPA-030 audit to close this lane and optionally scaffold
-  `fret-node-paint-root-cache-plan-adapter-v1`.
+  Evidence: `EVIDENCE_AND_GATES.md`, `HANDOFF.md`, `CLOSEOUT_AUDIT_2026-05-25.md`,
+  `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/`
+  Handoff: Complete. Continue in `fret-node-paint-root-cache-plan-adapter-v1`.

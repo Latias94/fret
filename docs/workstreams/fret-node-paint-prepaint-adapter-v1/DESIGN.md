@@ -1,7 +1,11 @@
 # Fret Node Paint Prepaint Adapter v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
+
+Status note (2026-05-25): this lane closed after shipping the prepaint cull-window adapter seam and
+splitting paint-root work into `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/`.
+Use `CLOSEOUT_AUDIT_2026-05-25.md` for the final state.
 
 ## Why This Lane Exists
 
@@ -71,3 +75,5 @@ not move node graph paint policy into `crates/fret-ui`; this is a node graph com
 This lane can close when one paint/prepaint lifecycle operation is behind a named adapter, retained
 bindings are explicit, gates prove default and compat `fret-node`, and broader paint tree migration
 is split into follow-ons.
+
+Status: Complete. The closeout audit records the shipped prepaint seam and the cache-plan follow-on.

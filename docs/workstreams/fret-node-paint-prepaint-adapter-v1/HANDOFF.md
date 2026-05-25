@@ -1,6 +1,6 @@
 # Fret Node Paint Prepaint Adapter v1 - Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## Current State
@@ -18,17 +18,12 @@ NPA-030 audited paint root scene emission and decided not to introduce a broad p
 this lane. The paint root has multiple retained-context operation families. The recommended
 follow-on is a narrower cache-plan adapter lane: `fret-node-paint-root-cache-plan-adapter-v1`.
 
-## Active Task
+## Final State
 
 - Task ID: NPA-040
-- Owner: planner
-- Files: `docs/workstreams/fret-node-paint-prepaint-adapter-v1/EVIDENCE_AND_GATES.md`,
-  `docs/workstreams/fret-node-paint-prepaint-adapter-v1/HANDOFF.md`,
-  optional closeout audit
-- Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
-- Status: NEEDS_CONTEXT
-- Review: not started
-- Evidence: `docs/workstreams/fret-node-paint-prepaint-adapter-v1/EVIDENCE_AND_GATES.md`
+- Owner: codex
+- Status: DONE
+- Evidence: `docs/workstreams/fret-node-paint-prepaint-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
 
 ## Decisions Since Last Update
 
@@ -37,6 +32,7 @@ follow-on is a narrower cache-plan adapter lane: `fret-node-paint-root-cache-pla
 - NPA-020 proved the prepaint cull-window seam without migrating paint root scene emission.
 - NPA-030 found that paint root scene emission is not a single operation family and should split
   into a narrower cache-plan adapter follow-on before frame or scene-emission adapters.
+- NPA-040 closed this lane and opened `fret-node-paint-root-cache-plan-adapter-v1`.
 
 ## Blockers
 
@@ -44,5 +40,4 @@ follow-on is a narrower cache-plan adapter lane: `fret-node-paint-root-cache-pla
 
 ## Next Recommended Action
 
-- Execute NPA-040: close this lane or scaffold the recommended
-  `fret-node-paint-root-cache-plan-adapter-v1` follow-on.
+- Continue in `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/`, starting with CPA-010.
