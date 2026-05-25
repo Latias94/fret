@@ -112,6 +112,9 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_invalidation.rs");
     const UI_CANVAS_WIDGET_REDRAW_REQUEST_RS: &str =
         include_str!("ui/canvas/widget/redraw_request.rs");
+    const UI_CANVAS_COMMAND_ADAPTER_RS: &str = include_str!("ui/canvas/widget/command_adapter.rs");
+    const UI_CANVAS_RETAINED_COMMAND_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/retained_command_adapter.rs");
     const UI_CANVAS_LOW_LEVEL_ADAPTER_RS: &str =
         include_str!("ui/canvas/widget/low_level_adapter.rs");
     const UI_CANVAS_RETAINED_LOW_LEVEL_ADAPTER_RS: &str =
@@ -155,6 +158,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_left_route/dispatch.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DOUBLE_CLICK_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_left_route/double_click.rs");
+    const UI_CANVAS_WIDGET_POINTER_DOWN_CLOSE_BUTTON_CX_RS: &str =
+        include_str!("ui/canvas/widget/pointer_down_close_button_cx.rs");
+    const UI_CANVAS_WIDGET_POINTER_DOWN_GESTURE_START_CLOSE_BUTTON_RS: &str =
+        include_str!("ui/canvas/widget/pointer_down_gesture_start/close_button.rs");
     const UI_CANVAS_WIDGET_CANCEL_RS: &str = include_str!("ui/canvas/widget/cancel.rs");
     const UI_CANVAS_WIDGET_CANCEL_VIEWPORT_STATE_RS: &str =
         include_str!("ui/canvas/widget/cancel_viewport_state.rs");
@@ -705,6 +712,44 @@ mod surface_policy_tests {
         assert!(UI_CANVAS_RETAINED_LOW_LEVEL_ADAPTER_RS.contains(
             "impl<H: UiHost> low_level_adapter::CanvasPointerCaptureReleaseCx<H> for CommandCx"
         ));
+    }
+
+    #[test]
+    fn retained_canvas_command_dispatch_adapter_replaces_close_button_retained_edge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_COMMAND_ADAPTER_RS.contains(forbidden),
+                "canvas command adapter contract must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(UI_CANVAS_COMMAND_ADAPTER_RS.contains("trait CanvasCommandDispatchCx"));
+        assert!(
+            UI_CANVAS_RETAINED_COMMAND_ADAPTER_RS
+                .contains("impl<H: UiHost> command_adapter::CanvasCommandDispatchCx for EventCx")
+        );
+        assert!(
+            UI_CANVAS_WIDGET_POINTER_DOWN_CLOSE_BUTTON_CX_RS
+                .contains("CanvasHandledCx<H> + CanvasCommandDispatchCx")
+        );
+        assert!(
+            !UI_CANVAS_WIDGET_POINTER_DOWN_CLOSE_BUTTON_CX_RS
+                .split("#[cfg(test)]")
+                .next()
+                .unwrap_or(UI_CANVAS_WIDGET_POINTER_DOWN_CLOSE_BUTTON_CX_RS)
+                .contains("dispatch_close_command"),
+            "close-button cx must inherit command dispatch from command_adapter"
+        );
+        assert!(
+            !UI_CANVAS_RS.contains("pointer_down_close_button_retained_cx"),
+            "close-button must not keep a dedicated retained command adapter"
+        );
     }
 
     #[test]

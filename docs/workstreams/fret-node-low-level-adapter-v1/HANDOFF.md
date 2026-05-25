@@ -4,13 +4,15 @@ Updated: 2026-05-25
 
 ## Current State
 
-This lane has landed its first adapter seam and shrunk one retained edge. It follows ADR 0330 and
-the retained public-surface exit. The retained canvas island is still compatibility-gated, but the
-common redraw / paint invalidation / handled / pointer-capture release operations now live behind a
-named low-level adapter contract:
+This lane has landed its first low-level adapter seam, shrunk one wire-commit retained edge, and
+added the first command dispatch adapter seam. It follows ADR 0330 and the retained public-surface
+exit. The retained canvas island is still compatibility-gated, but common host operations now live
+behind named adapter contracts:
 
 - `ecosystem/fret-node/src/ui/canvas/widget/low_level_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_low_level_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/command_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_command_adapter.rs`
 
 `low_level_adapter.rs` is retained-context agnostic (`CanvasRedrawCx`,
 `CanvasPaintInvalidationCx`, `CanvasHandledCx`, `CanvasPointerCaptureReleaseCx`).
@@ -21,11 +23,14 @@ retained `EventCx`, `CommandCx`, `LayoutCx`, and `PaintCx`.
 operations from `CanvasPointerCaptureReleaseCx`; `wire_drag/retained_commit_cx.rs` only binds the
 wire-commit-specific host, window, and bounds accessors.
 
+`PointerDownCloseButtonCx` now inherits command dispatch from `CanvasCommandDispatchCx`; the old
+`pointer_down_close_button_retained_cx.rs` dedicated retained adapter has been deleted.
+
 ## Next Step
 
-Continue with `NLA-040`: choose the next behavior-family adapter split. Good candidates are event
-routing, command dispatch, or paint/prepaint. Keep the next slice narrow: one behavior family, one
-adapter seam, one source-policy gate.
+Continue with `NLA-050`: migrate one more command dispatch consumer, such as keyboard shortcuts or
+context-menu command activation, onto `command_adapter`. Keep event routing and paint/prepaint as
+separate follow-on lanes.
 
 Expected gates:
 

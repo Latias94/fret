@@ -46,3 +46,20 @@ Evidence:
 - `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/retained_commit_cx.rs`
 - `ecosystem/fret-node/src/lib.rs`
+
+## M3 - Command Dispatch Adapter
+
+Exit criteria:
+
+- Command dispatch has a named retained-context-agnostic adapter.
+- One dedicated retained command dispatch edge is deleted.
+- A source-policy gate prevents the deleted edge from returning.
+
+Status: Complete.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/command_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_command_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_close_button_cx.rs`
+- `ecosystem/fret-node/src/lib.rs`

@@ -15,8 +15,11 @@ Last updated: 2026-05-25
 - `ecosystem/fret-node/Cargo.toml`
 - `ecosystem/fret-node/src/lib.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/command_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_command_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/low_level_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/retained_low_level_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_close_button_cx.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/retained_commit_cx.rs`
 - `docs/workstreams/retained-public-surface-exit-v1/EVIDENCE_AND_GATES.md`
@@ -80,3 +83,27 @@ Notes:
 
 - `CommandCx` preserves the previous no-op pointer-capture release behavior through
   `retained_low_level_adapter.rs`.
+
+## 2026-05-25 - NLA-040 command dispatch adapter seam
+
+Claim to verify:
+
+- Command dispatch has a retained-context-agnostic adapter contract in `command_adapter.rs`.
+- Retained `EventCx` command dispatch binding is isolated in `retained_command_adapter.rs`.
+- `PointerDownCloseButtonCx` no longer declares a dedicated `dispatch_close_command` method.
+- `pointer_down_close_button_retained_cx.rs` is deleted and `widget.rs` no longer declares that
+  module.
+
+Fresh validation:
+
+- Passed on 2026-05-25:
+  - `cargo fmt --package fret-node --check`
+  - `python3 -m json.tool docs/workstreams/fret-node-low-level-adapter-v1/WORKSTREAM.json`
+  - `python3 tools/check_layering.py`
+  - `python3 tools/check_workstream_catalog.py`
+  - `git diff --check`
+  - `cargo check -p fret-node`
+  - `cargo check -p fret-node --features compat-retained-canvas`
+  - `cargo test -p fret-node --features compat-retained-canvas retained_compatibility_surface_stays_declarative_only`
+  - `cargo test -p fret-node --features compat-retained-canvas retained_canvas_command_dispatch_adapter_replaces_close_button_retained_edge`
+  - `cargo test -p fret-node --features compat-retained-canvas command_adapter`

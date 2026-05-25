@@ -27,10 +27,18 @@ Last updated: 2026-05-25
   Evidence: `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/commit_cx.rs`, `ecosystem/fret-node/src/ui/canvas/widget/wire_drag/retained_commit_cx.rs`, source-policy test in `ecosystem/fret-node/src/lib.rs`
   Handoff: `WireCommitCx` now inherits low-level redraw / paint invalidation / pointer-capture release operations from `low_level_adapter`.
 
+## NLA-M3 - Command Dispatch Adapter
+
+- [x] NLA-040 [owner=codex] [deps=NLA-030] [scope=ecosystem/fret-node/src/ui/canvas/widget]
+  Goal: Choose the next behavior-family adapter split for event routing, command dispatch, or paint/prepaint.
+  Validation: `cargo check -p fret-node`; `cargo check -p fret-node --features compat-retained-canvas`; `cargo test -p fret-node --features compat-retained-canvas retained_canvas_command_dispatch_adapter_replaces_close_button_retained_edge`
+  Evidence: `ecosystem/fret-node/src/ui/canvas/widget/command_adapter.rs`, `ecosystem/fret-node/src/ui/canvas/widget/retained_command_adapter.rs`, `ecosystem/fret-node/src/ui/canvas/widget/pointer_down_close_button_cx.rs`, source-policy test in `ecosystem/fret-node/src/lib.rs`
+  Handoff: Command dispatch now has a named adapter seam; close-button no longer has a dedicated retained command adapter.
+
 ## Follow-On Candidates
 
-- [ ] NLA-040 [owner=unassigned] [deps=NLA-030] [scope=ecosystem/fret-node/src/ui/canvas/widget]
-  Goal: Choose the next behavior-family adapter split for event routing, command dispatch, or paint/prepaint.
-  Validation: narrow task-specific source-policy test plus `cargo check -p fret-node --features compat-retained-canvas`
+- [ ] NLA-050 [owner=unassigned] [deps=NLA-040] [scope=ecosystem/fret-node/src/ui/canvas/widget]
+  Goal: Migrate one more command dispatch consumer, such as keyboard shortcuts or context-menu command activation, onto `command_adapter`.
+  Validation: narrow source-policy test plus `cargo check -p fret-node --features compat-retained-canvas`
   Evidence: follow-on task or workstream.
-  Handoff: Keep this as one behavior family, not a broad retained canvas rewrite.
+  Handoff: Keep command dispatch migration separate from event routing and paint/prepaint.
