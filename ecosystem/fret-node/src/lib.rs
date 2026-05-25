@@ -150,6 +150,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/cached_edges/fallback_retained_cx.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_EDGES_FALLBACK_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_edges/edges/fallback.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_KEYS_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/keys.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_ADAPTER_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_edges/replay_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RETAINED_CX_RS: &str =
@@ -4358,6 +4360,74 @@ mod surface_policy_tests {
             assert!(
                 UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_RETAINED_CX_RS.contains(required),
                 "retained cached edge fallback binding should own retained fallback operation `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_cached_edge_key_helper_keeps_shared_fields_in_one_place() {
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_KEYS_RS.contains("fn cached_edge_key_builder"),
+            "cached edge key shared fields should live behind one key builder helper"
+        );
+        for required in [
+            "cached_edge_base_key",
+            "cached_edge_single_rect_key",
+            "edges_tiles_base_key",
+            "edge_labels_tiles_base_key",
+            "edges_single_rect_key",
+            "edge_labels_single_rect_key",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_KEYS_RS.contains(required),
+                "cached edge key helper module is missing `{required}`"
+            );
+        }
+
+        for scope in [
+            "fret-node.canvas.static_edges.tile.v1",
+            "fret-node.canvas.static_edge_labels.tile.v1",
+            "fret-node.canvas.static_edges.v1",
+            "fret-node.canvas.static_edge_labels.v1",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_KEYS_RS.contains(scope),
+                "cached edge key scope string must be preserved: `{scope}`"
+            );
+        }
+
+        for shared_field in [
+            "base_key.graph_rev",
+            "base_key.zoom_bits",
+            "base_key.node_origin_x_bits",
+            "base_key.node_origin_y_bits",
+            "base_key.draw_order.lo",
+            "base_key.draw_order.hi",
+            "base_key.presenter_rev",
+            "base_key.edge_types_rev",
+            "base_key.overrides_rev",
+            "b.add_u64(style_key)",
+            "b.add_f32_bits(edges_cache_tile_size_canvas)",
+        ] {
+            assert_eq!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_KEYS_RS
+                    .matches(shared_field)
+                    .count(),
+                1,
+                "cached edge key shared field should be written only by the shared helper: `{shared_field}`"
+            );
+        }
+
+        for rect_field in [
+            "edges_cache_rect.origin.x.0.to_bits()",
+            "edges_cache_rect.origin.y.0.to_bits()",
+        ] {
+            assert_eq!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_KEYS_RS
+                    .matches(rect_field)
+                    .count(),
+                1,
+                "single-rect cache key field should stay local to the single-rect helper: `{rect_field}`"
             );
         }
     }
