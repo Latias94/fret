@@ -9,6 +9,8 @@ mod edges;
 mod fallback;
 mod geometry;
 mod keys;
+mod label_build_state_adapter;
+mod label_build_state_retained_cx;
 mod labels;
 mod replay_adapter;
 mod replay_retained_cx;

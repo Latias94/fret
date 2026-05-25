@@ -1,8 +1,8 @@
 use super::*;
 
-pub(super) fn build_single_rect_edge_labels_cache<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn build_single_rect_edge_labels_cache<H, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut PaintCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     geom: &Arc<CanvasGeometry>,
     index: &Arc<CanvasSpatialDerived>,
@@ -10,7 +10,12 @@ pub(super) fn build_single_rect_edge_labels_cache<H: UiHost, M: NodeGraphCanvasM
     edges_cache_rect: Rect,
     zoom: f32,
     view_interacting: bool,
-) {
+) where
+    H: UiHost,
+    M: NodeGraphCanvasMiddleware,
+    Cx: super::super::label_build_state_adapter::PaintRootCachedEdgeLabelBuildStateCx<H>
+        + crate::ui::canvas::widget::low_level_adapter::CanvasRedrawCx<H>,
+{
     if canvas.edge_labels_scene_cache.contains_key(labels_key) {
         canvas.edge_labels_build_state = None;
         return;
@@ -21,8 +26,10 @@ pub(super) fn build_single_rect_edge_labels_cache<H: UiHost, M: NodeGraphCanvasM
         .take()
         .filter(|state| state.key == labels_key)
         .unwrap_or_else(|| {
+            let host = super::super::label_build_state_adapter::
+                paint_root_cached_edge_label_build_state_host(&*cx);
             canvas.init_edge_labels_build_state(
-                &*cx.app,
+                host,
                 snapshot,
                 geom,
                 index,
@@ -39,16 +46,21 @@ pub(super) fn build_single_rect_edge_labels_cache<H: UiHost, M: NodeGraphCanvasM
     let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
 
     let mut tmp = fret_core::Scene::default();
-    if canvas.paint_edge_labels_build_state_step(
-        &mut tmp,
-        &*cx.app,
-        cx.services,
-        cx.scale_factor,
-        zoom,
-        bezier_steps,
-        &mut state,
-        &mut budget,
-    ) {
+    let needs_more = {
+        let inputs = super::super::label_build_state_adapter::
+            paint_root_cached_edge_label_build_state_step_inputs(cx);
+        canvas.paint_edge_labels_build_state_step(
+            &mut tmp,
+            inputs.host,
+            inputs.services,
+            inputs.scale_factor,
+            zoom,
+            bezier_steps,
+            &mut state,
+            &mut budget,
+        )
+    };
+    if needs_more {
         crate::ui::canvas::widget::redraw_request::request_paint_redraw(cx);
     }
 
