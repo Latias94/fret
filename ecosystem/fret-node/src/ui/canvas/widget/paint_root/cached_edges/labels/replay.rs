@@ -1,12 +1,13 @@
 use super::*;
 
 fn replay_edge_label_ops<H: UiHost>(
-    cx: &mut PaintCx<'_, H>,
+    cx: &mut impl super::super::replay_adapter::PaintRootCachedEdgeReplayCx<H>,
     paint_cache: &mut CanvasPaintCache,
     ops: &[SceneOp],
     replay_delta: Point,
 ) {
-    cx.scene.replay_ops_translated(ops, replay_delta);
+    let scene = super::super::replay_adapter::paint_root_cached_edge_replay_scene(cx);
+    scene.replay_ops_translated(ops, replay_delta);
     paint_cache.touch_text_blobs_in_scene_ops(ops);
 }
 
@@ -24,20 +25,21 @@ pub(super) fn store_finished_edge_label_state<M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn try_replay_cached_edge_labels<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut PaintCx<'_, H>,
+    cx: &mut impl super::super::replay_adapter::PaintRootCachedEdgeReplayCx<H>,
     key: u64,
     replay_delta: Point,
 ) -> bool {
+    let scene = super::super::replay_adapter::paint_root_cached_edge_replay_scene(cx);
     canvas
         .edge_labels_scene_cache
-        .try_replay_with(key, cx.scene, replay_delta, |ops| {
+        .try_replay_with(key, scene, replay_delta, |ops| {
             canvas.paint_cache.touch_text_blobs_in_scene_ops(ops);
         })
 }
 
 pub(super) fn replay_single_rect_edge_labels<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut PaintCx<'_, H>,
+    cx: &mut impl super::super::replay_adapter::PaintRootCachedEdgeReplayCx<H>,
     labels_key: u64,
     replay_delta: Point,
 ) {
@@ -55,7 +57,7 @@ pub(super) fn replay_single_rect_edge_labels<H: UiHost, M: NodeGraphCanvasMiddle
 
 pub(super) fn replay_partial_edge_label_ops<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut PaintCx<'_, H>,
+    cx: &mut impl super::super::replay_adapter::PaintRootCachedEdgeReplayCx<H>,
     ops: &[SceneOp],
     replay_delta: Point,
 ) {

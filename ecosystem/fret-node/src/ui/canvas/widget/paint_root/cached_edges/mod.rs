@@ -8,6 +8,8 @@ mod fallback;
 mod geometry;
 mod keys;
 mod labels;
+mod replay_adapter;
+mod replay_retained_cx;
 mod single_rect;
 mod tile_path;
 

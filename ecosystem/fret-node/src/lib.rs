@@ -136,6 +136,14 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/cached_groups.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_NODES_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_nodes.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/replay_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/replay_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/edges/replay.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_REPLAY_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/labels/replay.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_ADAPTER_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_static_scene_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_RETAINED_CX_RS: &str =
@@ -3794,6 +3802,68 @@ mod surface_policy_tests {
                 "retained cached static scene binding should own retained field access `{required}`"
             );
         }
+    }
+
+    #[test]
+    fn paint_root_cached_edge_replay_adapter_keeps_scene_sink_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "SceneOp",
+            "cx.scene",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_ADAPTER_RS.contains(forbidden),
+                "paint-root cached edge replay adapter must stay retained-Cx and scene-op agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_ADAPTER_RS
+                .contains("trait PaintRootCachedEdgeReplayCx"),
+            "cached edge replay should live behind a named adapter seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_ADAPTER_RS
+                .contains("paint_root_cached_edge_replay_scene"),
+            "cached edge replay adapter is missing the scene replay sink contract"
+        );
+
+        let replay_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_REPLAY_RS,
+        ]
+        .join("\n");
+        for forbidden in ["PaintCx", "cx.scene"] {
+            assert!(
+                !replay_sources.contains(forbidden),
+                "cached edge/label replay helpers should not depend on retained PaintCx scene fields directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            replay_sources.contains("paint_root_cached_edge_replay_scene"),
+            "cached edge/label replay helpers should obtain scene replay access through the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RETAINED_CX_RS
+                .contains("impl<H: UiHost> super::replay_adapter::PaintRootCachedEdgeReplayCx<H>"),
+            "retained cached edge replay binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained cached edge replay binding should isolate PaintCx to the retained adapter module"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RETAINED_CX_RS.contains("self.scene"),
+            "retained cached edge replay binding should own retained scene access"
+        );
     }
 
     #[test]
