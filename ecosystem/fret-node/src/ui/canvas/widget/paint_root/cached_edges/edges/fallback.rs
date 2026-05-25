@@ -1,10 +1,8 @@
-use crate::ui::canvas::widget::paint_render_data::RenderData;
-
 use super::*;
 
-pub(super) fn paint_root_edges_uncached<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn paint_root_edges_uncached<H, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut PaintCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     geom: &Arc<CanvasGeometry>,
     index: &Arc<CanvasSpatialDerived>,
@@ -12,10 +10,15 @@ pub(super) fn paint_root_edges_uncached<H: UiHost, M: NodeGraphCanvasMiddleware>
     hovered_edge: Option<EdgeId>,
     zoom: f32,
     view_interacting: bool,
-) {
+) where
+    H: UiHost,
+    M: NodeGraphCanvasMiddleware,
+    Cx: super::super::fallback_adapter::PaintRootCachedEdgeFallbackCx<H>,
+{
     canvas.edges_build_states.clear();
-    let render_edges: RenderData = canvas.collect_render_data(
-        &*cx.app,
+    let host = super::super::fallback_adapter::paint_root_cached_edge_fallback_host(&*cx);
+    let render_edges = canvas.collect_render_data(
+        host,
         snapshot,
         Arc::clone(geom),
         Arc::clone(index),
@@ -26,5 +29,13 @@ pub(super) fn paint_root_edges_uncached<H: UiHost, M: NodeGraphCanvasMiddleware>
         false,
         true,
     );
-    canvas.paint_edges(cx, snapshot, &render_edges, geom, zoom, view_interacting);
+    super::super::fallback_adapter::paint_root_cached_edge_fallback_paint_edges(
+        cx,
+        canvas,
+        snapshot,
+        &render_edges,
+        geom,
+        zoom,
+        view_interacting,
+    );
 }

@@ -9,6 +9,8 @@ mod build_state_retained_cx;
 mod dispatch;
 mod edges;
 mod fallback;
+mod fallback_adapter;
+mod fallback_retained_cx;
 mod geometry;
 mod keys;
 mod label_build_state_adapter;

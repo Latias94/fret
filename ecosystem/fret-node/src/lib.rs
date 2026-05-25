@@ -142,6 +142,14 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/cached_edges/anchor_target_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RETAINED_CX_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_edges/anchor_target_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/fallback.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/fallback_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/fallback_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_EDGES_FALLBACK_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/edges/fallback.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_ADAPTER_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_edges/replay_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RETAINED_CX_RS: &str =
@@ -4271,6 +4279,85 @@ mod surface_policy_tests {
                 UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RETAINED_CX_RS
                     .contains(required),
                 "retained cached edge anchor target binding should own direct shared edge-anchor helper call `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_cached_edge_fallback_adapter_keeps_route_inputs_off_fallback_helpers() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+            "self.app",
+            "self.services",
+            "self.scale_factor",
+            "self.scene",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_ADAPTER_RS.contains(forbidden),
+                "paint-root cached edge fallback adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_ADAPTER_RS
+                .contains("trait PaintRootCachedEdgeFallbackCx"),
+            "cached edge fallback routing should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_root_cached_edge_fallback_host",
+            "paint_root_cached_edge_fallback_paint_edges",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_ADAPTER_RS.contains(required),
+                "cached edge fallback adapter is missing route contract `{required}`"
+            );
+        }
+
+        let fallback_route_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_EDGES_FALLBACK_RS,
+        ]
+        .join("\n");
+        for forbidden in ["PaintCx", "cx.app", "&*cx.app", "canvas.paint_edges"] {
+            assert!(
+                !fallback_route_sources.contains(forbidden),
+                "cached edge fallback helpers should not depend on retained Cx or direct edge paint dispatch; found `{forbidden}`"
+            );
+        }
+        for required in [
+            "paint_root_cached_edge_fallback_host",
+            "paint_root_cached_edge_fallback_paint_edges",
+        ] {
+            assert!(
+                fallback_route_sources.contains(required),
+                "cached edge fallback helpers should route through the fallback adapter; missing `{required}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::fallback_adapter::PaintRootCachedEdgeFallbackCx<H>"
+            ),
+            "retained cached edge fallback binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained cached edge fallback binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in ["self.app", "canvas.paint_edges"] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_RETAINED_CX_RS.contains(required),
+                "retained cached edge fallback binding should own retained fallback operation `{required}`"
             );
         }
     }

@@ -26,9 +26,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         replay::store_finished_edge_build_state(self, key, state);
     }
 
-    pub(super) fn paint_root_edges_uncached<H: UiHost>(
+    pub(super) fn paint_root_edges_uncached<H, Cx>(
         &mut self,
-        cx: &mut PaintCx<'_, H>,
+        cx: &mut Cx,
         snapshot: &ViewSnapshot,
         geom: &Arc<CanvasGeometry>,
         index: &Arc<CanvasSpatialDerived>,
@@ -36,7 +36,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         hovered_edge: Option<EdgeId>,
         zoom: f32,
         view_interacting: bool,
-    ) {
+    ) where
+        H: UiHost,
+        Cx: super::fallback_adapter::PaintRootCachedEdgeFallbackCx<H>,
+    {
         fallback::paint_root_edges_uncached(
             self,
             cx,
