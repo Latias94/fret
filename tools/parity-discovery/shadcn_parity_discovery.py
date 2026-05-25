@@ -235,8 +235,13 @@ class LayoutEvidence:
     bundle_paths: list[str]
     roots: list[LayoutRoot]
     text_paint_facts_by_node: dict[str, list[dict[str, Any]]]
+    text_paint_associated_facts_by_node: dict[str, list[dict[str, Any]]]
+    text_label_facts_by_node: dict[str, list[dict[str, Any]]]
     text_paint_bundle_entry_count: int
     text_paint_fact_row_count: int
+    text_paint_association_row_count: int
+    text_paint_unassociated_row_count: int
+    text_label_fact_row_count: int
 
     @classmethod
     def empty(cls) -> "LayoutEvidence":
@@ -247,8 +252,13 @@ class LayoutEvidence:
             bundle_paths=[],
             roots=[],
             text_paint_facts_by_node={},
+            text_paint_associated_facts_by_node={},
+            text_label_facts_by_node={},
             text_paint_bundle_entry_count=0,
             text_paint_fact_row_count=0,
+            text_paint_association_row_count=0,
+            text_paint_unassociated_row_count=0,
+            text_label_fact_row_count=0,
         )
 
     def find(
@@ -826,6 +836,127 @@ def _merge_text_paint_facts(
         target.setdefault(node_id, []).extend(facts)
 
 
+def _bundle_semantics_nodes_by_id(data: dict[str, Any]) -> dict[int, dict[str, Any]]:
+    nodes_by_id: dict[int, dict[str, Any]] = {}
+    try:
+        entries = _bundle_semantics_entries(data)
+    except FixtureError:
+        return nodes_by_id
+    for _, node in entries:
+        node_id = node.get("id")
+        if isinstance(node_id, int):
+            nodes_by_id[node_id] = node
+    return nodes_by_id
+
+
+def _semantics_ancestor_ids(
+    node_id: int, nodes_by_id: dict[int, dict[str, Any]]
+) -> list[int]:
+    ancestors: list[int] = []
+    seen = {node_id}
+    current = nodes_by_id.get(node_id, {}).get("parent")
+    while isinstance(current, int) and current not in seen:
+        ancestors.append(current)
+        seen.add(current)
+        current = nodes_by_id.get(current, {}).get("parent")
+    return ancestors
+
+
+def _preview_label(value: Any) -> str | None:
+    if not isinstance(value, str) or not value:
+        return None
+    return value[:120]
+
+
+def _associate_text_paint_rows_to_semantics_ancestors(
+    data: dict[str, Any],
+    rows_by_node: dict[str, list[dict[str, Any]]],
+) -> tuple[dict[str, list[dict[str, Any]]], int, int]:
+    nodes_by_id = _bundle_semantics_nodes_by_id(data)
+    if not nodes_by_id:
+        row_count = sum(len(rows) for rows in rows_by_node.values())
+        return {}, 0, row_count
+
+    associated: dict[str, list[dict[str, Any]]] = {}
+    matched_source_nodes: set[str] = set()
+    total_source_nodes = set(rows_by_node)
+    for source_node_id, rows in rows_by_node.items():
+        try:
+            numeric_source_id = int(source_node_id)
+        except ValueError:
+            continue
+        source_node = nodes_by_id.get(numeric_source_id)
+        if source_node is None:
+            continue
+        source_role = source_node.get("role")
+        source_label = _preview_label(source_node.get("label"))
+        for ancestor_id in _semantics_ancestor_ids(numeric_source_id, nodes_by_id):
+            ancestor_node = nodes_by_id.get(ancestor_id)
+            if ancestor_node is None:
+                continue
+            ancestor_test_ids = _test_ids_for_node(ancestor_node)
+            if not ancestor_test_ids:
+                continue
+            matched_source_nodes.add(source_node_id)
+            for row in rows:
+                associated_row = dict(row)
+                associated_row["association_kind"] = "semantics_descendant"
+                associated_row["associated_source_role"] = source_role
+                if source_label is not None:
+                    associated_row["associated_source_label_preview"] = source_label
+                associated_row["associated_ancestor_test_ids"] = ancestor_test_ids
+                associated_row["associated_ancestor_role"] = ancestor_node.get("role")
+                ancestor_label = _preview_label(ancestor_node.get("label"))
+                if ancestor_label is not None:
+                    associated_row["associated_ancestor_label_preview"] = ancestor_label
+                associated.setdefault(str(ancestor_id), []).append(associated_row)
+
+    associated_count = sum(len(rows) for rows in associated.values())
+    unassociated_count = sum(
+        len(rows)
+        for node_id, rows in rows_by_node.items()
+        if node_id in total_source_nodes and node_id not in matched_source_nodes
+    )
+    return associated, associated_count, unassociated_count
+
+
+def _bundle_text_label_rows_by_test_id_ancestor(
+    data: dict[str, Any], bundle_path: str
+) -> dict[str, list[dict[str, Any]]]:
+    nodes_by_id = _bundle_semantics_nodes_by_id(data)
+    label_rows: dict[str, list[dict[str, Any]]] = {}
+    for node_id, node in nodes_by_id.items():
+        if node.get("role") != "text":
+            continue
+        label = _preview_label(node.get("label"))
+        if label is None:
+            continue
+        rect = node.get("bounds")
+        for ancestor_id in _semantics_ancestor_ids(node_id, nodes_by_id):
+            ancestor_node = nodes_by_id.get(ancestor_id)
+            if ancestor_node is None:
+                continue
+            ancestor_test_ids = _test_ids_for_node(ancestor_node)
+            if not ancestor_test_ids:
+                continue
+            row: dict[str, Any] = {
+                "source": "bundle_schema2_semantics_text_descendant",
+                "node": str(node_id),
+                "role": "text",
+                "label_preview": label,
+                "ancestor_test_ids": ancestor_test_ids,
+                "ancestor_role": ancestor_node.get("role"),
+                "bundle_schema2_path": bundle_path,
+            }
+            ancestor_label = _preview_label(ancestor_node.get("label"))
+            if ancestor_label is not None:
+                row["ancestor_label_preview"] = ancestor_label
+            if isinstance(rect, dict):
+                row["bounds"] = Bounds.from_rect(rect).to_json()
+            label_rows.setdefault(str(ancestor_id), []).append(row)
+    return label_rows
+
+
 def _bundle_semantics_roots(
     data: dict[str, Any],
     bundle_path: str,
@@ -968,6 +1099,23 @@ def load_layout_evidence(
         _merge_text_paint_facts(
             evidence.text_paint_facts_by_node,
             text_paint_rows,
+        )
+        associated_rows, associated_count, unassociated_count = (
+            _associate_text_paint_rows_to_semantics_ancestors(data, text_paint_rows)
+        )
+        _merge_text_paint_facts(
+            evidence.text_paint_associated_facts_by_node,
+            associated_rows,
+        )
+        evidence.text_paint_association_row_count += associated_count
+        evidence.text_paint_unassociated_row_count += unassociated_count
+        text_label_rows = _bundle_text_label_rows_by_test_id_ancestor(data, bundle_path)
+        _merge_text_paint_facts(
+            evidence.text_label_facts_by_node,
+            text_label_rows,
+        )
+        evidence.text_label_fact_row_count += sum(
+            len(rows) for rows in text_label_rows.values()
         )
         for root_index, node in _bundle_semantics_entries(data):
             rect = node.get("bounds")
@@ -2133,15 +2281,143 @@ def _merge_compact_text_paint_facts(
     return [merged_by_key[key] for key in ordered_keys[:COMPACT_TEXT_PAINT_FACT_LIMIT]]
 
 
+SEMANTIC_TEXT_VOLATILE_KEYS = {
+    "bundle_schema2_path",
+    "node",
+}
+
+
+def _compact_semantic_text_fact(row: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: value
+        for key, value in row.items()
+        if key not in SEMANTIC_TEXT_VOLATILE_KEYS and value not in (None, [], {})
+    }
+
+
+def _compact_semantic_text_facts(
+    rows: list[dict[str, Any]], limit: int = COMPACT_TEXT_PAINT_FACT_LIMIT
+) -> list[dict[str, Any]]:
+    compact_by_key: dict[str, dict[str, Any]] = {}
+    ordered_keys: list[str] = []
+    for row in rows:
+        fact = _compact_semantic_text_fact(row)
+        key = _stable_json_key(fact)
+        existing = compact_by_key.get(key)
+        if existing is None:
+            existing = dict(fact)
+            existing["observed_count"] = 0
+            compact_by_key[key] = existing
+            ordered_keys.append(key)
+        existing["observed_count"] += 1
+        _append_unique_sample(
+            existing.setdefault("evidence_paths", []),
+            row.get("bundle_schema2_path"),
+            COMPACT_EVIDENCE_PATH_LIMIT,
+        )
+        _append_unique_sample(
+            existing.setdefault("node_samples", []),
+            row.get("node"),
+            COMPACT_NODE_SAMPLE_LIMIT,
+        )
+        _append_unique_sample(
+            existing.setdefault("bounds_samples", []),
+            row.get("bounds"),
+            COMPACT_NODE_SAMPLE_LIMIT,
+        )
+
+    compact = [compact_by_key[key] for key in ordered_keys[:limit]]
+    omitted = max(0, len(ordered_keys) - limit)
+    if omitted and compact:
+        compact[-1]["omitted_compact_fact_count"] = omitted
+    return compact
+
+
+def _merge_compact_semantic_text_facts(
+    existing_rows: list[dict[str, Any]], incoming_rows: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    merged_by_key: dict[str, dict[str, Any]] = {}
+    ordered_keys: list[str] = []
+    for row in [*existing_rows, *incoming_rows]:
+        stable = {
+            key: value
+            for key, value in row.items()
+            if key
+            not in {
+                "observed_count",
+                "evidence_paths",
+                "node_samples",
+                "bounds_samples",
+                "omitted_compact_fact_count",
+            }
+        }
+        key = _stable_json_key(stable)
+        current = merged_by_key.get(key)
+        if current is None:
+            current = dict(stable)
+            current["observed_count"] = 0
+            merged_by_key[key] = current
+            ordered_keys.append(key)
+        current["observed_count"] += int(row.get("observed_count", 1))
+        for path in row.get("evidence_paths", []):
+            _append_unique_sample(
+                current.setdefault("evidence_paths", []),
+                path,
+                COMPACT_EVIDENCE_PATH_LIMIT,
+            )
+        for sample in row.get("node_samples", []):
+            _append_unique_sample(
+                current.setdefault("node_samples", []),
+                sample,
+                COMPACT_NODE_SAMPLE_LIMIT,
+            )
+        for sample in row.get("bounds_samples", []):
+            _append_unique_sample(
+                current.setdefault("bounds_samples", []),
+                sample,
+                COMPACT_NODE_SAMPLE_LIMIT,
+            )
+
+    return [merged_by_key[key] for key in ordered_keys[:COMPACT_TEXT_PAINT_FACT_LIMIT]]
+
+
+def _rows_for_layout_node(
+    rows_by_node: dict[str, list[dict[str, Any]]], node: LayoutNode
+) -> list[dict[str, Any]]:
+    rows = rows_by_node.get(node.node, [])
+    if node.source != "bundle_schema2_semantics":
+        return rows
+    return [
+        row
+        for row in rows
+        if row.get("bundle_schema2_path") == node.sidecar_path
+    ]
+
+
 def _fret_node_fact_with_text_paint(
     node: LayoutNode, evidence: LayoutEvidence
 ) -> dict[str, Any]:
     fact = _fret_node_fact(node)
     text_paint_facts = _compact_text_paint_facts(
-        evidence.text_paint_facts_by_node.get(node.node, [])
+        _rows_for_layout_node(evidence.text_paint_facts_by_node, node)
     )
     if text_paint_facts:
         fact["text_paint"] = text_paint_facts
+    associated_text_paint_facts = _compact_text_paint_facts(
+        _rows_for_layout_node(evidence.text_paint_associated_facts_by_node, node)
+    )
+    if associated_text_paint_facts:
+        fact["associated_text_paint"] = associated_text_paint_facts
+    text_label_facts = _compact_semantic_text_facts(
+        _rows_for_layout_node(evidence.text_label_facts_by_node, node)
+    )
+    if text_label_facts:
+        fact["semantic_text_descendants"] = text_label_facts
+    if text_label_facts and not text_paint_facts and not associated_text_paint_facts:
+        fact["text_paint_coverage"] = {
+            "status": "semantic_text_without_text_paint_hotspot",
+            "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree",
+        }
     return fact
 
 
@@ -2168,6 +2444,9 @@ def _compact_fret_node_facts(
             existing.pop("sidecar_path", None)
             existing.pop("bundle_schema2_path", None)
             existing.pop("text_paint", None)
+            existing.pop("associated_text_paint", None)
+            existing.pop("semantic_text_descendants", None)
+            existing.pop("text_paint_coverage", None)
             existing["observed_count"] = 0
             compact_by_key[key] = existing
             ordered_keys.append(key)
@@ -2192,6 +2471,24 @@ def _compact_fret_node_facts(
             existing["text_paint"] = _merge_compact_text_paint_facts(
                 existing.get("text_paint", []), fact["text_paint"]
             )
+        if fact.get("associated_text_paint"):
+            existing["associated_text_paint"] = _merge_compact_text_paint_facts(
+                existing.get("associated_text_paint", []),
+                fact["associated_text_paint"],
+            )
+        if fact.get("semantic_text_descendants"):
+            existing["semantic_text_descendants"] = (
+                _merge_compact_semantic_text_facts(
+                    existing.get("semantic_text_descendants", []),
+                    fact["semantic_text_descendants"],
+                )
+            )
+        if (
+            fact.get("text_paint_coverage")
+            and not existing.get("text_paint")
+            and not existing.get("associated_text_paint")
+        ):
+            existing["text_paint_coverage"] = fact["text_paint_coverage"]
 
     compact = [compact_by_key[key] for key in ordered_keys[:limit]]
     omitted = max(0, len(ordered_keys) - limit)
@@ -2255,12 +2552,55 @@ def _fact_has_interaction(fact: dict[str, Any]) -> bool:
 
 def _fact_text_paint_count(fact: dict[str, Any]) -> int:
     count = len(fact.get("text_paint", []))
+    count += len(fact.get("associated_text_paint", []))
     primary = fact.get("primary")
     if isinstance(primary, dict):
         count += _fact_text_paint_count(primary)
     for key in ("semantics_nodes", "related"):
         count += sum(
             _fact_text_paint_count(item)
+            for item in fact.get(key, [])
+            if isinstance(item, dict)
+        )
+    return count
+
+
+def _fact_direct_text_paint_count(fact: dict[str, Any]) -> int:
+    count = len(fact.get("text_paint", []))
+    primary = fact.get("primary")
+    if isinstance(primary, dict):
+        count += _fact_direct_text_paint_count(primary)
+    for key in ("semantics_nodes", "related"):
+        count += sum(
+            _fact_direct_text_paint_count(item)
+            for item in fact.get(key, [])
+            if isinstance(item, dict)
+        )
+    return count
+
+
+def _fact_associated_text_paint_count(fact: dict[str, Any]) -> int:
+    count = len(fact.get("associated_text_paint", []))
+    primary = fact.get("primary")
+    if isinstance(primary, dict):
+        count += _fact_associated_text_paint_count(primary)
+    for key in ("semantics_nodes", "related"):
+        count += sum(
+            _fact_associated_text_paint_count(item)
+            for item in fact.get(key, [])
+            if isinstance(item, dict)
+        )
+    return count
+
+
+def _fact_semantic_text_count(fact: dict[str, Any]) -> int:
+    count = len(fact.get("semantic_text_descendants", []))
+    primary = fact.get("primary")
+    if isinstance(primary, dict):
+        count += _fact_semantic_text_count(primary)
+    for key in ("semantics_nodes", "related"):
+        count += sum(
+            _fact_semantic_text_count(item)
             for item in fact.get(key, [])
             if isinstance(item, dict)
         )
@@ -2361,8 +2701,24 @@ def _part_live_facts(
         "fret_text_paint_fact_count": sum(
             _fact_text_paint_count(fact) for fact in fret_facts
         ),
+        "fret_text_paint_direct_fact_count": sum(
+            _fact_direct_text_paint_count(fact) for fact in fret_facts
+        ),
+        "fret_text_paint_associated_fact_count": sum(
+            _fact_associated_text_paint_count(fact) for fact in fret_facts
+        ),
+        "fret_text_label_fact_count": sum(
+            _fact_semantic_text_count(fact) for fact in fret_facts
+        ),
         "fret_text_paint_bundle_entry_count": layout_evidence.text_paint_bundle_entry_count,
         "fret_text_paint_row_count": layout_evidence.text_paint_fact_row_count,
+        "fret_text_paint_association_row_count": (
+            layout_evidence.text_paint_association_row_count
+        ),
+        "fret_text_paint_unassociated_row_count": (
+            layout_evidence.text_paint_unassociated_row_count
+        ),
+        "fret_text_label_row_count": layout_evidence.text_label_fact_row_count,
         "upstream": upstream_facts,
         "fret": fret_facts,
     }
@@ -2412,8 +2768,24 @@ def _generate_live_facts(
         "fret_text_paint_fact_count": sum(
             part["fret_text_paint_fact_count"] for part in parts
         ),
+        "fret_text_paint_direct_fact_count": sum(
+            part["fret_text_paint_direct_fact_count"] for part in parts
+        ),
+        "fret_text_paint_associated_fact_count": sum(
+            part["fret_text_paint_associated_fact_count"] for part in parts
+        ),
+        "fret_text_label_fact_count": sum(
+            part["fret_text_label_fact_count"] for part in parts
+        ),
         "fret_text_paint_bundle_entry_count": layout_evidence.text_paint_bundle_entry_count,
         "fret_text_paint_row_count": layout_evidence.text_paint_fact_row_count,
+        "fret_text_paint_association_row_count": (
+            layout_evidence.text_paint_association_row_count
+        ),
+        "fret_text_paint_unassociated_row_count": (
+            layout_evidence.text_paint_unassociated_row_count
+        ),
+        "fret_text_label_row_count": layout_evidence.text_label_fact_row_count,
         "parts": parts,
     }
 
@@ -2826,11 +3198,29 @@ def _generate_agent_packet(
             "fret_text_paint_fact_count": report["summary"].get(
                 "fret_text_paint_fact_count", 0
             ),
+            "fret_text_paint_direct_fact_count": report["summary"].get(
+                "fret_text_paint_direct_fact_count", 0
+            ),
+            "fret_text_paint_associated_fact_count": report["summary"].get(
+                "fret_text_paint_associated_fact_count", 0
+            ),
+            "fret_text_label_fact_count": report["summary"].get(
+                "fret_text_label_fact_count", 0
+            ),
             "fret_text_paint_bundle_entry_count": report["summary"].get(
                 "fret_text_paint_bundle_entry_count", 0
             ),
             "fret_text_paint_row_count": report["summary"].get(
                 "fret_text_paint_row_count", 0
+            ),
+            "fret_text_paint_association_row_count": report["summary"].get(
+                "fret_text_paint_association_row_count", 0
+            ),
+            "fret_text_paint_unassociated_row_count": report["summary"].get(
+                "fret_text_paint_unassociated_row_count", 0
+            ),
+            "fret_text_label_row_count": report["summary"].get(
+                "fret_text_label_row_count", 0
             ),
             "repair_queue_count": len(repair_queue),
             "hardening_queue_count": len(hardening_queue),
@@ -2997,10 +3387,24 @@ def generate_report(
                 "fret_interaction_fact_count"
             ],
             "fret_text_paint_fact_count": live_facts["fret_text_paint_fact_count"],
+            "fret_text_paint_direct_fact_count": live_facts[
+                "fret_text_paint_direct_fact_count"
+            ],
+            "fret_text_paint_associated_fact_count": live_facts[
+                "fret_text_paint_associated_fact_count"
+            ],
+            "fret_text_label_fact_count": live_facts["fret_text_label_fact_count"],
             "fret_text_paint_bundle_entry_count": live_facts[
                 "fret_text_paint_bundle_entry_count"
             ],
             "fret_text_paint_row_count": live_facts["fret_text_paint_row_count"],
+            "fret_text_paint_association_row_count": live_facts[
+                "fret_text_paint_association_row_count"
+            ],
+            "fret_text_paint_unassociated_row_count": live_facts[
+                "fret_text_paint_unassociated_row_count"
+            ],
+            "fret_text_label_row_count": live_facts["fret_text_label_row_count"],
         },
         "live_facts": live_facts,
         "parts": report_parts,
@@ -3227,11 +3631,29 @@ def _legacy_agent_packet(report: dict[str, Any], path: Path) -> dict[str, Any]:
             "fret_text_paint_fact_count": report["summary"].get(
                 "fret_text_paint_fact_count", 0
             ),
+            "fret_text_paint_direct_fact_count": report["summary"].get(
+                "fret_text_paint_direct_fact_count", 0
+            ),
+            "fret_text_paint_associated_fact_count": report["summary"].get(
+                "fret_text_paint_associated_fact_count", 0
+            ),
+            "fret_text_label_fact_count": report["summary"].get(
+                "fret_text_label_fact_count", 0
+            ),
             "fret_text_paint_bundle_entry_count": report["summary"].get(
                 "fret_text_paint_bundle_entry_count", 0
             ),
             "fret_text_paint_row_count": report["summary"].get(
                 "fret_text_paint_row_count", 0
+            ),
+            "fret_text_paint_association_row_count": report["summary"].get(
+                "fret_text_paint_association_row_count", 0
+            ),
+            "fret_text_paint_unassociated_row_count": report["summary"].get(
+                "fret_text_paint_unassociated_row_count", 0
+            ),
+            "fret_text_label_row_count": report["summary"].get(
+                "fret_text_label_row_count", 0
             ),
             "repair_queue_count": non_passing,
             "hardening_queue_count": 0,

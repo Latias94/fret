@@ -1,6 +1,6 @@
 ---
 title: Component Parity Fact Harness v1
-status: active
+status: closed
 date: 2026-05-25
 scope: shadcn, material3, parity-discovery, diagnostics, agent-repair
 ---
@@ -15,6 +15,12 @@ not another screenshot checklist. The target is a fact packet that states:
 - which evidence proves the current state,
 - which rows need repair, hardening, or promotion into a gate,
 - and which residual risks are still not measurable.
+
+Status note: this v1 lane is closed on 2026-05-25. The shipped packet now separates direct
+`text_paint` node hits, semantics-ancestor-associated text paint, semantic text descendants, and
+hotspot-sparse coverage notes. The first Material adapter also carries a bounded MUI contained
+button DOM slice for enabled and disabled buttons. No confirmed mechanism-layer defect was found in
+the closeout slice, so no mechanism follow-on was split from this lane.
 
 The first pilot is Button Group because it already exposed the exact failure mode this lane should
 solve: visually small layout drift in self-drawn controls can be caused by recipe chrome, docs-path

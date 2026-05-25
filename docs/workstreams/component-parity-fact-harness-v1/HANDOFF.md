@@ -1,6 +1,6 @@
 ---
 title: Component Parity Fact Harness v1 Handoff
-status: active
+status: closed
 date: 2026-05-25
 ---
 
@@ -8,7 +8,7 @@ date: 2026-05-25
 
 Current state:
 
-- The lane is open and narrow: it owns unified component facts and agent repair packets, not broad
+- The lane is closed and narrow: it owns unified component facts and agent repair packets, not broad
   shadcn coverage discovery.
 - `tools/parity-discovery/shadcn_parity_discovery.py` now emits an `agent_packet` for every
   individual report and a compact packet summary for suite reports.
@@ -35,22 +35,33 @@ Current state:
   text/paint facts are compacted before entering the packet, Button Group now consumes current
   `tables.text_paint` evidence, and Material 3 Button uses live UI Gallery bundle facts through
   explicit `live_fact_requirements`.
-- The current Button Group pilot records 6 per-node Fret text/paint facts, 160 bundle
-  `tables.text_paint` entries, and 5532 compactable text/paint rows from session
+- CPF-098/CPF-099 are complete for final packet hardening: direct `text_paint`, associated
+  `text_paint`, semantic text descendants, and hotspot-sparse coverage notes are separate facts,
+  and Material 3 Button has a bounded MUI contained-button upstream DOM slice.
+- The current Button Group pilot records 6 direct Fret text/paint facts, 21 associated Fret
+  text/paint facts, 68 semantic label facts, 160 bundle `tables.text_paint` entries, and 5532
+  compactable text/paint rows from session
   `target/fret-diag-component-parity-button-group-text-paint-v1/sessions/1779671244627-41048`.
 - The current Material 3 Button adapter pilot records 4 Fret semantics facts, 4 Fret interaction
-  facts, 180 bundle `tables.text_paint` entries, and 3746 text/paint rows from session
+  facts, 16 semantic label facts, 180 bundle `tables.text_paint` entries, and 3746 text/paint rows
+  from session
   `target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708`.
+- The current Material 3 Button upstream slice records 1 MUI DOM snapshot, 2 upstream DOM targets,
+  4 upstream semantics facts, and 4 upstream interaction facts across the two adapter parts.
+- No confirmed mechanism-layer defect was found during closeout, so no mechanism follow-on was
+  created from this lane.
 
-How to continue:
+How to follow on:
 
-1. Start with the generated `agent_packet`, not screenshots.
-2. If `repair_queue` is non-empty, fix rows by owner/layer and refresh the same report.
-3. If only `hardening_queue` is non-empty, add live source/Fret facts before broadening coverage.
-4. Promote stable rows through `gate_queue` into component fixtures, diag scripts, or mechanism
+1. Keep this lane closed unless a v1 artifact has to be corrected.
+2. Start any new component parity work from the generated `agent_packet`, not screenshots.
+3. If a future `repair_queue` is non-empty, fix rows by owner/layer and refresh that follow-on
+   report.
+4. If only `hardening_queue` is non-empty, add live source/Fret facts before broadening coverage.
+5. Promote stable rows through `gate_queue` into component fixtures, diag scripts, or mechanism
    harness cases.
-5. For Material 3, attach an upstream Material UI DOM snapshot next. The Fret live side is now
-   hardening-only, not repair-only.
+6. Automated Material UI browser capture and broader Material component coverage should be a new
+   narrow follow-on.
 
 Residual risk:
 
@@ -59,7 +70,8 @@ Residual risk:
 - Current source facts still include curated prose as context; future rows should prefer
   `upstream.dom_target_ids` when upstream DOM/CSS evidence exists.
 - `tables.text_paint` is a sparse diagnostics/hotspot table. The Material 3 Button pilot proves
-  bundle-level table availability while per-button text/paint row association remains a hardening
-  target, not a proven component defect.
-- The Material 3 pilot still has no upstream Material UI DOM snapshot attached; use the local
-  Material UI repo-ref source and a future DOM extractor before claiming cross-stack visual parity.
+  bundle-level table availability and semantic label coverage while per-button direct/associated
+  text/paint rows remain absent for the selected nodes. That is a diagnostics/hardening signal, not
+  a proven component defect.
+- The Material 3 pilot has a bounded static MUI DOM snapshot attached. Use an automated DOM
+  extractor before claiming broad cross-stack visual parity.

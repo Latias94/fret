@@ -2,9 +2,9 @@
   "schema_version": 1,
   "slug": "component-parity-fact-harness-v1",
   "title": "Component Parity Fact Harness v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-25",
-  "scope_kind": "execution",
+  "scope_kind": "closeout",
   "problem": "Self-drawn component parity work still relies too much on humans or agents visually interpreting screenshots. This lane turns shadcn, Radix/Base UI, and future Material sources into unified source facts, Fret evidence facts, agent repair packets, and promotion queues that can expose recipe, policy, mechanism, and diagnostics defects before broad component ports drift.",
   "authoritative_docs": [
     {
@@ -26,6 +26,10 @@
     {
       "role": "handoff",
       "path": "docs/workstreams/component-parity-fact-harness-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/component-parity-fact-harness-v1/CLOSEOUT_AUDIT_2026-05-25.md"
     }
   ],
   "repro": {
@@ -40,7 +44,7 @@
       "python -m json.tool docs/workstreams/component-parity-fact-harness-v1/WORKSTREAM.json | Out-Null",
       "python tools/check_workstream_catalog.py",
       "target/debug/fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/material3/button/ui-gallery-material3-button-sizes-screenshots.json --dir target/fret-diag-component-parity-material3-button-live-v1 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery --features gallery-full",
-      "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/material3_button_adapter_v1.json --fret-bundle-schema2-dir target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708 --output docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json",
+      "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/material3_button_adapter_v1.json --fret-bundle-schema2-dir target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708 --upstream-dom-snapshot docs/workstreams/component-parity-fact-harness-v1/artifacts/upstream-dom/material3-button-mui-contained.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json",
       "python -m json.tool docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json | Out-Null",
       "cargo test -p fret-bootstrap --lib --features \"ui-app-driver diagnostics\" schema2_exports_text_paint_facts_table_from_debug_snapshots"
     ]
@@ -76,7 +80,7 @@
     },
     {
       "name": "material3-button-adapter-pilot",
-      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/material3_button_adapter_v1.json --fret-bundle-schema2-dir target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708 --output docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json"
+      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/material3_button_adapter_v1.json --fret-bundle-schema2-dir target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708 --upstream-dom-snapshot docs/workstreams/component-parity-fact-harness-v1/artifacts/upstream-dom/material3-button-mui-contained.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json"
     },
     {
       "name": "material3-button-adapter-json",
@@ -100,6 +104,8 @@
     "apps/fret-ui-gallery/src/ui/snippets/material3/button.rs",
     "tools/parity-discovery/fixtures/material3_button_adapter_v1.json",
     "docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json",
+    "docs/workstreams/component-parity-fact-harness-v1/artifacts/upstream-dom/material3-button-mui-contained.json",
+    "docs/workstreams/component-parity-fact-harness-v1/CLOSEOUT_AUDIT_2026-05-25.md",
     "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/ai.packet"
   ],
   "upstream_refs": [
@@ -111,11 +117,12 @@
     "repo-ref/primitives",
     "repo-ref/base-ui",
     "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js",
+    "F:/SourceCodes/Rust/fret/repo-ref/material-ui/docs/data/material/components/buttons/ContainedButtons.tsx",
     "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Button.kt",
     "https://m3.material.io/components/buttons/overview"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue by promoting the agent_packet shape from shadcn Button Group into the v2 discovery suite, then add live source-fact extraction and a Material adapter without widening crates/fret-ui. Mechanism defects discovered by component packets should be promoted into fret-mechanism-harness-v1 or a narrower mechanism follow-on."
+    "default_action": "start_follow_on",
+    "notes": "This v1 lane is closed after the Button Group packet, Material Button adapter, text_paint association hardening, and bounded MUI upstream DOM slice. Start a new narrow follow-on for automated upstream DOM capture, broader Material/shadcn component coverage, or any future confirmed mechanism defect; do not reopen this lane for new scope."
   }
 }

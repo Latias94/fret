@@ -1,6 +1,6 @@
 ---
 title: Component Parity Fact Harness v1 TODO
-status: active
+status: closed
 date: 2026-05-25
 ---
 
@@ -34,5 +34,11 @@ date: 2026-05-25
       `tables.text_paint` rows enter the pilot packet.
 - [x] CPF-096: Attach the Material 3 Button adapter to its first live UI Gallery diagnostics slice
       using stable gallery `test_id`s and explicit `live_fact_requirements`.
-- [ ] CPF-100: Split any confirmed mechanism-level defect found by component packets into
-      `fret-mechanism-harness-v1` or a narrower mechanism follow-on.
+- [x] CPF-098: Harden `text_paint` packet association by reporting direct per-node hits,
+      semantics-descendant ancestor associations, semantic text descendants, and explicit sparse
+      hotspot coverage notes as separate facts.
+- [x] CPF-099: Attach a bounded Material UI contained-button upstream DOM slice for enabled and
+      disabled buttons to the Material 3 Button adapter.
+- [x] CPF-100: Evaluate whether the final packets expose a confirmed mechanism-level defect. No
+      mechanism defect was found in this slice, so no mechanism follow-on was created from this
+      lane.

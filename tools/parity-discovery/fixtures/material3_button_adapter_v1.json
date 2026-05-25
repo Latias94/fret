@@ -20,7 +20,7 @@
     "generated_date": "2026-05-25",
     "limitations": [
       "This is the first Material adapter slice; it proves shared packet shape and source mapping, not full Material parity.",
-      "No upstream browser DOM snapshot is attached yet, so Material UI web geometry is source-referenced but not live-measured.",
+      "A bounded static MUI contained-button DOM snapshot is attached for enabled and disabled web-facing facts; automated browser capture remains a follow-up.",
       "Fret Material 3 headless goldens exist in Rust tests and should be promoted into bundle/sidecar evidence in the next slice."
     ]
   },
@@ -33,6 +33,10 @@
       {
         "id": "material_ui.button",
         "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js"
+      },
+      {
+        "id": "material_ui.button.contained_demo",
+        "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/docs/data/material/components/buttons/ContainedButtons.tsx"
       },
       {
         "id": "compose_material3.button",
@@ -54,8 +58,36 @@
       }
     ]
   },
-  "upstream_contexts": [],
-  "upstream_dom_targets": [],
+  "upstream_contexts": [
+    {
+      "id": "material3.button.mui.contained.light.vp1440x900",
+      "snapshot": "material3-button-mui-contained",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 1
+    }
+  ],
+  "upstream_dom_targets": [
+    {
+      "id": "material3.button.mui.contained.enabled",
+      "snapshot": "material3-button-mui-contained",
+      "theme": "light",
+      "path": "0",
+      "context_id": "material3.button.mui.contained.light.vp1440x900",
+      "source_ref_id": "material_ui.button.contained_demo"
+    },
+    {
+      "id": "material3.button.mui.contained.disabled",
+      "snapshot": "material3-button-mui-contained",
+      "theme": "light",
+      "path": "1",
+      "context_id": "material3.button.mui.contained.light.vp1440x900",
+      "source_ref_id": "material_ui.button.contained_demo"
+    }
+  ],
   "parts": [
     {
       "id": "material3_button_semantics",
@@ -65,7 +97,12 @@
         "source_ref_ids": [
           "material.spec.button",
           "material_ui.button",
+          "material_ui.button.contained_demo",
           "compose_material3.button"
+        ],
+        "dom_target_ids": [
+          "material3.button.mui.contained.enabled",
+          "material3.button.mui.contained.disabled"
         ],
         "facts": [
           "Material buttons expose a button activation role with a label-derived accessible name.",
@@ -89,6 +126,29 @@
         ]
       },
       "checks": [
+        {
+          "id": "material3_button_upstream_dom_gate",
+          "kind": "live_measurement_required",
+          "expected": "MUI contained button DOM evidence should expose enabled and disabled button roles, accessible names, disabled/focusability state, and computed button chrome for the Material adapter.",
+          "observed": "unknown",
+          "live_fact_requirements": {
+            "upstream_dom_target_count": 2,
+            "upstream_semantics_fact_count": 2,
+            "upstream_interaction_fact_count": 2
+          },
+          "confidence": "medium",
+          "owner": "upstream_reference",
+          "layer": "upstream",
+          "evidence_refs": [
+            "docs/workstreams/component-parity-fact-harness-v1/artifacts/upstream-dom/material3-button-mui-contained.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/material-ui/docs/data/material/components/buttons/ContainedButtons.tsx",
+            "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "The first Material adapter needs an upstream DOM slice before comparing Fret recipe semantics and chrome against web-facing Material UI behavior."
+          }
+        },
         {
           "id": "material3_button_semantics_bundle_gate",
           "kind": "live_measurement_required",
@@ -121,12 +181,18 @@
         "source_ref_ids": [
           "material.spec.button",
           "material_ui.button",
+          "material_ui.button.contained_demo",
           "compose_material3.button"
+        ],
+        "dom_target_ids": [
+          "material3.button.mui.contained.enabled",
+          "material3.button.mui.contained.disabled"
         ],
         "facts": [
           "Button height, shape, state-layer opacity, label text style, and container/label colors are token-driven Material outcomes.",
           "Pressed shape and state layer are policy-layer interaction visuals.",
-          "Icon and label spacing is a component recipe token, not a core layout mechanism."
+          "Icon and label spacing is a component recipe token, not a core layout mechanism.",
+          "MUI DOM evidence is attached for the filled/default and filled/disabled button slice so web-facing roles, labels, disabled state, and computed chrome can be compared mechanically."
         ]
       },
       "fret": {
@@ -148,9 +214,10 @@
         {
           "id": "material3_button_text_paint_table_gate",
           "kind": "live_measurement_required",
-          "expected": "Material Button diagnostics should export bundle schema2 text_paint rows while the Material button page is captured; per-button node association is a follow-up hardening target because the table is sparse.",
+          "expected": "Material Button diagnostics should export bundle schema2 text_paint rows while the Material button page is captured, and bundle semantics should expose label descendants for the selected button nodes. Per-label text_paint remains hotspot-sparse and must stay distinct from semantic label coverage.",
           "observed": "unknown",
           "live_fact_requirements": {
+            "fret_text_label_fact_count": 2,
             "fret_text_paint_bundle_entry_count": 1,
             "fret_text_paint_row_count": 1
           },

@@ -1,6 +1,6 @@
 ---
 title: Component Parity Fact Harness v1 Milestones
-status: active
+status: closed
 date: 2026-05-25
 ---
 
@@ -106,3 +106,24 @@ Completed criteria:
 - Material 3 Button adapter checks can use `live_fact_requirements` so live semantics and
   bundle-level text/paint evidence move checks out of repair queues without pretending sparse
   hotspot rows are per-button paint geometry.
+
+## M6 - Closeout and Follow-on Decision
+
+Status: complete on 2026-05-25.
+
+Completed criteria:
+
+- Agent packets now keep direct `text_paint`, semantics-ancestor-associated `text_paint`, semantic
+  text descendants, and hotspot-sparse coverage notes separate.
+- Button Group regenerated from current evidence with 6 direct text/paint facts, 21 associated
+  text/paint facts, and 68 semantic label facts.
+- Material 3 Button regenerated from current evidence with 1 bounded MUI upstream DOM snapshot, 2
+  upstream DOM targets, 16 semantic label facts, 3746 bundle text/paint rows, and no direct or
+  associated text/paint facts for the selected button nodes.
+- No confirmed mechanism-level defect was found, so this lane closes without creating a mechanism
+  follow-on.
+
+Follow-on boundary:
+
+- Automated MUI browser capture, broader Material component coverage, or a future mechanism defect
+  should start a new narrow workstream instead of reopening this v1 lane.

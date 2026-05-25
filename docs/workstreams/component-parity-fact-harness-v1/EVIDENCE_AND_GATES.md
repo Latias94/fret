@@ -1,6 +1,6 @@
 ---
 title: Component Parity Fact Harness v1 Evidence and Gates
-status: active
+status: closed
 date: 2026-05-25
 ---
 
@@ -18,7 +18,7 @@ python -m json.tool docs/workstreams/component-parity-fact-harness-v1/artifacts/
 python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v2.json --suite-from-existing-reports --suite-output docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json
 python -m json.tool docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json | Out-Null
 target\debug\fretboard-dev.exe diag run tools/diag-scripts/ui-gallery/material3/button/ui-gallery-material3-button-sizes-screenshots.json --dir target/fret-diag-component-parity-material3-button-live-v1 --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery --features gallery-full
-python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/material3_button_adapter_v1.json --fret-bundle-schema2-dir target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708 --output docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json
+python tools/parity-discovery/shadcn_parity_discovery.py --mapping tools/parity-discovery/fixtures/material3_button_adapter_v1.json --fret-bundle-schema2-dir target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708 --upstream-dom-snapshot docs/workstreams/component-parity-fact-harness-v1/artifacts/upstream-dom/material3-button-mui-contained.json --output docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json
 python -m json.tool docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json | Out-Null
 cargo test -p fret-bootstrap --lib --features "ui-app-driver diagnostics" schema2_exports_text_paint_facts_table_from_debug_snapshots
 python -m json.tool docs/workstreams/component-parity-fact-harness-v1/WORKSTREAM.json | Out-Null
@@ -60,9 +60,9 @@ Live fact coverage:
   corner radii, icon descendant bounds, role/name/state/relation hints, and focusability hints.
 - Fret facts include bounds, raw bounds, coordinate units, kind/role hints, and related `.chrome` /
   `-icon` nodes.
-- The current Button Group pilot records 6 per-node Fret text/paint facts from the current schema2
-  bundle set, plus 160 bundle `tables.text_paint` entries and 5532 raw text/paint rows available
-  for future focused gates.
+- The current Button Group pilot records 6 direct Fret text/paint facts, 21
+  semantics-descendant-associated text/paint facts, 68 semantic label facts, plus 160 bundle
+  `tables.text_paint` entries and 5532 raw text/paint rows available for future focused gates.
 
 ## Material 3 Adapter Evidence
 
@@ -71,6 +71,7 @@ Source facts:
 - `tools/parity-discovery/fixtures/material3_button_adapter_v1.json`
 - `https://m3.material.io/components/buttons/overview`
 - `F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js`
+- `F:/SourceCodes/Rust/fret/repo-ref/material-ui/docs/data/material/components/buttons/ContainedButtons.tsx`
 - `F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Button.kt`
 
 Fret evidence:
@@ -87,17 +88,21 @@ Fret evidence:
 Generated artifact:
 
 - `docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json`
+- `docs/workstreams/component-parity-fact-harness-v1/artifacts/upstream-dom/material3-button-mui-contained.json`
 
 Pilot packet summary:
 
 - `status`: `needs_hardening`
 - `repair_queue_count`: 0
-- `hardening_queue_count`: 2
-- `gate_queue_count`: 2
-- Live coverage: 4 Fret semantics facts, 4 Fret interaction facts, 180 bundle `tables.text_paint`
-  entries, and 3746 raw text/paint rows.
-- Interpretation: Fret-side live evidence is attached and hardening-only; upstream Material UI DOM
-  evidence remains the next cross-stack parity input.
+- `hardening_queue_count`: 3
+- `gate_queue_count`: 3
+- Upstream coverage: 1 bounded MUI DOM snapshot, 2 upstream DOM targets, 4 upstream semantics
+  facts, and 4 upstream interaction facts across the two Material adapter parts.
+- Fret coverage: 4 Fret semantics facts, 4 Fret interaction facts, 16 semantic label facts, 180
+  bundle `tables.text_paint` entries, and 3746 raw text/paint rows.
+- Interpretation: Fret-side live evidence and a bounded upstream DOM slice are attached. Per-button
+  label text remains hotspot-sparse in `tables.text_paint`, so semantic label coverage is explicit
+  and distinct from direct or associated text/paint coverage.
 
 ## Gate Policy
 
@@ -187,6 +192,29 @@ Pilot packet summary:
   and 3746 text/paint rows.
 - `python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v2.json --suite-from-existing-reports --suite-output docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json`:
   PASS, 9 reports, 17 parts, 0 top findings.
+
+2026-05-25 CPF-098/CPF-099 closeout validation:
+
+- `python -m py_compile tools/parity-discovery/shadcn_parity_discovery.py`: PASS.
+- `python -m json.tool tools/parity-discovery/fixtures/material3_button_adapter_v1.json | Out-Null`:
+  PASS.
+- Button Group pilot regeneration against session `1779671244627-41048`: PASS.
+- Button Group packet summary: 7 parts, 2 upstream DOM snapshots, 6 upstream DOM targets, 6 direct
+  Fret text/paint facts, 21 semantics-descendant-associated text/paint facts, 68 semantic label
+  facts, 160 bundle `tables.text_paint` entries, and 5532 text/paint rows.
+- Material 3 Button adapter regeneration against session `1779671892793-82708` plus
+  `docs/workstreams/component-parity-fact-harness-v1/artifacts/upstream-dom/material3-button-mui-contained.json`:
+  PASS.
+- Material 3 Button adapter summary: 2 parts, 1 upstream DOM snapshot, 2 upstream DOM targets, 0
+  direct Fret text/paint facts, 0 associated Fret text/paint facts, 16 semantic label facts, 180
+  bundle `tables.text_paint` entries, and 3746 text/paint rows.
+- Packet JSON validation for both refreshed artifacts: PASS.
+- `cargo test -p fret-bootstrap --lib --features "ui-app-driver diagnostics" schema2_exports_text_paint_facts_table_from_debug_snapshots`:
+  PASS, 1 test passed.
+- `python tools/check_workstream_catalog.py`: PASS, 437 dedicated directories and 47 standalone
+  markdown files.
+- Closeout decision: no confirmed mechanism-layer defect was found, so no `fret-mechanism-harness`
+  follow-on was split from this lane.
 
 Known validation note:
 
