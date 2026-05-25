@@ -112,6 +112,16 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_invalidation.rs");
     const UI_CANVAS_WIDGET_PREPAINT_CULL_WINDOW_ADAPTER_RS: &str =
         include_str!("ui/canvas/widget/prepaint_cull_window_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_cache.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_CACHE_WARM_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_cache/warm.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_CACHE_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_cache_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_cache_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_STATS_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_stats.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cache_plan.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_ADAPTER_RS: &str =
@@ -3369,6 +3379,79 @@ mod surface_policy_tests {
                 "retained frame background binding should own background scene emission `{required}`"
             );
         }
+    }
+
+    #[test]
+    fn paint_grid_cache_adapter_keeps_tile_warmup_scene_sink_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_GRID_CACHE_ADAPTER_RS.contains(forbidden),
+                "paint grid cache adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_CACHE_ADAPTER_RS.contains("trait PaintGridTileCacheCx"),
+            "grid tile cache warmup should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_grid_scene",
+            "request_grid_paint_redraw",
+            "CanvasRedrawCx",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_GRID_CACHE_ADAPTER_RS.contains(required),
+                "grid cache adapter is missing warmup contract `{required}`"
+            );
+        }
+
+        let grid_cache_warmup_sources = [
+            UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RS,
+            UI_CANVAS_WIDGET_PAINT_GRID_CACHE_WARM_RS,
+        ]
+        .join("\n");
+        for forbidden in ["PaintCx", "cx.scene", "request_paint_redraw(cx)"] {
+            assert!(
+                !grid_cache_warmup_sources.contains(forbidden),
+                "grid tile cache warmup should not read retained PaintCx or scene fields directly; found `{forbidden}`"
+            );
+        }
+        for required in [
+            "paint_grid_cache_adapter::paint_grid_scene",
+            "paint_grid_cache_adapter::request_grid_paint_redraw",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_GRID_CACHE_WARM_RS.contains(required),
+                "grid tile cache warmup should delegate through adapter contract `{required}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::paint_grid_cache_adapter::PaintGridTileCacheCx<H>"
+            ),
+            "retained grid cache binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RETAINED_CX_RS.contains("for PaintCx<'_, H>"),
+            "retained grid cache binding should isolate PaintCx to the retained adapter module"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RETAINED_CX_RS.contains("&mut *self.scene"),
+            "retained grid cache binding should own retained scene sink access"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_STATS_RS.contains("CanvasCacheStatsRegistry"),
+            "grid diagnostics should remain in paint_grid_stats.rs for a separate follow-on"
+        );
     }
 
     #[test]

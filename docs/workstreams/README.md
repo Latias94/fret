@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 450
+- Dedicated directories: 451
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2026,6 +2026,7 @@ Rule:
 - `docs/workstreams/fret-node-paint-root-frame-background-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that isolated node graph paint-root frame background scene quad emission behind a minimal adapter seam; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-root-frame-clip-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that isolated node graph paint-root frame clip scene emission behind a minimal adapter seam; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-root-frame-diagnostics-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that isolated node graph paint-root frame path-cache diagnostics recording behind a minimal adapter seam; includes `WORKSTREAM.json`)
+- `docs/workstreams/fret-node-paint-root-frame-grid-adapter-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on that isolated node graph paint-root frame grid tile cache warmup scene sink access behind a minimal adapter seam; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/` — first n/a, latest n/a, 7 markdown docs (closed narrow follow-on that audited paint-root frame setup and split bounds/viewport/render-cull route inputs behind a frame viewport adapter seam; includes `WORKSTREAM.json`)
 - `docs/workstreams/fret-node-style-skinning-v1/` — first 2026-02-27, latest 2026-03-01, 7 markdown docs
 - `docs/workstreams/fret-node-style-skinning-v2/` — first 2026-03-01, latest 2026-03-01, 3 markdown docs
