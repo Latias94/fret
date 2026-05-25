@@ -53,6 +53,7 @@
   "evidence": [
     "docs/workstreams/fret-node-event-runtime-adapter-v1/DESIGN.md",
     "docs/workstreams/fret-node-low-level-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
+    "ecosystem/fret-node/src/ui/canvas/widget/event_runtime_adapter.rs",
     "ecosystem/fret-node/src/ui/canvas/widget/event_router.rs",
     "ecosystem/fret-node/src/ui/canvas/widget/event_router_cx.rs",
     "ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_event.rs",

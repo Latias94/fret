@@ -31,6 +31,14 @@ Primary gates:
 - `cargo check -p fret-node --features compat-retained-canvas`
 - `cargo test -p fret-node --features compat-retained-canvas event_runtime_adapter`
 
+Status: Complete.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/event_runtime_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_event.rs`
+- `ecosystem/fret-node/src/lib.rs`
+
 ## M2 - Retained Edge Shrink
 
 Exit criteria:

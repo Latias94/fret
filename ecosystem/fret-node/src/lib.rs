@@ -243,11 +243,15 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/event_pointer_up.rs");
     const UI_CANVAS_WIDGET_EVENT_POINTER_UP_DISPATCH_RS: &str =
         include_str!("ui/canvas/widget/event_pointer_up/dispatch.rs");
+    const UI_CANVAS_WIDGET_EVENT_RUNTIME_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/event_runtime_adapter.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_UP_RS: &str =
         include_str!("ui/canvas/widget/event_router_pointer_button/up.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_MOVE_RS: &str =
         include_str!("ui/canvas/widget/event_router_pointer_button/move_event.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_RS: &str = include_str!("ui/canvas/widget/event_router.rs");
+    const UI_CANVAS_WIDGET_EVENT_ROUTER_CX_RS: &str =
+        include_str!("ui/canvas/widget/event_router_cx.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_RS: &str =
         include_str!("ui/canvas/widget/event_router_pointer.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_RS: &str =
@@ -542,6 +546,8 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/timer_motion_viewport/animation.rs");
     const UI_CANVAS_WIDGET_TIMER_MOTION_VIEWPORT_DEBOUNCE_RS: &str =
         include_str!("ui/canvas/widget/timer_motion_viewport/debounce.rs");
+    const UI_CANVAS_WIDGET_RETAINED_RUNTIME_EVENT_RS: &str =
+        include_str!("ui/canvas/widget/retained_widget_runtime_event.rs");
     const UI_CANVAS_WIDGET_VIEWPORT_MOTION_CX_RS: &str =
         include_str!("ui/canvas/widget/viewport_motion_cx.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
@@ -2849,6 +2855,7 @@ mod surface_policy_tests {
     fn top_level_event_router_stays_off_retained_bridge() {
         let router_sources = [
             UI_CANVAS_WIDGET_EVENT_ROUTER_RS,
+            UI_CANVAS_WIDGET_EVENT_ROUTER_CX_RS,
             UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_RS,
             UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_RS,
             UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_DOWN_RS,
@@ -2862,10 +2869,58 @@ mod surface_policy_tests {
             "CommandCx",
             "LayoutCx",
             "PaintCx",
+            "PrepaintCx",
         ] {
             assert!(
                 !router_sources.contains(forbidden),
                 "top-level event routing should stay behind retained-agnostic Cx seams; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn event_runtime_adapter_keeps_route_preparation_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_EVENT_RUNTIME_ADAPTER_RS.contains(forbidden),
+                "event runtime adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_EVENT_RUNTIME_ADAPTER_RS.contains("trait CanvasEventRuntimeCx"),
+            "event runtime route preparation should live behind a named adapter seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_EVENT_RUNTIME_ADAPTER_RS.contains("dispatch_canvas_event"),
+            "event runtime dispatch should go through the adapter seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_RETAINED_RUNTIME_EVENT_RS
+                .contains("impl<H: UiHost, M: NodeGraphCanvasMiddleware>"),
+            "retained event entrypoint should bind the adapter to the retained context explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_RETAINED_RUNTIME_EVENT_RS
+                .contains("event_runtime_adapter::dispatch_canvas_event"),
+            "retained event entrypoint should delegate route preparation and dispatch"
+        );
+        for forbidden in [
+            "sync_runtime_theme(",
+            "sync_view_state(",
+            "handle_event(cx, event",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_RETAINED_RUNTIME_EVENT_RS.contains(forbidden),
+                "retained event entrypoint should only bind and forward, not own route preparation; found `{forbidden}`"
             );
         }
     }

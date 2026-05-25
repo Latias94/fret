@@ -13,11 +13,11 @@ Last updated: 2026-05-25
 
 ## NEA-M1 - Event Runtime Adapter Proof
 
-- [ ] NEA-020 [owner=unassigned] [deps=NEA-010] [scope=ecosystem/fret-node/src/ui/canvas/widget]
+- [x] NEA-020 [owner=codex] [deps=NEA-010] [scope=ecosystem/fret-node/src/ui/canvas/widget]
   Goal: Introduce a named event runtime adapter seam for route preparation and dispatch, isolating
   retained `EventCx` binding outside route orchestration.
   Validation: `cargo check -p fret-node --features compat-retained-canvas`; narrow source-policy test.
-  Evidence: `event_router.rs`, `retained_widget_runtime_event.rs`, source-policy test in
+  Evidence: `event_runtime_adapter.rs`, `retained_widget_runtime_event.rs`, source-policy test in
   `ecosystem/fret-node/src/lib.rs`
   Handoff: Keep command dispatch and paint/prepaint out of this task.
 
