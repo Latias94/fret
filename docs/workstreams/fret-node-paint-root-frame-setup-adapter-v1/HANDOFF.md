@@ -12,10 +12,11 @@ The first slice should audit frame setup operation families before implementatio
 
 ## Active Task
 
-- Task ID: FSA-010
+- Task ID: FSA-030
 - Owner: unassigned
-- Files: `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1`
-- Validation: `python3 -m json.tool docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/WORKSTREAM.json`
+- Files: `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame.rs`,
+  new frame viewport adapter modules, `ecosystem/fret-node/src/lib.rs`
+- Validation: `cargo test -p fret-node --features compat-retained-canvas paint_root_frame_viewport_adapter`
 - Status: NEEDS_CONTEXT
 - Review: not started
 - Evidence: `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/EVIDENCE_AND_GATES.md`
@@ -25,6 +26,8 @@ The first slice should audit frame setup operation families before implementatio
 - Frame setup should be audited before adding an adapter.
 - Bounds/viewport route inputs are the likely smallest implementation candidate.
 - Clip/background/grid scene emission should not be folded into the first frame seam by default.
+- FSA-010 froze the audit-first scope.
+- FSA-020 selected bounds/viewport/render-cull route inputs as the first frame setup seam.
 
 ## Blockers
 
@@ -32,4 +35,5 @@ The first slice should audit frame setup operation families before implementatio
 
 ## Next Recommended Action
 
-- Execute FSA-010 to freeze scope, then FSA-020 to audit frame setup operation families.
+- Execute FSA-030: introduce a bounds/viewport-only frame adapter seam. Do not include cache stats
+  diagnostics, clip emission, background paint, or grid paint.

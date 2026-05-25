@@ -11,6 +11,13 @@ Exit criteria:
 - Non-goals exclude static layer replay/store and cached/immediate passes.
 - Gate set is recorded.
 
+Status: Complete.
+
+Evidence:
+
+- `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/DESIGN.md`
+- `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/EVIDENCE_AND_GATES.md`
+
 ## M1 - Frame Setup Operation-Family Audit
 
 Exit criteria:
@@ -24,10 +31,19 @@ Primary gates:
 - `python3 tools/check_workstream_catalog.py`
 - `git diff --check`
 
-## M2 - First Frame Seam Or Closeout
+Status: Complete.
+
+Evidence:
+
+- `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/FRAME_SETUP_SCOPE_AUDIT_2026-05-25.md`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame/cache.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame/background.rs`
+
+## M2 - Bounds/Viewport Frame Seam
 
 Exit criteria:
 
-- The lane either ships a narrow frame seam or splits the next task explicitly.
-- Evidence gates are fresh.
-- `WORKSTREAM.json` status is updated.
+- Bounds/viewport route inputs no longer require direct retained `PaintCx` reads in frame setup.
+- Source-policy coverage locks the frame viewport adapter boundary.
+- Diagnostics, clip emission, background paint, and grid paint remain out of scope.
