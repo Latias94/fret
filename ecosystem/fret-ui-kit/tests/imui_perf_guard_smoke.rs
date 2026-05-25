@@ -28,16 +28,20 @@ fn virtual_list_stress_demo_keeps_keyed_virtualization_path() {
 
 #[test]
 fn floating_layer_z_order_does_not_clone_vec_each_frame() {
-    let source = include_str!("../src/imui.rs");
+    let source = include_str!("../src/imui/floating_surface/layer.rs");
     assert!(
-        !source.contains("st.order.clone()"),
-        "floating_layer should avoid cloning the z-order Vec on every frame"
+        source.contains("if !self.dirty"),
+        "floating_layer should reuse the z-order snapshot while order is unchanged"
+    );
+    assert!(
+        source.contains("self.order.clone().into()"),
+        "floating_layer should rebuild the z-order snapshot only from the dirty branch"
     );
 }
 
 #[test]
 fn popup_menu_uses_environment_viewport_bounds_for_popper_outer_bounds() {
-    let source = include_str!("../src/imui/popup_overlay.rs");
+    let source = include_str!("../src/imui/popup_overlay/menu.rs");
     assert!(
         source.contains("environment_viewport_bounds"),
         "imui popup menu should derive popper outer bounds from committed environment viewport bounds"

@@ -1,128 +1,18 @@
-use fret_core::{PathCommand, Point, Px, Rect, Size};
+use fret_core::{PathCommand, Point, Px, Size};
 
-use super::geometry::effective_rect_rounding;
-use super::{
-    DEFAULT_ELLIPSE_SEGMENTS, DEFAULT_PATH_ARC_SEGMENTS, DEFAULT_PATH_BEZIER_SEGMENTS,
-    DEFAULT_PATH_ELLIPTICAL_ARC_SEGMENTS, DebugDrawRoundCorners,
+use super::DEFAULT_ELLIPSE_SEGMENTS;
+
+mod rects;
+mod sampling;
+
+pub(super) use rects::{append_path_rect_points, rect_path};
+pub(super) use sampling::{
+    append_arc_points, append_elliptical_arc_points, cubic_bezier_point, path_arc_segments,
+    path_bezier_segments, path_elliptical_arc_segments, quadratic_bezier_point,
 };
 
 pub(super) fn path_stroke_required_points(closed: bool) -> usize {
     if closed { 3 } else { 2 }
-}
-
-pub(super) fn path_arc_segments(segments: usize) -> usize {
-    if segments == 0 {
-        DEFAULT_PATH_ARC_SEGMENTS
-    } else {
-        segments
-    }
-}
-
-pub(super) fn path_bezier_segments(segments: usize) -> usize {
-    if segments == 0 {
-        DEFAULT_PATH_BEZIER_SEGMENTS
-    } else {
-        segments
-    }
-}
-
-pub(super) fn path_elliptical_arc_segments(segments: usize) -> usize {
-    if segments == 0 {
-        DEFAULT_PATH_ELLIPTICAL_ARC_SEGMENTS
-    } else {
-        segments
-    }
-}
-
-pub(super) fn append_arc_points(
-    points: &mut Vec<Point>,
-    center: Point,
-    radius: Px,
-    a_min: f32,
-    a_max: f32,
-    segments: usize,
-) {
-    for step in 0..=segments {
-        let t = if segments == 0 {
-            0.0
-        } else {
-            step as f32 / segments as f32
-        };
-        points.push(arc_point(center, radius, a_min + t * (a_max - a_min)));
-    }
-}
-
-fn arc_point(center: Point, radius: Px, angle: f32) -> Point {
-    let (sin, cos) = angle.sin_cos();
-    Point::new(
-        Px(center.x.0 + cos * radius.0),
-        Px(center.y.0 + sin * radius.0),
-    )
-}
-
-pub(super) fn append_elliptical_arc_points(
-    points: &mut Vec<Point>,
-    center: Point,
-    radius: Size,
-    rotation_radians: f32,
-    a_min: f32,
-    a_max: f32,
-    segments: usize,
-) {
-    for step in 0..=segments {
-        let t = if segments == 0 {
-            0.0
-        } else {
-            step as f32 / segments as f32
-        };
-        points.push(elliptical_arc_point(
-            center,
-            radius,
-            rotation_radians,
-            a_min + t * (a_max - a_min),
-        ));
-    }
-}
-
-fn elliptical_arc_point(center: Point, radius: Size, rotation_radians: f32, angle: f32) -> Point {
-    let (angle_sin, angle_cos) = angle.sin_cos();
-    let (rot_sin, rot_cos) = rotation_radians.sin_cos();
-    let x = angle_cos * radius.width.0;
-    let y = angle_sin * radius.height.0;
-    Point::new(
-        Px(center.x.0 + x * rot_cos - y * rot_sin),
-        Px(center.y.0 + x * rot_sin + y * rot_cos),
-    )
-}
-
-pub(super) fn quadratic_bezier_point(from: Point, ctrl: Point, to: Point, t: f32) -> Point {
-    let u = 1.0 - t;
-    Point::new(
-        Px(u * u * from.x.0 + 2.0 * u * t * ctrl.x.0 + t * t * to.x.0),
-        Px(u * u * from.y.0 + 2.0 * u * t * ctrl.y.0 + t * t * to.y.0),
-    )
-}
-
-pub(super) fn cubic_bezier_point(
-    from: Point,
-    ctrl1: Point,
-    ctrl2: Point,
-    to: Point,
-    t: f32,
-) -> Point {
-    let u = 1.0 - t;
-    let uu = u * u;
-    let tt = t * t;
-    Point::new(
-        Px(uu * u * from.x.0
-            + 3.0 * uu * t * ctrl1.x.0
-            + 3.0 * u * tt * ctrl2.x.0
-            + tt * t * to.x.0),
-        Px(uu * u * from.y.0
-            + 3.0 * uu * t * ctrl1.y.0
-            + 3.0 * u * tt * ctrl2.y.0
-            + tt * t * to.y.0),
-    )
 }
 
 pub(super) fn polyline_path(points: &[Point], closed: bool) -> Option<Vec<PathCommand>> {
@@ -147,119 +37,6 @@ pub(super) fn convex_poly_fill_path(points: &[Point]) -> Option<Vec<PathCommand>
 
 pub(super) fn concave_poly_fill_path(points: &[Point]) -> Option<Vec<PathCommand>> {
     polyline_path(points, true)
-}
-
-pub(super) fn rect_path(rect: Rect) -> [PathCommand; 5] {
-    let x0 = rect.origin.x;
-    let y0 = rect.origin.y;
-    let x1 = Px(rect.origin.x.0 + rect.size.width.0);
-    let y1 = Px(rect.origin.y.0 + rect.size.height.0);
-    [
-        PathCommand::MoveTo(Point::new(x0, y0)),
-        PathCommand::LineTo(Point::new(x1, y0)),
-        PathCommand::LineTo(Point::new(x1, y1)),
-        PathCommand::LineTo(Point::new(x0, y1)),
-        PathCommand::Close,
-    ]
-}
-
-pub(super) fn append_path_rect_points(
-    points: &mut Vec<Point>,
-    rect: Rect,
-    rounding: Px,
-    corners: DebugDrawRoundCorners,
-) {
-    let a = rect.origin;
-    let b = rect_max_point(rect);
-    let rounding = effective_rect_rounding(rect, rounding, corners);
-
-    if rounding.0 < 0.5 {
-        points.push(a);
-        points.push(Point::new(b.x, a.y));
-        points.push(b);
-        points.push(Point::new(a.x, b.y));
-        return;
-    }
-
-    let rounding_tl = if corners.contains(DebugDrawRoundCorners::TOP_LEFT) {
-        rounding
-    } else {
-        Px(0.0)
-    };
-    let rounding_tr = if corners.contains(DebugDrawRoundCorners::TOP_RIGHT) {
-        rounding
-    } else {
-        Px(0.0)
-    };
-    let rounding_br = if corners.contains(DebugDrawRoundCorners::BOTTOM_RIGHT) {
-        rounding
-    } else {
-        Px(0.0)
-    };
-    let rounding_bl = if corners.contains(DebugDrawRoundCorners::BOTTOM_LEFT) {
-        rounding
-    } else {
-        Px(0.0)
-    };
-
-    append_path_rect_corner_arc_points(
-        points,
-        Point::new(Px(a.x.0 + rounding_tl.0), Px(a.y.0 + rounding_tl.0)),
-        rounding_tl,
-        6,
-        9,
-    );
-    append_path_rect_corner_arc_points(
-        points,
-        Point::new(Px(b.x.0 - rounding_tr.0), Px(a.y.0 + rounding_tr.0)),
-        rounding_tr,
-        9,
-        12,
-    );
-    append_path_rect_corner_arc_points(
-        points,
-        Point::new(Px(b.x.0 - rounding_br.0), Px(b.y.0 - rounding_br.0)),
-        rounding_br,
-        0,
-        3,
-    );
-    append_path_rect_corner_arc_points(
-        points,
-        Point::new(Px(a.x.0 + rounding_bl.0), Px(b.y.0 - rounding_bl.0)),
-        rounding_bl,
-        3,
-        6,
-    );
-}
-
-fn append_path_rect_corner_arc_points(
-    points: &mut Vec<Point>,
-    center: Point,
-    radius: Px,
-    a_min_of_12: i32,
-    a_max_of_12: i32,
-) {
-    if radius.0 < 0.5 {
-        points.push(center);
-        return;
-    }
-    let a_min = a_min_of_12 as f32 * std::f32::consts::TAU / 12.0;
-    let a_max = a_max_of_12 as f32 * std::f32::consts::TAU / 12.0;
-    append_arc_points(
-        points,
-        center,
-        radius,
-        a_min,
-        a_max,
-        a_min_of_12.abs_diff(a_max_of_12) as usize,
-    );
-}
-
-fn rect_max_point(rect: Rect) -> Point {
-    Point::new(
-        Px(rect.origin.x.0 + rect.size.width.0),
-        Px(rect.origin.y.0 + rect.size.height.0),
-    )
 }
 
 pub(super) fn triangle_path(p1: Point, p2: Point, p3: Point) -> [PathCommand; 4] {

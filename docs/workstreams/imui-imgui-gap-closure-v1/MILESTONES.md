@@ -3,6 +3,23 @@
 Status: Active
 Last updated: 2026-05-26
 
+## M5 - Worktree Convergence
+
+Exit criteria:
+
+- Dirty IMUI changes in `main` and `imui-imgui-editor-grade-refactor` are checkpointed before
+  integration.
+- `main` remains the integration base and the only continuation branch.
+- Overlapping `fret-ui-kit::imui`, `fret-imui`, demo, workstream, and source-gate changes are
+  merged by topic with no unresolved conflict markers.
+- Focused convergence gates pass or have an explicit recorded reason for a narrower substitute.
+
+Result: done on 2026-05-26. The main checkpoint is
+`d078e25122 refactor(imui): checkpoint gap closure convergence slices`; the editor-grade worktree
+checkpoint is `05727e284b refactor(imui): checkpoint editor-grade convergence worktree`; the merge
+resolution keeps the editor-grade facade/container/listbox organization, preserves the main
+image-item owner split, and records the verification evidence in `EVIDENCE_AND_GATES.md`.
+
 ## M0 - Current Source Baseline
 
 Exit criteria:

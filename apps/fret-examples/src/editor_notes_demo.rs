@@ -10,9 +10,10 @@ use fret_ui_editor::composites::{
     PropertyRow,
 };
 use fret_ui_editor::controls::{
-    EditorTextSelectionBehavior, TextField, TextFieldBlurBehavior, TextFieldDraftController,
-    TextFieldOptions, TextFieldOutcome,
+    EditorTextSelectionBehavior, EditorThemePresetPicker, EditorThemePresetPickerOptions,
+    TextField, TextFieldBlurBehavior, TextFieldDraftController, TextFieldOptions, TextFieldOutcome,
 };
+use fret_ui_editor::theme::EditorThemePresetV1;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::{IntoUiElementInExt as _, Space};
@@ -45,6 +46,7 @@ const TEST_ID_DRAFT_COMMIT_COMMAND: &str = "editor-notes-demo.inspector.notes.co
 const TEST_ID_DRAFT_DISCARD_COMMAND: &str = "editor-notes-demo.inspector.notes.discard-draft";
 const TEST_ID_SUMMARY_COMMAND: &str = "editor-notes-demo.inspector.summary-command";
 const TEST_ID_SUMMARY_STATUS: &str = "editor-notes-demo.inspector.summary-status";
+const TEST_ID_THEME_PRESET_PICKER: &str = "editor-notes-demo.inspector.theme-preset";
 
 pub(crate) mod act {
     fret::actions!([
@@ -75,8 +77,9 @@ pub(crate) struct EditorAssetState {
     pub(crate) summary_status_model: Model<String>,
 }
 
-struct EditorNotesDemoView {
+pub(crate) struct EditorNotesDemoView {
     assets: Arc<[EditorAssetState]>,
+    theme_preset_model: Model<EditorThemePresetV1>,
 }
 
 pub(crate) fn install_editor_notes_demo_theme(app: &mut App) {
@@ -106,8 +109,11 @@ pub fn run() -> anyhow::Result<()> {
 
 impl View for EditorNotesDemoView {
     fn init(app: &mut App, _window: WindowId) -> Self {
+        let theme_preset = fret_ui_editor::theme::installed_editor_theme_preset_v1(app)
+            .unwrap_or(EditorThemePresetV1::Default);
         Self {
             assets: default_editor_assets(app),
+            theme_preset_model: app.models_mut().insert(theme_preset),
         }
     }
 
@@ -153,6 +159,7 @@ impl View for EditorNotesDemoView {
         let inspector = render_inspector_panel(
             cx,
             asset,
+            self.theme_preset_model.clone(),
             committed_line_count_label(&committed_notes),
             notes_outcome,
             summary_status,
@@ -522,6 +529,7 @@ where
 pub(crate) fn render_inspector_panel<'a, Cx>(
     cx: &mut Cx,
     asset: EditorAssetState,
+    theme_preset_model: Model<EditorThemePresetV1>,
     committed_label: String,
     outcome_label: String,
     summary_status: String,
@@ -767,6 +775,24 @@ where
                                             })
                                             .gap(Space::N2)
                                             .into_element_in(cx)
+                                        },
+                                        |_cx| None,
+                                    ));
+
+                                    rows.push(row_cx.row_with(
+                                        cx,
+                                        PropertyRow::new(),
+                                        |cx| row_cx.label_text(cx, "Theme preset"),
+                                        |cx| {
+                                            EditorThemePresetPicker::new(theme_preset_model.clone())
+                                                .options(EditorThemePresetPickerOptions {
+                                                    label: Some(Arc::from("Editor theme preset")),
+                                                    test_id: Some(Arc::from(
+                                                        TEST_ID_THEME_PRESET_PICKER,
+                                                    )),
+                                                    ..Default::default()
+                                                })
+                                                .into_element(cx)
                                         },
                                         |_cx| None,
                                     ));

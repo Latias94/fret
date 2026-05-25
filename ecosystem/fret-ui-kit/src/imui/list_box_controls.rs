@@ -4,7 +4,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 
 use fret_core::SemanticsRole;
-use fret_ui::element::{AnyElement, SemanticsDecoration};
+use fret_ui::element::SemanticsDecoration;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use super::{ImUiFacade, ListBoxOptions, containers::build_imui_children_with_focus};
@@ -15,7 +15,7 @@ pub(super) fn list_box_element<H: UiHost>(
     build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
     options: ListBoxOptions,
     f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-) -> AnyElement {
+) -> fret_ui::element::AnyElement {
     cx.keyed(id, |cx| {
         let mut scroll_options = options.scroll.clone();
         scroll_options.layout = options.layout.clone().merge(scroll_options.layout);

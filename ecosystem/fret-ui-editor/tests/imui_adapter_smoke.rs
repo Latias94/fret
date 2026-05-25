@@ -19,15 +19,16 @@ use fret_ui_editor::controls::{
     ColorEdit, ColorEditCopyOptions, ColorEditOptions, ColorEditPaletteEntry,
     ColorEditPaletteSlotDrop, ColorEditPopupNumericInputs, ColorEditPopupOptions,
     ColorEditPopupPicker, ColorEditPopupSidePreview, ColorEditTooltipOptions, DragValue,
-    DragValueOptions, DragValueOutcome, EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus,
-    FieldStatusBadge, FieldStatusBadgeOptions, IconButton, IconButtonOptions, MiniSearchBox,
-    MiniSearchBoxOptions, NumericInput, NumericInputOptions, NumericPresentation,
-    NumericValueConstraints, Slider, SliderOptions, TextAssistField, TextAssistFieldOptions,
-    TextAssistFieldSurface, TextField, TextFieldOptions, TransformEdit, TransformEditAxisOutcome,
-    TransformEditOptions, TransformEditPresentations, Vec2Edit, Vec3Edit, Vec4Edit,
-    VecEditAxisOutcome, VecEditOptions,
+    DragValueOptions, DragValueOutcome, EditorThemePresetPicker, EditorThemePresetPickerOptions,
+    EnumSelect, EnumSelectItem, EnumSelectOptions, FieldStatus, FieldStatusBadge,
+    FieldStatusBadgeOptions, IconButton, IconButtonOptions, MiniSearchBox, MiniSearchBoxOptions,
+    NumericInput, NumericInputOptions, NumericPresentation, NumericValueConstraints, Slider,
+    SliderOptions, TextAssistField, TextAssistFieldOptions, TextAssistFieldSurface, TextField,
+    TextFieldOptions, TransformEdit, TransformEditAxisOutcome, TransformEditOptions,
+    TransformEditPresentations, Vec2Edit, Vec3Edit, Vec4Edit, VecEditAxisOutcome, VecEditOptions,
 };
 use fret_ui_editor::imui;
+use fret_ui_editor::theme::EditorThemePresetV1;
 
 #[allow(dead_code)]
 fn editor_imui_adapters_compile<H: UiHost + 'static>(
@@ -40,6 +41,7 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
     search_model: &Model<String>,
     search_dismissed_query_model: &Model<String>,
     search_active_item_id_model: &Model<Option<Arc<str>>>,
+    theme_preset_model: &Model<EditorThemePresetV1>,
 ) {
     let value_presentation = NumericPresentation::<f64>::fixed_decimals(3);
     let blend_presentation = NumericPresentation::<f64>::percent_0_1(0);
@@ -336,6 +338,16 @@ fn editor_imui_adapters_compile<H: UiHost + 'static>(
         }),
     );
 
+    imui::editor_theme_preset_picker(
+        ui,
+        EditorThemePresetPicker::new(theme_preset_model.clone()).options(
+            EditorThemePresetPickerOptions {
+                test_id: Some(Arc::from("tests.editor_theme_preset_picker")),
+                ..Default::default()
+            },
+        ),
+    );
+
     imui::property_group(
         ui,
         PropertyGroup::new("Metadata").options(PropertyGroupOptions {
@@ -451,6 +463,7 @@ fn editor_imui_adapter_option_defaults_compile() {
     let _ = SliderOptions::default();
     let _ = CheckboxOptions::default();
     let _ = EnumSelectOptions::default();
+    let _ = EditorThemePresetPickerOptions::default();
     let _ = VecEditOptions::default();
     let _ = TransformEditOptions::default();
     let _ = PropertyGroupOptions::default();

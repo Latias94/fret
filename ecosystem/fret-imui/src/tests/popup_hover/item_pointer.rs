@@ -1,5 +1,18 @@
 use super::*;
 
+fn hit_or_ancestor_test_id<'a>(
+    snap: &'a fret_core::SemanticsSnapshot,
+    mut id: fret_core::NodeId,
+) -> Option<&'a str> {
+    loop {
+        let node = snap.nodes.iter().find(|n| n.id == id)?;
+        if let Some(test_id) = node.test_id.as_deref() {
+            return Some(test_id);
+        }
+        id = node.parent?;
+    }
+}
+
 #[test]
 fn context_menu_popup_item_click_closes_popup() {
     let window = AppWindowId::default();
@@ -98,15 +111,11 @@ fn context_menu_popup_item_click_closes_popup() {
     );
     let hit = ui.debug_hit_test(click_point).hit.expect("hit node");
     let snap = ui.semantics_snapshot().expect("semantics snapshot");
-    let hit_test_id = snap
-        .nodes
-        .iter()
-        .find(|n| n.id == hit)
-        .and_then(|n| n.test_id.as_deref());
+    let hit_test_id = hit_or_ancestor_test_id(snap, hit);
     assert_eq!(
         hit_test_id,
         Some("imui-popup-ctx-item-close"),
-        "expected click to hit the menu item pressable"
+        "expected click to hit the menu item pressable or one of its descendants"
     );
 
     click_at(&mut ui, &mut app, &mut services, click_point);

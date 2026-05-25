@@ -13,9 +13,9 @@ use crate::composites::{
     PropertyGridVirtualized, PropertyGridVirtualizedRowCx, PropertyGroup,
 };
 use crate::controls::{
-    AxisDragValue, Checkbox, ColorEdit, DragValue, EnumSelect, FieldStatusBadge, IconButton,
-    MiniSearchBox, NumericInput, Slider, TextAssistField, TextField, TransformEdit, Vec2Edit,
-    Vec3Edit, Vec4Edit,
+    AxisDragValue, Checkbox, ColorEdit, DragValue, EditorThemePresetPicker, EnumSelect,
+    FieldStatusBadge, IconButton, MiniSearchBox, NumericInput, Slider, TextAssistField, TextField,
+    TransformEdit, Vec2Edit, Vec3Edit, Vec4Edit,
 };
 use crate::primitives::DragValueScalar;
 
@@ -89,6 +89,15 @@ where
 /// Adds an `EnumSelect` control to an immediate-style authoring surface.
 #[track_caller]
 pub fn enum_select<H: UiHost + 'static>(ui: &mut impl UiWriter<H>, control: EnumSelect) {
+    add_editor_element(ui, move |cx| control.into_element(cx));
+}
+
+/// Adds an `EditorThemePresetPicker` control to an immediate-style authoring surface.
+#[track_caller]
+pub fn editor_theme_preset_picker<H: UiHost + 'static>(
+    ui: &mut impl UiWriter<H>,
+    control: EditorThemePresetPicker,
+) {
     add_editor_element(ui, move |cx| control.into_element(cx));
 }
 

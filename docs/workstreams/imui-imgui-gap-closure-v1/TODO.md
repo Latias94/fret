@@ -3,6 +3,20 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Worktree Convergence - 2026-05-26
+
+- [x] Stop feature development in both dirty worktrees and record the convergence plan.
+- [x] Checkpoint the main worktree before merging:
+      `d078e25122 refactor(imui): checkpoint gap closure convergence slices`.
+- [x] Checkpoint the `imui-imgui-editor-grade-refactor` worktree before merging:
+      `05727e284b refactor(imui): checkpoint editor-grade convergence worktree`.
+- [x] Merge `imui-imgui-editor-grade-refactor` back into `main`, resolving overlapping IMUI
+      changes by topic instead of treating either side as globally authoritative.
+- [x] Preserve the editor-grade facade/container/listbox organization, the main image-item owner
+      split, and the union source gate coverage.
+- [x] Run focused convergence gates and record the result in `EVIDENCE_AND_GATES.md`.
+- [x] Continue follow-up IMUI development only from `F:/SourceCodes/Rust/fret` on `main`.
+
 ## P0 - Source Baseline
 
 - [x] Create the dedicated `imui-imgui-gap-closure-v1` workstream.

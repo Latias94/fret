@@ -50,6 +50,7 @@ mod image_item_controls;
 mod interaction_runtime;
 mod item_behavior;
 mod label_identity;
+mod layout_sugar;
 mod list_box_controls;
 mod menu_controls;
 mod menu_family_controls;
@@ -78,6 +79,7 @@ pub use debug_draw_controls::{
     DebugDrawImageOptions, DebugDrawImageQuadOptions, DebugDrawInteractionOptions,
     DebugDrawListSummary, DebugDrawOptions, DebugDrawResponse, DebugDrawRoundCorners,
     DebugDrawStrokeStyle, DebugDrawSvgOptions, DebugDrawVertex, ImUiDebugDrawList,
+    ImUiDebugDrawPath,
 };
 pub use facade_support::UiWriterUiKitExt;
 #[allow(unused_imports)]
@@ -126,12 +128,13 @@ pub use options::{
     BeginMenuOptions, BeginSubmenuOptions, BulletTextOptions, ButtonArrowDirection, ButtonOptions,
     ButtonVariant, CheckboxOptions, ChildRegionChrome, ChildRegionOptions,
     ChildRegionResizeXOptions, ChildRegionResizeYOptions, CollapsingHeaderOptions,
-    ComboModelOptions, ComboOptions, DragSourceOptions, DropTargetOptions, GridOptions,
-    HorizontalOptions, ImageItemOptions, ImageItemVariant, InputTextCustomFilter, InputTextFilters,
-    InputTextMode, InputTextOptions, InputTextPickerFilter, InputTextPickerOptions, ListBoxOptions,
-    MenuBarOptions, MenuItemOptions, PopupMenuOptions, PopupModalOptions, RadioOptions,
-    ScrollOptions, SelectableOptions, SeparatorTextOptions, SliderOptions, SwitchOptions,
-    TabBarOptions, TabItemOptions, TableCellOptions, TableColumn, TableColumnPin,
+    ComboModelOptions, ComboOptions, DragSourceOptions, DropTargetOptions, DummyOptions,
+    GridOptions, HorizontalOptions, ImageItemOptions, ImageItemVariant, IndentOptions,
+    InputTextCustomFilter, InputTextFilters, InputTextMode, InputTextOptions,
+    InputTextPickerFilter, InputTextPickerOptions, ItemFlowOptions, ListBoxOptions, MenuBarOptions,
+    MenuItemOptions, PopupMenuOptions, PopupModalOptions, RadioOptions, SameLineOptions,
+    ScrollOptions, SelectableOptions, SeparatorTextOptions, SliderOptions, SpacingOptions,
+    SwitchOptions, TabBarOptions, TabItemOptions, TableCellOptions, TableColumn, TableColumnPin,
     TableColumnResizeOptions, TableColumnWidth, TableOptions, TableRowOptions, TableSortDirection,
     TextAreaOptions, TextAreaSubmitKey, TooltipOptions, TreeNodeOptions, VerticalOptions,
     VirtualListOptions,

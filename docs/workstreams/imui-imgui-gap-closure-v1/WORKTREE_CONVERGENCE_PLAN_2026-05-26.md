@@ -1,6 +1,6 @@
 # IMUI Worktree Convergence Plan - 2026-05-26
 
-Status: Active integration plan
+Status: Resolved on main in the convergence merge
 
 ## Context
 
@@ -48,6 +48,33 @@ Merge content by topic rather than treating either worktree as globally authorit
 4. Resolve conflicts by the topic decisions above.
 5. Run the focused convergence gates before resuming feature development.
 6. Continue IMUI development only from `F:/SourceCodes/Rust/fret` on `main` after convergence.
+
+## Resolution Record
+
+Resolved on 2026-05-26 with `main` as the only continuation worktree.
+
+- Main checkpoint: `d078e25122 refactor(imui): checkpoint gap closure convergence slices`.
+- IMUI worktree checkpoint:
+  `05727e284b refactor(imui): checkpoint editor-grade convergence worktree`.
+- Main merge commit message:
+  `refactor(imui): merge editor-grade convergence worktree`.
+
+Conflict decisions applied during the merge:
+
+- `facade_writer.rs` keeps the editor-grade owner split, including `facade_core.rs`,
+  `scope_methods.rs`, `container_methods.rs`, `layout_sugar.rs`, and the root facade tests owner.
+- `facade_writer/image_items.rs` from the main checkpoint is preserved as a dedicated owner module
+  and remains covered by the source gate.
+- ListBox facade methods route through `container_methods.rs`; the root facade no longer owns the
+  option assembly directly.
+- `fret-ui-kit::imui` keeps both sides' option exports, including the porting-sugar layout options
+  from the editor-grade worktree.
+- `fret-imui` composition tests use `ScrollHandle` at the test module that needs it instead of
+  re-exporting unused harness surface.
+- `tools/gate_imui_workstream_source.py` is the union gate: it keeps the main-only image-item
+  owner checks and the editor-grade facade/container/listbox/workbench checks.
+- Workstream catalog metadata is reconciled to the post-merge catalog count of 445 dedicated
+  directories.
 
 ## Minimum Gates
 

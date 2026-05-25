@@ -5,9 +5,9 @@ use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, Overflow
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use super::TableColumnResizeResponse;
 use super::{
-    BuiltTableCell, BuiltTableRow, TableColumn, TableHeaderResponse, TableOptions, TableResponse,
+    BuiltTableCell, BuiltTableRow, TableColumn, TableColumnResizeResponse, TableHeaderResponse,
+    TableOptions, TableResponse,
 };
 use super::{body, header};
 use crate::imui::{TableColumnPin, TableColumnWidth};

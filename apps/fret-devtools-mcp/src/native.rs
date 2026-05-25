@@ -77,6 +77,8 @@ const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
     "perf-docking/*/trace.chrome.json",
 ];
 const DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug";
+const DEMO_EDITOR_WORKBENCH_COMMAND: &str =
+    "cargo run -p fret-demo --bin imui_editor_workbench_demo";
 const DEMO_EDITOR_PROOF_COMMAND: &str = "cargo run -p fret-demo --bin imui_editor_proof_demo";
 const DEMO_EDITOR_NOTES_COMMAND: &str = "cargo run -p fret-demo --bin editor_notes_demo";
 const DEMO_DEVICE_SHELL_COMMAND: &str =
@@ -92,6 +94,41 @@ const DEBUG_TRIAGE_COMMAND: &str =
 const DEBUG_HOTSPOTS_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
 const DEBUG_TRACE_COMMAND: &str = "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
+const DEMO_METRICS_DEBUG_OWNER_DOC: &str =
+    "docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json";
+const DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =
+    "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json";
+const DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str = "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md";
+const DOCKING_ARBITRATION_COMMAND: &str = "cargo run -p fret-demo --bin docking_arbitration_demo";
+const DOCKING_CAMPAIGN_VALIDATE_COMMAND: &str = "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json";
+const DOCKING_POLICY_SKIP_COMMAND: &str = "python tools/diag_gate_docking_wayland_policy_skip.py";
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct DemoMetricsDebugActionSpec {
+    label: &'static str,
+    command: &'static str,
+}
+const DEMO_METRICS_DEBUG_ACTIONS: &[DemoMetricsDebugActionSpec] = &[
+    DemoMetricsDebugActionSpec {
+        label: "open workbench",
+        command: DEMO_EDITOR_WORKBENCH_COMMAND,
+    },
+    DemoMetricsDebugActionSpec {
+        label: "run product discovery",
+        command: IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
+    },
+    DemoMetricsDebugActionSpec {
+        label: "inspect metrics stats",
+        command: METRICS_STATS_COMMAND,
+    },
+    DemoMetricsDebugActionSpec {
+        label: "inspect debug trace",
+        command: DEBUG_TRACE_COMMAND,
+    },
+    DemoMetricsDebugActionSpec {
+        label: "validate docking campaign",
+        command: DOCKING_CAMPAIGN_VALIDATE_COMMAND,
+    },
+];
 const RECENT_EVIDENCE_GATE_RUNS_DIR: &str = ".fret/diag/gate-runs";
 const RECENT_EVIDENCE_WORKFLOW_RUNS_DIR: &str = ".fret/diag/workflow-runs";
 const RECENT_EVIDENCE_FOLLOWUPS_DIR: &str = ".fret/diag/followups";
@@ -2959,7 +2996,7 @@ fn mcp_server_instructions() -> String {
 }
 
 fn mcp_first_open_lines() -> Vec<String> {
-    vec![
+    let mut lines = vec![
         format!("mcp first-open: {DEVTOOLS_FIRST_OPEN_DOC}"),
         format!("mcp workflow: {DEVTOOLS_MCP_DOC}"),
         format!("gui branch: {DEVTOOLS_GUI_BRANCH_DOC}"),
@@ -2980,7 +3017,21 @@ fn mcp_first_open_lines() -> Vec<String> {
             IMUI_PRODUCT_WORKFLOW_ARTIFACTS.join(", ")
         ),
         format!("route: {DEMO_METRICS_DEBUG_ROUTE_ID}"),
-        format!("demo editor proof: {DEMO_EDITOR_PROOF_COMMAND}"),
+        format!("route owner: {DEMO_METRICS_DEBUG_OWNER_DOC}"),
+        format!("docking owner: {DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC}"),
+        format!("wayland acceptance: {DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC}"),
+        "action surface: dedicated DevTools guide panel + MCP first-open action list".to_string(),
+        "command palette: deferred until DevTools has a shared command palette contract"
+            .to_string(),
+    ];
+    lines.extend(
+        DEMO_METRICS_DEBUG_ACTIONS
+            .iter()
+            .map(|action| format!("action: {} -> {}", action.label, action.command)),
+    );
+    lines.extend([
+        format!("demo editor workbench: {DEMO_EDITOR_WORKBENCH_COMMAND}"),
+        format!("demo editor proof supporting: {DEMO_EDITOR_PROOF_COMMAND}"),
         format!("demo editor notes: {DEMO_EDITOR_NOTES_COMMAND}"),
         format!("demo device shell: {DEMO_DEVICE_SHELL_COMMAND}"),
         format!("metrics stats: {METRICS_STATS_COMMAND}"),
@@ -2989,13 +3040,17 @@ fn mcp_first_open_lines() -> Vec<String> {
         format!("debug triage: {DEBUG_TRIAGE_COMMAND}"),
         format!("debug hotspots: {DEBUG_HOTSPOTS_COMMAND}"),
         format!("debug trace: {DEBUG_TRACE_COMMAND}"),
+        format!("docking arbitration supporting: {DOCKING_ARBITRATION_COMMAND}"),
+        format!("docking campaign validate: {DOCKING_CAMPAIGN_VALIDATE_COMMAND}"),
+        format!("docking policy-skip local: {DOCKING_POLICY_SKIP_COMMAND}"),
         "recent evidence tool: fret_diag_recent_evidence".to_string(),
         format!("recent evidence gate runs: {RECENT_EVIDENCE_GATE_RUNS_DIR}"),
         format!("recent evidence workflow runs: {RECENT_EVIDENCE_WORKFLOW_RUNS_DIR}"),
         format!("recent evidence followups: {RECENT_EVIDENCE_FOLLOWUPS_DIR}"),
         "recent evidence next action: inspect failed result JSON or run a workflow/generated gate"
             .to_string(),
-    ]
+    ]);
+    lines
 }
 
 fn mcp_first_open_resource_text() -> String {
@@ -3568,14 +3623,56 @@ mod tests {
             "product workflow artifacts: perf-docking/regression.summary.json, perf-docking/check.perf_thresholds.json, perf-docking/*/trace.chrome.json"
         ));
         assert!(text.contains("route: demo-metrics-debug"));
-        assert!(
-            text.contains("demo editor proof: cargo run -p fret-demo --bin imui_editor_proof_demo")
-        );
+        assert!(text.contains(
+            "route owner: docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json"
+        ));
+        assert!(text.contains(
+            "docking owner: docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"
+        ));
+        assert!(text.contains(
+            "wayland acceptance: docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md"
+        ));
+        assert!(text.contains(
+            "action surface: dedicated DevTools guide panel + MCP first-open action list"
+        ));
+        assert!(text.contains(
+            "command palette: deferred until DevTools has a shared command palette contract"
+        ));
+        assert!(text.contains(
+            "action: open workbench -> cargo run -p fret-demo --bin imui_editor_workbench_demo"
+        ));
+        assert!(text.contains(
+            "action: run product discovery -> python tools/diag_gate_imui_product_chain.py --only discovery"
+        ));
+        assert!(text.contains(
+            "action: inspect metrics stats -> cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json"
+        ));
+        assert!(text.contains(
+            "action: inspect debug trace -> cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json"
+        ));
+        assert!(text.contains(
+            "action: validate docking campaign -> cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
+        ));
+        assert!(text.contains(
+            "demo editor workbench: cargo run -p fret-demo --bin imui_editor_workbench_demo"
+        ));
+        assert!(text.contains(
+            "demo editor proof supporting: cargo run -p fret-demo --bin imui_editor_proof_demo"
+        ));
         assert!(text.contains(
             "metrics stats: cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json"
         ));
         assert!(text.contains(
             "debug trace: cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json"
+        ));
+        assert!(text.contains(
+            "docking arbitration supporting: cargo run -p fret-demo --bin docking_arbitration_demo"
+        ));
+        assert!(text.contains(
+            "docking campaign validate: cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
+        ));
+        assert!(text.contains(
+            "docking policy-skip local: python tools/diag_gate_docking_wayland_policy_skip.py"
         ));
         assert!(text.contains("recent evidence tool: fret_diag_recent_evidence"));
         assert!(text.contains("recent evidence gate runs: .fret/diag/gate-runs"));

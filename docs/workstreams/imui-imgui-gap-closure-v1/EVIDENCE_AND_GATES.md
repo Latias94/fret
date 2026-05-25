@@ -3,6 +3,63 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Worktree Convergence Evidence - 2026-05-26
+
+Claim verified: the dirty `main` IMUI work and the dirty
+`imui-imgui-editor-grade-refactor` worktree were checkpointed, merged into `main`, conflict-resolved
+by topic, and verified with focused gates before continuing development from `main`.
+
+Checkpoints:
+
+- `d078e25122 refactor(imui): checkpoint gap closure convergence slices`
+- `05727e284b refactor(imui): checkpoint editor-grade convergence worktree`
+
+Merge resolution evidence:
+
+- `facade_writer.rs` keeps the editor-grade owner split and routes ListBox helpers through
+  `container_methods.rs`.
+- `facade_writer/image_items.rs` remains a dedicated owner from the main checkpoint.
+- `fret-ui-kit::imui` option exports include both checkpoint surfaces.
+- `fret-imui` composition tests import `ScrollHandle` only where needed.
+- `gate_imui_workstream_source.py` carries the merged source-policy checks.
+- `docs/workstreams/README.md` reflects the reconciled catalog count of 445 dedicated directories.
+
+Fresh gates run for this convergence:
+
+- `git diff --cached --check`: pass.
+- `git diff --check`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py tools\diag_gate_imui_p2_devtools_first_open.py tools\diag_gate_imui_product_chain.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; validated 445 dedicated directories and 47
+  standalone markdown files.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `cargo fmt --check -p fret-ui-kit -p fret-imui -p fret-plot -p fret-ui-editor -p fret-examples -p fret-demo -p fretboard-dev -p fret-devtools -p fret-devtools-mcp`: pass.
+- `cargo fmt --check -p fret-imui -p fret-ui-kit`: pass after removing the unused harness
+  `ScrollHandle` re-export.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass with pre-existing warnings for
+  `unexpected_cfgs` on `unstable-retained-bridge` and `dead_code` on
+  `current_effective_opacity`.
+- `cargo check -p fret-plot`: pass with the same `fret-ui` warnings and existing dead-code
+  warnings for axis-lock helpers.
+- `cargo check -p fret-plot --features imui`: pass with the same warnings.
+- `cargo check -p fret-ui-editor --features imui`: pass.
+- `cargo check -p fret-demo --bin imui_editor_workbench_demo`: pass with existing warnings from
+  `fret-ui`, `fret-plot`, and `fret-chart`.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_image_item_smoke --test imui_table_smoke --test imui_debug_draw_smoke --test imui_child_region_smoke --test imui_virtual_list_smoke --no-fail-fast`: pass; 16 tests.
+- `cargo nextest run -p fret-ui-editor --features imui --no-fail-fast`: pass; 189 tests.
+- `CARGO_TARGET_DIR=target-codex-merge cargo test -p fret-examples --test imui_editor_workbench_golden_path_surface -- --nocapture`: pass; 2 tests.
+- `CARGO_TARGET_DIR=target-codex-merge cargo test -p fret-imui --lib layout_collections -- --nocapture`: pass; 28 tests.
+- `CARGO_TARGET_DIR=target-codex-merge cargo test -p fret-imui --lib models_text_picker -- --nocapture`: pass; 6 tests.
+- `CARGO_TARGET_DIR=target-codex-merge cargo test -p fret-imui --lib item_pointer -- --nocapture`: pass; 5 tests.
+
+Gate notes:
+
+- Broad `cargo nextest run -p fret-examples --test imui_editor_workbench_golden_path_surface` and
+  `cargo nextest run -p fret-imui --no-fail-fast` attempts timed out while waiting on heavy
+  workspace compilation/build locks, with no test failure output. The same claims were rechecked
+  with isolated `target-codex-merge` focused cargo test runs.
+- One attempted command targeted `fret-imui` with `fret-ui-kit` test names and failed because those
+  test targets do not belong to that package; it is not a code failure.
+
 ## Evidence Anchors
 
 - Current lane:

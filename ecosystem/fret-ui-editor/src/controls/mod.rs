@@ -4,6 +4,7 @@ pub mod axis_drag_value;
 pub mod checkbox;
 pub mod color_edit;
 pub mod drag_value;
+pub mod editor_theme_preset_picker;
 pub mod enum_select;
 pub mod field_status;
 pub mod icon_button;
@@ -33,6 +34,7 @@ pub use color_edit::{
     OnColorEditPaletteSlotDrop, default_color_edit_palette,
 };
 pub use drag_value::{DragValue, DragValueOptions, DragValueOutcome, OnDragValueOutcome};
+pub use editor_theme_preset_picker::{EditorThemePresetPicker, EditorThemePresetPickerOptions};
 pub use enum_select::{EnumSelect, EnumSelectItem, EnumSelectOptions};
 pub use field_status::{FieldStatus, FieldStatusBadge, FieldStatusBadgeOptions};
 pub use fret_ui_kit::headless::text_assist::{
