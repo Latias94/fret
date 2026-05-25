@@ -1,3 +1,5 @@
+#[path = "build_state/clip_ops.rs"]
+mod clip_ops;
 #[path = "build_state/init.rs"]
 mod init;
 #[path = "build_state/ops.rs"]

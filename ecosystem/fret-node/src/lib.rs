@@ -152,6 +152,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/cached_edges/build_state/step.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_TEMP_SCENE_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_edges/build_state/temp_scene.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_OPS_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/build_state/ops.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_CLIP_OPS_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/build_state/clip_ops.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_SINGLE_RS: &str =
         include_str!("ui/canvas/widget/paint_root/cached_edges/edges/single.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_TILED_RS: &str =
@@ -4121,6 +4125,57 @@ mod surface_policy_tests {
                 .contains("finish_build_state_step"),
             "build-state step helpers should keep existing finish-step op merging"
         );
+    }
+
+    #[test]
+    fn paint_root_cached_edge_build_state_clip_ops_adapter_keeps_clip_policy_behind_helper() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_CLIP_OPS_RS
+                    .contains(forbidden),
+                "paint-root cached edge build-state clip ops helper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+        for required in [
+            "paint_root_cached_edge_build_state_initial_clip_ops",
+            "paint_root_cached_edge_build_state_merge_temp_ops",
+            "SceneOp::PushClipRect",
+            "SceneOp::PopClip",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_CLIP_OPS_RS.contains(required),
+                "cached edge build-state clip ops helper is missing clip policy `{required}`"
+            );
+        }
+
+        for forbidden in [
+            "SceneOp::PushClipRect",
+            "SceneOp::PopClip",
+            "append_temp_ops_before_trailing_pop_clip",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_OPS_RS.contains(forbidden),
+                "build-state ops facade should delegate clip-stack policy to clip_ops; found `{forbidden}`"
+            );
+        }
+        for required in [
+            "paint_root_cached_edge_build_state_initial_clip_ops",
+            "paint_root_cached_edge_build_state_merge_temp_ops",
+            "finish_build_state_step",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_OPS_RS.contains(required),
+                "build-state ops facade should retain completion bookkeeping and delegate clip policy; missing `{required}`"
+            );
+        }
     }
 
     #[test]

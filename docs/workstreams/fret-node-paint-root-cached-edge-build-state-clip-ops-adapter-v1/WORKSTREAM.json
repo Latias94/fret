@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "slug": "fret-node-paint-root-cached-edge-build-state-clip-ops-adapter-v1",
+  "title": "Fret Node Paint Root Cached Edge Build State Clip Ops Adapter v1",
+  "status": "closed",
+  "updated": "2026-05-25",
+  "scope_kind": "execution",
+  "follow_on_of": "fret-node-paint-root-cached-edge-build-state-temp-scene-adapter-v1",
+  "problem": "Move cached edge build-state cache-local clip stack construction and temp-op merge policy behind a named helper while keeping temporary scene construction, replay sinks, cache keys, route-input adapters, and overlays as separate follow-ons.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-node-paint-root-cached-edge-build-state-clip-ops-adapter-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-paint-root-cached-edge-build-state-clip-ops-adapter-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-paint-root-cached-edge-build-state-clip-ops-adapter-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/fret-node-paint-root-cached-edge-build-state-clip-ops-adapter-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/fret-node-paint-root-cached-edge-build-state-clip-ops-adapter-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fret-node-paint-root-cached-edge-build-state-clip-ops-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use focused source-policy coverage plus `fret-node` checks to move cached edge build-state clip stack construction and temp-op merge policy into a named helper.",
+    "commands": [
+      "cargo test -p fret-node --features compat-retained-canvas paint_root_cached_edge_build_state_clip_ops_adapter"
+    ]
+  },
+  "gates": [
+    {
+      "name": "paint-root-cached-edge-build-state-clip-ops-source-policy",
+      "command": "cargo test -p fret-node --features compat-retained-canvas paint_root_cached_edge_build_state_clip_ops_adapter"
+    },
+    {
+      "name": "node-default-check",
+      "command": "cargo check -p fret-node"
+    },
+    {
+      "name": "node-retained-compat-check",
+      "command": "cargo check -p fret-node --features compat-retained-canvas"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/fret-node-paint-root-cached-edge-build-state-temp-scene-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
+    "docs/workstreams/fret-node-paint-root-cached-edge-build-state-clip-ops-adapter-v1/DESIGN.md",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/build_state/clip_ops.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cached_edges/build_state/ops.rs",
+    "ecosystem/fret-node/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
+    "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed. Start a separate operation-family follow-on for overlay routing, replay/cache-key cleanup, or another retained paint-root cleanup surface."
+  }
+}
