@@ -31,6 +31,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             viewport_h,
         );
         self.prune_paint_caches(cx.services, snapshot);
-        cx.scene.push(SceneOp::PopClip);
+        super::tail_cleanup_adapter::pop_paint_root_tail_clip(cx);
     }
 }

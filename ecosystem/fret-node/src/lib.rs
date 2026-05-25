@@ -154,6 +154,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_root/frame_viewport_adapter.rs");
     const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_RETAINED_CX_RS: &str =
         include_str!("ui/canvas/widget/paint_root/frame_viewport_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/tail.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/tail_cleanup_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/tail_cleanup_retained_cx.rs");
     const UI_CANVAS_WIDGET_REDRAW_REQUEST_RS: &str =
         include_str!("ui/canvas/widget/redraw_request.rs");
     const UI_CANVAS_COMMAND_ADAPTER_RS: &str = include_str!("ui/canvas/widget/command_adapter.rs");
@@ -3534,6 +3540,63 @@ mod surface_policy_tests {
                 "retained grid diagnostics binding should own retained diagnostics read/write `{required}`"
             );
         }
+    }
+
+    #[test]
+    fn paint_root_tail_cleanup_adapter_keeps_root_pop_clip_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "SceneOp",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_ADAPTER_RS.contains(forbidden),
+                "paint-root tail cleanup adapter must stay retained-Cx and scene-op agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_ADAPTER_RS
+                .contains("trait PaintRootTailCleanupCx"),
+            "tail cleanup pop emission should live behind a named adapter seam"
+        );
+        for required in ["pop_paint_root_tail_clip", "PaintRootTailCleanupCx"] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_ADAPTER_RS.contains(required),
+                "tail cleanup adapter is missing scene-emission contract `{required}`"
+            );
+        }
+
+        for forbidden in ["cx.scene", "SceneOp::PopClip", "PopClip"] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_RS.contains(forbidden),
+                "paint-root tail cleanup should not emit root PopClip directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_RS
+                .contains("tail_cleanup_adapter::pop_paint_root_tail_clip"),
+            "paint-root tail cleanup should delegate root PopClip emission to the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_RETAINED_CX_RS
+                .contains("impl<H: UiHost> super::tail_cleanup_adapter::PaintRootTailCleanupCx<H>"),
+            "retained tail cleanup binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_RETAINED_CX_RS.contains("for PaintCx<'_, H>"),
+            "retained tail cleanup binding should isolate PaintCx to the retained adapter module"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_RETAINED_CX_RS.contains("SceneOp::PopClip"),
+            "retained tail cleanup binding should own root PopClip scene emission"
+        );
     }
 
     #[test]
