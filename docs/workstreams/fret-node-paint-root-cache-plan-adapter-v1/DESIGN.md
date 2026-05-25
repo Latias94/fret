@@ -1,7 +1,11 @@
 # Fret Node Paint Root Cache Plan Adapter v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
+
+Status note (2026-05-25): this lane closed after shipping the cache-plan adapter seam and splitting
+frame setup into `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/`.
+Use `CLOSEOUT_AUDIT_2026-05-25.md` for the final state.
 
 ## Why This Lane Exists
 
@@ -65,3 +69,5 @@ retained binding module.
 This lane can close when cache-plan preparation no longer directly depends on retained `PaintCx`,
 source-policy coverage locks the boundary, and the next paint operation family is either deferred or
 split into a new follow-on.
+
+Status: Complete. The closeout audit records the shipped cache-plan seam and frame setup follow-on.

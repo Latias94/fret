@@ -1,6 +1,6 @@
 # Fret Node Paint Root Cache Plan Adapter v1 - TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## CPA-M0 - Scope And Evidence Freeze
@@ -24,8 +24,9 @@ Last updated: 2026-05-25
 
 ## CPA-M2 - Next Paint Family Decision
 
-- [ ] CPA-030 [owner=planner] [deps=CPA-020] [scope=docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1]
+- [x] CPA-030 [owner=codex] [deps=CPA-020] [scope=docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1]
   Goal: Decide whether to close the lane or split the next paint family.
   Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
-  Evidence: `EVIDENCE_AND_GATES.md`, `HANDOFF.md`, optional closeout audit.
-  Handoff: Candidate follow-ons are frame setup, static layer replay/store, or scene pass emission.
+  Evidence: `EVIDENCE_AND_GATES.md`, `HANDOFF.md`, `CLOSEOUT_AUDIT_2026-05-25.md`,
+  `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/`
+  Handoff: Complete. Continue in `fret-node-paint-root-frame-setup-adapter-v1`.

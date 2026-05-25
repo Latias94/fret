@@ -1,6 +1,6 @@
 # Fret Node Paint Root Cache Plan Adapter v1 - Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## Current State
@@ -11,17 +11,12 @@ contains multiple operation families.
 
 The first implementation slice should target `paint_root/cache_plan.rs` only.
 
-## Active Task
+## Final State
 
 - Task ID: CPA-030
-- Owner: planner
-- Files: `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/EVIDENCE_AND_GATES.md`,
-  `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/HANDOFF.md`,
-  optional closeout audit
-- Validation: `python3 tools/check_workstream_catalog.py`; `git diff --check`
-- Status: NEEDS_CONTEXT
-- Review: not started
-- Evidence: `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/EVIDENCE_AND_GATES.md`
+- Owner: codex
+- Status: DONE
+- Evidence: `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
 
 ## Decisions Since Open
 
@@ -31,6 +26,7 @@ The first implementation slice should target `paint_root/cache_plan.rs` only.
 - CPA-010 froze the cache-plan-only scope.
 - CPA-020 introduced `PaintRootCachePlanCx` and isolated retained `PaintCx` binding in
   `cache_plan_retained_cx.rs`.
+- CPA-030 closed this lane and opened `fret-node-paint-root-frame-setup-adapter-v1`.
 
 ## Blockers
 
@@ -38,5 +34,5 @@ The first implementation slice should target `paint_root/cache_plan.rs` only.
 
 ## Next Recommended Action
 
-- Execute CPA-030: close this lane or split the next paint family. Candidate follow-ons are frame
-  setup, static layer replay/store, or scene pass emission.
+- Continue in `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/`, starting with
+  FSA-010.

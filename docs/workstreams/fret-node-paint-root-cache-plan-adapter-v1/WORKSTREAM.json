@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "fret-node-paint-root-cache-plan-adapter-v1",
   "title": "Fret Node Paint Root Cache Plan Adapter v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-25",
   "scope_kind": "execution",
   "follow_on_of": "fret-node-paint-prepaint-adapter-v1",
@@ -27,6 +27,10 @@
     {
       "role": "next",
       "path": "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md"
     }
   ],
   "repro": {
@@ -56,6 +60,8 @@
     "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan.rs",
     "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan_adapter.rs",
     "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan_retained_cx.rs",
+    "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
+    "docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/",
     "ecosystem/fret-node/src/lib.rs"
   ],
   "adr_refs": [
@@ -63,7 +69,7 @@
     "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue only for cache-plan adapter work. Keep frame setup, scene emission, static layer replay/store, and paint tail cleanup in separate lanes."
+    "default_action": "follow_on",
+    "notes": "This lane is closed. Continue frame setup audit work in docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/."
   }
 }

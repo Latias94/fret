@@ -1,6 +1,6 @@
 # Fret Node Paint Root Cache Plan Adapter v1 - Evidence And Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-25
 
 ## Smallest Current Repro
@@ -46,6 +46,7 @@ git diff --check
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan_adapter.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan_retained_cx.rs`
 - `ecosystem/fret-node/src/lib.rs`
+- `docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md`
 
 ## Initial Scope Evidence - 2026-05-25
 
@@ -92,5 +93,29 @@ Fresh validation:
   passed.
 - `python3 tools/check_layering.py` - passed.
 - `python3 tools/check_workstream_catalog.py` - passed; validated 446 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check` - passed.
+
+## CPA-030 Closeout And Frame Follow-On Split - 2026-05-25
+
+Claim:
+
+- This lane is closed.
+- The shipped cache-plan adapter seam remains the implementation proof.
+- Frame setup work is split into `fret-node-paint-root-frame-setup-adapter-v1`.
+
+Evidence:
+
+- `CLOSEOUT_AUDIT_2026-05-25.md` records final state and residual risks.
+- `docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/` contains the follow-on scope,
+  tasks, gates, and handoff.
+
+Fresh validation:
+
+- `python3 -m json.tool docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/WORKSTREAM.json` -
+  passed.
+- `python3 -m json.tool docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/WORKSTREAM.json` -
+  passed.
+- `python3 tools/check_workstream_catalog.py` - passed; validated 447 dedicated directories and 47
   standalone markdown files.
 - `git diff --check` - passed.

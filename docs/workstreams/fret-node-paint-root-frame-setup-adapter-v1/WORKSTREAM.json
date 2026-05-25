@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "slug": "fret-node-paint-root-frame-setup-adapter-v1",
+  "title": "Fret Node Paint Root Frame Setup Adapter v1",
+  "status": "active",
+  "updated": "2026-05-25",
+  "scope_kind": "execution",
+  "follow_on_of": "fret-node-paint-root-cache-plan-adapter-v1",
+  "problem": "Audit and split node graph paint-root frame setup before introducing a narrow adapter seam.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use focused source audits plus `fret-node` checks before moving frame setup behind an adapter seam.",
+    "commands": [
+      "cargo check -p fret-node --features compat-retained-canvas"
+    ]
+  },
+  "gates": [
+    {
+      "name": "node-retained-compat-check",
+      "command": "cargo check -p fret-node --features compat-retained-canvas"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame/cache.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame/background.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
+    "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue only for paint-root frame setup audit or a narrow frame setup adapter. Keep static layer replay/store, cached/immediate passes, and tail cleanup separate."
+  }
+}
