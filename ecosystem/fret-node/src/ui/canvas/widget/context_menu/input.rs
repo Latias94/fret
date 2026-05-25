@@ -1,10 +1,10 @@
 use super::{key_navigation, ui};
-use crate::ui::canvas::widget::widget_tail::WidgetHandledCx;
+use crate::ui::canvas::widget::low_level_adapter::CanvasHandledCx;
 use crate::ui::canvas::widget::*;
 
 pub(super) fn handle_context_menu_escape<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl WidgetHandledCx<H>,
+    cx: &mut impl CanvasHandledCx<H>,
 ) -> bool {
     ui::handle_context_menu_escape_event(canvas, cx)
 }

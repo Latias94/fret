@@ -112,7 +112,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/paint_invalidation.rs");
     const UI_CANVAS_WIDGET_REDRAW_REQUEST_RS: &str =
         include_str!("ui/canvas/widget/redraw_request.rs");
-    const UI_CANVAS_WIDGET_TAIL_RS: &str = include_str!("ui/canvas/widget/widget_tail.rs");
+    const UI_CANVAS_LOW_LEVEL_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/low_level_adapter.rs");
+    const UI_CANVAS_RETAINED_LOW_LEVEL_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/retained_low_level_adapter.rs");
     const UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS: &str =
         include_str!("ui/canvas/widget/wire_drag/commit_cx.rs");
     const UI_CANVAS_WIDGET_WIRE_DRAG_MOVE_CX_RS: &str =
@@ -632,11 +635,11 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn retained_canvas_tail_policy_helpers_stay_off_retained_bridge() {
-        let tail_policy_sources = [
+    fn retained_canvas_low_level_adapter_policy_helpers_stay_off_retained_bridge() {
+        let adapter_policy_sources = [
             UI_CANVAS_WIDGET_PAINT_INVALIDATION_RS,
             UI_CANVAS_WIDGET_REDRAW_REQUEST_RS,
-            UI_CANVAS_WIDGET_TAIL_RS,
+            UI_CANVAS_LOW_LEVEL_ADAPTER_RS,
             UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS,
             UI_CANVAS_WIDGET_POINTER_UP_FINISH_RS,
             UI_CANVAS_WIDGET_POINTER_UP_SESSION_CLEANUP_RS,
@@ -656,6 +659,11 @@ mod surface_policy_tests {
         .join("\n");
 
         for forbidden in [
+            "widget_tail",
+            "retained_widget_tail",
+            "WidgetRedrawCx",
+            "WidgetPaintInvalidationCx",
+            "WidgetHandledCx",
             "retained_bridge",
             "EventCx",
             "CommandCx",
@@ -663,10 +671,19 @@ mod surface_policy_tests {
             "PaintCx",
         ] {
             assert!(
-                !tail_policy_sources.contains(forbidden),
-                "canvas widget tail policy helpers must stay retained-Cx agnostic; found `{forbidden}`"
+                !adapter_policy_sources.contains(forbidden),
+                "canvas low-level adapter policy helpers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
+
+        assert!(UI_CANVAS_LOW_LEVEL_ADAPTER_RS.contains("trait CanvasRedrawCx"));
+        assert!(UI_CANVAS_LOW_LEVEL_ADAPTER_RS.contains("trait CanvasPaintInvalidationCx"));
+        assert!(UI_CANVAS_LOW_LEVEL_ADAPTER_RS.contains("trait CanvasHandledCx"));
+        assert!(UI_CANVAS_LOW_LEVEL_ADAPTER_RS.contains("trait CanvasPointerCaptureReleaseCx"));
+        assert!(
+            UI_CANVAS_RETAINED_LOW_LEVEL_ADAPTER_RS
+                .contains("impl<H: UiHost> low_level_adapter::CanvasRedrawCx<H> for EventCx")
+        );
     }
 
     #[test]

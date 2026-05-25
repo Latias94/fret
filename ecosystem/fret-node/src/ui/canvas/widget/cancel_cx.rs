@@ -1,7 +1,9 @@
 use fret_ui::UiHost;
 
-use super::widget_tail::HandledPointerCaptureReleaseCx;
+use super::low_level_adapter::HandledCanvasPointerCaptureReleaseCx;
 
-pub(super) trait CancelGestureCx<H: UiHost>: HandledPointerCaptureReleaseCx<H> {
+pub(super) trait CancelGestureCx<H: UiHost>:
+    HandledCanvasPointerCaptureReleaseCx<H>
+{
     fn host(&mut self) -> &mut H;
 }

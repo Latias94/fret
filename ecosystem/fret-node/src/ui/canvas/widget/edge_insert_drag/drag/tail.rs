@@ -1,12 +1,12 @@
-use super::super::super::widget_tail::{WidgetPaintInvalidationCx, invalidate_widget_paint};
+use super::super::super::low_level_adapter::{CanvasPaintInvalidationCx, invalidate_canvas_paint};
 
-pub(super) fn finish_edge_insert_drag_move<H>(cx: &mut impl WidgetPaintInvalidationCx<H>) {
-    invalidate_widget_paint(cx);
+pub(super) fn finish_edge_insert_drag_move<H>(cx: &mut impl CanvasPaintInvalidationCx<H>) {
+    invalidate_canvas_paint(cx);
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::super::widget_tail::WidgetRedrawCx;
+    use super::super::super::super::low_level_adapter::CanvasRedrawCx;
     use super::*;
 
     struct StubHost;
@@ -17,13 +17,13 @@ mod tests {
         paint_invalidations: usize,
     }
 
-    impl WidgetRedrawCx<StubHost> for StubCx {
+    impl CanvasRedrawCx<StubHost> for StubCx {
         fn request_redraw(&mut self) {
             self.redraws += 1;
         }
     }
 
-    impl WidgetPaintInvalidationCx<StubHost> for StubCx {
+    impl CanvasPaintInvalidationCx<StubHost> for StubCx {
         fn invalidate_paint(&mut self) {
             self.paint_invalidations += 1;
         }

@@ -11,7 +11,7 @@ pub(in super::super) fn handle_pending_edge_insert_drag_move<H: UiHost, M, Cx>(
 ) -> bool
 where
     M: NodeGraphCanvasMiddleware,
-    Cx: WidgetPaintInvalidationCx<H>,
+    Cx: CanvasPaintInvalidationCx<H>,
 {
     let pending = match checks::prepare_pending_edge_insert_drag_move(canvas, snapshot, position) {
         checks::PendingEdgeInsertDragMovePrep::NotHandled => return false,

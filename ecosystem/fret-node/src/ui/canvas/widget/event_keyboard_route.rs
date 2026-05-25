@@ -3,7 +3,7 @@ use super::*;
 pub(in crate::ui::canvas::widget) trait KeyboardRouteCx<H: UiHost, M: NodeGraphCanvasMiddleware>:
     super::keyboard_shortcuts_overlay::KeyboardOverlayCx<H, M>
     + super::keyboard_shortcuts::KeyboardShortcutCommandSink
-    + super::widget_tail::WidgetHandledCx<H>
+    + super::low_level_adapter::CanvasHandledCx<H>
 {
 }
 
@@ -12,7 +12,7 @@ where
     M: NodeGraphCanvasMiddleware,
     T: super::keyboard_shortcuts_overlay::KeyboardOverlayCx<H, M>
         + super::keyboard_shortcuts::KeyboardShortcutCommandSink
-        + super::widget_tail::WidgetHandledCx<H>,
+        + super::low_level_adapter::CanvasHandledCx<H>,
 {
 }
 
@@ -53,7 +53,7 @@ pub(super) fn route_key_down<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn route_key_up<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl super::widget_tail::WidgetPaintInvalidationCx<H>,
+    cx: &mut impl super::low_level_adapter::CanvasPaintInvalidationCx<H>,
     snapshot: &ViewSnapshot,
     key: fret_core::KeyCode,
 ) {

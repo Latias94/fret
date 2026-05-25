@@ -1,7 +1,8 @@
 use fret_ui::UiHost;
 
 use super::super::super::{
-    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, widget_tail::PointerCaptureReleaseCx,
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+    low_level_adapter::CanvasPointerCaptureReleaseCx,
 };
 
 pub(super) fn handle_pending_edge_insert_left_up<H: UiHost, M, Cx>(
@@ -10,7 +11,7 @@ pub(super) fn handle_pending_edge_insert_left_up<H: UiHost, M, Cx>(
 ) -> bool
 where
     M: NodeGraphCanvasMiddleware,
-    Cx: PointerCaptureReleaseCx<H>,
+    Cx: CanvasPointerCaptureReleaseCx<H>,
 {
     if canvas.interaction.pending_edge_insert_drag.take().is_some() {
         super::super::super::pointer_up_finish::finish_pointer_up(cx);

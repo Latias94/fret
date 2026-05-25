@@ -6,7 +6,7 @@ pub(in crate::ui::canvas::widget) trait KeyboardInputFocusCx {
 
 pub(in crate::ui::canvas::widget) trait KeyboardInputSink<H: UiHost, M: NodeGraphCanvasMiddleware>:
     super::event_keyboard_route::KeyboardRouteCx<H, M>
-    + super::widget_tail::WidgetPaintInvalidationCx<H>
+    + super::low_level_adapter::CanvasPaintInvalidationCx<H>
     + KeyboardInputFocusCx
 {
 }
@@ -15,7 +15,7 @@ impl<H: UiHost, M, T> KeyboardInputSink<H, M> for T
 where
     M: NodeGraphCanvasMiddleware,
     T: super::event_keyboard_route::KeyboardRouteCx<H, M>
-        + super::widget_tail::WidgetPaintInvalidationCx<H>
+        + super::low_level_adapter::CanvasPaintInvalidationCx<H>
         + KeyboardInputFocusCx,
 {
 }
@@ -38,7 +38,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     pub(super) fn handle_key_up<H: UiHost>(
         &mut self,
-        cx: &mut impl super::widget_tail::WidgetPaintInvalidationCx<H>,
+        cx: &mut impl super::low_level_adapter::CanvasPaintInvalidationCx<H>,
         snapshot: &ViewSnapshot,
         key: fret_core::KeyCode,
     ) {

@@ -4,13 +4,13 @@ use crate::ui::canvas::widget::*;
 
 pub(super) fn finish_group_resize_move<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl super::super::widget_tail::WidgetPaintInvalidationCx<H>,
+    cx: &mut impl super::super::low_level_adapter::CanvasPaintInvalidationCx<H>,
     resize: &mut GroupResize,
     new_rect: CanvasRect,
 ) {
     update_resize_preview_state(resize, new_rect);
     canvas.interaction.group_resize = Some(resize.clone());
-    super::super::widget_tail::invalidate_widget_paint(cx);
+    super::super::low_level_adapter::invalidate_canvas_paint(cx);
 }
 
 fn update_resize_preview_state(resize: &mut GroupResize, new_rect: CanvasRect) {

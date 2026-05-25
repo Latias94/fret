@@ -4,7 +4,7 @@ mod retained_cx;
 #[cfg(test)]
 mod tests;
 
-use crate::ui::canvas::widget::widget_tail::WidgetHandledCx;
+use crate::ui::canvas::widget::low_level_adapter::CanvasHandledCx;
 use crate::ui::canvas::widget::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -29,14 +29,14 @@ pub(in crate::ui::canvas::widget) trait ContextMenuSelectionActivationCx<
 }
 
 pub(in crate::ui::canvas::widget) trait ContextMenuPointerDownCx<H, M: NodeGraphCanvasMiddleware>:
-    WidgetHandledCx<H> + ContextMenuSelectionActivationCx<H, M>
+    CanvasHandledCx<H> + ContextMenuSelectionActivationCx<H, M>
 {
 }
 
 impl<H, M, T> ContextMenuPointerDownCx<H, M> for T
 where
     M: NodeGraphCanvasMiddleware,
-    T: WidgetHandledCx<H> + ContextMenuSelectionActivationCx<H, M>,
+    T: CanvasHandledCx<H> + ContextMenuSelectionActivationCx<H, M>,
 {
 }
 

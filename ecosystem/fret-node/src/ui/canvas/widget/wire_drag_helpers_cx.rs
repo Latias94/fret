@@ -1,7 +1,7 @@
 use fret_ui::UiHost;
 
-use super::widget_tail::WidgetPaintInvalidationCx;
+use super::low_level_adapter::CanvasPaintInvalidationCx;
 
-pub(super) trait WireDragStartCx<H: UiHost>: WidgetPaintInvalidationCx<H> {
+pub(super) trait WireDragStartCx<H: UiHost>: CanvasPaintInvalidationCx<H> {
     fn capture_self_pointer(&mut self);
 }

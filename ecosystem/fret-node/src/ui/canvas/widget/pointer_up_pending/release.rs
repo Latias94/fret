@@ -3,7 +3,7 @@ mod node;
 
 use fret_ui::UiHost;
 
-use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, widget_tail};
+use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, low_level_adapter};
 
 pub(in super::super) fn handle_pending_group_drag_release<H: UiHost, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
@@ -11,7 +11,7 @@ pub(in super::super) fn handle_pending_group_drag_release<H: UiHost, M, Cx>(
 ) -> bool
 where
     M: NodeGraphCanvasMiddleware,
-    Cx: widget_tail::PointerCaptureReleaseCx<H>,
+    Cx: low_level_adapter::CanvasPointerCaptureReleaseCx<H>,
 {
     group::handle_pending_group_drag_release(canvas, cx)
 }
@@ -22,7 +22,7 @@ pub(in super::super) fn handle_pending_group_resize_release<H: UiHost, M, Cx>(
 ) -> bool
 where
     M: NodeGraphCanvasMiddleware,
-    Cx: widget_tail::PointerCaptureReleaseCx<H>,
+    Cx: low_level_adapter::CanvasPointerCaptureReleaseCx<H>,
 {
     group::handle_pending_group_resize_release(canvas, cx)
 }
@@ -33,7 +33,7 @@ pub(in super::super) fn handle_pending_node_resize_release<H: UiHost, M, Cx>(
 ) -> bool
 where
     M: NodeGraphCanvasMiddleware,
-    Cx: widget_tail::PointerCaptureReleaseCx<H>,
+    Cx: low_level_adapter::CanvasPointerCaptureReleaseCx<H>,
 {
     node::handle_pending_node_resize_release(canvas, cx)
 }

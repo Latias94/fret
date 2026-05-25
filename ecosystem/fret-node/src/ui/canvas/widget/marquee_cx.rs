@@ -1,15 +1,15 @@
 use fret_ui::UiHost;
 
-use super::{pan_zoom_begin_cx::PanZoomBeginCx, widget_tail::PointerCaptureReleaseCx};
+use super::{low_level_adapter::CanvasPointerCaptureReleaseCx, pan_zoom_begin_cx::PanZoomBeginCx};
 
 pub(super) trait MarqueeCx<H: UiHost>:
-    PointerCaptureReleaseCx<H> + PanZoomBeginCx<H>
+    CanvasPointerCaptureReleaseCx<H> + PanZoomBeginCx<H>
 {
 }
 
 impl<H, T> MarqueeCx<H> for T
 where
     H: UiHost,
-    T: PointerCaptureReleaseCx<H> + PanZoomBeginCx<H>,
+    T: CanvasPointerCaptureReleaseCx<H> + PanZoomBeginCx<H>,
 {
 }

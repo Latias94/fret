@@ -30,7 +30,7 @@
     }
   ],
   "repro": {
-    "summary": "Start from the compatibility island and prove default node graph UI remains declarative while retained canvas still compiles only through the explicit compat feature.",
+    "summary": "Start from the compatibility island, route the first low-level canvas operations through an adapter seam, and prove default node graph UI remains declarative while retained canvas still compiles only through the explicit compat feature.",
     "commands": [
       "cargo check -p fret-node",
       "cargo check -p fret-node --features compat-retained-canvas"
@@ -50,7 +50,10 @@
     "docs/workstreams/fret-node-low-level-adapter-v1/DESIGN.md",
     "docs/workstreams/retained-public-surface-exit-v1/DESIGN.md",
     "ecosystem/fret-node/Cargo.toml",
-    "ecosystem/fret-node/src/ui/canvas/widget.rs"
+    "ecosystem/fret-node/src/ui/canvas/widget.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/low_level_adapter.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/retained_low_level_adapter.rs",
+    "ecosystem/fret-node/src/lib.rs"
   ],
   "adr_refs": [
     "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",

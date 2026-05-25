@@ -14,7 +14,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 }
 
 pub(super) fn finish_command_paint<H: UiHost>(cx: &mut CommandCx<'_, H>) -> bool {
-    super::widget_tail::invalidate_widget_paint(cx);
+    super::low_level_adapter::invalidate_canvas_paint(cx);
     true
 }
 

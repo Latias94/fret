@@ -1,5 +1,5 @@
-use super::super::super::widget_tail::{
-    PointerCaptureReleaseCx, WidgetPaintInvalidationCx, WidgetRedrawCx,
+use super::super::super::low_level_adapter::{
+    CanvasPaintInvalidationCx, CanvasPointerCaptureReleaseCx, CanvasRedrawCx,
 };
 use super::super::super::{
     ContextMenuTarget, InsertNodeCandidate, NodeGraphCanvasWith, NoopNodeGraphCanvasMiddleware,
@@ -22,19 +22,19 @@ struct StubCx {
     paint_invalidations: usize,
 }
 
-impl WidgetRedrawCx<StubHost> for StubCx {
+impl CanvasRedrawCx<StubHost> for StubCx {
     fn request_redraw(&mut self) {
         self.redraws += 1;
     }
 }
 
-impl WidgetPaintInvalidationCx<StubHost> for StubCx {
+impl CanvasPaintInvalidationCx<StubHost> for StubCx {
     fn invalidate_paint(&mut self) {
         self.paint_invalidations += 1;
     }
 }
 
-impl PointerCaptureReleaseCx<StubHost> for StubCx {
+impl CanvasPointerCaptureReleaseCx<StubHost> for StubCx {
     fn release_pointer_capture(&mut self) {
         self.released = true;
     }

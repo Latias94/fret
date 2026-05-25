@@ -1,11 +1,11 @@
-use super::super::widget_tail::{
-    HandledPointerCaptureReleaseCx, WidgetHandledCx, WidgetPaintInvalidationCx,
+use super::super::low_level_adapter::{
+    CanvasHandledCx, CanvasPaintInvalidationCx, HandledCanvasPointerCaptureReleaseCx,
 };
 use super::super::*;
 
 pub(super) fn dismiss_searcher_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl HandledPointerCaptureReleaseCx<H>,
+    cx: &mut impl HandledCanvasPointerCaptureReleaseCx<H>,
 ) -> bool {
     if canvas.interaction.searcher.is_none() {
         return false;
@@ -17,24 +17,24 @@ pub(super) fn dismiss_searcher_event<H, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_searcher_escape_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl HandledPointerCaptureReleaseCx<H>,
+    cx: &mut impl HandledCanvasPointerCaptureReleaseCx<H>,
 ) -> bool {
     dismiss_searcher_event(canvas, cx)
 }
 
-pub(super) fn invalidate_searcher_paint<H>(cx: &mut impl WidgetPaintInvalidationCx<H>) {
-    super::super::widget_tail::invalidate_widget_paint(cx);
+pub(super) fn invalidate_searcher_paint<H>(cx: &mut impl CanvasPaintInvalidationCx<H>) {
+    super::super::low_level_adapter::invalidate_canvas_paint(cx);
 }
 
-pub(super) fn finish_searcher_event<H>(cx: &mut impl WidgetHandledCx<H>) -> bool {
-    super::super::widget_tail::finish_widget_handled(cx);
+pub(super) fn finish_searcher_event<H>(cx: &mut impl CanvasHandledCx<H>) -> bool {
+    super::super::low_level_adapter::finish_canvas_handled(cx);
     true
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::widget_tail::{
-        PointerCaptureReleaseCx, WidgetPaintInvalidationCx, WidgetRedrawCx,
+    use super::super::super::low_level_adapter::{
+        CanvasPaintInvalidationCx, CanvasPointerCaptureReleaseCx, CanvasRedrawCx,
     };
     use super::*;
 
@@ -48,25 +48,25 @@ mod tests {
         paint_invalidations: usize,
     }
 
-    impl WidgetRedrawCx<StubHost> for StubCx {
+    impl CanvasRedrawCx<StubHost> for StubCx {
         fn request_redraw(&mut self) {
             self.redraws += 1;
         }
     }
 
-    impl WidgetPaintInvalidationCx<StubHost> for StubCx {
+    impl CanvasPaintInvalidationCx<StubHost> for StubCx {
         fn invalidate_paint(&mut self) {
             self.paint_invalidations += 1;
         }
     }
 
-    impl WidgetHandledCx<StubHost> for StubCx {
+    impl CanvasHandledCx<StubHost> for StubCx {
         fn stop_propagation(&mut self) {
             self.stopped = true;
         }
     }
 
-    impl PointerCaptureReleaseCx<StubHost> for StubCx {
+    impl CanvasPointerCaptureReleaseCx<StubHost> for StubCx {
         fn release_pointer_capture(&mut self) {
             self.released = true;
         }

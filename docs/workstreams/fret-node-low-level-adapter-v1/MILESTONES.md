@@ -10,7 +10,12 @@ Exit criteria:
 - Remaining retained context families are listed.
 - One first adapter seam is selected.
 
-Status: Pending.
+Status: Complete.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/low_level_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_low_level_adapter.rs`
 
 ## M1 - First Adapter Seam
 
@@ -19,7 +24,13 @@ Exit criteria:
 - One behavior family no longer directly depends on retained contexts outside its adapter.
 - Default and compat checks pass.
 
-Status: Pending.
+Status: Complete.
+
+Evidence:
+
+- `ecosystem/fret-node/src/lib.rs`
+- `cargo check -p fret-node`
+- `cargo check -p fret-node --features compat-retained-canvas`
 
 ## M2 - Compatibility Edge Shrink
 

@@ -21,5 +21,5 @@ pub(super) fn finish_node_drag_move<H: UiHost, M, Cx>(
     }
 
     canvas.emit_node_drag(drag.primary, &drag.node_ids);
-    super::super::widget_tail::invalidate_widget_paint(cx);
+    super::super::low_level_adapter::invalidate_canvas_paint(cx);
 }

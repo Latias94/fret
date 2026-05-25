@@ -3,12 +3,12 @@ mod wheel_event;
 
 use fret_core::{Modifiers, Point};
 
-use super::widget_tail::WidgetPaintInvalidationCx;
+use super::low_level_adapter::CanvasPaintInvalidationCx;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 pub(super) fn handle_searcher_pointer_move_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl WidgetPaintInvalidationCx<H>,
+    cx: &mut impl CanvasPaintInvalidationCx<H>,
     position: Point,
     zoom: f32,
 ) -> bool {
@@ -17,7 +17,7 @@ pub(super) fn handle_searcher_pointer_move_event<H, M: NodeGraphCanvasMiddleware
 
 pub(super) fn handle_searcher_wheel_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl WidgetPaintInvalidationCx<H>,
+    cx: &mut impl CanvasPaintInvalidationCx<H>,
     delta: Point,
     modifiers: Modifiers,
     _zoom: f32,

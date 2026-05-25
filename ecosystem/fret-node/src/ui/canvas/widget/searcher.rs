@@ -2,11 +2,11 @@ use fret_core::{Modifiers, MouseButton, Point};
 
 use super::{
     NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+    low_level_adapter::CanvasPaintInvalidationCx,
     searcher_activation::{self, SearcherPointerDownCx},
     searcher_activation_state::SearcherReleaseCx,
     searcher_input::{self, SearcherInputCx},
     searcher_pointer, searcher_ui,
-    widget_tail::WidgetPaintInvalidationCx,
 };
 
 pub(in super::super) trait SearcherCx<H, M: NodeGraphCanvasMiddleware>:
@@ -59,7 +59,7 @@ pub(super) fn handle_searcher_pointer_up<H, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_searcher_pointer_move<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl WidgetPaintInvalidationCx<H>,
+    cx: &mut impl CanvasPaintInvalidationCx<H>,
     position: Point,
     zoom: f32,
 ) -> bool {
@@ -81,11 +81,12 @@ mod tests {
     use super::super::{
         ContextMenuTarget, InsertNodeCandidate, NoopNodeGraphCanvasMiddleware, SearcherRowsMode,
         SearcherState,
+        low_level_adapter::{
+            CanvasHandledCx, CanvasPaintInvalidationCx, CanvasPointerCaptureReleaseCx,
+            CanvasRedrawCx,
+        },
         searcher_activation_state::{SearcherArmCx, SearcherReleaseCx},
         searcher_input::SearcherInputCx,
-        widget_tail::{
-            PointerCaptureReleaseCx, WidgetHandledCx, WidgetPaintInvalidationCx, WidgetRedrawCx,
-        },
     };
     use super::*;
     use crate::core::{CanvasPoint, Graph, GraphId, NodeKindKey};
@@ -123,25 +124,25 @@ mod tests {
         }
     }
 
-    impl WidgetRedrawCx<StubHost> for StubCx {
+    impl CanvasRedrawCx<StubHost> for StubCx {
         fn request_redraw(&mut self) {
             self.redraws += 1;
         }
     }
 
-    impl WidgetPaintInvalidationCx<StubHost> for StubCx {
+    impl CanvasPaintInvalidationCx<StubHost> for StubCx {
         fn invalidate_paint(&mut self) {
             self.paint_invalidations += 1;
         }
     }
 
-    impl WidgetHandledCx<StubHost> for StubCx {
+    impl CanvasHandledCx<StubHost> for StubCx {
         fn stop_propagation(&mut self) {
             self.stopped = true;
         }
     }
 
-    impl PointerCaptureReleaseCx<StubHost> for StubCx {
+    impl CanvasPointerCaptureReleaseCx<StubHost> for StubCx {
         fn release_pointer_capture(&mut self) {
             self.released = true;
         }

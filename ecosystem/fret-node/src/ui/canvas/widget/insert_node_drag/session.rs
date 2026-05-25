@@ -1,17 +1,17 @@
 use super::prelude::*;
-use crate::ui::canvas::widget::widget_tail::{
-    PointerCaptureReleaseCx, WidgetHandledCx, WidgetPaintInvalidationCx,
+use crate::ui::canvas::widget::low_level_adapter::{
+    CanvasHandledCx, CanvasPaintInvalidationCx, CanvasPointerCaptureReleaseCx,
 };
 
 pub(super) fn invalidate_insert_node_drag_preview<H: UiHost>(
-    cx: &mut impl WidgetPaintInvalidationCx<H>,
+    cx: &mut impl CanvasPaintInvalidationCx<H>,
 ) {
     super::super::paint_invalidation::invalidate_paint(cx);
 }
 
 pub(super) fn set_insert_node_drag_preview<H: UiHost>(
     interaction: &mut crate::ui::canvas::state::InteractionState,
-    cx: &mut impl WidgetPaintInvalidationCx<H>,
+    cx: &mut impl CanvasPaintInvalidationCx<H>,
     preview: InsertNodeDragPreview,
 ) {
     interaction.insert_node_drag_preview = Some(preview);
@@ -20,7 +20,7 @@ pub(super) fn set_insert_node_drag_preview<H: UiHost>(
 
 pub(super) fn clear_insert_node_drag_preview<H: UiHost>(
     interaction: &mut crate::ui::canvas::state::InteractionState,
-    cx: &mut impl WidgetPaintInvalidationCx<H>,
+    cx: &mut impl CanvasPaintInvalidationCx<H>,
 ) -> bool {
     if interaction.insert_node_drag_preview.take().is_none() {
         return false;
@@ -43,14 +43,14 @@ pub(super) fn clear_insert_node_drag_state(
     cleared
 }
 
-pub(super) fn finish_insert_node_drag_event<H: UiHost>(cx: &mut impl WidgetHandledCx<H>) -> bool {
+pub(super) fn finish_insert_node_drag_event<H: UiHost>(cx: &mut impl CanvasHandledCx<H>) -> bool {
     cx.stop_propagation();
     true
 }
 
 pub(super) fn abort_pending_insert_node_drag<H: UiHost>(
     interaction: &mut crate::ui::canvas::state::InteractionState,
-    cx: &mut impl PointerCaptureReleaseCx<H>,
+    cx: &mut impl CanvasPointerCaptureReleaseCx<H>,
 ) -> bool {
     if interaction.pending_insert_node_drag.take().is_none() {
         return false;
