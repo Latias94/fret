@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 combo trigger behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/behavior.rs` now owns activate handling,
+activate-shortcut handling, context-menu shortcut handling, transient events, and `ResponseExt`
+population. `trigger.rs` keeps pressable props, ComboBox a11y, chrome/pill visual assembly, and
+a11y label derivation.
+
 2026-05-27 child-region resize axis owner-split result:
 `ecosystem/fret-ui-kit/src/imui/child_region/resize/axis.rs` now owns X/Y handle width/height
 constants, axis keys, resize cursors, and absolute handle layout. `resize.rs` keeps handle entry

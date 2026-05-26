@@ -125,6 +125,14 @@ Last updated: 2026-05-27
       shortcut activation, context-menu request handling, trigger `ResponseExt` population, and
       open/menu badge visual assembly. The root file keeps label identity, popup open/close model
       wiring, popup mounting, and aggregate `ComboResponse` open/toggled state.
+- [x] Split IMUI combo trigger behavior out of
+      `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs` into a private owner module
+      without changing trigger props, ComboBox semantics, a11y label derivation, shortcut
+      activation, context-menu request handling, pressable response population, or popup behavior.
+      Result: `combo_controls/trigger/behavior.rs` owns activate handling, activate-shortcut
+      handling, context-menu shortcut handling, transient events, and `ResponseExt` population.
+      `trigger.rs` keeps pressable props, ComboBox a11y, chrome/pill visual assembly, and a11y
+      label derivation.
 - [x] Split IMUI boolean-control visual chrome out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` and its switch owner without changing
       the public checkbox/radio/switch surface.

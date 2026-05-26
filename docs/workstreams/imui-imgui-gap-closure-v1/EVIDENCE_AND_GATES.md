@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Combo Trigger Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: ComboBox trigger behavior moved behind a private owner without changing trigger
+props, ComboBox semantics, a11y label derivation, shortcut activation, context-menu request
+handling, pressable response population, popup behavior, or model/direct combo interaction tests.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs` now keeps trigger options, pressable
+  props, ComboBox a11y, chrome/pill visual assembly, and trigger a11y label derivation.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/behavior.rs` owns activate handling,
+  activate-shortcut handling, context-menu shortcut handling, transient clicked/context-menu events,
+  and `ResponseExt` population via shared pressable item behavior.
+- `tools/gate_imui_workstream_source.py` now requires the behavior owner and rejects activate/key
+  handlers plus `populate_pressable_item_response(...)` from the root trigger owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui combo_trigger --no-fail-fast`: pass; 2 tests,
+  735 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_combo_smoke --no-fail-fast`: pass;
+  2 tests, 0 skipped.
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast`: pass; 11 tests, 170 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Child-Region Resize Axis Owner-Split Evidence - 2026-05-27
 
 Claim verified: child-region resize axis geometry moved behind a private owner without changing
