@@ -271,6 +271,12 @@ Last updated: 2026-05-27
       `MenuRenderState`, model capture, row/open-menu reads, and render-state recording.
       `menu_state.rs` now focuses on menubar open-menu mutation, active-trigger synchronization,
       open-request resolution, and disabled-popup cleanup.
+- [x] Split IMUI begin-menu open-policy mutations out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs` into a private owner
+      module without changing menubar open-menu synchronization, active-trigger writes,
+      trigger-click toggling, open-request resolution, or disabled-popup cleanup.
+      Result: `menu_family_controls/menu_state/open_policy.rs` owns the begin-menu open-policy
+      state machine. `menu_state.rs` is now a thin capture/open-policy module index.
 - [x] Split IMUI table header row assembly out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` into a private owner module
       without changing header visibility, sortable/plain header cells, resize response metadata,

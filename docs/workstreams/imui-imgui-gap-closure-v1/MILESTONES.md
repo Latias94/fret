@@ -282,6 +282,11 @@ assembly.
 render-state recording. `menu_state.rs` now focuses on menubar open-menu mutation, active-trigger
 synchronization, open-request resolution, and disabled-popup cleanup.
 
+2026-05-27 begin-menu open-policy owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy.rs` now owns menubar
+open-menu synchronization, active-trigger writes, trigger-click toggling, open-request resolution,
+and disabled-popup cleanup. `menu_state.rs` is now a thin capture/open-policy module index.
+
 2026-05-27 table header row owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/header_row.rs` now owns the keyed header row,
 visible header cell assembly, sortable/plain wrapper selection, resize response initialization,

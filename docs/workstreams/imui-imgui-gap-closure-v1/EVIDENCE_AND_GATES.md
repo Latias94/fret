@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Begin Menu Open-Policy Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI begin-menu open-policy mutations moved out of the state index without changing
+menubar open-menu synchronization, active-trigger writes, trigger-click toggling,
+open-request resolution, disabled-popup cleanup, or menu/popup interaction behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs` is now a thin
+  capture/open-policy module index.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy.rs` owns
+  `sync_open_menu_for_active_trigger`, `reconcile_menubar_after_trigger`,
+  `toggle_menu_on_trigger_click`, `resolve_open_requested`,
+  `activate_menubar_trigger_if_requested`, and `close_disabled_popup_if_opened`.
+- `tools/gate_imui_workstream_source.py` now requires the open-policy owner and rejects open-policy
+  mutations from drifting back into the root state index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui menu_family_controls::tests
+  --no-fail-fast`: pass; 1 test, 736 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs popup_hover --no-fail-fast`: pass; 39
+  tests, 142 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Summary Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug draw command summary types and aggregate list summary ownership moved out of
