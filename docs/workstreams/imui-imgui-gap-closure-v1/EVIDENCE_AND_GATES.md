@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Boolean Controls Behavior Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI checkbox/radio boolean-control behavior moved into focused private owners
+without changing the public checkbox/radio/switch facade surface, response semantics, shortcuts, or
+label-identity behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox.rs` now owns checkbox label identity,
+  model toggling, focused shortcut handling, context-menu request handling, and pressable response
+  population.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs` now owns radio label identity,
+  focused shortcut handling, context-menu request handling, click reporting, and pressable response
+  population.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` is now a module/re-export index beside the
+  existing `switch.rs` and `visual.rs` owners.
+- `tools/gate_imui_workstream_source.py` now requires the split checkbox/radio owners and rejects
+  checkbox/radio behavior from drifting back into root `boolean_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_controls --no-fail-fast`: pass; 6 tests, 175 skipped.
+- `cargo nextest run -p fret-imui composition::control_geometry --no-fail-fast`: pass; 4 tests,
+  177 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --no-fail-fast`:
+  pass; 1 test.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- The focused nextest runs waited on package-cache/build-directory locks, then completed
+  successfully in the same runs.
+
 ## Menu Options Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI menu/popup/tab/tooltip option records moved into focused private owners

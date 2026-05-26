@@ -45,6 +45,14 @@ Last updated: 2026-05-26
       Result: `boolean_controls/visual.rs` owns checkbox badges, radio indicators, switch state
       badges, and shared boolean label text. The root checkbox/radio file and `switch.rs` keep
       pressable behavior, shortcut handling, model updates, and response population.
+- [x] Split IMUI checkbox/radio boolean-control behavior out of
+      `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` into private owner modules without
+      changing the public checkbox/radio/switch facade surface.
+      Result: `boolean_controls/checkbox.rs` owns checkbox label identity, model toggling,
+      shortcuts, context-menu requests, and response population; `boolean_controls/radio.rs` owns
+      radio label identity, shortcut/context-menu handling, click response, and response
+      population. The root `boolean_controls.rs` file is now a thin module/re-export index beside
+      the existing switch and visual owners.
 - [x] Split IMUI interaction-runtime hover internals out of
       `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` into private owner modules
       without changing hovered-query, shared-delay, active-item block, or long-press behavior.
