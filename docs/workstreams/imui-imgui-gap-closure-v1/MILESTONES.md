@@ -107,6 +107,14 @@ options, stroke/rounding/image/svg options, and mesh vertex helper types. `debug
 re-exports those types and keeps draw-list state plus helper orchestration. The public debug draw
 API remains unchanged.
 
+2026-05-26 popup-menu policy/panel owner-split result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/policy.rs` now owns menu navigation state,
+popup submenu policy state, and root submenu synchronization. `popup_overlay/menu/panel.rs` now
+owns popper placement, menu semantics, nav-state installation, panel chrome, IMUI child mounting,
+and focus-target extraction. `popup_overlay/menu.rs` keeps begin-popup orchestration, menubar
+policy lookup, dismiss/focus hooks, and overlay request dispatch. Popup/menu/submenu public facade
+behavior remains unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

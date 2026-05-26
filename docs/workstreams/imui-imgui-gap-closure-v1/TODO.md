@@ -156,6 +156,15 @@ Last updated: 2026-05-26
       assembly. The root `tab_family_controls.rs` keeps the public `ImUiTabBar` builder and
       `tab_bar_element(...)` entrypoint, while `trigger.rs` keeps per-trigger activation and
       shortcut behavior.
+- [x] Split IMUI popup-menu policy state and panel composition out of
+      `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu.rs` into private owner modules without
+      changing popup/menu/submenu behavior or facade entry points.
+      Result: `popup_overlay/menu/policy.rs` owns `ImUiMenuNavState`,
+      `ImUiPopupMenuPolicyState`, and root submenu-policy synchronization;
+      `popup_overlay/menu/panel.rs` owns popup panel placement, menu semantics, nav-state
+      installation, content mounting, and focus targets. The root `popup_overlay/menu.rs` keeps
+      overlay id/root-name setup, menubar policy lookup, dismiss/auto-focus handlers, and overlay
+      request dispatch.
 
 ## P0 - Source Baseline
 
