@@ -2,29 +2,22 @@
 
 use std::sync::Arc;
 
-use fret_core::{KeyCode, Modifiers, SemanticsRole};
-use fret_runtime::Model;
-use fret_ui::action::UiActionHostExt as _;
+use fret_core::SemanticsRole;
+use fret_ui::UiHost;
 use fret_ui::element::{ContainerProps, Length};
-use fret_ui::{GlobalElementId, UiHost};
 
 use super::{
     InputTextPickerOptions, InputTextPickerResponse, ResponseExt, SelectableOptions,
     UiWriterImUiFacadeExt,
 };
 
-#[derive(Debug, Clone)]
-struct InputTextPickerKeyboardPick {
-    source_index: usize,
-    value: Arc<str>,
-}
+mod candidates;
+mod keyboard;
 
-#[derive(Debug, Clone, Default)]
-struct InputTextPickerKeyboardState {
-    active_source_index: Option<usize>,
-    active_element: Option<GlobalElementId>,
-    picked: Option<InputTextPickerKeyboardPick>,
-}
+use candidates::resolve_text_picker_candidates;
+use keyboard::{
+    InputTextPickerKeyboardState, install_picker_keyboard_handler, reconcile_picker_keyboard_state,
+};
 
 pub(super) fn input_text_completion_model_with_options<
     H: UiHost,
@@ -83,14 +76,11 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         input_options.a11y_role = Some(SemanticsRole::ComboBox);
     }
 
-    let visible_candidates = visible_candidates(&current, candidates, &options);
-    let hide_for_exact_match = options.hide_when_exact_match
-        && candidates
-            .iter()
-            .any(|candidate| candidate.as_ref() == current.as_str());
+    let candidate_visibility = resolve_text_picker_candidates(&current, candidates, &options);
+    let visible_candidates = candidate_visibility.visible_candidates;
+    let hide_for_exact_match = candidate_visibility.hide_for_exact_match;
     let popup_open = ui.popup_open_model(id);
-    let picker_candidate_visible =
-        !visible_candidates.is_empty() && (options.open_when_empty || !current.is_empty());
+    let picker_candidate_visible = candidate_visibility.picker_candidate_visible;
     let input_enabled_by_scope =
         ui.with_cx_mut(|cx| options.input.enabled && !super::imui_is_disabled(cx));
     let keyboard_state = options.keyboard_navigation.then(|| {
@@ -114,30 +104,21 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         .as_ref()
         .and_then(|state| {
             ui.with_cx_mut(|cx| {
-                cx.app
-                    .models_mut()
-                    .update(state, |state| {
-                        let picked = state.picked.take();
-                        if !input_enabled_by_scope
-                            || visible_candidates.is_empty()
-                            || hide_for_exact_match
-                        {
-                            state.active_source_index = None;
-                            state.active_element = None;
-                        } else if let Some(active) = state.active_source_index
-                            && !visible_candidates
-                                .iter()
-                                .any(|(source_index, _)| *source_index == active)
-                        {
-                            state.active_source_index = None;
-                            state.active_element = None;
-                        } else if state.active_source_index.is_none() {
-                            state.active_element = None;
-                        }
-                        (state.active_source_index, picked, state.active_element)
-                    })
-                    .ok()
+                reconcile_picker_keyboard_state(
+                    cx,
+                    state,
+                    input_enabled_by_scope,
+                    &visible_candidates,
+                    hide_for_exact_match,
+                )
             })
+        })
+        .map(|snapshot| {
+            (
+                snapshot.active_source_index,
+                snapshot.pending_pick,
+                snapshot.active_element,
+            )
         })
         .unwrap_or((None, None, None));
     let picker_expanded = popup_is_open
@@ -310,111 +291,4 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         picked_index,
         picked,
     }
-}
-
-fn install_picker_keyboard_handler<H: UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    input_id: fret_ui::GlobalElementId,
-    model: Model<String>,
-    popup_open: Model<bool>,
-    state: Model<InputTextPickerKeyboardState>,
-    visible_candidates: Vec<(usize, Arc<str>)>,
-    keyboard_repeat: bool,
-) {
-    cx.key_add_on_key_down_capture_for(
-        input_id,
-        Arc::new(move |host, action_cx, down| {
-            if down.ime_composing
-                || down.modifiers != Modifiers::default()
-                || (down.repeat && !keyboard_repeat)
-            {
-                return false;
-            }
-
-            if visible_candidates.is_empty() {
-                return false;
-            }
-
-            match down.key {
-                KeyCode::ArrowDown | KeyCode::ArrowUp => {
-                    let forward = down.key == KeyCode::ArrowDown;
-                    let current_source_index = host
-                        .models_mut()
-                        .read(&state, |state| state.active_source_index)
-                        .ok()
-                        .unwrap_or(None);
-                    let current_visible_index = current_source_index.and_then(|source_index| {
-                        visible_candidates
-                            .iter()
-                            .position(|(candidate_source, _)| *candidate_source == source_index)
-                    });
-                    let disabled = vec![false; visible_candidates.len()];
-                    let Some(next_visible_index) =
-                        crate::headless::cmdk_selection::next_active_index(
-                            &disabled,
-                            current_visible_index,
-                            forward,
-                            true,
-                        )
-                    else {
-                        return false;
-                    };
-                    let next_source_index = visible_candidates[next_visible_index].0;
-                    let _ = host.update_model(&state, |state| {
-                        state.active_source_index = Some(next_source_index);
-                        state.active_element = None;
-                        state.picked = None;
-                    });
-                    host.request_redraw(action_cx.window);
-                    true
-                }
-                KeyCode::Enter | KeyCode::NumpadEnter => {
-                    let current_source_index = host
-                        .models_mut()
-                        .read(&state, |state| state.active_source_index)
-                        .ok()
-                        .unwrap_or(None);
-                    let Some(current_visible_index) =
-                        current_source_index.and_then(|source_index| {
-                            visible_candidates
-                                .iter()
-                                .position(|(candidate_source, _)| *candidate_source == source_index)
-                        })
-                    else {
-                        return false;
-                    };
-                    let (source_index, candidate) =
-                        visible_candidates[current_visible_index].clone();
-                    let next_value = candidate.to_string();
-                    let _ = host.update_model(&model, |value| *value = next_value);
-                    let _ = host.update_model(&popup_open, |open| *open = false);
-                    let _ = host.update_model(&state, |state| {
-                        state.active_source_index = Some(source_index);
-                        state.active_element = None;
-                        state.picked = Some(InputTextPickerKeyboardPick {
-                            source_index,
-                            value: candidate,
-                        });
-                    });
-                    host.request_redraw(action_cx.window);
-                    true
-                }
-                _ => false,
-            }
-        }),
-    );
-}
-
-fn visible_candidates(
-    current: &str,
-    candidates: &[Arc<str>],
-    options: &InputTextPickerOptions,
-) -> Vec<(usize, Arc<str>)> {
-    candidates
-        .iter()
-        .enumerate()
-        .filter(|(_, candidate)| options.filter.matches(current, candidate.as_ref()))
-        .take(options.max_items)
-        .map(|(index, candidate)| (index, candidate.clone()))
-        .collect()
 }

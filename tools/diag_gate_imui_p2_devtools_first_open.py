@@ -21,6 +21,13 @@ FIRST_OPEN_DOC = "docs/diagnostics-first-open.md"
 DEVTOOLS_GUI_DOC = "docs/workstreams/diag-fearless-refactor-v2/DEVTOOLS_GUI_DOGFOOD_WORKFLOW.md"
 DEVTOOLS_WORKSTREAM_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1.md"
 DEVTOOLS_MCP_DOC = "docs/workstreams/diag-devtools-gui-v1/diag-devtools-gui-v1-ai-mcp.md"
+DEMO_METRICS_DEBUG_OWNER_DOC = (
+    "docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json"
+)
+DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC = (
+    "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"
+)
+DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC = "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md"
 DEVTOOLS_GUI_SOURCE = "apps/fret-devtools/src/native.rs"
 DEVTOOLS_GUI_WS_SOURCE = "apps/fret-devtools/src/ws.rs"
 DEVTOOLS_GUI_SEMANTICS_SOURCE = "apps/fret-devtools/src/semantics.rs"
@@ -251,7 +258,11 @@ def _validate_tool_app_discovery(
         f"repo preflight json: {REPO_PREFLIGHT_JSON_COMMAND}",
         f"gui branch: {DEVTOOLS_GUI_DOC}",
         "route: demo-metrics-debug",
-        "demo editor proof: cargo run -p fret-demo --bin imui_editor_proof_demo",
+        f"owner: {DEMO_METRICS_DEBUG_OWNER_DOC}",
+        f"docking owner: {DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC}",
+        f"wayland acceptance: {DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC}",
+        "demo editor workbench: cargo run -p fret-demo --bin imui_editor_workbench_demo",
+        "demo editor proof supporting: cargo run -p fret-demo --bin imui_editor_proof_demo",
         "demo editor notes: cargo run -p fret-demo --bin editor_notes_demo",
         "demo device shell: cargo run -p fret-demo --bin editor_notes_device_shell_demo",
         "metrics stats: cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json",
@@ -260,6 +271,9 @@ def _validate_tool_app_discovery(
         "debug triage: cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json",
         "debug hotspots: cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json",
         "debug trace: cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json",
+        "docking arbitration supporting: cargo run -p fret-demo --bin docking_arbitration_demo",
+        "docking campaign validate: cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json",
+        "docking policy-skip local: python tools/diag_gate_docking_wayland_policy_skip.py",
         "fret-devtools",
         "cargo run -p fret-devtools",
         DEVTOOLS_GUI_DOC,
@@ -304,11 +318,20 @@ def _validate_tool_app_discovery(
         raise SystemExit("list tool-apps --json should expose demo-metrics-debug")
     if demo_metrics_route.get("docs") != FIRST_OPEN_DOC:
         raise SystemExit("list tool-apps --json should expose demo-metrics-debug docs")
+    if demo_metrics_route.get("owner_doc") != DEMO_METRICS_DEBUG_OWNER_DOC:
+        raise SystemExit("list tool-apps --json should expose demo-metrics-debug owner_doc")
+    if demo_metrics_route.get("docking_owner_doc") != DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC:
+        raise SystemExit("list tool-apps --json should expose demo-metrics-debug docking_owner_doc")
+    if demo_metrics_route.get("wayland_acceptance_doc") != DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC:
+        raise SystemExit(
+            "list tool-apps --json should expose demo-metrics-debug wayland_acceptance_doc"
+        )
     if not isinstance(demo_metrics_route.get("purpose"), str) or not demo_metrics_route["purpose"]:
         raise SystemExit("list tool-apps --json should expose demo-metrics-debug purpose")
     route_groups = {
         "demo_commands": {
-            "demo editor proof": "cargo run -p fret-demo --bin imui_editor_proof_demo",
+            "demo editor workbench": "cargo run -p fret-demo --bin imui_editor_workbench_demo",
+            "demo editor proof supporting": "cargo run -p fret-demo --bin imui_editor_proof_demo",
             "demo editor notes": "cargo run -p fret-demo --bin editor_notes_demo",
             "demo device shell": "cargo run -p fret-demo --bin editor_notes_device_shell_demo",
         },
@@ -321,6 +344,18 @@ def _validate_tool_app_discovery(
             "debug triage": "cargo run -p fretboard-dev -- diag triage <bundle-or-dir> --json",
             "debug hotspots": "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json",
             "debug trace": "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json",
+        },
+        "handoff_commands": {
+            "docking arbitration supporting": "cargo run -p fret-demo --bin docking_arbitration_demo",
+            "docking campaign validate": "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json",
+            "docking policy-skip local": "python tools/diag_gate_docking_wayland_policy_skip.py",
+        },
+        "action_commands": {
+            "open workbench": "cargo run -p fret-demo --bin imui_editor_workbench_demo",
+            "run product discovery": "python tools/diag_gate_imui_product_chain.py --only discovery",
+            "inspect metrics stats": "cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json",
+            "inspect debug trace": "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json",
+            "validate docking campaign": "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json",
         },
     }
     for group, expected_commands in route_groups.items():
@@ -464,12 +499,22 @@ def _validate_devtools_gui_first_open_source(
         'const IMUI_PRODUCT_WORKFLOW_SUITE: &str =',
         "const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[",
         'const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug"',
+        "const DEVTOOLS_DEMO_METRICS_DEBUG_OWNER_DOC: &str =",
+        "const DEVTOOLS_DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =",
+        "const DEVTOOLS_DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str =",
+        "const DEVTOOLS_DOCKING_ARBITRATION_COMMAND: &str =",
+        "const DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND: &str =",
+        "const DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND: &str =",
+        'const DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND: &str =',
         'const DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND: &str =',
         'const DEVTOOLS_METRICS_STATS_COMMAND: &str =',
         'const DEVTOOLS_METRICS_LAYOUT_PERF_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_TRIAGE_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =',
         'const DEVTOOLS_DEBUG_TRACE_COMMAND: &str =',
+        'const CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS: &str =',
+        "struct DemoMetricsDebugActionSpec",
+        "const DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS: &[DemoMetricsDebugActionSpec] = &[",
         "DevtoolsGateScriptTargetCommandInputV1",
         "DevtoolsGatePerfThresholdCommandInputV1",
         "DevtoolsGateResourceFootprintThresholdCommandInputV1",
@@ -499,7 +544,23 @@ def _validate_devtools_gui_first_open_source(
         "Dogfood Workflow",
         "UI gallery selector capture, script patching, run/pack, and offline viewer handoff stay visible from the GUI shell.",
         "Demo / Metrics / Debug Routes",
-        "Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
+        "Always-available editor demos, action commands, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
+        "demo_metrics_debug_rows.push(devtools_demo_metrics_debug_action_row(cx))",
+        "route owner: {DEVTOOLS_DEMO_METRICS_DEBUG_OWNER_DOC}",
+        "docking owner: {DEVTOOLS_DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC}",
+        "wayland acceptance: {DEVTOOLS_DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC}",
+        "action surface: dedicated DevTools guide panel + copyable action command bundle",
+        "command palette: deferred until DevTools has a shared command palette contract",
+        "action: open workbench -> {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}",
+        "action: run product discovery -> {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}",
+        "action: inspect metrics stats -> {DEVTOOLS_METRICS_STATS_COMMAND}",
+        "action: inspect debug trace -> {DEVTOOLS_DEBUG_TRACE_COMMAND}",
+        "action: validate docking campaign -> {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}",
+        "fn demo_metrics_debug_action_command_text() -> String",
+        "fn devtools_demo_metrics_debug_action_row(cx: &mut ElementContext<'_, App>) -> AnyElement",
+        "Copy Demo/Metrics/Debug actions",
+        "docking campaign validate: {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}",
+        "docking policy-skip local: {DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND}",
         "Workflow Runs",
         "First-class campaign validation and selected-session suite runs reuse the shared diag command path from the GUI shell.",
         "Gate Commands",
@@ -1041,6 +1102,11 @@ def _validate_devtools_mcp_ai_scenario_doc(
     for marker in (
         'const DEVTOOLS_MCP_DOC: &str =',
         'const RESOURCE_URI_FIRST_OPEN_MD: &str = "fret-diag://first-open.md"',
+        "const DEMO_METRICS_DEBUG_OWNER_DOC: &str =",
+        "const DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =",
+        "const DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str =",
+        "const DOCKING_CAMPAIGN_VALIDATE_COMMAND: &str =",
+        "const DOCKING_POLICY_SKIP_COMMAND: &str =",
         'const RESOURCE_URI_RECENT_EVIDENCE_JSON: &str = "fret-diag://recent-evidence.json"',
         "async fn fret_diag_inspect_set(",
         "async fn fret_diag_pick(",

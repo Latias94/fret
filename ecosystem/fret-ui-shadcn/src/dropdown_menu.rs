@@ -1503,6 +1503,8 @@ fn dropdown_menu_label_element<H: UiHost>(
     pad_x: Px,
     pad_x_inset: Px,
     pad_y: Px,
+    _text_style: &TextStyle,
+    _fg: fret_core::Color,
 ) -> AnyElement {
     let dir = crate::direction::use_direction(cx, None);
     let pad_left = if inset { pad_x_inset } else { pad_x };
@@ -1621,6 +1623,8 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                     style.pad_x,
                     style.pad_x_inset,
                     style.pad_y,
+                    &style.text_style,
+                    style.fg,
                 ));
             }
             DropdownMenuEntry::Group(group) => {
@@ -4048,6 +4052,8 @@ impl DropdownMenu {
                                                             pad_x,
                                                             pad_x_inset,
                                                             pad_y,
+                                                            &text_style,
+                                                            fg,
                                                         ));
                                                     }
                                                     DropdownMenuEntry::Group(group) => {
@@ -5393,7 +5399,14 @@ mod tests {
             CoreSize::new(Px(240.0), Px(96.0)),
         );
 
+        let foreground = fret_core::Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        };
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let style = typography::fixed_line_box_style(FontId::ui(), Px(14.0), Px(20.0));
             dropdown_menu_label_element(
                 cx,
                 Arc::from("Recently opened projects"),
@@ -5401,11 +5414,14 @@ mod tests {
                 Px(8.0),
                 Px(32.0),
                 Px(6.0),
+                &style,
+                foreground,
             )
         });
 
         let text = find_text_element(&element, "Recently opened projects")
             .expect("expected dropdown menu label text");
+        let theme = Theme::global(&app);
         let ElementKind::Text(props) = &text.kind else {
             panic!("expected Text element for dropdown menu label");
         };
@@ -5420,8 +5436,15 @@ mod tests {
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
-        assert!(text.inherited_text_style.is_some());
-        assert!(text.inherited_foreground.is_some());
+        let inherited = text
+            .inherited_text_style
+            .as_ref()
+            .expect("dropdown menu label should inherit a text style");
+        assert_eq!(inherited.weight, Some(FontWeight::MEDIUM));
+        assert_eq!(
+            text.inherited_foreground,
+            Some(typography::muted_foreground_color(theme))
+        );
     }
 
     #[test]

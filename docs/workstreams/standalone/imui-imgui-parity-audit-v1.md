@@ -245,8 +245,20 @@ helpers to make ImGui ports less noisy:
   - `component.imui.item_spacing_x_px` (fallback `8px`)
   - `component.imui.item_spacing_y_px` (fallback `4px`)
 
-Those helpers were removed by the fearless refactor. Current canonical guidance keeps layout
-explicit and does not treat `items` / `same_line` as surviving entry points.
+2026-05-25 follow-up: the helpers are restored as explicit closure-scoped porting sugar in
+`fret-ui-kit::imui`, not as an implicit window cursor:
+
+- `ui.items(...)` / `ui.items_with_options(...)` build a vertical item-flow group using
+  `component.imui.item_spacing_y_px`.
+- `ui.same_line(...)` / `ui.same_line_with_options(...)` build an explicit horizontal group using
+  `component.imui.item_spacing_x_px`.
+- `ui.spacing(...)`, `ui.dummy(size)`, and `ui.indent(...)` cover the small layout placeholders
+  that appear frequently in Dear ImGui ports.
+- `ui.indent(...)` is also theme-tunable through `component.imui.indent_spacing_px` (fallback
+  `21px`).
+
+This keeps canonical Fret layout explicit while reducing porting noise. It intentionally does not
+restore ImGui's global "last item" cursor semantics.
 
 ### 1.5 Popups / context menus
 

@@ -1,0 +1,498 @@
+{
+  "schema_version": 1,
+  "component": "input-group",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual input group docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/input_group.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/input.rs + apps/fret-ui-gallery/src/ui/pages/input_group.rs + apps/fret-ui-gallery/src/ui/snippets/input_group/*.rs + tools/diag-scripts/ui-gallery/input/*.json + tools/diag-scripts/ui-gallery/input-group/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-text-non-overlap.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-button-click-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-label-click-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-addon-after-control-tab-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json | Out-Null",
+      "status": "pass",
+      "scope": "Input Group diagnostic scripts parse cleanly after replacing stale page-root waits with the real `ui-gallery-input-group` body test id and adding direct `FRET_UI_GALLERY_START_PAGE=input_group` defaults."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail input_group",
+      "status": "pass",
+      "scope": "InputGroup recipe tests cover required/invalid semantics, custom control stamping, addon routing, width ownership, addon focus forwarding, chrome hit testing, disabled addon opacity, muted foreground inheritance, button/test-id plumbing, text ids, pressable descendant suppression, focus-ring tweening, and the new block addon row fill invariant."
+    },
+    {
+      "command": "$env:FRET_WEB_VS_FRET_LAYOUT_INPUT_CASE_FILTER='input-group'; cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_input_geometry_matches_web_fixtures",
+      "status": "pass",
+      "scope": "Filtered fixture-driven web-vs-Fret layout gate covers Input Group label, button-group, dropdown, icon, spinner, button, tooltip, Empty/Kbd embedding, textarea, text, custom textarea, and demo block-end cases without being blocked by unrelated Input cases."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail spinner_input_group",
+      "status": "pass",
+      "scope": "Spinner's InputGroup embedding gate now passes after the InputGroup block addon row fill repair, proving the fix covers cross-component slot composition as well as the local textarea case."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail input_group",
+      "status": "pass",
+      "scope": "Gallery authoring-surface gates keep Input Group snippets on AppComponentCx/UiChild, typed DocSection::build sections, compact slot shorthand, label association, and the narrow custom_input/custom_textarea lane."
+    },
+    {
+      "command": "cargo build -p fret-ui-gallery --bin fret-ui-gallery",
+      "status": "pass",
+      "scope": "Default UI Gallery binary contains the Input Group page, so diagnostics do not require the gallery-dev catalog."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-group-docs-smoke.json --dir target\\fret-diag-input-group-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Input Group docs smoke proves the default catalog renders the docs-path anchors and the real `ui-gallery-input-group` body.",
+      "run_id": "1779750011713",
+      "ai_packet": "target/fret-diag-input-group-docs-smoke-matrix/sessions/1779750005270-135092/1779750011713/ai.packet",
+      "share_zip": "target/fret-diag-input-group-docs-smoke-matrix/sessions/1779750005270-135092/share/1779750011713.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-group-text-non-overlap.json --dir target\\fret-diag-input-group-text-non-overlap-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Input Group text gate proves leading/trailing text addons remain non-overlapping and the text control stays within the window.",
+      "run_id": "1779750021334",
+      "ai_packet": "target/fret-diag-input-group-text-non-overlap-matrix/sessions/1779750016345-137672/1779750021334/ai.packet",
+      "share_zip": "target/fret-diag-input-group-text-non-overlap-matrix/sessions/1779750016345-137672/share/1779750021334.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-group-button-click-focus.json --dir target\\fret-diag-input-group-button-click-focus-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Input Group button focus gate proves clicking the concrete control focuses the text field and clicking the trailing addon button moves focus to the button.",
+      "run_id": "1779750027282",
+      "ai_packet": "target/fret-diag-input-group-button-click-focus-matrix/sessions/1779750022527-147000/1779750027282/ai.packet",
+      "share_zip": "target/fret-diag-input-group-button-click-focus-matrix/sessions/1779750022527-147000/share/1779750027282.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-group-label-click-focus.json --dir target\\fret-diag-input-group-label-click-focus-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Input Group label-association gate proves clicking the label forwards focus to the associated control.",
+      "run_id": "1779750033491",
+      "ai_packet": "target/fret-diag-input-group-label-click-focus-matrix/sessions/1779750028641-136516/1779750033491/ai.packet",
+      "share_zip": "target/fret-diag-input-group-label-click-focus-matrix/sessions/1779750028641-136516/share/1779750033491.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-group-addon-after-control-tab-focus.json --dir target\\fret-diag-input-group-addon-after-control-tab-focus-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Input Group keyboard focus gate proves Tab moves from the dropdown text field control to the addon button.",
+      "run_id": "1779750040255",
+      "ai_packet": "target/fret-diag-input-group-addon-after-control-tab-focus-matrix/sessions/1779750034926-145044/1779750040255/ai.packet",
+      "share_zip": "target/fret-diag-input-group-addon-after-control-tab-focus-matrix/sessions/1779750034926-145044/share/1779750040255.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-group-rtl-screenshot.json --dir target\\fret-diag-input-group-rtl-screenshot-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Input Group RTL screenshot gate captures mirrored leading/trailing slot composition.",
+      "run_id": "1779750046286",
+      "ai_packet": "target/fret-diag-input-group-rtl-screenshot-matrix/sessions/1779750041897-146708/1779750046286/ai.packet",
+      "share_zip": "target/fret-diag-input-group-rtl-screenshot-matrix/sessions/1779750041897-146708/share/1779750046286.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input-group\\ui-gallery-input-group-dropdown-relation-action-state.json --dir target\\fret-diag-input-group-dropdown-relation-action-state-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Input Group dropdown relation/action gate proves the addon trigger stays a button with expanded/controls semantics while the text field remains writable; Escape closes, restores focus, and clears controls relation.",
+      "run_id": "1779750056404",
+      "ai_packet": "target/fret-diag-input-group-dropdown-relation-action-state-matrix/sessions/1779750052066-142720/1779750056404/ai.packet",
+      "share_zip": "target/fret-diag-input-group-dropdown-relation-action-state-matrix/sessions/1779750052066-142720/share/1779750056404.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input-group\\ui-gallery-input-group-rtl-addon-order.json --dir target\\fret-diag-input-group-rtl-addon-order-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Input Group RTL addon-order gate proves leading/control/trailing bounds stay non-overlapping and logically mirrored under RTL.",
+      "run_id": "1779750063204",
+      "ai_packet": "target/fret-diag-input-group-rtl-addon-order-matrix/sessions/1779750058344-137812/1779750063204/ai.packet",
+      "share_zip": "target/fret-diag-input-group-rtl-addon-order-matrix/sessions/1779750058344-137812/share/1779750063204.zip"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.input-group.demo.light.vp1440x900",
+      "snapshot": "input-group-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.input-group.textarea.light.vp1440x900",
+      "snapshot": "input-group-textarea",
+      "theme": "light",
+      "mode": "static",
+      "variant": "textarea-block-addons",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.input-group.custom.light.vp1440x900",
+      "snapshot": "input-group-custom",
+      "theme": "light",
+      "mode": "static",
+      "variant": "custom-textarea",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.input-group.rtl.light.vp1440x900",
+      "snapshot": "input-group-rtl",
+      "theme": "light",
+      "mode": "static",
+      "variant": "rtl",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "input-group-button-group",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/input-group-button-group.json"
+      },
+      {
+        "snapshot": "input-group-button",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/input-group-button.json"
+      },
+      {
+        "snapshot": "input-group-custom",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/input-group-custom.json"
+      },
+      {
+        "snapshot": "input-group-demo",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/input-group-demo.json"
+      },
+      {
+        "snapshot": "input-group-dropdown",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/input-group-dropdown.json"
+      },
+      {
+        "snapshot": "input-group-icon",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/input-group-icon.json"
+      },
+      {
+        "snapshot": "input-group-label",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/input-group-label.json"
+      },
+      {
+        "snapshot": "input-group-spinner",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/input-group-spinner.json"
+      },
+      {
+        "snapshot": "input-group-text",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/input-group-text.json"
+      },
+      {
+        "snapshot": "input-group-textarea",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/input-group-textarea.json"
+      },
+      {
+        "snapshot": "input-group-tooltip",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/input-group-tooltip.json"
+      }
+    ],
+    "fret_layout_sidecar": [],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-docs-smoke.json",
+        "bundle_path": "target/fret-diag-input-group-docs-smoke-matrix/sessions/1779750005270-135092/1779750015487-ui-gallery-input-group-docs-smoke/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-text-non-overlap.json",
+        "bundle_path": "target/fret-diag-input-group-text-non-overlap-matrix/sessions/1779750016345-137672/1779750021763-ui-gallery-input-group-text-non-overlap/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-button-click-focus.json",
+        "bundle_path": "target/fret-diag-input-group-button-click-focus-matrix/sessions/1779750022527-147000/1779750027743-ui-gallery-input-group-button-click-focus/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-label-click-focus.json",
+        "bundle_path": "target/fret-diag-input-group-label-click-focus-matrix/sessions/1779750028641-136516/1779750033979-ui-gallery-input-group-label-click-focus/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-addon-after-control-tab-focus.json",
+        "bundle_path": "target/fret-diag-input-group-addon-after-control-tab-focus-matrix/sessions/1779750034926-145044/1779750040713-ui-gallery-input-group-addon-after-control-tab-focus/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json",
+        "bundle_path": "target/fret-diag-input-group-rtl-screenshot-matrix/sessions/1779750041897-146708/1779750047546-ui-gallery-input-group-rtl/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json",
+        "bundle_path": "target/fret-diag-input-group-dropdown-relation-action-state-matrix/sessions/1779750052066-142720/1779750057383-ui-gallery-input-group-dropdown-relation-action-state/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json",
+        "bundle_path": "target/fret-diag-input-group-rtl-addon-order-matrix/sessions/1779750058344-137812/1779750064380-ui-gallery-input-group-rtl-addon-order/bundle.schema2.json"
+      }
+    ],
+    "fret_screenshots": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-text-non-overlap.json",
+        "screenshot_path": "target/fret-diag-input-group-text-non-overlap-matrix/sessions/1779750016345-137672/screenshots/1779750021803-ui-gallery-input-group-text-non-overlap/window-4294967297-tick-17-frame-17.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-addon-after-control-tab-focus.json",
+        "screenshot_path": "target/fret-diag-input-group-addon-after-control-tab-focus-matrix/sessions/1779750034926-145044/screenshots/1779750040762-ui-gallery-input-group-addon-after-control-tab-focus/window-4294967297-tick-18-frame-18.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json",
+        "screenshot_path": "target/fret-diag-input-group-rtl-screenshot-matrix/sessions/1779750041897-146708/screenshots/1779750050761-ui-gallery-input-group-rtl/window-4294967297-tick-40-frame-40.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json",
+        "screenshot_path": "target/fret-diag-input-group-dropdown-relation-action-state-matrix/sessions/1779750052066-142720/screenshots/1779750057092-ui-gallery-input-group-dropdown-open-relation-action-state/window-4294967297-tick-22-frame-22.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json",
+        "screenshot_path": "target/fret-diag-input-group-rtl-addon-order-matrix/sessions/1779750058344-137812/screenshots/1779750064259-ui-gallery-input-group-rtl-addon-order/window-4294967297-tick-30-frame-30.png"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 9,
+    "status_counts": {
+      "pass_known": 9,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 4,
+      "gallery_composition": 2,
+      "diagnostics_surface": 2,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 2,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 4,
+      "app_demo": 2,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 9
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 8,
+      "component_fixture": 2,
+      "unit_test": 2,
+      "none": 0
+    },
+    "layout_sidecar_count": 0,
+    "bundle_schema2_count": 8,
+    "layout_test_id_count": 0,
+    "bundle_semantics_test_id_count": 0,
+    "measured_test_id_count": 0,
+    "upstream_dom_snapshot_count": 11,
+    "upstream_dom_target_count": 11,
+    "upstream_context_count": 4,
+    "upstream_dom_context_count": 4,
+    "upstream_live_fact_count": 8,
+    "upstream_semantics_fact_count": 2,
+    "upstream_interaction_fact_count": 2,
+    "fret_live_fact_count": 18,
+    "fret_semantics_fact_count": 14,
+    "fret_interaction_fact_count": 9,
+    "fret_text_paint_fact_count": 3,
+    "fret_text_paint_direct_fact_count": 2,
+    "fret_text_paint_associated_fact_count": 1,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 2
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "docs/audits/shadcn-input-group.md plus goldens/shadcn-web/v4/new-york-v4/input-group-*.json provide the local upstream docs/source and DOM/CSS outcome refs for Input Group.",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/input_group.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/input.rs + apps/fret-ui-gallery/src/ui/pages/input_group.rs + apps/fret-ui-gallery/src/ui/snippets/input_group/*.rs + tools/diag-scripts/ui-gallery/input/*.json + tools/diag-scripts/ui-gallery/input-group/*.json",
+    "part_count": 9,
+    "upstream_dom_target_count": 11,
+    "fret_test_id_count": 0,
+    "upstream_semantics_fact_count": 2,
+    "upstream_interaction_fact_count": 2,
+    "fret_semantics_fact_count": 14,
+    "fret_interaction_fact_count": 9,
+    "parts": [
+      {
+        "part_id": "input_group_upstream_source_and_examples",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "docs/audits/shadcn-input-group.md",
+          "goldens/shadcn-web/v4/new-york-v4/input-group-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/input-group-textarea.json",
+          "goldens/shadcn-web/v4/new-york-v4/input-group-custom.json",
+          "goldens/shadcn-web/v4/new-york-v4/input-group-rtl.json"
+        ],
+        "facts": [
+          "The tracked upstream docs path covers demo, usage, inline/block alignment, icon/text/button/kbd/dropdown/spinner/textarea/custom examples, label association, button group, and RTL composition.",
+          "The upstream textarea example depends on block addon rows where caller-authored auto margins push buttons to the inline end."
+        ]
+      },
+      {
+        "part_id": "input_group_recipe_root_width_and_block_row_fill",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/input_group.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail input_group",
+          "$env:FRET_WEB_VS_FRET_LAYOUT_INPUT_CASE_FILTER='input-group'; cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_input_geometry_matches_web_fixtures"
+        ],
+        "facts": [
+          "InputGroup root keeps upstream-owned `w-full min-w-0` while still allowing caller width overrides.",
+          "Block addon internal rows now use fill/min-w-0 layout so caller-owned `ml_auto` can push buttons to the inline end.",
+          "The web-golden gate exposed the previous drift through `input-group-textarea refresh x`; the filtered gate now passes."
+        ]
+      },
+      {
+        "part_id": "input_group_fixture_filter_for_case_level_gates",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/input.rs",
+          "ecosystem/fret-ui-shadcn/tests/fixtures/layout_input_cases_v1.json"
+        ],
+        "facts": [
+          "The fixture runner now supports `FRET_WEB_VS_FRET_LAYOUT_INPUT_CASE_FILTER` for explicit case-family runs without changing default all-case behavior.",
+          "The Input Group filtered run covers only matching case id, web name, or recipe names and fails if the filter matches no cases."
+        ]
+      },
+      {
+        "part_id": "input_group_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/input_group.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/input_group/*.rs",
+          "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail input_group"
+        ],
+        "facts": [
+          "The Gallery docs path mirrors the base docs with Usage, Align, docs-path examples, Fret follow-ups, RTL, notes, and API reference sections.",
+          "First-party snippets keep `InputGroup::new(model)` as the ergonomic lane while explicit addon/control parts remain the docs-parity lane.",
+          "Custom Input and Custom Textarea stay narrow through `custom_input(...)` and `custom_textarea(...)` instead of generic root children."
+        ]
+      },
+      {
+        "part_id": "input_group_docs_smoke_and_root_id",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-docs-smoke.json",
+          "target/fret-diag-input-group-docs-smoke-matrix/sessions/1779750005270-135092/1779750015487-ui-gallery-input-group-docs-smoke/bundle.schema2.json"
+        ],
+        "facts": [
+          "Docs smoke now starts directly on the Input Group page and waits for the real `ui-gallery-input-group` body test id.",
+          "The page is present in the default Gallery catalog, unlike Form, so no gallery-dev feature is needed for Input Group diagnostics."
+        ]
+      },
+      {
+        "part_id": "input_group_semantics_focus_and_keyboard",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-button-click-focus.json",
+          "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-label-click-focus.json",
+          "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-addon-after-control-tab-focus.json",
+          "target/fret-diag-input-group-button-click-focus-matrix/sessions/1779750022527-147000/1779750027743-ui-gallery-input-group-button-click-focus/bundle.schema2.json",
+          "target/fret-diag-input-group-label-click-focus-matrix/sessions/1779750028641-136516/1779750033979-ui-gallery-input-group-label-click-focus/bundle.schema2.json",
+          "target/fret-diag-input-group-addon-after-control-tab-focus-matrix/sessions/1779750034926-145044/1779750040713-ui-gallery-input-group-addon-after-control-tab-focus/bundle.schema2.json"
+        ],
+        "facts": [
+          "Clicking the text-field control focuses it, clicking the trailing addon button focuses the button, and clicking the label forwards focus to its control.",
+          "Keyboard Tab moves from the dropdown text-field control to the addon button, locking the keyboard focus path.",
+          "Recipe tests also cover focus-visible ring tweening and addon click-to-focus suppression for pressable descendants."
+        ]
+      },
+      {
+        "part_id": "input_group_dropdown_relation_action_state",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json",
+          "target/fret-diag-input-group-dropdown-relation-action-state-matrix/sessions/1779750052066-142720/1779750057383-ui-gallery-input-group-dropdown-relation-action-state/bundle.schema2.json"
+        ],
+        "facts": [
+          "The dropdown addon trigger stays a button with invoke/focus actions and expanded/controls state when open.",
+          "The sibling text-field control remains writable while the dropdown addon owns menu relations.",
+          "Escape closes the menu, restores focus to the trigger, and clears the controls relation."
+        ]
+      },
+      {
+        "part_id": "input_group_text_paint_and_non_overlap",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-text-non-overlap.json",
+          "target/fret-diag-input-group-text-non-overlap-matrix/sessions/1779750016345-137672/1779750021763-ui-gallery-input-group-text-non-overlap/bundle.schema2.json",
+          "target/fret-diag-input-group-text-non-overlap-matrix/sessions/1779750016345-137672/screenshots/1779750021803-ui-gallery-input-group-text-non-overlap/window-4294967297-tick-17-frame-17.png"
+        ],
+        "facts": [
+          "Leading and trailing InputGroupText addons remain non-overlapping in the docs-path Text section.",
+          "The captured screenshot and text/control bounds provide text metric and paint-token coverage for the Input Group text lane."
+        ]
+      },
+      {
+        "part_id": "input_group_rtl_logical_slot_order",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json",
+          "tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json",
+          "target/fret-diag-input-group-rtl-screenshot-matrix/sessions/1779750041897-146708/1779750047546-ui-gallery-input-group-rtl/bundle.schema2.json",
+          "target/fret-diag-input-group-rtl-addon-order-matrix/sessions/1779750058344-137812/1779750064380-ui-gallery-input-group-rtl-addon-order/bundle.schema2.json"
+        ],
+        "facts": [
+          "RTL diagnostics prove leading/control/trailing bounds stay non-overlapping and logically mirrored.",
+          "RTL screenshots capture the mirrored visual paint path for reviewable slot-order evidence."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Input Group docs-path slice with upstream goldens, recipe layout/semantics tests, case-filtered web-golden layout gates, Gallery authoring checks, focus/keyboard/dropdown/RTL/text diagnostics, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "input-group.docs-path.desktop",
+        "component": "input-group",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_group_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

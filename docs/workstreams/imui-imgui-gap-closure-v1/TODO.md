@@ -1,7 +1,50 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-24
+Last updated: 2026-05-26
+
+## Worktree Convergence - 2026-05-26
+
+- [x] Stop feature development in both dirty worktrees and record the convergence plan.
+- [x] Checkpoint the main worktree before merging:
+      `d078e25122 refactor(imui): checkpoint gap closure convergence slices`.
+- [x] Checkpoint the `imui-imgui-editor-grade-refactor` worktree before merging:
+      `05727e284b refactor(imui): checkpoint editor-grade convergence worktree`.
+- [x] Merge `imui-imgui-editor-grade-refactor` back into `main`, resolving overlapping IMUI
+      changes by topic instead of treating either side as globally authoritative.
+- [x] Preserve the editor-grade facade/container/listbox organization, the main image-item owner
+      split, and the union source gate coverage.
+- [x] Run focused convergence gates and record the result in `EVIDENCE_AND_GATES.md`.
+- [x] Continue follow-up IMUI development only from `F:/SourceCodes/Rust/fret` on `main`.
+
+## Owner Split Follow-Ups - 2026-05-26
+
+- [x] Split IMUI button visual/layout/accessibility ownership out of
+      `ecosystem/fret-ui-kit/src/imui/button_controls.rs` into a private owner module without
+      changing the public IMUI surface.
+      Result: `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` now owns button variant
+      layout, a11y label construction, arrow labels/glyphs, and chrome/content assembly, while
+      `button_controls.rs` keeps pressable behavior, shortcut handling, action dispatch, and
+      response population.
+- [x] Split IMUI input-text picker candidate visibility and keyboard state reconciliation out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into private owner modules without
+      changing the public IMUI surface.
+      Result: `text_picker_controls/candidates.rs` owns filter/max-item/exact-match/open-empty
+      visibility decisions, and `text_picker_controls/keyboard.rs` owns active-source cleanup plus
+      pending keyboard pick extraction. The root file keeps input/popup composition and response
+      merging.
+- [x] Split IMUI disclosure spec construction out of
+      `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private owner module without
+      changing the public collapsing-header/tree-node surface.
+      Result: `disclosure_controls/spec.rs` owns `DisclosureKind`, `DisclosureSpec`, option-to-spec
+      normalization, and leaf/children classification. The root file keeps pressable behavior,
+      model/toggle wiring, content mounting, and response population.
+- [x] Split IMUI boolean-control visual chrome out of
+      `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` and its switch owner without changing
+      the public checkbox/radio/switch surface.
+      Result: `boolean_controls/visual.rs` owns checkbox badges, radio indicators, switch state
+      badges, and shared boolean label text. The root checkbox/radio file and `switch.rs` keep
+      pressable behavior, shortcut handling, model updates, and response population.
 
 ## P0 - Source Baseline
 
@@ -135,6 +178,35 @@ Readiness order for the next locally testable review slices:
    through crate-local core setters. The adapter signal record is now read-only too: adapter seam
    inputs keep builder-friendly public options, but emitted `AdapterSignalRecord` /
    `AdapterSignalMetadata` values expose identity, response, and metadata through accessors.
+   2026-05-26 hover query owner split: `ImUiHoveredFlags` now lives in
+   `response/hover/flags.rs`, while `hovered_like_imgui(...)` / `is_hovered(...)` query policy
+   lives in `response/hover/query.rs`. The root `response/hover.rs` stays focused on
+   `ResponseExt` storage, mutators, accessors, and drag convenience helpers.
+   2026-05-26 lifecycle owner split: `ResponseExt` lifecycle signal mutators, merge helpers,
+   clearing, and read-only accessors now live in `response/hover/lifecycle.rs`. The root
+   `response/hover.rs` still owns the lifecycle storage fields but no longer owns lifecycle
+   behavior bodies.
+   2026-05-26 press/context owner split: `ResponseExt` secondary-click, double-click, long-press,
+   hold, context-menu, pointer-click, and pointer-modifier behavior now lives in
+   `response/hover/press_context.rs`. The root `response/hover.rs` keeps storage only for those
+   signals.
+   2026-05-26 hover-state owner split: `ResponseExt` raw pointer hover, popup-barrier hover,
+   hover-delay, active-item block, and nav-highlight mutators/accessors now live in
+   `response/hover/hover_state.rs`. The root `response/hover.rs` keeps the hover state storage
+   fields only.
+   2026-05-26 core-state owner split: `ResponseExt` core `fret_authoring::Response`, id, enabled,
+   clicked, changed, rect, hover, press, and focus mutators/accessors now live in
+   `response/hover/core_state.rs`. The root `response/hover.rs` keeps core/id/enabled storage only.
+   2026-05-26 menu-family menu owner split: `begin_menu_with_options(...)` now lives in
+   `menu_family_controls/menu.rs`. The root `menu_family_controls.rs` keeps menubar policy state,
+   menu-bar element construction, module wiring, and tests only.
+   2026-05-26 debug-draw response owner split: `DebugDrawResponse` now lives in
+   `debug_draw_controls/response.rs`, and the opaque-output source gate follows the new owner. The
+   root `debug_draw_controls.rs` keeps debug draw options, draw-list/style types, and helper
+   orchestration.
+   2026-05-26 debug-draw options owner split: public debug draw options/style/vertex types now
+   live in `debug_draw_controls/options.rs`. The root `debug_draw_controls.rs` re-exports them and
+   keeps draw-list state plus helper orchestration.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,
@@ -1337,3 +1409,54 @@ opening the slice.
       Result: `floating_window_content_props.rs` now owns the content surface layout, scroll
       layout, and container props, while `floating_window_content.rs` keeps the pointer/focus
       orchestration and consumes the prepared owner outputs.
+- [x] Split IMUI table render/body/header ownership out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls.rs` into private owner modules without
+      changing the public IMUI surface.
+      Result: `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` now owns table assembly,
+      test-id suffixing, palette resolution, and shared cell helpers; `table_controls/body.rs`
+      owns prepared cells, pinned row grouping, horizontal scroll wrapping, and cell wrapping; and
+      `table_controls/header.rs` plus `header/{trigger,resize}.rs` own sortable/plain header
+      behavior and resize interaction. The root `table_controls.rs` keeps only authoring collection
+      and row/cell facade wiring.
+      2026-05-26 table render helper owner split: shared cell layout/packing helpers now live in
+      `table_controls/cell.rs`, palette resolution lives in `table_controls/palette.rs`, and
+      column test-id suffixing lives in `table_controls/test_ids.rs`. `render.rs` keeps table
+      assembly only.
+- [x] Add a narrow optional `fret-plot/imui` adapter over existing declarative plot panels without
+      restoring retained plot code or adding plot dependencies to `fret-imui` /
+      `fret-ui-kit::imui`.
+      Result: `ecosystem/fret-plot/src/imui.rs` exposes thin `UiWriter` helpers for the declarative
+      plot panel props under the opt-in `imui` feature, while the default `fret-plot` surface stays
+      declarative and retained plot bridge code stays deleted.
+- [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
+      filtering, active-descendant, command package, or collection policy into the container.
+      Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll
+      host, `ListBoxOptions` exposes only layout/scroll/diagnostics semantics knobs, and the
+      focused `fret-imui` composition test proves listbox semantics, scroll forwarding, stacked
+      selectable rows, and no container-owned active-descendant policy.
+- [x] Split the IMUI facade basic text/separator wrapper bodies out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` into a private owner module without changing
+      the public IMUI facade trait surface.
+      Result: `ecosystem/fret-ui-kit/src/imui/facade_writer/basic_items.rs` owns the default bodies
+      for basic text, wrapped text, bullet text, plain separators, and separator text; the root
+      facade trait remains the public method hub and only forwards those calls.
+- [x] Split the IMUI facade image item/button default bodies out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` into a private owner module without changing
+      the public IMUI facade trait surface.
+      Result: `ecosystem/fret-ui-kit/src/imui/facade_writer/image_items.rs` owns the private
+      `image_item_with_options` / `image_button_with_options` forwarding and the image-button
+      default normalization, while `image_item_controls.rs` remains the interactive image widget
+      policy owner.
+- [x] Split the IMUI facade command-presentation default bodies out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` into the existing button/menu owner modules
+      without changing the public IMUI facade trait surface.
+      Result: `button_actions.rs` owns `button_command_with_options` presentation/default-enabled
+      forwarding, `menu_items.rs` owns `menu_item_command_with_options`
+      presentation/default-enabled/default-shortcut forwarding, and the source gate now rejects
+      `command_presentation_for_window` from drifting back into the root facade trait hub.
+- [x] Converge the dirty `main` and `imui-imgui-editor-grade-refactor` worktrees before continuing
+      IMUI feature work.
+      Result: `main` checkpoint `d078e25122`, IMUI worktree checkpoint `05727e284b`, and merge
+      commit `dee3d48f44` are recorded in `WORKTREE_CONVERGENCE_PLAN_2026-05-26.md` and
+      `EVIDENCE_AND_GATES.md`. The merged tree keeps the editor-grade facade/container/listbox
+      organization, preserves the `main` image-item owner split, and continues only from `main`.

@@ -2,7 +2,10 @@
   "schema_version": 2,
   "meta": {
     "name": "ui-gallery-form-docs-smoke",
-    "required_capabilities": ["diag.script_v2"]
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "form"
+    }
   },
   "steps": [
     { "type": "press_key", "key": "escape" },
@@ -48,7 +51,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-form" }
+        "target": { "kind": "test_id", "id": "ui-gallery-form" }
       },
       "timeout_frames": 600
     },

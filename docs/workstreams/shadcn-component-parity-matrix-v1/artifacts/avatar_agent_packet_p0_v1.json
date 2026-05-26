@@ -1,0 +1,448 @@
+{
+  "schema_version": 1,
+  "component": "avatar",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual avatar docs-demo harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-kit/src/primitives/avatar.rs + ecosystem/fret-ui-shadcn/src/avatar.rs + apps/fret-ui-gallery/src/ui/pages/avatar.rs + apps/fret-ui-gallery/src/ui/snippets/avatar/*.rs + tools/diag-scripts/ui-gallery/avatar/*.json",
+  "validation_gates": [
+    {
+      "command": "cargo nextest run -p fret-ui-kit --lib avatar --status-level fail",
+      "status": "pass",
+      "scope": "Avatar primitive tests cover Radix-like fallback delay state, reset behavior, and loaded-image fallback hiding."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail avatar",
+      "status": "pass",
+      "scope": "Avatar recipe tests cover badge size inheritance/override, group count inheritance, fallback delay, image/fallback swap, root clipping, children builder lanes, badge overflow wrapper, RTL badge/group logic, fill layout, cover image paint, and animation-frame requests while fallback delay is pending."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail avatar::",
+      "status": "pass",
+      "scope": "Avatar web-vs-Fret layout checks match avatar-demo, empty-avatar, and empty-avatar-group geometry against upstream golden snapshots."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app avatar_snippets_prefer_ui_cx_on_the_default_app_surface avatar_page_uses_typed_doc_sections_for_app_facing_snippets avatar_page_api_reference_lists_family_parts_and_builder_lanes selected_avatar_snippet_helpers_prefer_into_ui_element_over_anyelement --status-level fail",
+      "status": "pass",
+      "scope": "Gallery authoring-surface gates keep Avatar snippets on AppComponentCx/UiChild, typed DocSection::build sections, family-part API reference notes, and IntoUiElement helpers instead of AnyElement return drift."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\avatar\\ui-gallery-avatar-docs-screenshots.json --dir target\\fret-diag-avatar-docs-screenshots-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Avatar docs screenshots gate captures badge-with-icon paint and dropdown-open paint/bundle evidence from the Gallery docs path.",
+      "run_id": "1779740946452",
+      "ai_packet": "target/fret-diag-avatar-docs-screenshots-matrix/sessions/1779740941943-120408/1779740946452/ai.packet",
+      "share_zip": "target/fret-diag-avatar-docs-screenshots-matrix/sessions/1779740941943-120408/share/1779740946452.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\avatar\\ui-gallery-avatar-badge-and-group-count.json --dir target\\fret-diag-avatar-badge-group-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Avatar badge/group-count gate asserts the badge-with-icon section and default group-count section are present and captures schema2 bundle evidence.",
+      "run_id": "1779740985706",
+      "ai_packet": "target/fret-diag-avatar-badge-group-matrix/sessions/1779740980743-141828/1779740985706/ai.packet",
+      "share_zip": "target/fret-diag-avatar-badge-group-matrix/sessions/1779740980743-141828/share/1779740985706.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\avatar\\ui-gallery-avatar-dropdown-relation-action-state.json --dir target\\fret-diag-avatar-dropdown-relation-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Avatar dropdown relation/action gate proves the authored Button is the semantic trigger, the nested Avatar leaf stays generic/presentational, click opens the menu, Escape restores focus, and controls relations appear only while open.",
+      "run_id": "1779741023727",
+      "ai_packet": "target/fret-diag-avatar-dropdown-relation-matrix/sessions/1779741019561-138960/1779741023727/ai.packet",
+      "share_zip": "target/fret-diag-avatar-dropdown-relation-matrix/sessions/1779741019561-138960/share/1779741023727.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\avatar\\ui-gallery-avatar-fallback-only-screenshot.json --dir target\\fret-diag-avatar-fallback-only-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Avatar fallback-only screenshot gate captures sm/default/lg fallback text paint and rounded-muted chrome in the Fret-only follow-up surface.",
+      "run_id": "1779741043491",
+      "ai_packet": "target/fret-diag-avatar-fallback-only-matrix/sessions/1779741038699-108132/1779741043491/ai.packet",
+      "share_zip": "target/fret-diag-avatar-fallback-only-matrix/sessions/1779741038699-108132/share/1779741043491.zip"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.avatar.demo.light.vp1440x900",
+      "snapshot": "avatar-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.avatar.empty.light.vp1440x900",
+      "snapshot": "empty-avatar",
+      "theme": "light",
+      "mode": "static",
+      "variant": "empty-avatar",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.avatar.empty_group.light.vp1440x900",
+      "snapshot": "empty-avatar-group",
+      "theme": "light",
+      "mode": "static",
+      "variant": "empty-avatar-group",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "avatar-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.avatar.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/avatar-demo.json"
+      },
+      {
+        "snapshot": "empty-avatar",
+        "theme": "light",
+        "mode": "static",
+        "variant": "empty-avatar",
+        "context_id": "upstream.avatar.empty.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/empty-avatar.json"
+      },
+      {
+        "snapshot": "empty-avatar-group",
+        "theme": "light",
+        "mode": "static",
+        "variant": "empty-avatar-group",
+        "context_id": "upstream.avatar.empty_group.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/empty-avatar-group.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-relation-action-state.json",
+        "sidecar_path": "target/fret-diag-avatar-dropdown-relation-matrix/sessions/1779741019561-138960/1779741024749-ui-gallery-avatar-dropdown-open.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-docs-screenshots.json",
+        "bundle_path": "target/fret-diag-avatar-docs-screenshots-matrix/sessions/1779740941943-120408/1779740969077-ui-gallery-avatar-badge-icon/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-docs-screenshots.json",
+        "bundle_path": "target/fret-diag-avatar-docs-screenshots-matrix/sessions/1779740941943-120408/1779740969953-ui-gallery-avatar-dropdown-open/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-badge-and-group-count.json",
+        "bundle_path": "target/fret-diag-avatar-badge-group-matrix/sessions/1779740980743-141828/1779741008232-ui-gallery-avatar-badge-and-group-count/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-relation-action-state.json",
+        "bundle_path": "target/fret-diag-avatar-dropdown-relation-matrix/sessions/1779741019561-138960/1779741025083-ui-gallery-avatar-dropdown-relation-action-state/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-fallback-only-screenshot.json",
+        "bundle_path": "target/fret-diag-avatar-fallback-only-matrix/sessions/1779741038699-108132/1779741066793-ui-gallery-avatar-fallback-only/bundle.schema2.json"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-docs-screenshots.json",
+        "ai_packet": "target/fret-diag-avatar-docs-screenshots-matrix/sessions/1779740941943-120408/1779740946452/ai.packet",
+        "share_zip": "target/fret-diag-avatar-docs-screenshots-matrix/sessions/1779740941943-120408/share/1779740946452.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-badge-and-group-count.json",
+        "ai_packet": "target/fret-diag-avatar-badge-group-matrix/sessions/1779740980743-141828/1779740985706/ai.packet",
+        "share_zip": "target/fret-diag-avatar-badge-group-matrix/sessions/1779740980743-141828/share/1779740985706.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-relation-action-state.json",
+        "ai_packet": "target/fret-diag-avatar-dropdown-relation-matrix/sessions/1779741019561-138960/1779741023727/ai.packet",
+        "share_zip": "target/fret-diag-avatar-dropdown-relation-matrix/sessions/1779741019561-138960/share/1779741023727.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-fallback-only-screenshot.json",
+        "ai_packet": "target/fret-diag-avatar-fallback-only-matrix/sessions/1779741038699-108132/1779741043491/ai.packet",
+        "share_zip": "target/fret-diag-avatar-fallback-only-matrix/sessions/1779741038699-108132/share/1779741043491.zip"
+      }
+    ],
+    "fret_screenshots": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-docs-screenshots.json",
+        "screenshot_path": "target/fret-diag-avatar-docs-screenshots-matrix/sessions/1779740941943-120408/screenshots/1779740969077-ui-gallery-avatar-badge-icon/window-4294967297-tick-69-frame-69.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-docs-screenshots.json",
+        "screenshot_path": "target/fret-diag-avatar-docs-screenshots-matrix/sessions/1779740941943-120408/screenshots/1779740969953-ui-gallery-avatar-dropdown-open/window-4294967297-tick-98-frame-98.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-relation-action-state.json",
+        "screenshot_path": "target/fret-diag-avatar-dropdown-relation-matrix/sessions/1779741019561-138960/screenshots/1779741024785-ui-gallery-avatar-dropdown-open-relation-action-state/window-4294967297-tick-21-frame-21.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-fallback-only-screenshot.json",
+        "screenshot_path": "target/fret-diag-avatar-fallback-only-matrix/sessions/1779741038699-108132/screenshots/1779741066793-ui-gallery-avatar-fallback-only/window-4294967297-tick-78-frame-78.png"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 8,
+    "status_counts": {
+      "pass_known": 8,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 3,
+      "gallery_composition": 2,
+      "mechanism_core": 1,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 3,
+      "app_demo": 2,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 8
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 4,
+      "component_fixture": 2,
+      "unit_test": 2,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 5,
+    "layout_test_id_count": 18,
+    "bundle_semantics_test_id_count": 18,
+    "measured_test_id_count": 18,
+    "upstream_dom_snapshot_count": 3,
+    "upstream_dom_target_count": 3,
+    "upstream_context_count": 3,
+    "upstream_dom_context_count": 3,
+    "upstream_live_fact_count": 6,
+    "fret_live_fact_count": 20,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 6,
+    "fret_text_paint_fact_count": 4,
+    "fret_text_paint_direct_fact_count": 4,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 4,
+    "fret_text_paint_row_count": 4,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/base/avatar.mdx + repo-ref/ui/apps/v4/examples/base/ui/avatar.tsx + repo-ref/ui/apps/v4/examples/base/avatar-demo.tsx + repo-ref/primitives/packages/react/avatar/src/avatar.tsx + goldens/shadcn-web/v4/new-york-v4/avatar-demo.json + goldens/shadcn-web/v4/new-york-v4/empty-avatar.json + goldens/shadcn-web/v4/new-york-v4/empty-avatar-group.json",
+    "fret_source": "ecosystem/fret-ui-kit/src/primitives/avatar.rs + ecosystem/fret-ui-shadcn/src/avatar.rs + apps/fret-ui-gallery/src/ui/pages/avatar.rs + apps/fret-ui-gallery/src/ui/snippets/avatar/*.rs + tools/diag-scripts/ui-gallery/avatar/*.json",
+    "part_count": 8,
+    "upstream_dom_target_count": 3,
+    "fret_test_id_count": 18,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 6,
+    "parts": [
+      {
+        "part_id": "avatar_upstream_source_and_demo",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "docs/audits/shadcn-avatar.md",
+          "docs/audits/radix-avatar.md",
+          "repo-ref/ui/apps/v4/content/docs/components/base/avatar.mdx",
+          "repo-ref/ui/apps/v4/examples/base/ui/avatar.tsx",
+          "repo-ref/primitives/packages/react/avatar/src/avatar.tsx",
+          "goldens/shadcn-web/v4/new-york-v4/avatar-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/empty-avatar.json",
+          "goldens/shadcn-web/v4/new-york-v4/empty-avatar-group.json"
+        ],
+        "facts": [
+          "The upstream docs path covers Demo, Usage, Basic, Badge, Badge with Icon, Avatar Group, Avatar Group Count, Avatar Group with Icon, Sizes, Dropdown, RTL, and API Reference.",
+          "Radix Avatar owns image load status and fallback delay semantics, while the shadcn/base wrapper owns size, rounded clipping, fallback chrome, badge/group composition, and docs examples.",
+          "The tracked web goldens provide static geometry references for the avatar root, rounded variant, overlapping group, empty-avatar fallback, and empty-avatar-group surfaces."
+        ]
+      },
+      {
+        "part_id": "avatar_kit_mechanism",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "evidence_refs": [
+          "ecosystem/fret-ui-kit/src/primitives/avatar.rs",
+          "cargo nextest run -p fret-ui-kit --lib avatar --status-level fail"
+        ],
+        "facts": [
+          "AvatarFallbackDelay matches the Radix delayed fallback outcome without owning recipe chrome.",
+          "fallback_visible hides fallback content when image status is loaded.",
+          "Delay state resets when fallback is no longer wanted, preventing stale delayed fallback rendering."
+        ]
+      },
+      {
+        "part_id": "avatar_recipe_root_image_fallback",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/avatar.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail avatar"
+        ],
+        "facts": [
+          "Avatar root owns fixed size, rounded-full default chrome, flex-shrink-0, and overflow clipping like upstream.",
+          "AvatarImage fills the avatar box and emits SceneOp::Image with ViewportFit::Cover.",
+          "AvatarFallback uses the kit delay gate, hides once an image becomes available, and requests animation frames while pending."
+        ]
+      },
+      {
+        "part_id": "avatar_badge_group_recipe",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/avatar.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/avatar/with_badge.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/avatar/group_count.rs",
+          "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-badge-and-group-count.json",
+          "target/fret-diag-avatar-badge-group-matrix/sessions/1779740980743-141828/1779741008232-ui-gallery-avatar-badge-and-group-count/bundle.schema2.json"
+        ],
+        "facts": [
+          "AvatarBadge and AvatarGroupCount inherit avatar size scope when built inside Avatar/avatar_sized and also support explicit size overrides.",
+          "Avatar with badge uses an overflow-visible wrapper plus clipped core so badges can render outside the circle without leaking image/fallback overflow.",
+          "RTL keeps the badge physically bottom-right while AvatarGroup uses logical visual order for overlapping items."
+        ]
+      },
+      {
+        "part_id": "avatar_web_golden_layout",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "goldens/shadcn-web/v4/new-york-v4/avatar-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/empty-avatar.json",
+          "goldens/shadcn-web/v4/new-york-v4/empty-avatar-group.json",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/avatar.rs",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail avatar::"
+        ],
+        "facts": [
+          "The avatar-demo layout gate matches the default round avatar, rounded-lg override, and overlapping group geometry.",
+          "The empty-avatar layout gate matches the fallback-only root and fallback fill geometry.",
+          "The empty-avatar-group layout gate matches overlapping avatar group width and height against upstream."
+        ]
+      },
+      {
+        "part_id": "avatar_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/avatar.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/avatar/*.rs",
+          "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+          "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app avatar_snippets_prefer_ui_cx_on_the_default_app_surface avatar_page_uses_typed_doc_sections_for_app_facing_snippets avatar_page_api_reference_lists_family_parts_and_builder_lanes selected_avatar_snippet_helpers_prefer_into_ui_element_over_anyelement --status-level fail"
+        ],
+        "facts": [
+          "The Gallery page mirrors the upstream docs path before the Fret-only Fallback only follow-up.",
+          "The API Reference lists Avatar, AvatarImage, AvatarFallback, AvatarBadge, AvatarGroup, and AvatarGroupCount builder lanes.",
+          "Authoring tests keep snippets on the app-facing Ui/UiChild lane and keep helper returns on IntoUiElement rather than AnyElement."
+        ]
+      },
+      {
+        "part_id": "avatar_dropdown_trigger_relation",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/snippets/avatar/dropdown.rs",
+          "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-relation-action-state.json",
+          "target/fret-diag-avatar-dropdown-relation-matrix/sessions/1779741019561-138960/1779741024749-ui-gallery-avatar-dropdown-open.layout/layout.taffy.v1.json",
+          "target/fret-diag-avatar-dropdown-relation-matrix/sessions/1779741019561-138960/1779741025083-ui-gallery-avatar-dropdown-relation-action-state/bundle.schema2.json",
+          "target/fret-diag-avatar-dropdown-relation-matrix/sessions/1779741019561-138960/screenshots/1779741024785-ui-gallery-avatar-dropdown-open-relation-action-state/window-4294967297-tick-21-frame-21.png"
+        ],
+        "facts": [
+          "The dropdown example keeps the authored Button as the semantic trigger and the nested Avatar as presentational content.",
+          "The runtime gate asserts button role/action/focus on the trigger, generic/non-invokable semantics on the avatar leaf, menu open on click, and menu item invoke actions.",
+          "Escape closes the menu, restores focus to the trigger, and clears the trigger controls relation."
+        ]
+      },
+      {
+        "part_id": "avatar_runtime_paint_and_fallback",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-docs-screenshots.json",
+          "tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-fallback-only-screenshot.json",
+          "target/fret-diag-avatar-docs-screenshots-matrix/sessions/1779740941943-120408/screenshots/1779740969077-ui-gallery-avatar-badge-icon/window-4294967297-tick-69-frame-69.png",
+          "target/fret-diag-avatar-docs-screenshots-matrix/sessions/1779740941943-120408/screenshots/1779740969953-ui-gallery-avatar-dropdown-open/window-4294967297-tick-98-frame-98.png",
+          "target/fret-diag-avatar-fallback-only-matrix/sessions/1779741038699-108132/screenshots/1779741066793-ui-gallery-avatar-fallback-only/window-4294967297-tick-78-frame-78.png",
+          "target/fret-diag-avatar-fallback-only-matrix/sessions/1779741038699-108132/1779741066793-ui-gallery-avatar-fallback-only/bundle.schema2.json"
+        ],
+        "facts": [
+          "Docs screenshot evidence captures badge-with-icon paint and dropdown-open paint in the Gallery docs path.",
+          "Fallback-only screenshot evidence captures sm/default/lg fallback text paint, rounded-muted chrome, and stable text metrics.",
+          "The runtime bundle evidence keeps the badge, group-count, dropdown, and fallback-only test_id anchors present for future diffs."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Avatar docs-demo slice with Radix/shadcn source refs, upstream web goldens, kit fallback-delay mechanism tests, shadcn recipe tests, web-vs-Fret geometry, Gallery docs-surface authoring checks, dropdown trigger relation diagnostics, RTL, badge/group-count, and fallback paint evidence.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "avatar.docs-demo.desktop",
+        "component": "avatar",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/avatar_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

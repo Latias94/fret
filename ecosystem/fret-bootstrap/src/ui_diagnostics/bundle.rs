@@ -2,6 +2,7 @@ use fret_runtime::{
     RunnerMonitorInfoV1, RunnerMonitorRectPhysicalV1, RunnerMonitorTopologySnapshotV1,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 use super::*;
 
@@ -46,11 +47,13 @@ impl BundleSemanticsModeV1 {
 pub struct UiDiagnosticsBundleTablesV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub semantics: Option<UiBundleSemanticsTableV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_paint: Option<UiBundleTextPaintFactsTableV1>,
 }
 
 impl UiDiagnosticsBundleTablesV1 {
     fn is_empty(v: &Self) -> bool {
-        v.semantics.is_none()
+        v.semantics.is_none() && v.text_paint.is_none()
     }
 }
 
@@ -65,6 +68,57 @@ pub struct UiBundleSemanticsEntryV1 {
     pub window: u64,
     pub semantics_fingerprint: u64,
     pub semantics: UiSemanticsSnapshotV1,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiBundleTextPaintFactsTableV1 {
+    pub schema_version: u32,
+    pub entries: Vec<UiBundleTextPaintFactsEntryV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiBundleTextPaintFactsEntryV1 {
+    pub window: u64,
+    pub frame_id: u64,
+    pub window_snapshot_seq: u64,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub widget_measure_hotspots: Vec<UiWidgetMeasureHotspotV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub paint_widget_hotspots: Vec<UiPaintWidgetHotspotV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub paint_text_prepare_hotspots: Vec<UiPaintTextPrepareHotspotV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text_input: Option<UiWindowTextInputSnapshotV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub render_text: Option<UiRendererTextPerfSnapshotV1>,
+}
+
+impl UiBundleTextPaintFactsEntryV1 {
+    fn from_snapshot(s: &UiDiagnosticsSnapshotV1) -> Option<Self> {
+        let render_text = s
+            .resource_caches
+            .as_ref()
+            .and_then(|caches| caches.render_text);
+        let has_facts = !s.debug.widget_measure_hotspots.is_empty()
+            || !s.debug.paint_widget_hotspots.is_empty()
+            || !s.debug.paint_text_prepare_hotspots.is_empty()
+            || s.debug.text_input.is_some()
+            || render_text.is_some();
+        if !has_facts {
+            return None;
+        }
+
+        Some(Self {
+            window: s.window,
+            frame_id: s.frame_id,
+            window_snapshot_seq: s.window_snapshot_seq,
+            widget_measure_hotspots: s.debug.widget_measure_hotspots.clone(),
+            paint_widget_hotspots: s.debug.paint_widget_hotspots.clone(),
+            paint_text_prepare_hotspots: s.debug.paint_text_prepare_hotspots.clone(),
+            text_input: s.debug.text_input.clone(),
+            render_text,
+        })
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -404,11 +458,14 @@ fn ui_diagnostics_monitor_fingerprint_from_runner(
 
 impl UiDiagnosticsBundleV2 {
     pub(super) fn from_v1(bundle: UiDiagnosticsBundleV1) -> Self {
-        use std::collections::BTreeMap;
-
         let mut table: BTreeMap<(u64, u64), UiSemanticsSnapshotV1> = BTreeMap::new();
+        let mut text_paint_entries: Vec<UiBundleTextPaintFactsEntryV1> = Vec::new();
         for w in &bundle.windows {
             for s in &w.snapshots {
+                if let Some(entry) = UiBundleTextPaintFactsEntryV1::from_snapshot(s) {
+                    text_paint_entries.push(entry);
+                }
+
                 let Some(sem) = &s.debug.semantics else {
                     continue;
                 };
@@ -430,6 +487,10 @@ impl UiDiagnosticsBundleV2 {
                 })
                 .collect(),
         });
+        let text_paint = (!text_paint_entries.is_empty()).then(|| UiBundleTextPaintFactsTableV1 {
+            schema_version: 1,
+            entries: text_paint_entries,
+        });
 
         Self {
             schema_version: 2,
@@ -438,7 +499,10 @@ impl UiDiagnosticsBundleV2 {
             env: bundle.env,
             config: bundle.config,
             windows: bundle.windows,
-            tables: UiDiagnosticsBundleTablesV1 { semantics },
+            tables: UiDiagnosticsBundleTablesV1 {
+                semantics,
+                text_paint,
+            },
         }
     }
 
@@ -539,5 +603,128 @@ mod tests {
             }
         );
         assert_eq!(topology.monitors[1].scale_factor, 1.5);
+    }
+
+    fn minimal_snapshot(window: u64) -> UiDiagnosticsSnapshotV1 {
+        UiDiagnosticsSnapshotV1 {
+            schema_version: 1,
+            tick_id: 0,
+            frame_id: 0,
+            window_snapshot_seq: 0,
+            window,
+            timestamp_unix_ms: 0,
+            frame_clock: None,
+            scale_factor: 1.0,
+            window_bounds: RectV1 {
+                x: 0.0,
+                y: 0.0,
+                w: 1.0,
+                h: 1.0,
+            },
+            scene_ops: 0,
+            scene_fingerprint: 0,
+            semantics_fingerprint: None,
+            changed_models: Vec::new(),
+            changed_globals: Vec::new(),
+            changed_model_sources_top: Vec::new(),
+            resource_caches: None,
+            app_snapshot: None,
+            safe_area_insets: None,
+            occlusion_insets: None,
+            focus_is_text_input: None,
+            is_composing: None,
+            clipboard: None,
+            primary_pointer_type: None,
+            caps: None,
+            wgpu_adapter: None,
+            debug: UiTreeDebugSnapshotV1::default(),
+        }
+    }
+
+    #[test]
+    fn schema2_exports_text_paint_facts_table_from_debug_snapshots() {
+        let mut bundle = UiDiagnosticsBundleV1 {
+            schema_version: 1,
+            exported_unix_ms: 0,
+            out_dir: "target/fret-diag/test".to_string(),
+            env: None,
+            config: UiDiagnosticsBundleConfigV1 {
+                trigger_path: String::new(),
+                max_events: 0,
+                max_snapshots: 1,
+                dump_max_snapshots: None,
+                capture_semantics: false,
+                max_semantics_nodes: 0,
+                semantics_test_ids_only: false,
+                script_path: String::new(),
+                script_trigger_path: String::new(),
+                script_result_path: String::new(),
+                script_result_trigger_path: String::new(),
+                script_auto_dump: false,
+                pick_trigger_path: String::new(),
+                pick_result_path: String::new(),
+                pick_result_trigger_path: String::new(),
+                pick_auto_dump: false,
+                inspect_path: String::new(),
+                inspect_trigger_path: String::new(),
+                redact_text: false,
+                max_debug_string_bytes: 512,
+                frame_clock_fixed_delta_ms: None,
+            },
+            windows: Vec::new(),
+        };
+
+        let mut snapshot = minimal_snapshot(7);
+        snapshot.window = 7;
+        snapshot.frame_id = 11;
+        snapshot.window_snapshot_seq = 3;
+        snapshot
+            .debug
+            .paint_text_prepare_hotspots
+            .push(UiPaintTextPrepareHotspotV1 {
+                node: 42,
+                element: Some(100),
+                element_kind: Some("Text".to_string()),
+                prepare_time_us: 5,
+                text_len: 12,
+                max_width: Some(200.0),
+                wrap: Some("none".to_string()),
+                overflow: Some("clip".to_string()),
+                scale_factor: Some(1.0),
+                reasons_mask: 1,
+            });
+        snapshot
+            .debug
+            .paint_widget_hotspots
+            .push(UiPaintWidgetHotspotV1 {
+                node: 42,
+                element: Some(100),
+                element_kind: Some("Text".to_string()),
+                widget_type: "TextWidget".to_string(),
+                paint_time_us: 7,
+                inclusive_time_us: 9,
+                inclusive_scene_ops_delta: 2,
+                exclusive_scene_ops_delta: 1,
+            });
+
+        bundle.windows.push(UiDiagnosticsWindowBundleV1 {
+            window: 7,
+            events: Vec::new(),
+            snapshots: vec![snapshot],
+        });
+
+        let schema2 = UiDiagnosticsBundleV2::from_v1(bundle);
+        let table = schema2
+            .tables
+            .text_paint
+            .expect("text_paint table should be exported");
+        assert_eq!(table.schema_version, 1);
+        assert_eq!(table.entries.len(), 1);
+        let entry = &table.entries[0];
+        assert_eq!(entry.window, 7);
+        assert_eq!(entry.frame_id, 11);
+        assert_eq!(entry.window_snapshot_seq, 3);
+        assert_eq!(entry.paint_text_prepare_hotspots[0].node, 42);
+        assert_eq!(entry.paint_widget_hotspots[0].exclusive_scene_ops_delta, 1);
     }
 }

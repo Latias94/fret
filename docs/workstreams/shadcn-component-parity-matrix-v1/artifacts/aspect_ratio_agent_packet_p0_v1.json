@@ -1,0 +1,391 @@
+{
+  "schema_version": 1,
+  "component": "aspect-ratio",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual aspect-ratio docs-demo harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-kit/src/primitives/aspect_ratio.rs + ecosystem/fret-ui-shadcn/src/aspect_ratio.rs + apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs + tools/diag-scripts/ui-gallery/aspect-ratio/*.json",
+  "validation_gates": [
+    {
+      "command": "cargo nextest run -p fret-ui-kit --lib aspect_ratio --status-level fail",
+      "status": "pass",
+      "scope": "AspectRatio primitive tests cover ratio stamping, default 1/1 builder semantics, ratio override, multi-child builder shape, overflow-visible default, and full-size absolute content host."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout web_vs_fret_layout_aspect_ratio_demo_geometry_matches --status-level fail",
+      "status": "pass",
+      "scope": "AspectRatio web-vs-Fret layout gate matches the upstream aspect-ratio-demo image bounds against the Fret AspectRatio wrapper geometry."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_misc_targeted --status-level fail",
+      "status": "pass",
+      "scope": "Misc web-golden marker smoke confirms the upstream aspect-ratio-demo object-cover image and bg-muted rounded-lg wrapper markers remain present."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app aspect_ratio_snippets_prefer_ui_cx_on_the_default_app_surface aspect_ratio_page_uses_typed_doc_sections_for_app_facing_snippets selected_aspect_ratio_snippet_helpers_prefer_into_ui_element_over_anyelement --status-level fail",
+      "status": "pass",
+      "scope": "Gallery authoring-surface gates keep AspectRatio snippets on AppComponentCx/UiChild, typed DocSection::build sections, and IntoUiElement helpers instead of AnyElement return drift."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\aspect-ratio\\ui-gallery-aspect-ratio-docs-smoke.json --dir target\\fret-diag-aspect-ratio-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "AspectRatio docs smoke navigates to the Gallery page and asserts Demo, Usage, Square, Portrait, RTL, API Reference, and geometry-centering anchors before capturing bundle evidence.",
+      "run_id": "1779739275903",
+      "ai_packet": "target/fret-diag-aspect-ratio-docs-smoke-matrix/sessions/1779739270610-33384/1779739275903/ai.packet",
+      "share_zip": "target/fret-diag-aspect-ratio-docs-smoke-matrix/sessions/1779739270610-33384/share/1779739275903.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\aspect-ratio\\ui-gallery-aspect-ratio-demo-screenshot.json --dir target\\fret-diag-aspect-ratio-demo-screenshot-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "AspectRatio demo screenshot waits for the bundled image loaded marker, checks content centering, and captures screenshot plus schema2 bundle evidence.",
+      "run_id": "1779739338909",
+      "ai_packet": "target/fret-diag-aspect-ratio-demo-screenshot-matrix/sessions/1779739330716-121068/1779739338909/ai.packet",
+      "share_zip": "target/fret-diag-aspect-ratio-demo-screenshot-matrix/sessions/1779739330716-121068/share/1779739338909.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\aspect-ratio\\ui-gallery-aspect-ratio-composable-children-overlay.json --dir target\\fret-diag-aspect-ratio-composable-children-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "AspectRatio composable-children overlay gate proves direct image + badge children share the ratio frame without an extra caller wrapper and captures layout sidecar evidence.",
+      "run_id": "1779739338054",
+      "ai_packet": "target/fret-diag-aspect-ratio-composable-children-matrix/sessions/1779739330766-129600/1779739338054/ai.packet",
+      "share_zip": "target/fret-diag-aspect-ratio-composable-children-matrix/sessions/1779739330766-129600/share/1779739338054.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\aspect-ratio\\ui-gallery-aspect-ratio-rtl-screenshot.json --dir target\\fret-diag-aspect-ratio-rtl-screenshot-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "AspectRatio RTL screenshot gate waits for the real media asset, scrolls the RTL figure into view, and captures the direction-aware caption plus stable ratio frame.",
+      "run_id": "1779739339146",
+      "ai_packet": "target/fret-diag-aspect-ratio-rtl-screenshot-matrix/sessions/1779739330799-126080/1779739339146/ai.packet",
+      "share_zip": "target/fret-diag-aspect-ratio-rtl-screenshot-matrix/sessions/1779739330799-126080/share/1779739339146.zip"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.aspect_ratio.demo.light.vp1440x900",
+      "snapshot": "aspect-ratio-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.aspect_ratio.demo.dark.vp1440x900",
+      "snapshot": "aspect-ratio-demo",
+      "theme": "dark",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "aspect-ratio-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.aspect_ratio.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/aspect-ratio-demo.json"
+      },
+      {
+        "snapshot": "aspect-ratio-demo",
+        "theme": "dark",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.aspect_ratio.demo.dark.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/aspect-ratio-demo.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-composable-children-overlay.json",
+        "sidecar_path": "target/fret-diag-aspect-ratio-composable-children-matrix/sessions/1779739330766-129600/1779739355401-ui-gallery-aspect-ratio-composable-children-overlay/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-docs-smoke.json",
+        "bundle_path": "target/fret-diag-aspect-ratio-docs-smoke-matrix/sessions/1779739270610-33384/1779739283910-ui-gallery-aspect-ratio-docs-smoke/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-demo-screenshot.json",
+        "bundle_path": "target/fret-diag-aspect-ratio-demo-screenshot-matrix/sessions/1779739330716-121068/1779739346121-ui-gallery-aspect-ratio-demo-screenshot/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-composable-children-overlay.json",
+        "bundle_path": "target/fret-diag-aspect-ratio-composable-children-matrix/sessions/1779739330766-129600/1779739355401-ui-gallery-aspect-ratio-composable-children-overlay/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-rtl-screenshot.json",
+        "bundle_path": "target/fret-diag-aspect-ratio-rtl-screenshot-matrix/sessions/1779739330799-126080/1779739357375-ui-gallery-aspect-ratio-rtl/bundle.schema2.json"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-docs-smoke.json",
+        "ai_packet": "target/fret-diag-aspect-ratio-docs-smoke-matrix/sessions/1779739270610-33384/1779739275903/ai.packet",
+        "share_zip": "target/fret-diag-aspect-ratio-docs-smoke-matrix/sessions/1779739270610-33384/share/1779739275903.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-demo-screenshot.json",
+        "ai_packet": "target/fret-diag-aspect-ratio-demo-screenshot-matrix/sessions/1779739330716-121068/1779739338909/ai.packet",
+        "share_zip": "target/fret-diag-aspect-ratio-demo-screenshot-matrix/sessions/1779739330716-121068/share/1779739338909.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-composable-children-overlay.json",
+        "ai_packet": "target/fret-diag-aspect-ratio-composable-children-matrix/sessions/1779739330766-129600/1779739338054/ai.packet",
+        "share_zip": "target/fret-diag-aspect-ratio-composable-children-matrix/sessions/1779739330766-129600/share/1779739338054.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-rtl-screenshot.json",
+        "ai_packet": "target/fret-diag-aspect-ratio-rtl-screenshot-matrix/sessions/1779739330799-126080/1779739339146/ai.packet",
+        "share_zip": "target/fret-diag-aspect-ratio-rtl-screenshot-matrix/sessions/1779739330799-126080/share/1779739339146.zip"
+      }
+    ],
+    "fret_screenshots": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-demo-screenshot.json",
+        "screenshot_path": "target/fret-diag-aspect-ratio-demo-screenshot-matrix/sessions/1779739330716-121068/screenshots/1779739346177-ui-gallery-aspect-ratio-demo-screenshot/window-4294967297-tick-22-frame-22.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-rtl-screenshot.json",
+        "screenshot_path": "target/fret-diag-aspect-ratio-rtl-screenshot-matrix/sessions/1779739330799-126080/screenshots/1779739357412-ui-gallery-aspect-ratio-rtl/window-4294967297-tick-53-frame-53.png"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 7,
+    "status_counts": {
+      "pass_known": 7,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "gallery_composition": 2,
+      "mechanism_core": 2,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 2,
+      "policy": 0,
+      "recipe": 1,
+      "app_demo": 2,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 7
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 4,
+      "component_fixture": 2,
+      "unit_test": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 4,
+    "layout_test_id_count": 18,
+    "bundle_semantics_test_id_count": 18,
+    "measured_test_id_count": 18,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 1,
+    "upstream_context_count": 2,
+    "upstream_dom_context_count": 2,
+    "upstream_live_fact_count": 5,
+    "fret_live_fact_count": 18,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 0,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 2,
+    "fret_text_paint_direct_fact_count": 2,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 2,
+    "fret_text_paint_row_count": 2,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/primitives/packages/react/aspect-ratio/src/aspect-ratio.tsx + repo-ref/ui/apps/v4/registry/new-york-v4/ui/aspect-ratio.tsx + repo-ref/ui/apps/v4/content/docs/components/aspect-ratio.mdx + repo-ref/ui/apps/v4/registry/new-york-v4/examples/aspect-ratio-demo.tsx + goldens/shadcn-web/v4/new-york-v4/aspect-ratio-demo.json",
+    "fret_source": "ecosystem/fret-ui-kit/src/primitives/aspect_ratio.rs + ecosystem/fret-ui-shadcn/src/aspect_ratio.rs + apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs + apps/fret-ui-gallery/src/ui/snippets/aspect_ratio/*.rs + tools/diag-scripts/ui-gallery/aspect-ratio/*.json",
+    "part_count": 7,
+    "upstream_dom_target_count": 1,
+    "fret_test_id_count": 18,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 0,
+    "fret_interaction_fact_count": 4,
+    "parts": [
+      {
+        "part_id": "aspect_ratio_upstream_source_and_demo",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "docs/audits/radix-aspect-ratio.md",
+          "repo-ref/primitives/packages/react/aspect-ratio/src/aspect-ratio.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/aspect-ratio.tsx",
+          "repo-ref/ui/apps/v4/content/docs/components/aspect-ratio.mdx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/aspect-ratio-demo.tsx",
+          "goldens/shadcn-web/v4/new-york-v4/aspect-ratio-demo.json"
+        ],
+        "facts": [
+          "Radix AspectRatio is intentionally visual-agnostic and uses relative wrapper geometry plus an absolute content host.",
+          "The shadcn wrapper re-exports the Radix primitive without additional behavior.",
+          "The tracked docs demo provides the upstream image/wrapper chrome and object-cover markers for the Fret layout comparison."
+        ]
+      },
+      {
+        "part_id": "aspect_ratio_kit_mechanism",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "evidence_refs": [
+          "ecosystem/fret-ui-kit/src/primitives/aspect_ratio.rs",
+          "docs/adr/0062-tailwind-layout-primitives-margin-position-grid-aspect-ratio.md",
+          "cargo nextest run -p fret-ui-kit --lib aspect_ratio --status-level fail"
+        ],
+        "facts": [
+          "The kit primitive stamps LayoutStyle.aspect_ratio on the root container rather than emulating the DOM padding-bottom trick.",
+          "Overflow remains visible by default, matching Radix.",
+          "The primitive inserts a full-size absolute content host so child width/height fill resolves against an explicit containing block."
+        ]
+      },
+      {
+        "part_id": "aspect_ratio_shadcn_reexport_surface",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/aspect_ratio.rs",
+          "ecosystem/fret-ui-kit/src/primitives/aspect_ratio.rs"
+        ],
+        "facts": [
+          "The shadcn crate keeps AspectRatio as a thin re-export of the Radix-aligned kit primitive.",
+          "No recipe-local style policy is added on top of the primitive.",
+          "This keeps ratio geometry in the primitive layer and caller-owned chrome such as max width, radius, background, and object-fit in the gallery/examples."
+        ]
+      },
+      {
+        "part_id": "aspect_ratio_web_golden_layout_and_markers",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "evidence_refs": [
+          "goldens/shadcn-web/v4/new-york-v4/aspect-ratio-demo.json",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_misc_targeted.rs"
+        ],
+        "facts": [
+          "The web-vs-Fret layout gate matches Fret AspectRatio bounds to the upstream demo image rect within 2px.",
+          "The misc targeted web-golden gate confirms the upstream object-cover image marker remains present.",
+          "The same marker gate confirms the upstream bg-muted rounded-lg wrapper chrome remains present."
+        ]
+      },
+      {
+        "part_id": "aspect_ratio_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/aspect_ratio/demo.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/aspect_ratio/usage.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/aspect_ratio/rtl.rs",
+          "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+        ],
+        "facts": [
+          "The Gallery page follows the shadcn docs path after skipping Installation: Demo, Usage, Square, Portrait, RTL, and API Reference.",
+          "The API Reference records default ratio, multi-child composition, full-size content host, and caller-owned chrome notes.",
+          "The authoring-surface tests keep snippets on AppComponentCx/UiChild and keep extracted helpers returning IntoUiElement instead of AnyElement."
+        ]
+      },
+      {
+        "part_id": "aspect_ratio_runtime_docs_and_paint",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-docs-smoke.json",
+          "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-demo-screenshot.json",
+          "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-rtl-screenshot.json",
+          "target/fret-diag-aspect-ratio-docs-smoke-matrix/sessions/1779739270610-33384/1779739275903/ai.packet",
+          "target/fret-diag-aspect-ratio-demo-screenshot-matrix/sessions/1779739330716-121068/screenshots/1779739346177-ui-gallery-aspect-ratio-demo-screenshot/window-4294967297-tick-22-frame-22.png",
+          "target/fret-diag-aspect-ratio-rtl-screenshot-matrix/sessions/1779739330799-126080/screenshots/1779739357412-ui-gallery-aspect-ratio-rtl/window-4294967297-tick-53-frame-53.png"
+        ],
+        "facts": [
+          "The docs smoke script asserts the main docs-path sections and core ratio-frame/content centering relationships.",
+          "The demo screenshot script waits for the real bundled image loaded marker before capturing paint evidence.",
+          "The RTL screenshot script captures the direction-aware caption below a stable ratio frame without overlap."
+        ]
+      },
+      {
+        "part_id": "aspect_ratio_composable_children_overlay",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/snippets/aspect_ratio/composable_children.rs",
+          "tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-composable-children-overlay.json",
+          "target/fret-diag-aspect-ratio-composable-children-matrix/sessions/1779739330766-129600/1779739355401-ui-gallery-aspect-ratio-composable-children-overlay/layout.taffy.v1.json"
+        ],
+        "facts": [
+          "The Fret-specific composable-children follow-up proves image + badge overlay composition without forcing a caller wrapper.",
+          "The runtime gate asserts the badge overlaps both the ratio frame and image while staying inside the window.",
+          "This remains a public-surface/gallery composition proof, not a mechanism-layer expansion."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the AspectRatio docs-demo slice with Radix/shadcn source refs, upstream golden, kit primitive mechanism tests, web-vs-Fret geometry, Gallery docs-surface authoring checks, runtime screenshots, RTL, and direct multi-child overlay diagnostics.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "aspect-ratio.docs-demo.desktop",
+        "component": "aspect-ratio",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/aspect_ratio_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

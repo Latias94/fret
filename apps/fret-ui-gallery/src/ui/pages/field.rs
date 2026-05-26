@@ -145,6 +145,7 @@ pub(super) fn preview_field(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .description(
             "Responsive orientation keeps the upstream layout shape while the gallery-only width toggle exercises the container breakpoint.",
         )
+        .max_w(Px(980.0))
         .code_rust_from_file_region(snippets::responsive::SOURCE, "example");
     let validation_and_errors =
         DocSection::build(cx, "Validation and Errors", validation_and_errors)

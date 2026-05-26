@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "slug": "imui-list-box-container-proof-v1",
+  "title": "IMUI List Box Container Proof v1",
+  "status": "closed",
+  "updated": "2026-05-25",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-collection-helper-readiness-v1",
+  "problem": "Fret IMUI has selectable rows and generic scroll/child-region containers, but it lacks a narrow Dear ImGui `BeginListBox`-style container that gives listbox semantics, stable diagnostics ids, and a scrollable row host without owning selection, filtering, command packages, or collection policy.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-list-box-container-proof-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-list-box-container-proof-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-list-box-container-proof-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-list-box-container-proof-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-list-box-container-proof-v1/CLOSEOUT_AUDIT_2026-05-25.md"
+    },
+    {
+      "role": "closeout_boundary",
+      "path": "docs/workstreams/imui-collection-helper-readiness-v1/CLOSEOUT_AUDIT_2026-04-24.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use a focused IMUI composition test to prove `list_box_with_options` stamps ListBox semantics, forwards scroll/test-id options, stacks selectable rows, and keeps selection/app policy outside the container.",
+    "commands": [
+      "cargo nextest run -p fret-imui list_box_container_stamps_semantics_scroll_and_hosts_selectables --no-fail-fast",
+      "cargo check -p fret-ui-kit --features imui"
+    ]
+  },
+  "gates": [
+    {
+      "name": "fret-ui-kit-check",
+      "command": "cargo check -p fret-ui-kit --features imui"
+    },
+    {
+      "name": "imui-list-box-focused",
+      "command": "cargo nextest run -p fret-imui list_box_container_stamps_semantics_scroll_and_hosts_selectables --no-fail-fast"
+    },
+    {
+      "name": "imui-source-policy",
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-kit/src/imui/options/containers.rs",
+    "ecosystem/fret-ui-kit/src/imui/list_box_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer.rs",
+    "ecosystem/fret-imui/src/tests/composition/layout_collections.rs",
+    "tools/gate_imui_workstream_source.py",
+    "docs/workstreams/imui-list-box-container-proof-v1/EVIDENCE_AND_GATES.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed for the narrow ListBox semantic/scroll container. Do not reopen it for generic collection helpers, selection models, filtering/typeahead, command packages, virtualization, or recipe-owned overlay policy; start a new proof-led follow-on if product routes show repeated pressure."
+  }
+}

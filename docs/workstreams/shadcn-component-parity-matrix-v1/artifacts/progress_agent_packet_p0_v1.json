@@ -1,0 +1,360 @@
+{
+  "schema_version": 1,
+  "component": "progress",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual progress docs-demo harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/progress.rs + apps/fret-ui-gallery/src/ui/snippets/progress/*.rs + tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-numeric-semantics.json + tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-docs-smoke.json",
+  "validation_gates": [
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\progress\\ui-gallery-progress-numeric-semantics.json --dir target\\fret-diag-progress-numeric-semantics-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Progress controlled bar numeric semantics: slider-driven value update to 66, min/max/value assertions, layout sidecar, schema2 bundle, AI packet, and share zip.",
+      "run_id": "1779705454170",
+      "ai_packet": "target/fret-diag-progress-numeric-semantics-matrix/sessions/1779705450337-108572/1779705454170/ai.packet",
+      "share_zip": "target/fret-diag-progress-numeric-semantics-matrix/sessions/1779705450337-108572/share/1779705454170.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\progress\\ui-gallery-progress-docs-smoke.json --dir target\\fret-diag-progress-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Progress docs page smoke: navigation, docs-path section presence, API reference visibility, schema2 bundle, screenshot, AI packet, and share zip.",
+      "run_id": "1779705480257",
+      "ai_packet": "target/fret-diag-progress-docs-smoke-matrix/sessions/1779705476101-113760/1779705480257/ai.packet",
+      "share_zip": "target/fret-diag-progress-docs-smoke-matrix/sessions/1779705476101-113760/share/1779705480257.zip"
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail progress",
+      "status": "pass",
+      "scope": "Progress recipe tests cover optional value baseline, from_value semantics, UI patch lane, values-first bridge, RTL mirroring, and animated translate retargeting."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_progress_numeric_semantics",
+      "status": "pass",
+      "scope": "Progress semantics snapshot keeps role=ProgressBar and numeric value surface stable."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail progress::",
+      "status": "pass",
+      "scope": "Progress web-vs-Fret layout checks match the upstream track and indicator geometry in light and dark themes."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail web_vs_fret_progress_demo_control_chrome_matches",
+      "status": "pass",
+      "scope": "Progress control chrome matches upstream track width, height, border, and radius."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test progress_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Progress gallery docs surface keeps source-axis notes, snippet import surface, docs-path section order, label row, and RTL snippet expectations."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_progress_label_row_keeps_docs_aligned_trailing_value_lane",
+      "status": "pass",
+      "scope": "Progress gallery label and RTL rows keep their one-line label/value lanes and trailing/leading value placement."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.progress.demo.light.vp1440x900",
+      "snapshot": "progress-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.progress.demo.dark.vp1440x900",
+      "snapshot": "progress-demo",
+      "theme": "dark",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "progress-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.progress.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/progress-demo.json"
+      },
+      {
+        "snapshot": "progress-demo",
+        "theme": "dark",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.progress.demo.dark.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/progress-demo.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-numeric-semantics.json",
+        "sidecar_path": "target/fret-diag-progress-numeric-semantics-matrix/sessions/1779705450337-108572/1779705465971-ui-gallery-progress-numeric-semantics.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-numeric-semantics.json",
+        "bundle_path": "target/fret-diag-progress-numeric-semantics-matrix/sessions/1779705450337-108572/1779705466021-progress-numeric-semantics/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-docs-smoke.json",
+        "bundle_path": "target/fret-diag-progress-docs-smoke-matrix/sessions/1779705476101-113760/1779705499549-ui-gallery-progress-docs-smoke/bundle.schema2.json"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-numeric-semantics.json",
+        "ai_packet": "target/fret-diag-progress-numeric-semantics-matrix/sessions/1779705450337-108572/1779705454170/ai.packet",
+        "share_zip": "target/fret-diag-progress-numeric-semantics-matrix/sessions/1779705450337-108572/share/1779705454170.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-docs-smoke.json",
+        "ai_packet": "target/fret-diag-progress-docs-smoke-matrix/sessions/1779705476101-113760/1779705480257/ai.packet",
+        "share_zip": "target/fret-diag-progress-docs-smoke-matrix/sessions/1779705476101-113760/share/1779705480257.zip"
+      }
+    ],
+    "fret_screenshots": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-docs-smoke.json",
+        "screenshot_path": "target/fret-diag-progress-docs-smoke-matrix/sessions/1779705476101-113760/screenshots/1779705499681-ui-gallery-progress-docs-smoke/window-4294967297-tick-34-frame-34.png"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 7,
+    "status_counts": {
+      "pass_known": 7,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 3,
+      "gallery_composition": 2,
+      "mechanism_core": 0,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 3,
+      "app_demo": 2,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 7
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 2,
+      "component_fixture": 2,
+      "unit_test": 3,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 2,
+    "layout_test_id_count": 230,
+    "bundle_semantics_test_id_count": 324,
+    "measured_test_id_count": 324,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 1,
+    "upstream_context_count": 2,
+    "upstream_dom_context_count": 2,
+    "upstream_live_fact_count": 4,
+    "fret_live_fact_count": 15,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 3,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/progress.mdx + repo-ref/ui/apps/v4/registry/new-york-v4/ui/progress.tsx + repo-ref/ui/apps/v4/registry/new-york-v4/examples/progress-demo.tsx + goldens/shadcn-web/v4/new-york-v4/progress-demo.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/progress.rs + apps/fret-ui-gallery/src/ui/pages/progress.rs + apps/fret-ui-gallery/src/ui/snippets/progress/*.rs + tools/diag-scripts/ui-gallery/progress/*.json",
+    "part_count": 7,
+    "upstream_dom_target_count": 1,
+    "fret_test_id_count": 324,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 3,
+    "parts": [
+      {
+        "part_id": "progress_upstream_source_and_demo",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "repo-ref/ui/apps/v4/content/docs/components/progress.mdx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/progress.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/progress-demo.tsx",
+          "goldens/shadcn-web/v4/new-york-v4/progress-demo.json"
+        ],
+        "facts": [
+          "Upstream Progress root owns bg-primary/20, relative positioning, h-2, w-full, overflow-hidden, and rounded-full.",
+          "The upstream indicator owns bg-primary, h-full, w-full, flex-1, transition-all, and translateX(-100 + value).",
+          "The docs demo sets the value from 13 to 66 after 500ms and applies the example-local w-[60%] width."
+        ]
+      },
+      {
+        "part_id": "progress_recipe_semantics_and_motion",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/progress.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail progress"
+        ],
+        "facts": [
+          "Progress::from_value stamps role=ProgressBar, numeric value, and default percentage value text.",
+          "Progress::new_opt(None) preserves the shadcn value-or-zero visual baseline while omitting numeric_value.",
+          "Progress mirror_in_rtl and animated translate retargeting are covered by focused recipe tests."
+        ]
+      },
+      {
+        "part_id": "progress_web_golden_layout_and_chrome",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "goldens/shadcn-web/v4/new-york-v4/progress-demo.json",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/progress.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs"
+        ],
+        "facts": [
+          "The web-vs-Fret layout tests match the upstream progress track and indicator geometry in light and dark themes.",
+          "The control chrome test matches the upstream progress track width, height, border, and radius.",
+          "The recipe keeps the example width caller-owned through refine_layout instead of baking w-[60%] into the component default."
+        ]
+      },
+      {
+        "part_id": "progress_numeric_semantics_diag",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-numeric-semantics.json",
+          "target/fret-diag-progress-numeric-semantics-matrix/sessions/1779705450337-108572/1779705465971-ui-gallery-progress-numeric-semantics.layout/layout.taffy.v1.json",
+          "target/fret-diag-progress-numeric-semantics-matrix/sessions/1779705450337-108572/1779705466021-progress-numeric-semantics/bundle.schema2.json",
+          "target/fret-diag-progress-numeric-semantics-matrix/sessions/1779705450337-108572/1779705454170/ai.packet",
+          "target/fret-diag-progress-numeric-semantics-matrix/sessions/1779705450337-108572/share/1779705454170.zip"
+        ],
+        "facts": [
+          "The script drives ui-gallery-progress-controlled-slider to 66 and waits for the controlled progress bar numeric value to match.",
+          "The script asserts min=0 and max=100 on ui-gallery-progress-controlled-bar.",
+          "The captured bundle records ui-gallery-progress-controlled-bar as role=progress_bar with value 66%, and the layout sidecar contains the ProgressBar node."
+        ]
+      },
+      {
+        "part_id": "progress_docs_smoke_diag",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-docs-smoke.json",
+          "target/fret-diag-progress-docs-smoke-matrix/sessions/1779705476101-113760/1779705499549-ui-gallery-progress-docs-smoke/bundle.schema2.json",
+          "target/fret-diag-progress-docs-smoke-matrix/sessions/1779705476101-113760/screenshots/1779705499681-ui-gallery-progress-docs-smoke/window-4294967297-tick-34-frame-34.png"
+        ],
+        "facts": [
+          "The docs smoke script navigates to Progress and asserts Usage, Label, Controlled, RTL, and API Reference sections.",
+          "The passing run captures a schema2 bundle and screenshot for the docs-path page.",
+          "The command dispatch trace records ui_gallery.nav.select.progress handled by the gallery driver."
+        ]
+      },
+      {
+        "part_id": "progress_gallery_teaching_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/progress.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/progress/usage.rs",
+          "apps/fret-ui-gallery/tests/progress_docs_surface.rs",
+          "cargo nextest run -p fret-ui-gallery --test progress_docs_surface --status-level fail"
+        ],
+        "facts": [
+          "The docs surface test keeps source-axis notes, the children API decision, and docs-path section order visible.",
+          "The usage snippet remains a complete copyable snapshot-value example with AppComponentCx and UiChild imports.",
+          "The test caught and locked the import-order teaching-surface drift in usage.rs."
+        ]
+      },
+      {
+        "part_id": "progress_gallery_label_row_layout",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/driver/render_flow.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/progress/label.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/progress/rtl.rs",
+          "cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_progress_label_row_keeps_docs_aligned_trailing_value_lane"
+        ],
+        "facts": [
+          "The gallery render-flow test keeps the LTR progress label title and percentage on one row.",
+          "The same test keeps the RTL localized value in the visual inline-start lane and the label in the visual inline-end lane.",
+          "This is app-demo layout ownership, not a mechanism-layer change."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Lock the Progress docs-demo desktop slice with upstream source/golden, Fret recipe semantics, web-vs-Fret geometry/chrome, UI Gallery docs/layout, and runtime diagnostics evidence.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "progress.docs-demo.desktop",
+        "component": "progress",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/progress_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

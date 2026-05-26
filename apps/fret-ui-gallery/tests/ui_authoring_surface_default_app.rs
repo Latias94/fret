@@ -537,7 +537,7 @@ fn progress_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/progress/demo.rs",
         ],
         &[
-            "use fret::{UiChild, AppComponentCx};",
+            "use fret::{AppComponentCx, UiChild};",
             "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
@@ -3862,7 +3862,7 @@ fn checkbox_radio_input_and_textarea_docs_keep_required_ownership_on_the_control
         (
             "src/ui/pages/checkbox.rs",
             vec![
-                "`Checkbox::required(true)` now maps the upstream required semantics (`aria-required`) onto the checkbox control itself; the docs path still composes field labels/descriptions externally instead of widening the checkbox to a children API.",
+                "`Checkbox::required(true)` now maps required semantics (`aria-required`) onto the checkbox control itself; docs and registry examples still compose field labels/descriptions externally instead of widening the checkbox to a children API.",
             ],
         ),
         (
@@ -10459,7 +10459,7 @@ fn checkbox_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/checkbox/with_title.rs",
         ],
         &[
-            "use fret::{UiChild, AppComponentCx};",
+            "use fret::{AppComponentCx, UiChild};",
             "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
@@ -10552,19 +10552,19 @@ fn checkbox_page_teaches_rtl_as_fuller_translated_preview() {
 
     assert!(
         checkbox_page.contains(
-            "The `RTL` preview now keeps the translated upstream four-row example shape. `DirectionProvider(Rtl)` plus `Field`, `FieldContent`, `Label::for_control(...)`, and `FieldLabel::wrap(...)` are already sufficient, so no checkbox-specific physical alignment prop or wider children API is needed."
+            "The `RTL` preview translates the current four-row demo shape. `DirectionProvider(Rtl)` plus `Field`, `FieldContent`, `Label::for_control(...)`, and `FieldLabel::wrap(...)` are already sufficient, so no checkbox-specific physical alignment prop or wider children API is needed."
         ),
         "src/ui/pages/checkbox.rs should record that RTL parity stays on the existing logical field composition surface"
     );
     assert!(
         checkbox_page.contains(
-            "Translated upstream four-row RTL preview under `DirectionProvider(Rtl)` using the same logical field primitives."
+            "Translated four-row demo preview under `DirectionProvider(Rtl)` using the same logical field primitives."
         ),
         "src/ui/pages/checkbox.rs should describe the RTL section as the fuller translated upstream preview"
     );
     assert!(
         checkbox_page.contains(
-            "Preview mirrors the shadcn Checkbox docs path first, including the translated upstream four-row RTL preview, surfaces the source-aligned snapshot/action story in `API Reference`, then keeps `Label Association` and `With Title` as focused Fret follow-ups."
+            "Preview starts with the current shadcn Checkbox `Demo` and `Usage`, surfaces checked/invalid state and registry-shaped composition follow-ups, records the source-aligned snapshot/action story in `API Reference`, then keeps `Label Association` and `With Title` as focused Fret follow-ups."
         ),
         "src/ui/pages/checkbox.rs should keep the translated upstream RTL preview visible in the page-level teaching summary"
     );

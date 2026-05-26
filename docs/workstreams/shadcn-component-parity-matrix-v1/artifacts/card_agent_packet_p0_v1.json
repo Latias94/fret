@@ -1,0 +1,383 @@
+{
+  "schema_version": 1,
+  "component": "card",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual card docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/card.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/card.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs + apps/fret-ui-gallery/src/ui/pages/card.rs + apps/fret-ui-gallery/src/ui/snippets/card/*.rs + apps/fret-ui-gallery/tests/card_docs_surface.rs + apps/fret-ui-gallery/tests/card_rich_description_surface.rs + apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs + tools/diag-scripts/ui-gallery/card/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/card_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Card component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-screenshot.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-compositions.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-description-no-early-wrap.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-content-button-hitbox-not-stretched.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-image-event-cover-screenshot.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-meeting-notes-list-no-early-wrap.json | Out-Null",
+      "status": "pass",
+      "scope": "Card docs-path, action-state, screenshot, composition, text-wrap, hitbox, image-cover, and meeting-notes diagnostic scripts parse cleanly."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail card",
+      "status": "pass",
+      "scope": "Card recipe tests cover slot helpers, title/description children lanes, root chrome, header source-aligned grid tracks, CardAction slot placement, section sizing, footer fill/min-w-0 budget, and builder-first size inheritance."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail card",
+      "status": "pass",
+      "scope": "Card web-vs-Fret layout gates compare card-with-form root width, card-demo header/action geometry, action intrinsic width, text wrap budget, and footer text behavior against upstream goldens and style-aware layout captures."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail card",
+      "status": "pass",
+      "scope": "Card web-vs-Fret chrome gates cover card-demo border/radius/background and the dedicated light/dark shadow-sm footprint evidence."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test card_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery docs-surface gates keep Card source-axis notes, docs-path order, copyable snippets, runtime test ids, and promoted diagnostics scripts aligned."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test card_rich_description_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery authoring-surface gates keep the rich description lane on the copyable card_description_children helper instead of lower-level slot builders."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_card",
+      "status": "pass",
+      "scope": "Gallery render-flow gates keep card docs-path examples, RTL form controls, header action lane, support-link lane, footer button geometry, follow-up surfaces, composition widths, and text-wrap behavior stable."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\card\\ui-gallery-card-demo-action-state.json --dir target\\fret-diag-card-demo-action-state-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Card demo action-state diagnostic proves the docs-path title/description/input/link/button anchors, form-control roles, invoke/focus/set_value actions, and value mutation path.",
+      "run_id": "1779762833890",
+      "ai_packet": "target/fret-diag-card-demo-action-state-matrix/sessions/1779762815568-118164/1779762833890/ai.packet",
+      "share_zip": "target/fret-diag-card-demo-action-state-matrix/sessions/1779762815568-118164/share/1779762833890.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\card\\ui-gallery-card-docs-smoke.json --dir target\\fret-diag-card-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Card docs-smoke diagnostic proves the docs path plus Fret follow-up sections render with stable test_id anchors in the default UI Gallery catalog.",
+      "run_id": "1779762865717",
+      "ai_packet": "target/fret-diag-card-docs-smoke-matrix/sessions/1779762858788-153676/1779762865717/ai.packet",
+      "share_zip": "target/fret-diag-card-docs-smoke-matrix/sessions/1779762858788-153676/share/1779762865717.zip"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.card.demo.light.vp1440x900",
+      "snapshot": "card-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.card.with_form.light.vp1440x900",
+      "snapshot": "card-with-form",
+      "theme": "light",
+      "mode": "static",
+      "variant": "with-form",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "card-demo",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/card-demo.json"
+      },
+      {
+        "snapshot": "card-with-form",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/card-with-form.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json",
+        "layout_path": "target/fret-diag-card-demo-action-state-matrix"
+      },
+      {
+        "test": "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/card.rs",
+        "layout_scope": "card-demo and card-with-form web-vs-Fret layout gates"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json",
+        "bundle_path": "target/fret-diag-card-demo-action-state-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-docs-smoke.json",
+        "bundle_path": "target/fret-diag-card-docs-smoke-matrix"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json",
+        "ai_packet": "target/fret-diag-card-demo-action-state-matrix/sessions/1779762815568-118164/1779762833890/ai.packet",
+        "share_zip": "target/fret-diag-card-demo-action-state-matrix/sessions/1779762815568-118164/share/1779762833890.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-docs-smoke.json",
+        "ai_packet": "target/fret-diag-card-docs-smoke-matrix/sessions/1779762858788-153676/1779762865717/ai.packet",
+        "share_zip": "target/fret-diag-card-docs-smoke-matrix/sessions/1779762858788-153676/share/1779762865717.zip"
+      }
+    ],
+    "screenshots": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-screenshot.json",
+        "label": "card demo screenshot"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-image-event-cover-screenshot.json",
+        "label": "card image event cover screenshot"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 8,
+    "status_counts": {
+      "pass_known": 8,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 3,
+      "mechanism_core": 1,
+      "gallery_composition": 2,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 3,
+      "app_demo": 2,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 8
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 2,
+      "component_fixture": 2,
+      "unit_test": 3,
+      "none": 0
+    },
+    "layout_sidecar_count": 2,
+    "bundle_schema2_count": 2,
+    "layout_test_id_count": 16,
+    "bundle_semantics_test_id_count": 16,
+    "measured_test_id_count": 16,
+    "upstream_dom_snapshot_count": 2,
+    "upstream_dom_target_count": 2,
+    "upstream_context_count": 2,
+    "upstream_dom_context_count": 2,
+    "upstream_live_fact_count": 5,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 1,
+    "fret_live_fact_count": 16,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 5,
+    "fret_text_paint_fact_count": 4,
+    "fret_text_paint_direct_fact_count": 3,
+    "fret_text_paint_associated_fact_count": 1,
+    "fret_text_paint_bundle_entry_count": 24,
+    "fret_text_paint_row_count": 4,
+    "fret_text_paint_association_row_count": 1,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 4
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/card.mdx + repo-ref/ui/apps/v4/registry/new-york-v4/ui/card.tsx + repo-ref/ui/apps/v4/registry/bases/base/ui/card.tsx + repo-ref/ui/apps/v4/registry/new-york-v4/examples/card-demo.tsx + repo-ref/ui/apps/v4/registry/new-york-v4/examples/card-with-form.tsx + goldens/shadcn-web/v4/new-york-v4/card-demo.json + goldens/shadcn-web/v4/new-york-v4/card-with-form.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/card.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/card.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs + apps/fret-ui-gallery/src/ui/pages/card.rs + apps/fret-ui-gallery/src/ui/snippets/card/*.rs + apps/fret-ui-gallery/tests/card_docs_surface.rs + apps/fret-ui-gallery/tests/card_rich_description_surface.rs + apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs + tools/diag-scripts/ui-gallery/card/*.json",
+    "part_count": 8,
+    "upstream_dom_target_count": 2,
+    "fret_test_id_count": 16,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 5,
+    "parts": [
+      {
+        "part_id": "card_upstream_source_and_examples",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "repo-ref/ui/apps/v4/content/docs/components/card.mdx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/card.tsx",
+          "repo-ref/ui/apps/v4/registry/bases/base/ui/card.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/card-demo.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/card-with-form.tsx",
+          "goldens/shadcn-web/v4/new-york-v4/card-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/card-with-form.json"
+        ],
+        "facts": [
+          "The current new-york-v4 Card source owns root `bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm` chrome.",
+          "CardHeader uses explicit grid rows and switches to `grid-cols-[1fr_auto]` when CardAction is present.",
+          "CardAction is source-placed in column 2, row 1, spans two rows, and aligns self-start / justify-self-end.",
+          "The docs demo keeps width ownership at the call site with `w-full max-w-sm`; `card-with-form` keeps its fixed width at the call site."
+        ]
+      },
+      {
+        "part_id": "card_recipe_chrome_and_slots",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/card.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail card"
+        ],
+        "facts": [
+          "Card root chrome derives rounded-xl from the shadcn radius token and owns border, card background/foreground, py-6/py-4 size variants, and shadow-sm.",
+          "CardContent and CardFooter own horizontal section padding while root width, max width, and page placement stay caller-owned.",
+          "CardFooter requests fill width and min-w-0 for row/column children so footer-only text wraps against the card width instead of collapsing per word."
+        ]
+      },
+      {
+        "part_id": "card_header_grid_mechanism",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "evidence_refs": [
+          "crates/fret-ui/src",
+          "ecosystem/fret-ui-shadcn/src/card.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/card.rs",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail card"
+        ],
+        "facts": [
+          "The CardHeader translation uses explicit auto/auto rows and 1fr/auto columns when a CardAction marker is present.",
+          "In-flow grid item fill maps to grid-area stretch semantics, so title/description fill requests no longer push the CardAction lane out of the card.",
+          "Web-vs-Fret layout gates keep the Sign Up action in the upstream top-right lane with non-zero intrinsic button width."
+        ]
+      },
+      {
+        "part_id": "card_web_golden_layout_and_chrome",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "goldens/shadcn-web/v4/new-york-v4/card-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/card-with-form.json",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/card.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs"
+        ],
+        "facts": [
+          "The card-with-form layout gate matches the upstream fixed-width root.",
+          "The card-demo layout gate matches title/description/action offsets and Sign Up button size against the upstream web golden.",
+          "The chrome gate covers root background, foreground, border, radius, and the dedicated light/dark shadow-sm footprint."
+        ]
+      },
+      {
+        "part_id": "card_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/card.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/card/*.rs",
+          "apps/fret-ui-gallery/tests/card_docs_surface.rs"
+        ],
+        "facts": [
+          "The Gallery page mirrors the upstream docs path through Demo, Usage, Size, Image, RTL, and API Reference before explicit Fret follow-ups.",
+          "The default app-facing teaching lane uses `card(...)` plus slot helpers while `Card::new([...])` remains the explicit lower-level root collection surface.",
+          "Image and Meeting Notes snippets keep their demo media self-contained so copied code does not depend on UI Gallery-only asset helpers."
+        ]
+      },
+      {
+        "part_id": "card_title_description_children_surface",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/card.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/card/title_children.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/card/description_children.rs",
+          "apps/fret-ui-gallery/tests/card_rich_description_surface.rs"
+        ],
+        "facts": [
+          "CardTitle::new and CardDescription::new stay compact text lanes.",
+          "card_title_children(...) and card_description_children(...) keep rich/selectable text copyable without widening the root Card family to a generic compose/children API.",
+          "Shared text role and typography contracts stay scoped to the title/description slots."
+        ]
+      },
+      {
+        "part_id": "card_demo_action_state_diagnostics",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json",
+          "tools/diag-scripts/suites/ui-gallery-card-demo-action-state/suite.json",
+          "apps/fret-ui-gallery/tests/card_docs_surface.rs"
+        ],
+        "facts": [
+          "The promoted diagnostic targets title, description, email/password inputs, forgot-password link, Sign Up, Login, and Login with Google anchors.",
+          "The script checks text-field role/action state, focus and set_value behavior, link semantics, enabled invoke actions, and value mutation.",
+          "The docs-surface test keeps the same runtime anchors in the snippet and the diagnostic script."
+        ]
+      },
+      {
+        "part_id": "card_text_paint_and_rtl_followups",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/card/ui-gallery-card-docs-smoke.json",
+          "tools/diag-scripts/ui-gallery/card/ui-gallery-card-description-no-early-wrap.json",
+          "tools/diag-scripts/ui-gallery/card/ui-gallery-card-meeting-notes-list-no-early-wrap.json",
+          "tools/diag-scripts/ui-gallery/card/ui-gallery-card-image-event-cover-screenshot.json",
+          "apps/fret-ui-gallery/src/driver/render_flow.rs"
+        ],
+        "facts": [
+          "Docs smoke covers the upstream docs path plus Fret follow-up sections with stable test_id anchors.",
+          "Text-paint diagnostics and render-flow gates cover no-early-wrap description and meeting-notes list rows.",
+          "RTL gallery gates keep the translated card form controls visible and aligned while preserving caller-owned width constraints."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Card docs-path slice with current main-worktree repo-ref source refs, card-demo/card-with-form web goldens, recipe slot/grid/chrome tests, Gallery docs-surface checks, action-state diagnostics, text/paint follow-ups, RTL evidence, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "card.docs-path.desktop",
+        "component": "card",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/card_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

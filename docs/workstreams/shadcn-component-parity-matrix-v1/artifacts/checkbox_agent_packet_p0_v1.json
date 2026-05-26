@@ -1,0 +1,406 @@
+{
+  "schema_version": 1,
+  "component": "checkbox",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual checkbox docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/checkbox.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs + apps/fret-ui-gallery/src/ui/pages/checkbox.rs + apps/fret-ui-gallery/src/ui/snippets/checkbox/*.rs + apps/fret-ui-gallery/tests/checkbox_demo_surface.rs + apps/fret-ui-gallery/tests/checkbox_table_action_first_surface.rs + apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs + tools/diag-scripts/ui-gallery/checkbox/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/checkbox_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Checkbox component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-disabled-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-required-disabled-group-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-table-mixed-state-action.json | Out-Null; python -m json.tool tools/diag-scripts/suites/ui-gallery-checkbox-semantics/suite.json | Out-Null",
+      "status": "pass",
+      "scope": "Promoted Checkbox disabled, required disabled group, table mixed-state diagnostics and their suite parse cleanly."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail checkbox",
+      "status": "pass",
+      "scope": "Checkbox recipe tests cover click toggle, checked snapshot semantics, required/invalid semantics, optional and tri-state indeterminate behavior, Enter-vs-Space keyboard behavior, label forwarding, shrink-0 sizing, command gating, and focus-ring transitions.",
+      "tests_passed": 27,
+      "tests_skipped": 1276
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail checkbox",
+      "status": "pass",
+      "scope": "Checkbox web-vs-Fret layout gates cover checkbox-demo control size, with-text geometry, disabled size, and checkbox-family docs-path geometry.",
+      "tests_passed": 6,
+      "tests_skipped": 145
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail checkbox",
+      "status": "pass",
+      "scope": "Checkbox web-vs-Fret chrome gates cover default checked chrome and focus-visible ring thickness.",
+      "tests_passed": 2,
+      "tests_skipped": 74
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail checkbox",
+      "status": "pass",
+      "scope": "Gallery authoring-surface gates keep Checkbox docs copy, app-facing snippets, RTL summary, and required/control ownership aligned to the current source path.",
+      "tests_passed": 8,
+      "tests_skipped": 369
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test checkbox_demo_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery demo-surface gates keep the docs-path Checkbox demo controls and teaching surface stable.",
+      "tests_passed": 2
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test checkbox_table_action_first_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery table gates keep the derived mixed-state select-all checkbox on the action-first snapshot path.",
+      "tests_passed": 2
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag suite tools\\diag-scripts\\suites\\ui-gallery-checkbox-semantics\\suite.json --dir target\\fret-diag-checkbox-semantics-matrix-no-reuse --session-auto --timeout-ms 900000 --ai-packet --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Checkbox semantics suite proves disabled suppression, required disabled group action state, and table mixed-state behavior. Run without --reuse-launch because the scripts intentionally start at different virtualized sections.",
+      "run_ids": [
+        "1779765613522",
+        "1779765645478",
+        "1779765684887"
+      ],
+      "suite_summary": "target/fret-diag-checkbox-semantics-matrix-no-reuse/sessions/1779765591228-116716/suite.summary.json"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.checkbox.demo.light.vp1440x900",
+      "snapshot": "checkbox-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.checkbox.demo.focus.light.vp1440x900",
+      "snapshot": "checkbox-demo.focus",
+      "theme": "light",
+      "mode": "focus-visible",
+      "variant": "docs-demo-focus",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.checkbox.with_text.light.vp1440x900",
+      "snapshot": "checkbox-with-text",
+      "theme": "light",
+      "mode": "static",
+      "variant": "with-text",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.checkbox.disabled.light.vp1440x900",
+      "snapshot": "checkbox-disabled",
+      "theme": "light",
+      "mode": "disabled",
+      "variant": "disabled",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "checkbox-demo",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/checkbox-demo.json"
+      },
+      {
+        "snapshot": "checkbox-demo.focus",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/checkbox-demo.focus.json"
+      },
+      {
+        "snapshot": "checkbox-with-text",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/checkbox-with-text.json"
+      },
+      {
+        "snapshot": "checkbox-disabled",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/checkbox-disabled.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "test": "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs",
+        "layout_scope": "checkbox-demo, checkbox-with-text, and checkbox-disabled web-vs-Fret layout gates"
+      },
+      {
+        "test": "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "layout_scope": "checkbox default and focus-visible chrome gates"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-table-mixed-state-action.json",
+        "layout_path": "target/fret-diag-checkbox-semantics-matrix-no-reuse/sessions/1779765591228-116716"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-disabled-action-state.json",
+        "bundle_path": "target/fret-diag-checkbox-semantics-matrix-no-reuse/sessions/1779765591228-116716/1779765616444-ui-gallery-checkbox-disabled-action-state/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-required-disabled-group-action-state.json",
+        "bundle_path": "target/fret-diag-checkbox-semantics-matrix-no-reuse/sessions/1779765591228-116716/1779765648344-ui-gallery-checkbox-required-disabled-group-action-state/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-table-mixed-state-action.json",
+        "bundle_path": "target/fret-diag-checkbox-semantics-matrix-no-reuse/sessions/1779765591228-116716/1779765688367-ui-gallery-checkbox-table-mixed-state-action/bundle.schema2.json"
+      }
+    ],
+    "screenshots": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-disabled-action-state.json",
+        "screenshot": "target/fret-diag-checkbox-semantics-matrix-no-reuse/sessions/1779765591228-116716/screenshots/1779765616444-ui-gallery-checkbox-disabled-action-state/window-4294967297-tick-24-frame-24.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-required-disabled-group-action-state.json",
+        "screenshot": "target/fret-diag-checkbox-semantics-matrix-no-reuse/sessions/1779765591228-116716/screenshots/1779765648344-ui-gallery-checkbox-required-disabled-group-action-state/window-4294967297-tick-13-frame-13.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-table-mixed-state-action.json",
+        "screenshot": "target/fret-diag-checkbox-semantics-matrix-no-reuse/sessions/1779765591228-116716/screenshots/1779765688367-ui-gallery-checkbox-table-mixed-state-action/window-4294967297-tick-27-frame-27.png"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 7,
+    "status_counts": {
+      "pass_known": 7,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 2,
+      "mechanism_core": 1,
+      "gallery_composition": 2,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 2,
+      "app_demo": 2,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 7
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 3,
+      "component_fixture": 2,
+      "unit_test": 2,
+      "none": 0
+    },
+    "layout_sidecar_count": 3,
+    "bundle_schema2_count": 3,
+    "layout_test_id_count": 12,
+    "bundle_semantics_test_id_count": 12,
+    "measured_test_id_count": 12,
+    "upstream_dom_snapshot_count": 4,
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 4,
+    "upstream_dom_context_count": 4,
+    "upstream_live_fact_count": 5,
+    "upstream_semantics_fact_count": 2,
+    "upstream_interaction_fact_count": 2,
+    "fret_live_fact_count": 12,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 6,
+    "fret_text_paint_fact_count": 3,
+    "fret_text_paint_direct_fact_count": 2,
+    "fret_text_paint_associated_fact_count": 1,
+    "fret_text_paint_bundle_entry_count": 9,
+    "fret_text_paint_row_count": 3,
+    "fret_text_paint_association_row_count": 1,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 3
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/checkbox.mdx + repo-ref/ui/apps/v4/registry/new-york-v4/ui/checkbox.tsx + repo-ref/ui/apps/v4/registry/new-york-v4/examples/checkbox-demo.tsx + repo-ref/ui/apps/v4/registry/new-york-v4/examples/checkbox-with-text.tsx + repo-ref/ui/apps/v4/registry/new-york-v4/examples/checkbox-disabled.tsx + repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-checkbox.tsx + goldens/shadcn-web/v4/new-york-v4/checkbox-demo.json + goldens/shadcn-web/v4/new-york-v4/checkbox-demo.focus.json + goldens/shadcn-web/v4/new-york-v4/checkbox-with-text.json + goldens/shadcn-web/v4/new-york-v4/checkbox-disabled.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/checkbox.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs + apps/fret-ui-gallery/src/ui/pages/checkbox.rs + apps/fret-ui-gallery/src/ui/snippets/checkbox/*.rs + apps/fret-ui-gallery/tests/checkbox_demo_surface.rs + apps/fret-ui-gallery/tests/checkbox_table_action_first_surface.rs + apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs + tools/diag-scripts/ui-gallery/checkbox/*.json",
+    "part_count": 7,
+    "upstream_dom_target_count": 4,
+    "fret_test_id_count": 12,
+    "upstream_semantics_fact_count": 2,
+    "upstream_interaction_fact_count": 2,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 6,
+    "parts": [
+      {
+        "part_id": "checkbox_upstream_source_and_examples",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "repo-ref/ui/apps/v4/content/docs/components/checkbox.mdx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/checkbox.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/checkbox-demo.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/checkbox-with-text.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/checkbox-disabled.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-checkbox.tsx",
+          "goldens/shadcn-web/v4/new-york-v4/checkbox-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/checkbox-demo.focus.json",
+          "goldens/shadcn-web/v4/new-york-v4/checkbox-with-text.json",
+          "goldens/shadcn-web/v4/new-york-v4/checkbox-disabled.json"
+        ],
+        "facts": [
+          "The current new-york-v4 Checkbox source owns the 16px shrink-0 leaf control, rounded 4px border, checked primary background/foreground, disabled opacity, transition-shadow, and focus-visible ring-[3px] chrome.",
+          "The docs page exposes Demo and Usage, while registry examples keep labels, descriptions, disabled rows, and wrapped choice-card content outside the Checkbox primitive.",
+          "Radix semantics remain the behavior truth for checked, unchecked, disabled, required, invalid, and indeterminate states."
+        ]
+      },
+      {
+        "part_id": "checkbox_recipe_leaf_control",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/checkbox.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail checkbox"
+        ],
+        "facts": [
+          "Checkbox remains a leaf control: labels, descriptions, fieldsets, table rows, and larger click targets stay caller-owned or Field-owned instead of widening the checkbox to a children API.",
+          "Checkbox::new, new_optional, and new_tristate cover model-backed bool, optional bool, and explicit indeterminate state while Checkbox::from_checked and from_checked_state preserve the source-aligned snapshot path.",
+          "Space toggles, Enter does not toggle, label forwarding mirrors command dispatch, and disabled/command-gated checkboxes suppress invoke and focus behavior."
+        ]
+      },
+      {
+        "part_id": "checkbox_semantics_mechanism",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "evidence_refs": [
+          "ecosystem/fret-ui-kit/src/primitives/checkbox.rs",
+          "ecosystem/fret-ui-shadcn/src/checkbox.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail checkbox"
+        ],
+        "facts": [
+          "Primitive state mapping exposes checked, unchecked, and indeterminate values without requiring DOM-specific child structure.",
+          "Required and invalid are owned by the concrete checkbox semantics node, while group shells and descriptions remain external composition.",
+          "Label control_id forwarding works for both model-backed and snapshot/action-first checkboxes."
+        ]
+      },
+      {
+        "part_id": "checkbox_web_golden_layout_and_chrome",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "goldens/shadcn-web/v4/new-york-v4/checkbox-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/checkbox-demo.focus.json",
+          "goldens/shadcn-web/v4/new-york-v4/checkbox-with-text.json",
+          "goldens/shadcn-web/v4/new-york-v4/checkbox-disabled.json",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs"
+        ],
+        "facts": [
+          "Layout gates keep the checkbox affordance at the upstream 16px size and prevent constrained rows from shrinking it.",
+          "Chrome gates keep default checked styling and focus-visible ring thickness aligned with the upstream focus snapshot.",
+          "With-text and disabled examples prove that surrounding text and disabled presentation stay outside the leaf control recipe."
+        ]
+      },
+      {
+        "part_id": "checkbox_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/checkbox.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/checkbox/*.rs",
+          "apps/fret-ui-gallery/tests/checkbox_demo_surface.rs",
+          "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+        ],
+        "facts": [
+          "The Gallery page now references the current shadcn Checkbox docs path and new-york registry examples instead of the stale base docs path.",
+          "Demo and Usage come first, followed by checked/invalid state, Description, Disabled, Group, Required Disabled Group, Table, RTL, API Reference, Label Association, and With Title.",
+          "App-facing snippets stay on the curated fret facade with Checkbox/Field composition instead of teaching raw primitive wiring."
+        ]
+      },
+      {
+        "part_id": "checkbox_action_first_and_mixed_state_diagnostics",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-disabled-action-state.json",
+          "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-required-disabled-group-action-state.json",
+          "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-table-mixed-state-action.json",
+          "tools/diag-scripts/suites/ui-gallery-checkbox-semantics/suite.json",
+          "target/fret-diag-checkbox-semantics-matrix-no-reuse/sessions/1779765591228-116716/suite.summary.json"
+        ],
+        "facts": [
+          "Disabled action-state diagnostics prove disabled rows do not expose stale enabled invoke behavior.",
+          "Required disabled group diagnostics prove required semantics stay on each checkbox while disabled state remains row-local.",
+          "Table mixed-state diagnostics prove the derived select-all checkbox can represent mixed state and dispatch action-first toggles."
+        ]
+      },
+      {
+        "part_id": "checkbox_rtl_text_and_paint_followups",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/snippets/checkbox/rtl.rs",
+          "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-rtl-and-checked-wrap.json",
+          "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-basic-screenshots-zinc-dark.json",
+          "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-invalid-screenshots.json"
+        ],
+        "facts": [
+          "RTL preview translates the current four-row demo shape under DirectionProvider(Rtl) with logical Field and Label composition.",
+          "Text and paint follow-up scripts keep checked wrapping, dark-theme chrome, and invalid-state screenshots available as regression anchors.",
+          "The docs-surface note keeps checkbox-specific physical alignment props out of the public API."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Checkbox docs-path slice with current main-worktree repo-ref source refs, checkbox-demo/with-text/disabled/focus web goldens, recipe semantics/chrome/layout tests, Gallery docs-surface checks, disabled/required/table diagnostics, RTL and text/paint follow-ups, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "checkbox.docs-path.desktop",
+        "component": "checkbox",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/checkbox_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

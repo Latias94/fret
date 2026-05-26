@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "style": "material3",
+  "source_family": "mui-material",
+  "name": "material3-button-mui-contained",
+  "themes": {
+    "light": {
+      "url": "repo-ref/material-ui/docs/data/material/components/buttons/ContainedButtons.tsx",
+      "devicePixelRatio": 1,
+      "viewport": {
+        "w": 1440,
+        "h": 900
+      },
+      "root": {
+        "path": "",
+        "tag": "div",
+        "attrs": {},
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "w": 236,
+          "h": 36
+        },
+        "computedStyle": {
+          "display": "flex",
+          "boxSizing": "border-box",
+          "gap": "8px",
+          "alignItems": "center",
+          "width": "236px",
+          "height": "36px",
+          "fontFamily": "\"Roboto\", \"Helvetica\", \"Arial\", sans-serif",
+          "fontSize": "14px",
+          "fontWeight": "500",
+          "lineHeight": "24.5px",
+          "letterSpacing": "0.4px"
+        },
+        "children": [
+          {
+            "path": "0",
+            "tag": "button",
+            "className": "MuiButtonBase-root MuiButton-root MuiButton-contained MuiButton-containedPrimary MuiButton-sizeMedium MuiButton-containedSizeMedium MuiButton-colorPrimary",
+            "attrs": {
+              "type": "button"
+            },
+            "text": "Filled",
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 75,
+              "h": 36
+            },
+            "computedStyle": {
+              "display": "inline-flex",
+              "position": "relative",
+              "boxSizing": "border-box",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "minWidth": "64px",
+              "height": "36px",
+              "paddingTop": "6px",
+              "paddingRight": "16px",
+              "paddingBottom": "6px",
+              "paddingLeft": "16px",
+              "borderTopWidth": "0px",
+              "borderRightWidth": "0px",
+              "borderBottomWidth": "0px",
+              "borderLeftWidth": "0px",
+              "borderTopLeftRadius": "4px",
+              "borderTopRightRadius": "4px",
+              "borderBottomRightRadius": "4px",
+              "borderBottomLeftRadius": "4px",
+              "backgroundColor": "rgb(25, 118, 210)",
+              "color": "rgb(255, 255, 255)",
+              "opacity": "1",
+              "boxShadow": "rgba(0, 0, 0, 0.2) 0px 3px 1px -2px, rgba(0, 0, 0, 0.14) 0px 2px 2px 0px, rgba(0, 0, 0, 0.12) 0px 1px 5px 0px",
+              "fontFamily": "\"Roboto\", \"Helvetica\", \"Arial\", sans-serif",
+              "fontSize": "14px",
+              "fontWeight": "500",
+              "lineHeight": "24.5px",
+              "letterSpacing": "0.4px",
+              "textTransform": "uppercase",
+              "cursor": "pointer",
+              "pointerEvents": "auto"
+            },
+            "children": []
+          },
+          {
+            "path": "1",
+            "tag": "button",
+            "className": "MuiButtonBase-root MuiButton-root MuiButton-contained MuiButton-containedPrimary MuiButton-sizeMedium MuiButton-containedSizeMedium MuiButton-colorPrimary Mui-disabled",
+            "attrs": {
+              "type": "button",
+              "disabled": true
+            },
+            "text": "Disabled",
+            "rect": {
+              "x": 83,
+              "y": 0,
+              "w": 96,
+              "h": 36
+            },
+            "computedStyle": {
+              "display": "inline-flex",
+              "position": "relative",
+              "boxSizing": "border-box",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "minWidth": "64px",
+              "height": "36px",
+              "paddingTop": "6px",
+              "paddingRight": "16px",
+              "paddingBottom": "6px",
+              "paddingLeft": "16px",
+              "borderTopWidth": "0px",
+              "borderRightWidth": "0px",
+              "borderBottomWidth": "0px",
+              "borderLeftWidth": "0px",
+              "borderTopLeftRadius": "4px",
+              "borderTopRightRadius": "4px",
+              "borderBottomRightRadius": "4px",
+              "borderBottomLeftRadius": "4px",
+              "backgroundColor": "rgba(0, 0, 0, 0.12)",
+              "color": "rgba(0, 0, 0, 0.26)",
+              "opacity": "1",
+              "boxShadow": "none",
+              "fontFamily": "\"Roboto\", \"Helvetica\", \"Arial\", sans-serif",
+              "fontSize": "14px",
+              "fontWeight": "500",
+              "lineHeight": "24.5px",
+              "letterSpacing": "0.4px",
+              "textTransform": "uppercase",
+              "cursor": "default",
+              "pointerEvents": "none"
+            },
+            "children": []
+          }
+        ]
+      }
+    }
+  }
+}

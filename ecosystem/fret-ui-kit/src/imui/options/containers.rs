@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use fret_core::Px;
 
+use crate::style::MetricFallback;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ChildRegionChrome {
     #[default]
@@ -28,6 +30,114 @@ impl Default for HorizontalOptions {
             items: crate::Items::Center,
             wrap: false,
             test_id: None,
+        }
+    }
+}
+
+pub const IMUI_ITEM_SPACING_X_TOKEN: &str = "component.imui.item_spacing_x_px";
+pub const IMUI_ITEM_SPACING_Y_TOKEN: &str = "component.imui.item_spacing_y_px";
+pub const IMUI_INDENT_SPACING_TOKEN: &str = "component.imui.indent_spacing_px";
+
+pub(crate) fn imui_item_spacing_x() -> crate::MetricRef {
+    crate::MetricRef::Token {
+        key: IMUI_ITEM_SPACING_X_TOKEN,
+        fallback: MetricFallback::Px(Px(8.0)),
+    }
+}
+
+pub(crate) fn imui_item_spacing_y() -> crate::MetricRef {
+    crate::MetricRef::Token {
+        key: IMUI_ITEM_SPACING_Y_TOKEN,
+        fallback: MetricFallback::Px(Px(4.0)),
+    }
+}
+
+pub(crate) fn imui_indent_spacing() -> crate::MetricRef {
+    crate::MetricRef::Token {
+        key: IMUI_INDENT_SPACING_TOKEN,
+        fallback: MetricFallback::Px(Px(21.0)),
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ItemFlowOptions {
+    pub layout: crate::LayoutRefinement,
+    pub gap: crate::MetricRef,
+    pub justify: crate::Justify,
+    pub items: crate::Items,
+    pub wrap: bool,
+    pub test_id: Option<Arc<str>>,
+}
+
+impl Default for ItemFlowOptions {
+    fn default() -> Self {
+        Self {
+            layout: crate::LayoutRefinement::default(),
+            gap: imui_item_spacing_y(),
+            justify: crate::Justify::Start,
+            items: crate::Items::Stretch,
+            wrap: false,
+            test_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SameLineOptions {
+    pub layout: crate::LayoutRefinement,
+    pub gap: crate::MetricRef,
+    pub justify: crate::Justify,
+    pub items: crate::Items,
+    pub wrap: bool,
+    pub test_id: Option<Arc<str>>,
+}
+
+impl Default for SameLineOptions {
+    fn default() -> Self {
+        Self {
+            layout: crate::LayoutRefinement::default(),
+            gap: imui_item_spacing_x(),
+            justify: crate::Justify::Start,
+            items: crate::Items::Center,
+            wrap: false,
+            test_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct DummyOptions {
+    pub test_id: Option<Arc<str>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct SpacingOptions {
+    pub size: Option<fret_core::Size>,
+    pub test_id: Option<Arc<str>>,
+}
+
+impl Default for SpacingOptions {
+    fn default() -> Self {
+        Self {
+            size: None,
+            test_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct IndentOptions {
+    pub width: crate::MetricRef,
+    pub test_id: Option<Arc<str>>,
+    pub content_test_id: Option<Arc<str>>,
+}
+
+impl Default for IndentOptions {
+    fn default() -> Self {
+        Self {
+            width: imui_indent_spacing(),
+            test_id: None,
+            content_test_id: None,
         }
     }
 }
@@ -101,6 +211,29 @@ impl Default for ScrollOptions {
             handle: None,
             test_id: None,
             viewport_test_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ListBoxOptions {
+    pub layout: crate::LayoutRefinement,
+    pub scroll: ScrollOptions,
+    pub label: Option<Arc<str>>,
+    pub multiselectable: bool,
+    pub test_id: Option<Arc<str>>,
+    pub content_test_id: Option<Arc<str>>,
+}
+
+impl Default for ListBoxOptions {
+    fn default() -> Self {
+        Self {
+            layout: crate::LayoutRefinement::default().h_px(Px(160.0)),
+            scroll: ScrollOptions::default(),
+            label: None,
+            multiselectable: false,
+            test_id: None,
+            content_test_id: None,
         }
     }
 }

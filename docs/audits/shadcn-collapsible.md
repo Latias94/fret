@@ -8,16 +8,16 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret's shadcn-aligned `Collapsible` against the upstream shadcn/ui v4 base docs,
-base examples, and the current gallery/docs surface.
+This audit compares Fret's shadcn-aligned `Collapsible` against the current upstream shadcn/ui v4
+docs, the new-york-v4 registry implementation, and the current gallery/docs surface.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/collapsible.mdx`
-- Base implementation: `repo-ref/ui/apps/v4/registry/bases/base/ui/collapsible.tsx`
-- Current default visual/chrome implementation: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/collapsible.tsx`
-- Example compositions: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/collapsible-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/collapsible-basic.tsx`, `repo-ref/ui/apps/v4/examples/base/collapsible-settings.tsx`, `repo-ref/ui/apps/v4/examples/base/collapsible-file-tree.tsx`, `repo-ref/ui/apps/v4/examples/base/collapsible-rtl.tsx`
-- Underlying primitive: Base UI `@base-ui/react/collapsible`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/collapsible.mdx`
+- Component implementation: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/collapsible.tsx`
+- Example composition: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/collapsible-demo.tsx`
+- Secondary headless/base references: `repo-ref/ui/apps/v4/registry/bases/base/ui/collapsible.tsx`, `repo-ref/ui/apps/v4/registry/bases/base/examples/collapsible-example.tsx`, `repo-ref/ui/apps/v4/registry/bases/radix/ui/collapsible.tsx`, `repo-ref/ui/apps/v4/registry/bases/radix/examples/collapsible-example.tsx`
+- Underlying primitive: Radix `@radix-ui/react-collapsible`
 
 ## Fret implementation
 
@@ -34,7 +34,7 @@ base examples, and the current gallery/docs surface.
 - Pass: A source-aligned children surface is available via
   `fret_ui_shadcn::raw::collapsible::primitives`.
 - Pass: The legacy flat module path `fret_ui_shadcn::collapsible_primitives` remains available for compatibility.
-- Pass: No extra generic `compose()` API is needed here because the parts/primitives surfaces already cover the free-form shadcn/Base UI composition model, while the top-level wrapper stays a compact Fret-first builder.
+- Pass: No extra generic `compose()` API is needed here because the parts/primitives surfaces already cover the free-form shadcn/Radix composition model, while the top-level wrapper stays a compact Fret-first builder.
 - Pass: Supports a controlled open state (`Model<bool>`).
 - Pass: Supports uncontrolled `default_open` via `Collapsible::uncontrolled(...)`.
 - Pass: `CollapsibleContentPart` keeps `gap=0` and start-aligned children by default, so width/flex negotiation stays caller-owned like the upstream unstyled panel surface instead of introducing an implicit stretch policy.
@@ -47,9 +47,12 @@ base examples, and the current gallery/docs surface.
 
 ### Gallery / docs parity
 
-- Pass: The gallery now mirrors the upstream base Collapsible docs path first: `Demo`, `Usage`, `Controlled State`, `Basic`, `Settings Panel`, `File Tree`, `RTL`, and `API Reference`.
+- Pass: The gallery starts with the current upstream docs path (`Demo`, `Usage`) before keeping
+  controlled state, basic/settings/file-tree/RTL examples, and `API Reference` as explicit Fret
+  follow-ups.
 - Pass: The `Demo` section now matches the official shadcn repository-list example rather than the older order-details card.
-- Pass: The `RTL` section now mirrors the current upstream repository-list composition as an Arabic RTL disclosure layout instead of the earlier simplified example.
+- Pass: The `RTL` section keeps the current repository-list composition as an Arabic RTL disclosure
+  layout instead of the earlier simplified example.
 - Pass: The `Basic` section now matches the upstream `data-open:bg-muted` surface, `Learn More` CTA copy, and `xs` button size while still teaching the compact top-level wrapper lane.
 - Pass: The `Settings Panel` section now keeps the extra inputs nested inside the left field column, uses the right-aligned outline icon trigger shape, and restores the upstream `0` default values for all four inputs.
 - Pass: The `File Tree` section now mirrors the upstream explorer shell with `Explorer` / `Outline` tabs, the current shadcn docs data set, default-closed folders, and non-link-colored file rows.

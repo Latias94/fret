@@ -185,6 +185,8 @@ const IMUI_PRODUCT_WORKFLOW_ARTIFACTS: &[&str] = &[
     "perf-docking/*/trace.chrome.json",
 ];
 const DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID: &str = "demo-metrics-debug";
+const DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND: &str =
+    "cargo run -p fret-demo --bin imui_editor_workbench_demo";
 const DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND: &str =
     "cargo run -p fret-demo --bin imui_editor_proof_demo";
 const DEVTOOLS_DEMO_EDITOR_NOTES_COMMAND: &str =
@@ -203,6 +205,57 @@ const DEVTOOLS_DEBUG_HOTSPOTS_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag hotspots <bundle-or-dir> --json";
 const DEVTOOLS_DEBUG_TRACE_COMMAND: &str =
     "cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json";
+const DEVTOOLS_DEMO_METRICS_DEBUG_OWNER_DOC: &str =
+    "docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json";
+const DEVTOOLS_DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC: &str =
+    "docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json";
+const DEVTOOLS_DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC: &str =
+    "docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md";
+const DEVTOOLS_DOCKING_ARBITRATION_COMMAND: &str =
+    "cargo run -p fret-demo --bin docking_arbitration_demo";
+const DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND: &str = "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json";
+const DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND: &str =
+    "python tools/diag_gate_docking_wayland_policy_skip.py";
+const CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS: &str =
+    "fret.devtools.demo_metrics_debug.copy_actions";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct DemoMetricsDebugActionSpec {
+    label: &'static str,
+    command: &'static str,
+}
+
+const DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS: &[DemoMetricsDebugActionSpec] = &[
+    DemoMetricsDebugActionSpec {
+        label: "open workbench",
+        command: DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND,
+    },
+    DemoMetricsDebugActionSpec {
+        label: "run product discovery",
+        command: IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND,
+    },
+    DemoMetricsDebugActionSpec {
+        label: "inspect metrics stats",
+        command: DEVTOOLS_METRICS_STATS_COMMAND,
+    },
+    DemoMetricsDebugActionSpec {
+        label: "inspect debug trace",
+        command: DEVTOOLS_DEBUG_TRACE_COMMAND,
+    },
+    DemoMetricsDebugActionSpec {
+        label: "validate docking campaign",
+        command: DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND,
+    },
+];
+
+fn demo_metrics_debug_action_command_text() -> String {
+    DEVTOOLS_DEMO_METRICS_DEBUG_ACTIONS
+        .iter()
+        .map(|action| format!("{}: {}", action.label, action.command))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 #[derive(Clone)]
 struct DevtoolsConfig {
     transport: DiagTransportKind,
@@ -1707,6 +1760,22 @@ fn first_open_recent_evidence_action_row(
         .items_center()
         .layout(fret_ui_kit::LayoutRefinement::default().w_full())
         .into_element(cx)
+}
+
+fn devtools_demo_metrics_debug_action_row(cx: &mut ElementContext<'_, App>) -> AnyElement {
+    ui::h_row(|cx| {
+        [
+            shadcn::Button::new("Copy Demo/Metrics/Debug actions")
+                .variant(shadcn::ButtonVariant::Outline)
+                .size(shadcn::ButtonSize::Sm)
+                .on_click(CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS)
+                .into_element(cx),
+        ]
+    })
+    .gap(fret_ui_kit::Space::N2)
+    .items_center()
+    .layout(fret_ui_kit::LayoutRefinement::default().w_full())
+    .into_element(cx)
 }
 
 fn resizable_body(
@@ -3255,10 +3324,11 @@ fn devtools_guide_panel(cx: &mut ElementContext<'_, App>, st: &State) -> AnyElem
     for line in devtools_demo_metrics_debug_lines(st.cfg.fs_out_dir.as_ref()) {
         demo_metrics_debug_rows.push(cx.text(line));
     }
+    demo_metrics_debug_rows.push(devtools_demo_metrics_debug_action_row(cx));
     let demo_metrics_debug_panel = diag_section(
         cx,
         "Demo / Metrics / Debug Routes",
-        "Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
+        "Always-available editor demos, action commands, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell.",
         demo_metrics_debug_rows,
     );
     let mut workflow_run_rows = Vec::new();
@@ -7010,6 +7080,14 @@ fn on_command(
                 text: st.cfg.token.to_string(),
             });
         }
+        CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS => {
+            let token = app.next_clipboard_token();
+            app.push_effect(Effect::ClipboardWriteText {
+                window,
+                token,
+                text: demo_metrics_debug_action_command_text(),
+            });
+        }
         CMD_INSPECT_ENABLE | CMD_INSPECT_DISABLE => {
             if !ws::require_session_selected(app, st) {
                 app.request_redraw(window);
@@ -9414,8 +9492,22 @@ fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
     };
     vec![
         format!("route: {DEVTOOLS_DEMO_METRICS_DEBUG_ROUTE_ID}"),
+        format!("route owner: {DEVTOOLS_DEMO_METRICS_DEBUG_OWNER_DOC}"),
+        format!("docking owner: {DEVTOOLS_DEMO_METRICS_DEBUG_DOCKING_OWNER_DOC}"),
+        format!("wayland acceptance: {DEVTOOLS_DEMO_METRICS_DEBUG_WAYLAND_ACCEPTANCE_DOC}"),
         format!("artifacts root: {artifacts_root}"),
-        format!("demo editor proof: {DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND}"),
+        "route surface: Always-available editor demos, metrics commands, and debug drill-down entrypoints stay visible in the GUI shell."
+            .to_string(),
+        "action surface: dedicated DevTools guide panel + copyable action command bundle"
+            .to_string(),
+        "command palette: deferred until DevTools has a shared command palette contract".to_string(),
+        format!("action: open workbench -> {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}"),
+        format!("action: run product discovery -> {IMUI_PRODUCT_WORKFLOW_FOCUSED_COMMAND}"),
+        format!("action: inspect metrics stats -> {DEVTOOLS_METRICS_STATS_COMMAND}"),
+        format!("action: inspect debug trace -> {DEVTOOLS_DEBUG_TRACE_COMMAND}"),
+        format!("action: validate docking campaign -> {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}"),
+        format!("demo editor workbench: {DEVTOOLS_DEMO_EDITOR_WORKBENCH_COMMAND}"),
+        format!("demo editor proof supporting: {DEVTOOLS_DEMO_EDITOR_PROOF_COMMAND}"),
         format!("demo editor notes: {DEVTOOLS_DEMO_EDITOR_NOTES_COMMAND}"),
         format!("demo device shell: {DEVTOOLS_DEMO_DEVICE_SHELL_COMMAND}"),
         format!("metrics stats: {DEVTOOLS_METRICS_STATS_COMMAND}"),
@@ -9424,6 +9516,9 @@ fn devtools_demo_metrics_debug_lines(artifacts_root: &str) -> Vec<String> {
         format!("debug triage: {DEVTOOLS_DEBUG_TRIAGE_COMMAND}"),
         format!("debug hotspots: {DEVTOOLS_DEBUG_HOTSPOTS_COMMAND}"),
         format!("debug trace: {DEVTOOLS_DEBUG_TRACE_COMMAND}"),
+        format!("docking arbitration supporting: {DEVTOOLS_DOCKING_ARBITRATION_COMMAND}"),
+        format!("docking campaign validate: {DEVTOOLS_DOCKING_CAMPAIGN_VALIDATE_COMMAND}"),
+        format!("docking policy-skip local: {DEVTOOLS_DOCKING_POLICY_SKIP_COMMAND}"),
     ]
 }
 
@@ -11937,8 +12032,41 @@ mod tests {
         let lines = devtools_demo_metrics_debug_lines("target/fret-diag");
         let text = lines.join("\n");
         assert!(text.contains("route: demo-metrics-debug"));
+        assert!(text.contains(
+            "route owner: docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json"
+        ));
+        assert!(text.contains(
+            "docking owner: docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"
+        ));
+        assert!(text.contains(
+            "wayland acceptance: docs/workstreams/docking-multiwindow-imgui-parity/M5_WAYLAND_COMPOSITOR_ACCEPTANCE_RUNBOOK_2026-04-21.md"
+        ));
         assert!(text.contains("artifacts root: target/fret-diag"));
-        assert!(text.contains("demo editor proof: cargo run -p fret-demo --bin imui_editor_proof_demo"));
+        assert!(text.contains(
+            "action surface: dedicated DevTools guide panel + copyable action command bundle"
+        ));
+        assert!(text.contains(
+            "command palette: deferred until DevTools has a shared command palette contract"
+        ));
+        assert!(text.contains(
+            "action: open workbench -> cargo run -p fret-demo --bin imui_editor_workbench_demo"
+        ));
+        assert!(text.contains(
+            "action: run product discovery -> python tools/diag_gate_imui_product_chain.py --only discovery"
+        ));
+        assert!(text.contains(
+            "action: inspect metrics stats -> cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json"
+        ));
+        assert!(text.contains(
+            "action: inspect debug trace -> cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json"
+        ));
+        assert!(text.contains(
+            "action: validate docking campaign -> cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
+        ));
+        assert!(text.contains("demo editor workbench: cargo run -p fret-demo --bin imui_editor_workbench_demo"));
+        assert!(text.contains(
+            "demo editor proof supporting: cargo run -p fret-demo --bin imui_editor_proof_demo"
+        ));
         assert!(text.contains("demo editor notes: cargo run -p fret-demo --bin editor_notes_demo"));
         assert!(text.contains(
             "demo device shell: cargo run -p fret-demo --bin editor_notes_device_shell_demo"
@@ -11960,6 +12088,41 @@ mod tests {
         );
         assert!(
             text.contains("debug trace: cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json")
+        );
+        assert!(text.contains(
+            "docking arbitration supporting: cargo run -p fret-demo --bin docking_arbitration_demo"
+        ));
+        assert!(text.contains(
+            "docking campaign validate: cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
+        ));
+        assert!(text.contains(
+            "docking policy-skip local: python tools/diag_gate_docking_wayland_policy_skip.py"
+        ));
+    }
+
+    #[test]
+    fn demo_metrics_debug_action_bundle_prioritizes_workbench_and_shared_gates() {
+        let text = demo_metrics_debug_action_command_text();
+        let lines = text.lines().collect::<Vec<_>>();
+        assert_eq!(
+            lines.first(),
+            Some(&"open workbench: cargo run -p fret-demo --bin imui_editor_workbench_demo")
+        );
+        assert!(lines.contains(
+            &"run product discovery: python tools/diag_gate_imui_product_chain.py --only discovery"
+        ));
+        assert!(lines.contains(
+            &"inspect metrics stats: cargo run -p fretboard-dev -- diag stats <bundle-or-dir> --json"
+        ));
+        assert!(lines.contains(
+            &"inspect debug trace: cargo run -p fretboard-dev -- diag trace <bundle-or-dir> --json"
+        ));
+        assert!(lines.contains(
+            &"validate docking campaign: cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-multiwindow-parity.json --json"
+        ));
+        assert_eq!(
+            CMD_COPY_DEMO_METRICS_DEBUG_ACTIONS,
+            "fret.devtools.demo_metrics_debug.copy_actions"
         );
     }
 

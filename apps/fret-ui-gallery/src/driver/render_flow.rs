@@ -20,6 +20,8 @@ use super::{
     settings_sheet, shell, status_bar, text_roles, toaster, ui_gallery_bisect_flags,
 };
 
+const COMPACT_SHELL_MAX_SIDEBAR_WIDTH: Px = Px(640.0);
+
 pub(super) struct PreparedFrame {
     pub(super) bisect: u32,
     pub(super) cache_sidebar: bool,
@@ -243,15 +245,19 @@ fn render_root_contents(
     }
 
     let theme = cx.theme().clone();
+    let viewport = cx.environment_viewport_bounds(Invalidation::Layout);
+    let compact_shell = viewport.size.width.0 < COMPACT_SHELL_MAX_SIDEBAR_WIDTH.0;
 
-    let sidebar = shell::sidebar_view(
-        cx,
-        &theme,
-        frame.bisect,
-        frame.cache_sidebar,
-        &frame.nav_query,
-        &frame.selected_page,
-    );
+    let sidebar = (!compact_shell).then(|| {
+        shell::sidebar_view(
+            cx,
+            &theme,
+            frame.bisect,
+            frame.cache_sidebar,
+            &frame.nav_query,
+            &frame.selected_page,
+        )
+    });
     let content = shell::content_view(
         cx,
         &theme,
@@ -342,7 +348,7 @@ fn render_root_contents(
                 direction: fret_core::Axis::Horizontal,
                 ..Default::default()
             },
-            |_cx| vec![sidebar, content],
+            |_cx| sidebar.into_iter().chain([content]).collect::<Vec<_>>(),
         )
         .test_id("ui-gallery-workspace-center");
 
@@ -806,6 +812,44 @@ mod tests {
         if let Err(payload) = join {
             std::panic::resume_unwind(payload);
         }
+    }
+
+    #[test]
+    fn gallery_compact_shell_gives_mobile_component_story_full_window_width() {
+        let _section_guard = EnvVarGuard::set(
+            ENV_UI_GALLERY_START_SECTION,
+            "ui-gallery-combobox-responsive-docsec",
+        );
+        let mut rendered = render_gallery_page_with_bounds(
+            PAGE_COMBOBOX,
+            Rect::new(
+                Point::new(Px(0.0), Px(0.0)),
+                Size::new(Px(375.0), Px(240.0)),
+            ),
+        );
+
+        assert!(
+            visual_bounds_by_test_id_if_present(&rendered, "ui-gallery-nav-scroll").is_none(),
+            "expected compact gallery shell to hide the fixed-width sidebar at mobile widths",
+        );
+
+        let workspace_content = visual_bounds_by_test_id(&rendered, "ui-gallery-workspace-content");
+        let workspace_content_right = workspace_content.origin.x.0 + workspace_content.size.width.0;
+        assert!(
+            workspace_content.origin.x.0 <= 1.0 && workspace_content_right >= 374.0,
+            "expected compact gallery content to occupy the full 375px window instead of leaving only the sidebar remainder: content={workspace_content:?}"
+        );
+
+        scroll_test_id_into_gallery_viewport(
+            &mut rendered,
+            "ui-gallery-combobox-responsive-trigger",
+        );
+        let trigger = visual_bounds_by_test_id(&rendered, "ui-gallery-combobox-responsive-trigger");
+        let trigger_right = trigger.origin.x.0 + trigger.size.width.0;
+        assert!(
+            trigger.origin.x.0 >= 0.0 && trigger_right <= 375.0 && trigger.size.width.0 >= 140.0,
+            "expected mobile combobox responsive trigger to be horizontally reachable in the compact shell: trigger={trigger:?}"
+        );
     }
 
     #[derive(Debug, Clone, Copy)]

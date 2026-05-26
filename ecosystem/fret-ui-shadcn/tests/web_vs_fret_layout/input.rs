@@ -60,7 +60,22 @@ fn web_vs_fret_layout_input_geometry_matches_web_fixtures() {
     assert_eq!(suite.schema_version, 1);
     assert!(!suite.cases.is_empty());
 
+    let case_filter = std::env::var("FRET_WEB_VS_FRET_LAYOUT_INPUT_CASE_FILTER")
+        .ok()
+        .map(|value| value.trim().to_ascii_lowercase())
+        .filter(|value| !value.is_empty());
+    let mut matched_cases = 0usize;
+
     for case in suite.cases {
+        if let Some(filter) = case_filter.as_deref() {
+            let id = case.id.to_ascii_lowercase();
+            let web_name = case.web_name.to_ascii_lowercase();
+            let recipe = format!("{:?}", case.recipe).to_ascii_lowercase();
+            if !id.contains(filter) && !web_name.contains(filter) && !recipe.contains(filter) {
+                continue;
+            }
+        }
+        matched_cases += 1;
         eprintln!("layout input case={}", case.id);
         match case.recipe {
             LayoutInputRecipe::InputDemoGeometry => {
@@ -195,6 +210,13 @@ fn web_vs_fret_layout_input_geometry_matches_web_fixtures() {
                 web_vs_fret_layout_input_group_demo_block_end_geometry_matches();
             }
         }
+    }
+
+    if let Some(filter) = case_filter {
+        assert!(
+            matched_cases > 0,
+            "no layout input fixture case matched FRET_WEB_VS_FRET_LAYOUT_INPUT_CASE_FILTER={filter:?}"
+        );
     }
 }
 

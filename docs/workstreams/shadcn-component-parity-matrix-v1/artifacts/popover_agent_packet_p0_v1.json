@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "component": "popover",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual popover command shell harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/popover.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/mechanism_harness.rs + tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-demo-relation-action-state.json",
+  "validation_gates": [
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout mechanism_harness::mechanism_harness_recipe_layout_cases_match_oracles --status-level fail",
+      "status": "pass",
+      "scope": "Mechanism harness locks PopoverContent sizing when a Command subtree is wrapped by HoverRegion/Stack layout wrappers."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\popover\\ui-gallery-popover-demo-relation-action-state.json --dir target\\fret-diag-popover-relation-action-state-matrix-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Popover open/close semantics: expanded state, controls relation, dialog/panel split, non-modal barrier state, form set_value actions, Escape dismiss, and trigger focus restore.",
+      "run_id": "1779698429094",
+      "ai_packet": "target/fret-diag-popover-relation-action-state-matrix-rerun/sessions/1779698425442-53392/1779698429094/ai.packet"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.popover.command.desktop.vp1440x900",
+      "snapshot": "combobox-popover",
+      "theme": "light",
+      "mode": "open",
+      "variant": "desktop",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    },
+    {
+      "id": "upstream.popover.demo.desktop.vp1440x900",
+      "snapshot": "popover-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "desktop",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "combobox-popover",
+        "theme": "light",
+        "mode": "open",
+        "variant": "desktop",
+        "context_id": "upstream.popover.command.desktop.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-popover.open.json"
+      },
+      {
+        "snapshot": "popover-demo",
+        "theme": "light",
+        "mode": "open",
+        "variant": "desktop",
+        "context_id": "upstream.popover.demo.desktop.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/popover-demo.open.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+        "sidecar_path": "target/fret-diag/combobox-desktop-compact-shell-regression/sessions/1779696065919-48032/1779696070441-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-demo-relation-action-state.json",
+        "sidecar_path": "target/fret-diag-popover-relation-action-state-matrix-rerun/sessions/1779698425442-53392/1779698444096-ui-gallery-popover-demo-open.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+        "bundle_path": "target/fret-diag/combobox-desktop-compact-shell-regression/sessions/1779696065919-48032/1779696069815/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-demo-relation-action-state.json",
+        "bundle_path": "target/fret-diag-popover-relation-action-state-matrix-rerun/sessions/1779698425442-53392/1779698429094/bundle.schema2.json"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-demo-relation-action-state.json",
+        "ai_packet": "target/fret-diag-popover-relation-action-state-matrix-rerun/sessions/1779698425442-53392/1779698429094/ai.packet",
+        "share_zip": "target/fret-diag-popover-relation-action-state-matrix-rerun/sessions/1779698425442-53392/share/1779698429094.zip"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 3,
+    "status_counts": {
+      "pass_known": 3,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 0,
+      "gallery_composition": 0,
+      "mechanism_core": 1,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 0,
+      "app_demo": 0,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 3
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 1,
+      "mechanism_harness": 1,
+      "none": 1
+    },
+    "layout_sidecar_count": 2,
+    "bundle_schema2_count": 2,
+    "layout_test_id_count": 8,
+    "bundle_semantics_test_id_count": 6,
+    "measured_test_id_count": 190,
+    "upstream_dom_snapshot_count": 2,
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 2,
+    "upstream_dom_context_count": 2,
+    "upstream_live_fact_count": 6,
+    "fret_live_fact_count": 8,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 6,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "goldens/shadcn-web/v4/new-york-v4/combobox-popover.open.json + goldens/shadcn-web/v4/new-york-v4/popover-demo.open.json + repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/popover.rs + ecosystem/fret-ui-shadcn/tests/fixtures/mechanism_layout_recipe_cases_v1.json + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/mechanism_harness.rs",
+    "part_count": 3,
+    "upstream_dom_target_count": 4,
+    "fret_test_id_count": 190,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 6,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 0,
+    "parts": [
+      {
+        "part_id": "popover_command_shell_size_hint_mechanism",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/fixtures/mechanism_layout_recipe_cases_v1.json",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/mechanism_harness.rs",
+          "docs/mechanism-harness-v2.md",
+          "goldens/shadcn-web/v4/new-york-v4/combobox-popover.open.json",
+          "target/fret-diag/combobox-desktop-compact-shell-regression/sessions/1779696065919-48032/1779696070441-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json"
+        ],
+        "facts": [
+          "Upstream combobox-popover PopoverContent is about 288x205.33px and wraps a Command root of about 204px height.",
+          "The Fret mechanism fixture asserts the Popover shell stays 200px wide, is at least 204px tall, and matches the Command subtree height within 2px.",
+          "The owning layer is mechanism: overlay placement must read size hints through HoverRegion and Stack wrappers before the opening frame computes content geometry."
+        ]
+      },
+      {
+        "part_id": "popover_open_relation_action_semantics",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-demo-relation-action-state.json",
+          "target/fret-diag-popover-relation-action-state-matrix-rerun/sessions/1779698425442-53392/1779698429094/bundle.schema2.json",
+          "target/fret-diag-popover-relation-action-state-matrix-rerun/sessions/1779698425442-53392/1779698429094/ai.packet",
+          "target/fret-diag-popover-relation-action-state-matrix-rerun/sessions/1779698425442-53392/share/1779698429094.zip"
+        ],
+        "facts": [
+          "The Popover trigger transitions expanded=false -> true -> false.",
+          "The trigger controls relation targets the dialog wrapper while the visual panel remains a separate panel node.",
+          "The non-modal Popover keeps barrier_root and focus_barrier_root empty, exposes set_value actions for the form inputs, and restores focus to the trigger after Escape."
+        ]
+      },
+      {
+        "part_id": "popover_upstream_dom_and_source_context",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/popover.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-popover.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/popover-demo.tsx",
+          "goldens/shadcn-web/v4/new-york-v4/combobox-popover.open.json",
+          "goldens/shadcn-web/v4/new-york-v4/popover-demo.open.json"
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Lock the Popover command-shell desktop slice after confirming the promoted mechanism size-hint gate and Popover relation/action diagnostics.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "popover.command.desktop",
+        "component": "popover",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/popover_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

@@ -26,6 +26,45 @@ Coverage manifests live in `tools/parity-discovery/manifests/`. The v2 manifest 
 coverage-driven sweep order for the highest-risk shadcn surfaces and keeps the existing v1 lock
 rows available as regression anchors.
 
+Each generated report also contains an `agent_packet` section. This packet is intentionally derived
+from the same fixture/report data instead of introducing a second source of truth. It gives repair
+agents a stable queue:
+
+- `repair_queue`: non-passing rows with owner, layer, promotion target, source refs, Fret refs,
+  test ids, evidence refs, and a next-step hint.
+- `hardening_queue`: passing rows that are still medium/low confidence and should become stronger
+  live measurements before broad reuse.
+- `gate_queue`: rows that can be promoted into diag scripts, component fixtures, or mechanism
+  harness cases once the owner/layer classification is confirmed.
+
+The first packet-focused lane is
+`docs/workstreams/component-parity-fact-harness-v1/`; the Button Group pilot artifact lives at
+`docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json`.
+
+Reports may also include `live_facts`. The first fact extractor reads upstream DOM snapshots and
+records class tokens, computed layout values, text metrics, paint values, border/radius values, and
+icon descendant bounds for `upstream.dom_target_ids`. Fret facts come from layout sidecars, bundle
+schema2 semantics, and bundle schema2 `tables.text_paint` rows. Semantics/text-paint packet rows are
+compacted by stable fact signatures and keep observed counts plus bounded evidence-path samples
+instead of repeating every captured snapshot node. This is deliberately conservative; `tables.text_paint`
+is a sparse diagnostics table, so bundle-level table presence is distinct from per-node paint/text
+association.
+
+`live_measurement_required` checks may declare `live_fact_requirements` as a map from live-fact
+summary field to minimum count, for example:
+
+```json
+{
+  "live_fact_requirements": {
+    "fret_semantics_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 1
+  }
+}
+```
+
+When those counts are satisfied, the row becomes `pass_known` with `observed_source:
+live_fact_requirements`; otherwise it stays in the repair queue.
+
 ## Current Seeds
 
 - Context Menu:
@@ -182,6 +221,13 @@ Generate the current v2 suite and cross-component summary:
 python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v2.json --suite-output docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json
 ```
 
+Generate only the v2 suite summary from already generated report artifacts when archived Fret
+sidecars are not present in the current worktree:
+
+```powershell
+python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/shadcn_parity_discovery_v2.json --suite-from-existing-reports --suite-output docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json
+```
+
 Generate the v1 regression suite and cross-component summary:
 
 ```powershell
@@ -264,7 +310,9 @@ Supported `kind` values:
   `layout.taffy.v1.json` sidecars.
 - `upstream_dom_snapshot`: evaluate structured geometry predicates from one or more shadcn web DOM
   snapshot JSON files.
-- `live_measurement_required`: the source fact is known but the prototype cannot measure it live yet.
+- `live_measurement_required`: the source fact needs live evidence. Without
+  `live_fact_requirements` it remains `needs_live_measurement`; with satisfied requirements it
+  becomes `pass_known`.
 - `expected_mismatch`: a known mismatch imported from a prior report or failing gate.
 - `blocked`: the mapping cannot run because selectors or evidence are missing.
 
@@ -390,5 +438,5 @@ artifacts do not mix evidence generations.
 Current promoted lightweight mechanism cases live in
 `ecosystem/fret-ui-shadcn/tests/fixtures/mechanism_layout_recipe_cases_v1.json`:
 
-- `responsive-drawer-bottom-sheet-uses-eighty-vh`
+- `responsive-drawer-bottom-sheet-caps-visible-lane`
 - `popover-command-shell-wraps-hover-region-max-height`

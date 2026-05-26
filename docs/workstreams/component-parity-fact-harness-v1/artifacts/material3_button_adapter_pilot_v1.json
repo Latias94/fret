@@ -1,0 +1,4530 @@
+{
+  "schema_version": 1,
+  "component": "button",
+  "style": "material3",
+  "generated_date": "2026-05-25",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_mapping": "tools/parity-discovery/fixtures/material3_button_adapter_v1.json",
+  "upstream_contexts": [
+    {
+      "id": "material3.button.mui.contained.light.vp1440x900",
+      "snapshot": "material3-button-mui-contained",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 1
+    }
+  ],
+  "evidence_contexts": {
+    "fret_layout_sidecar": [],
+    "fret_bundle_schema2": [
+      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json",
+      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671909369-ui-gallery-material3-button-sizes-screenshots/bundle.schema2.json"
+    ],
+    "upstream_dom": [
+      {
+        "snapshot": "material3-button-mui-contained",
+        "theme": "light",
+        "mode": "",
+        "variant": "",
+        "context_id": "material3.button.mui.contained.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 1.0,
+        "snapshot_path": "docs/workstreams/component-parity-fact-harness-v1/artifacts/upstream-dom/material3-button-mui-contained.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 2,
+    "status_counts": {
+      "pass_known": 2,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "gallery_composition": 0,
+      "mechanism_core": 0,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 1,
+      "app_demo": 0,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 2
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 2,
+      "component_fixture": 1,
+      "mechanism_harness": 0,
+      "none": 0
+    },
+    "layout_sidecar_count": 0,
+    "bundle_schema2_count": 4,
+    "layout_test_id_count": 0,
+    "bundle_semantics_test_id_count": 99,
+    "measured_test_id_count": 99,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 2,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1,
+    "upstream_live_fact_count": 4,
+    "fret_live_fact_count": 4,
+    "upstream_semantics_fact_count": 4,
+    "upstream_interaction_fact_count": 4,
+    "fret_semantics_fact_count": 4,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_label_fact_count": 16,
+    "fret_text_paint_bundle_entry_count": 180,
+    "fret_text_paint_row_count": 3746,
+    "fret_text_paint_association_row_count": 4199,
+    "fret_text_paint_unassociated_row_count": 2872,
+    "fret_text_label_row_count": 2248
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "upstream_dom_computed_style",
+    "fret_source": "layout_sidecar+bundle_schema2_semantics",
+    "part_count": 2,
+    "upstream_dom_target_count": 4,
+    "fret_test_id_count": 4,
+    "upstream_semantics_fact_count": 4,
+    "upstream_interaction_fact_count": 4,
+    "fret_semantics_fact_count": 4,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_label_fact_count": 16,
+    "fret_text_paint_bundle_entry_count": 180,
+    "fret_text_paint_row_count": 3746,
+    "fret_text_paint_association_row_count": 4199,
+    "fret_text_paint_unassociated_row_count": 2872,
+    "fret_text_label_row_count": 2248,
+    "parts": [
+      {
+        "part_id": "material3_button_semantics",
+        "upstream_dom_target_count": 2,
+        "fret_test_id_count": 2,
+        "upstream_semantics_fact_count": 2,
+        "upstream_interaction_fact_count": 2,
+        "fret_semantics_fact_count": 2,
+        "fret_interaction_fact_count": 2,
+        "fret_text_paint_fact_count": 0,
+        "fret_text_paint_direct_fact_count": 0,
+        "fret_text_paint_associated_fact_count": 0,
+        "fret_text_label_fact_count": 8,
+        "fret_text_paint_bundle_entry_count": 180,
+        "fret_text_paint_row_count": 3746,
+        "fret_text_paint_association_row_count": 4199,
+        "fret_text_paint_unassociated_row_count": 2872,
+        "fret_text_label_row_count": 2248,
+        "upstream": [
+          {
+            "target_id": "material3.button.mui.contained.enabled",
+            "snapshot": "material3-button-mui-contained",
+            "theme": "light",
+            "mode": "",
+            "variant": "",
+            "context_id": "material3.button.mui.contained.light.vp1440x900",
+            "path": "0",
+            "tag": "button",
+            "attrs": {
+              "type": "button"
+            },
+            "class_tokens": [
+              "MuiButtonBase-root",
+              "MuiButton-root",
+              "MuiButton-contained",
+              "MuiButton-containedPrimary",
+              "MuiButton-sizeMedium",
+              "MuiButton-containedSizeMedium",
+              "MuiButton-colorPrimary"
+            ],
+            "bounds": {
+              "x": 0.0,
+              "y": 0.0,
+              "w": 75.0,
+              "h": 36.0
+            },
+            "device_pixel_ratio": 1.0,
+            "child_count": 0,
+            "layout": {
+              "display": "inline-flex",
+              "position": "relative",
+              "boxSizing": "border-box",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "height": 36.0,
+              "minWidth": 64.0,
+              "paddingTop": 6.0,
+              "paddingRight": 16.0,
+              "paddingBottom": 6.0,
+              "paddingLeft": 16.0
+            },
+            "text": {
+              "text": "Filled",
+              "fontFamily": "\"Roboto\", \"Helvetica\", \"Arial\", sans-serif",
+              "fontWeight": "500",
+              "textTransform": "uppercase",
+              "fontSize": 14.0,
+              "lineHeight": 24.5,
+              "letterSpacing": 0.4
+            },
+            "paint": {
+              "color": "rgb(255, 255, 255)",
+              "backgroundColor": "rgb(25, 118, 210)",
+              "boxShadow": "rgba(0, 0, 0, 0.2) 0px 3px 1px -2px, rgba(0, 0, 0, 0.14) 0px 2px 2px 0px, rgba(0, 0, 0, 0.12) 0px 1px 5px 0px",
+              "opacity": "1",
+              "border_widths_px": {
+                "borderTopWidth": 0.0,
+                "borderRightWidth": 0.0,
+                "borderBottomWidth": 0.0,
+                "borderLeftWidth": 0.0
+              },
+              "corner_radii_px": {
+                "borderTopLeftRadius": 4.0,
+                "borderTopRightRadius": 4.0,
+                "borderBottomRightRadius": 4.0,
+                "borderBottomLeftRadius": 4.0
+              }
+            },
+            "semantics": {
+              "role": "button",
+              "implicit_role": "button",
+              "accessible_name": "Filled",
+              "states": {},
+              "relations": {},
+              "tab_index": null,
+              "source": "upstream_dom_accessibility_attrs"
+            },
+            "interaction": {
+              "focusable": true,
+              "disabled": false,
+              "has_popup": null,
+              "cursor": "pointer",
+              "pointer_events": "auto",
+              "keyboard_target": true,
+              "source": "upstream_dom_accessibility_attrs"
+            },
+            "descendant_summary": {
+              "count": 0,
+              "svg_count": 0,
+              "text_count": 0
+            },
+            "source": "upstream_dom_computed_style"
+          },
+          {
+            "target_id": "material3.button.mui.contained.disabled",
+            "snapshot": "material3-button-mui-contained",
+            "theme": "light",
+            "mode": "",
+            "variant": "",
+            "context_id": "material3.button.mui.contained.light.vp1440x900",
+            "path": "1",
+            "tag": "button",
+            "attrs": {
+              "type": "button",
+              "disabled": true
+            },
+            "class_tokens": [
+              "MuiButtonBase-root",
+              "MuiButton-root",
+              "MuiButton-contained",
+              "MuiButton-containedPrimary",
+              "MuiButton-sizeMedium",
+              "MuiButton-containedSizeMedium",
+              "MuiButton-colorPrimary",
+              "Mui-disabled"
+            ],
+            "bounds": {
+              "x": 83.0,
+              "y": 0.0,
+              "w": 96.0,
+              "h": 36.0
+            },
+            "device_pixel_ratio": 1.0,
+            "child_count": 0,
+            "layout": {
+              "display": "inline-flex",
+              "position": "relative",
+              "boxSizing": "border-box",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "height": 36.0,
+              "minWidth": 64.0,
+              "paddingTop": 6.0,
+              "paddingRight": 16.0,
+              "paddingBottom": 6.0,
+              "paddingLeft": 16.0
+            },
+            "text": {
+              "text": "Disabled",
+              "fontFamily": "\"Roboto\", \"Helvetica\", \"Arial\", sans-serif",
+              "fontWeight": "500",
+              "textTransform": "uppercase",
+              "fontSize": 14.0,
+              "lineHeight": 24.5,
+              "letterSpacing": 0.4
+            },
+            "paint": {
+              "color": "rgba(0, 0, 0, 0.26)",
+              "backgroundColor": "rgba(0, 0, 0, 0.12)",
+              "boxShadow": "none",
+              "opacity": "1",
+              "border_widths_px": {
+                "borderTopWidth": 0.0,
+                "borderRightWidth": 0.0,
+                "borderBottomWidth": 0.0,
+                "borderLeftWidth": 0.0
+              },
+              "corner_radii_px": {
+                "borderTopLeftRadius": 4.0,
+                "borderTopRightRadius": 4.0,
+                "borderBottomRightRadius": 4.0,
+                "borderBottomLeftRadius": 4.0
+              }
+            },
+            "semantics": {
+              "role": "button",
+              "implicit_role": "button",
+              "accessible_name": "Disabled",
+              "states": {},
+              "relations": {},
+              "tab_index": null,
+              "source": "upstream_dom_accessibility_attrs"
+            },
+            "interaction": {
+              "focusable": false,
+              "disabled": true,
+              "has_popup": null,
+              "cursor": "default",
+              "pointer_events": "none",
+              "keyboard_target": false,
+              "source": "upstream_dom_accessibility_attrs"
+            },
+            "descendant_summary": {
+              "count": 0,
+              "svg_count": 0,
+              "text_count": 0
+            },
+            "source": "upstream_dom_computed_style"
+          }
+        ],
+        "fret": [
+          {
+            "test_id": "ui-gallery-material3-button-filled-default",
+            "primary": {
+              "test_id": "ui-gallery-material3-button-filled-default",
+              "bounds": {
+                "x": 346.667,
+                "y": 777.333,
+                "w": 65.333,
+                "h": 40.0
+              },
+              "raw_bounds": {
+                "x": 346.667,
+                "y": 777.333,
+                "w": 65.333,
+                "h": 40.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "12884902274",
+              "kind_hint": "button",
+              "source": "bundle_schema2_semantics",
+              "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+              "label_preview": "Filled",
+              "semantics": {
+                "role": "button",
+                "label": "Filled",
+                "actions": {
+                  "focus": true,
+                  "invoke": true
+                },
+                "source": "bundle_schema2_semantics"
+              },
+              "interaction": {
+                "focusable": true,
+                "invokable": true,
+                "set_value": false,
+                "disabled": false,
+                "focused": false,
+                "source": "bundle_schema2_semantics_actions"
+              },
+              "semantic_text_descendants": [
+                {
+                  "source": "bundle_schema2_semantics_text_descendant",
+                  "role": "text",
+                  "label_preview": "Filled",
+                  "ancestor_test_ids": [
+                    "ui-gallery-material3-button-filled-default"
+                  ],
+                  "ancestor_role": "button",
+                  "ancestor_label_preview": "Filled",
+                  "bounds": {
+                    "x": 362.667,
+                    "y": 787.333,
+                    "w": 33.333,
+                    "h": 20.0
+                  },
+                  "observed_count": 1,
+                  "evidence_paths": [
+                    "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                  ],
+                  "node_samples": [
+                    "12884902292"
+                  ],
+                  "bounds_samples": [
+                    {
+                      "x": 362.667,
+                      "y": 787.333,
+                      "w": 33.333,
+                      "h": 20.0
+                    }
+                  ]
+                }
+              ],
+              "text_paint_coverage": {
+                "status": "semantic_text_without_text_paint_hotspot",
+                "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+              }
+            },
+            "semantics_nodes": [
+              {
+                "test_id": "ui-gallery-material3-button-filled-default",
+                "bounds": {
+                  "x": 346.667,
+                  "y": 777.333,
+                  "w": 65.333,
+                  "h": 40.0
+                },
+                "raw_bounds": {
+                  "x": 346.667,
+                  "y": 777.333,
+                  "w": 65.333,
+                  "h": 40.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "12884902274",
+                "kind_hint": "button",
+                "source": "bundle_schema2_semantics",
+                "label_preview": "Filled",
+                "semantics": {
+                  "role": "button",
+                  "label": "Filled",
+                  "actions": {
+                    "focus": true,
+                    "invoke": true
+                  },
+                  "source": "bundle_schema2_semantics"
+                },
+                "interaction": {
+                  "focusable": true,
+                  "invokable": true,
+                  "set_value": false,
+                  "disabled": false,
+                  "focused": false,
+                  "source": "bundle_schema2_semantics_actions"
+                },
+                "observed_count": 4,
+                "evidence_paths": [
+                  "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                  "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                  "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                ],
+                "node_samples": [
+                  "12884902274"
+                ],
+                "bounds_samples": [
+                  {
+                    "x": 346.667,
+                    "y": 777.333,
+                    "w": 65.333,
+                    "h": 40.0
+                  }
+                ],
+                "semantic_text_descendants": [
+                  {
+                    "source": "bundle_schema2_semantics_text_descendant",
+                    "role": "text",
+                    "label_preview": "Filled",
+                    "ancestor_test_ids": [
+                      "ui-gallery-material3-button-filled-default"
+                    ],
+                    "ancestor_role": "button",
+                    "ancestor_label_preview": "Filled",
+                    "bounds": {
+                      "x": 362.667,
+                      "y": 787.333,
+                      "w": 33.333,
+                      "h": 20.0
+                    },
+                    "observed_count": 4,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902292"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 362.667,
+                        "y": 787.333,
+                        "w": 33.333,
+                        "h": 20.0
+                      }
+                    ]
+                  }
+                ],
+                "text_paint_coverage": {
+                  "status": "semantic_text_without_text_paint_hotspot",
+                  "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                }
+              }
+            ],
+            "semantics_summary": {
+              "observed_node_count": 4,
+              "compact_node_count": 1,
+              "omitted_node_count": 0
+            },
+            "related": [
+              {
+                "test_id": "ui-gallery-material3-button-filled-default.chrome",
+                "bounds": {
+                  "x": 346.667,
+                  "y": 777.333,
+                  "w": 65.333,
+                  "h": 40.0
+                },
+                "raw_bounds": {
+                  "x": 346.667,
+                  "y": 777.333,
+                  "w": 65.333,
+                  "h": 40.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "12884902276",
+                "kind_hint": "generic",
+                "source": "bundle_schema2_semantics",
+                "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                "semantics": {
+                  "role": "generic",
+                  "source": "bundle_schema2_semantics"
+                },
+                "interaction": {
+                  "focusable": false,
+                  "invokable": false,
+                  "set_value": false,
+                  "disabled": false,
+                  "focused": false,
+                  "source": "bundle_schema2_semantics_actions"
+                },
+                "semantic_text_descendants": [
+                  {
+                    "source": "bundle_schema2_semantics_text_descendant",
+                    "role": "text",
+                    "label_preview": "Filled",
+                    "ancestor_test_ids": [
+                      "ui-gallery-material3-button-filled-default.chrome"
+                    ],
+                    "ancestor_role": "generic",
+                    "bounds": {
+                      "x": 362.667,
+                      "y": 787.333,
+                      "w": 33.333,
+                      "h": 20.0
+                    },
+                    "observed_count": 1,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902292"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 362.667,
+                        "y": 787.333,
+                        "w": 33.333,
+                        "h": 20.0
+                      }
+                    ]
+                  }
+                ],
+                "text_paint_coverage": {
+                  "status": "semantic_text_without_text_paint_hotspot",
+                  "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                }
+              },
+              {
+                "test_id": "ui-gallery-material3-button-filled-default.chrome",
+                "semantics_nodes": [
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-default.chrome",
+                    "bounds": {
+                      "x": 346.667,
+                      "y": 777.333,
+                      "w": 65.333,
+                      "h": 40.0
+                    },
+                    "raw_bounds": {
+                      "x": 346.667,
+                      "y": 777.333,
+                      "w": 65.333,
+                      "h": 40.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "12884902276",
+                    "kind_hint": "generic",
+                    "source": "bundle_schema2_semantics",
+                    "semantics": {
+                      "role": "generic",
+                      "source": "bundle_schema2_semantics"
+                    },
+                    "interaction": {
+                      "focusable": false,
+                      "invokable": false,
+                      "set_value": false,
+                      "disabled": false,
+                      "focused": false,
+                      "source": "bundle_schema2_semantics_actions"
+                    },
+                    "observed_count": 4,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902276"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 346.667,
+                        "y": 777.333,
+                        "w": 65.333,
+                        "h": 40.0
+                      }
+                    ],
+                    "semantic_text_descendants": [
+                      {
+                        "source": "bundle_schema2_semantics_text_descendant",
+                        "role": "text",
+                        "label_preview": "Filled",
+                        "ancestor_test_ids": [
+                          "ui-gallery-material3-button-filled-default.chrome"
+                        ],
+                        "ancestor_role": "generic",
+                        "bounds": {
+                          "x": 362.667,
+                          "y": 787.333,
+                          "w": 33.333,
+                          "h": 20.0
+                        },
+                        "observed_count": 4,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902292"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 362.667,
+                            "y": 787.333,
+                            "w": 33.333,
+                            "h": 20.0
+                          }
+                        ]
+                      }
+                    ],
+                    "text_paint_coverage": {
+                      "status": "semantic_text_without_text_paint_hotspot",
+                      "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                    }
+                  }
+                ],
+                "semantics_summary": {
+                  "observed_node_count": 4,
+                  "compact_node_count": 1,
+                  "omitted_node_count": 0
+                },
+                "source": "bundle_schema2_semantics"
+              }
+            ]
+          },
+          {
+            "test_id": "ui-gallery-material3-button-filled-disabled",
+            "primary": {
+              "test_id": "ui-gallery-material3-button-filled-disabled",
+              "bounds": {
+                "x": 514.0,
+                "y": 777.333,
+                "w": 86.0,
+                "h": 40.0
+              },
+              "raw_bounds": {
+                "x": 514.0,
+                "y": 777.333,
+                "w": 86.0,
+                "h": 40.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "12884902311",
+              "kind_hint": "button",
+              "source": "bundle_schema2_semantics",
+              "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+              "label_preview": "Disabled",
+              "semantics": {
+                "role": "button",
+                "label": "Disabled",
+                "flags": {
+                  "disabled": true
+                },
+                "source": "bundle_schema2_semantics"
+              },
+              "interaction": {
+                "focusable": false,
+                "invokable": false,
+                "set_value": false,
+                "disabled": true,
+                "focused": false,
+                "source": "bundle_schema2_semantics_actions"
+              },
+              "semantic_text_descendants": [
+                {
+                  "source": "bundle_schema2_semantics_text_descendant",
+                  "role": "text",
+                  "label_preview": "Disabled",
+                  "ancestor_test_ids": [
+                    "ui-gallery-material3-button-filled-disabled"
+                  ],
+                  "ancestor_role": "button",
+                  "ancestor_label_preview": "Disabled",
+                  "bounds": {
+                    "x": 530.0,
+                    "y": 787.333,
+                    "w": 54.0,
+                    "h": 20.0
+                  },
+                  "observed_count": 1,
+                  "evidence_paths": [
+                    "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                  ],
+                  "node_samples": [
+                    "12884902320"
+                  ],
+                  "bounds_samples": [
+                    {
+                      "x": 530.0,
+                      "y": 787.333,
+                      "w": 54.0,
+                      "h": 20.0
+                    }
+                  ]
+                }
+              ],
+              "text_paint_coverage": {
+                "status": "semantic_text_without_text_paint_hotspot",
+                "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+              }
+            },
+            "semantics_nodes": [
+              {
+                "test_id": "ui-gallery-material3-button-filled-disabled",
+                "bounds": {
+                  "x": 514.0,
+                  "y": 777.333,
+                  "w": 86.0,
+                  "h": 40.0
+                },
+                "raw_bounds": {
+                  "x": 514.0,
+                  "y": 777.333,
+                  "w": 86.0,
+                  "h": 40.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "12884902311",
+                "kind_hint": "button",
+                "source": "bundle_schema2_semantics",
+                "label_preview": "Disabled",
+                "semantics": {
+                  "role": "button",
+                  "label": "Disabled",
+                  "flags": {
+                    "disabled": true
+                  },
+                  "source": "bundle_schema2_semantics"
+                },
+                "interaction": {
+                  "focusable": false,
+                  "invokable": false,
+                  "set_value": false,
+                  "disabled": true,
+                  "focused": false,
+                  "source": "bundle_schema2_semantics_actions"
+                },
+                "observed_count": 4,
+                "evidence_paths": [
+                  "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                  "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                  "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                ],
+                "node_samples": [
+                  "12884902311"
+                ],
+                "bounds_samples": [
+                  {
+                    "x": 514.0,
+                    "y": 777.333,
+                    "w": 86.0,
+                    "h": 40.0
+                  }
+                ],
+                "semantic_text_descendants": [
+                  {
+                    "source": "bundle_schema2_semantics_text_descendant",
+                    "role": "text",
+                    "label_preview": "Disabled",
+                    "ancestor_test_ids": [
+                      "ui-gallery-material3-button-filled-disabled"
+                    ],
+                    "ancestor_role": "button",
+                    "ancestor_label_preview": "Disabled",
+                    "bounds": {
+                      "x": 530.0,
+                      "y": 787.333,
+                      "w": 54.0,
+                      "h": 20.0
+                    },
+                    "observed_count": 4,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902320"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 530.0,
+                        "y": 787.333,
+                        "w": 54.0,
+                        "h": 20.0
+                      }
+                    ]
+                  }
+                ],
+                "text_paint_coverage": {
+                  "status": "semantic_text_without_text_paint_hotspot",
+                  "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                }
+              }
+            ],
+            "semantics_summary": {
+              "observed_node_count": 4,
+              "compact_node_count": 1,
+              "omitted_node_count": 0
+            },
+            "related": [
+              {
+                "test_id": "ui-gallery-material3-button-filled-disabled.chrome",
+                "bounds": {
+                  "x": 514.0,
+                  "y": 777.333,
+                  "w": 86.0,
+                  "h": 40.0
+                },
+                "raw_bounds": {
+                  "x": 514.0,
+                  "y": 777.333,
+                  "w": 86.0,
+                  "h": 40.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "12884902316",
+                "kind_hint": "generic",
+                "source": "bundle_schema2_semantics",
+                "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                "semantics": {
+                  "role": "generic",
+                  "source": "bundle_schema2_semantics"
+                },
+                "interaction": {
+                  "focusable": false,
+                  "invokable": false,
+                  "set_value": false,
+                  "disabled": false,
+                  "focused": false,
+                  "source": "bundle_schema2_semantics_actions"
+                },
+                "semantic_text_descendants": [
+                  {
+                    "source": "bundle_schema2_semantics_text_descendant",
+                    "role": "text",
+                    "label_preview": "Disabled",
+                    "ancestor_test_ids": [
+                      "ui-gallery-material3-button-filled-disabled.chrome"
+                    ],
+                    "ancestor_role": "generic",
+                    "bounds": {
+                      "x": 530.0,
+                      "y": 787.333,
+                      "w": 54.0,
+                      "h": 20.0
+                    },
+                    "observed_count": 1,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902320"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 530.0,
+                        "y": 787.333,
+                        "w": 54.0,
+                        "h": 20.0
+                      }
+                    ]
+                  }
+                ],
+                "text_paint_coverage": {
+                  "status": "semantic_text_without_text_paint_hotspot",
+                  "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                }
+              },
+              {
+                "test_id": "ui-gallery-material3-button-filled-disabled.chrome",
+                "semantics_nodes": [
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-disabled.chrome",
+                    "bounds": {
+                      "x": 514.0,
+                      "y": 777.333,
+                      "w": 86.0,
+                      "h": 40.0
+                    },
+                    "raw_bounds": {
+                      "x": 514.0,
+                      "y": 777.333,
+                      "w": 86.0,
+                      "h": 40.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "12884902316",
+                    "kind_hint": "generic",
+                    "source": "bundle_schema2_semantics",
+                    "semantics": {
+                      "role": "generic",
+                      "source": "bundle_schema2_semantics"
+                    },
+                    "interaction": {
+                      "focusable": false,
+                      "invokable": false,
+                      "set_value": false,
+                      "disabled": false,
+                      "focused": false,
+                      "source": "bundle_schema2_semantics_actions"
+                    },
+                    "observed_count": 4,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902316"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 514.0,
+                        "y": 777.333,
+                        "w": 86.0,
+                        "h": 40.0
+                      }
+                    ],
+                    "semantic_text_descendants": [
+                      {
+                        "source": "bundle_schema2_semantics_text_descendant",
+                        "role": "text",
+                        "label_preview": "Disabled",
+                        "ancestor_test_ids": [
+                          "ui-gallery-material3-button-filled-disabled.chrome"
+                        ],
+                        "ancestor_role": "generic",
+                        "bounds": {
+                          "x": 530.0,
+                          "y": 787.333,
+                          "w": 54.0,
+                          "h": 20.0
+                        },
+                        "observed_count": 4,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902320"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 530.0,
+                            "y": 787.333,
+                            "w": 54.0,
+                            "h": 20.0
+                          }
+                        ]
+                      }
+                    ],
+                    "text_paint_coverage": {
+                      "status": "semantic_text_without_text_paint_hotspot",
+                      "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                    }
+                  }
+                ],
+                "semantics_summary": {
+                  "observed_node_count": 4,
+                  "compact_node_count": 1,
+                  "omitted_node_count": 0
+                },
+                "source": "bundle_schema2_semantics"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "part_id": "material3_button_text_paint",
+        "upstream_dom_target_count": 2,
+        "fret_test_id_count": 2,
+        "upstream_semantics_fact_count": 2,
+        "upstream_interaction_fact_count": 2,
+        "fret_semantics_fact_count": 2,
+        "fret_interaction_fact_count": 2,
+        "fret_text_paint_fact_count": 0,
+        "fret_text_paint_direct_fact_count": 0,
+        "fret_text_paint_associated_fact_count": 0,
+        "fret_text_label_fact_count": 8,
+        "fret_text_paint_bundle_entry_count": 180,
+        "fret_text_paint_row_count": 3746,
+        "fret_text_paint_association_row_count": 4199,
+        "fret_text_paint_unassociated_row_count": 2872,
+        "fret_text_label_row_count": 2248,
+        "upstream": [
+          {
+            "target_id": "material3.button.mui.contained.enabled",
+            "snapshot": "material3-button-mui-contained",
+            "theme": "light",
+            "mode": "",
+            "variant": "",
+            "context_id": "material3.button.mui.contained.light.vp1440x900",
+            "path": "0",
+            "tag": "button",
+            "attrs": {
+              "type": "button"
+            },
+            "class_tokens": [
+              "MuiButtonBase-root",
+              "MuiButton-root",
+              "MuiButton-contained",
+              "MuiButton-containedPrimary",
+              "MuiButton-sizeMedium",
+              "MuiButton-containedSizeMedium",
+              "MuiButton-colorPrimary"
+            ],
+            "bounds": {
+              "x": 0.0,
+              "y": 0.0,
+              "w": 75.0,
+              "h": 36.0
+            },
+            "device_pixel_ratio": 1.0,
+            "child_count": 0,
+            "layout": {
+              "display": "inline-flex",
+              "position": "relative",
+              "boxSizing": "border-box",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "height": 36.0,
+              "minWidth": 64.0,
+              "paddingTop": 6.0,
+              "paddingRight": 16.0,
+              "paddingBottom": 6.0,
+              "paddingLeft": 16.0
+            },
+            "text": {
+              "text": "Filled",
+              "fontFamily": "\"Roboto\", \"Helvetica\", \"Arial\", sans-serif",
+              "fontWeight": "500",
+              "textTransform": "uppercase",
+              "fontSize": 14.0,
+              "lineHeight": 24.5,
+              "letterSpacing": 0.4
+            },
+            "paint": {
+              "color": "rgb(255, 255, 255)",
+              "backgroundColor": "rgb(25, 118, 210)",
+              "boxShadow": "rgba(0, 0, 0, 0.2) 0px 3px 1px -2px, rgba(0, 0, 0, 0.14) 0px 2px 2px 0px, rgba(0, 0, 0, 0.12) 0px 1px 5px 0px",
+              "opacity": "1",
+              "border_widths_px": {
+                "borderTopWidth": 0.0,
+                "borderRightWidth": 0.0,
+                "borderBottomWidth": 0.0,
+                "borderLeftWidth": 0.0
+              },
+              "corner_radii_px": {
+                "borderTopLeftRadius": 4.0,
+                "borderTopRightRadius": 4.0,
+                "borderBottomRightRadius": 4.0,
+                "borderBottomLeftRadius": 4.0
+              }
+            },
+            "semantics": {
+              "role": "button",
+              "implicit_role": "button",
+              "accessible_name": "Filled",
+              "states": {},
+              "relations": {},
+              "tab_index": null,
+              "source": "upstream_dom_accessibility_attrs"
+            },
+            "interaction": {
+              "focusable": true,
+              "disabled": false,
+              "has_popup": null,
+              "cursor": "pointer",
+              "pointer_events": "auto",
+              "keyboard_target": true,
+              "source": "upstream_dom_accessibility_attrs"
+            },
+            "descendant_summary": {
+              "count": 0,
+              "svg_count": 0,
+              "text_count": 0
+            },
+            "source": "upstream_dom_computed_style"
+          },
+          {
+            "target_id": "material3.button.mui.contained.disabled",
+            "snapshot": "material3-button-mui-contained",
+            "theme": "light",
+            "mode": "",
+            "variant": "",
+            "context_id": "material3.button.mui.contained.light.vp1440x900",
+            "path": "1",
+            "tag": "button",
+            "attrs": {
+              "type": "button",
+              "disabled": true
+            },
+            "class_tokens": [
+              "MuiButtonBase-root",
+              "MuiButton-root",
+              "MuiButton-contained",
+              "MuiButton-containedPrimary",
+              "MuiButton-sizeMedium",
+              "MuiButton-containedSizeMedium",
+              "MuiButton-colorPrimary",
+              "Mui-disabled"
+            ],
+            "bounds": {
+              "x": 83.0,
+              "y": 0.0,
+              "w": 96.0,
+              "h": 36.0
+            },
+            "device_pixel_ratio": 1.0,
+            "child_count": 0,
+            "layout": {
+              "display": "inline-flex",
+              "position": "relative",
+              "boxSizing": "border-box",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "height": 36.0,
+              "minWidth": 64.0,
+              "paddingTop": 6.0,
+              "paddingRight": 16.0,
+              "paddingBottom": 6.0,
+              "paddingLeft": 16.0
+            },
+            "text": {
+              "text": "Disabled",
+              "fontFamily": "\"Roboto\", \"Helvetica\", \"Arial\", sans-serif",
+              "fontWeight": "500",
+              "textTransform": "uppercase",
+              "fontSize": 14.0,
+              "lineHeight": 24.5,
+              "letterSpacing": 0.4
+            },
+            "paint": {
+              "color": "rgba(0, 0, 0, 0.26)",
+              "backgroundColor": "rgba(0, 0, 0, 0.12)",
+              "boxShadow": "none",
+              "opacity": "1",
+              "border_widths_px": {
+                "borderTopWidth": 0.0,
+                "borderRightWidth": 0.0,
+                "borderBottomWidth": 0.0,
+                "borderLeftWidth": 0.0
+              },
+              "corner_radii_px": {
+                "borderTopLeftRadius": 4.0,
+                "borderTopRightRadius": 4.0,
+                "borderBottomRightRadius": 4.0,
+                "borderBottomLeftRadius": 4.0
+              }
+            },
+            "semantics": {
+              "role": "button",
+              "implicit_role": "button",
+              "accessible_name": "Disabled",
+              "states": {},
+              "relations": {},
+              "tab_index": null,
+              "source": "upstream_dom_accessibility_attrs"
+            },
+            "interaction": {
+              "focusable": false,
+              "disabled": true,
+              "has_popup": null,
+              "cursor": "default",
+              "pointer_events": "none",
+              "keyboard_target": false,
+              "source": "upstream_dom_accessibility_attrs"
+            },
+            "descendant_summary": {
+              "count": 0,
+              "svg_count": 0,
+              "text_count": 0
+            },
+            "source": "upstream_dom_computed_style"
+          }
+        ],
+        "fret": [
+          {
+            "test_id": "ui-gallery-material3-button-filled-default",
+            "primary": {
+              "test_id": "ui-gallery-material3-button-filled-default",
+              "bounds": {
+                "x": 346.667,
+                "y": 777.333,
+                "w": 65.333,
+                "h": 40.0
+              },
+              "raw_bounds": {
+                "x": 346.667,
+                "y": 777.333,
+                "w": 65.333,
+                "h": 40.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "12884902274",
+              "kind_hint": "button",
+              "source": "bundle_schema2_semantics",
+              "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+              "label_preview": "Filled",
+              "semantics": {
+                "role": "button",
+                "label": "Filled",
+                "actions": {
+                  "focus": true,
+                  "invoke": true
+                },
+                "source": "bundle_schema2_semantics"
+              },
+              "interaction": {
+                "focusable": true,
+                "invokable": true,
+                "set_value": false,
+                "disabled": false,
+                "focused": false,
+                "source": "bundle_schema2_semantics_actions"
+              },
+              "semantic_text_descendants": [
+                {
+                  "source": "bundle_schema2_semantics_text_descendant",
+                  "role": "text",
+                  "label_preview": "Filled",
+                  "ancestor_test_ids": [
+                    "ui-gallery-material3-button-filled-default"
+                  ],
+                  "ancestor_role": "button",
+                  "ancestor_label_preview": "Filled",
+                  "bounds": {
+                    "x": 362.667,
+                    "y": 787.333,
+                    "w": 33.333,
+                    "h": 20.0
+                  },
+                  "observed_count": 1,
+                  "evidence_paths": [
+                    "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                  ],
+                  "node_samples": [
+                    "12884902292"
+                  ],
+                  "bounds_samples": [
+                    {
+                      "x": 362.667,
+                      "y": 787.333,
+                      "w": 33.333,
+                      "h": 20.0
+                    }
+                  ]
+                }
+              ],
+              "text_paint_coverage": {
+                "status": "semantic_text_without_text_paint_hotspot",
+                "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+              }
+            },
+            "semantics_nodes": [
+              {
+                "test_id": "ui-gallery-material3-button-filled-default",
+                "bounds": {
+                  "x": 346.667,
+                  "y": 777.333,
+                  "w": 65.333,
+                  "h": 40.0
+                },
+                "raw_bounds": {
+                  "x": 346.667,
+                  "y": 777.333,
+                  "w": 65.333,
+                  "h": 40.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "12884902274",
+                "kind_hint": "button",
+                "source": "bundle_schema2_semantics",
+                "label_preview": "Filled",
+                "semantics": {
+                  "role": "button",
+                  "label": "Filled",
+                  "actions": {
+                    "focus": true,
+                    "invoke": true
+                  },
+                  "source": "bundle_schema2_semantics"
+                },
+                "interaction": {
+                  "focusable": true,
+                  "invokable": true,
+                  "set_value": false,
+                  "disabled": false,
+                  "focused": false,
+                  "source": "bundle_schema2_semantics_actions"
+                },
+                "observed_count": 4,
+                "evidence_paths": [
+                  "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                  "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                  "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                ],
+                "node_samples": [
+                  "12884902274"
+                ],
+                "bounds_samples": [
+                  {
+                    "x": 346.667,
+                    "y": 777.333,
+                    "w": 65.333,
+                    "h": 40.0
+                  }
+                ],
+                "semantic_text_descendants": [
+                  {
+                    "source": "bundle_schema2_semantics_text_descendant",
+                    "role": "text",
+                    "label_preview": "Filled",
+                    "ancestor_test_ids": [
+                      "ui-gallery-material3-button-filled-default"
+                    ],
+                    "ancestor_role": "button",
+                    "ancestor_label_preview": "Filled",
+                    "bounds": {
+                      "x": 362.667,
+                      "y": 787.333,
+                      "w": 33.333,
+                      "h": 20.0
+                    },
+                    "observed_count": 4,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902292"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 362.667,
+                        "y": 787.333,
+                        "w": 33.333,
+                        "h": 20.0
+                      }
+                    ]
+                  }
+                ],
+                "text_paint_coverage": {
+                  "status": "semantic_text_without_text_paint_hotspot",
+                  "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                }
+              }
+            ],
+            "semantics_summary": {
+              "observed_node_count": 4,
+              "compact_node_count": 1,
+              "omitted_node_count": 0
+            },
+            "related": [
+              {
+                "test_id": "ui-gallery-material3-button-filled-default.chrome",
+                "bounds": {
+                  "x": 346.667,
+                  "y": 777.333,
+                  "w": 65.333,
+                  "h": 40.0
+                },
+                "raw_bounds": {
+                  "x": 346.667,
+                  "y": 777.333,
+                  "w": 65.333,
+                  "h": 40.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "12884902276",
+                "kind_hint": "generic",
+                "source": "bundle_schema2_semantics",
+                "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                "semantics": {
+                  "role": "generic",
+                  "source": "bundle_schema2_semantics"
+                },
+                "interaction": {
+                  "focusable": false,
+                  "invokable": false,
+                  "set_value": false,
+                  "disabled": false,
+                  "focused": false,
+                  "source": "bundle_schema2_semantics_actions"
+                },
+                "semantic_text_descendants": [
+                  {
+                    "source": "bundle_schema2_semantics_text_descendant",
+                    "role": "text",
+                    "label_preview": "Filled",
+                    "ancestor_test_ids": [
+                      "ui-gallery-material3-button-filled-default.chrome"
+                    ],
+                    "ancestor_role": "generic",
+                    "bounds": {
+                      "x": 362.667,
+                      "y": 787.333,
+                      "w": 33.333,
+                      "h": 20.0
+                    },
+                    "observed_count": 1,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902292"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 362.667,
+                        "y": 787.333,
+                        "w": 33.333,
+                        "h": 20.0
+                      }
+                    ]
+                  }
+                ],
+                "text_paint_coverage": {
+                  "status": "semantic_text_without_text_paint_hotspot",
+                  "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                }
+              },
+              {
+                "test_id": "ui-gallery-material3-button-filled-default.chrome",
+                "semantics_nodes": [
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-default.chrome",
+                    "bounds": {
+                      "x": 346.667,
+                      "y": 777.333,
+                      "w": 65.333,
+                      "h": 40.0
+                    },
+                    "raw_bounds": {
+                      "x": 346.667,
+                      "y": 777.333,
+                      "w": 65.333,
+                      "h": 40.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "12884902276",
+                    "kind_hint": "generic",
+                    "source": "bundle_schema2_semantics",
+                    "semantics": {
+                      "role": "generic",
+                      "source": "bundle_schema2_semantics"
+                    },
+                    "interaction": {
+                      "focusable": false,
+                      "invokable": false,
+                      "set_value": false,
+                      "disabled": false,
+                      "focused": false,
+                      "source": "bundle_schema2_semantics_actions"
+                    },
+                    "observed_count": 4,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902276"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 346.667,
+                        "y": 777.333,
+                        "w": 65.333,
+                        "h": 40.0
+                      }
+                    ],
+                    "semantic_text_descendants": [
+                      {
+                        "source": "bundle_schema2_semantics_text_descendant",
+                        "role": "text",
+                        "label_preview": "Filled",
+                        "ancestor_test_ids": [
+                          "ui-gallery-material3-button-filled-default.chrome"
+                        ],
+                        "ancestor_role": "generic",
+                        "bounds": {
+                          "x": 362.667,
+                          "y": 787.333,
+                          "w": 33.333,
+                          "h": 20.0
+                        },
+                        "observed_count": 4,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902292"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 362.667,
+                            "y": 787.333,
+                            "w": 33.333,
+                            "h": 20.0
+                          }
+                        ]
+                      }
+                    ],
+                    "text_paint_coverage": {
+                      "status": "semantic_text_without_text_paint_hotspot",
+                      "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                    }
+                  }
+                ],
+                "semantics_summary": {
+                  "observed_node_count": 4,
+                  "compact_node_count": 1,
+                  "omitted_node_count": 0
+                },
+                "source": "bundle_schema2_semantics"
+              }
+            ]
+          },
+          {
+            "test_id": "ui-gallery-material3-button-filled-disabled",
+            "primary": {
+              "test_id": "ui-gallery-material3-button-filled-disabled",
+              "bounds": {
+                "x": 514.0,
+                "y": 777.333,
+                "w": 86.0,
+                "h": 40.0
+              },
+              "raw_bounds": {
+                "x": 514.0,
+                "y": 777.333,
+                "w": 86.0,
+                "h": 40.0
+              },
+              "scale_factor": 1.5,
+              "coordinate_units": "logical_px",
+              "node": "12884902311",
+              "kind_hint": "button",
+              "source": "bundle_schema2_semantics",
+              "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+              "label_preview": "Disabled",
+              "semantics": {
+                "role": "button",
+                "label": "Disabled",
+                "flags": {
+                  "disabled": true
+                },
+                "source": "bundle_schema2_semantics"
+              },
+              "interaction": {
+                "focusable": false,
+                "invokable": false,
+                "set_value": false,
+                "disabled": true,
+                "focused": false,
+                "source": "bundle_schema2_semantics_actions"
+              },
+              "semantic_text_descendants": [
+                {
+                  "source": "bundle_schema2_semantics_text_descendant",
+                  "role": "text",
+                  "label_preview": "Disabled",
+                  "ancestor_test_ids": [
+                    "ui-gallery-material3-button-filled-disabled"
+                  ],
+                  "ancestor_role": "button",
+                  "ancestor_label_preview": "Disabled",
+                  "bounds": {
+                    "x": 530.0,
+                    "y": 787.333,
+                    "w": 54.0,
+                    "h": 20.0
+                  },
+                  "observed_count": 1,
+                  "evidence_paths": [
+                    "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                  ],
+                  "node_samples": [
+                    "12884902320"
+                  ],
+                  "bounds_samples": [
+                    {
+                      "x": 530.0,
+                      "y": 787.333,
+                      "w": 54.0,
+                      "h": 20.0
+                    }
+                  ]
+                }
+              ],
+              "text_paint_coverage": {
+                "status": "semantic_text_without_text_paint_hotspot",
+                "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+              }
+            },
+            "semantics_nodes": [
+              {
+                "test_id": "ui-gallery-material3-button-filled-disabled",
+                "bounds": {
+                  "x": 514.0,
+                  "y": 777.333,
+                  "w": 86.0,
+                  "h": 40.0
+                },
+                "raw_bounds": {
+                  "x": 514.0,
+                  "y": 777.333,
+                  "w": 86.0,
+                  "h": 40.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "12884902311",
+                "kind_hint": "button",
+                "source": "bundle_schema2_semantics",
+                "label_preview": "Disabled",
+                "semantics": {
+                  "role": "button",
+                  "label": "Disabled",
+                  "flags": {
+                    "disabled": true
+                  },
+                  "source": "bundle_schema2_semantics"
+                },
+                "interaction": {
+                  "focusable": false,
+                  "invokable": false,
+                  "set_value": false,
+                  "disabled": true,
+                  "focused": false,
+                  "source": "bundle_schema2_semantics_actions"
+                },
+                "observed_count": 4,
+                "evidence_paths": [
+                  "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                  "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                  "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                ],
+                "node_samples": [
+                  "12884902311"
+                ],
+                "bounds_samples": [
+                  {
+                    "x": 514.0,
+                    "y": 777.333,
+                    "w": 86.0,
+                    "h": 40.0
+                  }
+                ],
+                "semantic_text_descendants": [
+                  {
+                    "source": "bundle_schema2_semantics_text_descendant",
+                    "role": "text",
+                    "label_preview": "Disabled",
+                    "ancestor_test_ids": [
+                      "ui-gallery-material3-button-filled-disabled"
+                    ],
+                    "ancestor_role": "button",
+                    "ancestor_label_preview": "Disabled",
+                    "bounds": {
+                      "x": 530.0,
+                      "y": 787.333,
+                      "w": 54.0,
+                      "h": 20.0
+                    },
+                    "observed_count": 4,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902320"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 530.0,
+                        "y": 787.333,
+                        "w": 54.0,
+                        "h": 20.0
+                      }
+                    ]
+                  }
+                ],
+                "text_paint_coverage": {
+                  "status": "semantic_text_without_text_paint_hotspot",
+                  "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                }
+              }
+            ],
+            "semantics_summary": {
+              "observed_node_count": 4,
+              "compact_node_count": 1,
+              "omitted_node_count": 0
+            },
+            "related": [
+              {
+                "test_id": "ui-gallery-material3-button-filled-disabled.chrome",
+                "bounds": {
+                  "x": 514.0,
+                  "y": 777.333,
+                  "w": 86.0,
+                  "h": 40.0
+                },
+                "raw_bounds": {
+                  "x": 514.0,
+                  "y": 777.333,
+                  "w": 86.0,
+                  "h": 40.0
+                },
+                "scale_factor": 1.5,
+                "coordinate_units": "logical_px",
+                "node": "12884902316",
+                "kind_hint": "generic",
+                "source": "bundle_schema2_semantics",
+                "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                "semantics": {
+                  "role": "generic",
+                  "source": "bundle_schema2_semantics"
+                },
+                "interaction": {
+                  "focusable": false,
+                  "invokable": false,
+                  "set_value": false,
+                  "disabled": false,
+                  "focused": false,
+                  "source": "bundle_schema2_semantics_actions"
+                },
+                "semantic_text_descendants": [
+                  {
+                    "source": "bundle_schema2_semantics_text_descendant",
+                    "role": "text",
+                    "label_preview": "Disabled",
+                    "ancestor_test_ids": [
+                      "ui-gallery-material3-button-filled-disabled.chrome"
+                    ],
+                    "ancestor_role": "generic",
+                    "bounds": {
+                      "x": 530.0,
+                      "y": 787.333,
+                      "w": 54.0,
+                      "h": 20.0
+                    },
+                    "observed_count": 1,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902320"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 530.0,
+                        "y": 787.333,
+                        "w": 54.0,
+                        "h": 20.0
+                      }
+                    ]
+                  }
+                ],
+                "text_paint_coverage": {
+                  "status": "semantic_text_without_text_paint_hotspot",
+                  "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                }
+              },
+              {
+                "test_id": "ui-gallery-material3-button-filled-disabled.chrome",
+                "semantics_nodes": [
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-disabled.chrome",
+                    "bounds": {
+                      "x": 514.0,
+                      "y": 777.333,
+                      "w": 86.0,
+                      "h": 40.0
+                    },
+                    "raw_bounds": {
+                      "x": 514.0,
+                      "y": 777.333,
+                      "w": 86.0,
+                      "h": 40.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "12884902316",
+                    "kind_hint": "generic",
+                    "source": "bundle_schema2_semantics",
+                    "semantics": {
+                      "role": "generic",
+                      "source": "bundle_schema2_semantics"
+                    },
+                    "interaction": {
+                      "focusable": false,
+                      "invokable": false,
+                      "set_value": false,
+                      "disabled": false,
+                      "focused": false,
+                      "source": "bundle_schema2_semantics_actions"
+                    },
+                    "observed_count": 4,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902316"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 514.0,
+                        "y": 777.333,
+                        "w": 86.0,
+                        "h": 40.0
+                      }
+                    ],
+                    "semantic_text_descendants": [
+                      {
+                        "source": "bundle_schema2_semantics_text_descendant",
+                        "role": "text",
+                        "label_preview": "Disabled",
+                        "ancestor_test_ids": [
+                          "ui-gallery-material3-button-filled-disabled.chrome"
+                        ],
+                        "ancestor_role": "generic",
+                        "bounds": {
+                          "x": 530.0,
+                          "y": 787.333,
+                          "w": 54.0,
+                          "h": 20.0
+                        },
+                        "observed_count": 4,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902320"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 530.0,
+                            "y": 787.333,
+                            "w": 54.0,
+                            "h": 20.0
+                          }
+                        ]
+                      }
+                    ],
+                    "text_paint_coverage": {
+                      "status": "semantic_text_without_text_paint_hotspot",
+                      "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                    }
+                  }
+                ],
+                "semantics_summary": {
+                  "observed_node_count": 4,
+                  "compact_node_count": 1,
+                  "omitted_node_count": 0
+                },
+                "source": "bundle_schema2_semantics"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "parts": [
+    {
+      "id": "material3_button_semantics",
+      "label": "Material 3 Button semantics and activation",
+      "axis": "semantics",
+      "status": "pass_known",
+      "confidence": "medium",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "material3_button_upstream_dom_gate",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-material3-button-filled-default",
+        "ui-gallery-material3-button-filled-disabled"
+      ],
+      "upstream_facts": [
+        "Material buttons expose a button activation role with a label-derived accessible name.",
+        "Disabled buttons remain non-invokable and must report disabled state.",
+        "Focus, hover, and press are interaction states that influence state-layer visuals without becoming core mechanism policy."
+      ],
+      "fret_facts": [
+        "Fret Material3 Button sets SemanticsRole::Button through PressableA11y.",
+        "Fret Material3 Button disables activation when disabled or when the bound action is unavailable.",
+        "The existing headless suite renders enabled and disabled Material buttons with stable test IDs."
+      ],
+      "checks": [
+        {
+          "id": "material3_button_upstream_dom_gate",
+          "kind": "live_measurement_required",
+          "status": "pass_known",
+          "expected": "MUI contained button DOM evidence should expose enabled and disabled button roles, accessible names, disabled/focusability state, and computed button chrome for the Material adapter.",
+          "observed": "pass",
+          "observed_source": "live_fact_requirements",
+          "confidence": "medium",
+          "owner": "upstream_reference",
+          "layer": "upstream",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "docs/workstreams/component-parity-fact-harness-v1/artifacts/upstream-dom/material3-button-mui-contained.json",
+            "F:/SourceCodes/Rust/fret/repo-ref/material-ui/docs/data/material/components/buttons/ContainedButtons.tsx",
+            "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "The first Material adapter needs an upstream DOM slice before comparing Fret recipe semantics and chrome against web-facing Material UI behavior."
+          },
+          "measurement": {
+            "source": "live_fact_requirements",
+            "status": "pass",
+            "part_id": "material3_button_semantics",
+            "requirements": [
+              {
+                "field": "upstream_dom_target_count",
+                "observed": 2,
+                "minimum": 2,
+                "status": "pass"
+              },
+              {
+                "field": "upstream_interaction_fact_count",
+                "observed": 2,
+                "minimum": 2,
+                "status": "pass"
+              },
+              {
+                "field": "upstream_semantics_fact_count",
+                "observed": 2,
+                "minimum": 2,
+                "status": "pass"
+              }
+            ]
+          }
+        },
+        {
+          "id": "material3_button_semantics_bundle_gate",
+          "kind": "live_measurement_required",
+          "status": "pass_known",
+          "expected": "Bundle schema2 semantics should expose role=button, label, disabled flag, and invoke/focus action state for enabled and disabled Material buttons.",
+          "observed": "pass",
+          "observed_source": "live_fact_requirements",
+          "confidence": "medium",
+          "owner": "component_recipe",
+          "layer": "recipe",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "ecosystem/fret-ui-material3/src/button.rs",
+            "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+            "target/fret-diag/**/bundle.schema2.json"
+          ],
+          "promotion": {
+            "target": "component_fixture",
+            "reason": "The invariant is Material Button recipe semantics; only missing portable semantics fields should be promoted inward."
+          },
+          "measurement": {
+            "source": "live_fact_requirements",
+            "status": "pass",
+            "part_id": "material3_button_semantics",
+            "requirements": [
+              {
+                "field": "fret_interaction_fact_count",
+                "observed": 2,
+                "minimum": 2,
+                "status": "pass"
+              },
+              {
+                "field": "fret_semantics_fact_count",
+                "observed": 2,
+                "minimum": 2,
+                "status": "pass"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "material3_button_text_paint",
+      "label": "Material 3 Button token-driven text and paint facts",
+      "axis": "chrome",
+      "status": "pass_known",
+      "confidence": "medium",
+      "triage": {
+        "score": 0,
+        "level": "none",
+        "highest_check_id": "material3_button_text_paint_table_gate",
+        "reasons": [
+          "passing evidence"
+        ]
+      },
+      "test_ids": [
+        "ui-gallery-material3-button-filled-default",
+        "ui-gallery-material3-button-filled-disabled"
+      ],
+      "upstream_facts": [
+        "Button height, shape, state-layer opacity, label text style, and container/label colors are token-driven Material outcomes.",
+        "Pressed shape and state layer are policy-layer interaction visuals.",
+        "Icon and label spacing is a component recipe token, not a core layout mechanism.",
+        "MUI DOM evidence is attached for the filled/default and filled/disabled button slice so web-facing roles, labels, disabled state, and computed chrome can be compared mechanically."
+      ],
+      "fret_facts": [
+        "Fret Material3 Button resolves container height, padding, shape, text style, and state-layer colors through Material token keys.",
+        "Bundle schema2 text_paint tables provide first-class text/paint diagnostics for promotion into future Material parity gates."
+      ],
+      "checks": [
+        {
+          "id": "material3_button_text_paint_table_gate",
+          "kind": "live_measurement_required",
+          "status": "pass_known",
+          "expected": "Material Button diagnostics should export bundle schema2 text_paint rows while the Material button page is captured, and bundle semantics should expose label descendants for the selected button nodes. Per-label text_paint remains hotspot-sparse and must stay distinct from semantic label coverage.",
+          "observed": "pass",
+          "observed_source": "live_fact_requirements",
+          "confidence": "medium",
+          "owner": "diagnostics_surface",
+          "layer": "runner",
+          "triage": {
+            "score": 0,
+            "level": "none",
+            "reasons": [
+              "passing evidence"
+            ]
+          },
+          "evidence_refs": [
+            "ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs",
+            "ecosystem/fret-ui-material3/src/button.rs",
+            "ecosystem/fret-ui-material3/src/tokens/button.rs"
+          ],
+          "promotion": {
+            "target": "diag_script",
+            "reason": "The first Material adapter needs diagnostics evidence before broad token parity claims."
+          },
+          "measurement": {
+            "source": "live_fact_requirements",
+            "status": "pass",
+            "part_id": "material3_button_text_paint",
+            "requirements": [
+              {
+                "field": "fret_text_label_fact_count",
+                "observed": 8,
+                "minimum": 2,
+                "status": "pass"
+              },
+              {
+                "field": "fret_text_paint_bundle_entry_count",
+                "observed": 180,
+                "minimum": 1,
+                "status": "pass"
+              },
+              {
+                "field": "fret_text_paint_row_count",
+                "observed": 3746,
+                "minimum": 1,
+                "status": "pass"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "This is the first Material adapter slice; it proves shared packet shape and source mapping, not full Material parity.",
+    "A bounded static MUI contained-button DOM snapshot is attached for enabled and disabled web-facing facts; automated browser capture remains a follow-up.",
+    "Fret Material 3 headless goldens exist in Rust tests and should be promoted into bundle/sidecar evidence in the next slice."
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "needs_hardening",
+    "component": "button",
+    "style": "material3",
+    "source_mapping": "tools/parity-discovery/fixtures/material3_button_adapter_v1.json",
+    "goal": "Give a repair agent the minimum source truth, Fret wiring, evidence, and promotion queues needed to turn parity findings into gates.",
+    "truth": {
+      "upstream_refs": [
+        {
+          "id": "material.spec.button",
+          "bucket": "upstream",
+          "path": "https://m3.material.io/components/buttons/overview"
+        },
+        {
+          "id": "material_ui.button",
+          "bucket": "upstream",
+          "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js"
+        },
+        {
+          "id": "material_ui.button.contained_demo",
+          "bucket": "upstream",
+          "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/docs/data/material/components/buttons/ContainedButtons.tsx"
+        },
+        {
+          "id": "compose_material3.button",
+          "bucket": "upstream",
+          "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Button.kt"
+        }
+      ],
+      "upstream_contexts": [
+        {
+          "id": "material3.button.mui.contained.light.vp1440x900",
+          "snapshot": "material3-button-mui-contained",
+          "theme": "light",
+          "viewport": {
+            "width_px": 1440,
+            "height_px": 900
+          },
+          "device_pixel_ratio": 1
+        }
+      ],
+      "live_facts": {
+        "schema_version": 1,
+        "upstream_source": "upstream_dom_computed_style",
+        "fret_source": "layout_sidecar+bundle_schema2_semantics",
+        "part_count": 2,
+        "upstream_dom_target_count": 4,
+        "fret_test_id_count": 4,
+        "upstream_semantics_fact_count": 4,
+        "upstream_interaction_fact_count": 4,
+        "fret_semantics_fact_count": 4,
+        "fret_interaction_fact_count": 4,
+        "fret_text_paint_fact_count": 0,
+        "fret_text_paint_direct_fact_count": 0,
+        "fret_text_paint_associated_fact_count": 0,
+        "fret_text_label_fact_count": 16,
+        "fret_text_paint_bundle_entry_count": 180,
+        "fret_text_paint_row_count": 3746,
+        "fret_text_paint_association_row_count": 4199,
+        "fret_text_paint_unassociated_row_count": 2872,
+        "fret_text_label_row_count": 2248,
+        "parts": [
+          {
+            "part_id": "material3_button_semantics",
+            "upstream_dom_target_count": 2,
+            "fret_test_id_count": 2,
+            "upstream_semantics_fact_count": 2,
+            "upstream_interaction_fact_count": 2,
+            "fret_semantics_fact_count": 2,
+            "fret_interaction_fact_count": 2,
+            "fret_text_paint_fact_count": 0,
+            "fret_text_paint_direct_fact_count": 0,
+            "fret_text_paint_associated_fact_count": 0,
+            "fret_text_label_fact_count": 8,
+            "fret_text_paint_bundle_entry_count": 180,
+            "fret_text_paint_row_count": 3746,
+            "fret_text_paint_association_row_count": 4199,
+            "fret_text_paint_unassociated_row_count": 2872,
+            "fret_text_label_row_count": 2248,
+            "upstream": [
+              {
+                "target_id": "material3.button.mui.contained.enabled",
+                "snapshot": "material3-button-mui-contained",
+                "theme": "light",
+                "mode": "",
+                "variant": "",
+                "context_id": "material3.button.mui.contained.light.vp1440x900",
+                "path": "0",
+                "tag": "button",
+                "attrs": {
+                  "type": "button"
+                },
+                "class_tokens": [
+                  "MuiButtonBase-root",
+                  "MuiButton-root",
+                  "MuiButton-contained",
+                  "MuiButton-containedPrimary",
+                  "MuiButton-sizeMedium",
+                  "MuiButton-containedSizeMedium",
+                  "MuiButton-colorPrimary"
+                ],
+                "bounds": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "w": 75.0,
+                  "h": 36.0
+                },
+                "device_pixel_ratio": 1.0,
+                "child_count": 0,
+                "layout": {
+                  "display": "inline-flex",
+                  "position": "relative",
+                  "boxSizing": "border-box",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "height": 36.0,
+                  "minWidth": 64.0,
+                  "paddingTop": 6.0,
+                  "paddingRight": 16.0,
+                  "paddingBottom": 6.0,
+                  "paddingLeft": 16.0
+                },
+                "text": {
+                  "text": "Filled",
+                  "fontFamily": "\"Roboto\", \"Helvetica\", \"Arial\", sans-serif",
+                  "fontWeight": "500",
+                  "textTransform": "uppercase",
+                  "fontSize": 14.0,
+                  "lineHeight": 24.5,
+                  "letterSpacing": 0.4
+                },
+                "paint": {
+                  "color": "rgb(255, 255, 255)",
+                  "backgroundColor": "rgb(25, 118, 210)",
+                  "boxShadow": "rgba(0, 0, 0, 0.2) 0px 3px 1px -2px, rgba(0, 0, 0, 0.14) 0px 2px 2px 0px, rgba(0, 0, 0, 0.12) 0px 1px 5px 0px",
+                  "opacity": "1",
+                  "border_widths_px": {
+                    "borderTopWidth": 0.0,
+                    "borderRightWidth": 0.0,
+                    "borderBottomWidth": 0.0,
+                    "borderLeftWidth": 0.0
+                  },
+                  "corner_radii_px": {
+                    "borderTopLeftRadius": 4.0,
+                    "borderTopRightRadius": 4.0,
+                    "borderBottomRightRadius": 4.0,
+                    "borderBottomLeftRadius": 4.0
+                  }
+                },
+                "semantics": {
+                  "role": "button",
+                  "implicit_role": "button",
+                  "accessible_name": "Filled",
+                  "states": {},
+                  "relations": {},
+                  "tab_index": null,
+                  "source": "upstream_dom_accessibility_attrs"
+                },
+                "interaction": {
+                  "focusable": true,
+                  "disabled": false,
+                  "has_popup": null,
+                  "cursor": "pointer",
+                  "pointer_events": "auto",
+                  "keyboard_target": true,
+                  "source": "upstream_dom_accessibility_attrs"
+                },
+                "descendant_summary": {
+                  "count": 0,
+                  "svg_count": 0,
+                  "text_count": 0
+                },
+                "source": "upstream_dom_computed_style"
+              },
+              {
+                "target_id": "material3.button.mui.contained.disabled",
+                "snapshot": "material3-button-mui-contained",
+                "theme": "light",
+                "mode": "",
+                "variant": "",
+                "context_id": "material3.button.mui.contained.light.vp1440x900",
+                "path": "1",
+                "tag": "button",
+                "attrs": {
+                  "type": "button",
+                  "disabled": true
+                },
+                "class_tokens": [
+                  "MuiButtonBase-root",
+                  "MuiButton-root",
+                  "MuiButton-contained",
+                  "MuiButton-containedPrimary",
+                  "MuiButton-sizeMedium",
+                  "MuiButton-containedSizeMedium",
+                  "MuiButton-colorPrimary",
+                  "Mui-disabled"
+                ],
+                "bounds": {
+                  "x": 83.0,
+                  "y": 0.0,
+                  "w": 96.0,
+                  "h": 36.0
+                },
+                "device_pixel_ratio": 1.0,
+                "child_count": 0,
+                "layout": {
+                  "display": "inline-flex",
+                  "position": "relative",
+                  "boxSizing": "border-box",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "height": 36.0,
+                  "minWidth": 64.0,
+                  "paddingTop": 6.0,
+                  "paddingRight": 16.0,
+                  "paddingBottom": 6.0,
+                  "paddingLeft": 16.0
+                },
+                "text": {
+                  "text": "Disabled",
+                  "fontFamily": "\"Roboto\", \"Helvetica\", \"Arial\", sans-serif",
+                  "fontWeight": "500",
+                  "textTransform": "uppercase",
+                  "fontSize": 14.0,
+                  "lineHeight": 24.5,
+                  "letterSpacing": 0.4
+                },
+                "paint": {
+                  "color": "rgba(0, 0, 0, 0.26)",
+                  "backgroundColor": "rgba(0, 0, 0, 0.12)",
+                  "boxShadow": "none",
+                  "opacity": "1",
+                  "border_widths_px": {
+                    "borderTopWidth": 0.0,
+                    "borderRightWidth": 0.0,
+                    "borderBottomWidth": 0.0,
+                    "borderLeftWidth": 0.0
+                  },
+                  "corner_radii_px": {
+                    "borderTopLeftRadius": 4.0,
+                    "borderTopRightRadius": 4.0,
+                    "borderBottomRightRadius": 4.0,
+                    "borderBottomLeftRadius": 4.0
+                  }
+                },
+                "semantics": {
+                  "role": "button",
+                  "implicit_role": "button",
+                  "accessible_name": "Disabled",
+                  "states": {},
+                  "relations": {},
+                  "tab_index": null,
+                  "source": "upstream_dom_accessibility_attrs"
+                },
+                "interaction": {
+                  "focusable": false,
+                  "disabled": true,
+                  "has_popup": null,
+                  "cursor": "default",
+                  "pointer_events": "none",
+                  "keyboard_target": false,
+                  "source": "upstream_dom_accessibility_attrs"
+                },
+                "descendant_summary": {
+                  "count": 0,
+                  "svg_count": 0,
+                  "text_count": 0
+                },
+                "source": "upstream_dom_computed_style"
+              }
+            ],
+            "fret": [
+              {
+                "test_id": "ui-gallery-material3-button-filled-default",
+                "primary": {
+                  "test_id": "ui-gallery-material3-button-filled-default",
+                  "bounds": {
+                    "x": 346.667,
+                    "y": 777.333,
+                    "w": 65.333,
+                    "h": 40.0
+                  },
+                  "raw_bounds": {
+                    "x": 346.667,
+                    "y": 777.333,
+                    "w": 65.333,
+                    "h": 40.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "12884902274",
+                  "kind_hint": "button",
+                  "source": "bundle_schema2_semantics",
+                  "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                  "label_preview": "Filled",
+                  "semantics": {
+                    "role": "button",
+                    "label": "Filled",
+                    "actions": {
+                      "focus": true,
+                      "invoke": true
+                    },
+                    "source": "bundle_schema2_semantics"
+                  },
+                  "interaction": {
+                    "focusable": true,
+                    "invokable": true,
+                    "set_value": false,
+                    "disabled": false,
+                    "focused": false,
+                    "source": "bundle_schema2_semantics_actions"
+                  },
+                  "semantic_text_descendants": [
+                    {
+                      "source": "bundle_schema2_semantics_text_descendant",
+                      "role": "text",
+                      "label_preview": "Filled",
+                      "ancestor_test_ids": [
+                        "ui-gallery-material3-button-filled-default"
+                      ],
+                      "ancestor_role": "button",
+                      "ancestor_label_preview": "Filled",
+                      "bounds": {
+                        "x": 362.667,
+                        "y": 787.333,
+                        "w": 33.333,
+                        "h": 20.0
+                      },
+                      "observed_count": 1,
+                      "evidence_paths": [
+                        "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                      ],
+                      "node_samples": [
+                        "12884902292"
+                      ],
+                      "bounds_samples": [
+                        {
+                          "x": 362.667,
+                          "y": 787.333,
+                          "w": 33.333,
+                          "h": 20.0
+                        }
+                      ]
+                    }
+                  ],
+                  "text_paint_coverage": {
+                    "status": "semantic_text_without_text_paint_hotspot",
+                    "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                  }
+                },
+                "semantics_nodes": [
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-default",
+                    "bounds": {
+                      "x": 346.667,
+                      "y": 777.333,
+                      "w": 65.333,
+                      "h": 40.0
+                    },
+                    "raw_bounds": {
+                      "x": 346.667,
+                      "y": 777.333,
+                      "w": 65.333,
+                      "h": 40.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "12884902274",
+                    "kind_hint": "button",
+                    "source": "bundle_schema2_semantics",
+                    "label_preview": "Filled",
+                    "semantics": {
+                      "role": "button",
+                      "label": "Filled",
+                      "actions": {
+                        "focus": true,
+                        "invoke": true
+                      },
+                      "source": "bundle_schema2_semantics"
+                    },
+                    "interaction": {
+                      "focusable": true,
+                      "invokable": true,
+                      "set_value": false,
+                      "disabled": false,
+                      "focused": false,
+                      "source": "bundle_schema2_semantics_actions"
+                    },
+                    "observed_count": 4,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902274"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 346.667,
+                        "y": 777.333,
+                        "w": 65.333,
+                        "h": 40.0
+                      }
+                    ],
+                    "semantic_text_descendants": [
+                      {
+                        "source": "bundle_schema2_semantics_text_descendant",
+                        "role": "text",
+                        "label_preview": "Filled",
+                        "ancestor_test_ids": [
+                          "ui-gallery-material3-button-filled-default"
+                        ],
+                        "ancestor_role": "button",
+                        "ancestor_label_preview": "Filled",
+                        "bounds": {
+                          "x": 362.667,
+                          "y": 787.333,
+                          "w": 33.333,
+                          "h": 20.0
+                        },
+                        "observed_count": 4,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902292"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 362.667,
+                            "y": 787.333,
+                            "w": 33.333,
+                            "h": 20.0
+                          }
+                        ]
+                      }
+                    ],
+                    "text_paint_coverage": {
+                      "status": "semantic_text_without_text_paint_hotspot",
+                      "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                    }
+                  }
+                ],
+                "semantics_summary": {
+                  "observed_node_count": 4,
+                  "compact_node_count": 1,
+                  "omitted_node_count": 0
+                },
+                "related": [
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-default.chrome",
+                    "bounds": {
+                      "x": 346.667,
+                      "y": 777.333,
+                      "w": 65.333,
+                      "h": 40.0
+                    },
+                    "raw_bounds": {
+                      "x": 346.667,
+                      "y": 777.333,
+                      "w": 65.333,
+                      "h": 40.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "12884902276",
+                    "kind_hint": "generic",
+                    "source": "bundle_schema2_semantics",
+                    "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                    "semantics": {
+                      "role": "generic",
+                      "source": "bundle_schema2_semantics"
+                    },
+                    "interaction": {
+                      "focusable": false,
+                      "invokable": false,
+                      "set_value": false,
+                      "disabled": false,
+                      "focused": false,
+                      "source": "bundle_schema2_semantics_actions"
+                    },
+                    "semantic_text_descendants": [
+                      {
+                        "source": "bundle_schema2_semantics_text_descendant",
+                        "role": "text",
+                        "label_preview": "Filled",
+                        "ancestor_test_ids": [
+                          "ui-gallery-material3-button-filled-default.chrome"
+                        ],
+                        "ancestor_role": "generic",
+                        "bounds": {
+                          "x": 362.667,
+                          "y": 787.333,
+                          "w": 33.333,
+                          "h": 20.0
+                        },
+                        "observed_count": 1,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902292"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 362.667,
+                            "y": 787.333,
+                            "w": 33.333,
+                            "h": 20.0
+                          }
+                        ]
+                      }
+                    ],
+                    "text_paint_coverage": {
+                      "status": "semantic_text_without_text_paint_hotspot",
+                      "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                    }
+                  },
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-default.chrome",
+                    "semantics_nodes": [
+                      {
+                        "test_id": "ui-gallery-material3-button-filled-default.chrome",
+                        "bounds": {
+                          "x": 346.667,
+                          "y": 777.333,
+                          "w": 65.333,
+                          "h": 40.0
+                        },
+                        "raw_bounds": {
+                          "x": 346.667,
+                          "y": 777.333,
+                          "w": 65.333,
+                          "h": 40.0
+                        },
+                        "scale_factor": 1.5,
+                        "coordinate_units": "logical_px",
+                        "node": "12884902276",
+                        "kind_hint": "generic",
+                        "source": "bundle_schema2_semantics",
+                        "semantics": {
+                          "role": "generic",
+                          "source": "bundle_schema2_semantics"
+                        },
+                        "interaction": {
+                          "focusable": false,
+                          "invokable": false,
+                          "set_value": false,
+                          "disabled": false,
+                          "focused": false,
+                          "source": "bundle_schema2_semantics_actions"
+                        },
+                        "observed_count": 4,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902276"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 346.667,
+                            "y": 777.333,
+                            "w": 65.333,
+                            "h": 40.0
+                          }
+                        ],
+                        "semantic_text_descendants": [
+                          {
+                            "source": "bundle_schema2_semantics_text_descendant",
+                            "role": "text",
+                            "label_preview": "Filled",
+                            "ancestor_test_ids": [
+                              "ui-gallery-material3-button-filled-default.chrome"
+                            ],
+                            "ancestor_role": "generic",
+                            "bounds": {
+                              "x": 362.667,
+                              "y": 787.333,
+                              "w": 33.333,
+                              "h": 20.0
+                            },
+                            "observed_count": 4,
+                            "evidence_paths": [
+                              "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                              "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                              "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                            ],
+                            "node_samples": [
+                              "12884902292"
+                            ],
+                            "bounds_samples": [
+                              {
+                                "x": 362.667,
+                                "y": 787.333,
+                                "w": 33.333,
+                                "h": 20.0
+                              }
+                            ]
+                          }
+                        ],
+                        "text_paint_coverage": {
+                          "status": "semantic_text_without_text_paint_hotspot",
+                          "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                        }
+                      }
+                    ],
+                    "semantics_summary": {
+                      "observed_node_count": 4,
+                      "compact_node_count": 1,
+                      "omitted_node_count": 0
+                    },
+                    "source": "bundle_schema2_semantics"
+                  }
+                ]
+              },
+              {
+                "test_id": "ui-gallery-material3-button-filled-disabled",
+                "primary": {
+                  "test_id": "ui-gallery-material3-button-filled-disabled",
+                  "bounds": {
+                    "x": 514.0,
+                    "y": 777.333,
+                    "w": 86.0,
+                    "h": 40.0
+                  },
+                  "raw_bounds": {
+                    "x": 514.0,
+                    "y": 777.333,
+                    "w": 86.0,
+                    "h": 40.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "12884902311",
+                  "kind_hint": "button",
+                  "source": "bundle_schema2_semantics",
+                  "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                  "label_preview": "Disabled",
+                  "semantics": {
+                    "role": "button",
+                    "label": "Disabled",
+                    "flags": {
+                      "disabled": true
+                    },
+                    "source": "bundle_schema2_semantics"
+                  },
+                  "interaction": {
+                    "focusable": false,
+                    "invokable": false,
+                    "set_value": false,
+                    "disabled": true,
+                    "focused": false,
+                    "source": "bundle_schema2_semantics_actions"
+                  },
+                  "semantic_text_descendants": [
+                    {
+                      "source": "bundle_schema2_semantics_text_descendant",
+                      "role": "text",
+                      "label_preview": "Disabled",
+                      "ancestor_test_ids": [
+                        "ui-gallery-material3-button-filled-disabled"
+                      ],
+                      "ancestor_role": "button",
+                      "ancestor_label_preview": "Disabled",
+                      "bounds": {
+                        "x": 530.0,
+                        "y": 787.333,
+                        "w": 54.0,
+                        "h": 20.0
+                      },
+                      "observed_count": 1,
+                      "evidence_paths": [
+                        "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                      ],
+                      "node_samples": [
+                        "12884902320"
+                      ],
+                      "bounds_samples": [
+                        {
+                          "x": 530.0,
+                          "y": 787.333,
+                          "w": 54.0,
+                          "h": 20.0
+                        }
+                      ]
+                    }
+                  ],
+                  "text_paint_coverage": {
+                    "status": "semantic_text_without_text_paint_hotspot",
+                    "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                  }
+                },
+                "semantics_nodes": [
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-disabled",
+                    "bounds": {
+                      "x": 514.0,
+                      "y": 777.333,
+                      "w": 86.0,
+                      "h": 40.0
+                    },
+                    "raw_bounds": {
+                      "x": 514.0,
+                      "y": 777.333,
+                      "w": 86.0,
+                      "h": 40.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "12884902311",
+                    "kind_hint": "button",
+                    "source": "bundle_schema2_semantics",
+                    "label_preview": "Disabled",
+                    "semantics": {
+                      "role": "button",
+                      "label": "Disabled",
+                      "flags": {
+                        "disabled": true
+                      },
+                      "source": "bundle_schema2_semantics"
+                    },
+                    "interaction": {
+                      "focusable": false,
+                      "invokable": false,
+                      "set_value": false,
+                      "disabled": true,
+                      "focused": false,
+                      "source": "bundle_schema2_semantics_actions"
+                    },
+                    "observed_count": 4,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902311"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 514.0,
+                        "y": 777.333,
+                        "w": 86.0,
+                        "h": 40.0
+                      }
+                    ],
+                    "semantic_text_descendants": [
+                      {
+                        "source": "bundle_schema2_semantics_text_descendant",
+                        "role": "text",
+                        "label_preview": "Disabled",
+                        "ancestor_test_ids": [
+                          "ui-gallery-material3-button-filled-disabled"
+                        ],
+                        "ancestor_role": "button",
+                        "ancestor_label_preview": "Disabled",
+                        "bounds": {
+                          "x": 530.0,
+                          "y": 787.333,
+                          "w": 54.0,
+                          "h": 20.0
+                        },
+                        "observed_count": 4,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902320"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 530.0,
+                            "y": 787.333,
+                            "w": 54.0,
+                            "h": 20.0
+                          }
+                        ]
+                      }
+                    ],
+                    "text_paint_coverage": {
+                      "status": "semantic_text_without_text_paint_hotspot",
+                      "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                    }
+                  }
+                ],
+                "semantics_summary": {
+                  "observed_node_count": 4,
+                  "compact_node_count": 1,
+                  "omitted_node_count": 0
+                },
+                "related": [
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-disabled.chrome",
+                    "bounds": {
+                      "x": 514.0,
+                      "y": 777.333,
+                      "w": 86.0,
+                      "h": 40.0
+                    },
+                    "raw_bounds": {
+                      "x": 514.0,
+                      "y": 777.333,
+                      "w": 86.0,
+                      "h": 40.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "12884902316",
+                    "kind_hint": "generic",
+                    "source": "bundle_schema2_semantics",
+                    "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                    "semantics": {
+                      "role": "generic",
+                      "source": "bundle_schema2_semantics"
+                    },
+                    "interaction": {
+                      "focusable": false,
+                      "invokable": false,
+                      "set_value": false,
+                      "disabled": false,
+                      "focused": false,
+                      "source": "bundle_schema2_semantics_actions"
+                    },
+                    "semantic_text_descendants": [
+                      {
+                        "source": "bundle_schema2_semantics_text_descendant",
+                        "role": "text",
+                        "label_preview": "Disabled",
+                        "ancestor_test_ids": [
+                          "ui-gallery-material3-button-filled-disabled.chrome"
+                        ],
+                        "ancestor_role": "generic",
+                        "bounds": {
+                          "x": 530.0,
+                          "y": 787.333,
+                          "w": 54.0,
+                          "h": 20.0
+                        },
+                        "observed_count": 1,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902320"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 530.0,
+                            "y": 787.333,
+                            "w": 54.0,
+                            "h": 20.0
+                          }
+                        ]
+                      }
+                    ],
+                    "text_paint_coverage": {
+                      "status": "semantic_text_without_text_paint_hotspot",
+                      "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                    }
+                  },
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-disabled.chrome",
+                    "semantics_nodes": [
+                      {
+                        "test_id": "ui-gallery-material3-button-filled-disabled.chrome",
+                        "bounds": {
+                          "x": 514.0,
+                          "y": 777.333,
+                          "w": 86.0,
+                          "h": 40.0
+                        },
+                        "raw_bounds": {
+                          "x": 514.0,
+                          "y": 777.333,
+                          "w": 86.0,
+                          "h": 40.0
+                        },
+                        "scale_factor": 1.5,
+                        "coordinate_units": "logical_px",
+                        "node": "12884902316",
+                        "kind_hint": "generic",
+                        "source": "bundle_schema2_semantics",
+                        "semantics": {
+                          "role": "generic",
+                          "source": "bundle_schema2_semantics"
+                        },
+                        "interaction": {
+                          "focusable": false,
+                          "invokable": false,
+                          "set_value": false,
+                          "disabled": false,
+                          "focused": false,
+                          "source": "bundle_schema2_semantics_actions"
+                        },
+                        "observed_count": 4,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902316"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 514.0,
+                            "y": 777.333,
+                            "w": 86.0,
+                            "h": 40.0
+                          }
+                        ],
+                        "semantic_text_descendants": [
+                          {
+                            "source": "bundle_schema2_semantics_text_descendant",
+                            "role": "text",
+                            "label_preview": "Disabled",
+                            "ancestor_test_ids": [
+                              "ui-gallery-material3-button-filled-disabled.chrome"
+                            ],
+                            "ancestor_role": "generic",
+                            "bounds": {
+                              "x": 530.0,
+                              "y": 787.333,
+                              "w": 54.0,
+                              "h": 20.0
+                            },
+                            "observed_count": 4,
+                            "evidence_paths": [
+                              "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                              "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                              "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                            ],
+                            "node_samples": [
+                              "12884902320"
+                            ],
+                            "bounds_samples": [
+                              {
+                                "x": 530.0,
+                                "y": 787.333,
+                                "w": 54.0,
+                                "h": 20.0
+                              }
+                            ]
+                          }
+                        ],
+                        "text_paint_coverage": {
+                          "status": "semantic_text_without_text_paint_hotspot",
+                          "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                        }
+                      }
+                    ],
+                    "semantics_summary": {
+                      "observed_node_count": 4,
+                      "compact_node_count": 1,
+                      "omitted_node_count": 0
+                    },
+                    "source": "bundle_schema2_semantics"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "part_id": "material3_button_text_paint",
+            "upstream_dom_target_count": 2,
+            "fret_test_id_count": 2,
+            "upstream_semantics_fact_count": 2,
+            "upstream_interaction_fact_count": 2,
+            "fret_semantics_fact_count": 2,
+            "fret_interaction_fact_count": 2,
+            "fret_text_paint_fact_count": 0,
+            "fret_text_paint_direct_fact_count": 0,
+            "fret_text_paint_associated_fact_count": 0,
+            "fret_text_label_fact_count": 8,
+            "fret_text_paint_bundle_entry_count": 180,
+            "fret_text_paint_row_count": 3746,
+            "fret_text_paint_association_row_count": 4199,
+            "fret_text_paint_unassociated_row_count": 2872,
+            "fret_text_label_row_count": 2248,
+            "upstream": [
+              {
+                "target_id": "material3.button.mui.contained.enabled",
+                "snapshot": "material3-button-mui-contained",
+                "theme": "light",
+                "mode": "",
+                "variant": "",
+                "context_id": "material3.button.mui.contained.light.vp1440x900",
+                "path": "0",
+                "tag": "button",
+                "attrs": {
+                  "type": "button"
+                },
+                "class_tokens": [
+                  "MuiButtonBase-root",
+                  "MuiButton-root",
+                  "MuiButton-contained",
+                  "MuiButton-containedPrimary",
+                  "MuiButton-sizeMedium",
+                  "MuiButton-containedSizeMedium",
+                  "MuiButton-colorPrimary"
+                ],
+                "bounds": {
+                  "x": 0.0,
+                  "y": 0.0,
+                  "w": 75.0,
+                  "h": 36.0
+                },
+                "device_pixel_ratio": 1.0,
+                "child_count": 0,
+                "layout": {
+                  "display": "inline-flex",
+                  "position": "relative",
+                  "boxSizing": "border-box",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "height": 36.0,
+                  "minWidth": 64.0,
+                  "paddingTop": 6.0,
+                  "paddingRight": 16.0,
+                  "paddingBottom": 6.0,
+                  "paddingLeft": 16.0
+                },
+                "text": {
+                  "text": "Filled",
+                  "fontFamily": "\"Roboto\", \"Helvetica\", \"Arial\", sans-serif",
+                  "fontWeight": "500",
+                  "textTransform": "uppercase",
+                  "fontSize": 14.0,
+                  "lineHeight": 24.5,
+                  "letterSpacing": 0.4
+                },
+                "paint": {
+                  "color": "rgb(255, 255, 255)",
+                  "backgroundColor": "rgb(25, 118, 210)",
+                  "boxShadow": "rgba(0, 0, 0, 0.2) 0px 3px 1px -2px, rgba(0, 0, 0, 0.14) 0px 2px 2px 0px, rgba(0, 0, 0, 0.12) 0px 1px 5px 0px",
+                  "opacity": "1",
+                  "border_widths_px": {
+                    "borderTopWidth": 0.0,
+                    "borderRightWidth": 0.0,
+                    "borderBottomWidth": 0.0,
+                    "borderLeftWidth": 0.0
+                  },
+                  "corner_radii_px": {
+                    "borderTopLeftRadius": 4.0,
+                    "borderTopRightRadius": 4.0,
+                    "borderBottomRightRadius": 4.0,
+                    "borderBottomLeftRadius": 4.0
+                  }
+                },
+                "semantics": {
+                  "role": "button",
+                  "implicit_role": "button",
+                  "accessible_name": "Filled",
+                  "states": {},
+                  "relations": {},
+                  "tab_index": null,
+                  "source": "upstream_dom_accessibility_attrs"
+                },
+                "interaction": {
+                  "focusable": true,
+                  "disabled": false,
+                  "has_popup": null,
+                  "cursor": "pointer",
+                  "pointer_events": "auto",
+                  "keyboard_target": true,
+                  "source": "upstream_dom_accessibility_attrs"
+                },
+                "descendant_summary": {
+                  "count": 0,
+                  "svg_count": 0,
+                  "text_count": 0
+                },
+                "source": "upstream_dom_computed_style"
+              },
+              {
+                "target_id": "material3.button.mui.contained.disabled",
+                "snapshot": "material3-button-mui-contained",
+                "theme": "light",
+                "mode": "",
+                "variant": "",
+                "context_id": "material3.button.mui.contained.light.vp1440x900",
+                "path": "1",
+                "tag": "button",
+                "attrs": {
+                  "type": "button",
+                  "disabled": true
+                },
+                "class_tokens": [
+                  "MuiButtonBase-root",
+                  "MuiButton-root",
+                  "MuiButton-contained",
+                  "MuiButton-containedPrimary",
+                  "MuiButton-sizeMedium",
+                  "MuiButton-containedSizeMedium",
+                  "MuiButton-colorPrimary",
+                  "Mui-disabled"
+                ],
+                "bounds": {
+                  "x": 83.0,
+                  "y": 0.0,
+                  "w": 96.0,
+                  "h": 36.0
+                },
+                "device_pixel_ratio": 1.0,
+                "child_count": 0,
+                "layout": {
+                  "display": "inline-flex",
+                  "position": "relative",
+                  "boxSizing": "border-box",
+                  "alignItems": "center",
+                  "justifyContent": "center",
+                  "height": 36.0,
+                  "minWidth": 64.0,
+                  "paddingTop": 6.0,
+                  "paddingRight": 16.0,
+                  "paddingBottom": 6.0,
+                  "paddingLeft": 16.0
+                },
+                "text": {
+                  "text": "Disabled",
+                  "fontFamily": "\"Roboto\", \"Helvetica\", \"Arial\", sans-serif",
+                  "fontWeight": "500",
+                  "textTransform": "uppercase",
+                  "fontSize": 14.0,
+                  "lineHeight": 24.5,
+                  "letterSpacing": 0.4
+                },
+                "paint": {
+                  "color": "rgba(0, 0, 0, 0.26)",
+                  "backgroundColor": "rgba(0, 0, 0, 0.12)",
+                  "boxShadow": "none",
+                  "opacity": "1",
+                  "border_widths_px": {
+                    "borderTopWidth": 0.0,
+                    "borderRightWidth": 0.0,
+                    "borderBottomWidth": 0.0,
+                    "borderLeftWidth": 0.0
+                  },
+                  "corner_radii_px": {
+                    "borderTopLeftRadius": 4.0,
+                    "borderTopRightRadius": 4.0,
+                    "borderBottomRightRadius": 4.0,
+                    "borderBottomLeftRadius": 4.0
+                  }
+                },
+                "semantics": {
+                  "role": "button",
+                  "implicit_role": "button",
+                  "accessible_name": "Disabled",
+                  "states": {},
+                  "relations": {},
+                  "tab_index": null,
+                  "source": "upstream_dom_accessibility_attrs"
+                },
+                "interaction": {
+                  "focusable": false,
+                  "disabled": true,
+                  "has_popup": null,
+                  "cursor": "default",
+                  "pointer_events": "none",
+                  "keyboard_target": false,
+                  "source": "upstream_dom_accessibility_attrs"
+                },
+                "descendant_summary": {
+                  "count": 0,
+                  "svg_count": 0,
+                  "text_count": 0
+                },
+                "source": "upstream_dom_computed_style"
+              }
+            ],
+            "fret": [
+              {
+                "test_id": "ui-gallery-material3-button-filled-default",
+                "primary": {
+                  "test_id": "ui-gallery-material3-button-filled-default",
+                  "bounds": {
+                    "x": 346.667,
+                    "y": 777.333,
+                    "w": 65.333,
+                    "h": 40.0
+                  },
+                  "raw_bounds": {
+                    "x": 346.667,
+                    "y": 777.333,
+                    "w": 65.333,
+                    "h": 40.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "12884902274",
+                  "kind_hint": "button",
+                  "source": "bundle_schema2_semantics",
+                  "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                  "label_preview": "Filled",
+                  "semantics": {
+                    "role": "button",
+                    "label": "Filled",
+                    "actions": {
+                      "focus": true,
+                      "invoke": true
+                    },
+                    "source": "bundle_schema2_semantics"
+                  },
+                  "interaction": {
+                    "focusable": true,
+                    "invokable": true,
+                    "set_value": false,
+                    "disabled": false,
+                    "focused": false,
+                    "source": "bundle_schema2_semantics_actions"
+                  },
+                  "semantic_text_descendants": [
+                    {
+                      "source": "bundle_schema2_semantics_text_descendant",
+                      "role": "text",
+                      "label_preview": "Filled",
+                      "ancestor_test_ids": [
+                        "ui-gallery-material3-button-filled-default"
+                      ],
+                      "ancestor_role": "button",
+                      "ancestor_label_preview": "Filled",
+                      "bounds": {
+                        "x": 362.667,
+                        "y": 787.333,
+                        "w": 33.333,
+                        "h": 20.0
+                      },
+                      "observed_count": 1,
+                      "evidence_paths": [
+                        "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                      ],
+                      "node_samples": [
+                        "12884902292"
+                      ],
+                      "bounds_samples": [
+                        {
+                          "x": 362.667,
+                          "y": 787.333,
+                          "w": 33.333,
+                          "h": 20.0
+                        }
+                      ]
+                    }
+                  ],
+                  "text_paint_coverage": {
+                    "status": "semantic_text_without_text_paint_hotspot",
+                    "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                  }
+                },
+                "semantics_nodes": [
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-default",
+                    "bounds": {
+                      "x": 346.667,
+                      "y": 777.333,
+                      "w": 65.333,
+                      "h": 40.0
+                    },
+                    "raw_bounds": {
+                      "x": 346.667,
+                      "y": 777.333,
+                      "w": 65.333,
+                      "h": 40.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "12884902274",
+                    "kind_hint": "button",
+                    "source": "bundle_schema2_semantics",
+                    "label_preview": "Filled",
+                    "semantics": {
+                      "role": "button",
+                      "label": "Filled",
+                      "actions": {
+                        "focus": true,
+                        "invoke": true
+                      },
+                      "source": "bundle_schema2_semantics"
+                    },
+                    "interaction": {
+                      "focusable": true,
+                      "invokable": true,
+                      "set_value": false,
+                      "disabled": false,
+                      "focused": false,
+                      "source": "bundle_schema2_semantics_actions"
+                    },
+                    "observed_count": 4,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902274"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 346.667,
+                        "y": 777.333,
+                        "w": 65.333,
+                        "h": 40.0
+                      }
+                    ],
+                    "semantic_text_descendants": [
+                      {
+                        "source": "bundle_schema2_semantics_text_descendant",
+                        "role": "text",
+                        "label_preview": "Filled",
+                        "ancestor_test_ids": [
+                          "ui-gallery-material3-button-filled-default"
+                        ],
+                        "ancestor_role": "button",
+                        "ancestor_label_preview": "Filled",
+                        "bounds": {
+                          "x": 362.667,
+                          "y": 787.333,
+                          "w": 33.333,
+                          "h": 20.0
+                        },
+                        "observed_count": 4,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902292"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 362.667,
+                            "y": 787.333,
+                            "w": 33.333,
+                            "h": 20.0
+                          }
+                        ]
+                      }
+                    ],
+                    "text_paint_coverage": {
+                      "status": "semantic_text_without_text_paint_hotspot",
+                      "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                    }
+                  }
+                ],
+                "semantics_summary": {
+                  "observed_node_count": 4,
+                  "compact_node_count": 1,
+                  "omitted_node_count": 0
+                },
+                "related": [
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-default.chrome",
+                    "bounds": {
+                      "x": 346.667,
+                      "y": 777.333,
+                      "w": 65.333,
+                      "h": 40.0
+                    },
+                    "raw_bounds": {
+                      "x": 346.667,
+                      "y": 777.333,
+                      "w": 65.333,
+                      "h": 40.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "12884902276",
+                    "kind_hint": "generic",
+                    "source": "bundle_schema2_semantics",
+                    "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                    "semantics": {
+                      "role": "generic",
+                      "source": "bundle_schema2_semantics"
+                    },
+                    "interaction": {
+                      "focusable": false,
+                      "invokable": false,
+                      "set_value": false,
+                      "disabled": false,
+                      "focused": false,
+                      "source": "bundle_schema2_semantics_actions"
+                    },
+                    "semantic_text_descendants": [
+                      {
+                        "source": "bundle_schema2_semantics_text_descendant",
+                        "role": "text",
+                        "label_preview": "Filled",
+                        "ancestor_test_ids": [
+                          "ui-gallery-material3-button-filled-default.chrome"
+                        ],
+                        "ancestor_role": "generic",
+                        "bounds": {
+                          "x": 362.667,
+                          "y": 787.333,
+                          "w": 33.333,
+                          "h": 20.0
+                        },
+                        "observed_count": 1,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902292"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 362.667,
+                            "y": 787.333,
+                            "w": 33.333,
+                            "h": 20.0
+                          }
+                        ]
+                      }
+                    ],
+                    "text_paint_coverage": {
+                      "status": "semantic_text_without_text_paint_hotspot",
+                      "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                    }
+                  },
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-default.chrome",
+                    "semantics_nodes": [
+                      {
+                        "test_id": "ui-gallery-material3-button-filled-default.chrome",
+                        "bounds": {
+                          "x": 346.667,
+                          "y": 777.333,
+                          "w": 65.333,
+                          "h": 40.0
+                        },
+                        "raw_bounds": {
+                          "x": 346.667,
+                          "y": 777.333,
+                          "w": 65.333,
+                          "h": 40.0
+                        },
+                        "scale_factor": 1.5,
+                        "coordinate_units": "logical_px",
+                        "node": "12884902276",
+                        "kind_hint": "generic",
+                        "source": "bundle_schema2_semantics",
+                        "semantics": {
+                          "role": "generic",
+                          "source": "bundle_schema2_semantics"
+                        },
+                        "interaction": {
+                          "focusable": false,
+                          "invokable": false,
+                          "set_value": false,
+                          "disabled": false,
+                          "focused": false,
+                          "source": "bundle_schema2_semantics_actions"
+                        },
+                        "observed_count": 4,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902276"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 346.667,
+                            "y": 777.333,
+                            "w": 65.333,
+                            "h": 40.0
+                          }
+                        ],
+                        "semantic_text_descendants": [
+                          {
+                            "source": "bundle_schema2_semantics_text_descendant",
+                            "role": "text",
+                            "label_preview": "Filled",
+                            "ancestor_test_ids": [
+                              "ui-gallery-material3-button-filled-default.chrome"
+                            ],
+                            "ancestor_role": "generic",
+                            "bounds": {
+                              "x": 362.667,
+                              "y": 787.333,
+                              "w": 33.333,
+                              "h": 20.0
+                            },
+                            "observed_count": 4,
+                            "evidence_paths": [
+                              "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                              "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                              "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                            ],
+                            "node_samples": [
+                              "12884902292"
+                            ],
+                            "bounds_samples": [
+                              {
+                                "x": 362.667,
+                                "y": 787.333,
+                                "w": 33.333,
+                                "h": 20.0
+                              }
+                            ]
+                          }
+                        ],
+                        "text_paint_coverage": {
+                          "status": "semantic_text_without_text_paint_hotspot",
+                          "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                        }
+                      }
+                    ],
+                    "semantics_summary": {
+                      "observed_node_count": 4,
+                      "compact_node_count": 1,
+                      "omitted_node_count": 0
+                    },
+                    "source": "bundle_schema2_semantics"
+                  }
+                ]
+              },
+              {
+                "test_id": "ui-gallery-material3-button-filled-disabled",
+                "primary": {
+                  "test_id": "ui-gallery-material3-button-filled-disabled",
+                  "bounds": {
+                    "x": 514.0,
+                    "y": 777.333,
+                    "w": 86.0,
+                    "h": 40.0
+                  },
+                  "raw_bounds": {
+                    "x": 514.0,
+                    "y": 777.333,
+                    "w": 86.0,
+                    "h": 40.0
+                  },
+                  "scale_factor": 1.5,
+                  "coordinate_units": "logical_px",
+                  "node": "12884902311",
+                  "kind_hint": "button",
+                  "source": "bundle_schema2_semantics",
+                  "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                  "label_preview": "Disabled",
+                  "semantics": {
+                    "role": "button",
+                    "label": "Disabled",
+                    "flags": {
+                      "disabled": true
+                    },
+                    "source": "bundle_schema2_semantics"
+                  },
+                  "interaction": {
+                    "focusable": false,
+                    "invokable": false,
+                    "set_value": false,
+                    "disabled": true,
+                    "focused": false,
+                    "source": "bundle_schema2_semantics_actions"
+                  },
+                  "semantic_text_descendants": [
+                    {
+                      "source": "bundle_schema2_semantics_text_descendant",
+                      "role": "text",
+                      "label_preview": "Disabled",
+                      "ancestor_test_ids": [
+                        "ui-gallery-material3-button-filled-disabled"
+                      ],
+                      "ancestor_role": "button",
+                      "ancestor_label_preview": "Disabled",
+                      "bounds": {
+                        "x": 530.0,
+                        "y": 787.333,
+                        "w": 54.0,
+                        "h": 20.0
+                      },
+                      "observed_count": 1,
+                      "evidence_paths": [
+                        "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                      ],
+                      "node_samples": [
+                        "12884902320"
+                      ],
+                      "bounds_samples": [
+                        {
+                          "x": 530.0,
+                          "y": 787.333,
+                          "w": 54.0,
+                          "h": 20.0
+                        }
+                      ]
+                    }
+                  ],
+                  "text_paint_coverage": {
+                    "status": "semantic_text_without_text_paint_hotspot",
+                    "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                  }
+                },
+                "semantics_nodes": [
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-disabled",
+                    "bounds": {
+                      "x": 514.0,
+                      "y": 777.333,
+                      "w": 86.0,
+                      "h": 40.0
+                    },
+                    "raw_bounds": {
+                      "x": 514.0,
+                      "y": 777.333,
+                      "w": 86.0,
+                      "h": 40.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "12884902311",
+                    "kind_hint": "button",
+                    "source": "bundle_schema2_semantics",
+                    "label_preview": "Disabled",
+                    "semantics": {
+                      "role": "button",
+                      "label": "Disabled",
+                      "flags": {
+                        "disabled": true
+                      },
+                      "source": "bundle_schema2_semantics"
+                    },
+                    "interaction": {
+                      "focusable": false,
+                      "invokable": false,
+                      "set_value": false,
+                      "disabled": true,
+                      "focused": false,
+                      "source": "bundle_schema2_semantics_actions"
+                    },
+                    "observed_count": 4,
+                    "evidence_paths": [
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                      "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                    ],
+                    "node_samples": [
+                      "12884902311"
+                    ],
+                    "bounds_samples": [
+                      {
+                        "x": 514.0,
+                        "y": 777.333,
+                        "w": 86.0,
+                        "h": 40.0
+                      }
+                    ],
+                    "semantic_text_descendants": [
+                      {
+                        "source": "bundle_schema2_semantics_text_descendant",
+                        "role": "text",
+                        "label_preview": "Disabled",
+                        "ancestor_test_ids": [
+                          "ui-gallery-material3-button-filled-disabled"
+                        ],
+                        "ancestor_role": "button",
+                        "ancestor_label_preview": "Disabled",
+                        "bounds": {
+                          "x": 530.0,
+                          "y": 787.333,
+                          "w": 54.0,
+                          "h": 20.0
+                        },
+                        "observed_count": 4,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902320"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 530.0,
+                            "y": 787.333,
+                            "w": 54.0,
+                            "h": 20.0
+                          }
+                        ]
+                      }
+                    ],
+                    "text_paint_coverage": {
+                      "status": "semantic_text_without_text_paint_hotspot",
+                      "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                    }
+                  }
+                ],
+                "semantics_summary": {
+                  "observed_node_count": 4,
+                  "compact_node_count": 1,
+                  "omitted_node_count": 0
+                },
+                "related": [
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-disabled.chrome",
+                    "bounds": {
+                      "x": 514.0,
+                      "y": 777.333,
+                      "w": 86.0,
+                      "h": 40.0
+                    },
+                    "raw_bounds": {
+                      "x": 514.0,
+                      "y": 777.333,
+                      "w": 86.0,
+                      "h": 40.0
+                    },
+                    "scale_factor": 1.5,
+                    "coordinate_units": "logical_px",
+                    "node": "12884902316",
+                    "kind_hint": "generic",
+                    "source": "bundle_schema2_semantics",
+                    "bundle_schema2_path": "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                    "semantics": {
+                      "role": "generic",
+                      "source": "bundle_schema2_semantics"
+                    },
+                    "interaction": {
+                      "focusable": false,
+                      "invokable": false,
+                      "set_value": false,
+                      "disabled": false,
+                      "focused": false,
+                      "source": "bundle_schema2_semantics_actions"
+                    },
+                    "semantic_text_descendants": [
+                      {
+                        "source": "bundle_schema2_semantics_text_descendant",
+                        "role": "text",
+                        "label_preview": "Disabled",
+                        "ancestor_test_ids": [
+                          "ui-gallery-material3-button-filled-disabled.chrome"
+                        ],
+                        "ancestor_role": "generic",
+                        "bounds": {
+                          "x": 530.0,
+                          "y": 787.333,
+                          "w": 54.0,
+                          "h": 20.0
+                        },
+                        "observed_count": 1,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902320"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 530.0,
+                            "y": 787.333,
+                            "w": 54.0,
+                            "h": 20.0
+                          }
+                        ]
+                      }
+                    ],
+                    "text_paint_coverage": {
+                      "status": "semantic_text_without_text_paint_hotspot",
+                      "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                    }
+                  },
+                  {
+                    "test_id": "ui-gallery-material3-button-filled-disabled.chrome",
+                    "semantics_nodes": [
+                      {
+                        "test_id": "ui-gallery-material3-button-filled-disabled.chrome",
+                        "bounds": {
+                          "x": 514.0,
+                          "y": 777.333,
+                          "w": 86.0,
+                          "h": 40.0
+                        },
+                        "raw_bounds": {
+                          "x": 514.0,
+                          "y": 777.333,
+                          "w": 86.0,
+                          "h": 40.0
+                        },
+                        "scale_factor": 1.5,
+                        "coordinate_units": "logical_px",
+                        "node": "12884902316",
+                        "kind_hint": "generic",
+                        "source": "bundle_schema2_semantics",
+                        "semantics": {
+                          "role": "generic",
+                          "source": "bundle_schema2_semantics"
+                        },
+                        "interaction": {
+                          "focusable": false,
+                          "invokable": false,
+                          "set_value": false,
+                          "disabled": false,
+                          "focused": false,
+                          "source": "bundle_schema2_semantics_actions"
+                        },
+                        "observed_count": 4,
+                        "evidence_paths": [
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                          "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                        ],
+                        "node_samples": [
+                          "12884902316"
+                        ],
+                        "bounds_samples": [
+                          {
+                            "x": 514.0,
+                            "y": 777.333,
+                            "w": 86.0,
+                            "h": 40.0
+                          }
+                        ],
+                        "semantic_text_descendants": [
+                          {
+                            "source": "bundle_schema2_semantics_text_descendant",
+                            "role": "text",
+                            "label_preview": "Disabled",
+                            "ancestor_test_ids": [
+                              "ui-gallery-material3-button-filled-disabled.chrome"
+                            ],
+                            "ancestor_role": "generic",
+                            "bounds": {
+                              "x": 530.0,
+                              "y": 787.333,
+                              "w": 54.0,
+                              "h": 20.0
+                            },
+                            "observed_count": 4,
+                            "evidence_paths": [
+                              "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+                              "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+                              "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json"
+                            ],
+                            "node_samples": [
+                              "12884902320"
+                            ],
+                            "bounds_samples": [
+                              {
+                                "x": 530.0,
+                                "y": 787.333,
+                                "w": 54.0,
+                                "h": 20.0
+                              }
+                            ]
+                          }
+                        ],
+                        "text_paint_coverage": {
+                          "status": "semantic_text_without_text_paint_hotspot",
+                          "reason": "bundle schema2 text_paint is hotspot-sparse for this node subtree"
+                        }
+                      }
+                    ],
+                    "semantics_summary": {
+                      "observed_node_count": 4,
+                      "compact_node_count": 1,
+                      "omitted_node_count": 0
+                    },
+                    "source": "bundle_schema2_semantics"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "limitations": [
+        "This is the first Material adapter slice; it proves shared packet shape and source mapping, not full Material parity.",
+        "A bounded static MUI contained-button DOM snapshot is attached for enabled and disabled web-facing facts; automated browser capture remains a follow-up.",
+        "Fret Material 3 headless goldens exist in Rust tests and should be promoted into bundle/sidecar evidence in the next slice."
+      ]
+    },
+    "fret_wiring": {
+      "refs": [
+        {
+          "id": "fret.material3.button",
+          "bucket": "fret",
+          "path": "ecosystem/fret-ui-material3/src/button.rs"
+        },
+        {
+          "id": "fret.material3.button_tokens",
+          "bucket": "fret",
+          "path": "ecosystem/fret-ui-material3/src/tokens/button.rs"
+        },
+        {
+          "id": "fret.material3.headless_goldens",
+          "bucket": "fret",
+          "path": "ecosystem/fret-ui-material3/tests/radio_alignment.rs"
+        }
+      ],
+      "test_ids": [
+        "ui-gallery-material3-button-filled-default",
+        "ui-gallery-material3-button-filled-disabled"
+      ]
+    },
+    "evidence": {
+      "fret_layout_sidecar": [],
+      "fret_bundle_schema2": [
+        "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671898136/bundle.schema2.json",
+        "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671907993-ui-gallery-material3-button-sizes-zinc-dark/bundle.schema2.json",
+        "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671908917-ui-gallery-material3-button-sizes-zinc-light/bundle.schema2.json",
+        "target/fret-diag-component-parity-material3-button-live-v1/sessions/1779671892793-82708/1779671909369-ui-gallery-material3-button-sizes-screenshots/bundle.schema2.json"
+      ],
+      "upstream_dom": [
+        {
+          "snapshot": "material3-button-mui-contained",
+          "theme": "light",
+          "mode": "",
+          "variant": "",
+          "context_id": "material3.button.mui.contained.light.vp1440x900",
+          "viewport": {
+            "width_px": 1440,
+            "height_px": 900
+          },
+          "device_pixel_ratio": 1.0,
+          "snapshot_path": "docs/workstreams/component-parity-fact-harness-v1/artifacts/upstream-dom/material3-button-mui-contained.json"
+        }
+      ]
+    },
+    "summary": {
+      "status_counts": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "owner_status_counts": {
+        "component_recipe": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "gallery_composition": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism_core": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "diagnostics_surface": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream_reference": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "top_findings": [],
+      "upstream_live_fact_count": 4,
+      "fret_live_fact_count": 4,
+      "upstream_semantics_fact_count": 4,
+      "upstream_interaction_fact_count": 4,
+      "fret_semantics_fact_count": 4,
+      "fret_interaction_fact_count": 4,
+      "fret_text_paint_fact_count": 0,
+      "fret_text_paint_direct_fact_count": 0,
+      "fret_text_paint_associated_fact_count": 0,
+      "fret_text_label_fact_count": 16,
+      "fret_text_paint_bundle_entry_count": 180,
+      "fret_text_paint_row_count": 3746,
+      "fret_text_paint_association_row_count": 4199,
+      "fret_text_paint_unassociated_row_count": 2872,
+      "fret_text_label_row_count": 2248,
+      "repair_queue_count": 0,
+      "hardening_queue_count": 3,
+      "gate_queue_count": 3
+    },
+    "repair_queue": [],
+    "hardening_queue": [
+      {
+        "part_id": "material3_button_semantics",
+        "part_label": "Material 3 Button semantics and activation",
+        "check_id": "material3_button_upstream_dom_gate",
+        "status": "pass_known",
+        "axis": "semantics",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "promotion_target": "diag_script",
+        "confidence": "medium",
+        "triage": {
+          "score": 0,
+          "level": "none",
+          "reasons": [
+            "passing evidence"
+          ]
+        },
+        "expected": "MUI contained button DOM evidence should expose enabled and disabled button roles, accessible names, disabled/focusability state, and computed button chrome for the Material adapter.",
+        "observed": "pass",
+        "observed_source": "live_fact_requirements",
+        "test_ids": [
+          "ui-gallery-material3-button-filled-default",
+          "ui-gallery-material3-button-filled-disabled"
+        ],
+        "source_refs": {
+          "upstream": [
+            {
+              "id": "material.spec.button",
+              "bucket": "upstream",
+              "path": "https://m3.material.io/components/buttons/overview"
+            },
+            {
+              "id": "material_ui.button",
+              "bucket": "upstream",
+              "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js"
+            },
+            {
+              "id": "material_ui.button.contained_demo",
+              "bucket": "upstream",
+              "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/docs/data/material/components/buttons/ContainedButtons.tsx"
+            },
+            {
+              "id": "compose_material3.button",
+              "bucket": "upstream",
+              "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Button.kt"
+            }
+          ],
+          "fret": [
+            {
+              "id": "fret.material3.button",
+              "bucket": "fret",
+              "path": "ecosystem/fret-ui-material3/src/button.rs"
+            },
+            {
+              "id": "fret.material3.headless_goldens",
+              "bucket": "fret",
+              "path": "ecosystem/fret-ui-material3/tests/radio_alignment.rs"
+            }
+          ]
+        },
+        "evidence_refs": [
+          "docs/workstreams/component-parity-fact-harness-v1/artifacts/upstream-dom/material3-button-mui-contained.json",
+          "F:/SourceCodes/Rust/fret/repo-ref/material-ui/docs/data/material/components/buttons/ContainedButtons.tsx",
+          "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js"
+        ],
+        "next_step": "Keep this as a regression lock for the upstream/upstream_reference owner; harden only if confidence or coverage gaps remain."
+      },
+      {
+        "part_id": "material3_button_semantics",
+        "part_label": "Material 3 Button semantics and activation",
+        "check_id": "material3_button_semantics_bundle_gate",
+        "status": "pass_known",
+        "axis": "semantics",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "promotion_target": "component_fixture",
+        "confidence": "medium",
+        "triage": {
+          "score": 0,
+          "level": "none",
+          "reasons": [
+            "passing evidence"
+          ]
+        },
+        "expected": "Bundle schema2 semantics should expose role=button, label, disabled flag, and invoke/focus action state for enabled and disabled Material buttons.",
+        "observed": "pass",
+        "observed_source": "live_fact_requirements",
+        "test_ids": [
+          "ui-gallery-material3-button-filled-default",
+          "ui-gallery-material3-button-filled-disabled"
+        ],
+        "source_refs": {
+          "upstream": [
+            {
+              "id": "material.spec.button",
+              "bucket": "upstream",
+              "path": "https://m3.material.io/components/buttons/overview"
+            },
+            {
+              "id": "material_ui.button",
+              "bucket": "upstream",
+              "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js"
+            },
+            {
+              "id": "material_ui.button.contained_demo",
+              "bucket": "upstream",
+              "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/docs/data/material/components/buttons/ContainedButtons.tsx"
+            },
+            {
+              "id": "compose_material3.button",
+              "bucket": "upstream",
+              "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Button.kt"
+            }
+          ],
+          "fret": [
+            {
+              "id": "fret.material3.button",
+              "bucket": "fret",
+              "path": "ecosystem/fret-ui-material3/src/button.rs"
+            },
+            {
+              "id": "fret.material3.headless_goldens",
+              "bucket": "fret",
+              "path": "ecosystem/fret-ui-material3/tests/radio_alignment.rs"
+            }
+          ]
+        },
+        "evidence_refs": [
+          "ecosystem/fret-ui-material3/src/button.rs",
+          "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+          "target/fret-diag/**/bundle.schema2.json"
+        ],
+        "next_step": "Keep this as a regression lock for the recipe/component_recipe owner; harden only if confidence or coverage gaps remain."
+      },
+      {
+        "part_id": "material3_button_text_paint",
+        "part_label": "Material 3 Button token-driven text and paint facts",
+        "check_id": "material3_button_text_paint_table_gate",
+        "status": "pass_known",
+        "axis": "chrome",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "promotion_target": "diag_script",
+        "confidence": "medium",
+        "triage": {
+          "score": 0,
+          "level": "none",
+          "reasons": [
+            "passing evidence"
+          ]
+        },
+        "expected": "Material Button diagnostics should export bundle schema2 text_paint rows while the Material button page is captured, and bundle semantics should expose label descendants for the selected button nodes. Per-label text_paint remains hotspot-sparse and must stay distinct from semantic label coverage.",
+        "observed": "pass",
+        "observed_source": "live_fact_requirements",
+        "test_ids": [
+          "ui-gallery-material3-button-filled-default",
+          "ui-gallery-material3-button-filled-disabled"
+        ],
+        "source_refs": {
+          "upstream": [
+            {
+              "id": "material.spec.button",
+              "bucket": "upstream",
+              "path": "https://m3.material.io/components/buttons/overview"
+            },
+            {
+              "id": "material_ui.button",
+              "bucket": "upstream",
+              "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/packages/mui-material/src/Button/Button.js"
+            },
+            {
+              "id": "material_ui.button.contained_demo",
+              "bucket": "upstream",
+              "path": "F:/SourceCodes/Rust/fret/repo-ref/material-ui/docs/data/material/components/buttons/ContainedButtons.tsx"
+            },
+            {
+              "id": "compose_material3.button",
+              "bucket": "upstream",
+              "path": "F:/SourceCodes/Rust/fret/repo-ref/compose-multiplatform-core/compose/material3/material3/src/commonMain/kotlin/androidx/compose/material3/Button.kt"
+            }
+          ],
+          "fret": [
+            {
+              "id": "fret.material3.button",
+              "bucket": "fret",
+              "path": "ecosystem/fret-ui-material3/src/button.rs"
+            },
+            {
+              "id": "fret.material3.button_tokens",
+              "bucket": "fret",
+              "path": "ecosystem/fret-ui-material3/src/tokens/button.rs"
+            },
+            {
+              "id": "fret.material3.headless_goldens",
+              "bucket": "fret",
+              "path": "ecosystem/fret-ui-material3/tests/radio_alignment.rs"
+            }
+          ]
+        },
+        "evidence_refs": [
+          "ecosystem/fret-bootstrap/src/ui_diagnostics/bundle.rs",
+          "ecosystem/fret-ui-material3/src/button.rs",
+          "ecosystem/fret-ui-material3/src/tokens/button.rs"
+        ],
+        "next_step": "Keep this as a regression lock for the runner/diagnostics_surface owner; harden only if confidence or coverage gaps remain."
+      }
+    ],
+    "gate_queue": [
+      {
+        "part_id": "material3_button_semantics",
+        "check_id": "material3_button_upstream_dom_gate",
+        "target": "diag_script",
+        "reason": "The first Material adapter needs an upstream DOM slice before comparing Fret recipe semantics and chrome against web-facing Material UI behavior.",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream"
+      },
+      {
+        "part_id": "material3_button_semantics",
+        "check_id": "material3_button_semantics_bundle_gate",
+        "target": "component_fixture",
+        "reason": "The invariant is Material Button recipe semantics; only missing portable semantics fields should be promoted inward.",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe"
+      },
+      {
+        "part_id": "material3_button_text_paint",
+        "check_id": "material3_button_text_paint_table_gate",
+        "target": "diag_script",
+        "reason": "The first Material adapter needs diagnostics evidence before broad token parity claims.",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner"
+      }
+    ]
+  }
+}

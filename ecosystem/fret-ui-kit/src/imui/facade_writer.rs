@@ -3,148 +3,22 @@
 use super::*;
 use std::any::Any;
 
+mod basic_items;
 mod boolean_wrappers;
 mod button_actions;
+mod container_methods;
 mod container_wrappers;
 mod disclosure;
+mod facade_core;
 mod floating_popup;
+mod image_items;
 mod menu_items;
+mod scope_methods;
 mod selection_combo;
 mod text_models;
 mod value_models;
 
-/// A minimal `UiWriter` implementation used by facade container helpers (e.g. floating windows).
-///
-/// This mirrors the `fret-imui::ImUi` pattern without depending on the `fret-imui` crate.
-pub struct ImUiFacade<'cx, 'a, H: UiHost> {
-    pub(super) cx: &'cx mut ElementContext<'a, H>,
-    pub(super) out: &'cx mut Vec<AnyElement>,
-    pub(super) build_focus: Option<Rc<Cell<Option<GlobalElementId>>>>,
-}
-
-impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
-    fn record_focusable(&mut self, id: Option<GlobalElementId>, enabled: bool) {
-        if !enabled {
-            return;
-        }
-        let Some(id) = id else {
-            return;
-        };
-        let Some(st) = self.build_focus.as_ref() else {
-            return;
-        };
-        if st.get().is_none() {
-            st.set(Some(id));
-        }
-    }
-
-    pub fn cx_mut(&mut self) -> &mut ElementContext<'a, H> {
-        self.cx
-    }
-
-    pub fn add(&mut self, element: AnyElement) {
-        self.out.push(element);
-    }
-
-    pub fn id<K: Hash>(
-        &mut self,
-        key: K,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
-        let out = &mut *self.out;
-        let build_focus = self.build_focus.clone();
-        self.cx.keyed(key, |cx| {
-            prepare_imui_runtime_for_frame(cx);
-            let mut ui = ImUiFacade {
-                cx,
-                out,
-                build_focus,
-            };
-            f(&mut ui);
-        });
-    }
-
-    pub fn push_id<K: Hash>(
-        &mut self,
-        key: K,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
-        self.id(key, f);
-    }
-
-    pub fn for_each_keyed<I, K, T>(
-        &mut self,
-        items: I,
-        mut f: impl FnMut(&mut ImUiFacade<'_, '_, H>, &K, T),
-    ) where
-        I: IntoIterator<Item = (K, T)>,
-        K: Hash,
-    {
-        let f = &mut f;
-        for (key, item) in items {
-            self.id(&key, |ui| f(ui, &key, item));
-        }
-    }
-
-    /// Disable all `imui`-facade interactions within the closure and dim visuals (ImGui-style
-    /// `BeginDisabled/EndDisabled`).
-    ///
-    /// Notes:
-    /// - This is scoped to the closure (Rust-friendly) rather than a manual begin/end pair.
-    /// - The disabled alpha multiplier is controlled by theme number
-    ///   `component.imui.disabled_alpha` (default `0.60`).
-    pub fn disabled_scope(
-        &mut self,
-        disabled: bool,
-        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
-    ) {
-        if !disabled {
-            f(self);
-            return;
-        }
-
-        let was_disabled = self.with_cx_mut(|cx| imui_is_disabled(cx));
-        if was_disabled {
-            f(self);
-            return;
-        }
-
-        let build_focus = self.build_focus.clone();
-        let element = self.with_cx_mut(|cx| {
-            let depth = disabled_scope_depth_for(cx);
-            let _guard = DisabledScopeGuard::push(depth);
-            let alpha = disabled_alpha_for(cx);
-            cx.pointer_region(PointerRegionProps::default(), |cx| {
-                cx.pointer_region_on_pointer_down(Arc::new(|_host, _acx, _down| true));
-                cx.pointer_region_on_pointer_up(Arc::new(|_host, _acx, _up| true));
-                vec![cx.opacity(alpha, |cx| {
-                    vec![cx.focus_traversal_gate(false, |cx| {
-                        prepare_imui_runtime_for_frame(cx);
-                        let mut out = Vec::new();
-                        let mut ui = ImUiFacade {
-                            cx,
-                            out: &mut out,
-                            build_focus,
-                        };
-                        f(&mut ui);
-                        out
-                    })]
-                })]
-            })
-        });
-        self.add(element);
-    }
-}
-
-impl<'cx, 'a, H: UiHost> UiWriter<H> for ImUiFacade<'cx, 'a, H> {
-    fn with_cx_mut<R>(&mut self, f: impl FnOnce(&mut ElementContext<'_, H>) -> R) -> R {
-        f(self.cx)
-    }
-
-    fn add(&mut self, element: AnyElement) {
-        self.out.push(element);
-    }
-}
+pub use facade_core::ImUiFacade;
 
 /// Immediate-mode facade helpers for any authoring frontend that implements `UiWriter`.
 ///
@@ -157,22 +31,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         key: K,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>) -> R,
     ) -> R {
-        let mut result = None;
-        let elements = self.with_cx_mut(|cx| {
-            cx.keyed(key, |cx| {
-                prepare_imui_runtime_for_frame(cx);
-                let mut out = Vec::new();
-                let mut ui = ImUiFacade {
-                    cx,
-                    out: &mut out,
-                    build_focus: None,
-                };
-                result = Some(f(&mut ui));
-                out
-            })
-        });
-        self.extend(elements);
-        result.expect("imui push_id closure should produce a result")
+        scope_methods::push_id(self, key, f)
     }
 
     /// Disable all `imui`-facade interactions within the closure and dim visuals (ImGui-style
@@ -189,79 +48,15 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         disabled: bool,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
-        if !disabled {
-            let elements = self.with_cx_mut(|cx| {
-                prepare_imui_runtime_for_frame(cx);
-                let mut out = Vec::new();
-                let mut ui = ImUiFacade {
-                    cx,
-                    out: &mut out,
-                    build_focus: None,
-                };
-                f(&mut ui);
-                out
-            });
-            self.extend(elements);
-            return;
-        }
-
-        enum Built {
-            Inline(Vec<AnyElement>),
-            Wrapped(Box<AnyElement>),
-        }
-
-        let built = self.with_cx_mut(|cx| {
-            let depth = disabled_scope_depth_for(cx);
-            let was_disabled = depth.get() > 0;
-            let _guard = DisabledScopeGuard::push(depth);
-
-            let build_children = |cx: &mut ElementContext<'_, H>| {
-                prepare_imui_runtime_for_frame(cx);
-                let mut out = Vec::new();
-                let mut ui = ImUiFacade {
-                    cx,
-                    out: &mut out,
-                    build_focus: None,
-                };
-                f(&mut ui);
-                out
-            };
-
-            if was_disabled {
-                Built::Inline(build_children(cx))
-            } else {
-                let alpha = disabled_alpha_for(cx);
-                Built::Wrapped(Box::new(cx.pointer_region(
-                    PointerRegionProps::default(),
-                    |cx| {
-                        cx.pointer_region_on_pointer_down(Arc::new(|_host, _acx, _down| true));
-                        cx.pointer_region_on_pointer_up(Arc::new(|_host, _acx, _up| true));
-                        vec![cx.opacity(alpha, |cx| {
-                            vec![cx.focus_traversal_gate(false, |cx| build_children(cx))]
-                        })]
-                    },
-                )))
-            }
-        });
-
-        match built {
-            Built::Inline(elements) => self.extend(elements),
-            Built::Wrapped(element) => self.add(*element),
-        }
+        scope_methods::disabled_scope(self, disabled, f);
     }
 
     fn text(&mut self, text: impl Into<Arc<str>>) {
-        let text = text.into();
-        let element =
-            self.with_cx_mut(|cx| crate::declarative::text::text_section_chrome_label(cx, text));
-        self.add(element);
+        basic_items::text(self, text.into());
     }
 
     fn text_wrapped(&mut self, text: impl Into<Arc<str>>) {
-        let text = text.into();
-        let element =
-            self.with_cx_mut(|cx| crate::declarative::text::text_compact_paragraph(cx, text));
-        self.add(element);
+        basic_items::text_wrapped(self, text.into());
     }
 
     fn bullet_text(&mut self, text: impl Into<Arc<str>>) {
@@ -269,7 +64,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     }
 
     fn bullet_text_with_options(&mut self, text: impl Into<Arc<str>>, options: BulletTextOptions) {
-        bullet_text_controls::bullet_text_with_options(self, text.into(), options);
+        basic_items::bullet_text_with_options(self, text.into(), options);
     }
 
     fn debug_draw<K: Hash>(
@@ -286,19 +81,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: DebugDrawOptions,
         draw: impl FnOnce(&mut ImUiDebugDrawList),
     ) -> DebugDrawResponse {
-        debug_draw_controls::debug_draw_with_options(self, id, options, draw)
+        basic_items::debug_draw_with_options(self, id, options, draw)
     }
 
     fn separator(&mut self) {
-        let element = self.with_cx_mut(|cx| {
-            let mut props = fret_ui::element::ContainerProps::default();
-            let theme = fret_ui::Theme::global(&*cx.app);
-            props.background = Some(theme.color_token("border"));
-            props.layout.size.width = fret_ui::element::Length::Fill;
-            props.layout.size.height = fret_ui::element::Length::Px(fret_core::Px(1.0));
-            cx.container(props, |_| Vec::new())
-        });
-        self.add(element);
+        basic_items::separator(self);
     }
 
     fn separator_text(&mut self, label: impl Into<Arc<str>>) {
@@ -310,11 +97,71 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         label: impl Into<Arc<str>>,
         options: SeparatorTextOptions,
     ) {
-        separator_text_controls::separator_text_with_options(self, label.into(), options);
+        basic_items::separator_text_with_options(self, label.into(), options);
+    }
+
+    /// Explicit vertical item-flow convenience for ImGui ports.
+    ///
+    /// This does not add an implicit layout cursor. It is a scoped vertical group whose default
+    /// gap reads `component.imui.item_spacing_y_px` (fallback `4px`).
+    fn items(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        container_methods::items(self, None, f);
+    }
+
+    fn items_with_options(
+        &mut self,
+        options: ItemFlowOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        container_methods::items_with_options(self, None, options, f);
+    }
+
+    /// Explicit horizontal same-line group for ImGui ports.
+    ///
+    /// This intentionally scopes "same line" to the closure instead of reaching backward to a
+    /// previous item. The default gap reads `component.imui.item_spacing_x_px` (fallback `8px`).
+    fn same_line(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        container_methods::same_line(self, None, f);
+    }
+
+    fn same_line_with_options(
+        &mut self,
+        options: SameLineOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        container_methods::same_line_with_options(self, None, options, f);
+    }
+
+    fn dummy(&mut self, size: Size) {
+        container_methods::dummy(self, size);
+    }
+
+    fn dummy_with_options(&mut self, size: Size, options: DummyOptions) {
+        container_methods::dummy_with_options(self, size, options);
+    }
+
+    fn spacing(&mut self) {
+        container_methods::spacing(self);
+    }
+
+    fn spacing_with_options(&mut self, options: SpacingOptions) {
+        container_methods::spacing_with_options(self, options);
+    }
+
+    fn indent(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
+        container_methods::indent(self, None, f);
+    }
+
+    fn indent_with_options(
+        &mut self,
+        options: IndentOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        container_methods::indent_with_options(self, None, options, f);
     }
 
     fn horizontal(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
-        self.horizontal_with_options(HorizontalOptions::default(), f);
+        container_methods::horizontal(self, None, f);
     }
 
     fn horizontal_with_options(
@@ -322,12 +169,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: HorizontalOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
-        let element = self.with_cx_mut(|cx| horizontal_container_element(cx, None, options, f));
-        self.add(element);
+        container_methods::horizontal_with_options(self, None, options, f);
     }
 
     fn menu_bar(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
-        self.menu_bar_with_options(MenuBarOptions::default(), f);
+        container_methods::menu_bar(self, None, f);
     }
 
     fn menu_bar_with_options(
@@ -335,9 +181,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: MenuBarOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
-        let element =
-            self.with_cx_mut(|cx| menu_family_controls::menu_bar_element(cx, None, options, f));
-        self.add(element);
+        container_methods::menu_bar_with_options(self, None, options, f);
     }
 
     fn tab_bar(
@@ -345,7 +189,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         id: &str,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
     ) -> TabBarResponse {
-        self.tab_bar_with_options(id, TabBarOptions::default(), f)
+        container_methods::tab_bar(self, None, id, f)
     }
 
     fn tab_bar_with_options(
@@ -354,14 +198,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: TabBarOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTabBar<'cx2, 'a2, H>),
     ) -> TabBarResponse {
-        let (element, response) =
-            self.with_cx_mut(|cx| tab_family_controls::tab_bar_element(cx, id, None, options, f));
-        self.add(element);
-        response
+        container_methods::tab_bar_with_options(self, None, id, options, f)
     }
 
     fn vertical(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
-        self.vertical_with_options(VerticalOptions::default(), f);
+        container_methods::vertical(self, None, f);
     }
 
     fn vertical_with_options(
@@ -369,12 +210,29 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: VerticalOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
-        let element = self.with_cx_mut(|cx| vertical_container_element(cx, None, options, f));
-        self.add(element);
+        container_methods::vertical_with_options(self, None, options, f);
+    }
+
+    fn list_box(
+        &mut self,
+        id: &str,
+        label: impl Into<Arc<str>>,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        container_methods::list_box(self, None, id, label, f);
+    }
+
+    fn list_box_with_options(
+        &mut self,
+        id: &str,
+        options: ListBoxOptions,
+        f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
+    ) {
+        container_methods::list_box_with_options(self, None, id, options, f);
     }
 
     fn grid(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
-        self.grid_with_options(GridOptions::default(), f);
+        container_methods::grid(self, None, f);
     }
 
     fn grid_with_options(
@@ -382,8 +240,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: GridOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
-        let element = self.with_cx_mut(|cx| grid_container_element(cx, None, options, f));
-        self.add(element);
+        container_methods::grid_with_options(self, None, options, f);
     }
 
     fn table(
@@ -392,7 +249,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         columns: &[TableColumn],
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTable<'cx2, 'a2, H>),
     ) -> TableResponse {
-        self.table_with_options(id, columns, TableOptions::default(), f)
+        container_methods::table(self, None, id, columns, f)
     }
 
     fn table_with_options(
@@ -402,10 +259,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: TableOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiTable<'cx2, 'a2, H>),
     ) -> TableResponse {
-        let (element, response) =
-            self.with_cx_mut(|cx| table_controls::table_element(cx, id, columns, None, options, f));
-        self.add(element);
-        response
+        container_methods::table_with_options(self, None, id, columns, options, f)
     }
 
     fn virtual_list<K, R>(&mut self, id: &str, len: usize, key_at: K, row: R) -> VirtualListResponse
@@ -413,7 +267,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         K: FnMut(usize) -> fret_ui::ItemKey,
         R: for<'cx2, 'a2> FnMut(&mut ImUiFacade<'cx2, 'a2, H>, usize),
     {
-        self.virtual_list_with_options(id, len, VirtualListOptions::default(), key_at, row)
+        container_methods::virtual_list(self, None, id, len, key_at, row)
     }
 
     fn virtual_list_with_options<K, R>(
@@ -428,15 +282,11 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         K: FnMut(usize) -> fret_ui::ItemKey,
         R: for<'cx2, 'a2> FnMut(&mut ImUiFacade<'cx2, 'a2, H>, usize),
     {
-        let (element, response) = self.with_cx_mut(|cx| {
-            virtual_list_controls::virtual_list_element(cx, id, len, None, options, key_at, row)
-        });
-        self.add(element);
-        response
+        container_methods::virtual_list_with_options(self, None, id, len, options, key_at, row)
     }
 
     fn scroll(&mut self, f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>)) {
-        self.scroll_with_options(ScrollOptions::default(), f);
+        container_methods::scroll(self, None, f);
     }
 
     fn scroll_with_options(
@@ -444,8 +294,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: ScrollOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) {
-        let element = self.with_cx_mut(|cx| scroll_container_element(cx, None, options, f));
-        self.add(element);
+        container_methods::scroll_with_options(self, None, options, f);
     }
 
     fn child_region(
@@ -453,7 +302,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         id: &str,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> ChildRegionResponse {
-        self.child_region_with_options(id, ChildRegionOptions::default(), f)
+        container_methods::child_region(self, None, id, f)
     }
 
     fn child_region_with_options(
@@ -462,10 +311,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: ChildRegionOptions,
         f: impl for<'cx2, 'a2> FnOnce(&mut ImUiFacade<'cx2, 'a2, H>),
     ) -> ChildRegionResponse {
-        let (element, response) =
-            self.with_cx_mut(|cx| child_region::child_region_element(cx, id, None, options, f));
-        self.add(element);
-        response
+        container_methods::child_region_with_options(self, None, id, options, f)
     }
 
     /// Render a window-scoped floating window layer that manages z-order (bring-to-front).
@@ -773,17 +619,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         command: impl Into<CommandId>,
         options: MenuItemOptions,
     ) -> ResponseExt {
-        let command = command.into();
-        let presentation =
-            self.with_cx_mut(|cx| crate::command::command_presentation_for_window(cx, &command));
-
-        let mut options = options;
-        options.enabled = options.enabled && presentation.enabled;
-        if options.shortcut.is_none() {
-            options.shortcut = presentation.shortcut;
-        }
-
-        menu_controls::menu_item_action_with_options(self, presentation.label, command, options)
+        menu_items::menu_item_command_with_options(self, command.into(), options)
     }
 
     fn begin_menu(
@@ -969,7 +805,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         size: Size,
         options: ImageItemOptions,
     ) -> ResponseExt {
-        image_item_controls::image_item_with_options(self, id, image, size, options)
+        image_items::image_item_with_options(self, id, image, size, options)
     }
 
     fn image_button(&mut self, id: &str, image: fret_core::ImageId, size: Size) -> ResponseExt {
@@ -981,14 +817,9 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         id: &str,
         image: fret_core::ImageId,
         size: Size,
-        mut options: ImageItemOptions,
+        options: ImageItemOptions,
     ) -> ResponseExt {
-        let was_plain_image_options = matches!(options.variant, ImageItemVariant::Image);
-        options.variant = ImageItemVariant::Button;
-        if was_plain_image_options {
-            options.focusable = true;
-        }
-        image_item_controls::image_item_with_options(self, id, image, size, options)
+        image_items::image_button_with_options(self, id, image, size, options)
     }
 
     fn button_with_options(
@@ -1056,14 +887,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         command: impl Into<CommandId>,
         options: ButtonOptions,
     ) -> ResponseExt {
-        let command = command.into();
-        let presentation =
-            self.with_cx_mut(|cx| crate::command::command_presentation_for_window(cx, &command));
-
-        let mut options = options;
-        options.enabled = options.enabled && presentation.enabled;
-
-        button_controls::action_button_with_options(self, presentation.label, command, options)
+        button_actions::button_command_with_options(self, command.into(), options)
     }
 
     fn checkbox_model(
@@ -1274,87 +1098,4 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 impl<H: UiHost, W: UiWriter<H> + ?Sized> UiWriterImUiFacadeExt<H> for W {}
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    use fret_app::App;
-    use fret_core::{AppWindowId, Px, Rect, TextOverflow, TextWrap};
-    use fret_ui::element::{ElementKind, Length};
-    use fret_ui::elements;
-
-    struct TestWriter<'cx, 'a, H: UiHost> {
-        cx: &'cx mut ElementContext<'a, H>,
-        out: &'cx mut Vec<AnyElement>,
-    }
-
-    impl<'cx, 'a, H: UiHost> UiWriter<H> for TestWriter<'cx, 'a, H> {
-        fn with_cx_mut<R>(&mut self, f: impl FnOnce(&mut ElementContext<'_, H>) -> R) -> R {
-            f(self.cx)
-        }
-
-        fn add(&mut self, element: AnyElement) {
-            self.out.push(element);
-        }
-    }
-
-    #[test]
-    fn imui_text_item_is_single_line_and_shrinkable() {
-        let mut app = App::new();
-
-        elements::with_element_cx(
-            &mut app,
-            AppWindowId::default(),
-            Rect::default(),
-            "imui-text-item",
-            |cx| {
-                let mut out = Vec::new();
-                let mut ui = TestWriter { cx, out: &mut out };
-
-                ui.text("Long editor status text that should not wrap inside a dense row");
-
-                assert_eq!(out.len(), 1);
-                let ElementKind::Text(props) = &out[0].kind else {
-                    panic!("expected imui text item to produce a Text element");
-                };
-
-                assert_eq!(props.layout.flex.shrink, 1.0);
-                assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
-                assert_eq!(props.wrap, TextWrap::None);
-                assert_eq!(props.overflow, TextOverflow::Ellipsis);
-                assert!(out[0].inherited_text_style.is_some());
-            },
-        );
-    }
-
-    #[test]
-    fn imui_text_wrapped_is_explicit_wrapping_text() {
-        let mut app = App::new();
-
-        elements::with_element_cx(
-            &mut app,
-            AppWindowId::default(),
-            Rect::default(),
-            "imui-text-wrapped",
-            |cx| {
-                let mut out = Vec::new();
-                let mut ui = TestWriter { cx, out: &mut out };
-
-                ui.text_wrapped("Long explanatory text can opt into wrapping explicitly");
-
-                assert_eq!(out.len(), 1);
-                let ElementKind::Text(props) = &out[0].kind else {
-                    panic!("expected imui wrapped text item to produce a Text element");
-                };
-
-                assert_eq!(props.layout.size.width, Length::Fill);
-                assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
-                assert_eq!(props.layout.flex.grow, 1.0);
-                assert_eq!(props.layout.flex.shrink, 1.0);
-                assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
-                assert_eq!(props.wrap, TextWrap::Word);
-                assert_eq!(props.overflow, TextOverflow::Clip);
-                assert!(out[0].inherited_text_style.is_some());
-            },
-        );
-    }
-}
+mod tests;

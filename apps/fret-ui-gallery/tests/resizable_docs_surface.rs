@@ -15,18 +15,24 @@ fn resizable_page_documents_source_axes_and_children_api_decision() {
         "The Fret-only follow-ups below keep fixed-window splitter, viewport-root overlay ownership, and cached-source movement proofs diagnostics opt-in",
         "FRET_UI_GALLERY_RESIZABLE_ADAPTIVE_PANEL",
         "FRET_UI_GALLERY_RESIZABLE_MULTI_VIEWPORT_COMBOBOX",
+        "FRET_UI_GALLERY_RESIZABLE_MULTI_VIEWPORT_SELECT",
         "FRET_UI_GALLERY_RESIZABLE_MOVING_CACHED_COMBOBOX",
+        "FRET_UI_GALLERY_RESIZABLE_MOVING_CACHED_POPOVER",
         "section_focus_filters",
         "should_build_resizable_section",
         "adaptive_panel_enabled",
         "multi_viewport_combobox_enabled",
+        "multi_viewport_select_enabled",
         "moving_cached_combobox_enabled",
-        "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`. `Adaptive Panel Proof`, `Multi-Viewport Combobox`, and `Moving Cached Combobox` are diagnostics opt-in follow-ups",
+        "moving_cached_popover_enabled",
+        "Preview mirrors the shadcn/Base UI Resizable docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `About`, `Usage`, `Vertical`, `Handle`, `RTL`, and `API Reference`. `Adaptive Panel Proof`, `Multi-Viewport Combobox`, `Multi-Viewport Select`, `Moving Cached Combobox`, and `Moving Cached Popover` are diagnostics opt-in follow-ups",
         "DocSection::build(cx, \"About\", about)",
         "DocSection::build(cx, \"API Reference\", api_reference)",
         "DocSection::build(cx, \"Adaptive Panel Proof\", adaptive_panel)",
         "Multi-Viewport Combobox",
+        "Multi-Viewport Select",
         "Moving Cached Combobox",
+        "Moving Cached Popover",
     ] {
         assert!(
             source.contains(needle),
@@ -69,6 +75,16 @@ fn resizable_page_documents_source_axes_and_children_api_decision() {
     );
     assert!(
         normalized.contains(&normalize_ws(
+            r#"if multi_viewport_select_enabled && should_build_resizable_section( focus_filters.as_deref(), "Multi-Viewport Select", "ui-gallery-resizable-multi-viewport-select-docsec", ) { let multi_viewport_select = snippets::multi_viewport_select::render(cx);"#
+        )),
+        "resizable page should keep the cross-family Select overlay ownership surface diagnostics opt-in",
+    );
+    assert!(
+        normalized.contains(&normalize_ws("sections.push(multi_viewport_select);")),
+        "resizable page should append the opt-in multi-viewport Select section before Notes",
+    );
+    assert!(
+        normalized.contains(&normalize_ws(
             r#"if moving_cached_combobox_enabled && should_build_resizable_section( focus_filters.as_deref(), "Moving Cached Combobox", "ui-gallery-resizable-view-cache-moving-combobox-docsec", ) { let moving_cached_combobox = snippets::moving_cached_combobox::render(cx);"#
         )),
         "resizable page should keep the deeper cached-source movement surface diagnostics opt-in",
@@ -76,6 +92,16 @@ fn resizable_page_documents_source_axes_and_children_api_decision() {
     assert!(
         normalized.contains(&normalize_ws("sections.push(moving_cached_combobox);")),
         "resizable page should append the opt-in cached-source movement section before Notes",
+    );
+    assert!(
+        normalized.contains(&normalize_ws(
+            r#"if moving_cached_popover_enabled && should_build_resizable_section( focus_filters.as_deref(), "Moving Cached Popover", "ui-gallery-resizable-view-cache-moving-popover-docsec", ) { let moving_cached_popover = snippets::moving_cached_popover::render(cx);"#
+        )),
+        "resizable page should keep the cached Popover outside-press diagnostics opt-in",
+    );
+    assert!(
+        normalized.contains(&normalize_ws("sections.push(moving_cached_popover);")),
+        "resizable page should append the opt-in cached Popover section before Notes",
     );
     assert!(
         normalized.contains(&normalize_ws(
@@ -94,8 +120,11 @@ fn resizable_snippets_stay_copyable_and_docs_aligned() {
     let adaptive_panel = include_str!("../src/ui/snippets/resizable/adaptive_panel.rs");
     let multi_viewport_combobox =
         include_str!("../src/ui/snippets/resizable/multi_viewport_combobox.rs");
+    let multi_viewport_select =
+        include_str!("../src/ui/snippets/resizable/multi_viewport_select.rs");
     let moving_cached_combobox =
         include_str!("../src/ui/snippets/resizable/moving_cached_combobox.rs");
+    let moving_cached_popover = include_str!("../src/ui/snippets/resizable/moving_cached_popover.rs");
     let notes = include_str!("../src/ui/snippets/resizable/notes.rs");
 
     for needle in [
@@ -179,6 +208,18 @@ fn resizable_snippets_stay_copyable_and_docs_aligned() {
     }
 
     for needle in [
+        "ui-gallery-resizable-multi-viewport-select",
+        "shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)",
+        ".side_offset(Px(6.0))",
+        ".test_id_prefix(TEST_ID_PREFIX)",
+    ] {
+        assert!(
+            multi_viewport_select.contains(needle),
+            "resizable multi-viewport Select snippet should keep the cross-family viewport-root placement fixture; missing `{needle}`",
+        );
+    }
+
+    for needle in [
         "ui-gallery-resizable-view-cache-moving-combobox",
         "cx.cached_subtree_with(",
         ".cache_key(0x7a59_d111_6a1d_c0de)",
@@ -199,11 +240,25 @@ fn resizable_snippets_stay_copyable_and_docs_aligned() {
     );
 
     for needle in [
+        "ui-gallery-resizable-view-cache-moving-popover",
+        "cx.cached_subtree_with(",
+        "Move source right",
+        "Outside press should dismiss after the cached source moves roots.",
+    ] {
+        assert!(
+            moving_cached_popover.contains(needle),
+            "resizable moving cached Popover snippet should keep the cached-source outside-press fixture; missing `{needle}`",
+        );
+    }
+
+    for needle in [
         "Adaptive Panel Proof",
         "tools/diag-scripts/ui-gallery/resizable/",
         "ui-gallery-resizable-adaptive-panel-proof.json",
         "ui-gallery-resizable-multi-viewport-combobox-placement.json",
+        "ui-gallery-resizable-multi-viewport-select-placement.json",
         "ui-gallery-resizable-view-cache-moving-combobox-root-boundary.json",
+        "ui-gallery-resizable-view-cache-moving-popover-outside-press.json",
         "cache_key_bool(review_disabled_now)",
         "No extra generic children API is planned unless a real authoring cliff appears",
     ] {

@@ -16,11 +16,12 @@ as secondary headless references.
 
 Current source axes:
 
-- Docs pages:
-  `repo-ref/ui/apps/v4/content/docs/components/radix/progress.mdx`,
-  `repo-ref/ui/apps/v4/content/docs/components/base/progress.mdx`
+- Docs page:
+  `repo-ref/ui/apps/v4/content/docs/components/progress.mdx`
 - Registry implementation (new-york visual baseline):
   `repo-ref/ui/apps/v4/registry/new-york-v4/ui/progress.tsx`
+- Registry example (docs demo behavior):
+  `repo-ref/ui/apps/v4/registry/new-york-v4/examples/progress-demo.tsx`
 - Base/radix registry copies (secondary structure check):
   `repo-ref/ui/apps/v4/registry/bases/radix/ui/progress.tsx`,
   `repo-ref/ui/apps/v4/registry/bases/base/ui/progress.tsx`

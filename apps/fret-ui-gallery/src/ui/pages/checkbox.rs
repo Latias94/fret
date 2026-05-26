@@ -20,16 +20,16 @@ pub(super) fn preview_checkbox(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let rtl_section = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "Reference baseline: shadcn base Checkbox docs.",
+        "Reference baseline: current shadcn/ui v4 new-york Checkbox docs plus registry examples.",
         "`Checkbox::new(...)`, `Checkbox::new_optional(...)`, and `Checkbox::new_tristate(...)` cover the model-backed checked and mixed-state paths; all three lanes now accept the narrow checked-state bridge traits, while `Checkbox::from_checked(...)` / `from_checked_state(...)` plus `.action(...)` cover the default source-aligned snapshot/action path. `.on_click(...)` remains the lower-level command bridge when explicit command routing is genuinely needed.",
-        "`Checkbox::required(true)` now maps the upstream required semantics (`aria-required`) onto the checkbox control itself; the docs path still composes field labels/descriptions externally instead of widening the checkbox to a children API.",
+        "`Checkbox::required(true)` now maps required semantics (`aria-required`) onto the checkbox control itself; docs and registry examples still compose field labels/descriptions externally instead of widening the checkbox to a children API.",
         "Checkbox remains a leaf control surface: labels, descriptions, and larger click targets are composed through `Field`, `FieldContent`, `FieldLabel::for_control(...)`, and `FieldLabel::wrap(...)` rather than a generic children/`compose()` API on the checkbox itself.",
         "`Required Disabled Group` keeps the fieldset and field-group shell caller-owned while each concrete checkbox owns `required=true`; disabled rows suppress focus/invoke and label-forwarded toggles only on the disabled control.",
         "Visual defaults such as control size, border, focus ring, and indicator chrome stay recipe-owned, while row width and form layout remain caller-owned.",
         "The top-level `Demo` now mirrors the upstream four-row composite preview (`Label`, description, disabled, and wrapped title/content) instead of collapsing that teaching surface into a single shortcut row.",
-        "The docs-aligned `Description`, `Group`, and `Table` sections now keep the upstream row order, fieldset framing, and mixed select-all teaching surface visible on the page instead of hiding them behind unrelated composition shortcuts.",
-        "The `RTL` preview now keeps the translated upstream four-row example shape. `DirectionProvider(Rtl)` plus `Field`, `FieldContent`, `Label::for_control(...)`, and `FieldLabel::wrap(...)` are already sufficient, so no checkbox-specific physical alignment prop or wider children API is needed.",
-        "`Label Association` and `With Title` stay after the upstream docs path because they document Fret-specific control-registry and wrapped-field composition patterns.",
+        "The follow-up `Description`, `Group`, `Required Disabled Group`, `Table`, and `RTL` sections keep registry/example-shaped composition, fieldset framing, and mixed select-all behavior visible without hiding them behind unrelated shortcuts.",
+        "The `RTL` preview translates the current four-row demo shape. `DirectionProvider(Rtl)` plus `Field`, `FieldContent`, `Label::for_control(...)`, and `FieldLabel::wrap(...)` are already sufficient, so no checkbox-specific physical alignment prop or wider children API is needed.",
+        "`Label Association` and `With Title` stay after the docs/registry path because they document Fret-specific control-registry and wrapped-field composition patterns.",
         "This page is docs/public-surface parity work, not a mechanism-layer fix.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
@@ -77,7 +77,7 @@ pub(super) fn preview_checkbox(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .description("Table selection pattern with a derived mixed-state select-all checkbox on the action-first path.")
         .code_rust_from_file_region(snippets::table::SOURCE, "example");
     let rtl_section = DocSection::build(cx, "RTL", rtl_section)
-        .description("Translated upstream four-row RTL preview under `DirectionProvider(Rtl)` using the same logical field primitives.")
+        .description("Translated four-row demo preview under `DirectionProvider(Rtl)` using the same logical field primitives.")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let label = DocSection::build(cx, "Label Association (Fret)", label)
         .description("Use `FieldLabel::for_control` plus `Checkbox::control_id` so label clicks toggle the checkbox.")
@@ -90,7 +90,7 @@ pub(super) fn preview_checkbox(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Checkbox docs path first, including the translated upstream four-row RTL preview, surfaces the source-aligned snapshot/action story in `API Reference`, then keeps `Label Association` and `With Title` as focused Fret follow-ups.",
+            "Preview starts with the current shadcn Checkbox `Demo` and `Usage`, surfaces checked/invalid state and registry-shaped composition follow-ups, records the source-aligned snapshot/action story in `API Reference`, then keeps `Label Association` and `With Title` as focused Fret follow-ups.",
         ),
         vec![
             demo,

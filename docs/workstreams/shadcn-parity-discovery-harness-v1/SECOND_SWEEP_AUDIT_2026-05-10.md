@@ -101,7 +101,7 @@ The active objective requires:
   - Unit/root-cause gate in `ecosystem/fret-ui-shadcn/src/drawer.rs`.
   - Mechanism recipe fixture:
     `ecosystem/fret-ui-shadcn/tests/fixtures/mechanism_layout_recipe_cases_v1.json`
-    (`responsive-drawer-bottom-sheet-uses-eighty-vh`).
+    (`responsive-drawer-bottom-sheet-caps-visible-lane`).
   - Harness runner:
     `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/mechanism_harness.rs`.
 - Current status: mobile report records 6 parts, 6 pass, 0 mismatch and gates the effective

@@ -57,6 +57,7 @@ DevTools full clippy is now a current maintenance gate for the P2 diagnostics/de
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-15.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-25.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-04.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_PRODUCT_WORKFLOW_COHERENCE_REVIEW_2026-05-06.md`
@@ -563,6 +564,218 @@ DevTools GUI product-workflow projection follow-up (2026-05-15):
 cargo nextest run -p fret-devtools devtools_first_open_lines_surface_canonical_paths --no-fail-fast
 python tools/diag_gate_imui_p2_devtools_first_open.py --discovery-only
 python tools/diag_gate_imui_product_chain.py --only discovery
+python tools/gate_imui_workstream_source.py
+```
+
+## IMUI text picker keyboard owner split - 2026-05-25
+
+Scope: keep `text_picker_controls.rs` as the input/popup orchestration owner while moving picker
+keyboard state, active-index movement, and Enter/NumpadEnter commit policy into a focused owner.
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard.rs` now owns
+  `InputTextPickerKeyboardState`, `InputTextPickerKeyboardPick`, arrow-key wrap movement through
+  `cmdk_selection::next_active_index(...)`, repeat/modifier/IME guards, and keyboard commit writes
+  to the text model plus popup-open model.
+- `text_picker_controls.rs` keeps current-value reads, candidate filtering, input semantics,
+  popup-open orchestration, candidate rendering, pointer selection, response lifecycle merging, and
+  active-descendant wiring.
+- The split leaves `text_picker_controls.rs` at 300 lines and the new `keyboard.rs` owner at 106
+  lines.
+- The source gate now rejects keyboard state/handler bodies from returning to
+  `text_picker_controls.rs`, while checking that `keyboard.rs` does not grow popup or selectable UI
+  composition policy.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-imui models_text --no-fail-fast
+cargo nextest run -p fret-ui-kit --features imui text_controls::tests --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The first two `fret-imui models_text` attempts failed at Windows link time
+with unresolved `hashbrown`/`fret_core::input::Event` symbols after the earlier interrupted
+`nextest list` commands; `cargo clean -p fret-imui` cleared the stale test artifacts, and the rerun
+reported `29 tests run: 29 passed`. The `fret-ui-kit` focused text-controls gate reported
+`3 tests run: 3 passed`. `cargo check` reported only the existing `fret-ui` warnings for
+`unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code. `git diff --check`
+reported only the pre-existing line-ending warnings for `Cargo.lock` and
+`apps/fret-examples/src/lib.rs`.
+
+## IMUI debug draw element owner split - 2026-05-25
+
+Scope: keep `debug_draw_controls.rs` as the draw-list API and response/model hub while moving the
+final canvas/pressable element assembly into a narrower owner module.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs` now owns `debug_draw_element`,
+  pressable wrapping, fill-layout policy, canvas cache policy, clip-to-bounds dispatch, and
+  forwarding into `paint_debug_draw_commands`.
+- `debug_draw_controls.rs` still owns `DebugDrawOptions`, `DebugDrawResponse`,
+  `ImUiDebugDrawList`, stroke/corner options, command recording, summary construction, and the
+  facade entrypoint.
+- The split reduces `debug_draw_controls.rs` from 1418 lines to 1285 lines in this worktree and
+  keeps the new element owner at 142 lines.
+- The source gate now rejects pressable/canvas element assembly and direct paint dispatch from
+  `debug_draw_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui debug_draw_default_element_stays_noninteractive_canvas debug_draw_interaction_wraps_canvas_in_pressable_response_surface debug_draw_options_default_to_clipped_canvas --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+## IMUI debug draw path-builder owner split - 2026-05-25
+
+Scope: keep `debug_draw_controls.rs` focused on the draw-list API and command recorder while moving
+the high-level path DSL into a dedicated owner module.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder.rs` now owns
+  `ImUiDebugDrawPath`, line/rect/bezier/arc/elliptical-arc path building, path stroke/fill
+  finalization, and the glue to low-level path sampling helpers.
+- `debug_draw_controls.rs` still exposes the same `ImUiDebugDrawList::path(...)` authoring entry
+  and still owns the command recorder methods.
+- The split reduces `debug_draw_controls.rs` from 1151 lines after the element split to 1078 lines;
+  the new `path_builder.rs` owner is 220 lines.
+- The source gate now rejects path-builder implementation details from `debug_draw_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui debug_draw_path_builder --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+## IMUI debug draw draw-list owner split - 2026-05-25
+
+Scope: keep `debug_draw_controls.rs` as the options/response/style entrypoint hub while moving the
+command recorder, channel merge, and command/list summary logic into a narrower owner module.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list.rs` now owns the
+  `ImUiDebugDrawList` implementation: `path`, channel split/switch/merge, command summaries,
+  list summary, all `add_*` command recorder helpers, and `Default`.
+- `debug_draw_controls.rs` keeps type declarations (`DebugDrawOptions`, `DebugDrawResponse`,
+  `DebugDrawStrokeStyle`, `DebugDrawRoundCorners`, image/svg option types, `DebugDrawVertex`) and
+  the `debug_draw_with_options` facade entrypoint.
+- `path_builder.rs` keeps the path DSL, `element.rs` keeps element assembly, `commands.rs` keeps
+  command/summary contracts, `paint.rs` now imports low-level path helpers directly from `paths`
+  instead of depending on parent-module re-exports.
+- The split reduces `debug_draw_controls.rs` from 1078 lines after the path-builder split to 419
+  lines; the new `draw_list.rs` owner is 671 lines.
+- The source gate now rejects command recorder, channel, summary, and sequential triangle index
+  logic from returning to `debug_draw_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui debug_draw_list --no-fail-fast
+cargo nextest run -p fret-ui-kit --features imui debug_draw_channels --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The first `debug_draw_list` attempt timed out while compiling test
+artifacts, then passed on rerun with `7 tests run: 7 passed`; `debug_draw_channels` reported
+`2 tests run: 2 passed`. `cargo check` reported only the existing `fret-ui` warnings for
+`unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code.
+
+## IMUI debug draw draw-list shape-method owner split - 2026-05-25
+
+Scope: keep `draw_list.rs` focused on path/channel/summary/clip/image/svg/text command flow while
+moving basic ImDrawList-style geometry authoring methods into a shape-method owner.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes.rs` now owns line,
+  polyline, convex/concave polygon fill, rect/quad/triangle/mesh, circle/ngon/ellipse, and bezier
+  command recorder methods for `ImUiDebugDrawList`.
+- `draw_list.rs` still owns path entry, channel split/switch/merge, summary construction,
+  clip-stack commands, image/svg/text command recorders, command count, and `Default`.
+- The split reduces `draw_list.rs` from 672 lines after the earlier draw-list split to 308 lines;
+  the new `draw_list_shapes.rs` owner is 371 lines.
+- The source gate now rejects basic shape recorder methods and sequential triangle index generation
+  from returning to `draw_list.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui debug_draw_list --no-fail-fast
+cargo nextest run -p fret-ui-kit --features imui debug_draw_channels --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The `debug_draw_list` focused gate reported `7 tests run: 7 passed`; the
+`debug_draw_channels` focused gate reported `2 tests run: 2 passed`. `cargo check` reported only
+the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI debug draw summary-contract owner split - 2026-05-25
+
+Scope: keep `commands.rs` focused on private debug-draw command payloads and command-to-summary
+mapping while moving public summary contracts into a dedicated owner.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries.rs` now owns
+  `DebugDrawCommandKind`, `DebugDrawCommandSummary`, and `DebugDrawListSummary`, including
+  accessor-first public metrics plus internal constructors/aggregation helpers.
+- `commands.rs` keeps `DebugDrawCommand` payload variants and `summary_with_clip_state(...)` /
+  `summary(...)`, using the summary owner instead of defining public summary contracts inline.
+- `debug_draw_controls.rs` re-exports the public summary types from `summaries`, preserving the
+  existing external `fret_ui_kit::imui::*` API shape.
+- The split reduces `commands.rs` from 644 lines before the summary split to 401 lines; the new
+  `summaries.rs` owner is 245 lines.
+- The source gate now moves opaque summary-struct coverage to `summaries.rs` and rejects public
+  summary contracts from returning to `commands.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui debug_draw_list --no-fail-fast
+cargo nextest run -p fret-ui-kit --features imui debug_draw_channels --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The `debug_draw_list` focused gate reported `7 tests run: 7 passed`; the
+`debug_draw_channels` focused gate reported `2 tests run: 2 passed`. `cargo check` reported only
+the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI debug draw paint-helper owner split - 2026-05-25
+
+Scope: keep `debug_draw_controls/paint.rs` as the command-to-painter dispatcher while moving pure
+paint helpers for image opacity/UV validation, rounded image clipping, triangle meshes, and image
+scene ops into a smaller helper owner.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_helpers.rs` now owns
+  `normalized_opacity`, `uv_rect_is_valid`, `corner_radii_are_visible`,
+  `rounded_rect_corner_radii`, `paint_triangle_mesh`, `paint_image_triangle_mesh`, `paint_image`,
+  and `paint_image_region`.
+- `paint.rs` keeps `paint_debug_draw_commands` and imports those helpers instead of owning mesh and
+  image scene-op emission directly.
+- Existing tests now import paint-helper proof functions from `paint_helpers`, keeping unit proof
+  close to the new owner.
+- The split reduces `paint.rs` from 729 lines after the draw-list split to 589 lines; the new
+  `paint_helpers.rs` owner is 148 lines.
+- The source gate now rejects opacity/UV/rounded-image/mesh/image helper bodies from returning to
+  `paint.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui image_overlay_helpers_sanitize_opacity_and_uv_rects rounded_image_helpers_follow_imgui_path_rect_corner_rules --no-fail-fast
 python tools/gate_imui_workstream_source.py
 ```
 
@@ -1935,3 +2148,1888 @@ DevTools first-open/source gates passed, the workstream catalog and JSON checks 
 `tools/diag_gate_imui_p2_devtools_first_open.py`. This is a DevTools/MCP first-open
 productization slice only; broader GUI product maturity, real-host Wayland hand-feel, and full
 perf/smoothness attribution remain open.
+
+## Goal completion audit refresh - 2026-05-25
+
+Scope: close the latest IMUI-side implementation slices without claiming external host acceptance
+or broad product maturity as complete.
+
+- `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-25.md`
+  records the canonical workbench, Demo/Metrics/Debug, ListBox, plot adapter, style/theme preset
+  picker, and table owner-split closeout evidence.
+- The umbrella goal remains open for real-host Wayland hand-feel (`DW-P1-linux-003`), broader
+  DevTools GUI productization, full perf/smoothness attribution, and broad porting sugar.
+- The corresponding narrow lanes are closed with `scope_kind: closeout` and
+  `default_action: start_follow_on`, so new work should start from owner-specific follow-ons rather
+  than reopening those lane records.
+
+## IMUI porting sugar layout follow-up - 2026-05-25
+
+Scope: restore the small Dear ImGui porting helpers that reduce layout boilerplate without adding
+an implicit window cursor or widening `fret-imui`.
+
+- `fret-ui-kit::imui` now owns explicit closure-scoped `items`, `same_line`, `spacing`, `dummy`, and
+  `indent` helpers.
+- Default item spacing is theme-driven:
+  - `component.imui.item_spacing_x_px` fallback `8px`
+  - `component.imui.item_spacing_y_px` fallback `4px`
+  - `component.imui.indent_spacing_px` fallback `21px`
+- `fret-imui` remains a thin authoring frontend; the helpers are exposed through
+  `UiWriterImUiFacadeExt` and `ImUiFacade`, both in `fret-ui-kit`.
+- The parity audit now records this as explicit porting sugar, not a resurrection of Dear ImGui's
+  global layout cursor.
+
+Focused gates:
+
+```text
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-imui porting_sugar_items_same_line_spacing_dummy_and_indent_use_imgui_style_layout_tokens --no-fail-fast
+```
+
+Result: passed locally. The layout test proves `same_line` uses the X spacing token, `items` and
+`spacing` use the Y spacing token, `dummy(size)` preserves explicit size in both same-line and item
+flow contexts, and `indent` uses the indent token.
+
+## IMUI facade container-method owner split - 2026-05-25
+
+Scope: keep the restored porting sugar and structural container wrappers from making
+`facade_writer.rs` the long-term owner for container construction policy.
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods.rs` now owns the shared
+  trait/facade container-method bodies for `items`, `same_line`, `dummy`, `spacing`, `indent`,
+  horizontal/vertical/grid/scroll/child-region, list box, tab bar, table, menu bar, and virtual
+  list.
+- `UiWriterImUiFacadeExt` stays source-compatible but now delegates container methods to
+  `container_methods::*` with `build_focus = None`.
+- Inherent `ImUiFacade` container wrappers keep focus-tracker forwarding by passing their cloned
+  `build_focus` into the same helper functions.
+- The source gate now rejects direct `layout_sugar::*` and heavy container-builder calls from
+  `facade_writer.rs` / `facade_writer/container_wrappers.rs`, so the trait hub and facade wrapper
+  file stay thin.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+```
+
+Result: `cargo check -p fret-ui-kit --features imui` passed locally after the split. The check
+reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI facade core owner split - 2026-05-25
+
+Scope: keep `facade_writer.rs` as the public trait/default-method hub while moving the
+`ImUiFacade` writer object, focus-capture helper, keyed child construction, and disabled-scope
+wrapper into a narrower owner module.
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/facade_core.rs` now owns `ImUiFacade`, its
+  `UiWriter` implementation, `record_focusable`, `id`/`push_id`/`for_each_keyed`, `cx_mut`, `add`,
+  and inherent `disabled_scope`.
+- `facade_writer.rs` re-exports `ImUiFacade` and keeps `UiWriterImUiFacadeExt` as the public
+  extension trait hub, including trait default methods that delegate to component/policy owners.
+- `ImUiFacade` fields remain internal to `crate::imui` (`pub(in crate::imui)`) so existing IMUI
+  element builders can construct nested facades without exposing writer internals outside the
+  module boundary.
+- The split reduces `facade_writer.rs` from 1420 lines after the previous facade/container splits
+  to 1290 lines; the new `facade_core.rs` owner is 134 lines.
+- The source gate now rejects `ImUiFacade` struct/core impl and `UiWriter` impl from returning to
+  `facade_writer.rs`, and verifies the field visibility does not become fully public.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+python tools/gate_imui_workstream_source.py
+```
+
+## IMUI facade scope-method owner split - 2026-05-25
+
+Scope: keep `facade_writer.rs` as the public trait/default-method hub while moving trait-level
+scope construction for `UiWriterImUiFacadeExt::push_id` and
+`UiWriterImUiFacadeExt::disabled_scope` into a smaller owner module.
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/scope_methods.rs` now owns trait-level keyed child
+  construction, result capture, disabled-scope wrapping, disabled depth guards, pointer blocking,
+  and focus traversal gating for any `UiWriterImUiFacadeExt` implementor.
+- `facade_writer.rs` keeps the public trait methods and delegates to
+  `scope_methods::push_id(...)` / `scope_methods::disabled_scope(...)`.
+- `facade_core.rs` still owns the concrete `ImUiFacade` writer object and its inherent
+  `push_id`/`disabled_scope`; this split only removes the trait-default implementation body from
+  the trait hub.
+- The split reduces `facade_writer.rs` from 1290 lines after the facade-core split to 1218 lines;
+  the new `scope_methods.rs` owner is 98 lines.
+- The source gate now rejects keyed result capture, disabled depth guards, pointer blocking, and
+  focus traversal gate bodies from returning to `facade_writer.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+python tools/gate_imui_workstream_source.py
+```
+
+## IMUI facade basic-item owner split - 2026-05-25
+
+Scope: keep `facade_writer.rs` as the public trait/default-method hub while moving simple item
+construction into a narrower owner module.
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/basic_items.rs` now owns trait-level `text`,
+  `text_wrapped`, `bullet_text_with_options`, `debug_draw_with_options`, `separator`, and
+  `separator_text_with_options` implementation bodies.
+- `facade_writer.rs` keeps the public `UiWriterImUiFacadeExt` method roster and delegates those
+  methods through `basic_items::*`, so authoring code remains source-compatible.
+- The split reduces `facade_writer.rs` from 1218 lines after the scope-method split to 1205 lines;
+  the new `basic_items.rs` owner is 70 lines.
+- The source gate now rejects direct text element construction, bullet/separator/debug-draw policy
+  calls, and separator line container construction from returning to `facade_writer.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui imui_text --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+## IMUI facade test owner split - 2026-05-25
+
+Scope: keep `facade_writer.rs` as the public trait/default-method roster while moving its local
+text contract tests into a separate test owner file.
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/tests.rs` now owns the local `TestWriter` harness
+  and the `imui_text_item_is_single_line_and_shrinkable` /
+  `imui_text_wrapped_is_explicit_wrapping_text` contract tests.
+- `facade_writer.rs` keeps only `#[cfg(test)] mod tests;` and no longer embeds test harness code at
+  the bottom of the trait hub.
+- The split reduces `facade_writer.rs` from 1205 lines after the basic-item split to 1122 lines;
+  the new `tests.rs` owner is 83 lines.
+- The source gate now rejects local test harness and text contract test bodies from returning to
+  `facade_writer.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui imui_text --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+## IMUI disclosure test owner split - 2026-05-25
+
+Scope: keep `disclosure_controls.rs` as the disclosure implementation owner while moving its local
+contract tests into a separate test owner file.
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/tests.rs` now owns the local `TestWriter`
+  harness plus collapsing-header, tree-node semantics, palette, row-label, and indicator-glyph
+  tests.
+- `disclosure_controls.rs` keeps only `#[cfg(test)] mod tests;` and no longer embeds its local test
+  harness at the bottom of the implementation file.
+- The split reduces `disclosure_controls.rs` from 877 lines to 615 lines; the new disclosure
+  `tests.rs` owner is 261 lines.
+- The source gate now rejects local test harness and disclosure contract test bodies from returning
+  to `disclosure_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui disclosure_controls::tests --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+## IMUI disclosure visual owner split - 2026-05-25
+
+Scope: keep `disclosure_controls.rs` focused on open-state, pressable behavior, response
+population, and content mounting while moving header visuals into a dedicated owner.
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs` now owns disclosure a11y mapping,
+  content padding, header row layout, indicator/label shared text roles, and disclosure palette
+  resolution.
+- `disclosure_controls.rs` delegates to
+  `visual::disclosure_a11y(...)`, `visual::header_row(...)`, and
+  `visual::disclosure_content_padding(...)`, while keeping shortcut handling, context-menu
+  requests, hover-delay response fields, and open/toggled response population in the main owner.
+- `disclosure_controls/tests.rs` now imports `AnyElement`, `ElementContext`, `Theme`, `Color`,
+  `Px`, and `SemanticsRole` explicitly instead of relying on the parent implementation imports.
+- The split reduces `disclosure_controls.rs` from 576 lines after the test split to 365 lines; the
+  new `visual.rs` owner is 222 lines.
+- The source gate now rejects visual text-role, palette, a11y, and header-row bodies from returning
+  to `disclosure_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui disclosure_controls::tests --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The focused nextest gate reported `6 tests run: 6 passed`; `cargo check`
+reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI menu-family test owner split - 2026-05-25
+
+Scope: keep `menu_family_controls.rs` as the menu-family implementation owner while moving its
+local visual contract test into a separate test owner file.
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/tests.rs` now owns the local
+  `menu_trigger_visual_uses_button_label_text_role` test and its bounds helper.
+- `menu_family_controls.rs` keeps only `#[cfg(test)] mod tests;` and no longer embeds the visual
+  proof at the bottom of the implementation file.
+- The split reduces `menu_family_controls.rs` from 894 lines to 849 lines; the new menu-family
+  `tests.rs` owner is 44 lines.
+- The source gate now rejects the local visual test body from returning to
+  `menu_family_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui menu_trigger_visual_uses_button_label_text_role --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+## IMUI menu-family visual owner split - 2026-05-25
+
+Scope: keep `menu_family_controls.rs` focused on menubar/menu/submenu state policy while moving
+menu trigger chrome and label construction into a visual owner.
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/visual.rs` now owns
+  `menu_trigger_visual`, including active/disabled foreground selection, accent background
+  selection, trigger padding, radius, and shared `text_button_label(...)` role.
+- `menu_family_controls.rs` delegates trigger row rendering through `visual::menu_trigger_visual`
+  and keeps menubar open/close, active-row, popup, and submenu policy in the original owner.
+- The split reduces `menu_family_controls.rs` from 849 lines after the test split to 804 lines; the
+  new menu-family `visual.rs` owner is 60 lines.
+- The source gate now rejects menu trigger chrome construction and shared button-label text
+  construction from returning to `menu_family_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui menu_trigger_visual_uses_button_label_text_role --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The focused nextest gate reported `1 test run: 1 passed`; `cargo check`
+reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI menu-family trigger owner split - 2026-05-25
+
+Scope: keep `menu_family_controls.rs` focused on menu/submenu state flow while moving the menu-bar
+trigger pressable wiring, active-trigger response population, keyboard shortcut handling, and
+menubar row registration into a trigger owner.
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger.rs` now owns
+  `menu_trigger_with_options`, including visible-label identity parsing, pressable a11y props,
+  activate/shortcut handling, menubar row sync, arrow-key opening, and response population.
+- `menu_family_controls.rs` delegates trigger construction through
+  `trigger::menu_trigger_with_options(...)` and keeps menu open/close, popup anchoring, submenu
+  state selection, and popup rendering flow in the original owner.
+- The split reduces `menu_family_controls.rs` from 804 lines after the visual split to 640 lines;
+  the new menu-family `trigger.rs` owner is 179 lines.
+- The source gate now rejects trigger pressable wiring, active-trigger behavior installation, and
+  visible-label identity parsing from returning to `menu_family_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui menu_trigger_visual_uses_button_label_text_role --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The focused nextest gate reported `1 test run: 1 passed`; `cargo check`
+reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI menu-family submenu-state owner split - 2026-05-25
+
+Scope: keep `menu_family_controls.rs` focused on submenu flow while moving the popup submenu model
+clearing and selection writes into a state owner.
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu_state.rs` now owns submenu model
+  clearing, pending-open reset, pointer-grace reset, focus retry reset, open-timer reset, and
+  selected-submenu writes.
+- `menu_family_controls.rs` delegates submenu state changes through
+  `submenu_state::clear_imui_submenu(...)` and `submenu_state::select_imui_submenu(...)`, leaving
+  trigger click interpretation and popup open/close flow in the original owner.
+- The split reduces `menu_family_controls.rs` from 640 lines after the trigger split to 510 lines;
+  the new menu-family `submenu_state.rs` owner is 143 lines.
+- The source gate now rejects submenu model mutation details from returning to
+  `menu_family_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui menu_trigger_visual_uses_button_label_text_role --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The focused nextest gate reported `1 test run: 1 passed`; `cargo check`
+reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI menu item visual/test owner split - 2026-05-25
+
+Scope: keep `menu_controls.rs` focused on menu item pressable/activation flow while moving shared
+menu item text visuals and local contract tests into narrower owners.
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/visual.rs` now owns
+  `menu_item_label_text`, `menu_item_shortcut_text`, and `menu_item_indicator_text`, preserving the
+  shared list-row label, control readout, and chrome glyph text roles.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/tests.rs` now owns the local visual-role and
+  pressable-root contract tests.
+- `menu_controls.rs` delegates row text construction through `visual::*` and keeps shortcut/action
+  activation, popup close behavior, menubar trigger-row sync, and response population in the
+  original owner.
+- The split reduces `menu_controls.rs` from 596 lines to 459 lines; the new `visual.rs` owner is
+  25 lines and the new `tests.rs` owner is 123 lines.
+- The source gate now rejects menu item visual helpers and local test bodies from returning to
+  `menu_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui menu_controls::tests --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The focused nextest gate reported `4 tests run: 4 passed`; `cargo check`
+reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI menu item element owner split - 2026-05-25
+
+Scope: keep `menu_controls.rs` as the public menu-item API wrapper while moving pressable element
+assembly, activation/shortcut handling, menubar row switching, and visual row assembly into an
+element owner.
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/element.rs` now owns
+  `menu_item_element_with_pressable_hook_inner`, including pressable a11y props, enabled/action
+  gating, popup-close handling, item-local shortcut dispatch, popup-menu keyboard navigation,
+  menubar horizontal-arrow switching, response population, and row child assembly.
+- `menu_controls.rs` delegates to `element::menu_item_element_with_pressable_hook_inner(...)` and
+  keeps the menu-item public helper wrappers plus label identity scoping.
+- The split reduces `menu_controls.rs` from 459 lines after the visual/test split to 199 lines; the
+  new `element.rs` owner is 281 lines.
+- The source gate now rejects pressable wiring, command dispatch, menubar switching, and row
+  assembly details from returning to `menu_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui menu_controls::tests --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The focused nextest gate reported `4 tests run: 4 passed`; `cargo check`
+reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI text-controls test owner split - 2026-05-25
+
+Scope: keep `text_controls.rs` as the text input/textarea implementation owner while moving its
+local chrome contract tests into a separate test owner file.
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls/tests.rs` now owns the local `TestWriter` harness,
+  text-input lookup helpers, text-area lookup helpers, and the compact IMUI chrome tests for
+  `input_text_model_with_options` and `textarea_model_with_options`.
+- `text_controls.rs` keeps only `#[cfg(test)] mod tests;` and no longer embeds local chrome proof
+  code at the bottom of the implementation file.
+- The split reduces `text_controls.rs` from 658 lines to 526 lines; the new text-controls
+  `tests.rs` owner is 131 lines.
+- The source gate now rejects local test harness, lookup helpers, and text chrome contract tests
+  from returning to `text_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui text_controls::tests --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+## IMUI text-controls focus/style/policy owner split - 2026-05-25
+
+Scope: keep `text_controls.rs` as the text input/textarea API and element-assembly owner while
+moving select-all focus timing, IMUI text chrome, and text command key policy into narrower owners.
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls/focus.rs` now owns
+  `ImuiTextFocusSelectionState`, select-all-on-focus timer arming/canceling, transient event
+  recording, and redraw request policy.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/style.rs` now owns text input chrome,
+  textarea chrome, default input text style, and the fixed input layout tokens.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/policy_commands.rs` now owns input history,
+  completion, undo/redo, textarea submit, and textarea cancel key policy.
+- `text_controls.rs` delegates to those owners and keeps model reads, response lifecycle
+  population, filter plumbing, props assembly, and element mounting in one thin implementation
+  owner.
+- The split reduces `text_controls.rs` from 488 lines after the intermediate owner-file skeleton to
+  209 lines; the new focused owners are `focus.rs` at 71 lines, `style.rs` at 95 lines, and
+  `policy_commands.rs` at 122 lines.
+- The source gate now rejects focus-selection state, chrome style bodies, and command-policy bodies
+  from returning to `text_controls.rs`, while also checking the three new owner files directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui text_controls::tests --no-fail-fast
+cargo nextest run -p fret-imui models_text --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. `cargo check` reported only the existing `fret-ui` warnings for
+`unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code. The
+`fret-ui-kit` focused nextest gate reported `3 tests run: 3 passed`, including the two
+text-controls chrome tests; `fret-imui models_text` reported `29 tests run: 29 passed`. The
+`fret-imui` picker keyboard assertions now check the active-descendant relation for keyboard
+highlight instead of treating transient highlight as selected semantics.
+
+## IMUI text option-contract owner split - 2026-05-25
+
+Scope: keep `options/controls.rs` as the general control option roster while moving text input,
+text picker, text filter, custom filter, and textarea option contracts into a focused text-option
+owner.
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text.rs` now owns `InputTextMode`,
+  `InputTextFilters`, `InputTextCustomFilter`, `InputTextPickerFilter`,
+  `InputTextPickerOptions`, `InputTextOptions`, `TextAreaSubmitKey`, and `TextAreaOptions`.
+- `options/controls.rs` re-exports those text option types from the new owner, preserving the
+  existing `fret_ui_kit::imui::*` public surface while keeping button/selectable/image/switch/
+  slider/combo option contracts in the general controls roster.
+- The split reduces `options/controls.rs` from 724 lines to 416 lines; the new `text.rs` owner is
+  316 lines.
+- The source gate now rejects text filter helpers, picker defaults, text command policy fields, and
+  textarea submit defaults from returning to `options/controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-imui models_text --no-fail-fast
+cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_combo_smoke --test imui_image_item_smoke --test imui_selectable_smoke --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. `fret-imui models_text` reported `29 tests run: 29 passed`; the
+`fret-ui-kit` option smoke gate reported `6 tests run: 6 passed`; `cargo check` reported only the
+existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code. An exploratory nextest filter form ran zero tests and was
+replaced by the explicit `--test` command recorded above.
+
+## IMUI boolean switch owner split - 2026-05-25
+
+Scope: keep `boolean_controls.rs` focused on checkbox/radio item behavior plus the shared radio
+indicator while moving switch active-trigger behavior into a dedicated owner.
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs` now owns
+  `switch_model_with_options`, switch active-trigger install/population, switch a11y,
+  shortcut toggle policy, changed/clicked transient handling, and the On/Off badge row.
+- `boolean_controls.rs` re-exports `switch_model_with_options` under the existing internal path,
+  and keeps checkbox/radio label identity, checkbox model mutation, radio click response, context
+  menu key handling, and the radio indicator visual.
+- The split reduces `boolean_controls.rs` from 450 lines to 313 lines; the new `switch.rs` owner
+  is 148 lines.
+- The source gate now rejects switch active-trigger bodies from returning to
+  `boolean_controls.rs` and checks the new switch owner directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-imui switch_model checkbox_changed_is_delivered_once_and_updates_model checkbox_model_activate_shortcut_is_scoped_to_focused_checkbox button_family_variants_and_radio_mount_with_expected_bounds base_control_state_changes_keep_outer_bounds_stable control_disabled_state_changes_keep_outer_bounds_stable --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The focused boolean-control nextest gate reported `7 tests run: 7 passed`;
+`cargo check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge`
+check-cfg and `current_effective_opacity` dead code.
+
+## IMUI floating-window resize-handle owner split - 2026-05-25
+
+Scope: keep `floating_window_resize.rs` focused on resize drag snapshots, geometry clamping,
+state updates, and snapped size/position output while moving resize-handle stack assembly,
+handle layout, cursor policy, pointer capture, and pointer drag event wiring into a dedicated
+owner.
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs` now owns
+  `resize_stack_element`, handle layout for the eight resize handles, pointer-region construction,
+  left-button drag start, pointer capture/release, cursor updates, resize activation events, and
+  `update_immediate_move(...)` cancellation handling.
+- `floating_window_resize.rs` re-exports `resize_stack_element` under the existing internal path
+  for `floating_window_shell.rs`, but no longer owns handle layout or pointer event bodies.
+- The split reduces `floating_window_resize.rs` from 462 lines to 238 lines; the new
+  `handles.rs` owner is 229 lines.
+- The source gate now rejects pointer-region handle bodies from returning to
+  `floating_window_resize.rs` and checks the new handle owner directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-imui floating_window_resizable_false_hides_resize_handles floating_window_resizes_when_dragging_corner_handle floating_window_resizes_from_left_updates_origin_and_width floating_window_title_bar_double_click_toggles_collapsed floating_window_activate_on_click_can_be_disabled_for_resize_handles --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The focused floating-window nextest gate reported `5 tests run: 5 passed`;
+`cargo check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge`
+check-cfg and `current_effective_opacity` dead code.
+
+## IMUI tab-family visual/test owner split - 2026-05-25
+
+Scope: keep `tab_family_controls.rs` focused on selected-tab model normalization, tab trigger
+activation/shortcut handling, active-trigger response population, and panel selection while moving
+tab trigger visuals plus local visual proof into narrower owners.
+
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/visual.rs` now owns `tab_trigger_visual`,
+  including foreground selection, hover background, selected underline, trigger padding, and the
+  shared `text_button_label(...)` role.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/tests.rs` now owns the
+  `tab_trigger_visual_uses_button_label_text_role` proof and its bounds helper.
+- `tab_family_controls.rs` delegates trigger body rendering through
+  `visual::tab_trigger_visual(...)` and keeps tab selection, keyboard shortcut handling, lifecycle
+  updates, response population, and panel semantics in the original owner.
+- The split reduces `tab_family_controls.rs` from 488 lines to 388 lines; the new `visual.rs`
+  owner is 66 lines and the new `tests.rs` owner is 39 lines.
+- The source gate now rejects tab trigger visual bodies and local visual tests from returning to
+  `tab_family_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui tab_trigger_visual_uses_button_label_text_role --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The focused nextest gate reported `1 test run: 1 passed`; `cargo check`
+reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI tab-family trigger owner split - 2026-05-25
+
+Scope: keep `tab_family_controls.rs` focused on tab-bar orchestration, selected-tab normalization,
+and panel/list semantics while moving trigger pressable behavior into a dedicated owner.
+
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger.rs` now owns
+  `render_tab_trigger`, `BuiltTabTrigger`, pressable props/a11y construction, activate/shortcut
+  dispatch, lifecycle instant marking, clicked transient capture, active-trigger response
+  population, and delegation to `visual::tab_trigger_visual(...)`.
+- `tab_family_controls.rs` delegates trigger construction through `trigger::render_tab_trigger(...)`
+  and keeps tab item collection, focus target selection, tab-list semantics, selected panel
+  mounting, and selected-model normalization in the original owner.
+- The split reduces `tab_family_controls.rs` from 388 lines after the visual/test split to 267
+  lines; the new `trigger.rs` owner is 124 lines.
+- The source gate now rejects pressable props, shortcut handlers, active-trigger response
+  population, and trigger structs from returning to `tab_family_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui tab_trigger_visual_uses_button_label_text_role --no-fail-fast
+cargo nextest run -p fret-imui tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_item_activate_shortcut_is_scoped_to_focused_trigger tab_bar_helper_reports_selected_change_and_trigger_edges --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The first `fret-ui-kit` visual nextest attempt timed out while waiting on
+the parallel `fret-imui` cargo lock; the single rerun passed with `1 test run: 1 passed`. The
+`fret-imui` tab behavior focused gate reported `3 tests run: 3 passed`; `cargo check` reported only
+the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI table-column visibility menu owner split - 2026-05-25
+
+Scope: keep `table_column_visibility.rs` as the public state/snapshot/API wrapper while moving
+table-column visibility menu composition into a dedicated owner without changing public paths.
+
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu.rs` now owns header context-menu
+  trigger selection, menu item group composition, checkbox menu item dispatch, response changed/
+  edited propagation, visible-label filtering, and stable test-id suffix generation.
+- `table_column_visibility.rs` keeps the public state/snapshot types and public helper function
+  names, delegating the menu helper bodies through `menu::*` so existing callers keep the same API.
+- The split reduces `table_column_visibility.rs` from 535 lines to 430 lines; the new `menu.rs`
+  owner is 151 lines.
+- The source gate now rejects popup/menu-item dispatch, label filtering, and test-id slug logic from
+  returning to `table_column_visibility.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui table_column_visibility --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The focused nextest gate reported `11 tests run: 11 passed`; `cargo check`
+reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI popup modal owner split - 2026-05-25
+
+Scope: keep `popup_overlay.rs` focused on popup store/open/close, menu/context orchestration, and
+menu overlay requests while moving modal dialog overlay assembly into a dedicated owner.
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal.rs` now owns modal open keep-alive,
+  centered dialog panel placement, backdrop construction, outside-press/Escape dismissal policy,
+  focus target capture, and `OverlayRequest::modal` submission.
+- `popup_overlay.rs` keeps `open_popup*`, `close_popup`, popup menu construction, context-menu
+  anchoring, and a thin `begin_popup_modal_with_options(...)` wrapper that preserves the existing
+  private API path.
+- The split reduces `popup_overlay.rs` from 512 lines to 363 lines; the new `modal.rs` owner is
+  170 lines.
+- The source gate now rejects modal dismiss/backdrop/panel/focus/request bodies from returning to
+  `popup_overlay.rs` while keeping menu/context orchestration in the original owner.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-imui popup_hover::lifecycle_modal popup_hover::context_basics --no-fail-fast
+cargo nextest run -p fret-ui-kit --features imui popup_menu_uses_environment_viewport_bounds_for_popper_outer_bounds --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The focused `fret-imui` popup gate reported `6 tests run: 6 passed`; the
+`fret-ui-kit` popup overlay perf/source smoke reported `1 test run: 1 passed`. `cargo check`
+reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI popup menu owner split - 2026-05-25
+
+Scope: keep `popup_overlay.rs` as the popup lifecycle/API wrapper while moving popup-menu policy,
+panel construction, popper placement, and dismissible-menu overlay request wiring into a dedicated
+owner.
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu.rs` now owns `ImUiMenuNavState`,
+  `ImUiPopupMenuPolicyState`, submenu policy sync, popup panel construction, menu-child rendering,
+  popper placement from `environment_viewport_bounds(...)`, and
+  `menu_root::dismissible_menu_request_with_modal_and_dismiss_handler(...)`.
+- `popup_overlay.rs` keeps `popup_open_model`, `drop_popup_scope`, `open_popup*`, `close_popup`,
+  context-menu anchoring, and thin menu/modal wrappers. It re-exports the internal menu state types
+  under the same `popup_overlay::*` path so sibling IMUI modules keep their existing imports.
+- The split reduces `popup_overlay.rs` from 363 lines after the modal split to 102 lines; the new
+  `menu.rs` owner is 287 lines.
+- The `imui_perf_guard_smoke` popup source check now reads `popup_overlay/menu.rs`, matching the
+  new owner for the environment-viewport popper contract.
+- The source gate now rejects popup menu policy/build/request bodies from returning to
+  `popup_overlay.rs` while keeping modal-only bodies in `modal.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-imui popup_hover --no-fail-fast
+cargo nextest run -p fret-ui-kit --features imui popup_menu_uses_environment_viewport_bounds_for_popper_outer_bounds --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally for the listed focused gates. The full `fret-imui` popup-hover gate reported
+`21 tests run: 21 passed`; the `fret-ui-kit` popup overlay perf/source smoke reported
+`1 test run: 1 passed`. The hit-test close-popup regression now accepts the target menu-item
+pressable or one of its descendants, matching runtime hit routing while still proving that the
+subsequent click closes the popup.
+
+## IMUI table render owner split - 2026-05-25
+
+Scope: keep `table_controls.rs` as the table builder/API hub while moving the render tail and
+shared cell layout helpers into a narrower owner module.
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` now owns `render_table`, row/column
+  test-id suffixing, palette resolution, `table_cell_layout`, `table_cell_padding`, `empty_cell`,
+  and `pack_cell_children`.
+- `table_controls.rs` still collects rows/cells and preserves the public authoring shape, but it
+  now delegates table rendering through `render::render_table` and multi-child cell packing through
+  `render::pack_cell_children`.
+- `table_controls/body.rs` and `table_controls/header.rs` import the shared cell helpers from
+  `render::{...}`, so body/header keep their specialized row and header interaction owners without
+  pulling the render tail back into the API hub.
+- The source gate now rejects `render_table`, cell layout helpers, palette resolution, pinned body
+  wrappers, and header trigger internals from `table_controls.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui hidden_table_columns_do_not_render_header_body_or_response horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups table_header_label_uses_shared_table_cell_text_role table_sort_indicator_uses_shared_chrome_glyph_text_role --no-fail-fast
+python tools/gate_imui_workstream_source.py
+```
+
+## IMUI table header trigger/resize owner split - 2026-05-25
+
+Scope: keep `table_controls/header.rs` as the table-header coordination owner while moving the two
+mechanism-heavy header internals into focused child owners.
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger.rs` now owns sortable/plain header
+  pressable trigger construction, pressable a11y props, keyboard activation lifecycle marking,
+  active-trigger response population, and sortable header visual hover/focus/pressed chrome.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/resize.rs` now owns table column resize
+  handle constants, pointer-region construction, resize cursor capture, pointer drag start/move/up
+  handling, resize drag response population, and resize handle visual chrome.
+- `header.rs` keeps visible-label parsing, sortable a11y label construction, public header label
+  and sort-indicator text roles, sortable/plain cell assembly, and final cell wrapping.
+- The split reduces `header.rs` from 453 lines to 204 lines; the new `trigger.rs` owner is 150
+  lines and the new `resize.rs` owner is 118 lines.
+- The source gate now rejects trigger/resize implementation bodies from returning to `header.rs`
+  and checks the new owner files directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui hidden_table_columns_do_not_render_header_body_or_response horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups table_header_label_uses_shared_table_cell_text_role table_sort_indicator_uses_shared_chrome_glyph_text_role --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused table gate reported `4 tests run: 4 passed`. `cargo check`
+reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI debug draw paint-shape owner split - 2026-05-25
+
+Scope: keep `debug_draw_controls/paint.rs` as the command-stream dispatcher while moving the
+path/shape/text paint branches into a narrower owner module.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes.rs` remains the command-stream
+  dispatcher and still exposes `paint_debug_draw_shape_command(...)`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths.rs` now owns path-based
+  line/polyline/polygon/outline/quad/triangle/circle/ngon/ellipse/bezier paint branches.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/rects.rs` now owns filled rect
+  and vertex-color rect scene-op emission.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/text.rs` now owns debug-draw text
+  emission and canvas text constraints.
+- `paint.rs` keeps clip depth balancing, image/svg command dispatch, rounded-image clipping, and
+  explicit delegation to `paint_shapes::paint_debug_draw_shape_command(...)` for shape commands.
+- The follow-up split reduces `paint_shapes.rs` from 451 lines to 196 lines; the new owners are
+  `paths.rs` at 395 lines, `rects.rs` at 37 lines, and `text.rs` at 33 lines.
+- The source gate now rejects path/rect/text paint bodies from returning to `paint_shapes.rs` while
+  keeping image opacity/UV/rounded-image helpers in `paint_helpers.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused debug-draw gate reported `39 tests run: 39 passed`. `cargo
+check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI debug draw test owner split - 2026-05-25
+
+Scope: keep debug-draw behavior proof close to the debug-draw owner while removing the oversized
+single test module that mixed element, draw-list, path-builder, paint-helper, style, and path
+primitive contracts.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests.rs` is now a 44-line test facade with
+  shared helpers plus submodule declarations only.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/element.rs` owns canvas/pressable
+  element tests.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list.rs` is now a 4-line facade
+  for draw-list-specific test owners.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/commands.rs` owns command
+  recorder, image overlay, mesh, and concave-polygon command tests.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/summaries.rs` owns command
+  summary, list summary, and clip-stack tests.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/draw_list/channels.rs` owns channel
+  split/switch/merge tests.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/path_builder.rs` owns path-builder
+  stroke/fill, rounded rect, Bezier, arc, elliptical arc, and invalid-finish tests.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/paint_helpers.rs` owns opacity/UV and
+  rounded-image helper tests.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/paths.rs` and
+  `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests/style.rs` own primitive path and stroke
+  style policy tests.
+- The source gate now checks the test facade, draw-list test subfacade, and each test owner
+  directly, preventing the large mixed test bodies from returning to
+  `debug_draw_controls/tests.rs` or `tests/draw_list.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused debug-draw nextest gate reported `39 tests run: 39 passed`.
+`cargo check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge`
+check-cfg and `current_effective_opacity` dead code.
+
+## IMUI debug draw command summary projection owner split - 2026-05-25
+
+Scope: keep `debug_draw_controls/commands.rs` focused on recorded command payload variants while
+moving command-to-summary and clip-stack projection into a dedicated child owner.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands.rs` now owns the private
+  `DebugDrawCommand` payload enum and declares the summary projection child module.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection.rs` now owns
+  `summary_with_clip_state(...)`, the internal `summary()` projection, point/vertex/index/triangle
+  count mapping, image command mapping, and clip-stack depth/rect projection.
+- The split reduces `commands.rs` from 396 lines after the previous debug-draw command split to
+  192 lines; the new `summary_projection.rs` owner is 207 lines.
+- The source gate now rejects summary projection bodies from returning to `commands.rs` and checks
+  that `summary_projection.rs` does not regain command payload definitions or image/svg option
+  imports.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused debug-draw nextest gate reported `39 tests run: 39 passed`.
+`cargo check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge`
+check-cfg and `current_effective_opacity` dead code. `git diff --check` reported only the
+pre-existing line-ending warnings for `Cargo.lock` and `apps/fret-examples/src/lib.rs`.
+
+## IMUI debug draw path paint owner split - 2026-05-25
+
+Scope: keep `debug_draw_controls/paint_shapes/paths.rs` as a narrow facade while moving stroked
+path painting, filled path painting, and shared canvas path dispatch into focused owners.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths.rs` is now an 11-line
+  facade that declares `common`, `filled`, and `stroked` and re-exports the existing path-paint
+  functions to `paint_shapes.rs`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked.rs` now owns line,
+  polyline, rect, quad, triangle, circle, ngon, ellipse, and Bezier stroked path paint branches.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/filled.rs` now owns
+  convex/concave polygon fill, quad fill, triangle fill, circle fill, ngon fill, and ellipse fill
+  path paint branches.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/common.rs` now owns the
+  shared `paint_path(...)` canvas dispatch helper.
+- The split reduces `paint_shapes/paths.rs` from 395 lines after the previous paint-shape split to
+  11 lines; the new owners are `stroked.rs` at 264 lines, `filled.rs` at 123 lines, and
+  `common.rs` at 21 lines.
+- The source gate now rejects paint bodies from returning to the facade and checks stroked, filled,
+  and common dispatch owner boundaries directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused debug-draw nextest gate reported `39 tests run: 39 passed`.
+`cargo check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge`
+check-cfg and `current_effective_opacity` dead code. `git diff --check` reported only the
+pre-existing line-ending warnings for `Cargo.lock` and `apps/fret-examples/src/lib.rs`.
+
+## IMUI debug draw path geometry owner split - 2026-05-25
+
+Scope: keep `debug_draw_controls/paths.rs` focused on low-level path primitive construction while
+moving point sampling and rounded-rect path construction into dedicated owners.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs` now owns the primitive path roster:
+  stroke point minimums, polyline/convex/concave paths, triangle/quad/circle/ngon/ellipse paths,
+  and native quadratic/cubic Bezier path commands.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/sampling.rs` now owns default segment
+  selection, arc/elliptical-arc point sampling, and quadratic/cubic Bezier point sampling helpers.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/rects.rs` now owns `rect_path(...)`,
+  rounded-rect point generation, corner masking, and the local rect max-point helper.
+- `paths.rs` re-exports the moved helpers under the existing internal module path, preserving
+  `path_builder.rs` and paint-shape owner call sites.
+- The split reduces `paths.rs` from 363 lines to 154 lines; the new owners are `sampling.rs` at 115 lines and `rects.rs` at 110 lines.
+- The source gate now rejects sampling/rounded-rect bodies from returning to `paths.rs` and checks
+  the new owner boundaries directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused debug-draw nextest gate reported `39 tests run: 39 passed`.
+`cargo check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge`
+check-cfg and `current_effective_opacity` dead code. `git diff --check` reported only the
+pre-existing line-ending warnings for `Cargo.lock` and `apps/fret-examples/src/lib.rs`.
+
+## IMUI debug draw draw-list shape facade split - 2026-05-25
+
+Scope: keep the `ImUiDebugDrawList` shape-authoring API unchanged while moving shape recorder method
+families out of the mixed `draw_list_shapes.rs` owner.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes.rs` is now a 4-line facade
+  declaring `linear`, `meshes`, `round`, and `beziers`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear.rs` now owns line,
+  polyline, convex/concave fill, rect, quad, and triangle command recorder methods.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/meshes.rs` now owns
+  triangle-list and explicit triangle-mesh command recorder methods, including sequential index
+  generation for triangle lists.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round.rs` now owns circle,
+  ngon, and ellipse command recorder methods.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/beziers.rs` now owns
+  quadratic and cubic Bezier command recorder methods.
+- The split reduces `draw_list_shapes.rs` from 338 lines to 4 lines; the new owners are
+  `linear.rs` at 176 lines, `round.rs` at 118 lines, `beziers.rs` at 65 lines, and `meshes.rs` at
+  30 lines.
+- The source gate now rejects command recorder method bodies from returning to the facade and checks
+  each method-family owner directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused debug-draw nextest gate reported `39 tests run: 39 passed`.
+`cargo check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge`
+check-cfg and `current_effective_opacity` dead code. `git diff --check` reported only the
+pre-existing line-ending warnings for `Cargo.lock` and `apps/fret-examples/src/lib.rs`.
+
+## IMUI debug draw draw-list runtime facade split - 2026-05-25
+
+Scope: keep the `ImUiDebugDrawList` runtime API unchanged while moving channel, summary, clip,
+image, SVG/text, and core list behavior out of the mixed `draw_list.rs` owner.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list.rs` is now a 6-line facade declaring
+  `channels`, `clips`, `core`, `images`, `summaries`, and `svg_text`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list/core.rs` now owns `path(...)`,
+  `command_count`, `is_empty`, and `Default`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list/channels.rs` now owns channel
+  split/switch/merge and the internal `for_each_command_with_channel(...)` traversal helper.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list/summaries.rs` now owns command and
+  aggregate list summary projection.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list/clips.rs` now owns clip stack command
+  recorders.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list/images.rs` now owns image, image
+  region, image quad, rounded image, and image triangle mesh command recorders.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list/svg_text.rs` now owns SVG image,
+  SVG mask icon, and text command recorders.
+- The split reduces `draw_list.rs` from 309 lines to 6 lines; the new owners are `images.rs` at 145
+  lines, `channels.rs` at 66 lines, `svg_text.rs` at 51 lines, `core.rs` at 34 lines,
+  `summaries.rs` at 25 lines, and `clips.rs` at 14 lines.
+- The source gate now rejects runtime method bodies from returning to the facade and checks each
+  draw-list owner family directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused debug-draw nextest gate reported `39 tests run: 39 passed`.
+`cargo check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge`
+check-cfg and `current_effective_opacity` dead code. `git diff --check` reported only the
+pre-existing line-ending warnings for `Cargo.lock` and `apps/fret-examples/src/lib.rs`.
+
+## IMUI debug draw stroked path paint owner split - 2026-05-25
+
+Scope: keep `paint_shapes/paths/stroked.rs` as the stroked path-paint facade while moving linear,
+round, and Bezier paint branches into focused owners.
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked.rs` is now a
+  13-line facade that re-exports `linear`, `round`, and `beziers`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/linear.rs` now
+  owns line, polyline, rect, quad, and triangle stroked path paint branches.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/round.rs` now owns
+  circle, ngon, and ellipse stroked path paint branches.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/paths/stroked/beziers.rs` now
+  owns quadratic and cubic Bezier stroked path paint branches.
+- The split reduces `stroked.rs` from 276 lines to 13 lines; the new owners are `linear.rs` at 138
+  lines, `round.rs` at 89 lines, and `beziers.rs` at 60 lines.
+- The source gate now rejects stroked paint bodies from returning to the facade and checks the
+  linear/round/Bezier owner boundaries directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui debug_draw --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused debug-draw nextest gate reported `39 tests run: 39 passed`.
+`cargo check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge`
+check-cfg and `current_effective_opacity` dead code. `git diff --check` reported only the
+pre-existing line-ending warnings for `Cargo.lock` and `apps/fret-examples/src/lib.rs`.
+
+## IMUI selectable visual/test owner split - 2026-05-25
+
+Scope: keep `selectable_controls.rs` focused on selectable pressable behavior, activation
+shortcuts, context-menu request events, popup arrow navigation, and response population while
+moving row visual policy plus local unit tests into narrower owners.
+
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/visual.rs` now owns
+  `SelectablePalette`, `selectable_row_element(...)`, selected/hover/highlight foreground and
+  background resolution, row padding, row radius, and shared list-row text construction.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/tests.rs` now owns selectable palette and
+  row-label text-role unit tests.
+- `selectable_controls.rs` keeps label identity, semantics, pressable item behavior, keyboard
+  activation shortcut handling, context-menu keyboard requests, popup menu navigation, and response
+  lifecycle population.
+- The split reduces `selectable_controls.rs` from 378 lines to 184 lines; the new `visual.rs`
+  owner is 83 lines and `tests.rs` is 114 lines.
+- The source gate now rejects palette bodies, direct row text construction, and test bodies from
+  returning to `selectable_controls.rs`, while checking that `visual.rs` stays free of activation
+  and keyboard behavior.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui selectable_controls::tests --no-fail-fast
+cargo nextest run -p fret-imui selectable_activate_shortcut_is_scoped_to_focused_item selectable_activate_shortcut_preserves_popup_arrow_nav --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The `fret-ui-kit` selectable focused gate reported
+`3 tests run: 3 passed`; the `fret-imui` behavior gate reported `2 tests run: 2 passed`. `cargo
+check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI drag/drop source-store-target owner split - 2026-05-25
+
+Scope: keep `drag_drop.rs` as the stable internal module path while moving immediate-mode
+drag/drop store lifecycle, drag-source handlers, drop-target response resolution, and local tests
+into focused owners.
+
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/store.rs` now owns the per-app drag/drop store model,
+  active payloads, delivered payloads, stale-session pruning, source response projection, active
+  payload lookup, and one-tick delivery expiry.
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/source.rs` now owns `drag_source_with_options(...)`,
+  including trigger-id gating, optional cross-window drag promotion, pointer-move active payload
+  registration, pointer-up delivery write, and source response projection.
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/target.rs` now owns `drop_target_with_options(...)`,
+  including delivered payload extraction, active preview projection, hover-target tracking, and
+  `DropTargetResponse` population.
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/tests.rs` now owns the no-trigger-id source/target
+  local unit tests.
+- `drag_drop.rs` is now an 8-line module facade preserving the existing internal
+  `drag_drop::drag_source_with_options` and `drag_drop::drop_target_with_options` paths.
+- The split moves the former 401-line implementation into `source.rs` at 135 lines, `store.rs` at
+  161 lines, `target.rs` at 63 lines, and `tests.rs` at 65 lines.
+- The source gate now rejects store/source/target/test bodies from returning to `drag_drop.rs`, and
+  separately checks that store stays free of event-handler policy while source and target stay in
+  their respective responsibilities.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui drag_drop --no-fail-fast
+cargo nextest run -p fret-imui drag_drop_helper_previews_and_delivers_payload --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The first `fret-ui-kit drag_drop` focused run reported
+`3 tests run: 3 passed` and exposed one local unused-import warning in the moved tests; after
+removing that import, the rerun again reported `3 tests run: 3 passed`. The `fret-imui` payload
+preview/delivery gate reported `1 test run: 1 passed`. `cargo check` reported only the existing
+`fret-ui` warnings for `unstable-retained-bridge` check-cfg and `current_effective_opacity` dead
+code.
+
+## IMUI floating-surface layer owner split - 2026-05-25
+
+Scope: keep `floating_surface.rs` focused on floating-area state, drag surface wiring, and shared
+floating-window ids while moving layer registration, z-order state, snapshot reuse, sorting, and
+layer container assembly into a dedicated owner.
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs` now owns
+  `FloatWindowLayerMarker`, `FloatWindowLayerZOrder`, z-order snapshot reuse, child registration,
+  activation bring-to-front, layer sorting, and the full-viewport floating-layer container.
+- `floating_surface.rs` keeps `FloatingAreaState`, `FloatWindowState`, drag/resize kind ids,
+  `floating_area_element(...)`, and `floating_area_drag_surface_element(...)`, delegating
+  layer-child registration and bring-to-front handling through `layer::*`.
+- The split reduces `floating_surface.rs` from about 432 lines to 331 lines; the new `layer.rs`
+  owner is 164 lines.
+- The source gate now rejects layer marker/z-order/sorting bodies from returning to
+  `floating_surface.rs`, checks the new layer owner directly, and verifies that drag-surface
+  pointer policy stays out of `floating_surface/layer.rs`.
+- `imui_perf_guard_smoke::floating_layer_z_order_does_not_clone_vec_each_frame` now reads
+  `floating_surface/layer.rs`, so the existing source smoke follows the new owner instead of the
+  old aggregate module.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui floating_layer_z_order_does_not_clone_vec_each_frame --no-fail-fast
+cargo nextest run -p fret-imui floating_area_bring_to_front_updates_hit_test_order floating_layer_bring_to_front_updates_hit_test_order floating_window_focus_on_click_can_be_independent_from_z_order_activation floating_window_activate_on_click_can_be_disabled_for_content floating_window_activate_on_click_can_be_disabled_for_resize_handles --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The first `fret-ui-kit` perf-smoke attempt timed out while waiting on the
+build directory lock; the rerun with the same filter reported `1 test run: 1 passed`. The
+`fret-imui` floating z-order/activation focused gate reported `5 tests run: 5 passed`. `cargo
+check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI menu-family submenu owner split - 2026-05-25
+
+Scope: keep `menu_family_controls.rs` focused on menubar policy state, menu-bar assembly, and
+top-level `begin_menu` orchestration while moving `begin_submenu` trigger/popup orchestration into
+a dedicated owner.
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu.rs` now owns
+  `begin_submenu_with_options(...)`, submenu menu-item trigger construction, submenu popper
+  geometry hints, open/close selection routing through `submenu_state`, and nested popup-menu
+  mounting.
+- `menu_family_controls.rs` re-exports `begin_submenu_with_options` under the existing internal
+  path, and keeps menubar policy models, `menu_bar_element(...)`, top-level `begin_menu`, trigger
+  sync, and tests module wiring.
+- The split reduces `menu_family_controls.rs` from 510 lines to 351 lines; the new `submenu.rs`
+  owner is 167 lines.
+- The source gate now rejects submenu trigger/body logic from returning to
+  `menu_family_controls.rs`, checks the new submenu owner directly, and keeps menubar trigger-row
+  policy out of `submenu.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-imui begin_submenu --no-fail-fast
+cargo nextest run -p fret-imui menu_and_submenu_helpers_report_toggle_and_trigger_edges --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The `begin_submenu` focused gate reported `7 tests run: 7 passed`; the
+response-edge focused gate reported `1 test run: 1 passed`. `cargo check` reported only the
+existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code.
+
+## IMUI table-column visibility state/test owner split - 2026-05-25
+
+Scope: keep `table_column_visibility.rs` as the public response/wrapper hub while moving pure
+runtime visibility state, persistence-friendly snapshots, and local unit tests into dedicated
+owners.
+
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state.rs` now owns
+  `ImUiTableColumnVisibilityState`, `TableColumnVisibilitySnapshot`,
+  `TableColumnVisibilityEntry`, private override storage, snapshot restore, visibility toggling,
+  and `apply_to_columns(...)`.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/tests.rs` now owns the local
+  state/snapshot/menu-label unit tests.
+- `table_column_visibility.rs` re-exports the public state/snapshot types under the same
+  `fret_ui_kit::imui::*` surface, and keeps only menu options, response accessors, public helper
+  wrappers, and `#[cfg(test)] mod tests;`.
+- The split reduces `table_column_visibility.rs` from 506 lines to 176 lines; the new `state.rs`
+  owner is 217 lines and `tests.rs` is 124 lines.
+- The source gate now rejects state/snapshot impls and inline local tests from returning to
+  `table_column_visibility.rs`, checks the state owner directly, and keeps menu/widget policy out
+  of `state.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui table_column_visibility --no-fail-fast
+cargo nextest run -p fret-imui table_column_visibility --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The `fret-ui-kit` table-column visibility focused gate reported
+`11 tests run: 11 passed`; the `fret-imui` behavior gate reported `4 tests run: 4 passed`.
+`cargo check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge`
+check-cfg and `current_effective_opacity` dead code.
+
+## IMUI tooltip text/test owner split - 2026-05-25
+
+Scope: keep `tooltip_overlay.rs` focused on trigger gates, placement, hoverable-content policy,
+overlay request wiring, and dismissal while moving text-body helper policy plus local unit tests
+into dedicated owners.
+
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/text.rs` now owns
+  `tooltip_text_with_options(...)` and `tooltip_body_text(...)`, including the compact paragraph
+  role used for simple tooltip copy.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/tests.rs` now owns the no-trigger-id guard,
+  compact paragraph text-role proof, and default-options proof.
+- `tooltip_overlay.rs` re-exports `tooltip_text_with_options` under the existing internal path,
+  and keeps pointer-move open gating, Radix tooltip interaction updates, popper layout, panel
+  assembly, overlay request creation, and dismiss handling.
+- The split reduces `tooltip_overlay.rs` from 401 lines to 283 lines; the new `text.rs` owner is
+  30 lines and `tests.rs` is 103 lines.
+- The source gate now rejects text helper bodies and inline tests from returning to
+  `tooltip_overlay.rs`, while keeping Radix interaction/update/request logic out of `text.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui tooltip --no-fail-fast
+cargo nextest run -p fret-imui hovered_for_tooltip_requires_stationary_and_delay_short_even_when_disabled --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The `fret-ui-kit` tooltip focused gate reported
+`32 tests run: 32 passed`; the `fret-imui` disabled tooltip-hover focused gate reported
+`1 test run: 1 passed`. `cargo check` reported only the existing `fret-ui` warnings for
+`unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code.
+
+## IMUI child-region response owner split - 2026-05-25
+
+Scope: keep `response/widgets.rs` focused on shared widget response families while moving
+child-region resize response contracts and tests into a dedicated owner.
+
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/child_region.rs` now owns
+  `ChildRegionResponse`, `ChildRegionResizeXResponse`, `ChildRegionResizeYResponse`, resize
+  mutators, drag accessors, and min/max clamped size projection helpers.
+- `response/widgets.rs` re-exports the child-region response family under the existing internal
+  module path and continues to own disclosure, combo, text-picker, tab, table, and virtual-list
+  response families.
+- The split reduces `response/widgets.rs` from 540 lines to 351 lines; the new child-region
+  response owner is 198 lines.
+- The opaque public-struct gate now points the child-region response family at the new owner, and
+  the source gate rejects child-region response bodies from returning to `response/widgets.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui child_region_resize --no-fail-fast
+cargo nextest run -p fret-imui child_region --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. The `fret-ui-kit` child-region response focused gate reported
+`4 tests run: 4 passed`; the `fret-imui` child-region behavior gate reported
+`6 tests run: 6 passed`. `cargo check` reported only the existing `fret-ui` warnings for
+`unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code.
+
+## IMUI button/image option-contract owner split - 2026-05-25
+
+Scope: keep `options/controls.rs` as the general control-option roster while moving button and
+image-item option contracts into a dedicated pure-data owner.
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/button_image.rs` now owns
+  `ButtonArrowDirection`, `ButtonVariant`, `ButtonOptions`, `ImageItemVariant`, and
+  `ImageItemOptions`, including button/image defaults plus image-item builder helpers.
+- `options/controls.rs` re-exports those types under the existing internal module path and
+  continues to own disclosure, selectable, boolean, combo, slider, and combo-model option
+  contracts alongside the existing text owner re-export.
+- The split reduces `options/controls.rs` from 416 lines after the text option split to 307 lines;
+  the new `button_image.rs` owner is 114 lines.
+- The source gate now rejects button/image option contracts and default bodies from returning to
+  `options/controls.rs`, while keeping selectable/boolean/combo/text option families out of
+  `button_image.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_image_item_smoke --no-fail-fast
+cargo nextest run -p fret-imui button_family_variants_and_radio_mount_with_expected_bounds --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally after rerunning the nextest gates serially. The first parallel nextest
+attempts timed out under concurrent build load; the serial reruns reported `3 tests run: 3 passed`
+for `fret-ui-kit` button/image smoke and `1 test run: 1 passed` for the `fret-imui` button-family
+geometry gate. `cargo check` reported only the existing `fret-ui` warnings for
+`unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code. `git diff --check`
+reported only the pre-existing line-ending warnings for `Cargo.lock` and
+`apps/fret-examples/src/lib.rs`.
+
+## IMUI disclosure option-contract owner split - 2026-05-25
+
+Scope: keep `options/controls.rs` as the general control-option roster while moving disclosure
+option contracts into a dedicated pure-data owner.
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/disclosure.rs` now owns
+  `CollapsingHeaderOptions` and `TreeNodeOptions`, including default-open, tree level, set
+  position, leaf/selected, content test-id, and item-local shortcut defaults.
+- `options/controls.rs` re-exports those types under the existing internal module path and
+  continues to own tab, selectable, boolean, combo, slider, and combo-model option contracts
+  alongside the existing button/image and text owner re-exports.
+- The split reduces `options/controls.rs` from 307 lines after the button/image split to 238 lines;
+  the new `disclosure.rs` owner is 72 lines.
+- The source gate now rejects disclosure option contracts and tree defaults from returning to
+  `options/controls.rs`, while keeping selectable/boolean/combo/text/button/image option families
+  out of `disclosure.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui --test imui_disclosure_smoke --no-fail-fast
+cargo nextest run -p fret-ui-kit --features imui disclosure_controls::tests --no-fail-fast
+cargo nextest run -p fret-imui collapsing_header_activate_shortcut_is_scoped_to_focused_trigger tree_node_activate_shortcut_preserves_shift_f10_context_menu_request tree_node_children_stack_vertically_inside_open_parents --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The `fret-ui-kit` disclosure smoke gate reported
+`1 test run: 1 passed`; the `fret-ui-kit` disclosure-controls focused gate reported
+`6 tests run: 6 passed`; the `fret-imui` disclosure/tree behavior gate reported
+`3 tests run: 3 passed`. `cargo check` reported only the existing `fret-ui` warnings for
+`unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code. `git diff --check`
+reported only the pre-existing line-ending warnings for `Cargo.lock` and
+`apps/fret-examples/src/lib.rs`.
+
+## IMUI boolean option-contract owner split - 2026-05-25
+
+Scope: keep `options/controls.rs` as the general control-option roster while moving checkbox,
+radio, and switch option contracts into a dedicated pure-data owner.
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/boolean.rs` now owns `CheckboxOptions`,
+  `RadioOptions`, and `SwitchOptions`, including focusability, accessibility label, test-id, and
+  item-local shortcut defaults.
+- `options/controls.rs` re-exports those types under the existing internal module path and
+  continues to own tab, selectable, combo, slider, and combo-model option contracts alongside the
+  existing button/image, disclosure, and text owner re-exports.
+- The split reduces `options/controls.rs` from 238 lines after the disclosure split to 162 lines;
+  the new `boolean.rs` owner is 79 lines.
+- The source gate now rejects boolean option contracts from returning to `options/controls.rs`,
+  while keeping selectable/slider/combo/text/button/image/disclosure option families out of
+  `boolean.rs`.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_adapter_seam_smoke --no-fail-fast
+cargo nextest run -p fret-imui checkbox_model_activate_shortcut_is_scoped_to_focused_checkbox switch_model_activate_shortcut_is_scoped_to_focused_switch base_control_state_changes_keep_outer_bounds_stable --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The `fret-ui-kit` button/adapter focused gate reported
+`4 tests run: 4 passed`; the `fret-imui` checkbox/switch/control-geometry gate reported
+`3 tests run: 3 passed`. `cargo check` reported only the existing `fret-ui` warnings for
+`unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code. `git diff --check`
+reported only the pre-existing line-ending warnings for `Cargo.lock` and
+`apps/fret-examples/src/lib.rs`.
+
+## IMUI remaining control option facade split - 2026-05-25
+
+Scope: finish turning `options/controls.rs` into a pure module facade by moving the remaining
+tab, selectable, combo, and value option contracts into dedicated owners.
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/tab.rs` now owns `TabItemOptions`, including
+  default-selected, panel test-id, and item-local shortcut defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/selection.rs` now owns `SelectableOptions`,
+  including highlighted-but-not-selected semantics, popup-close model, accessibility role defaults,
+  and item-local shortcut defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/combo.rs` now owns `ComboOptions` and
+  `ComboModelOptions`, including popup defaults, placeholder defaults, and item-local shortcut
+  defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/value.rs` now owns `SliderOptions`, including
+  min/max/step defaults.
+- `options/controls.rs` is now a 21-line facade containing only module declarations and re-exports.
+  The new owners are 27 lines (`tab.rs`), 41 lines (`selection.rs`), 60 lines (`combo.rs`), and
+  24 lines (`value.rs`).
+- The source gate now rejects all control option struct/default bodies from returning to
+  `options/controls.rs`, and keeps each option family out of the other owner files.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui --test imui_combo_smoke --test imui_selectable_smoke --no-fail-fast
+cargo nextest run -p fret-ui-kit --features imui selectable_controls::tests tab_trigger_visual_uses_button_label_text_role --no-fail-fast
+cargo nextest run -p fret-imui tab_bar_helper_switches_selected_panel_and_updates_selection_model tab_item_activate_shortcut_is_scoped_to_focused_trigger tab_bar_helper_reports_selected_change_and_trigger_edges selectable_activate_shortcut_is_scoped_to_focused_item selectable_activate_shortcut_preserves_popup_arrow_nav combo_activate_shortcut_is_scoped_to_focused_trigger combo_model_activate_shortcut_is_scoped_to_focused_trigger combo_can_commit_selection_with_selectable_rows slider_f32_model_reports_changed_once_after_pointer_input --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The `fret-ui-kit` combo/selectable smoke gate reported
+`3 tests run: 3 passed`; the `fret-ui-kit` selectable/tab focused gate reported
+`4 tests run: 4 passed`; the `fret-imui` tab/selectable/combo/slider behavior gate reported
+`9 tests run: 9 passed`. `cargo check` reported only the existing `fret-ui` warnings for
+`unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code. `git diff --check`
+reported only the pre-existing line-ending warnings for `Cargo.lock` and
+`apps/fret-examples/src/lib.rs`.
+
+## IMUI container test owner split - 2026-05-25
+
+Scope: keep `containers.rs` focused on structural container element assembly while moving local
+layout/test-id contract tests into a dedicated test owner.
+
+- `ecosystem/fret-ui-kit/src/imui/containers.rs` now keeps the child-building helper plus
+  horizontal, vertical, scroll, and grid container element builders.
+- `ecosystem/fret-ui-kit/src/imui/containers/tests.rs` now owns the local layout forwarding,
+  outer `test_id`, and scroll viewport `test_id` contract tests.
+- `containers.rs` is a 146-line implementation file with only `#[cfg(test)] mod tests;` for the
+  local unit-test module; `containers/tests.rs` is a 207-line test owner.
+- The source gate now rejects local test harness and container contract test bodies from returning
+  to `containers.rs`, and checks the split test owner directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui imui::containers::tests --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused `fret-ui-kit` nextest gate reported
+`4 tests run: 4 passed, 731 skipped`. `cargo check` reported only the existing `fret-ui` warnings
+for `unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code.
+`git diff --check` reported only the pre-existing line-ending warnings for `Cargo.lock` and
+`apps/fret-examples/src/lib.rs`.
+
+## IMUI multi-select test owner split - 2026-05-25
+
+Scope: keep `multi_select.rs` focused on the immediate multi-select state model, controllable model
+hook, and click/range selection behavior while moving local model tests into a dedicated test
+owner.
+
+- `ecosystem/fret-ui-kit/src/imui/multi_select.rs` still owns `ImUiMultiSelectState`,
+  `multi_select_use_model(...)`, `multi_selectable_with_options(...)`, and the private
+  click/toggle/range selection helpers.
+- `ecosystem/fret-ui-kit/src/imui/multi_select/tests.rs` now owns the plain-click,
+  primary-modifier toggle, ordered-selection normalization, missing-anchor repair, and shift-range
+  selection tests.
+- `multi_select.rs` is now a 182-line implementation file with only `#[cfg(test)] mod tests;` for
+  the local test module; `multi_select/tests.rs` is a 113-line test owner.
+- The source gate now rejects the local test fixture and multi-select contract test bodies from
+  returning to `multi_select.rs`, while preserving the existing no-`BeginMultiSelect` and opaque
+  state guards.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui imui::multi_select::tests --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused `fret-ui-kit` nextest gate reported
+`6 tests run: 6 passed, 729 skipped`. `cargo check` reported only the existing `fret-ui` warnings
+for `unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code.
+`git diff --check` reported only the pre-existing line-ending warnings for `Cargo.lock` and
+`apps/fret-examples/src/lib.rs`.
+
+## IMUI virtual-list test owner split - 2026-05-25
+
+Scope: keep `virtual_list_controls.rs` focused on virtual-list element assembly, runtime option
+projection, row wrapping, row height resolution, and row test-id generation while moving local row
+height/overflow tests into a dedicated test owner.
+
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs` still owns `virtual_list_element(...)`,
+  runtime option projection, row packing/wrapping, fixed/known/measured row height behavior, and
+  row test-id derivation.
+- `ecosystem/fret-ui-kit/src/imui/virtual_list_controls/tests.rs` now owns the fixed-height,
+  known-height, and measured-row overflow contract tests.
+- `virtual_list_controls.rs` is now a 183-line implementation file with only
+  `#[cfg(test)] mod tests;` for the local test module; `virtual_list_controls/tests.rs` is an
+  82-line test owner.
+- The source gate now rejects the local row-height test bodies from returning to
+  `virtual_list_controls.rs`, while checking the split test owner directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui imui::virtual_list_controls::tests --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused `fret-ui-kit` nextest gate reported
+`3 tests run: 3 passed, 732 skipped` after waiting on an existing package-cache file lock.
+`cargo check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge`
+check-cfg and `current_effective_opacity` dead code. `git diff --check` reported only the
+pre-existing line-ending warnings for `Cargo.lock` and `apps/fret-examples/src/lib.rs`.
+
+## IMUI control chrome test owner split - 2026-05-25
+
+Scope: keep `control_chrome.rs` focused on shared IMUI chrome constants, palette resolution, chrome
+props, row/stack props, and compact text helpers while moving local text-role contract tests into a
+dedicated test owner.
+
+- `ecosystem/fret-ui-kit/src/imui/control_chrome.rs` still owns button/field chrome, compact
+  control/fill/caption text helpers, row/stack props, and `pill(...)`.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/tests.rs` now owns the button-label and fill-label
+  text role tests, including single-line, shrinkable, inherited foreground behavior.
+- `control_chrome.rs` is now a 235-line implementation file with only `#[cfg(test)] mod tests;`
+  for the local test module; `control_chrome/tests.rs` is a 59-line test owner.
+- The source gate now rejects local text-role test bodies from returning to `control_chrome.rs`,
+  while checking the split test owner directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+CARGO_INCREMENTAL=0 cargo nextest run -p fret-ui-kit --features imui imui::control_chrome::tests --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The first focused nextest attempt failed while compiling after `rustc-LLVM
+ERROR: IO failure on output stream: no space on device`; `cargo clean -p fret-ui-kit` freed about
+1.0GiB, and the rerun with `CARGO_INCREMENTAL=0` reported `2 tests run: 2 passed, 733 skipped`.
+`cargo check` reported only the existing `fret-ui` warnings for `unstable-retained-bridge`
+check-cfg and `current_effective_opacity` dead code. `git diff --check` reported only the
+pre-existing line-ending warnings for `Cargo.lock` and `apps/fret-examples/src/lib.rs`.
+
+## IMUI image-item test owner split - 2026-05-25
+
+Scope: keep `image_item_controls.rs` focused on response-bearing image-item assembly, chrome
+selection, image prop projection, and sanitization helpers while moving local helper tests into a
+dedicated test owner.
+
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` still owns `image_item_with_options(...)`,
+  pressable image/button behavior, chrome selection, image prop projection, size sanitization,
+  opacity normalization, and UV validation.
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls/tests.rs` now owns the size/opacity/UV
+  sanitization test and the image-props fill-box projection test.
+- `image_item_controls.rs` is now a 173-line implementation file with only
+  `#[cfg(test)] mod tests;` for the local test module; `image_item_controls/tests.rs` is a 35-line
+  test owner.
+- The source gate now rejects local helper test bodies from returning to `image_item_controls.rs`,
+  while checking the split test owner directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui imui::image_item_controls::tests --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused `fret-ui-kit` nextest gate reported
+`2 tests run: 2 passed, 733 skipped`. `cargo check` reported only the existing `fret-ui` warnings
+for `unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code.
+`git diff --check` reported only the pre-existing line-ending warnings for `Cargo.lock` and
+`apps/fret-examples/src/lib.rs`.
+
+## IMUI table control test owner split - 2026-05-25
+
+Scope: keep `table_controls.rs` focused on row/cell collection and table API wrappers while moving
+local table header text-role, hidden-column, and horizontal-scroll contract tests into a dedicated
+test owner.
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls.rs` still owns `ImUiTable`, `ImUiTableRow`,
+  row/cell collection, and delegation to `render::render_table(...)` / `render::pack_cell_children(...)`.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/tests.rs` now owns the table header label text
+  role, sort indicator glyph role, hidden column render/response, and horizontal-scroll wrapper
+  tests.
+- `table_controls.rs` is now a 137-line implementation file with only `#[cfg(test)] mod tests;`
+  for the local test module; `table_controls/tests.rs` is a 154-line test owner.
+- The source gate now rejects the local table test harness and table test bodies from returning to
+  `table_controls.rs`, while checking the split test owner directly across both existing table
+  source-gate sections.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui imui::table_controls::tests --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. `cargo check` and focused nextest both waited on existing cargo file locks,
+then completed. The focused `fret-ui-kit` nextest gate reported
+`4 tests run: 4 passed, 731 skipped`. `cargo check` reported only the existing `fret-ui` warnings
+for `unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code.
+`git diff --check` reported only the pre-existing line-ending warnings for `Cargo.lock` and
+`apps/fret-examples/src/lib.rs`.
+
+## IMUI combo test owner split - 2026-05-25
+
+Scope: keep `combo_controls.rs` focused on combo trigger behavior, popup open/close orchestration,
+response lifecycle projection, and visual composition while moving local trigger a11y-label tests
+into a dedicated test owner.
+
+- `ecosystem/fret-ui-kit/src/imui/combo_controls.rs` still owns `combo_with_options(...)`, trigger
+  pressable behavior, activation shortcuts, popup menu handoff, response state projection, and
+  `combo_trigger_a11y_label(...)`.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/tests.rs` now owns the two
+  `combo_trigger_a11y_label(...)` format tests.
+- `combo_controls.rs` is now a 213-line implementation file with only `#[cfg(test)] mod tests;`
+  for the local test module; `combo_controls/tests.rs` is a 9-line test owner.
+- The source gate now rejects the local combo a11y-label test bodies from returning to
+  `combo_controls.rs`, while checking the split test owner directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui imui::combo_controls::tests --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The first focused nextest attempt timed out while another same-worktree
+`fret-demo` check and broad `cargo fmt --check` held cargo locks; after those processes ended, the
+rerun reported `2 tests run: 2 passed, 733 skipped`. `cargo check` reported only the existing
+`fret-ui` warnings for `unstable-retained-bridge` check-cfg and `current_effective_opacity` dead
+code. `git diff --check` reported only the pre-existing line-ending warnings for `Cargo.lock` and
+`apps/fret-examples/src/lib.rs`.
+
+## IMUI floating-window title-bar test owner split - 2026-05-25
+
+Scope: keep `floating_window_title_bar.rs` focused on title-bar row assembly, drag/collapse/close
+interaction wiring, and close-glyph text construction while moving the local close-glyph text-role
+test into a dedicated test owner.
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` still owns
+  `floating_window_title_bar_row(...)` and `floating_window_close_glyph_text(...)`.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar/tests.rs` now owns the close-glyph
+  shared chrome-glyph text-role test.
+- `floating_window_title_bar.rs` is now a 112-line implementation file with only
+  `#[cfg(test)] mod tests;` for the local test module; `floating_window_title_bar/tests.rs` is a
+  27-line test owner.
+- The source gate now rejects the local close-glyph test body from returning to
+  `floating_window_title_bar.rs`, while checking the split test owner directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui imui::floating_window_title_bar::tests --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused `fret-ui-kit` nextest gate reported
+`1 test run: 1 passed, 734 skipped`. `cargo check` reported only the existing `fret-ui` warnings
+for `unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code.
+`git diff --check` reported only the pre-existing line-ending warnings for `Cargo.lock` and
+`apps/fret-examples/src/lib.rs`.
+
+## Fresh resume verification for closed 2026-05-25 IMUI slices - 2026-05-25
+
+Scope: after context recovery, re-check the current worktree evidence for the seven new closed
+follow-ons named by `GOAL_COMPLETION_AUDIT_2026-05-25.md`: canonical editor workbench route,
+Demo/Metrics/Debug route, ListBox container proof, optional plot adapter proof, style/theme preset
+picker proof, and table header/body owner splits.
+
+Focused gates:
+
+```text
+python -m json.tool docs/workstreams/imui-editor-workbench-golden-path-v1/WORKSTREAM.json
+python -m json.tool docs/workstreams/imui-demo-metrics-debug-devtools-v1/WORKSTREAM.json
+python -m json.tool docs/workstreams/imui-list-box-container-proof-v1/WORKSTREAM.json
+python -m json.tool docs/workstreams/imui-plot-adapter-proof-v1/WORKSTREAM.json
+python -m json.tool docs/workstreams/imui-style-theme-editor-proof-v1/WORKSTREAM.json
+python -m json.tool docs/workstreams/imui-table-header-owner-split-v1/WORKSTREAM.json
+python -m json.tool docs/workstreams/imui-table-body-owner-split-v1/WORKSTREAM.json
+python tools/check_workstream_catalog.py
+python tools/gate_imui_workstream_source.py
+cargo fmt -p fret-examples -p fret-demo -p fret-ui-editor -p fret-ui-kit -p fret-imui -p fret-plot -- --check
+cargo nextest run -p fret-examples --test imui_editor_workbench_golden_path_surface --no-fail-fast
+cargo check -p fret-demo --bin imui_editor_workbench_demo
+git diff --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_sortable_header_api_compiles table_resizable_column_api_compiles --no-fail-fast
+cargo nextest run -p fret-imui list_box_container_stamps_semantics_scroll_and_hosts_selectables table_sortable_header_reports_app_owned_trigger_without_sorting_rows table_resizable_header_reports_drag_response table_plain_header_left_click_does_not_activate_or_click --no-fail-fast
+cargo check -p fret-plot --features imui
+cargo nextest run -p fret-plot imui_adapter_stays_opt_in_and_declarative_only --no-fail-fast
+cargo check -p fret-ui-editor --features imui
+cargo nextest run -p fret-ui-editor --features imui --no-fail-fast
+cargo nextest run -p fret-examples --test editor_notes_device_shell_surface --no-fail-fast
+cargo nextest run -p fret-examples parse_editor_theme_preset_key --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+```
+
+Result: passed locally. `check_workstream_catalog.py` validated 443 dedicated directories and 47
+standalone markdown files. `gate_imui_workstream_source.py` reported `[gate] ok`. The workbench
+golden-path test rerun reported `2 tests run: 2 passed`; the first attempt had timed out during
+initial compilation and left Cargo/rustc child processes, which were observed until they exited
+before the successful rerun. `fret-demo` workbench check passed. `fret-ui-kit` table smoke reported
+`2 tests run: 2 passed`; the focused `fret-imui` ListBox/table gate reported
+`4 tests run: 4 passed`; the optional `fret-plot` adapter gate reported `1 test run: 1 passed`;
+the full `fret-ui-editor --features imui` gate reported `189 tests run: 189 passed`; the device
+shell surface gate reported `2 tests run: 2 passed`; the theme preset key gate reported
+`2 tests run: 2 passed`. `git diff --check` reported no whitespace errors and only the existing
+line-ending warnings for `Cargo.lock` and `apps/fret-examples/src/lib.rs`. Cargo warnings remained
+limited to existing `fret-ui` check-cfg/dead-code warnings and unrelated `fret-chart` /
+`fret-plot` dead-code warnings.
+
+## IMUI label-identity test owner split - 2026-05-25
+
+Scope: keep `label_identity.rs` focused on parsing Dear ImGui-style visible label / stable identity
+suffixes while moving local parser tests into a dedicated test owner. This completes the current
+root-level IMUI inline-test cleanup pass.
+
+- `ecosystem/fret-ui-kit/src/imui/label_identity.rs` still owns `ImUiLabelParts` and
+  `parse_label_identity(...)`.
+- `ecosystem/fret-ui-kit/src/imui/label_identity/tests.rs` now owns the six parser contract tests
+  for plain labels, `##` hidden suffixes, hidden labels, `###` stable identities, and triple-hash
+  precedence.
+- `label_identity.rs` is now a 16-line implementation file with only `#[cfg(test)] mod tests;` for
+  the local test module; `label_identity/tests.rs` is a 37-line test owner.
+- The source gate now rejects parser test bodies from returning to `label_identity.rs`, while
+  checking the split test owner directly.
+- A root-file scan now finds no remaining `#[test]` bodies under
+  `ecosystem/fret-ui-kit/src/imui/*.rs`; future IMUI root-file owner work can assume local tests
+  live in sibling `tests.rs` owners.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui imui::label_identity::tests --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused `fret-ui-kit` nextest gate reported
+`6 tests run: 6 passed, 729 skipped` after waiting on existing package-cache locks. `cargo check`
+reported only the existing `fret-ui` warnings for `unstable-retained-bridge` check-cfg and
+`current_effective_opacity` dead code. `git diff --check` reported only the pre-existing
+line-ending warnings for `Cargo.lock` and `apps/fret-examples/src/lib.rs`.
+
+## IMUI bullet-text test owner split - 2026-05-25
+
+Scope: keep `bullet_text_controls.rs` focused on bullet row construction, indicator/test-id
+projection, and compact paragraph text assembly while moving the local text-role contract test into
+a dedicated test owner.
+
+- `ecosystem/fret-ui-kit/src/imui/bullet_text_controls.rs` still owns
+  `bullet_text_with_options(...)` and `bullet_text_element(...)`.
+- `ecosystem/fret-ui-kit/src/imui/bullet_text_controls/tests.rs` now owns the shared compact
+  paragraph role test for bullet labels.
+- `bullet_text_controls.rs` is now a 73-line implementation file with only
+  `#[cfg(test)] mod tests;` for the local test module; `bullet_text_controls/tests.rs` is a 55-line
+  test owner.
+- The source gate now rejects the local bullet label text-role test body from returning to
+  `bullet_text_controls.rs`, while checking the split test owner directly.
+
+Focused gates:
+
+```text
+cargo fmt -p fret-ui-kit -p fret-imui -- --check
+cargo check -p fret-ui-kit --features imui
+cargo nextest run -p fret-ui-kit --features imui imui::bullet_text_controls::tests --no-fail-fast
+python -m py_compile tools/gate_imui_workstream_source.py
+python tools/gate_imui_workstream_source.py
+python tools/check_workstream_catalog.py
+git diff --check
+```
+
+Result: passed locally. The focused `fret-ui-kit` nextest gate reported
+`1 test run: 1 passed, 734 skipped`. `cargo check` reported only the existing `fret-ui` warnings
+for `unstable-retained-bridge` check-cfg and `current_effective_opacity` dead code.
+`git diff --check` reported only the pre-existing line-ending warnings for `Cargo.lock` and
+`apps/fret-examples/src/lib.rs`.

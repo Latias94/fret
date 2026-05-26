@@ -1,0 +1,431 @@
+{
+  "schema_version": 1,
+  "component": "resizable",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual resizable docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/resizable.rs + crates/fret-ui/src/resizable_panel_group + crates/fret-ui/src/resizable_split + apps/fret-ui-gallery/src/ui/pages/resizable.rs + tools/diag-scripts/ui-gallery/resizable/*.json",
+  "validation_gates": [
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test resizable_panel_group_layout --status-level fail",
+      "status": "pass",
+      "scope": "ResizablePanelGroup respects caller-owned height while the recipe owns orientation flex behavior and panel-group fill sizing."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail resizable::",
+      "status": "pass",
+      "scope": "Resizable docs-path Fret layout matches shadcn web fixtures for demo, demo-with-handle, handle, and vertical examples."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_resizable --status-level fail",
+      "status": "pass",
+      "scope": "Resizable web-golden smoke finds upstream panel-group direction and handle recipe markers for all tracked docs-path goldens."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test resizable_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Resizable gallery docs surface keeps source-axis notes, docs-path ordering, copyable snippets, opt-in diagnostics follow-ups, RTL, and API Reference coverage stable."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --lib gallery_resizable_core_examples_keep_upstream_aligned_targets_present --status-level fail",
+      "status": "pass",
+      "scope": "Resizable gallery core examples keep upstream-aligned section targets present with non-zero bounds."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\resizable\\ui-gallery-resizable-initial-bundle.json --dir target\\fret-diag-resizable-initial-bundle-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Resizable docs page opens with the demo title, main panel surface, layout sidecar, screenshot, and schema2 bundle evidence."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\resizable\\ui-gallery-resizable-keyboard-shift-arrow-nudges.json --dir target\\fret-diag-resizable-keyboard-shift-arrow-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Resizable splitter exposes keyboard action state and Shift+Arrow nudges the panel fractions."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\resizable\\ui-gallery-resizable-handle-line-screenshots-zinc-light-dark.json --dir target\\fret-diag-resizable-handle-line-matrix --session-auto --pack --ai-packet --include-screenshots --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Resizable handle line screenshots and bundles capture light/dark handle chrome for the demo and withHandle sections."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\resizable\\ui-gallery-resizable-adaptive-panel-proof.json --dir target\\fret-diag-resizable-adaptive-panel-proof-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Resizable adaptive panel proof captures splitter drag/resize behavior against a fixed-window container-query target."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.resizable.demo.light.vp1440x900",
+      "snapshot": "resizable-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.resizable.demo_with_handle.light.vp1440x900",
+      "snapshot": "resizable-demo-with-handle",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo-with-handle",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.resizable.handle.light.vp1440x900",
+      "snapshot": "resizable-handle",
+      "theme": "light",
+      "mode": "static",
+      "variant": "handle",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.resizable.vertical.light.vp1440x900",
+      "snapshot": "resizable-vertical",
+      "theme": "light",
+      "mode": "static",
+      "variant": "vertical",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "resizable-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.resizable.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/resizable-demo.json"
+      },
+      {
+        "snapshot": "resizable-demo-with-handle",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo-with-handle",
+        "context_id": "upstream.resizable.demo_with_handle.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/resizable-demo-with-handle.json"
+      },
+      {
+        "snapshot": "resizable-handle",
+        "theme": "light",
+        "mode": "static",
+        "variant": "handle",
+        "context_id": "upstream.resizable.handle.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/resizable-handle.json"
+      },
+      {
+        "snapshot": "resizable-vertical",
+        "theme": "light",
+        "mode": "static",
+        "variant": "vertical",
+        "context_id": "upstream.resizable.vertical.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/resizable-vertical.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-initial-bundle.json",
+        "sidecar_path": "target/fret-diag-resizable-initial-bundle-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-keyboard-shift-arrow-nudges.json",
+        "sidecar_path": "target/fret-diag-resizable-keyboard-shift-arrow-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-adaptive-panel-proof.json",
+        "sidecar_path": "target/fret-diag-resizable-adaptive-panel-proof-matrix"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-initial-bundle.json",
+        "bundle_path": "target/fret-diag-resizable-initial-bundle-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-keyboard-shift-arrow-nudges.json",
+        "bundle_path": "target/fret-diag-resizable-keyboard-shift-arrow-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-handle-line-screenshots-zinc-light-dark.json",
+        "bundle_path": "target/fret-diag-resizable-handle-line-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-adaptive-panel-proof.json",
+        "bundle_path": "target/fret-diag-resizable-adaptive-panel-proof-matrix"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 9,
+    "status_counts": {
+      "pass_known": 9,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "mechanism_core": 3,
+      "component_recipe": 3,
+      "gallery_composition": 2,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "mechanism": 3,
+      "recipe": 3,
+      "app_demo": 2,
+      "runner": 1,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 9
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 4,
+      "component_fixture": 3,
+      "unit_test": 2,
+      "none": 0
+    },
+    "layout_sidecar_count": 3,
+    "bundle_schema2_count": 4,
+    "layout_test_id_count": 9,
+    "bundle_semantics_test_id_count": 6,
+    "measured_test_id_count": 9,
+    "upstream_dom_snapshot_count": 4,
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 4,
+    "upstream_dom_context_count": 4,
+    "upstream_live_fact_count": 5,
+    "fret_live_fact_count": 16,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 6,
+    "fret_interaction_fact_count": 5,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/base/resizable.mdx + goldens/shadcn-web/v4/new-york-v4/resizable-*.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/resizable.rs + crates/fret-ui/src/resizable_panel_group + crates/fret-ui/src/resizable_split + apps/fret-ui-gallery/src/ui/pages/resizable.rs + tools/diag-scripts/ui-gallery/resizable/*.json",
+    "part_count": 9,
+    "upstream_dom_target_count": 4,
+    "fret_test_id_count": 9,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 6,
+    "fret_interaction_fact_count": 5,
+    "parts": [
+      {
+        "part_id": "resizable_upstream_source_and_goldens",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "docs/audits/shadcn-resizable.md",
+          "goldens/shadcn-web/v4/new-york-v4/resizable-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/resizable-demo-with-handle.json",
+          "goldens/shadcn-web/v4/new-york-v4/resizable-handle.json",
+          "goldens/shadcn-web/v4/new-york-v4/resizable-vertical.json"
+        ],
+        "facts": [
+          "Upstream Resizable docs path is an explicit PanelGroup / Panel / Handle composition.",
+          "Tracked web goldens cover nested demo, visible handle, standalone handle, and vertical orientation.",
+          "No generic children or compose API is required beyond the ordered panel/handle entries lane."
+        ]
+      },
+      {
+        "part_id": "resizable_panel_group_layout_ownership",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "evidence_refs": [
+          "crates/fret-ui/src/resizable_panel_group",
+          "crates/fret-ui/src/resizable_split",
+          "ecosystem/fret-ui-shadcn/tests/resizable_panel_group_layout.rs",
+          "cargo nextest run -p fret-ui-shadcn --test resizable_panel_group_layout --status-level fail"
+        ],
+        "facts": [
+          "ResizablePanelGroup respects caller-owned height.",
+          "Splitter fraction layout remains runtime-owned rather than being encoded as static recipe widths.",
+          "The shadcn recipe owns orientation flex behavior while bordered demo shells stay caller-owned."
+        ]
+      },
+      {
+        "part_id": "resizable_web_vs_fret_geometry",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/fixtures/layout_resizable_cases_v1.json",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/resizable.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_resizable.rs"
+        ],
+        "facts": [
+          "Fret demo geometry is matched against web goldens for the docs-path resizable examples.",
+          "Panel-group direction and handle recipe markers are tracked in upstream DOM goldens.",
+          "Horizontal and vertical examples are both fixture-driven."
+        ]
+      },
+      {
+        "part_id": "resizable_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/resizable.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/resizable/usage.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/resizable/demo.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/resizable/handle.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/resizable/rtl.rs",
+          "apps/fret-ui-gallery/tests/resizable_docs_surface.rs"
+        ],
+        "facts": [
+          "Gallery docs order mirrors the shadcn/Base UI Resizable docs path after collapsing ComponentPreview into Demo.",
+          "Usage remains a copyable app-facing panel/handle composition on the curated facade.",
+          "Opt-in diagnostics follow-ups stay outside the default docs path."
+        ]
+      },
+      {
+        "part_id": "resizable_core_gallery_targets",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/driver/render_flow.rs",
+          "cargo nextest run -p fret-ui-gallery --lib gallery_resizable_core_examples_keep_upstream_aligned_targets_present --status-level fail"
+        ],
+        "facts": [
+          "Core Resizable docs-path section targets are present in the gallery.",
+          "Demo, Usage, Handle, Vertical, and RTL targets render with non-zero bounds.",
+          "Gallery target ids remain stable enough for diagnostics scripts."
+        ]
+      },
+      {
+        "part_id": "resizable_splitter_keyboard_drag",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-keyboard-shift-arrow-nudges.json",
+          "crates/fret-ui/src/resizable_split"
+        ],
+        "facts": [
+          "Splitter keyboard actions are exposed through stable test ids.",
+          "Shift+Arrow changes panel fractions.",
+          "Keyboard resizing is tracked as a first-class state-depth axis."
+        ]
+      },
+      {
+        "part_id": "resizable_handle_chrome",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/resizable.rs",
+          "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-handle-line-screenshots-zinc-light-dark.json"
+        ],
+        "facts": [
+          "ResizableHandle owns the intrinsic separator chrome.",
+          "Visible handle affordance is covered for light and dark zinc theme screenshots.",
+          "Handle color/border/radius evidence is treated as paint-token coverage for planning."
+        ]
+      },
+      {
+        "part_id": "resizable_rtl_surface",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/snippets/resizable/rtl.rs",
+          "apps/fret-ui-gallery/tests/resizable_docs_surface.rs"
+        ],
+        "facts": [
+          "RTL docs-path snippet keeps translated labels and visible handle affordance.",
+          "RTL remains part of the required state-depth surface for Resizable.",
+          "Surrounding layout shells remain caller-owned."
+        ]
+      },
+      {
+        "part_id": "resizable_adaptive_panel_diag",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-adaptive-panel-proof.json",
+          "apps/fret-ui-gallery/src/ui/snippets/resizable/adaptive_panel.rs"
+        ],
+        "facts": [
+          "Adaptive panel diagnostics prove panel resize behavior without changing the outer window size.",
+          "The script captures before/after state and layout sidecar evidence.",
+          "Container-query follow-ups remain opt-in rather than part of the base docs path."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Lock the Resizable docs-path slice with source refs, upstream goldens, Fret layout/semantics evidence, splitter keyboard/drag behavior, RTL, handle chrome, and gallery docs-surface proof.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "resizable.docs-path.desktop",
+        "component": "resizable",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/resizable_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

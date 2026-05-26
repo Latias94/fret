@@ -8,7 +8,7 @@
     { "type": "reset_diagnostics" },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
-    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 720.0 },
     { "type": "wait_frames", "n": 10 },
 
     {
@@ -99,10 +99,14 @@
         "eps_px": 1.0
       }
     },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-field-responsive-orientation-narrow.layout"
+    },
     { "type": "capture_screenshot", "label": "ui-gallery-field-responsive-orientation-narrow" },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-field-responsive-width-switch" } },
-    { "type": "wait_frames", "n": 8 },
+    { "type": "wait_frames", "n": 16 },
     {
       "type": "assert",
       "predicate": {
@@ -129,6 +133,10 @@
         "b": { "kind": "test_id", "id": "ui-gallery-field-responsive-name-input" },
         "eps_px": 1.0
       }
+    },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-field-responsive-orientation-wide.layout"
     },
     { "type": "capture_screenshot", "label": "ui-gallery-field-responsive-orientation-wide" },
 

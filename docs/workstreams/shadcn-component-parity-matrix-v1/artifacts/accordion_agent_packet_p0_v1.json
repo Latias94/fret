@@ -1,0 +1,272 @@
+{
+  "schema_version": 1,
+  "component": "accordion",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual accordion docs-demo harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/accordion.rs + ecosystem/fret-ui-kit/src/primitives/accordion.rs + apps/fret-ui-gallery/src/ui/pages/accordion.rs + apps/fret-ui-gallery/src/ui/snippets/accordion/*.rs + tools/diag-scripts/ui-gallery/accordion/*.json",
+  "validation_gates": [
+    {
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\accordion\\ui-gallery-accordion-usage-toggle.json --dir target\\fret-diag-accordion-usage-toggle-p0-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Accordion Usage typed-children lane toggles expanded semantics from open to closed and back open while preserving panel mount/unmount behavior.",
+      "run_id": "1779712643033",
+      "ai_packet": "target/fret-diag-accordion-usage-toggle-p0-v1/sessions/1779712613488-110756/1779712643033/ai.packet",
+      "share_zip": "target/fret-diag-accordion-usage-toggle-p0-v1/sessions/1779712613488-110756/share/1779712643033.zip"
+    },
+    {
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\accordion\\ui-gallery-accordion-docs-smoke.json --dir target\\fret-diag-accordion-docs-smoke-p0-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Accordion docs page smoke covers Demo, Usage, Basic, Multiple, Disabled, Focusable Disabled, Borders, Card, RTL, and API Reference sections with bundle, AI packet, and share zip evidence.",
+      "run_id": "1779712752307",
+      "ai_packet": "target/fret-diag-accordion-docs-smoke-p0-v1/sessions/1779712733263-123444/1779712752307/ai.packet",
+      "share_zip": "target/fret-diag-accordion-docs-smoke-p0-v1/sessions/1779712733263-123444/share/1779712752307.zip"
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail accordion",
+      "status": "pass",
+      "scope": "Accordion recipe and primitive tests cover item/trigger/content composition, chevron/text styling, disabled/focusable-disabled policy, icon sizing, border/card variants, RTL, and action wiring."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail accordion::",
+      "status": "pass",
+      "scope": "Accordion web-vs-Fret layout checks match upstream docs-demo trigger/content geometry for the covered accordion cases."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test accordion_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Accordion gallery docs surface keeps the shadcn docs-path ordering, typed children usage snippet, focusable-disabled section, and docs/usage diagnostics script wiring stable."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.accordion.demo.light.vp1440x900",
+      "snapshot": "accordion-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "accordion-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.accordion.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/accordion-demo.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json",
+        "bundle_path": "target/fret-diag-accordion-usage-toggle-p0-v1/sessions/1779712613488-110756/1779712643033/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-docs-smoke.json",
+        "bundle_path": "target/fret-diag-accordion-docs-smoke-p0-v1/sessions/1779712733263-123444/1779712752307/bundle.json"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json",
+        "ai_packet": "target/fret-diag-accordion-usage-toggle-p0-v1/sessions/1779712613488-110756/1779712643033/ai.packet",
+        "share_zip": "target/fret-diag-accordion-usage-toggle-p0-v1/sessions/1779712613488-110756/share/1779712643033.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-docs-smoke.json",
+        "ai_packet": "target/fret-diag-accordion-docs-smoke-p0-v1/sessions/1779712733263-123444/1779712752307/ai.packet",
+        "share_zip": "target/fret-diag-accordion-docs-smoke-p0-v1/sessions/1779712733263-123444/share/1779712752307.zip"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 5,
+    "status_counts": {
+      "pass_known": 5,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 2,
+      "gallery_composition": 1,
+      "mechanism_core": 0,
+      "diagnostics_surface": 2,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 2,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 2,
+      "app_demo": 1,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 5
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 2,
+      "component_fixture": 2,
+      "unit_test": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 0,
+    "bundle_schema2_count": 2,
+    "layout_test_id_count": 10,
+    "bundle_semantics_test_id_count": 3,
+    "measured_test_id_count": 3,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 1,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1,
+    "upstream_live_fact_count": 3,
+    "fret_live_fact_count": 9,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 4,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 4,
+    "fret_text_paint_direct_fact_count": 4,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 4,
+    "fret_text_paint_row_count": 4,
+    "fret_text_label_row_count": 2
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/accordion.mdx + repo-ref/ui/apps/v4/registry/new-york-v4/ui/accordion.tsx + goldens/shadcn-web/v4/new-york-v4/accordion-demo.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/accordion.rs + ecosystem/fret-ui-kit/src/primitives/accordion.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/accordion.rs + apps/fret-ui-gallery/src/ui/pages/accordion.rs + apps/fret-ui-gallery/src/ui/snippets/accordion/*.rs + apps/fret-ui-gallery/tests/accordion_docs_surface.rs + tools/diag-scripts/ui-gallery/accordion/*.json",
+    "part_count": 5,
+    "upstream_dom_target_count": 1,
+    "fret_test_id_count": 10,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 4,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 4,
+    "parts": [
+      {
+        "part_id": "accordion_recipe_and_policy_tests",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/accordion.rs",
+          "ecosystem/fret-ui-kit/src/primitives/accordion.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail accordion"
+        ],
+        "facts": [
+          "Accordion recipe and primitive tests passed 24/24 for the focused filter.",
+          "The existing recipe/policy surface already covers item/trigger/content composition, disabled and focusable-disabled policy, text-label roles, chevron/icon styling, border/card variants, RTL, and action wiring."
+        ]
+      },
+      {
+        "part_id": "accordion_web_golden_layout",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/accordion.rs",
+          "goldens/shadcn-web/v4/new-york-v4/accordion-demo.json",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail accordion::"
+        ],
+        "facts": [
+          "The Accordion web-vs-Fret layout gate passed 2/2 for the focused accordion filter.",
+          "The gate keeps upstream docs-demo trigger/content geometry wired to the new-york v4 golden."
+        ]
+      },
+      {
+        "part_id": "accordion_usage_toggle_diag",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json",
+          "target/fret-diag-accordion-usage-toggle-p0-v1/sessions/1779712613488-110756/1779712643033/bundle.schema2.json",
+          "target/fret-diag-accordion-usage-toggle-p0-v1/sessions/1779712613488-110756/1779712643033/ai.packet",
+          "target/fret-diag-accordion-usage-toggle-p0-v1/sessions/1779712613488-110756/share/1779712643033.zip"
+        ],
+        "facts": [
+          "The Usage script starts on the Accordion page typed-children lane, asserts the panel exists and the trigger is expanded, then clicks the trigger closed and asserts expanded=false with the panel unmounted.",
+          "The same run clicks the trigger open again and asserts expanded=true with the panel remounted.",
+          "The passing run captured schema2 bundle, AI packet, and share zip evidence in run 1779712643033."
+        ]
+      },
+      {
+        "part_id": "accordion_docs_smoke_diag",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-docs-smoke.json",
+          "target/fret-diag-accordion-docs-smoke-p0-v1/sessions/1779712733263-123444/1779712752307/bundle.json",
+          "target/fret-diag-accordion-docs-smoke-p0-v1/sessions/1779712733263-123444/1779712752307/ai.packet",
+          "target/fret-diag-accordion-docs-smoke-p0-v1/sessions/1779712733263-123444/share/1779712752307.zip"
+        ],
+        "facts": [
+          "The docs-smoke script navigates through the Gallery nav and asserts Demo, Usage, Basic, Multiple, Disabled, Focusable Disabled, Borders, Card, RTL, and API Reference anchors.",
+          "The passing run captured bundle, AI packet, and share zip evidence in run 1779712752307."
+        ]
+      },
+      {
+        "part_id": "accordion_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/accordion.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/accordion/usage.rs",
+          "apps/fret-ui-gallery/tests/accordion_docs_surface.rs",
+          "cargo nextest run -p fret-ui-gallery --test accordion_docs_surface --status-level fail"
+        ],
+        "facts": [
+          "The docs-surface test now matches the current docs path including the Focusable Disabled lane.",
+          "The same test keeps the copyable Usage snippet on the curated AccordionRoot::children typed lane with text_button_label trigger text and stable usage toggle anchors."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Accordion docs-demo desktop slice with upstream source/golden, Fret recipe/layout gates, gallery docs-surface coverage, typed-children usage semantics, and runtime diagnostics evidence.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "accordion.docs-demo.desktop",
+        "component": "accordion",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/accordion_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

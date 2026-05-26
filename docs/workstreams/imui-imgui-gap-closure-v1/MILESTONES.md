@@ -1,7 +1,112 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-24
+Last updated: 2026-05-26
+
+## M6 - Continuing IMUI Owner-Split Pressure
+
+Exit criteria:
+
+- Continue reducing large `fret-ui-kit::imui` implementation files after worktree convergence.
+- Keep public IMUI facade method names, options, responses, and behavior stable.
+- Move policy sub-owners behind private modules and freeze the split with source gates.
+- Run focused compile/test/source gates for each slice.
+
+2026-05-26 button visual owner-split result:
+`ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` now owns button variant layout,
+accessibility labels, arrow glyph/label mapping, and visual chrome/content assembly.
+`button_controls.rs` keeps immediate pressable orchestration, keyboard shortcut/context-menu
+handling, action dispatch, and response population. The public IMUI button APIs remain unchanged.
+The same verification pass repaired the existing DropdownMenuLabel source-policy drift by routing
+that shadcn label through the shared `text_menu_group_label(...)` role.
+
+2026-05-26 text-picker owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/candidates.rs` now owns candidate filtering,
+`max_items`, exact-match hiding, and open-when-empty visibility decisions.
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard.rs` now also owns keyboard active
+source reconciliation and pending keyboard pick extraction. `text_picker_controls.rs` keeps the
+input/popup composition, selectable item rendering, command-free model updates, and response
+merging. The public input-text completion/history APIs remain unchanged.
+
+2026-05-26 disclosure spec owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs` now owns the private
+`DisclosureKind` / `DisclosureSpec` model, option normalization, level clamping, test-id routing,
+and leaf/children classification. `disclosure_controls.rs` keeps immediate pressable behavior,
+keyboard/context-menu handling, open-model updates, content mounting, and `DisclosureResponse`
+population. The public collapsing-header and tree-node APIs remain unchanged.
+
+2026-05-26 boolean visual owner-split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` now owns checkbox badges, radio
+indicators, switch state badges, and shared boolean label text. `boolean_controls.rs` keeps
+checkbox/radio pressable orchestration, shortcut/context-menu handling, and response population,
+while `boolean_controls/switch.rs` keeps switch active-trigger behavior and model updates. The
+public checkbox, radio, and switch APIs remain unchanged.
+
+2026-05-26 hover query owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover/flags.rs` now owns `ImUiHoveredFlags`, while
+`ecosystem/fret-ui-kit/src/imui/response/hover/query.rs` owns the ImGui-style hovered query
+helpers. `response/hover.rs` keeps `ResponseExt` storage, crate-local mutators, public accessors,
+and drag convenience helpers. The public hover flags and `ResponseExt` API remain unchanged.
+
+2026-05-26 lifecycle owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover/lifecycle.rs` now owns the `ResponseExt`
+lifecycle signal mutators, merge helpers, clearing, and read-only accessors for activation,
+deactivation, edits, and deactivate-after-edit. `response/hover.rs` keeps lifecycle storage but no
+longer owns lifecycle method bodies. The public `ResponseExt` API remains unchanged.
+
+2026-05-26 press/context owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover/press_context.rs` now owns the `ResponseExt`
+secondary-click, double-click, long-press, hold, context-menu, pointer-click, pointer-modifier, and
+clear helpers plus read-only accessors. `response/hover.rs` keeps storage for those signals only.
+The public `ResponseExt` API remains unchanged.
+
+2026-05-26 hover-state owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover/hover_state.rs` now owns the `ResponseExt` raw
+pointer-hover, popup-barrier hover, hover-delay, active-item block, and nav-highlight mutators plus
+read-only accessors. `response/hover.rs` keeps the hover state storage fields only. The public
+`ResponseExt` API remains unchanged.
+
+2026-05-26 core-state owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover/core_state.rs` now owns the `ResponseExt`
+core-response, id, enabled, clicked, changed, rect, hover, press, and focus mutators/accessors.
+`response/hover.rs` keeps core/id/enabled storage only. The public `ResponseExt` API remains
+unchanged.
+
+2026-05-26 menu-family menu owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now owns top-level
+`begin_menu_with_options(...)` menu open/close orchestration, trigger wiring, menubar active-menu
+policy updates, and popup mounting. `menu_family_controls.rs` keeps menubar policy state,
+menu-bar element construction, module wiring, and tests. The public facade menu API remains
+unchanged.
+
+2026-05-26 debug-draw response owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/response.rs` now owns `DebugDrawResponse`
+storage and accessors. The opaque-output source gate follows the new owner, while
+`debug_draw_controls.rs` keeps debug draw options, draw-list/style types, and helper orchestration.
+The public debug draw response API remains unchanged.
+
+2026-05-26 debug-draw options owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options.rs` now owns the public debug draw
+options, stroke/rounding/image/svg options, and mesh vertex helper types. `debug_draw_controls.rs`
+re-exports those types and keeps draw-list state plus helper orchestration. The public debug draw
+API remains unchanged.
+
+## M5 - Worktree Convergence
+
+Exit criteria:
+
+- Dirty IMUI changes in `main` and `imui-imgui-editor-grade-refactor` are checkpointed before
+  integration.
+- `main` remains the integration base and the only continuation branch.
+- Overlapping `fret-ui-kit::imui`, `fret-imui`, demo, workstream, and source-gate changes are
+  merged by topic with no unresolved conflict markers.
+- Focused convergence gates pass or have an explicit recorded reason for a narrower substitute.
+
+Result: done on 2026-05-26. The main checkpoint is
+`d078e25122 refactor(imui): checkpoint gap closure convergence slices`; the editor-grade worktree
+checkpoint is `05727e284b refactor(imui): checkpoint editor-grade convergence worktree`; the merge
+resolution keeps the editor-grade facade/container/listbox organization, preserves the main
+image-item owner split, and records the verification evidence in `EVIDENCE_AND_GATES.md`.
 
 ## M0 - Current Source Baseline
 
@@ -1152,3 +1257,61 @@ keeps keyboard/click behavior orchestration plus the close-glyph text-role helpe
 2026-05-24 content props helper result: `ecosystem/fret-ui-kit/src/imui/floating_window_content_props.rs`
 now owns content surface layout, scroll layout, and container props. `floating_window_content.rs`
 keeps the pointer/focus orchestration and consumes the prepared content owner outputs.
+
+2026-05-25 table render/body/header owner split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` now owns table assembly, test-id suffixing,
+palette resolution, and shared cell helpers. `table_controls/body.rs` owns prepared cells, pinned row
+grouping, horizontal center-scroll wrapping, and cell wrapping. `table_controls/header.rs` plus
+`header/{trigger,resize}.rs` own sortable/plain header behavior and resize interaction. The root
+`table_controls.rs` keeps authoring collection and row/cell facade wiring only. The public IMUI
+table API stayed stable.
+
+2026-05-26 table render helper owner split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/cell.rs` now owns shared table cell layout, padding,
+empty-cell, and cell-child packing helpers. `table_controls/palette.rs` owns theme-to-table-palette
+resolution, and `table_controls/test_ids.rs` owns column test-id suffixing. `render.rs` keeps table
+assembly, hidden-column handling, header/body response collection, and root table wrapping only.
+The public IMUI table API stayed stable.
+
+2026-05-25 plot adapter proof result:
+`ecosystem/fret-plot/src/imui.rs` now provides opt-in `UiWriter` helpers that delegate to the
+existing declarative plot panels. `fret-plot` default features remain empty, `fret-imui` and
+`fret-ui-kit::imui` do not depend on `fret-plot`, and the retained plot bridge stays deleted.
+
+2026-05-25 ListBox container proof result:
+`ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now provides a Dear ImGui `BeginListBox`-style
+semantic scroll host. `ListBoxOptions` stays container-scoped, covering layout, scroll,
+diagnostics ids, label, and multiselectable semantics only. Selection rows remain ordinary
+`selectable_with_options(...)` children, and the container does not own active-descendant,
+filtering, command, or collection policy.
+
+2026-05-25 facade basic-items owner split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/basic_items.rs` now owns the private
+`UiWriterImUiFacadeExt` default bodies for basic text, wrapped text, bullet text, plain separators,
+and separator text. `facade_writer.rs` remains the public trait hub and forwards those methods to
+the owner module without changing public names or behavior.
+
+2026-05-26 facade image-items owner split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/image_items.rs` now owns the private
+`UiWriterImUiFacadeExt` default bodies for image item/button forwarding, including the
+`ImageItemVariant::Button` normalization used by `image_button_with_options`. The interactive image
+item policy stays in `image_item_controls.rs`; the public facade method names and signatures stay
+unchanged.
+
+2026-05-26 facade command-presentation owner split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs` now owns the button command
+presentation/default-enabled forwarding path, and
+`ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs` owns the menu command
+presentation/default-enabled/default-shortcut forwarding path. The root `UiWriterImUiFacadeExt`
+trait in `facade_writer.rs` still exposes the same public method roster and now only forwards these
+command helpers to the owner modules. `facade_writer.rs` dropped from 984 to 971 lines after this
+slice.
+
+2026-05-26 worktree convergence decision:
+`WORKTREE_CONVERGENCE_PLAN_2026-05-26.md` records the integration strategy for the dirty `main` and
+`imui-imgui-editor-grade-refactor` worktrees. `main` remains the final integration base because it
+already contains the six committed shadcn/parity foundation commits. IMUI content is resolved by
+topic: keep identical plot/table slices, prefer the IMUI worktree's more complete facade owner split,
+layout sugar, canonical workbench, Demo/Metrics/Debug, and style/theme picker work, and leave the
+`main`-only `facade_writer/image_items.rs` slice for a separate evidenced follow-up unless completed
+before checkpointing. The image-items slice was completed before the `main` checkpoint.

@@ -47,9 +47,9 @@
       "recipe": "dialog_demo_overlay_center"
     },
     {
-      "id": "sidebar-13.sidebar_13_dialog_overlay_center",
+      "id": "sidebar-13.sidebar13_dialog_overlay_center",
       "web_name": "sidebar-13",
-      "recipe": "sidebar_13_dialog_overlay_center"
+      "recipe": "sidebar13_dialog_overlay_center"
     },
     {
       "id": "command-dialog.command_dialog_overlay_center",

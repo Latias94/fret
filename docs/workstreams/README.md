@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 464
+- Dedicated directories: 473
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -279,6 +279,7 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_IMMEDIATE_PARITY_STATUS_2026-04-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-15.md`
+  - `docs/workstreams/imui-editor-grade-product-closure-v1/GOAL_COMPLETION_AUDIT_2026-05-25.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P0_CONSUMER_WORKFLOW_AUDIT_2026-05-13.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_WORKBENCH_PROOF_MATRIX_2026-04-12.md`
   - `docs/workstreams/imui-editor-grade-product-closure-v1/P1_SHELL_DIAG_SMOKE_DECISION_2026-04-12.md`
@@ -294,11 +295,14 @@ Current source of truth for the in-tree immediate-mode stack:
   - `docs/workstreams/imui-editor-grade-product-closure-v1/WORKSTREAM.json`
   - Scope: keep the phase ordering and cross-phase status for the remaining maturity gap after the
     stack-reset closeouts without reopening runtime widening or generic helper-growth by default;
-    the 2026-05-15 audit keeps the goal explicitly not complete until real-host Wayland hand-feel,
-    DevTools GUI productization, and broader perf attribution/smoothness close in their owner
-    lanes; the 2026-05-16 M18 docking matrix is local policy-skip evidence only; future
-    `fret-ui-kit::imui` widening still needs the frozen two-surface proof budget before review, and
-    implementation-heavy work should stay in narrower follow-ons or the active docking parity lane.
+    the 2026-05-25 audit closes the latest IMUI-side implementation slices while keeping the goal
+    explicitly not complete until real-host Wayland hand-feel, broader DevTools GUI productization,
+    and broader perf attribution/smoothness close in their owner lanes; the 2026-05-16 M18 docking
+    matrix is local policy-skip evidence only; the 2026-05-25 porting-sugar follow-up restores
+    explicit `items`/`same_line`/`spacing`/`dummy`/`indent` helpers in `fret-ui-kit::imui` without
+    adding an implicit layout cursor; future `fret-ui-kit::imui` widening still needs the frozen
+    two-surface proof budget before review, and implementation-heavy work should stay in narrower
+    follow-ons or the active docking parity lane.
 
 - Closed narrow P1 text input policy depth follow-on:
   - `docs/workstreams/imui-text-input-policy-depth-v1/WORKSTREAM.json`
@@ -1944,6 +1948,7 @@ Rule:
 - `docs/workstreams/code-editor-row-fragment-replay-contract-v1/` — first 2026-05-16, latest 2026-05-16, 4 markdown docs (active narrow follow-on for code-editor row-fragment replay contract design and perf validation; includes `WORKSTREAM.json`)
 - `docs/workstreams/code-editor-row-content-snapshot-cache-v1/` — first 2026-05-15, latest 2026-05-15, 5 markdown docs (closed narrow follow-on for shared row content snapshot payloads across text, scene cache, replay plan, and paint; includes `WORKSTREAM.json`)
 - `docs/workstreams/component-ecosystem-state-integration-v1/` — first 2026-02-06, latest 2026-02-14, 2 markdown docs
+- `docs/workstreams/component-parity-fact-harness-v1/` — first 2026-05-25, latest 2026-05-25, 5 markdown docs (active narrow follow-on for unified shadcn/Material component facts, agent repair packets, and Button Group pilot evidence; includes `WORKSTREAM.json`)
 - `docs/workstreams/container-aware-editor-rail-helper-shape-v1/` — first 2026-04-11, latest 2026-04-11, 6 markdown docs
 - `docs/workstreams/container-aware-editor-rail-surface-v1/` — first 2026-04-11, latest 2026-04-11, 11 markdown docs
 - `docs/workstreams/container-queries-v1/` — first 2026-02-09, latest 2026-02-11, 3 markdown docs
@@ -2144,6 +2149,7 @@ Rule:
 - `docs/workstreams/imui-collection-command-package-v1/` — first n/a, latest n/a, 9 markdown docs (closed closeout record for the landed app-owned collection command-package slice; duplicate-selected plus explicit rename-trigger parity now close this folder while second-proof-surface pressure has moved through the closed follow-on)
 - `docs/workstreams/imui-collection-second-proof-surface-v1/` — first n/a, latest n/a, 7 markdown docs (closed closeout record for the second shell-mounted collection proof surface after command-package closeout; `editor_notes_demo.rs` now carries the landed `Scene collection` surface with `workspace_shell_demo.rs` as supporting evidence, while the no-helper-widening verdict keeps shared collection helpers closed)
 - `docs/workstreams/imui-collection-helper-readiness-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for the helper-readiness audit over the two existing collection proof surfaces; M2 keeps shared helper widening closed because no policy-light helper shape is needed by both surfaces)
+- `docs/workstreams/imui-list-box-container-proof-v1/` — first n/a, latest n/a, 7 markdown docs (closed narrow proof for a Dear ImGui `BeginListBox`-style semantic/scroll container without generic collection helper, selection, filtering, command-package, or overlay policy growth)
 - `docs/workstreams/imui-editor-notes-inspector-command-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for an app-owned `editor_notes_demo.rs` inspector command/status loop after helper-readiness closeout)
 - `docs/workstreams/imui-editor-notes-dirty-status-v1/` — first n/a, latest n/a, 6 markdown docs (closed closeout record for an app-owned `editor_notes_demo.rs` `Draft status` row after inspector-command closeout)
 - `docs/workstreams/imui-next-gap-audit-v1/` — first n/a, latest n/a, 6 markdown docs (closed decision record recommending `imui-editor-notes-draft-actions-v1` as the next locally testable IMUI follow-on)
@@ -2175,7 +2181,9 @@ Rule:
 - `docs/workstreams/imui-table-column-resize-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table header resize handles and response reporting)
 - `docs/workstreams/imui-table-column-width-diag-gate-v1/` — first n/a, latest n/a, 7 markdown docs (closed narrow follow-on for the IMUI table column width resize diagnostics gate)
 - `docs/workstreams/imui-table-column-width-demo-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for an app-owned IMUI table column width demo proof)
+- `docs/workstreams/imui-table-body-owner-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed private owner split for moving IMUI table body row wrapping, pinned groups, horizontal scroll wrapping, and cell wrapper rendering into `table_controls/body.rs` without public table API growth)
 - `docs/workstreams/imui-table-header-label-policy-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table header visible-label policy)
+- `docs/workstreams/imui-table-header-owner-split-v1/` — first n/a, latest n/a, 6 markdown docs (closed private owner split for moving IMUI table header trigger/sort/resize behavior into `table_controls/header.rs` without public table API growth)
 - `docs/workstreams/imui-table-sortable-demo-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for a runnable IMUI table sortable header demo proof)
 - `docs/workstreams/imui-table-sortable-diag-gate-v1/` — first n/a, latest n/a, 7 markdown docs (closed narrow follow-on for the IMUI table sortable diagnostics gate)
 - `docs/workstreams/imui-table-sortable-header-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow follow-on for IMUI table sortable header trigger responses)
@@ -2193,7 +2201,11 @@ Rule:
 - `docs/workstreams/imui-facade-container-wrapper-owner-split-v1/` — first 2026-05-13, latest 2026-05-13, 7 markdown docs (closed narrow follow-on for structural container facade wrapper owner split without public API or runtime contract widening)
 - `docs/workstreams/imui-facade-floating-popup-owner-split-v1/` — first 2026-05-14, latest 2026-05-14, 7 markdown docs (closed narrow follow-on for floating/popup trait-default owner split without public API or runtime contract widening)
 - `docs/workstreams/imui-debug-draw-owner-split-v1/` — first 2026-05-06, latest 2026-05-06, 10 markdown docs (closed narrow follow-on for splitting IMUI debug draw private owners without public API or behavior changes; includes a closeout audit and private test owner)
-- `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest 2026-05-15, 23 markdown docs
+- `docs/workstreams/imui-editor-grade-product-closure-v1/` — first n/a, latest 2026-05-25, 24 markdown docs
+- `docs/workstreams/imui-editor-workbench-golden-path-v1/` — first n/a, latest n/a, 6 markdown docs (closed canonical editor workbench golden path lane for promoting one product-facing IMUI route above the supporting proof demos; includes `WORKSTREAM.json`)
+- `docs/workstreams/imui-demo-metrics-debug-devtools-v1/` — first n/a, latest n/a, 7 markdown docs (closed DevTools/diagnostics owner lane for the Fret equivalent of Dear ImGui `ShowDemoWindow` / Metrics / Debug, keeping product diagnostics out of `fret-imui`)
+- `docs/workstreams/imui-plot-adapter-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow proof-led follow-on for optional declarative `fret-plot/imui` adapters without restoring retained plot facade or widening `fret-imui` / `fret-ui-kit::imui`)
+- `docs/workstreams/imui-style-theme-editor-proof-v1/` — first n/a, latest n/a, 6 markdown docs (closed narrow proof for Dear ImGui-style editor theme preset switching in `fret-ui-editor` without moving `GetStyle` / `PushStyleVar` / global style-stack policy into runtime or `fret-ui-kit::imui`)
 - `docs/workstreams/imui-interaction-inspector-v1/` — first n/a, latest n/a, 5 markdown docs (closed product-facing follow-on that added a live response inspector to `imui_interaction_showcase_demo` without replacing the proof-first `imui_response_signals_demo` or widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-interaction-inspector-diag-gate-v1/` — first n/a, latest n/a, 5 markdown docs (closed diagnostics follow-on that promotes the showcase inspector response edge into a `fretboard diag` suite without widening public IMUI/runtime contracts)
 - `docs/workstreams/imui-active-trigger-behavior-kernel-v1/` — first n/a, latest n/a, 7 markdown docs (closed fearless private active-trigger behavior follow-on for deleting switch/menu/tab trigger response and lifecycle duplication without widening `fret-imui` or runtime contracts by default)
@@ -2281,6 +2293,7 @@ Rule:
 - `docs/workstreams/selector-query-authoring-density-fearless-refactor-v1/` — first 2026-03-20, latest 2026-03-20, 6 markdown docs
 - `docs/workstreams/select-combobox-deep-redesign-v1/` — first 2026-03-02, latest 2026-03-03, 3 markdown docs
 - `docs/workstreams/shadcn-component-surface-audit-v1/` — first 2026-03-02, latest 2026-03-03, 3 markdown docs
+- `docs/workstreams/shadcn-component-parity-matrix-v1/` — first 2026-05-25, latest 2026-05-25, 5 markdown docs (active matrix lane for tracking how far shadcn component parity can be proven by self-rendered harness evidence; includes `WORKSTREAM.json`)
 - `docs/workstreams/shadcn-extras/` — first 2026-02-09, latest 2026-02-16, 3 markdown docs
 - `docs/workstreams/shadcn-motion-parity-audit-v1/` — first 2026-03-03, latest 2026-03-04, 5 markdown docs
 - `docs/workstreams/shadcn-parity-discovery-harness-v1/` — first 2026-05-09, latest 2026-05-09, 4 markdown docs (active discovery lane for mapping upstream shadcn facts to Fret evidence and classifying parity drift before manual screenshot reports)

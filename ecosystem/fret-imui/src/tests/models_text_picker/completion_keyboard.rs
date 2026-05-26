@@ -94,7 +94,7 @@ fn input_text_completion_picker_keyboard_navigation_commits_active_candidate() {
         bounds,
         "imui-input-text-completion-picker-keyboard.option.1",
     ));
-    assert!(!picker_option_selected(
+    assert!(!picker_option_active(
         &mut ui,
         &mut app,
         &mut services,
@@ -121,7 +121,20 @@ fn input_text_completion_picker_keyboard_navigation_commits_active_candidate() {
         "imui-input-text-completion-picker-keyboard",
         |cx| render(cx, &changed_out, &picked_index_out, &picked_out),
     );
-    assert!(picker_option_selected(
+    app.advance_frame();
+    let changed_out = changed.clone();
+    let picked_index_out = picked_index.clone();
+    let picked_out = picked.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-input-text-completion-picker-keyboard",
+        |cx| render(cx, &changed_out, &picked_index_out, &picked_out),
+    );
+    assert!(picker_option_active(
         &mut ui,
         &mut app,
         &mut services,
@@ -149,7 +162,20 @@ fn input_text_completion_picker_keyboard_navigation_commits_active_candidate() {
         "imui-input-text-completion-picker-keyboard",
         |cx| render(cx, &changed_out, &picked_index_out, &picked_out),
     );
-    assert!(picker_option_selected(
+    app.advance_frame();
+    let changed_out = changed.clone();
+    let picked_index_out = picked_index.clone();
+    let picked_out = picked.clone();
+    let _root = run_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "imui-input-text-completion-picker-keyboard",
+        |cx| render(cx, &changed_out, &picked_index_out, &picked_out),
+    );
+    assert!(picker_option_active(
         &mut ui,
         &mut app,
         &mut services,

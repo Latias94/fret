@@ -71,7 +71,7 @@ Status: complete
   - Drawer top/bottom max-height follows upstream `max-h-[80vh]` without an extra edge-gap clamp.
   - `cargo check -p fret-ui-shadcn --lib -j 1` passes under low-memory local settings.
   - `mechanism_harness_recipe_layout_cases_match_oracles` now includes and passes
-    `responsive-drawer-bottom-sheet-uses-eighty-vh` and
+    `responsive-drawer-bottom-sheet-caps-visible-lane` and
     `popover-command-shell-wraps-hover-region-max-height`.
 - Fresh post-fix UI Gallery desktop/mobile diag captures and regenerated combobox reports now pass.
   The mobile fixture includes an effective-viewport guard so a native resize/request mismatch is

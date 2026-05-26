@@ -79,7 +79,7 @@ oracle instead of scattering them across bespoke tests.
 The shadcn recipe fixture suite now includes two shell sizing cases, both run by
 `mechanism_harness_recipe_layout_cases_match_oracles`:
 
-- `responsive-drawer-bottom-sheet-uses-eighty-vh`
+- `responsive-drawer-bottom-sheet-caps-visible-lane`
 - `popover-command-shell-wraps-hover-region-max-height`
 
 These cases came from the shadcn parity discovery harness:

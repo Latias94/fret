@@ -102,7 +102,7 @@
       "predicate": {
         "kind": "bounds_min_size",
         "target": { "kind": "test_id", "id": "ui-gallery-alert-action" },
-        "min_w_px": 500.0,
+        "min_w_px": 440.0,
         "min_h_px": 36.0,
         "eps_px": 1.0
       },

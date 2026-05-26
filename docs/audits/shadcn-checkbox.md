@@ -9,15 +9,15 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret's shadcn-aligned `Checkbox` against the upstream shadcn/ui v4 docs and the
-base implementation in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `Checkbox` against the current upstream shadcn/ui v4 docs
+and new-york-v4 registry implementation in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/checkbox.mdx`
-- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/checkbox.tsx`
-- Example compositions: `repo-ref/ui/apps/v4/examples/base/checkbox-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-basic.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-description.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-disabled.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-group.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-invalid.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-table.tsx`, `repo-ref/ui/apps/v4/examples/base/checkbox-rtl.tsx`
-- Underlying primitive: Base UI `@base-ui/react/checkbox`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/checkbox.mdx`
+- Component implementation: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/checkbox.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/checkbox-demo.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/checkbox-with-text.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/checkbox-disabled.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-checkbox.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/form-rhf-checkbox.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/form-tanstack-checkbox.tsx`
+- Underlying primitive: Radix `@radix-ui/react-checkbox`
 
 ## Fret implementation
 
@@ -49,14 +49,16 @@ base implementation in `repo-ref/ui`.
 ### Gallery / docs parity
 
 - Pass: `Demo` now mirrors the upstream `checkbox-demo.tsx` teaching surface by keeping the four-row `FieldGroup` composite preview (`Label`, description, disabled, and wrapped title/content) instead of collapsing the first section into a single row.
-- Pass: the gallery now mirrors the upstream docs path first: `Demo`, `Usage`, `Checked State`, `Invalid State`, `Basic`, `Description`, `Disabled`, `Group`, `Table`, `RTL`, and `API Reference`.
+- Pass: the gallery starts with the current upstream docs path (`Demo`, `Usage`) before keeping
+  checked/invalid state, registry-shaped composition, table, RTL, and API reference follow-ups
+  explicit.
 - Pass: `Checked State` now teaches both the model-backed path and the narrower
   `Checkbox::from_checked(...)` + `.action(...)` snapshot/action path directly in the copyable
   snippet instead of burying that guidance only in prose.
-- Pass: `Description` now matches the upstream row order (`Checkbox` first, `FieldContent` second)
-  instead of teaching a reversed layout.
-- Pass: `Group` now restores the upstream `FieldSet` / `FieldLegend` / `FieldDescription` framing
-  before the checkbox list instead of collapsing the example into an unrelated list layout.
+- Pass: `Description` keeps the registry row order (`Checkbox` first, `FieldContent` second) instead
+  of teaching a reversed layout.
+- Pass: `Group` keeps the current field-registry `FieldSet` / `FieldLegend` / `FieldDescription`
+  framing before the checkbox list instead of collapsing the example into an unrelated list layout.
 - Pass: `Table` now teaches a derived select-all checkbox with mixed-state behavior on the same
   action-first snapshot path, which is the important source-aligned authoring story for checkbox
   collections.

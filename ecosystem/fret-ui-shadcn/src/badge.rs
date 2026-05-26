@@ -1377,14 +1377,14 @@ mod tests {
         match &el.kind {
             ElementKind::Text(props) if props.text.as_ref() == needle => {
                 return Some(BadgeVisualState {
-                    label_color: props.color,
+                    label_color: props.color.or(el.inherited_foreground),
                     label_underlined: false,
                     ..Default::default()
                 });
             }
             ElementKind::StyledText(props) if props.rich.text.as_ref() == needle => {
                 return Some(BadgeVisualState {
-                    label_color: props.color,
+                    label_color: props.color.or(el.inherited_foreground),
                     label_underlined: props
                         .rich
                         .spans
@@ -1395,7 +1395,7 @@ mod tests {
             }
             ElementKind::SelectableText(props) if props.rich.text.as_ref() == needle => {
                 return Some(BadgeVisualState {
-                    label_color: props.color,
+                    label_color: props.color.or(el.inherited_foreground),
                     label_underlined: props
                         .rich
                         .spans

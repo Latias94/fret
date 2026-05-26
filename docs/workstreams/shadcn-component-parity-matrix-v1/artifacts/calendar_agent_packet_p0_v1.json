@@ -1,0 +1,287 @@
+{
+  "schema_version": 1,
+  "component": "calendar",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual calendar harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/calendar.rs + ecosystem/fret-ui-shadcn/src/calendar_range.rs + ecosystem/fret-ui-shadcn/src/calendar_multiple.rs",
+  "validation_gates": [
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout web_vs_fret_layout_calendar_variant_geometries_match_web_fixtures --status-level fail",
+      "status": "pass",
+      "scope": "Calendar variant geometry for single, multiple, range, custom-size, and responsive fixtures."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout calendar_04_range --status-level fail",
+      "status": "pass",
+      "scope": "Calendar range start/middle/end day background geometry in the layout suite."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_calendar calendar_03 --status-level fail",
+      "status": "pass",
+      "scope": "Calendar multiple-selection geometry, hover, and text-centering gates."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_calendar calendar_04 --status-level fail",
+      "status": "pass",
+      "scope": "Calendar range-selection hover, range background, desktop, and constrained viewport gates."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome calendar_04 --status-level fail",
+      "status": "pass",
+      "scope": "Calendar range focus-visible chrome in desktop and constrained viewport variants."
+    },
+    {
+      "command": "cargo fmt --check -p fret-ui-shadcn",
+      "status": "pass",
+      "scope": "Rust formatting for the touched shadcn recipe crate."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.calendar.multiple.desktop",
+      "snapshot": "calendar-03",
+      "theme": "light",
+      "mode": "static",
+      "variant": "desktop",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    },
+    {
+      "id": "upstream.calendar.range.desktop",
+      "snapshot": "calendar-04",
+      "theme": "light",
+      "mode": "static",
+      "variant": "desktop",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    },
+    {
+      "id": "upstream.calendar.range.mobile",
+      "snapshot": "calendar-04.vp375x320",
+      "theme": "light",
+      "mode": "static",
+      "variant": "vp375x320",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 320
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "calendar-03",
+        "theme": "light",
+        "mode": "static",
+        "variant": "desktop",
+        "context_id": "upstream.calendar.multiple.desktop",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-03.json"
+      },
+      {
+        "snapshot": "calendar-04",
+        "theme": "light",
+        "mode": "static",
+        "variant": "desktop",
+        "context_id": "upstream.calendar.range.desktop",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-04.json"
+      },
+      {
+        "snapshot": "calendar-04.vp375x320",
+        "theme": "light",
+        "mode": "static",
+        "variant": "vp375x320",
+        "context_id": "upstream.calendar.range.mobile",
+        "viewport": {
+          "width_px": 375,
+          "height_px": 320
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/calendar-04.vp375x320.json"
+      }
+    ],
+    "fret_layout_sidecar": [],
+    "fret_bundle_schema2": []
+  },
+  "summary": {
+    "part_count": 3,
+    "status_counts": {
+      "pass_known": 3,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 3,
+      "gallery_composition": 0,
+      "mechanism_core": 0,
+      "diagnostics_surface": 1,
+      "upstream_reference": 3,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 3,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 3,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 3,
+      "app_demo": 0,
+      "upstream": 3,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 3,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 3,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 3
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "component_fixture": 3,
+      "diag_script": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 0,
+    "bundle_schema2_count": 0,
+    "layout_test_id_count": 3,
+    "bundle_semantics_test_id_count": 3,
+    "measured_test_id_count": 3,
+    "upstream_dom_snapshot_count": 3,
+    "upstream_dom_target_count": 3,
+    "upstream_context_count": 3,
+    "upstream_dom_context_count": 3,
+    "upstream_live_fact_count": 6,
+    "fret_live_fact_count": 9,
+    "upstream_semantics_fact_count": 3,
+    "upstream_interaction_fact_count": 2,
+    "fret_semantics_fact_count": 9,
+    "fret_interaction_fact_count": 3,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_label_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "goldens/shadcn-web/v4/new-york-v4/calendar-03.json + goldens/shadcn-web/v4/new-york-v4/calendar-04.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/calendar_range.rs + ecosystem/fret-ui-shadcn/src/calendar_multiple.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/calendar.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_calendar.rs",
+    "part_count": 3,
+    "upstream_dom_target_count": 3,
+    "fret_test_id_count": 3,
+    "upstream_semantics_fact_count": 3,
+    "upstream_interaction_fact_count": 2,
+    "fret_semantics_fact_count": 9,
+    "fret_interaction_fact_count": 3,
+    "fret_text_paint_fact_count": 0,
+    "parts": [
+      {
+        "part_id": "calendar_range_day_grid_spacing",
+        "upstream_dom_target_count": 2,
+        "fret_test_id_count": 1,
+        "upstream_semantics_fact_count": 1,
+        "upstream_interaction_fact_count": 1,
+        "fret_semantics_fact_count": 4,
+        "fret_interaction_fact_count": 2
+      },
+      {
+        "part_id": "calendar_multiple_day_grid_spacing",
+        "upstream_dom_target_count": 1,
+        "fret_test_id_count": 1,
+        "upstream_semantics_fact_count": 1,
+        "upstream_interaction_fact_count": 1,
+        "fret_semantics_fact_count": 3,
+        "fret_interaction_fact_count": 1
+      },
+      {
+        "part_id": "calendar_range_focus_and_paint",
+        "upstream_dom_target_count": 2,
+        "fret_test_id_count": 1,
+        "upstream_semantics_fact_count": 1,
+        "upstream_interaction_fact_count": 0,
+        "fret_semantics_fact_count": 2,
+        "fret_interaction_fact_count": 0
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Lock the Calendar multiple and range day-grid spacing slices after fixing the top row gap model.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "reports": [
+      {
+        "id": "calendar.multiple_and_range.day_grid_spacing",
+        "component": "calendar",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/calendar_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

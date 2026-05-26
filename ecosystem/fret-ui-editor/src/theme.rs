@@ -38,12 +38,33 @@ pub enum EditorThemePresetV1 {
     ImguiLikeDense,
 }
 
+/// Stable editor theme preset order for editor tools and diagnostics.
+pub const EDITOR_THEME_PRESETS_V1: [EditorThemePresetV1; 2] = [
+    EditorThemePresetV1::Default,
+    EditorThemePresetV1::ImguiLikeDense,
+];
+
 impl EditorThemePresetV1 {
     pub const fn key(self) -> &'static str {
         match self {
             Self::Default => "default",
             Self::ImguiLikeDense => "imgui_like_dense",
         }
+    }
+
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::Default => "Default",
+            Self::ImguiLikeDense => "ImGui-like dense",
+        }
+    }
+
+    pub fn from_key(key: &str) -> Option<Self> {
+        let normalized = key.trim().to_ascii_lowercase().replace('-', "_");
+        EDITOR_THEME_PRESETS_V1
+            .iter()
+            .copied()
+            .find(|preset| preset.key() == normalized.as_str())
     }
 }
 
@@ -70,6 +91,13 @@ pub fn install_editor_theme_preset_v1<H: UiHost>(app: &mut H, preset: EditorThem
     app.with_global_mut_untracked(EditorThemeInstallConfigV1::default, |stored, _app| {
         stored.preset = preset;
     });
+}
+
+/// Returns the last installed editor theme preset, if app code opted into install/replay tracking.
+pub fn installed_editor_theme_preset_v1<H: UiHost>(app: &H) -> Option<EditorThemePresetV1> {
+    app.global::<EditorThemeInstallConfigV1>()
+        .copied()
+        .map(|stored| stored.preset)
 }
 
 /// Reapply the last installed editor preset after a host-level theme reset.
@@ -234,6 +262,21 @@ fn editor_theme_patch_v1() -> ThemeConfig {
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_BORDER, "#c76f77");
     color(&mut cfg, EditorTokenKeys::NUMERIC_ERROR_BG, "#2a171c");
 
+    // Numeric scrub defaults. These are included in the base patch so switching back from a dense
+    // preset clears dense-only scrub overrides instead of leaving stale token values behind.
+    metric(&mut cfg, EditorTokenKeys::NUMERIC_SCRUB_SPEED, 0.02);
+    metric(
+        &mut cfg,
+        EditorTokenKeys::NUMERIC_SCRUB_SLOW_MULTIPLIER,
+        0.1,
+    );
+    metric(
+        &mut cfg,
+        EditorTokenKeys::NUMERIC_SCRUB_FAST_MULTIPLIER,
+        10.0,
+    );
+    metric(&mut cfg, EditorTokenKeys::NUMERIC_SCRUB_DRAG_THRESHOLD, 4.0);
+
     // Slider metrics and colors (normalized floats like roughness/metallic).
     metric(&mut cfg, EditorTokenKeys::SLIDER_TRACK_HEIGHT, 4.0);
     metric(&mut cfg, EditorTokenKeys::SLIDER_THUMB_DIAMETER, 12.0);
@@ -387,12 +430,43 @@ mod tests {
     use std::any::TypeId;
 
     use super::{
-        EditorThemePresetV1, apply_editor_theme_preset_v1, install_editor_theme_preset_v1,
+        EDITOR_THEME_PRESETS_V1, EditorThemePresetV1, apply_editor_theme_preset_v1,
+        install_editor_theme_preset_v1, installed_editor_theme_preset_v1,
         reapply_installed_editor_theme_preset_on_window_metrics_change,
         reapply_installed_editor_theme_preset_v1,
         sync_host_theme_then_reapply_installed_editor_theme_preset_on_window_metrics_change,
     };
     use crate::primitives::EditorTokenKeys;
+
+    #[test]
+    fn editor_theme_preset_metadata_is_stable_for_tools() {
+        assert_eq!(
+            EDITOR_THEME_PRESETS_V1,
+            [
+                EditorThemePresetV1::Default,
+                EditorThemePresetV1::ImguiLikeDense
+            ]
+        );
+        assert_eq!(EditorThemePresetV1::Default.key(), "default");
+        assert_eq!(EditorThemePresetV1::Default.label(), "Default");
+        assert_eq!(
+            EditorThemePresetV1::ImguiLikeDense.key(),
+            "imgui_like_dense"
+        );
+        assert_eq!(
+            EditorThemePresetV1::ImguiLikeDense.label(),
+            "ImGui-like dense"
+        );
+        assert_eq!(
+            EditorThemePresetV1::from_key("imgui_like_dense"),
+            Some(EditorThemePresetV1::ImguiLikeDense)
+        );
+        assert_eq!(
+            EditorThemePresetV1::from_key("IMGUI-LIKE-DENSE"),
+            Some(EditorThemePresetV1::ImguiLikeDense)
+        );
+        assert_eq!(EditorThemePresetV1::from_key("unknown"), None);
+    }
 
     #[test]
     fn default_preset_keeps_existing_editor_patch_baseline() {
@@ -557,6 +631,22 @@ mod tests {
         assert_eq!(
             theme.color_by_key(EditorTokenKeys::CONTROL_INVALID_BORDER),
             Some(Color::from_srgb_hex_rgb(0xc7_6f_77))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_SPEED),
+            Some(Px(0.02))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_SLOW_MULTIPLIER),
+            Some(Px(0.1))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_FAST_MULTIPLIER),
+            Some(Px(10.0))
+        );
+        assert_eq!(
+            theme.metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_DRAG_THRESHOLD),
+            Some(Px(4.0))
         );
     }
 
@@ -739,10 +829,38 @@ mod tests {
     }
 
     #[test]
+    fn default_preset_resets_dense_numeric_scrub_tokens() {
+        let mut app = App::new();
+        apply_editor_theme_preset_v1(&mut app, EditorThemePresetV1::ImguiLikeDense);
+        assert_eq!(
+            Theme::global(&app).metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_SPEED),
+            Some(Px(0.035))
+        );
+        assert_eq!(
+            Theme::global(&app).metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_DRAG_THRESHOLD),
+            Some(Px(2.0))
+        );
+
+        apply_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
+        assert_eq!(
+            Theme::global(&app).metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_SPEED),
+            Some(Px(0.02))
+        );
+        assert_eq!(
+            Theme::global(&app).metric_by_key(EditorTokenKeys::NUMERIC_SCRUB_DRAG_THRESHOLD),
+            Some(Px(4.0))
+        );
+    }
+
+    #[test]
     fn installed_preset_can_be_reapplied_after_base_theme_reset() {
         let mut app = App::new();
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Slate, ShadcnColorScheme::Dark);
         install_editor_theme_preset_v1(&mut app, EditorThemePresetV1::Default);
+        assert_eq!(
+            installed_editor_theme_preset_v1(&app),
+            Some(EditorThemePresetV1::Default)
+        );
 
         let expected_field_bg = Some(Color::from_srgb_hex_rgb(0x14_1b_24));
         let expected_panel_bg = Some(Color::from_srgb_hex_rgb(0x0f_15_1d));

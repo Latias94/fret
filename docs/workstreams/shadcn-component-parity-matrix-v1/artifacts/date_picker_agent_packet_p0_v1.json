@@ -1,0 +1,430 @@
+{
+  "schema_version": 1,
+  "component": "date-picker",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual date picker docs-demo harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/date_picker.rs + ecosystem/fret-ui-shadcn/src/date_range_picker.rs + ecosystem/fret-ui-shadcn/src/date_picker_with_presets.rs + apps/fret-ui-gallery/src/ui/pages/date_picker.rs + tools/diag-scripts/ui-gallery/date-picker/*.json",
+  "validation_gates": [
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib date_picker_trigger_width_is_intrinsic_unless_caller_overrides_it --status-level fail",
+      "status": "pass",
+      "scope": "DatePicker trigger width ownership stays caller-owned unless the caller explicitly overrides it."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib date_range_picker_trigger_width_is_intrinsic_unless_caller_overrides_it date_picker_with_presets_trigger_width_is_intrinsic_unless_caller_overrides_it --status-level fail",
+      "status": "pass",
+      "scope": "DateRangePicker and DatePickerWithPresets keep the same intrinsic trigger-width ownership rule as DatePicker."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test date_picker_close_on_select --status-level fail",
+      "status": "pass",
+      "scope": "Date picker, range picker, and presets picker default selection keeps the popover open, while explicit close_on_select paths dismiss at the source-aligned point."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib date_range_picker_control_id_uses_registry_labelled_by_and_described_by_elements date_range_picker_test_id_prefix_stamps_trigger_content_and_calendar date_picker_with_presets_control_id_uses_registry_labelled_by_and_described_by_elements date_picker_with_presets_test_id_prefix_stamps_trigger_content_select_and_calendar --status-level fail",
+      "status": "pass",
+      "scope": "Date picker family control-id and test-id-prefix helpers stamp trigger, content, calendar, and nested select anchors for semantics and diagnostics."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --lib gallery_date_picker_core_examples_keep_upstream_aligned_targets_present --status-level fail",
+      "status": "pass",
+      "scope": "Date Picker gallery keeps the core upstream-aligned docs-path examples and stable target ids present."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_page_uses_typed_doc_sections_for_app_facing_snippets date_picker_input_snippet_keeps_upstream_ghost_icon_xs_trigger_surface date_picker_time_snippet_explicitly_opts_into_close_on_select --status-level fail",
+      "status": "pass",
+      "scope": "Date Picker gallery docs surface keeps typed snippets, the upstream ghost icon-xs input trigger, and explicit dismiss-on-select teaching where upstream does so."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\date-picker\\ui-gallery-date-picker-input-open-calendar.json --dir target\\fret-diag-date-picker-input-open-calendar-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Date Picker input example opens its calendar popover and captures schema2 bundle evidence for trigger/content/calendar test ids."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\date-picker\\ui-gallery-date-picker-required-invalid-semantics.json --dir target\\fret-diag-date-picker-required-invalid-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Date Picker required and invalid semantics live on the trigger button, label click focuses the trigger, and the invalid popover exposes its calendar content."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\date-picker\\ui-gallery-date-picker-dropdowns-mobile-drawer.json --dir target\\fret-diag-date-picker-mobile-drawer-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Date Picker dropdowns example switches to Drawer content in the mobile presentation branch and closes through its Done action."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.date_picker.demo.light.vp1440x900",
+      "snapshot": "date-picker-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.date_picker.demo.open.light.vp1440x900",
+      "snapshot": "date-picker-demo.open",
+      "theme": "light",
+      "mode": "open",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.date_picker.with_range.open.light.vp1440x900",
+      "snapshot": "date-picker-with-range.open",
+      "theme": "light",
+      "mode": "open",
+      "variant": "range",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.date_picker.with_presets.open.mobile.vp375x240",
+      "snapshot": "date-picker-with-presets.vp375x240.open",
+      "theme": "light",
+      "mode": "open",
+      "variant": "presets-mobile",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 240
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "date-picker-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.date_picker.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-demo.json"
+      },
+      {
+        "snapshot": "date-picker-demo.open",
+        "theme": "light",
+        "mode": "open",
+        "variant": "docs-demo",
+        "context_id": "upstream.date_picker.demo.open.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-demo.open.json"
+      },
+      {
+        "snapshot": "date-picker-with-range.open",
+        "theme": "light",
+        "mode": "open",
+        "variant": "range",
+        "context_id": "upstream.date_picker.with_range.open.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json"
+      },
+      {
+        "snapshot": "date-picker-with-presets.vp375x240.open",
+        "theme": "light",
+        "mode": "open",
+        "variant": "presets-mobile",
+        "context_id": "upstream.date_picker.with_presets.open.mobile.vp375x240",
+        "viewport": {
+          "width_px": 375,
+          "height_px": 240
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/date-picker-with-presets.vp375x240.open.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-input-open-calendar.json",
+        "sidecar_path": "target/fret-diag-date-picker-input-open-calendar-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json",
+        "sidecar_path": "target/fret-diag-date-picker-required-invalid-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-dropdowns-mobile-drawer.json",
+        "sidecar_path": "target/fret-diag-date-picker-mobile-drawer-matrix"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-input-open-calendar.json",
+        "bundle_path": "target/fret-diag-date-picker-input-open-calendar-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json",
+        "bundle_path": "target/fret-diag-date-picker-required-invalid-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-dropdowns-mobile-drawer.json",
+        "bundle_path": "target/fret-diag-date-picker-mobile-drawer-matrix"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 9,
+    "status_counts": {
+      "pass_known": 9,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 4,
+      "gallery_composition": 2,
+      "mechanism_core": 0,
+      "diagnostics_surface": 2,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 2,
+      "mechanism": 0,
+      "policy": 1,
+      "recipe": 4,
+      "app_demo": 2,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 9
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 3,
+      "component_fixture": 3,
+      "unit_test": 3,
+      "none": 0
+    },
+    "layout_sidecar_count": 3,
+    "bundle_schema2_count": 3,
+    "layout_test_id_count": 12,
+    "bundle_semantics_test_id_count": 8,
+    "measured_test_id_count": 12,
+    "upstream_dom_snapshot_count": 4,
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 4,
+    "upstream_dom_context_count": 4,
+    "upstream_live_fact_count": 6,
+    "fret_live_fact_count": 18,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 2,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 6,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/base/date-picker.mdx + repo-ref/ui/apps/v4/examples/base/date-picker-*.tsx + goldens/shadcn-web/v4/new-york-v4/date-picker-*.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/date_picker*.rs + apps/fret-ui-gallery/src/ui/pages/date_picker.rs + tools/diag-scripts/ui-gallery/date-picker/*.json",
+    "part_count": 9,
+    "upstream_dom_target_count": 4,
+    "fret_test_id_count": 12,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 2,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 6,
+    "parts": [
+      {
+        "part_id": "date_picker_upstream_source_and_goldens",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "docs/audits/shadcn-date-picker.md",
+          "goldens/shadcn-web/v4/new-york-v4/date-picker-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/date-picker-demo.open.json",
+          "goldens/shadcn-web/v4/new-york-v4/date-picker-with-range.open.json",
+          "goldens/shadcn-web/v4/new-york-v4/date-picker-with-presets.vp375x240.open.json"
+        ],
+        "facts": [
+          "Upstream Date Picker is a Popover + Calendar composition rather than a generic children API.",
+          "Upstream examples keep trigger width at the call site while the recipe owns trigger chrome and PopoverContent w-auto p-0.",
+          "Local web goldens cover static, open, range, presets, select-open, and mobile viewport contexts."
+        ]
+      },
+      {
+        "part_id": "date_picker_trigger_width_ownership",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/date_picker.rs",
+          "ecosystem/fret-ui-shadcn/src/date_range_picker.rs",
+          "ecosystem/fret-ui-shadcn/src/date_picker_with_presets.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib date_picker_trigger_width_is_intrinsic_unless_caller_overrides_it --status-level fail",
+          "cargo nextest run -p fret-ui-shadcn --lib date_range_picker_trigger_width_is_intrinsic_unless_caller_overrides_it date_picker_with_presets_trigger_width_is_intrinsic_unless_caller_overrides_it --status-level fail"
+        ],
+        "facts": [
+          "DatePicker trigger width is intrinsic unless the caller refines layout.",
+          "DateRangePicker and DatePickerWithPresets follow the same width ownership rule.",
+          "The recipe still owns outline trigger chrome, icon, placeholder muted foreground, and PopoverContent w-auto p-0."
+        ]
+      },
+      {
+        "part_id": "date_picker_open_close_policy",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/date_picker_close_on_select.rs",
+          "cargo nextest run -p fret-ui-shadcn --test date_picker_close_on_select --status-level fail"
+        ],
+        "facts": [
+          "Default single-date selection keeps the popover open.",
+          "Range selection only dismisses with close_on_select after a completed range.",
+          "DatePickerWithPresets keeps the default upstream-open behavior and supports explicit dismiss-on-select."
+        ]
+      },
+      {
+        "part_id": "date_picker_form_semantics",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "policy",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json",
+          "ecosystem/fret-ui-shadcn/src/date_picker.rs",
+          "ecosystem/fret-ui-shadcn/src/form_field.rs"
+        ],
+        "facts": [
+          "Required semantics are attached to the DatePicker trigger button.",
+          "Invalid semantics and destructive trigger chrome are attached to the trigger rather than only to field copy.",
+          "Label click focuses the trigger through the control-id registry."
+        ]
+      },
+      {
+        "part_id": "date_picker_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/date_picker.rs",
+          "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+          "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_page_uses_typed_doc_sections_for_app_facing_snippets date_picker_input_snippet_keeps_upstream_ghost_icon_xs_trigger_surface date_picker_time_snippet_explicitly_opts_into_close_on_select --status-level fail"
+        ],
+        "facts": [
+          "Gallery docs order follows the upstream Date Picker docs path before Fret-specific follow-ups.",
+          "Usage stays on the composed Popover + Calendar teaching lane.",
+          "The Input example keeps the upstream ghost icon-xs trigger surface."
+        ]
+      },
+      {
+        "part_id": "date_picker_input_open_diag",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-input-open-calendar.json"
+        ],
+        "facts": [
+          "The Input example trigger opens the calendar popover.",
+          "The diagnostics script captures a schema2 bundle after the calendar is visible.",
+          "Stable trigger and calendar test ids are present for automation."
+        ]
+      },
+      {
+        "part_id": "date_picker_mobile_drawer_diag",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-dropdowns-mobile-drawer.json"
+        ],
+        "facts": [
+          "The Dropdowns gallery example switches to Drawer content in a mobile-sized viewport.",
+          "The popover content is absent while the drawer branch is active.",
+          "The Done action closes the drawer."
+        ]
+      },
+      {
+        "part_id": "date_picker_web_golden_layout_and_overlay",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/fixtures/layout_date_picker_trigger_cases_v1.json",
+          "ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_date_picker_cases_v1.json",
+          "ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_date_picker_cases_v1.json",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/triggers.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/date_picker/fixtures.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/date_picker/fixtures.rs"
+        ],
+        "facts": [
+          "Existing fixture-driven web-vs-Fret gates cover DatePicker trigger geometry.",
+          "DatePickerWithPresets and DateRangePicker overlay placement are fixture-driven across desktop and mobile contexts.",
+          "Nested Select listbox chrome inside DatePickerWithPresets is covered by overlay chrome fixtures."
+        ]
+      },
+      {
+        "part_id": "date_picker_required_invalid_trigger_semantics",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/date_picker.rs",
+          "ecosystem/fret-ui-shadcn/src/date_range_picker.rs",
+          "ecosystem/fret-ui-shadcn/src/date_picker_with_presets.rs",
+          "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json"
+        ],
+        "facts": [
+          "DatePicker::required(true) and aria_invalid(true) decorate the trigger semantics.",
+          "Adjacent DateRangePicker and DatePickerWithPresets expose matching required/invalid trigger semantics.",
+          "The invalid popover exposes its calendar content through stable test ids."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Lock the Date Picker docs-demo family slice with source refs, upstream goldens, Fret layout/overlay gates, trigger semantics, open behavior, responsive drawer diagnostics, and gallery docs-surface evidence.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "date-picker.docs-family.desktop-mobile",
+        "component": "date-picker",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/date_picker_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

@@ -37,7 +37,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-input-group" }
+        "target": { "kind": "test_id", "id": "ui-gallery-input-group" }
       },
       "timeout_frames": 600
     },
