@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Menu Item Interaction Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI menu-item interaction behavior moved into a focused private owner without
+changing menu item facade entry points, popup menu keyboard navigation, menubar horizontal-arrow
+switching, command dispatch metadata, or row visual structure.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` now owns
+  `MenuItemInteractionParts`, `MenuItemInteraction`, enabled/action gating, pressable props,
+  activation handlers, item-local shortcuts, popup roving-focus keyboard movement, menubar
+  horizontal-arrow switching, command dispatch source metadata, and active-trigger response
+  population.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/element.rs` keeps the menu row panel, indicator,
+  label, shortcut/submenu glyph visual assembly, and the custom `pressable_hook` insertion point
+  used by submenu helpers.
+- `tools/gate_imui_workstream_source.py` now requires the interaction owner and rejects
+  pressable/a11y props, active-trigger installation, keyboard handlers, menubar wiring, command
+  dispatch, and response population from drifting back into `menu_controls/element.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_controls::tests --no-fail-fast`:
+  pass; 4 tests, 684 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation
+  interaction_menu_tabs::submenu_shortcuts
+  interaction_shortcuts::command_metadata::menu_item_command_uses_command_metadata_shortcut_and_gating
+  popup_hover::item_keyboard --no-fail-fast`: pass; 15 tests, 166 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Button Behavior Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI button pressable/action behavior moved into a focused private owner without

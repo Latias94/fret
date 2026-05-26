@@ -187,6 +187,14 @@ Last updated: 2026-05-26
       installation, content mounting, and focus targets. The root `popup_overlay/menu.rs` keeps
       overlay id/root-name setup, menubar policy lookup, dismiss/auto-focus handlers, and overlay
       request dispatch.
+- [x] Split IMUI menu-item interaction behavior out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls/element.rs` into a private owner module without
+      changing menu item, checkbox/radio menu item, command menu item, submenu, or menubar behavior.
+      Result: `menu_controls/interaction.rs` owns enabled/action gating, pressable props,
+      activation/shortcut handlers, popup menu roving focus, menubar horizontal-arrow switching,
+      command dispatch source metadata, and menu-item `ResponseExt` population. The element file
+      keeps row panel/indicator/shortcut/label visual assembly and the custom `pressable_hook`
+      insertion point.
 
 ## P0 - Source Baseline
 

@@ -138,6 +138,14 @@ and focus-target extraction. `popup_overlay/menu.rs` keeps begin-popup orchestra
 policy lookup, dismiss/focus hooks, and overlay request dispatch. Popup/menu/submenu public facade
 behavior remains unchanged.
 
+2026-05-26 menu-item interaction owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` now owns menu item enabled/action
+gating, pressable props, activation and shortcut handlers, popup menu roving focus, menubar
+horizontal-arrow switching, command dispatch source metadata, and `ResponseExt` population.
+`menu_controls/element.rs` keeps the row panel, checkbox/radio/submenu indicators, shortcut text,
+label text, and custom `pressable_hook` insertion point. Public menu item and command menu item
+facade APIs remain unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:
