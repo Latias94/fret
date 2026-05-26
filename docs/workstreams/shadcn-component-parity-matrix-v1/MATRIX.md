@@ -39,35 +39,35 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 35,
-    "fret_layout": 35,
-    "fret_text_paint": 15,
-    "interaction_script": 35,
+    "fret_bundle_semantics": 36,
+    "fret_layout": 36,
+    "fret_text_paint": 16,
+    "interaction_script": 36,
     "responsive_viewport": 9,
-    "source_refs": 35,
-    "upstream_dom_snapshot": 35
+    "source_refs": 36,
+    "upstream_dom_snapshot": 36
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
   "registry_component_count": 54,
   "state_depth_component_counts": {
-    "disabled": 12,
+    "disabled": 13,
     "drag": 2,
-    "focus_visible": 10,
+    "focus_visible": 11,
     "hover": 11,
-    "keyboard": 18,
+    "keyboard": 19,
     "mobile": 13,
     "open": 21,
-    "paint_token": 33,
+    "paint_token": 34,
     "pressed": 1,
-    "rtl": 15,
-    "text_metrics": 15
+    "rtl": 16,
+    "text_metrics": 16
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 19,
+    "inventory_only": 18,
     "not_in_harness": 5,
-    "regression_locked": 34
+    "regression_locked": 35
   }
 }
 ```
@@ -89,7 +89,7 @@ State-depth legend:
 | card | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | KEY, RTL, TEXT-MET, PAINT | - | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | carousel | registry | Defer | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | chart | registry | Defer | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
-| checkbox | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| checkbox | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | collapsible | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | combobox | non_registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV, RESP | OPEN, MOB | KEY, TEXT-MET, PAINT | 2 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | command | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |

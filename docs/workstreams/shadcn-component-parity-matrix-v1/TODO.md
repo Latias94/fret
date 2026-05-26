@@ -93,3 +93,7 @@ date: 2026-05-26
       covering root chrome, caller-owned width, source-aligned header grid/action slot placement,
       footer width budget, rich title/description children lanes, action-state diagnostics, RTL
       form controls, and text/paint follow-ups.
+- [x] SCPM-360: Promote Checkbox from inventory-only to a regression-locked docs-path harness seed
+      covering leaf-control chrome, required/invalid ownership, disabled action-state, label
+      forwarding, indeterminate mixed state, focus-visible ring, RTL field composition, and
+      text/paint follow-ups.

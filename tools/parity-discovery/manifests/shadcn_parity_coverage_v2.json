@@ -1444,6 +1444,62 @@
         "tools/diag-scripts/suites/ui-gallery-card-demo-action-state/suite.json",
         "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/card_agent_packet_p0_v1.json"
       ]
+    },
+    {
+      "rank": 40,
+      "priority": "P1",
+      "id": "checkbox.docs-path.desktop",
+      "component": "checkbox",
+      "state": "docs path leaf control chrome, required/invalid ownership, disabled action-state, label forwarding, indeterminate mixed state, focus-visible ring, RTL field composition, and text paint",
+      "trigger": "static, click, focus, space keyboard, disabled, required, invalid, mixed-state, rtl, screenshot, text paint",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "Checkbox had an existing audit, current main-worktree repo-ref source refs, checkbox-demo/with-text/disabled/focus web goldens, recipe semantics tests, web-vs-Fret layout/chrome gates, Gallery docs-surface tests, and runtime diagnostics, but no component-matrix packet. The new slice locks the owner split: Checkbox remains a 16px leaf control for checked/disabled/required/invalid/indeterminate semantics and focus-visible chrome, while Field/Gallery own labels, descriptions, fieldset framing, table composition, RTL layout, and larger click targets.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/checkbox.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/checkbox.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/checkbox-demo.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/checkbox-with-text.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/checkbox-disabled.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/field-checkbox.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/form-rhf-checkbox.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/form-tanstack-checkbox.tsx",
+        "goldens/shadcn-web/v4/new-york-v4/checkbox-demo.json",
+        "goldens/shadcn-web/v4/new-york-v4/checkbox-demo.focus.json",
+        "goldens/shadcn-web/v4/new-york-v4/checkbox-with-text.json",
+        "goldens/shadcn-web/v4/new-york-v4/checkbox-disabled.json"
+      ],
+      "fret_refs": [
+        "docs/audits/shadcn-checkbox.md",
+        "ecosystem/fret-ui-shadcn/src/checkbox.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "apps/fret-ui-gallery/src/ui/pages/checkbox.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/checkbox/demo.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/checkbox/usage.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/checkbox/description.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/checkbox/disabled.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/checkbox/group.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/checkbox/required_disabled_group.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/checkbox/table.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/checkbox/rtl.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/checkbox/label.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/checkbox/with_title.rs",
+        "apps/fret-ui-gallery/tests/checkbox_demo_surface.rs",
+        "apps/fret-ui-gallery/tests/checkbox_table_action_first_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+        "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-disabled-action-state.json",
+        "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-required-disabled-group-action-state.json",
+        "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-table-mixed-state-action.json",
+        "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-rtl-and-checked-wrap.json",
+        "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-basic-screenshots-zinc-dark.json",
+        "tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-invalid-screenshots.json",
+        "tools/diag-scripts/suites/ui-gallery-checkbox-semantics/suite.json",
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/checkbox_agent_packet_p0_v1.json"
+      ]
     }
   ]
 }
