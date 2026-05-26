@@ -72,6 +72,14 @@ core-response, id, enabled, clicked, changed, rect, hover, press, and focus muta
 `response/hover.rs` keeps core/id/enabled storage only. The public `ResponseExt` API remains
 unchanged.
 
+2026-05-26 interaction-runtime hover owner-split result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs` now owns window-scoped
+shared hover delay state, clear timers, and shared timer transitions. `hover/timers.rs` owns
+deterministic per-element hover timer token derivation, and `hover/long_press.rs` owns long-press
+timer emission. `interaction_runtime/hover.rs` keeps the exported hover query helpers, active-item
+block read, local delay state accumulation, and response readout. The public hover and long-press
+behavior remains unchanged.
+
 2026-05-26 menu-family menu owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now owns top-level
 `begin_menu_with_options(...)` menu open/close orchestration, trigger wiring, menubar active-menu

@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Interaction Runtime Hover Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI hover runtime internals moved into focused private owners without changing
+hovered-query, shared-delay, active-item block, or long-press behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs` now owns
+  window-scoped shared hover delay state, shared delay timers, clear timer handling, and shared
+  delay readout.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/timers.rs` now owns deterministic
+  per-element hover timer token derivation.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/long_press.rs` now owns long-press
+  timer emission into the existing `KEY_LONG_PRESSED` transient.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` keeps the exported hover query
+  helpers, active-item block read, local delay state accumulation, hook installation, and response
+  readout.
+- `tools/gate_imui_workstream_source.py` now requires the hover sub-owners and forbids shared
+  delay/timer/long-press bodies from drifting back into the root hover runtime file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass with pre-existing `fret-ui` warnings
+  for `unexpected_cfgs` on `unstable-retained-bridge` and `dead_code` on
+  `current_effective_opacity`.
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass; 21 tests, 160 skipped, with
+  the same pre-existing `fret-ui` warnings.
+- `cargo nextest run -p fret-imui interaction_press --no-fail-fast`: pass; 9 tests, 172 skipped,
+  with the same pre-existing `fret-ui` warnings.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests, with the same pre-existing `fret-ui` warnings.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Table Render Helper Owner-Split Evidence - 2026-05-26
 
 Claim verified: table render assembly no longer owns shared cell helpers, palette resolution, or

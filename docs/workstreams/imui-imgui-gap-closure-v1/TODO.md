@@ -45,6 +45,13 @@ Last updated: 2026-05-26
       Result: `boolean_controls/visual.rs` owns checkbox badges, radio indicators, switch state
       badges, and shared boolean label text. The root checkbox/radio file and `switch.rs` keep
       pressable behavior, shortcut handling, model updates, and response population.
+- [x] Split IMUI interaction-runtime hover internals out of
+      `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` into private owner modules
+      without changing hovered-query, shared-delay, active-item block, or long-press behavior.
+      Result: `hover/shared_delay.rs` owns window-scoped hover delay state/timers,
+      `hover/timers.rs` owns deterministic per-element hover timer tokens, and
+      `hover/long_press.rs` owns long-press timer emission. The root hover runtime file keeps the
+      exported query helpers and local response-state assembly.
 
 ## P0 - Source Baseline
 
