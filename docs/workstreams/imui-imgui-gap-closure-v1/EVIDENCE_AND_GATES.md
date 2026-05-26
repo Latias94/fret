@@ -3,6 +3,49 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Tab Family Items Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI tab-family item collection, selected-model normalization, tab-list semantics,
+trigger response aggregation, focus fallback, and selected-panel assembly moved into a focused
+private owner without changing the public tab-bar builder or response surface.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items.rs` now owns `BuiltTabItem`,
+  selected-tab normalization, tab-list semantics, trigger response aggregation, focus fallback, and
+  selected panel assembly.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` keeps the public `ImUiTabBar` builder,
+  `tab_item(...)` / `begin_tab_item(...)` collection API, and `tab_bar_element(...)` entrypoint.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger.rs` remains the per-trigger owner for
+  activation, keyboard shortcut handling, a11y, and response population.
+- `tools/gate_imui_workstream_source.py` now requires the split tab item owner and rejects tab-list
+  semantics, panel assembly, and selection normalization from drifting back into root
+  `tab_family_controls.rs` or trigger-local code.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::tabs --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  composition::layout_collections::tab_bar_helper_arranges_tabs_horizontally_and_stamps_tab_semantics
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  composition::control_geometry::menu_and_tab_trigger_state_changes_keep_outer_bounds_stable
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- An earlier parallel tab nextest attempt timed out after 244 seconds while unrelated cargo jobs in
+  other worktrees were holding package/build locks. The focused tab gates passed when rerun
+  serially after source/doc updates.
+
 ## Boolean Controls Behavior Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI checkbox/radio boolean-control behavior moved into focused private owners

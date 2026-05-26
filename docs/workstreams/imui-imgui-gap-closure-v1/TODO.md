@@ -148,6 +148,14 @@ Last updated: 2026-05-26
       selection/gap/test-id options, and `menus/tooltip.rs` owns tooltip placement, timing,
       hoverable-content, and diagnostics options. The root `menus.rs` file is now a thin
       module/re-export index.
+- [x] Split IMUI tab-family item collection, selected-model normalization, and panel/list assembly
+      out of `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` into a private owner module
+      without changing the public tab-bar builder or response surface.
+      Result: `tab_family_controls/items.rs` owns `BuiltTabItem`, selected-tab normalization,
+      tab-list semantics, trigger response aggregation, focus fallback, and selected panel
+      assembly. The root `tab_family_controls.rs` keeps the public `ImUiTabBar` builder and
+      `tab_bar_element(...)` entrypoint, while `trigger.rs` keeps per-trigger activation and
+      shortcut behavior.
 
 ## P0 - Source Baseline
 

@@ -836,6 +836,7 @@
     "ecosystem/fret-ui-kit/src/imui/table_controls/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs",
     "ecosystem/fret-ui-kit/tests/imui_table_smoke.rs",
+    "ecosystem/fret-ui-kit/src/imui/tab_family_controls/items.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
     "ecosystem/fret-imui/src/tests/floating/mod.rs",
     "ecosystem/fret-imui/src/tests/popup_hover/mod.rs",
