@@ -161,6 +161,13 @@ switching. `menu_controls/interaction.rs` keeps enabled/action gating, pressable
 dispatch, and response population. Public menu item, command menu item, submenu, and menubar
 keyboard behavior remain unchanged.
 
+2026-05-26 textarea owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs` now owns textarea props assembly,
+lifecycle/response population, select-all-on-focus command emission, submit/cancel command policy
+installation, and text-area chrome/text-style selection. `text_controls.rs` keeps input-text
+assembly plus shared helper routing. Public `textarea_model(...)` and `textarea_model_with_options`
+facade behavior remains unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

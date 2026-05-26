@@ -47,6 +47,14 @@ Last updated: 2026-05-26
       handler installation, candidate selectable rows, active-element synchronization, click commit,
       popup close, and picked-result reporting. The root file keeps input composition, assistive
       semantics, open/close policy, candidate/keyboard snapshots, and final response merge.
+- [x] Split IMUI textarea element assembly out of
+      `ecosystem/fret-ui-kit/src/imui/text_controls.rs` into a private owner module without changing
+      the textarea facade, response semantics, select-all-on-focus behavior, submit/cancel command
+      policy, chrome, or text style selection.
+      Result: `text_controls/textarea.rs` owns textarea props assembly, lifecycle/response
+      population, select-all command emission, submit/cancel policy installation, and text-area
+      chrome/text-style selection. The root file keeps input-text assembly plus shared helper
+      routing for text models.
 - [x] Split IMUI disclosure spec construction out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private owner module without
       changing the public collapsing-header/tree-node surface.

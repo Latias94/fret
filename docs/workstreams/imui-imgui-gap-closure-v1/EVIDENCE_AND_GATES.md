@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Textarea Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI textarea element assembly moved out of the root text-controls owner without
+changing textarea facade routing, response semantics, select-all-on-focus behavior, submit/cancel
+command policy, compact chrome, or text style selection.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs` now owns textarea props assembly,
+  response/lifecycle population, select-all command emission, submit/cancel policy command
+  installation, and text-area chrome/text-style selection.
+- `ecosystem/fret-ui-kit/src/imui/text_controls.rs` keeps input-text assembly, shared text-model
+  changed detection, assistive semantics, input policy command installation, and the
+  `text_controls::textarea_model_with_options` re-export used by the facade.
+- `tools/gate_imui_workstream_source.py` now requires the textarea owner and rejects
+  `TextAreaProps`, text-area chrome/style selection, and textarea policy installation from drifting
+  back into `text_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui text_controls::tests --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui models_text_area --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Menu Item Keyboard Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI menu-item keyboard/navigation behavior moved out of the menu item

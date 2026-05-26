@@ -503,6 +503,8 @@
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/candidates.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard.rs",
