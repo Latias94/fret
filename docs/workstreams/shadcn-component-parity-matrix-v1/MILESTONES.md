@@ -1026,3 +1026,30 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Textarea `DIS`, `FOCUS-VIS`, `DRAG`, `KEY`, `RTL`,
   `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M42 - Promote Toggle
+
+Status: complete on 2026-05-27.
+
+`toggle.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Toggle docs path, new-york-v4 source/examples, base/radix references,
+toggle-* upstream goldens, recipe semantics/chrome tests, web-vs-Fret toggle and control-chrome
+gates, Gallery docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Toggle docs path, new-york-v4 recipe/examples,
+  base/radix recipe and example references, and the tracked toggle upstream goldens.
+- The Toggle packet records the owner split: `fret-ui-shadcn` owns root button chrome, size
+  presets, default/outline variants, disabled behavior, hover/focus-visible paint, keyboard
+  activation, pressed-state tokens, and child foreground inheritance; callers own toolbar placement
+  and explicit label association; Gallery owns current docs ordering plus Fret/base-radix follow-ups.
+- The Gallery page now follows current upstream docs through `Demo`, `Usage`, `Outline`,
+  `With Text`, `Small`, `Large`, and `Disabled`, then appends `RTL`, `Children (Fret)`,
+  `Label Association`, and `API Reference`.
+- `toggle_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 48 `regression_locked`, 1 `harness_hardening`, 5
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Toggle `DIS`, `HOV`, `FOCUS-VIS`, `PRESS`, `KEY`, `RTL`,
+  `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.

@@ -145,3 +145,7 @@ date: 2026-05-26
       seed covering current shadcn docs/source refs, textarea-* upstream goldens, leaf control
       chrome and semantics, resize drag clamping, label association, Gallery docs ordering, base/
       radix Field follow-up, diagnostics JSON, RTL, and text/paint evidence.
+- [x] SCPM-490: Promote Toggle from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn docs/source refs, toggle-* upstream goldens, recipe chrome and
+      pressed/disabled/hover/focus-visible/keyboard behavior, Gallery docs ordering, split Small/
+      Large examples, diagnostics JSON, RTL/Children/Label follow-ups, and text/paint evidence.

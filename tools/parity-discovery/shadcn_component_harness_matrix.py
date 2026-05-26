@@ -178,6 +178,7 @@ COMPONENT_STATE_DEPTH_REQUIREMENTS = {
     "spinner": ["disabled", "rtl", "text_metrics", "paint_token"],
     "table": ["hover", "paint_token"],
     "textarea": ["disabled", "focus_visible", "drag", "keyboard", "rtl", "text_metrics", "paint_token"],
+    "toggle": ["disabled", "hover", "focus_visible", "pressed", "keyboard", "rtl", "text_metrics", "paint_token"],
     "tooltip": ["disabled", "hover", "focus_visible", "open", "keyboard", "paint_token"],
 }
 
@@ -925,6 +926,7 @@ def main() -> int:
             "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/skeleton_agent_packet_p0_v1.json",
             "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/spinner_agent_packet_p0_v1.json",
             "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/textarea_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_agent_packet_p0_v1.json",
             "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/pagination_agent_packet_p0_v1.json",
         ],
         help="Additional component agent packet report to fold into the matrix. May be repeated.",

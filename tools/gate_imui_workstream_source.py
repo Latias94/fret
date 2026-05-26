@@ -5543,7 +5543,6 @@ def main() -> None:
                 "apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/toggle/outline.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/toggle/rtl.rs",
-                "apps/fret-ui-gallery/src/ui/snippets/toggle/size.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/toggle/usage.rs",
                 "apps/fret-ui-gallery/src/ui/snippets/toggle/with_text.rs",
             ]

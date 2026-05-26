@@ -2170,6 +2170,62 @@
         "tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json",
         "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/textarea_agent_packet_p0_v1.json"
       ]
+    },
+    {
+      "rank": 53,
+      "priority": "P1",
+      "id": "toggle.docs-path.desktop",
+      "component": "toggle",
+      "state": "docs path Toggle Demo/Usage/Outline/With Text/Small/Large/Disabled, pressed on state, hover, focus-visible, keyboard activation, disabled semantics, size and variant chrome, RTL and Label/Children follow-ups, text metrics, and paint token output",
+      "trigger": "static, click pressed toggle, keyboard Space and Enter, hover, focus, disabled, rtl, screenshot, text paint",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "Toggle had current shadcn docs/new-york-v4 source refs, toggle-* upstream goldens, recipe semantics and chrome tests, web-vs-Fret toggle layout and control-chrome gates, Gallery docs-surface checks, diagnostics JSON, and focused authoring-surface gates, but no component-matrix packet. The new slice locks the owner split: the shadcn recipe owns root button chrome, size presets, variant styling, disabled behavior, pressed state colors, focus-visible ring, hover paint, and keyboard activation; callers own toolbar placement and label association; Gallery owns current docs ordering plus Fret/base-radix follow-ups.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/toggle.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/toggle.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-demo.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-outline.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-with-text.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-sm.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-lg.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-disabled.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/base/ui/toggle.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/base/examples/toggle-example.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/radix/examples/toggle-example.tsx",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-demo.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-demo.focus.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-outline.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-with-text.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-sm.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-lg.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-disabled.json"
+      ],
+      "fret_refs": [
+        "docs/audits/shadcn-toggle.md",
+        "ecosystem/fret-ui-shadcn/src/toggle.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_toggle.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "apps/fret-ui-gallery/src/ui/pages/toggle.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle/demo.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle/usage.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle/outline.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle/with_text.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle/small.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle/large.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle/disabled.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle/rtl.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle/children.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs",
+        "apps/fret-ui-gallery/tests/toggle_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+        "tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-docs-smoke.json",
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_agent_packet_p0_v1.json"
+      ]
     }
   ]
 }

@@ -88,7 +88,15 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-toggle-size-content" }
+        "target": { "kind": "test_id", "id": "ui-gallery-toggle-small-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-toggle-large-content" }
       },
       "timeout_frames": 600
     },

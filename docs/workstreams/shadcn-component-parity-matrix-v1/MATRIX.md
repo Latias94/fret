@@ -39,35 +39,35 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 48,
-    "fret_layout": 48,
-    "fret_text_paint": 28,
-    "interaction_script": 48,
+    "fret_bundle_semantics": 49,
+    "fret_layout": 49,
+    "fret_text_paint": 29,
+    "interaction_script": 49,
     "responsive_viewport": 9,
-    "source_refs": 48,
-    "upstream_dom_snapshot": 48
+    "source_refs": 49,
+    "upstream_dom_snapshot": 49
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
   "registry_component_count": 54,
   "state_depth_component_counts": {
-    "disabled": 19,
+    "disabled": 20,
     "drag": 5,
-    "focus_visible": 16,
-    "hover": 13,
-    "keyboard": 28,
+    "focus_visible": 17,
+    "hover": 14,
+    "keyboard": 29,
     "mobile": 15,
     "open": 25,
-    "paint_token": 46,
-    "pressed": 1,
-    "rtl": 28,
-    "text_metrics": 28
+    "paint_token": 47,
+    "pressed": 2,
+    "rtl": 29,
+    "text_metrics": 29
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 6,
+    "inventory_only": 5,
     "not_in_harness": 5,
-    "regression_locked": 47
+    "regression_locked": 48
   }
 }
 ```
@@ -131,7 +131,7 @@ State-depth legend:
 | tabs | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | textarea | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | toast | non_registry | Skip | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
-| toggle | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| toggle | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, HOV, FOCUS-VIS, PRESS, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | toggle-group | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | tooltip | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | DIS, HOV, FOCUS-VIS, OPEN, KEY, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | typography | non_registry | Skip | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |

@@ -9,7 +9,8 @@ pub(super) fn preview_toggle(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let usage = snippets::usage::render(cx);
     let outline = snippets::outline::render(cx);
     let with_text = snippets::with_text::render(cx);
-    let size = snippets::size::render(cx);
+    let small = snippets::small::render(cx);
+    let large = snippets::large::render(cx);
     let disabled = snippets::disabled::render(cx);
     let rtl = snippets::rtl::render(cx);
     let children = snippets::children::render(cx);
@@ -22,7 +23,8 @@ pub(super) fn preview_toggle(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         "`children([...])`, `leading_icon(...)`, and `label(...)` remain recipe-level content choices; the helper family simply keeps the common path builder-preserving.",
         "Toggle chrome, size presets, horizontal padding, and pressed-state colors remain recipe-owned because the upstream component source defines those defaults on the component itself.",
         "Surrounding toolbar layout, wrapping behavior, and label-to-control wiring remain caller-owned composition choices.",
-        "Pressed semantics, keyboard activation, and focus-visible treatment are already covered by the existing toggle semantics/chrome gates; the remaining parity work here is docs/public-surface alignment rather than a `fret-ui` mechanism gap.",
+        "Current upstream docs path: `Demo`, `Usage`, `Default`, `Outline`, `With Text`, `Small`, `Large`, and `Disabled`; this gallery collapses the duplicate `Default` preview into `Demo` while keeping `Small` and `Large` as separate sections.",
+        "Pressed semantics, keyboard activation, focus-visible treatment, size geometry, and chrome output are already covered by the existing toggle semantics/chrome/web-golden gates; the remaining parity work here is docs/public-surface alignment rather than a `fret-ui` mechanism gap.",
         "No extra generic `asChild` / `compose()` surface is needed here: `children([...])` already covers the composable content story without widening the primitive contract.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
@@ -47,10 +49,14 @@ pub(super) fn preview_toggle(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .description("Default variant with icon + text content.")
         .test_id_prefix("ui-gallery-toggle-with-text")
         .code_rust_from_file_region(snippets::with_text::SOURCE, "example");
-    let size = DocSection::build(cx, "Size", size)
-        .description("Size presets: `sm`, `default`, and `lg`.")
-        .test_id_prefix("ui-gallery-toggle-size")
-        .code_rust_from_file_region(snippets::size::SOURCE, "example");
+    let small = DocSection::build(cx, "Small", small)
+        .description("Small icon-only toggle matching the current upstream `size=\"sm\"` example.")
+        .test_id_prefix("ui-gallery-toggle-small")
+        .code_rust_from_file_region(snippets::small::SOURCE, "example");
+    let large = DocSection::build(cx, "Large", large)
+        .description("Large icon-only toggle matching the current upstream `size=\"lg\"` example.")
+        .test_id_prefix("ui-gallery-toggle-large")
+        .code_rust_from_file_region(snippets::large::SOURCE, "example");
     let disabled = DocSection::build(cx, "Disabled", disabled)
         .description("Disabled toggles stay readable while blocking interaction.")
         .test_id_prefix("ui-gallery-toggle-disabled")
@@ -75,14 +81,15 @@ pub(super) fn preview_toggle(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Toggle docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Outline`, `With Text`, `Size`, `Disabled`, and `RTL`. `Children (Fret)`, `Label Association`, and `API Reference` stay as explicit Fret follow-ups.",
+            "Preview mirrors the current shadcn Toggle docs path after collapsing the top `ComponentPreview` / `Default` duplicate into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Outline`, `With Text`, `Small`, `Large`, and `Disabled`. `RTL`, `Children (Fret)`, `Label Association`, and `API Reference` stay as explicit Fret/base-radix follow-ups.",
         ),
         vec![
             demo,
             usage,
             outline,
             with_text,
-            size,
+            small,
+            large,
             disabled,
             rtl,
             children,
