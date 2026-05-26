@@ -39,13 +39,13 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 39,
-    "fret_layout": 39,
-    "fret_text_paint": 19,
-    "interaction_script": 39,
+    "fret_bundle_semantics": 40,
+    "fret_layout": 40,
+    "fret_text_paint": 20,
+    "interaction_script": 40,
     "responsive_viewport": 9,
-    "source_refs": 39,
-    "upstream_dom_snapshot": 39
+    "source_refs": 40,
+    "upstream_dom_snapshot": 40
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
@@ -53,21 +53,21 @@ State-depth legend:
   "state_depth_component_counts": {
     "disabled": 15,
     "drag": 3,
-    "focus_visible": 12,
-    "hover": 11,
-    "keyboard": 22,
+    "focus_visible": 13,
+    "hover": 12,
+    "keyboard": 23,
     "mobile": 14,
-    "open": 23,
-    "paint_token": 37,
+    "open": 24,
+    "paint_token": 38,
     "pressed": 1,
-    "rtl": 19,
-    "text_metrics": 19
+    "rtl": 20,
+    "text_metrics": 20
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 15,
+    "inventory_only": 14,
     "not_in_harness": 5,
-    "regression_locked": 38
+    "regression_locked": 39
   }
 }
 ```
@@ -106,7 +106,7 @@ State-depth legend:
 | input | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | PAINT | DIS, FOCUS-VIS, KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | input-group | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT | - | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | input-otp | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | DIS, PAINT | FOCUS-VIS, KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
-| item | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| item | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | HOV, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | kbd | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | label | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | menubar | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | DIS, OPEN, PAINT | KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |

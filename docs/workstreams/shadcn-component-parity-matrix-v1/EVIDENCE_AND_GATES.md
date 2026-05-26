@@ -1658,6 +1658,31 @@ screenshots.
   `DRAG, KEY, MOB, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0, hardening=0,
   gate=0`, `Next gap = state_depth_model_satisfied`.
 
+2026-05-26 Item regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/item_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Item diagnostic JSON scripts: PASS for the demo action-state suite, link action-state suite, and
+  all JSON scripts under `tools/diag-scripts/ui-gallery/item`.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail item`: PASS, 113 tests passed and
+  1190 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail item`:
+  PASS, 13 tests passed and 138 skipped.
+- `cargo nextest run -p fret-ui-gallery --test item_docs_surface --status-level fail`: PASS, 5 tests
+  passed.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool` checks for the Item packet, generated matrix JSON, `WORKSTREAM.json`, the
+  coverage manifest, and promoted Item diagnostic scripts: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `python tools/check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files indexed.
+- Matrix summary: 39 `regression_locked`, 1 `harness_hardening`, 14 `inventory_only`, and 5
+  `not_in_harness`.
+- Item row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `HOV, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0,
+  hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
 2026-05-26 Collapsible regression-lock validation:
 
 - `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/collapsible_agent_packet_p0_v1.json | Out-Null`:

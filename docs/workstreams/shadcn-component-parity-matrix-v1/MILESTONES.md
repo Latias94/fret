@@ -779,3 +779,32 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Empty `KEY`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
   component has no required state-depth gaps.
+
+## M33 - Promote Item
+
+Status: complete on 2026-05-26.
+
+`item.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after connecting
+the current shadcn Item docs path, new-york-v4 source, item demo/variant/size/icon/avatar/image/
+group/header/link/dropdown upstream goldens, recipe slot/text/link tests, web-vs-Fret layout gates,
+Gallery docs-surface checks, action-state diagnostics, text/paint scripts, and a component-matrix
+packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Item docs path, new-york-v4 recipe source, demo/variant/
+  size/icon/avatar/image/group/header/link/dropdown examples, and tracked item upstream goldens.
+- The Item packet records the owner split: `fret-ui-shadcn` owns item chrome, variants, size
+  presets, media sizing/alignment, title/description text styling, action/header/footer slots,
+  link-render semantics, hover/focus chrome, and item-group list semantics; Gallery owns page width,
+  example grouping, dropdown composition, RTL follow-up composition, deterministic examples, and
+  runtime diagnostics.
+- The Gallery page now keeps the upstream docs path through `API Reference` before the Fret-only
+  RTL/Gallery/Link-render follow-ups, matching the current upstream Item docs instead of stale
+  base-path assumptions.
+- `item_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 39 `regression_locked`, 1 `harness_hardening`, 14
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Item `HOV`, `FOCUS-VIS`, `OPEN`, `KEY`, `RTL`, `TEXT-MET`, and
+  `PAINT` evidence; the component has no required state-depth gaps.

@@ -109,3 +109,7 @@ date: 2026-05-26
       covering current shadcn docs/source refs, empty-* upstream goldens, recipe chrome/text
       metrics, responsive padding, Gallery action/link semantics, RTL follow-up, and text/paint
       diagnostics.
+- [x] SCPM-400: Promote Item from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn docs/source refs, item-* upstream goldens, recipe slot/text/link
+      semantics, web layout gates, Gallery docs ordering, link action diagnostics, RTL follow-up,
+      and text/paint evidence.
