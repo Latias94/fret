@@ -146,6 +146,14 @@ and focus-target extraction. `popup_overlay/menu.rs` keeps begin-popup orchestra
 policy lookup, dismiss/focus hooks, and overlay request dispatch. Popup/menu/submenu public facade
 behavior remains unchanged.
 
+2026-05-27 popup modal layout owner-split result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layout.rs` now owns modal palette resolution,
+centered panel geometry, absolute layer/backdrop props, dialog semantics layout, and panel chrome
+props. `popup_overlay/modal.rs` keeps popup store reads, keepalive generation, Escape and outside
+press dismissal policy, focus handoff, IMUI facade content mounting, and `OverlayRequest::modal`
+assembly. Modal open/close behavior, barrier semantics, centered placement, and test ids remain
+unchanged.
+
 2026-05-26 menu-item interaction owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` now owns menu item enabled/action
 gating, pressable props, activation and shortcut handlers, popup menu roving focus, menubar

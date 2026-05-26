@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Popup Modal Layout Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI popup modal palette, centered panel geometry, layer/backdrop props, dialog
+semantics layout, and panel chrome construction moved into a private layout owner without changing
+modal open/keepalive policy, Escape or outside-press dismissal, barrier behavior, focus handoff,
+centered panel placement, test ids, or `OverlayRequest::modal` assembly.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layout.rs` now owns modal palette resolution,
+  centered panel layout, absolute layer and backdrop props, dialog semantics layout, and panel
+  chrome props.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal.rs` now keeps popup store reads, keepalive
+  generation, dismiss policy, focus tracking, IMUI facade content mounting, and overlay request
+  assembly.
+- `tools/gate_imui_workstream_source.py` now requires the layout owner and rejects direct dialog
+  semantics/chrome/layout construction from drifting back into `popup_overlay/modal.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui popup_hover::lifecycle_modal --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit modal_barrier_is_hidden_from_accessibility_tree_but_still_invokable
+  select_pointer_up_guard_barrier_is_hidden_from_accessibility_tree --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Pressable Item Response Owner-Split Evidence - 2026-05-27
 
 Claim verified: shared IMUI pressable item response population moved out of the hook-installation
