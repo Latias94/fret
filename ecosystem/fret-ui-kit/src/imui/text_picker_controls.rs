@@ -9,6 +9,7 @@ use super::{InputTextPickerOptions, InputTextPickerResponse, UiWriterImUiFacadeE
 mod candidates;
 mod input;
 mod keyboard;
+mod open_policy;
 mod popup;
 
 use candidates::resolve_text_picker_candidates;
@@ -17,6 +18,10 @@ use input::{
     render_text_picker_input_root,
 };
 use keyboard::{InputTextPickerKeyboardState, reconcile_picker_keyboard_state};
+use open_policy::{
+    TextPickerOpenPolicyInput, apply_text_picker_open_policy, read_text_picker_popup_snapshot,
+    text_picker_expanded,
+};
 use popup::{InputTextPickerPopupInput, render_text_picker_popup};
 
 pub(super) fn input_text_completion_model_with_options<
@@ -79,15 +84,7 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
             )
         })
     });
-    let (popup_is_open, popup_panel_id) = ui.with_cx_mut(|cx| {
-        let open = cx
-            .read_model(&popup_open, fret_ui::Invalidation::Paint, |_app, value| {
-                *value
-            })
-            .unwrap_or(false);
-        let panel_id = super::with_popup_store_for_id(cx, id, |st, _app| st.panel_id);
-        (open, panel_id)
-    });
+    let popup_snapshot = read_text_picker_popup_snapshot(ui, id, &popup_open);
     let (active_source_index, pending_keyboard_pick, active_element) = keyboard_state
         .as_ref()
         .and_then(|state| {
@@ -109,10 +106,12 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
             )
         })
         .unwrap_or((None, None, None));
-    let picker_expanded = popup_is_open
-        && input_enabled_by_scope
-        && picker_candidate_visible
-        && !hide_for_exact_match;
+    let picker_expanded = text_picker_expanded(
+        popup_snapshot.is_open,
+        input_enabled_by_scope,
+        picker_candidate_visible,
+        hide_for_exact_match,
+    );
     let input_root = ui.with_cx_mut(|cx| {
         render_text_picker_input_root(
             cx,
@@ -128,26 +127,28 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
                 hide_for_exact_match,
                 picker_expanded,
                 active_element,
-                popup_panel_id,
+                popup_panel_id: popup_snapshot.panel_id,
             },
         )
     });
     let mut input = input_root.response;
     ui.add(input_root.root);
     let enabled = input.enabled();
+    let input_focused = input.focused();
 
-    if enabled && (visible_candidates.is_empty() || hide_for_exact_match) {
-        ui.close_popup(id);
-    }
-    if enabled
-        && options.open_on_focus
-        && input.focused()
-        && picker_candidate_visible
-        && !hide_for_exact_match
-        && let Some(anchor) = input.rect()
-    {
-        ui.open_popup_at(id, anchor);
-    }
+    apply_text_picker_open_policy(
+        ui,
+        id,
+        TextPickerOpenPolicyInput {
+            enabled,
+            visible_candidates_empty: visible_candidates.is_empty(),
+            hide_for_exact_match,
+            open_on_focus: options.open_on_focus,
+            input_focused,
+            picker_candidate_visible,
+            anchor: input.rect(),
+        },
+    );
 
     let popup = render_text_picker_popup(
         ui,
@@ -165,7 +166,7 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
             item_test_id_base: prepared_input.test_id.clone(),
             install_keyboard_handler: enabled
                 && options.keyboard_navigation
-                && input.focused()
+                && input_focused
                 && picker_candidate_visible
                 && !hide_for_exact_match,
             keyboard_repeat: options.keyboard_repeat,

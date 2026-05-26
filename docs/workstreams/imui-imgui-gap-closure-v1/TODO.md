@@ -71,6 +71,15 @@ Last updated: 2026-05-27
       keyboard handler installation. The root file keeps candidate visibility, popup-open state,
       popup lifecycle policy, popup rendering delegation, and final `InputTextPickerResponse`
       merge.
+- [x] Split IMUI input-text picker popup open policy out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private owner module without
+      changing popup open/panel-id reads, active-descendant wiring, open-on-focus behavior,
+      empty/exact-match close behavior, keyboard navigation, popup rendering, or picked response
+      merging.
+      Result: `text_picker_controls/open_policy.rs` owns popup snapshot reads, expanded-state
+      calculation, empty/exact-match close policy, and open-on-focus anchoring. The root file keeps
+      candidate resolution, input/popup orchestration, keyboard reconciliation, and response
+      assembly.
 - [x] Split IMUI textarea element assembly out of
       `ecosystem/fret-ui-kit/src/imui/text_controls.rs` into a private owner module without changing
       the textarea facade, response semantics, select-all-on-focus behavior, submit/cancel command

@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Text-Picker Open-Policy Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI input-text picker popup open policy moved behind a narrower private owner
+without changing popup snapshot reads, active-descendant wiring, open-on-focus behavior,
+empty/exact-match close behavior, candidate filtering, keyboard navigation, or picked-response
+merge semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` keeps completion/history entry points,
+  candidate resolution, keyboard reconciliation, input-root rendering, popup rendering, and final
+  `InputTextPickerResponse` assembly.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/open_policy.rs` owns popup open/panel-id
+  snapshot reads, expanded-state calculation, empty/exact-match popup close policy, and
+  open-on-focus anchoring.
+- `tools/gate_imui_workstream_source.py` now requires the open-policy owner and rejects direct
+  popup-store reads plus `open_popup_at` / `close_popup` calls from the root text-picker owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass; 6 tests, 175
+  skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Media Summary Projection Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug-draw image/SVG/media command summary projection moved behind a narrower

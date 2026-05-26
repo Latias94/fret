@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 text-picker open-policy owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/open_policy.rs` now owns popup open/panel-id
+snapshot reads, expanded-state calculation, empty/exact-match close policy, and open-on-focus
+anchoring. `text_picker_controls.rs` keeps completion/history entry points, input/popup
+orchestration, keyboard reconciliation, and response assembly.
+
 2026-05-27 debug-draw media summary projection owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/media.rs`
 now owns image triangle mesh, image rect/region/rounded, image quad, and SVG rect summary
