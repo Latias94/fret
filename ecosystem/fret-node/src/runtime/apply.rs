@@ -81,12 +81,76 @@ pub fn apply_node_changes(graph: &mut Graph, changes: &[NodeChange]) -> ApplyCha
                 node.kind_version = *kind_version;
                 report.applied += 1;
             }
+            NodeChange::Selectable { id, selectable } => {
+                let Some(node) = graph.nodes.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                node.selectable = *selectable;
+                report.applied += 1;
+            }
+            NodeChange::Draggable { id, draggable } => {
+                let Some(node) = graph.nodes.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                node.draggable = *draggable;
+                report.applied += 1;
+            }
+            NodeChange::Connectable { id, connectable } => {
+                let Some(node) = graph.nodes.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                node.connectable = *connectable;
+                report.applied += 1;
+            }
+            NodeChange::Deletable { id, deletable } => {
+                let Some(node) = graph.nodes.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                node.deletable = *deletable;
+                report.applied += 1;
+            }
+            NodeChange::Parent { id, parent } => {
+                let Some(node) = graph.nodes.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                node.parent = *parent;
+                report.applied += 1;
+            }
+            NodeChange::Extent { id, extent } => {
+                let Some(node) = graph.nodes.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                node.extent = *extent;
+                report.applied += 1;
+            }
+            NodeChange::ExpandParent { id, expand_parent } => {
+                let Some(node) = graph.nodes.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                node.expand_parent = *expand_parent;
+                report.applied += 1;
+            }
             NodeChange::Size { id, size } => {
                 let Some(node) = graph.nodes.get_mut(id) else {
                     report.ignored += 1;
                     continue;
                 };
                 node.size = *size;
+                report.applied += 1;
+            }
+            NodeChange::Hidden { id, hidden } => {
+                let Some(node) = graph.nodes.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                node.hidden = *hidden;
                 report.applied += 1;
             }
             NodeChange::Collapsed { id, collapsed } => {
@@ -103,6 +167,14 @@ pub fn apply_node_changes(graph: &mut Graph, changes: &[NodeChange]) -> ApplyCha
                     continue;
                 };
                 node.data = data.clone();
+                report.applied += 1;
+            }
+            NodeChange::Ports { id, ports } => {
+                let Some(node) = graph.nodes.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                node.ports = ports.clone();
                 report.applied += 1;
             }
         }
@@ -133,6 +205,30 @@ pub fn apply_edge_changes(graph: &mut Graph, changes: &[EdgeChange]) -> ApplyCha
                     continue;
                 };
                 edge.kind = *kind;
+                report.applied += 1;
+            }
+            EdgeChange::Selectable { id, selectable } => {
+                let Some(edge) = graph.edges.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                edge.selectable = *selectable;
+                report.applied += 1;
+            }
+            EdgeChange::Deletable { id, deletable } => {
+                let Some(edge) = graph.edges.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                edge.deletable = *deletable;
+                report.applied += 1;
+            }
+            EdgeChange::Reconnectable { id, reconnectable } => {
+                let Some(edge) = graph.edges.get_mut(id) else {
+                    report.ignored += 1;
+                    continue;
+                };
+                edge.reconnectable = *reconnectable;
                 report.applied += 1;
             }
             EdgeChange::Endpoints { id, from, to } => {

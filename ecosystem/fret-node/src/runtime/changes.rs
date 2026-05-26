@@ -8,8 +8,10 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::core::GroupId;
 use crate::core::{
-    CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, Graph, Node, NodeId, NodeKindKey, PortId,
+    CanvasPoint, CanvasSize, Edge, EdgeId, EdgeKind, EdgeReconnectable, Graph, Node, NodeExtent,
+    NodeId, NodeKindKey, PortId,
 };
 use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction};
 
@@ -37,9 +39,41 @@ pub enum NodeChange {
         id: NodeId,
         kind_version: u32,
     },
+    Selectable {
+        id: NodeId,
+        selectable: Option<bool>,
+    },
+    Draggable {
+        id: NodeId,
+        draggable: Option<bool>,
+    },
+    Connectable {
+        id: NodeId,
+        connectable: Option<bool>,
+    },
+    Deletable {
+        id: NodeId,
+        deletable: Option<bool>,
+    },
+    Parent {
+        id: NodeId,
+        parent: Option<GroupId>,
+    },
+    Extent {
+        id: NodeId,
+        extent: Option<NodeExtent>,
+    },
+    ExpandParent {
+        id: NodeId,
+        expand_parent: Option<bool>,
+    },
     Size {
         id: NodeId,
         size: Option<CanvasSize>,
+    },
+    Hidden {
+        id: NodeId,
+        hidden: bool,
     },
     Collapsed {
         id: NodeId,
@@ -48,6 +82,10 @@ pub enum NodeChange {
     Data {
         id: NodeId,
         data: serde_json::Value,
+    },
+    Ports {
+        id: NodeId,
+        ports: Vec<PortId>,
     },
 }
 
@@ -66,6 +104,18 @@ pub enum EdgeChange {
     Kind {
         id: EdgeId,
         kind: EdgeKind,
+    },
+    Selectable {
+        id: EdgeId,
+        selectable: Option<bool>,
+    },
+    Deletable {
+        id: EdgeId,
+        deletable: Option<bool>,
+    },
+    Reconnectable {
+        id: EdgeId,
+        reconnectable: Option<EdgeReconnectable>,
     },
     Endpoints {
         id: EdgeId,
@@ -101,7 +151,12 @@ impl NodeGraphChanges {
                     id: *id,
                     node: node.clone(),
                 }),
-                GraphOp::RemoveNode { id, .. } => out.nodes.push(NodeChange::Remove { id: *id }),
+                GraphOp::RemoveNode { id, edges, .. } => {
+                    out.nodes.push(NodeChange::Remove { id: *id });
+                    for (edge_id, _edge) in edges {
+                        out.edges.push(EdgeChange::Remove { id: *edge_id });
+                    }
+                }
                 GraphOp::SetNodePos { id, to, .. } => out.nodes.push(NodeChange::Position {
                     id: *id,
                     position: *to,
@@ -116,9 +171,47 @@ impl NodeGraphChanges {
                         kind_version: *to,
                     })
                 }
+                GraphOp::SetNodeSelectable { id, to, .. } => {
+                    out.nodes.push(NodeChange::Selectable {
+                        id: *id,
+                        selectable: *to,
+                    })
+                }
+                GraphOp::SetNodeDraggable { id, to, .. } => out.nodes.push(NodeChange::Draggable {
+                    id: *id,
+                    draggable: *to,
+                }),
+                GraphOp::SetNodeConnectable { id, to, .. } => {
+                    out.nodes.push(NodeChange::Connectable {
+                        id: *id,
+                        connectable: *to,
+                    })
+                }
+                GraphOp::SetNodeDeletable { id, to, .. } => out.nodes.push(NodeChange::Deletable {
+                    id: *id,
+                    deletable: *to,
+                }),
+                GraphOp::SetNodeParent { id, to, .. } => out.nodes.push(NodeChange::Parent {
+                    id: *id,
+                    parent: *to,
+                }),
+                GraphOp::SetNodeExtent { id, to, .. } => out.nodes.push(NodeChange::Extent {
+                    id: *id,
+                    extent: *to,
+                }),
+                GraphOp::SetNodeExpandParent { id, to, .. } => {
+                    out.nodes.push(NodeChange::ExpandParent {
+                        id: *id,
+                        expand_parent: *to,
+                    })
+                }
                 GraphOp::SetNodeSize { id, to, .. } => {
                     out.nodes.push(NodeChange::Size { id: *id, size: *to })
                 }
+                GraphOp::SetNodeHidden { id, to, .. } => out.nodes.push(NodeChange::Hidden {
+                    id: *id,
+                    hidden: *to,
+                }),
                 GraphOp::SetNodeCollapsed { id, to, .. } => out.nodes.push(NodeChange::Collapsed {
                     id: *id,
                     collapsed: *to,
@@ -127,6 +220,15 @@ impl NodeGraphChanges {
                     id: *id,
                     data: to.clone(),
                 }),
+                GraphOp::SetNodePorts { id, to, .. } => out.nodes.push(NodeChange::Ports {
+                    id: *id,
+                    ports: to.clone(),
+                }),
+                GraphOp::RemovePort { edges, .. } => {
+                    for (edge_id, _edge) in edges {
+                        out.edges.push(EdgeChange::Remove { id: *edge_id });
+                    }
+                }
                 GraphOp::AddEdge { id, edge } => out.edges.push(EdgeChange::Add {
                     id: *id,
                     edge: edge.clone(),
@@ -135,12 +237,63 @@ impl NodeGraphChanges {
                 GraphOp::SetEdgeKind { id, to, .. } => {
                     out.edges.push(EdgeChange::Kind { id: *id, kind: *to })
                 }
+                GraphOp::SetEdgeSelectable { id, to, .. } => {
+                    out.edges.push(EdgeChange::Selectable {
+                        id: *id,
+                        selectable: *to,
+                    })
+                }
+                GraphOp::SetEdgeDeletable { id, to, .. } => out.edges.push(EdgeChange::Deletable {
+                    id: *id,
+                    deletable: *to,
+                }),
+                GraphOp::SetEdgeReconnectable { id, to, .. } => {
+                    out.edges.push(EdgeChange::Reconnectable {
+                        id: *id,
+                        reconnectable: *to,
+                    })
+                }
                 GraphOp::SetEdgeEndpoints { id, to, .. } => out.edges.push(EdgeChange::Endpoints {
                     id: *id,
                     from: to.from,
                     to: to.to,
                 }),
-                _ => {}
+                GraphOp::RemoveGroup { detached, .. } => {
+                    for (node_id, _previous_parent) in detached {
+                        out.nodes.push(NodeChange::Parent {
+                            id: *node_id,
+                            parent: None,
+                        });
+                    }
+                }
+
+                // These variants mutate graph resources that are outside the XyFlow-style
+                // node/edge change-array contract. Full-fidelity controlled integrations should
+                // apply the committed GraphTransaction from on_graph_commit.
+                GraphOp::AddPort { .. }
+                | GraphOp::SetPortConnectable { .. }
+                | GraphOp::SetPortConnectableStart { .. }
+                | GraphOp::SetPortConnectableEnd { .. }
+                | GraphOp::SetPortType { .. }
+                | GraphOp::SetPortData { .. }
+                | GraphOp::AddImport { .. }
+                | GraphOp::RemoveImport { .. }
+                | GraphOp::SetImportAlias { .. }
+                | GraphOp::AddSymbol { .. }
+                | GraphOp::RemoveSymbol { .. }
+                | GraphOp::SetSymbolName { .. }
+                | GraphOp::SetSymbolType { .. }
+                | GraphOp::SetSymbolDefaultValue { .. }
+                | GraphOp::SetSymbolMeta { .. }
+                | GraphOp::AddGroup { .. }
+                | GraphOp::SetGroupRect { .. }
+                | GraphOp::SetGroupTitle { .. }
+                | GraphOp::SetGroupColor { .. }
+                | GraphOp::AddStickyNote { .. }
+                | GraphOp::RemoveStickyNote { .. }
+                | GraphOp::SetStickyNoteText { .. }
+                | GraphOp::SetStickyNoteRect { .. }
+                | GraphOp::SetStickyNoteColor { .. } => {}
             }
         }
         out
@@ -228,6 +381,90 @@ impl NodeGraphChanges {
                         to: *kind_version,
                     });
                 }
+                NodeChange::Selectable { id, selectable } => {
+                    let from = graph
+                        .nodes
+                        .get(id)
+                        .map(|n| n.selectable)
+                        .ok_or(ChangesToTransactionError::MissingNode(*id))?;
+                    tx.push(GraphOp::SetNodeSelectable {
+                        id: *id,
+                        from,
+                        to: *selectable,
+                    });
+                }
+                NodeChange::Draggable { id, draggable } => {
+                    let from = graph
+                        .nodes
+                        .get(id)
+                        .map(|n| n.draggable)
+                        .ok_or(ChangesToTransactionError::MissingNode(*id))?;
+                    tx.push(GraphOp::SetNodeDraggable {
+                        id: *id,
+                        from,
+                        to: *draggable,
+                    });
+                }
+                NodeChange::Connectable { id, connectable } => {
+                    let from = graph
+                        .nodes
+                        .get(id)
+                        .map(|n| n.connectable)
+                        .ok_or(ChangesToTransactionError::MissingNode(*id))?;
+                    tx.push(GraphOp::SetNodeConnectable {
+                        id: *id,
+                        from,
+                        to: *connectable,
+                    });
+                }
+                NodeChange::Deletable { id, deletable } => {
+                    let from = graph
+                        .nodes
+                        .get(id)
+                        .map(|n| n.deletable)
+                        .ok_or(ChangesToTransactionError::MissingNode(*id))?;
+                    tx.push(GraphOp::SetNodeDeletable {
+                        id: *id,
+                        from,
+                        to: *deletable,
+                    });
+                }
+                NodeChange::Parent { id, parent } => {
+                    let from = graph
+                        .nodes
+                        .get(id)
+                        .map(|n| n.parent)
+                        .ok_or(ChangesToTransactionError::MissingNode(*id))?;
+                    tx.push(GraphOp::SetNodeParent {
+                        id: *id,
+                        from,
+                        to: *parent,
+                    });
+                }
+                NodeChange::Extent { id, extent } => {
+                    let from = graph
+                        .nodes
+                        .get(id)
+                        .map(|n| n.extent)
+                        .ok_or(ChangesToTransactionError::MissingNode(*id))?;
+                    tx.push(GraphOp::SetNodeExtent {
+                        id: *id,
+                        from,
+                        to: *extent,
+                    });
+                }
+                NodeChange::ExpandParent { id, expand_parent } => {
+                    let from = graph
+                        .nodes
+                        .get(id)
+                        .map(|n| n.expand_parent)
+                        .ok_or(ChangesToTransactionError::MissingNode(*id))?;
+                    tx.push(GraphOp::SetNodeExpandParent {
+                        id: *id,
+                        from,
+                        to: *expand_parent,
+                    });
+                }
                 NodeChange::Size { id, size } => {
                     let from = graph
                         .nodes
@@ -238,6 +475,18 @@ impl NodeGraphChanges {
                         id: *id,
                         from,
                         to: *size,
+                    });
+                }
+                NodeChange::Hidden { id, hidden } => {
+                    let from = graph
+                        .nodes
+                        .get(id)
+                        .map(|n| n.hidden)
+                        .ok_or(ChangesToTransactionError::MissingNode(*id))?;
+                    tx.push(GraphOp::SetNodeHidden {
+                        id: *id,
+                        from,
+                        to: *hidden,
                     });
                 }
                 NodeChange::Collapsed { id, collapsed } => {
@@ -262,6 +511,18 @@ impl NodeGraphChanges {
                         id: *id,
                         from,
                         to: data.clone(),
+                    });
+                }
+                NodeChange::Ports { id, ports } => {
+                    let from = graph
+                        .nodes
+                        .get(id)
+                        .map(|n| n.ports.clone())
+                        .ok_or(ChangesToTransactionError::MissingNode(*id))?;
+                    tx.push(GraphOp::SetNodePorts {
+                        id: *id,
+                        from,
+                        to: ports.clone(),
                     });
                 }
             }
@@ -291,6 +552,42 @@ impl NodeGraphChanges {
                         id: *id,
                         from,
                         to: *kind,
+                    });
+                }
+                EdgeChange::Selectable { id, selectable } => {
+                    let from = graph
+                        .edges
+                        .get(id)
+                        .map(|e| e.selectable)
+                        .ok_or(ChangesToTransactionError::MissingEdge(*id))?;
+                    tx.push(GraphOp::SetEdgeSelectable {
+                        id: *id,
+                        from,
+                        to: *selectable,
+                    });
+                }
+                EdgeChange::Deletable { id, deletable } => {
+                    let from = graph
+                        .edges
+                        .get(id)
+                        .map(|e| e.deletable)
+                        .ok_or(ChangesToTransactionError::MissingEdge(*id))?;
+                    tx.push(GraphOp::SetEdgeDeletable {
+                        id: *id,
+                        from,
+                        to: *deletable,
+                    });
+                }
+                EdgeChange::Reconnectable { id, reconnectable } => {
+                    let from = graph
+                        .edges
+                        .get(id)
+                        .map(|e| e.reconnectable)
+                        .ok_or(ChangesToTransactionError::MissingEdge(*id))?;
+                    tx.push(GraphOp::SetEdgeReconnectable {
+                        id: *id,
+                        from,
+                        to: *reconnectable,
                     });
                 }
                 EdgeChange::Endpoints { id, from, to } => {

@@ -1,0 +1,246 @@
+# `fret-node` Runtime/Store Contract Closure (v1) - TODO
+
+Status: active
+Last updated: 2026-05-26
+
+Task IDs use `FNRS` for `fret-node runtime/store`.
+
+## Guardrails
+
+- [x] Runtime correctness lands before UI mirror deletion.
+- [x] Every task has a focused validation command before it is marked done.
+- [ ] Compatibility retained behavior remains covered while internals move toward store-first.
+- [ ] Feature-contract changes update docs and compile-matrix gates in the same slice.
+- [x] Workstream decisions stay in `DESIGN.md`, `MILESTONES.md`, or ADRs, not only in chat.
+
+## FNRS-010 - Close `GraphOp` to `NodeGraphChanges` semantics
+
+Status: done
+Owner: planner/worker
+Dependencies: none
+
+Problem:
+
+`GraphOp` covers more graph edits than `runtime/changes.rs` reports. The current mapping silently
+drops unmatched operations, which makes controlled-mode callbacks and external synchronization
+incomplete.
+
+Scope:
+
+- `ecosystem/fret-node/src/ops/mod.rs`
+- `ecosystem/fret-node/src/runtime/changes.rs`
+- focused runtime tests near the existing change-mapping coverage
+- controlled-mode example only if the public callback contract needs a small adjustment
+
+Deliverables:
+
+- A small change-coverage matrix in code or tests that names every `GraphOp` variant.
+- Red tests for at least two currently dropped observable operations.
+- An implementation that emits deliberate `NodeGraphChange` values or explicit non-observable
+  outcomes for every `GraphOp`.
+- No catch-all silent drop for future observable operations.
+
+Validation:
+
+- `cargo nextest run -p fret-node --no-default-features runtime`
+- `cargo check -p fret-node --no-default-features`
+
+Review notes:
+
+- Review should focus on semantic intent, not just line coverage.
+- If a `GraphOp` is intentionally non-observable, the reason must be documented in the mapping
+  test or helper name.
+
+Completion notes:
+
+- `NodeChange` now covers node selectable, draggable, connectable, deletable, parent, extent,
+  expand-parent, hidden, and port-order changes.
+- `EdgeChange` now covers edge selectable, deletable, and reconnectable changes.
+- `RemoveNode` and `RemovePort` now report cascaded edge removals in `NodeGraphChanges`.
+- `NodeGraphChanges::from_transaction` no longer uses a catch-all arm; graph-resource operations
+  outside the XyFlow-style node/edge change-array contract are explicitly listed as requiring the
+  committed `GraphTransaction` for full-fidelity controlled integrations.
+- Fresh validation on 2026-05-26:
+  - `cargo nextest run -p fret-node --no-default-features runtime`: 41 passed.
+  - `cargo check -p fret-node --no-default-features`: passed.
+
+## FNRS-020 - Make lookup cache updates exhaustive and stale-safe
+
+Status: ready
+Owner: planner/worker
+Dependencies: FNRS-010
+
+Problem:
+
+`NodeGraphLookups` caches derived node/edge fields, but incremental dispatch does not cover every
+operation that can affect cached hidden state, reconnectability, endpoints, ports, or geometry.
+
+Scope:
+
+- `ecosystem/fret-node/src/runtime/lookups.rs`
+- `ecosystem/fret-node/src/runtime/store.rs`
+- focused lookup/store tests
+
+Deliverables:
+
+- Tests proving `store.lookups()` is fresh immediately after dispatch for operations that mutate
+  hidden state and reconnectability.
+- Exhaustive incremental application for lookup-affecting operations, or an explicit rebuild path
+  for operations that cannot be incrementally updated safely.
+- A guard against adding future lookup-affecting operations without updating lookup handling.
+
+Validation:
+
+- `cargo nextest run -p fret-node --no-default-features runtime`
+- `cargo check -p fret-node --no-default-features`
+
+Review notes:
+
+- Prefer precise incremental updates where the operation payload has enough information.
+- Prefer a deliberate rebuild over partial incremental handling when precision would be fragile.
+
+## FNRS-030 - Harden store dispatch as the single runtime commit pipeline
+
+Status: blocked on FNRS-010 and FNRS-020
+Owner: planner/worker
+Dependencies: FNRS-010, FNRS-020
+
+Problem:
+
+Store dispatch, change emission, lookup maintenance, history, subscribers, and controlled sync must
+derive from one coherent commit pipeline. If these are maintained independently, the UI cleanup
+phase will reintroduce drift.
+
+Scope:
+
+- `ecosystem/fret-node/src/runtime/store.rs`
+- `ecosystem/fret-node/src/runtime/changes.rs`
+- `ecosystem/fret-node/src/runtime/lookups.rs`
+- `ecosystem/fret-node/src/ui/controller_store_sync.rs`
+- `ecosystem/fret-node/src/ui/binding_store_sync.rs`
+
+Deliverables:
+
+- A documented dispatch order inside the store implementation.
+- Tests proving a transaction updates graph document, changes, lookups, and subscribers coherently.
+- Removal or quarantine of duplicate commit paths that bypass store dispatch for committed edits.
+
+Validation:
+
+- `cargo nextest run -p fret-node --no-default-features runtime`
+- targeted default-feature tests for controller/binding store sync, as discovered during the task
+
+Review notes:
+
+- This task may split if a large bypass surface is found.
+- Do not remove retained compatibility transport until equivalent store-first evidence exists.
+
+## FNRS-040 - Reduce UI state mirrors after runtime/store gates are green
+
+Status: blocked on FNRS-030
+Owner: planner/worker
+Dependencies: FNRS-030
+
+Problem:
+
+Declarative and retained UI code still carries multiple graph/view/editor-config mirrors and sync
+helpers. Once the runtime/store contract is reliable, these mirrors should either become short-lived
+snapshots or be deleted.
+
+Scope:
+
+- `ecosystem/fret-node/src/ui/binding.rs`
+- `ecosystem/fret-node/src/ui/binding_store_sync.rs`
+- `ecosystem/fret-node/src/ui/controller_store_sync.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- focused retained/declarative compatibility tests
+
+Deliverables:
+
+- A short inventory of remaining long-lived UI mirrors and their owner.
+- At least one concrete mirror-removal or quarantine slice with tests.
+- A rule for when a UI surface may hold transient local interaction state versus committed graph
+  state.
+
+Validation:
+
+- `cargo nextest run -p fret-node --features compat-retained-canvas`
+- focused default-feature tests for the changed UI surfaces
+
+Review notes:
+
+- This task should not become a broad rewrite. Split follow-ups if more than one compatibility
+  surface needs independent review.
+
+## FNRS-050 - Clean feature, dependency-boundary, and policy-test contracts
+
+Status: blocked on FNRS-010 through FNRS-030
+Owner: planner/worker
+Dependencies: FNRS-010, FNRS-020, FNRS-030
+
+Problem:
+
+The `headless` feature name is misleading with default features enabled. The `fret-ui-kit`
+dependency and roadmap wording disagree. The crate root contains large string-scanning surface
+policy tests that should live closer to the contract they protect.
+
+Scope:
+
+- `ecosystem/fret-node/Cargo.toml`
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/tests/`
+- `docs/node-graph-roadmap.md`
+- this workstream and related public-posture docs
+
+Deliverables:
+
+- A documented feature matrix that states default, headless, and compatibility-retained modes.
+- Either a code change or documentation update that resolves the `fret-ui-kit` boundary tension.
+- Migration of large surface-policy tests out of `src/lib.rs` where practical.
+- Compile/test gates for the supported feature matrix.
+
+Validation:
+
+- `cargo check -p fret-node --no-default-features`
+- `cargo check -p fret-node --no-default-features --features headless`
+- `cargo check -p fret-node --features compat-retained-canvas`
+- `cargo nextest run -p fret-node --no-default-features runtime`
+
+Review notes:
+
+- Renaming or deprecating features is a public contract change. Update docs and consider ADR
+  alignment if the impact crosses crate boundaries.
+
+## FNRS-060 - Closeout verification and follow-on split
+
+Status: blocked on all implementation slices
+Owner: planner/reviewer
+Dependencies: FNRS-010, FNRS-020, FNRS-030, FNRS-040, FNRS-050
+
+Problem:
+
+This lane is complete only when the runtime/store contract is strong enough to support future
+fearless cleanup without relying on chat memory.
+
+Scope:
+
+- workstream docs
+- closeout audit
+- validation command evidence
+- related docs or ADR alignment rows when changed
+
+Deliverables:
+
+- Fresh evidence for all required gates.
+- Updated `HANDOFF.md` with no hidden blockers.
+- A closeout audit or split follow-on list.
+- Clear statement of which remaining retained/declarative cleanup belongs to other workstreams.
+
+Validation:
+
+- `cargo fmt --check`
+- `cargo nextest run -p fret-node --no-default-features runtime`
+- `cargo check -p fret-node --no-default-features`
+- `cargo check -p fret-node --no-default-features --features headless`
+- `cargo check -p fret-node --features compat-retained-canvas`
+- `python3 tools/check_layering.py`
