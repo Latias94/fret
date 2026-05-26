@@ -97,6 +97,14 @@ Last updated: 2026-05-26
       helpers, `collections/table.rs` owns table/row/cell options, and
       `collections/virtual_list.rs` owns virtual-list defaults. The root `collections.rs` file is
       now a thin module/re-export index.
+- [x] Split IMUI container/layout option types out of
+      `ecosystem/fret-ui-kit/src/imui/options/containers.rs` into private owner modules without
+      changing option type names, fields, defaults, or re-export paths.
+      Result: `containers/flow.rs` owns item-flow/same-line/spacing/indent/grid options and the
+      IMUI layout-token defaults, `containers/scroll.rs` owns scroll options,
+      `containers/list_box.rs` owns list-box options, and `containers/child_region.rs` owns
+      child-region chrome and resize option records. The root `containers.rs` file is now a thin
+      module/re-export index.
 - [x] Split IMUI floating-surface drag-kind and state ownership out of
       `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into private owner modules without
       changing floating-area, floating-window, drag, resize, activation, or collapse behavior.
