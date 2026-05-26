@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Core-State Owner-Split Evidence - 2026-05-26
+
+Claim verified: `ResponseExt` core response/id/enabled behavior moved out of the root hover
+response owner without changing public response accessors or model/popup behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/hover/core_state.rs` now owns core
+  `fret_authoring::Response`, id, enabled, clicked, changed, rect, hover, press, and focus
+  mutators/accessors.
+- `ecosystem/fret-ui-kit/src/imui/response/hover.rs` still owns core/id/enabled storage, but no
+  longer owns core-state behavior bodies.
+- `tools/gate_imui_workstream_source.py` now requires the core-state owner and forbids those method
+  bodies from drifting back into the root response storage file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass with pre-existing `fret-ui` warnings
+  for `unexpected_cfgs` on `unstable-retained-bridge` and `dead_code` on
+  `current_effective_opacity`.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests.
+- `cargo nextest run -p fret-imui models_controls --no-fail-fast`: pass; 6 tests, 175 skipped,
+  with the same pre-existing `fret-ui` warnings.
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass; 21 tests, 160 skipped, with
+  the same pre-existing `fret-ui` warnings.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
+Gate note:
+
+- The first `fret-imui models_controls` run timed out while shared cargo work continued in the
+  background. The process was allowed to finish naturally; the same command was then rerun and
+  passed.
+
 ## Hover-State Owner-Split Evidence - 2026-05-26
 
 Claim verified: `ResponseExt` raw hover/nav/delay state behavior moved out of the root hover

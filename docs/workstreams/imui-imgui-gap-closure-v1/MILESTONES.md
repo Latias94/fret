@@ -66,6 +66,12 @@ pointer-hover, popup-barrier hover, hover-delay, active-item block, and nav-high
 read-only accessors. `response/hover.rs` keeps the hover state storage fields only. The public
 `ResponseExt` API remains unchanged.
 
+2026-05-26 core-state owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover/core_state.rs` now owns the `ResponseExt`
+core-response, id, enabled, clicked, changed, rect, hover, press, and focus mutators/accessors.
+`response/hover.rs` keeps core/id/enabled storage only. The public `ResponseExt` API remains
+unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:
