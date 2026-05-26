@@ -167,7 +167,7 @@ Completion notes:
 
 ## FNRS-040 - Reduce UI state mirrors after runtime/store gates are green
 
-Status: ready
+Status: done
 Owner: planner/worker
 Dependencies: FNRS-030
 
@@ -202,9 +202,27 @@ Review notes:
 - This task should not become a broad rewrite. Split follow-ups if more than one compatibility
   surface needs independent review.
 
+Completion notes:
+
+- Added `UI_MIRROR_INVENTORY_2026-05-26.md` with the first long-lived UI mirror map.
+- Quarantined `NodeGraphSurfaceBinding` graph/view/editor-config mirrors behind a private
+  `NodeGraphSurfaceMirrors` container while preserving public accessors and sync behavior.
+- Updated surface-policy coverage so future binding fields must preserve the explicit mirror
+  boundary.
+- Left retained `NodeGraphCanvas` model ownership untouched; it needs a separate retained
+  compatibility slice.
+- Fresh validation on 2026-05-26:
+  - `cargo fmt -p fret-node --check`: passed.
+  - `cargo nextest run -p fret-node --features compat-retained-canvas binding_surface_covers_instance_style_sync_and_history_helpers new_binding_seeds_graph_view_and_store_models from_store_clones_initial_store_state_into_surface_models`: 3 passed.
+  - `cargo check -p fret-node --features compat-retained-canvas`: passed.
+  - `cargo check -p fret-node --no-default-features`: passed.
+  - `cargo clippy -p fret-node --features compat-retained-canvas --all-targets -- -D warnings`:
+    failed in unrelated `crates/fret-ui/src/tree/layout/clean_geometry.rs` lints; no `fret-node`
+    lint was reached.
+
 ## FNRS-050 - Clean feature, dependency-boundary, and policy-test contracts
 
-Status: blocked on FNRS-010 through FNRS-030
+Status: ready
 Owner: planner/worker
 Dependencies: FNRS-010, FNRS-020, FNRS-030
 

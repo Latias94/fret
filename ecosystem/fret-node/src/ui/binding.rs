@@ -26,15 +26,20 @@ mod binding_store_sync;
 #[path = "binding_viewport.rs"]
 mod binding_viewport;
 
+#[derive(Debug, Clone)]
+struct NodeGraphSurfaceMirrors {
+    graph: Model<Graph>,
+    view_state: Model<NodeGraphViewState>,
+    editor_config: Model<NodeGraphEditorConfig>,
+}
+
 /// Canonical app-facing binding bundle for the declarative node-graph surface.
 ///
 /// This keeps the controller-first public story explicit while avoiding repeated
 /// `graph + view_state + controller` triplets in app code.
 #[derive(Debug, Clone)]
 pub struct NodeGraphSurfaceBinding {
-    graph: Model<Graph>,
-    view_state: Model<NodeGraphViewState>,
-    editor_config: Model<NodeGraphEditorConfig>,
+    mirrors: NodeGraphSurfaceMirrors,
     store: Model<NodeGraphStore>,
     internals: Arc<NodeGraphInternalsStore>,
 }
@@ -84,24 +89,26 @@ impl NodeGraphSurfaceBinding {
         controller: NodeGraphController,
     ) -> Self {
         Self {
-            graph,
-            view_state,
-            editor_config,
+            mirrors: NodeGraphSurfaceMirrors {
+                graph,
+                view_state,
+                editor_config,
+            },
             store: controller.store(),
             internals: Arc::new(NodeGraphInternalsStore::new()),
         }
     }
 
     pub fn graph_model(&self) -> Model<Graph> {
-        self.graph.clone()
+        self.mirrors.graph.clone()
     }
 
     pub fn view_state_model(&self) -> Model<NodeGraphViewState> {
-        self.view_state.clone()
+        self.mirrors.view_state.clone()
     }
 
     pub fn editor_config_model(&self) -> Model<NodeGraphEditorConfig> {
-        self.editor_config.clone()
+        self.mirrors.editor_config.clone()
     }
 
     /// Advanced lower-level seam for callers that need explicit controller ownership.
@@ -140,9 +147,9 @@ impl NodeGraphSurfaceBinding {
         Cx: ElementContextAccess<'a, H>,
     {
         let cx = cx.elements();
-        cx.observe_model(&self.graph, Invalidation::Paint);
-        cx.observe_model(&self.view_state, Invalidation::Paint);
-        cx.observe_model(&self.editor_config, Invalidation::Paint);
+        cx.observe_model(&self.mirrors.graph, Invalidation::Paint);
+        cx.observe_model(&self.mirrors.view_state, Invalidation::Paint);
+        cx.observe_model(&self.mirrors.editor_config, Invalidation::Paint);
     }
 }
 

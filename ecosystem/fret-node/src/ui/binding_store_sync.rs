@@ -4,19 +4,22 @@ impl NodeGraphSurfaceBinding {
     pub fn sync_from_store<H: UiHost>(&self, host: &mut H) -> bool {
         let controller = self.controller();
         let graph_view_synced =
-            controller.sync_models_from_store(host, &self.graph, &self.view_state);
+            controller.sync_models_from_store(host, &self.mirrors.graph, &self.mirrors.view_state);
         let config_synced =
-            controller.sync_editor_config_model_from_store(host, &self.editor_config);
+            controller.sync_editor_config_model_from_store(host, &self.mirrors.editor_config);
         graph_view_synced && config_synced
     }
 
     /// Re-syncs the graph/view mirrors from the authoritative store.
     pub fn sync_from_store_action_host(&self, host: &mut dyn UiActionHost) -> bool {
         let controller = self.controller();
-        let graph_view_synced =
-            controller.sync_models_from_store_action_host(host, &self.graph, &self.view_state);
-        let config_synced =
-            controller.sync_editor_config_model_from_store_action_host(host, &self.editor_config);
+        let graph_view_synced = controller.sync_models_from_store_action_host(
+            host,
+            &self.mirrors.graph,
+            &self.mirrors.view_state,
+        );
+        let config_synced = controller
+            .sync_editor_config_model_from_store_action_host(host, &self.mirrors.editor_config);
         graph_view_synced && config_synced
     }
 
@@ -100,6 +103,7 @@ impl NodeGraphSurfaceBinding {
         view_state: NodeGraphViewState,
     ) -> Result<(), NodeGraphControllerError> {
         let editor_config = self
+            .mirrors
             .editor_config
             .read_ref(host, |config| config.clone())
             .expect("binding editor-config model must stay readable");
@@ -123,7 +127,7 @@ impl NodeGraphSurfaceBinding {
     ) -> Result<(), NodeGraphControllerError> {
         let editor_config = host
             .models_mut()
-            .read(&self.editor_config, |config| config.clone())
+            .read(&self.mirrors.editor_config, |config| config.clone())
             .expect("binding editor-config model must stay readable");
         self.controller()
             .replace_document_with_editor_config_action_host(

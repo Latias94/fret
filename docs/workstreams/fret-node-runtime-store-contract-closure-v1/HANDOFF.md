@@ -5,8 +5,8 @@ Last updated: 2026-05-26
 
 ## Current State
 
-The workstream has been opened from the `fret-node` audit findings. `FNRS-010`, `FNRS-020`, and
-`FNRS-030` are complete.
+The workstream has been opened from the `fret-node` audit findings. `FNRS-010`, `FNRS-020`,
+`FNRS-030`, and `FNRS-040` are complete.
 
 Completed:
 
@@ -22,16 +22,24 @@ Completed:
 - `NodeGraphStore` dispatch/undo/redo paths now share common graph-state install/publish helpers.
 - A dispatch coherency test proves graph state, changes, lookups, history, and subscribers observe
   the same committed metadata update.
+- `NodeGraphSurfaceBinding` mirrors are quarantined behind private `NodeGraphSurfaceMirrors`.
+- `UI_MIRROR_INVENTORY_2026-05-26.md` records remaining UI mirror ownership and risk.
 - Fresh validation:
   - `cargo fmt -p fret-node --check`: passed.
   - `cargo nextest run -p fret-node --no-default-features runtime`: passed, 46 tests.
+  - `cargo nextest run -p fret-node --features compat-retained-canvas binding_surface_covers_instance_style_sync_and_history_helpers new_binding_seeds_graph_view_and_store_models from_store_clones_initial_store_state_into_surface_models`: passed, 3 tests.
   - `cargo check -p fret-node --no-default-features`: passed.
+  - `cargo check -p fret-node --features compat-retained-canvas`: passed.
   - `cargo clippy -p fret-node --no-default-features --all-targets -- -D warnings`: passed.
+  - `cargo clippy -p fret-node --features compat-retained-canvas --all-targets -- -D warnings`
+    failed in unrelated `crates/fret-ui/src/tree/layout/clean_geometry.rs` lints before reaching
+    `fret-node`.
 
 Primary remaining finding:
 
-With runtime/store correctness closed, the next risk is UI state mirror drift in binding/controller
-sync and retained/declarative compatibility surfaces.
+Feature and documentation contracts still need closure: the `headless` feature wording is
+misleading with defaults enabled, the `fret-ui-kit` dependency boundary needs a deliberate docs/code
+decision, and large crate-root policy scans should move toward focused tests/audit helpers.
 
 ## Authoritative Docs
 
@@ -49,16 +57,18 @@ Related background:
 
 ## Next Task
 
-Run `FNRS-040 - Reduce UI state mirrors after runtime/store gates are green`.
+Run `FNRS-050 - Clean feature, dependency-boundary, and policy-test contracts`.
 
 Expected workflow:
 
-1. Use `run-workstream-task` for `FNRS-040`.
-2. Start with an inventory of long-lived UI mirrors in `binding`, `controller_store_sync`, and
-   retained/declarative canvas surfaces.
-3. Pick one narrow mirror-removal or quarantine slice with a focused compatibility gate.
+1. Use `run-workstream-task` for `FNRS-050`.
+2. Start with the Cargo feature matrix in `ecosystem/fret-node/Cargo.toml`.
+3. Decide whether to change feature names/code or document the current `headless` + defaults
+   behavior explicitly.
+4. Resolve the `fret-ui-kit` roadmap/dependency tension.
+5. Move at least the most obvious large crate-root policy scan out of `src/lib.rs` if practical.
 4. Run fresh gates and update `EVIDENCE_AND_GATES.md`.
-5. Mark `FNRS-040` complete in `TODO.md` only after reviewable evidence exists.
+6. Mark `FNRS-050` complete in `TODO.md` only after reviewable evidence exists.
 
 ## Known Constraints
 
@@ -69,8 +79,8 @@ Expected workflow:
 
 ## Parallelism
 
-Parallel workers may start FNRS-050 inventory-only docs work if needed, but implementation work on
-UI mirrors should stay serialized until the first FNRS-040 slice picks exact file scope.
+Parallel workers are not recommended for FNRS-050 unless docs-only and code/test movement scopes are
+kept separate.
 
 After FNRS-020:
 

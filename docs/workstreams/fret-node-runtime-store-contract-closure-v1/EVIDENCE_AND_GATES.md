@@ -222,3 +222,37 @@ Skipped broader gates:
 - `--all-features`, `compat-retained-canvas`, and workspace clippy were not run for this task
   because the changed behavior is the headless store commit pipeline and required no-default
   runtime/check/clippy gates cover the affected slice.
+
+### 2026-05-26 - FNRS-040 completed
+
+Changes:
+
+- Added `UI_MIRROR_INVENTORY_2026-05-26.md`.
+- Introduced private `NodeGraphSurfaceMirrors` to quarantine the binding's graph/view/editor-config
+  mirrors away from the authoritative store and internals fields.
+- Preserved public `graph_model()`, `view_state_model()`, `editor_config_model()`, `store_model()`,
+  `sync_from_store*`, and viewport sync behavior.
+- Updated surface-policy tests to assert the explicit mirror container.
+
+Fresh gates:
+
+- `cargo fmt -p fret-node --check`: passed.
+- `cargo nextest run -p fret-node --features compat-retained-canvas binding_surface_covers_instance_style_sync_and_history_helpers new_binding_seeds_graph_view_and_store_models from_store_clones_initial_store_state_into_surface_models`: passed, 3 tests.
+- `cargo check -p fret-node --features compat-retained-canvas`: passed.
+- `cargo check -p fret-node --no-default-features`: passed.
+
+Attempted broader gate:
+
+- `cargo clippy -p fret-node --features compat-retained-canvas --all-targets -- -D warnings`:
+  failed before reaching `fret-node` on existing `fret-ui` lints in
+  `crates/fret-ui/src/tree/layout/clean_geometry.rs` (`enum_variant_names`, `large_enum_variant`,
+  `collapsible_if`, `redundant_closure_call`). This was not fixed in FNRS-040 because it is outside
+  the task scope.
+
+Evidence anchors:
+
+- `docs/workstreams/fret-node-runtime-store-contract-closure-v1/UI_MIRROR_INVENTORY_2026-05-26.md`
+- `ecosystem/fret-node/src/ui/binding.rs`
+- `ecosystem/fret-node/src/ui/binding_store_sync.rs`
+- `ecosystem/fret-node/src/ui/binding_viewport.rs`
+- `ecosystem/fret-node/src/lib.rs`
