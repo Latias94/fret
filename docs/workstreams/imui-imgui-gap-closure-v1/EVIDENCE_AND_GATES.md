@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Table Render Helper Owner-Split Evidence - 2026-05-26
+
+Claim verified: table render assembly no longer owns shared cell helpers, palette resolution, or
+column test-id suffix policy; public table API names and behavior stay unchanged.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/cell.rs` now owns shared table cell layout,
+  padding, empty-cell, and cell-child packing helpers.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/palette.rs` now owns theme-to-table-palette
+  resolution.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/test_ids.rs` now owns column test-id suffixing.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` keeps table assembly,
+  hidden-column handling, header/body response collection, and root table wrapping only.
+- `tools/gate_imui_workstream_source.py` now requires the helper owners and forbids helper bodies
+  from drifting back into `render.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass with pre-existing `fret-ui` warnings
+  for `unexpected_cfgs` on `unstable-retained-bridge` and `dead_code` on
+  `current_effective_opacity`.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls::tests --no-fail-fast`:
+  pass; 7 tests, 681 skipped, with the same pre-existing `fret-ui` warnings.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`:
+  pass; 9 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Debug-Draw Options Owner-Split Evidence - 2026-05-26
 
 Claim verified: public debug draw options/style/vertex types moved out of

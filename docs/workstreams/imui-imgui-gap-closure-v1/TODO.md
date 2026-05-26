@@ -1418,6 +1418,10 @@ opening the slice.
       `table_controls/header.rs` plus `header/{trigger,resize}.rs` own sortable/plain header
       behavior and resize interaction. The root `table_controls.rs` keeps only authoring collection
       and row/cell facade wiring.
+      2026-05-26 table render helper owner split: shared cell layout/packing helpers now live in
+      `table_controls/cell.rs`, palette resolution lives in `table_controls/palette.rs`, and
+      column test-id suffixing lives in `table_controls/test_ids.rs`. `render.rs` keeps table
+      assembly only.
 - [x] Add a narrow optional `fret-plot/imui` adapter over existing declarative plot panels without
       restoring retained plot code or adding plot dependencies to `fret-imui` /
       `fret-ui-kit::imui`.

@@ -1266,6 +1266,13 @@ grouping, horizontal center-scroll wrapping, and cell wrapping. `table_controls/
 `table_controls.rs` keeps authoring collection and row/cell facade wiring only. The public IMUI
 table API stayed stable.
 
+2026-05-26 table render helper owner split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/cell.rs` now owns shared table cell layout, padding,
+empty-cell, and cell-child packing helpers. `table_controls/palette.rs` owns theme-to-table-palette
+resolution, and `table_controls/test_ids.rs` owns column test-id suffixing. `render.rs` keeps table
+assembly, hidden-column handling, header/body response collection, and root table wrapping only.
+The public IMUI table API stayed stable.
+
 2026-05-25 plot adapter proof result:
 `ecosystem/fret-plot/src/imui.rs` now provides opt-in `UiWriter` helpers that delegate to the
 existing declarative plot panels. `fret-plot` default features remain empty, `fret-imui` and

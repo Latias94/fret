@@ -3,7 +3,7 @@ use std::sync::Arc;
 use fret_ui::element::{AnyElement, ContainerProps, Length};
 use fret_ui::{ElementContext, UiHost};
 
-use super::render::{empty_cell, table_cell_layout, table_cell_padding};
+use super::cell::{empty_cell, table_cell_layout, table_cell_padding};
 use crate::imui::label_identity::parse_label_identity;
 use crate::imui::{
     ResponseExt, TableColumn, TableColumnResizeResponse, TableOptions, TableSortDirection,

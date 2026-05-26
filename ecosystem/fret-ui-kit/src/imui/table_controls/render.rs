@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::{Corners, Edges, Px, SemanticsRole};
-use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length, Overflow, SemanticsProps};
+use fret_ui::element::{AnyElement, ContainerProps, Length, SemanticsProps};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
@@ -9,8 +9,8 @@ use super::{
     BuiltTableCell, BuiltTableRow, TableColumn, TableColumnResizeResponse, TableHeaderResponse,
     TableOptions, TableResponse,
 };
-use super::{body, header};
-use crate::imui::{TableColumnPin, TableColumnWidth};
+use super::{body, cell, header, palette, test_ids};
+use crate::imui::TableColumnPin;
 
 pub(super) fn render_table<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -19,7 +19,7 @@ pub(super) fn render_table<H: UiHost>(
     rows: Vec<BuiltTableRow>,
     options: TableOptions,
 ) -> (AnyElement, TableResponse) {
-    let palette = resolve_table_palette(Theme::global(&*cx.app));
+    let palette = palette::resolve_table_palette(Theme::global(&*cx.app));
     let root_test_id = options.test_id.clone();
     let visible_columns = columns
         .iter()
@@ -44,7 +44,7 @@ pub(super) fn render_table<H: UiHost>(
     let column_test_id_suffixes = columns
         .iter()
         .enumerate()
-        .map(|(index, column)| column_test_id_suffix(column, index))
+        .map(|(index, column)| test_ids::column_test_id_suffix(column, index))
         .collect::<Vec<_>>();
     let mut header_responses = Vec::new();
     let header = if show_header {
@@ -139,7 +139,7 @@ pub(super) fn render_table<H: UiHost>(
                         test_id: None,
                         explicit_test_id: None,
                         background: None,
-                        content: empty_cell(cx),
+                        content: cell::empty_cell(cx),
                     });
                     if !column.visible() {
                         continue;
@@ -227,119 +227,4 @@ pub(super) fn render_table<H: UiHost>(
             headers: header_responses,
         },
     )
-}
-
-fn column_test_id_suffix(column: &TableColumn, index: usize) -> String {
-    column
-        .id()
-        .map(test_id_slug)
-        .filter(|slug| !slug.is_empty())
-        .unwrap_or_else(|| index.to_string())
-}
-
-fn test_id_slug(s: &str) -> String {
-    let mut out = String::new();
-    let mut last_was_separator = false;
-
-    for ch in s.chars() {
-        if ch.is_ascii_alphanumeric() {
-            out.push(ch.to_ascii_lowercase());
-            last_was_separator = false;
-        } else if !out.is_empty() && !last_was_separator {
-            out.push('-');
-            last_was_separator = true;
-        }
-    }
-
-    if out.ends_with('-') {
-        out.pop();
-    }
-
-    out
-}
-
-pub(super) fn table_cell_padding() -> Edges {
-    Edges {
-        left: Px(8.0),
-        right: Px(8.0),
-        top: Px(4.0),
-        bottom: Px(4.0),
-    }
-}
-
-pub(super) fn pack_cell_children<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    children: Vec<AnyElement>,
-) -> AnyElement {
-    match children.len() {
-        0 => empty_cell(cx),
-        1 => children.into_iter().next().expect("single cell child"),
-        _ => crate::ui::v_flex(move |_cx| children)
-            .gap_metric(crate::MetricRef::space(crate::Space::N0))
-            .justify(crate::Justify::Start)
-            .items(crate::Items::Stretch)
-            .no_wrap()
-            .into_element(cx),
-    }
-}
-
-pub(super) fn empty_cell<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    cx.container(ContainerProps::default(), |_cx| Vec::new())
-}
-
-pub(super) fn table_cell_layout(width: TableColumnWidth, clip_cells: bool) -> LayoutStyle {
-    let mut layout = LayoutStyle::default();
-    layout.size.height = Length::Auto;
-    if clip_cells {
-        layout.overflow = Overflow::Clip;
-    }
-
-    match width {
-        TableColumnWidth::Px(width) => {
-            layout.size.width = Length::Px(width);
-            layout.size.min_width = Some(Length::Px(width));
-            layout.size.max_width = Some(Length::Px(width));
-            layout.flex.shrink = 0.0;
-        }
-        TableColumnWidth::Fill(weight) => {
-            let grow = if weight.is_finite() && weight > 0.0 {
-                weight
-            } else {
-                1.0
-            };
-            layout.size.width = Length::Px(Px(0.0));
-            layout.flex.grow = grow;
-            layout.flex.shrink = 1.0;
-            layout.flex.basis = Length::Px(Px(0.0));
-        }
-    }
-
-    layout
-}
-
-fn resolve_table_palette(theme: &Theme) -> body::TablePalette {
-    let table_bg = theme
-        .color_by_key("table.background")
-        .or_else(|| theme.color_by_key("card"))
-        .unwrap_or_else(|| theme.color_token("card"));
-    let border = theme
-        .color_by_key("table.border")
-        .or_else(|| theme.color_by_key("border"))
-        .unwrap_or_else(|| theme.color_token("border"));
-    let header_bg = theme
-        .color_by_key("table.header.background")
-        .or_else(|| theme.color_by_key("muted"))
-        .unwrap_or_else(|| theme.color_token("muted"));
-    let mut striped_bg = theme
-        .color_by_key("table.row.striped")
-        .or_else(|| theme.color_by_key("muted"))
-        .unwrap_or_else(|| theme.color_token("muted"));
-    striped_bg.a *= 0.35;
-
-    body::TablePalette {
-        table_bg,
-        border,
-        header_bg,
-        striped_bg,
-    }
 }

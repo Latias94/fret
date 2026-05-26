@@ -14,8 +14,11 @@ use super::{
 };
 
 mod body;
+mod cell;
 mod header;
+mod palette;
 mod render;
+mod test_ids;
 
 struct BuiltTableRow {
     key: Arc<str>,
@@ -123,7 +126,7 @@ impl<'cx, 'a, H: UiHost> ImUiTableRow<'cx, 'a, H> {
         let cell_index = self.cells.len();
         let mut out = Vec::new();
         build_imui_children_with_focus(self.cx, &mut out, self.build_focus.clone(), f);
-        let content = render::pack_cell_children(self.cx, out);
+        let content = cell::pack_cell_children(self.cx, out);
         let test_id = self
             .row_test_id
             .as_ref()

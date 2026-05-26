@@ -8,7 +8,7 @@ use fret_ui::element::{
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use super::render::{table_cell_layout, table_cell_padding};
+use super::cell::{table_cell_layout, table_cell_padding};
 use crate::imui::{TableColumn, TableColumnPin, TableOptions};
 
 pub(super) struct PreparedTableCell {

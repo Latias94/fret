@@ -15,7 +15,7 @@ use crate::imui::{
 };
 
 use super::{table_header_label_text, table_sort_indicator_text};
-use crate::imui::table_controls::render::table_cell_padding;
+use crate::imui::table_controls::cell::table_cell_padding;
 
 pub(super) struct BuiltHeaderTrigger {
     pub(super) element: AnyElement,
