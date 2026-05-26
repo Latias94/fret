@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Selectable Keyboard Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI selectable keyboard policy moved into a focused private owner without changing
+selectable activation, popup close, context-menu request, popup arrow navigation, or public
+selectable APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard.rs` now owns selectable activation
+  shortcuts, popup close-on-activate updates, ContextMenu/Shift+F10 context-menu requests, and
+  inherited popup-menu arrow/Home/End focus navigation.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` keeps label identity normalization,
+  pressable/a11y assembly, pointer activation, response population, and visual row composition.
+- `tools/gate_imui_workstream_source.py` now requires `selectable_controls/keyboard.rs`, forbids
+  keyboard/nav internals from drifting back into the root selectable file, and keeps the existing
+  visual owner guard intact.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke
+  --no-fail-fast`: pass; 1 test.
+- `cargo nextest run -p fret-imui interaction_shortcuts_selectable interaction_drag_multi_select
+  models_combo --no-fail-fast`: pass; 11 tests, 170 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
+Gate note:
+
+- The focused `fret-imui` nextest run waited on package-cache/build-directory locks before
+  compiling; after the wait, the selected tests completed successfully in the same run.
+
 ## Floating Surface Kinds/State Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI floating-surface drag-kind and state records moved into focused private owners

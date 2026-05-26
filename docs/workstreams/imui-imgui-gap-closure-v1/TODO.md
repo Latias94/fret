@@ -104,6 +104,12 @@ Last updated: 2026-05-26
       transient activation/collapse keys; `floating_surface/state.rs` owns floating-area and
       floating-window state records. The root `floating_surface.rs` now keeps area composition,
       pointer-region wiring, layer wiring, and private re-exports.
+- [x] Split IMUI selectable keyboard ownership out of
+      `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` into a private owner module without
+      changing selectable activation, popup close, menu navigation, or context-menu behavior.
+      Result: `selectable_controls/keyboard.rs` now owns shortcut handling, popup close-on-activate
+      behavior, context-menu requests, and popup menu arrow-key navigation. The root file keeps
+      label identity, pressable assembly, and row rendering.
 
 ## P0 - Source Baseline
 
