@@ -494,6 +494,7 @@
     "ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/policy.rs",
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs",

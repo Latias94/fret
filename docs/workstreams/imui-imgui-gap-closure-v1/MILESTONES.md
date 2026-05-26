@@ -188,6 +188,13 @@ and resize cursors, while `handles/pointer.rs` owns pointer-region wiring, point
 runtime drag begin/update/cancel, cursor updates, and activation handoff. `handles.rs` now only
 stacks body/blocker with the eight resize handles.
 
+2026-05-27 begin-menu state owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs` now owns begin-menu state
+capture, row/popup/was-open models, menubar open-menu synchronization, active trigger state writes,
+open-request resolution, disabled-popup cleanup, and render-state recording. `menu.rs` now keeps
+begin-menu flow orchestration, trigger mounting, popup mounting, and final `DisclosureResponse`
+assembly.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

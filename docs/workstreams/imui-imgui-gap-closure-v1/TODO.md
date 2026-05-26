@@ -208,6 +208,14 @@ Last updated: 2026-05-26
       selection/gap/test-id options, and `menus/tooltip.rs` owns tooltip placement, timing,
       hoverable-content, and diagnostics options. The root `menus.rs` file is now a thin
       module/re-export index.
+- [x] Split IMUI begin-menu state/open-policy ownership out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` into a private owner module
+      without changing menubar trigger activation, popup open/close, active-trigger synchronization,
+      disabled-popup cleanup, or `DisclosureResponse` open/toggled semantics.
+      Result: `menu_family_controls/menu_state.rs` owns begin-menu state capture, row/popup/was-open
+      models, menubar open-menu synchronization, active trigger state writes, open-request
+      resolution, disabled-popup cleanup, and render-state recording. `menu.rs` now keeps public
+      flow orchestration plus trigger and popup mounting.
 - [x] Split IMUI tab-family item collection, selected-model normalization, and panel/list assembly
       out of `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` into a private owner module
       without changing the public tab-bar builder or response surface.
