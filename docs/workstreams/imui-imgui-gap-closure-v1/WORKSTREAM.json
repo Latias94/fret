@@ -484,6 +484,7 @@
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/flags.rs",
+    "ecosystem/fret-ui-kit/src/imui/response/hover/lifecycle.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/query.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets.rs",
     "ecosystem/fret-ui-kit/src/imui/options/collections.rs",

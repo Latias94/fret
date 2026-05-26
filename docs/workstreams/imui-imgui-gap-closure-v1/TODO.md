@@ -182,6 +182,10 @@ Readiness order for the next locally testable review slices:
    `response/hover/flags.rs`, while `hovered_like_imgui(...)` / `is_hovered(...)` query policy
    lives in `response/hover/query.rs`. The root `response/hover.rs` stays focused on
    `ResponseExt` storage, mutators, accessors, and drag convenience helpers.
+   2026-05-26 lifecycle owner split: `ResponseExt` lifecycle signal mutators, merge helpers,
+   clearing, and read-only accessors now live in `response/hover/lifecycle.rs`. The root
+   `response/hover.rs` still owns the lifecycle storage fields but no longer owns lifecycle
+   behavior bodies.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,

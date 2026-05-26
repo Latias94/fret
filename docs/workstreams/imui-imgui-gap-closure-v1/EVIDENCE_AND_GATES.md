@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Lifecycle Owner-Split Evidence - 2026-05-26
+
+Claim verified: `ResponseExt` lifecycle signal behavior moved out of the root hover response owner
+without changing public lifecycle accessors or model-control behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/hover/lifecycle.rs` now owns lifecycle signal mutators,
+  merge helpers, clearing, and read-only accessors for activation, deactivation, edits, and
+  deactivate-after-edit.
+- `ecosystem/fret-ui-kit/src/imui/response/hover.rs` still owns the lifecycle storage fields, but
+  no longer owns lifecycle behavior bodies.
+- `tools/gate_imui_workstream_source.py` now requires the lifecycle owner and forbids lifecycle
+  method bodies from drifting back into the root response storage file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass with pre-existing `fret-ui` warnings
+  for `unexpected_cfgs` on `unstable-retained-bridge` and `dead_code` on
+  `current_effective_opacity`.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests.
+- `cargo nextest run -p fret-imui models_controls --no-fail-fast`: pass; 6 tests, 175 skipped,
+  with the same pre-existing `fret-ui` warnings.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; validated 445 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
+Gate note:
+
+- The first parallel `fret-ui-kit` and `fret-imui` nextest runs timed out while shared cargo work
+  was still compiling. Both processes were allowed to finish naturally; the same commands were then
+  rerun serially and passed.
+
 ## Hover Query Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI hovered query flags and query policy moved out of the `ResponseExt` storage

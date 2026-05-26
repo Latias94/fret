@@ -48,6 +48,12 @@ public checkbox, radio, and switch APIs remain unchanged.
 helpers. `response/hover.rs` keeps `ResponseExt` storage, crate-local mutators, public accessors,
 and drag convenience helpers. The public hover flags and `ResponseExt` API remain unchanged.
 
+2026-05-26 lifecycle owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover/lifecycle.rs` now owns the `ResponseExt`
+lifecycle signal mutators, merge helpers, clearing, and read-only accessors for activation,
+deactivation, edits, and deactivate-after-edit. `response/hover.rs` keeps lifecycle storage but no
+longer owns lifecycle method bodies. The public `ResponseExt` API remains unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:
