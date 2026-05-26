@@ -49,6 +49,15 @@ Design constraints:
 - UI integration is optional (behind the default `fret-ui` feature); a headless build must remain
   usable for validation, tooling, and server-side workflows.
 
+Feature contract:
+
+- Default `fret-node` builds are UI-enabled through `default = ["fret-ui", "kit"]`.
+- Actual headless builds require `--no-default-features`; `--features headless` is only a marker
+  alias and does not disable defaults because Cargo features are additive.
+- The `fret-ui` feature currently depends on `fret-ui-kit` with the `dnd` feature for integration
+  helpers. This is the accepted UI-integration boundary; design-system recipe policy still must not
+  harden inside the headless runtime/store layer.
+
 ## Current Status (Snapshot)
 
 Now / Next / Later (high level):
@@ -168,7 +177,9 @@ Legend:
 - [x] Implement minimap overlay consuming derived geometry.
 - [x] Implement canvas controls (zoom/fit/reset) and bind to commands.
 - [x] Implement auto-pan during connect/drag near edges.
-- [x] Add "drag handle tooltip/help" in demo (components-layer tooltip; do not add `fret-ui-kit` dep to `fret-node`).
+- [x] Add "drag handle tooltip/help" in demo. UI integration may use the existing `fret-ui-kit`
+      dependency behind the `fret-ui` feature; keep recipe policy out of the headless runtime/store
+      layer.
 
 ### Medium-term
 

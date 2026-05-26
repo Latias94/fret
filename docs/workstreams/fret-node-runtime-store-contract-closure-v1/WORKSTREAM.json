@@ -9,8 +9,8 @@
     "docs/node-graph-roadmap.md",
     "docs/workstreams/fret-node-declarative-fearless-refactor-v1"
   ],
-  "phase": "feature-doc-test-contracts",
-  "current_task": "FNRS-050",
+  "phase": "closeout-verification",
+  "current_task": "FNRS-060",
   "next_skill": "run-workstream-task",
   "dependencies": [
     "docs/workstreams/fret-node-declarative-fearless-refactor-v1"
@@ -56,7 +56,7 @@
     {
       "id": "M5",
       "name": "Feature and documentation contracts aligned",
-      "status": "in_progress",
+      "status": "complete",
       "tasks": [
         "FNRS-050"
       ]
@@ -64,7 +64,7 @@
     {
       "id": "M6",
       "name": "Closeout",
-      "status": "pending",
+      "status": "in_progress",
       "tasks": [
         "FNRS-060"
       ]

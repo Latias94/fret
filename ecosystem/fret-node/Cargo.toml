@@ -52,7 +52,11 @@ kit = []
 # Optional integration helpers for `fret-app` applications (command registration + default keybindings).
 app-integration = ["dep:fret-app"]
 
-# Builds only the headless graph model + schema + rules (no `fret-ui` dependency).
+# Marker for explicitly documented headless builds.
+#
+# Cargo features are additive: `--features headless` does not disable the default UI-enabled
+# feature set. Use `--no-default-features` (optionally with `--features headless`) for the actual
+# headless graph model + schema + rules build with no `fret-ui` dependency.
 headless = []
 
 [lints.rust]

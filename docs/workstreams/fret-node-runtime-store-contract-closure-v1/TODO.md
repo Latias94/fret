@@ -222,7 +222,7 @@ Completion notes:
 
 ## FNRS-050 - Clean feature, dependency-boundary, and policy-test contracts
 
-Status: ready
+Status: done
 Owner: planner/worker
 Dependencies: FNRS-010, FNRS-020, FNRS-030
 
@@ -258,6 +258,24 @@ Review notes:
 
 - Renaming or deprecating features is a public contract change. Update docs and consider ADR
   alignment if the impact crosses crate boundaries.
+
+Completion notes:
+
+- Clarified `headless` as a documented marker for `--no-default-features` builds, not a feature
+  that disables defaults.
+- Added a feature contract section to `docs/node-graph-roadmap.md`.
+- Updated the roadmap wording to acknowledge the current `fret-ui` -> `fret-ui-kit` integration
+  dependency while preserving the headless runtime/store policy boundary.
+- Moved the large crate-root `surface_policy_tests` module from `src/lib.rs` to
+  `src/surface_policy_tests.rs`; `src/lib.rs` is now back to the crate surface.
+- Fresh validation on 2026-05-26:
+  - `cargo fmt -p fret-node --check`: passed.
+  - `cargo nextest run -p fret-node --features compat-retained-canvas binding_surface_covers_instance_style_sync_and_history_helpers first_party_node_graph_demos_stay_declarative_only`: 2 passed.
+  - `cargo check -p fret-node --no-default-features`: passed.
+  - `cargo check -p fret-node --no-default-features --features headless`: passed.
+  - `cargo check -p fret-node --features compat-retained-canvas`: passed.
+  - `cargo nextest run -p fret-node --no-default-features runtime`: 46 passed.
+  - `cargo clippy -p fret-node --no-default-features --all-targets -- -D warnings`: passed.
 
 ## FNRS-060 - Closeout verification and follow-on split
 

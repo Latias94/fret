@@ -256,3 +256,32 @@ Evidence anchors:
 - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
 - `ecosystem/fret-node/src/ui/binding_viewport.rs`
 - `ecosystem/fret-node/src/lib.rs`
+
+### 2026-05-26 - FNRS-050 completed
+
+Changes:
+
+- Clarified the `headless` Cargo feature comment so it does not imply that enabling `headless`
+  disables default UI features.
+- Added an explicit feature contract to `docs/node-graph-roadmap.md`.
+- Updated the roadmap `fret-ui-kit` wording to match the current UI integration dependency while
+  keeping recipe policy out of the headless runtime/store layer.
+- Moved the large crate-root policy scan module from `ecosystem/fret-node/src/lib.rs` to
+  `ecosystem/fret-node/src/surface_policy_tests.rs`.
+
+Fresh gates:
+
+- `cargo fmt -p fret-node --check`: passed.
+- `cargo nextest run -p fret-node --features compat-retained-canvas binding_surface_covers_instance_style_sync_and_history_helpers first_party_node_graph_demos_stay_declarative_only`: passed, 2 tests.
+- `cargo check -p fret-node --no-default-features`: passed.
+- `cargo check -p fret-node --no-default-features --features headless`: passed.
+- `cargo check -p fret-node --features compat-retained-canvas`: passed.
+- `cargo nextest run -p fret-node --no-default-features runtime`: passed, 46 tests.
+- `cargo clippy -p fret-node --no-default-features --all-targets -- -D warnings`: passed.
+
+Evidence anchors:
+
+- `ecosystem/fret-node/Cargo.toml`
+- `docs/node-graph-roadmap.md`
+- `ecosystem/fret-node/src/lib.rs`
+- `ecosystem/fret-node/src/surface_policy_tests.rs`
