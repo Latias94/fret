@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-26
+Last updated: 2026-05-27
 
 ## M6 - Continuing IMUI Owner-Split Pressure
 
@@ -200,6 +200,13 @@ assembly.
 `BeginMenuState`, `MenuRenderState`, row/popup/was-open model capture, row/open-menu reads, and
 render-state recording. `menu_state.rs` now focuses on menubar open-menu mutation, active-trigger
 synchronization, open-request resolution, and disabled-popup cleanup.
+
+2026-05-27 table header row owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/header_row.rs` now owns the keyed header row,
+visible header cell assembly, sortable/plain wrapper selection, resize response initialization,
+`TableHeaderResponse` collection, and header row wrapping. `table_controls/render.rs` keeps table
+palette, visible-column, horizontal-scroll, and header-presence decisions plus body rows, root
+chrome, semantics, and final `TableResponse` assembly. Public IMUI table APIs remain unchanged.
 
 ## M5 - Worktree Convergence
 

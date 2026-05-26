@@ -1,7 +1,45 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-26
+Last updated: 2026-05-27
+
+## Table Header Row Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI table header row assembly moved out of the root render owner without changing
+header visibility, sortable/plain header behavior, resize response metadata, pinned/horizontal
+scroll wrapping, header test ids, or aggregate `TableResponse` headers.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header_row.rs` now owns the keyed header row,
+  visible-header-cell assembly, sortable/plain wrapper selection, resize response initialization,
+  `TableHeaderResponse` collection, and header row wrapping.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` now keeps table palette resolution,
+  visible-column filtering, horizontal-scroll/header-presence decisions, body row assembly, root
+  chrome, semantics, and final `TableResponse` assembly.
+- `tools/gate_imui_workstream_source.py` now requires the header-row owner and rejects header
+  label/sort/resize response assembly from drifting back into `render.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls::tests --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  composition::layout_collections::table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells
+  label_identity::table_headers::label_identity_table_headers_hide_suffixes_from_visible_labels
+  label_identity::table_headers::table_sortable_header_reports_app_owned_trigger_without_sorting_rows
+  label_identity::table_headers::table_resizable_header_reports_drag_response
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
 
 ## Begin Menu State Capture Owner-Split Evidence - 2026-05-27
 

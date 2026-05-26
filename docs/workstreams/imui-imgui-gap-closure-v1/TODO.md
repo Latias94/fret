@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-26
+Last updated: 2026-05-27
 
 ## Worktree Convergence - 2026-05-26
 
@@ -224,6 +224,15 @@ Last updated: 2026-05-26
       `MenuRenderState`, model capture, row/open-menu reads, and render-state recording.
       `menu_state.rs` now focuses on menubar open-menu mutation, active-trigger synchronization,
       open-request resolution, and disabled-popup cleanup.
+- [x] Split IMUI table header row assembly out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` into a private owner module
+      without changing header visibility, sortable/plain header cells, resize response metadata,
+      pinned/horizontal-scroll wrapping, test ids, or aggregate `TableResponse` headers.
+      Result: `table_controls/header_row.rs` owns the keyed header row, visible-header-cell
+      assembly, sortable/plain wrapper selection, resize response initialization, header response
+      collection, and header row wrapping. `render.rs` keeps palette, visible-column, scroll, and
+      header-presence decisions plus body rows, root chrome, semantics, and final response
+      assembly.
 - [x] Split IMUI tab-family item collection, selected-model normalization, and panel/list assembly
       out of `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` into a private owner module
       without changing the public tab-bar builder or response surface.
