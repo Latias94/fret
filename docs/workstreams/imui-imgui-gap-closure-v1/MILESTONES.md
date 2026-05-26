@@ -294,6 +294,13 @@ visible header cell assembly, sortable/plain wrapper selection, resize response 
 palette, visible-column, horizontal-scroll, and header-presence decisions plus body rows, root
 chrome, semantics, and final `TableResponse` assembly. Public IMUI table APIs remain unchanged.
 
+2026-05-27 table header label owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/header/labels.rs` now owns visible-label parsing,
+sort-indicator text, sortable a11y labels, header content boxes, and header label text. The root
+`header.rs` keeps sortable/plain header-cell assembly and resize-handle wrapping while re-exporting
+the same `header::visible_header_label`, `header::column_is_sortable`,
+`header::table_header_label_text`, and `header::table_sort_indicator_text` call surface.
+
 2026-05-27 table row-group owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` now owns pinned-cell splitting,
 left/center/right row-group assembly, horizontal center-scroll wrapping, and the shared horizontal

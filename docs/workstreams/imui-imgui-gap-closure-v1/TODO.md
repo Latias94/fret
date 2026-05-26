@@ -286,6 +286,13 @@ Last updated: 2026-05-27
       collection, and header row wrapping. `render.rs` keeps palette, visible-column, scroll, and
       header-presence decisions plus body rows, root chrome, semantics, and final response
       assembly.
+- [x] Split IMUI table header label/sort helpers out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` into a private owner module without
+      changing visible-label parsing, sortable/plain header wrapping, sort glyph text role,
+      sortable a11y labels, resize handle placement, or header response aggregation.
+      Result: `table_controls/header/labels.rs` owns visible header label parsing,
+      sort-indicator text, sortable a11y labels, header content boxes, and header label text.
+      `header.rs` keeps sortable/plain header-cell assembly and resize-handle wrapping.
 - [x] Split IMUI table row-group mechanics out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/body.rs` into a private owner module without
       changing row semantics, cell wrapping, pinned left/right grouping, horizontal center-scroll

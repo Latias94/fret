@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Table Header Label Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI table header label/sort helpers moved out of the header assembly owner without
+changing visible-label parsing, sortable/plain header wrapping, sort glyph text role, sortable a11y
+labels, resize handle placement, or header response aggregation.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` now keeps sortable/plain header-cell
+  assembly and resize-handle wrapping.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/labels.rs` owns visible-header label
+  parsing, column sortability reads, sort-indicator text, sortable a11y labels, header content
+  boxes, and header label text.
+- Existing callers continue to use the same `header::visible_header_label`,
+  `header::column_is_sortable`, `header::table_header_label_text`, and
+  `header::table_sort_indicator_text` surface through root re-exports.
+- `tools/gate_imui_workstream_source.py` now requires the labels owner and rejects label/sort/text
+  helpers from drifting back into the root header assembly owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui
+  table_header_label_uses_shared_table_cell_text_role
+  table_sort_indicator_uses_shared_chrome_glyph_text_role
+  hidden_table_columns_do_not_render_header_body_or_response
+  horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`: pass; 4
+  tests, 733 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Image-Item Visual Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI image-item visual/props helpers moved out of the interaction owner without
