@@ -121,3 +121,7 @@ date: 2026-05-26
       covering current shadcn docs/source refs, label upstream goldens, primitive association and
       disabled opacity, click forwarding, inline children, Gallery docs ordering, RTL follow-up,
       and text/paint evidence.
+- [x] SCPM-430: Promote Radio Group from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, radio-group upstream goldens, primitive
+      roving selection, recipe item chrome, invalid/disabled/focus-visible states, Gallery docs
+      ordering, dropdown-menu radio composition, RTL follow-up, and text/paint evidence.

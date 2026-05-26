@@ -1668,6 +1668,43 @@ screenshots.
 - `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
   regenerated JSON/Markdown artifacts.
 
+2026-05-26 Radio Group regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/radio_group_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Radio Group diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/radio-group`.
+- `python -m json.tool tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json | Out-Null`:
+  PASS.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/WORKSTREAM.json | Out-Null`:
+  PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 ecosystem\fret-ui-shadcn\src\dropdown_menu.rs apps\fret-ui-gallery\src\ui\pages\radio_group.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail radio_group`: PASS, 20 tests
+  passed and 1283 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail radio_group`:
+  PASS, 1 test passed and 150 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail radio_group_demo`:
+  PASS, 2 tests passed and 74 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail dropdown_menu_radio_group`:
+  PASS, 1 test passed and 34 skipped after fixing DropdownMenuLabel to use the source-aligned
+  `text-sm font-medium` popover-foreground section-label role instead of the stale muted
+  `text-xs` group-label role; the previous `top_to_first_item` drift was 3.6667px.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail dropdown_menu_label_element_uses_source_aligned_section_text_role`:
+  PASS, 1 test passed and 1302 skipped.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail radio_group`:
+  PASS, 7 tests passed and 371 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json | Out-Null`:
+  PASS.
+- Matrix summary: 42 `regression_locked`, 1 `harness_hardening`, 11 `inventory_only`, and 5
+  `not_in_harness`.
+- Radio Group row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
+  depth `DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
 2026-05-26 Kbd regression-lock validation:
 
 - `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json | Out-Null`:

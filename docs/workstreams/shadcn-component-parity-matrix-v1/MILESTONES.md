@@ -859,3 +859,32 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Label `DIS`, `KEY`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
   component has no required state-depth gaps.
+
+## M36 - Promote Radio Group
+
+Status: complete on 2026-05-26.
+
+`radio-group.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Radio Group docs path, new-york-v4 source, radio-group/field/form/
+dropdown-menu radio upstream goldens, primitive roving-selection tests, shadcn recipe tests,
+web-vs-Fret layout/chrome/focus/overlay gates, Gallery docs-surface checks, diagnostics JSON, and
+a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Radio Group docs path, new-york-v4 recipe source,
+  radio-group demo, Field/Form radio compositions, dropdown-menu radio-group composition, and
+  tracked upstream goldens.
+- The Radio Group packet records the owner split: `fret-ui-kit` owns roving radio selection,
+  keyboard behavior, required semantics, and label-control focus routing; `fret-ui-shadcn` owns
+  root gap, item chrome, indicator centering, invalid/disabled/focus-visible states, choice-card
+  variant, and typed parts row composition; Gallery owns docs ordering and Fret follow-ups.
+- The Gallery page now keeps the current upstream docs path through `Demo` and `Usage` before
+  Fret-only follow-ups, matching the current upstream Radio Group docs instead of stale base-path
+  assumptions.
+- `radio_group_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs
+  with zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 42 `regression_locked`, 1 `harness_hardening`, 11
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Radio Group `DIS`, `FOCUS-VIS`, `KEY`, `RTL`, `TEXT-MET`, and
+  `PAINT` evidence; the component has no required state-depth gaps.

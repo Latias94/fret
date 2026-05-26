@@ -10897,7 +10897,7 @@ fn radio_group_page_teaches_docs_parity_parts_without_generic_children_api() {
     );
     assert!(
         radio_group_page.contains(
-            "Preview mirrors the shadcn Radio Group docs path first: Demo, Usage, Description, Choice Card, Fieldset, Disabled, Required Disabled, Invalid, RTL, and API Reference. The docs-path rows now use `into_element_parts(...)` for source-shaped composition, while `Label Association` stays as a focused Fret follow-up."
+            "Preview mirrors the current shadcn Radio Group docs path first: Demo and Usage. Description, Choice Card, Fieldset, Disabled, Required Disabled, Invalid, RTL, API Reference, and Label Association are Fret follow-ups. The composed rows use `into_element_parts(...)` for source-shaped control/label layout."
         ),
         "src/ui/pages/radio_group.rs should summarize the shift to the docs-shaped parts lane"
     );

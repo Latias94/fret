@@ -1,0 +1,304 @@
+{
+  "schema_version": 1,
+  "component": "radio-group",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual radio-group docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-kit/src/primitives/radio_group.rs + ecosystem/fret-ui-shadcn/src/radio_group.rs + ecosystem/fret-ui-shadcn/tests/{radix_web_primitives_state.rs,web_vs_fret_layout/radio_group.rs,web_vs_fret_control_chrome.rs,web_vs_fret_overlay_placement/dropdown_menu_radio_group/fixtures.rs} + apps/fret-ui-gallery/src/ui/pages/radio_group.rs + apps/fret-ui-gallery/src/ui/snippets/radio_group/*.rs + apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs + tools/diag-scripts/ui-gallery/radio-group/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/radio_group_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Radio Group component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/radio-group -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Radio Group checked-state, choice-card/RTL, description layout, label-click focus, and required-disabled diagnostics parse cleanly."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail radio_group",
+      "status": "pass",
+      "scope": "Shadcn Radio Group recipe tests cover indicator centering, invalid semantics/chrome, choice-card checked chrome, required semantics, uncontrolled default value, arrow/space keyboard behavior, Enter suppression, label/control association, text wrapping, and focus-ring tweening."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail radio_group",
+      "status": "pass",
+      "scope": "Radio Group web-vs-Fret layout gates cover docs-demo row geometry and indicator offset against tracked upstream fixtures."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail radio_group_demo",
+      "status": "pass",
+      "scope": "Control chrome gates cover docs-demo item border/background/check indicator and focus-visible ring against radio-group-demo web goldens."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail dropdown_menu_radio_group",
+      "status": "pass",
+      "scope": "Dropdown Menu radio-group composition gate covers related radio indicator slot insets, menu item height, content insets, and open overlay placement."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail radio_group",
+      "status": "pass",
+      "scope": "Gallery authoring tests keep Radio Group snippets on the default app surface, preserve typed docs sections, and assert the current Demo/Usage docs path before Fret follow-ups."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.radio-group.demo.light.vp1440x900",
+      "snapshot": "radio-group-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.radio-group.demo-focus.light.vp1440x900",
+      "snapshot": "radio-group-demo.focus",
+      "theme": "light",
+      "mode": "focus-visible",
+      "variant": "docs-demo-focus",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.radio-group.field-radio.light.vp1440x900",
+      "snapshot": "field-radio",
+      "theme": "light",
+      "mode": "static",
+      "variant": "field-radio",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.radio-group.dropdown-menu.open.light.vp1440x900",
+      "snapshot": "dropdown-menu-radio-group.open",
+      "theme": "light",
+      "mode": "open overlay",
+      "variant": "dropdown-menu-radio-group",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": [
+    {
+      "id": "fret.radio-group.primitive",
+      "layer": "kit_primitive",
+      "owner": "fret-ui-kit",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/primitives/radio_group.rs",
+        "ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs"
+      ]
+    },
+    {
+      "id": "fret.radio-group.recipe",
+      "layer": "recipe",
+      "owner": "fret-ui-shadcn",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/radio_group.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/radio_group.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_radio_group/fixtures.rs"
+      ]
+    },
+    {
+      "id": "fret.radio-group.gallery",
+      "layer": "app_demo",
+      "owner": "fret-ui-gallery",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/radio_group.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/radio_group/*.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+      ]
+    },
+    {
+      "id": "fret.radio-group.diagnostics",
+      "layer": "runner",
+      "owner": "diagnostics_surface",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/radio-group/*.json"
+      ]
+    }
+  ],
+  "summary": {
+    "status_counts": {
+      "regression_locked": 1
+    },
+    "covered_axes": [
+      "source_refs",
+      "upstream_dom_snapshot",
+      "fret_layout",
+      "fret_bundle_semantics",
+      "fret_text_paint",
+      "interaction_script"
+    ],
+    "state_depth": [
+      "disabled",
+      "focus_visible",
+      "keyboard",
+      "rtl",
+      "text_metrics",
+      "paint_token"
+    ],
+    "layout_sidecar_count": 4,
+    "bundle_schema2_count": 5,
+    "layout_test_id_count": 8,
+    "bundle_semantics_test_id_count": 7,
+    "measured_test_id_count": 8,
+    "upstream_dom_snapshot_count": 8,
+    "upstream_dom_target_count": 8,
+    "upstream_context_count": 4,
+    "upstream_dom_context_count": 8,
+    "upstream_live_fact_count": 6,
+    "upstream_semantics_fact_count": 3,
+    "upstream_interaction_fact_count": 3,
+    "fret_live_fact_count": 15,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 7,
+    "fret_text_paint_fact_count": 5,
+    "fret_text_paint_direct_fact_count": 3,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 5,
+    "fret_text_paint_row_count": 3,
+    "fret_text_paint_association_row_count": 2,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 5,
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0
+  },
+  "live_facts": {
+    "owner_split": [
+      "The kit primitive owns radio-group model use, radio role semantics, required group semantics, roving focus order, arrow-key selection, Space selection, Enter suppression, and label/control focus routing.",
+      "The shadcn recipe owns root gap, 16px item chrome, checked indicator centering, invalid/destructive ring and border color, disabled opacity, focus-visible ring width, choice-card chrome, and typed parts composition.",
+      "Gallery owns docs teaching order, Field/Form/card row composition, current Demo/Usage docs-path framing, RTL follow-up, and the Fret-specific label association bridge."
+    ],
+    "source_truth": [
+      "Current docs/source truth is the main-worktree repo-ref Radio Group docs page plus the new-york-v4 Radio Group recipe and radio-group-demo example.",
+      "The current upstream Radio Group docs page defines Demo and Usage only; Description, Choice Card, Fieldset, Disabled, Required Disabled, Invalid, RTL, API Reference, and Label Association are Fret follow-ups.",
+      "Field/Form radio and Dropdown Menu radio-group examples are related upstream composition references, not additional sections on the current Radio Group docs page."
+    ],
+    "regression_gates": [
+      "web_vs_fret_layout radio_group covers docs-demo row geometry and indicator offset against radio-group-demo.",
+      "web_vs_fret_control_chrome radio_group_demo covers idle control chrome and focus-visible ring paint against radio-group-demo and radio-group-demo.focus.",
+      "radix_web_primitives_state keeps click-driven radio selection aligned with Radix-style state transitions.",
+      "Radio Group diagnostic scripts cover checked-state mutation, choice-card/RTL layout, description layout, label-click focus, and required-disabled action-state."
+    ]
+  },
+  "parts": [
+    {
+      "part_id": "radio_group_primitive_selection",
+      "status": "pass_known",
+      "owner": "kit_primitive",
+      "layer": "mechanism_policy",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/primitives/radio_group.rs",
+        "ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs"
+      ],
+      "facts": [
+        "Radio Group exposes radio-group and radio-button semantics with exactly one selected item in the default single-selection lane.",
+        "Arrow keys move roving focus and selection, Space selects the active radio, and Enter does not select, matching the Radix/APG radio-group behavior axis.",
+        "Required semantics live on the group root while disabled action suppression remains item-local."
+      ]
+    },
+    {
+      "part_id": "radio_group_recipe_item_chrome",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/radio_group.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/radio_group.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs"
+      ],
+      "facts": [
+        "The shadcn recipe owns the source-aligned root gap, 16px round item control, border/input background tokens, primary checked indicator, disabled opacity, and invalid destructive border/ring colors.",
+        "The item focus-visible ring uses the upstream 3px ring width without a ring offset.",
+        "The web-vs-Fret gates keep row geometry, indicator offset, idle chrome, and focus ring paint aligned with the tracked radio-group-demo web goldens."
+      ]
+    },
+    {
+      "part_id": "radio_group_parts_and_choice_card",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/radio_group.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/radio_group/*.rs"
+      ],
+      "facts": [
+        "RadioGroup::into_element_parts keeps docs-shaped external Field, Label, FieldLabel, and FieldDescription composition typed while preserving group-owned roving order.",
+        "RadioGroupItem::children(...) and the ChoiceCard variant remain narrow shorthands for full-row item content without widening the root to arbitrary children.",
+        "RTL rows keep the logical label/description side and opposite indicator side through direction-aware parts composition."
+      ]
+    },
+    {
+      "part_id": "radio_group_related_compositions",
+      "status": "pass_known",
+      "owner": "component_recipe_and_gallery_composition",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_radio_group/fixtures.rs",
+        "goldens/shadcn-web/v4/new-york-v4/field-radio.json",
+        "goldens/shadcn-web/v4/new-york-v4/form-rhf-radiogroup.json",
+        "goldens/shadcn-web/v4/new-york-v4/form-tanstack-radiogroup.json",
+        "goldens/shadcn-web/v4/new-york-v4/dropdown-menu-radio-group.open.json"
+      ],
+      "facts": [
+        "Field and Form radio-group examples remain caller-owned Field/Form compositions around the Radio Group recipe.",
+        "Dropdown Menu radio groups are tracked as related overlay composition because the checked radio indicator appears inside menu item slots.",
+        "Overlay placement and menu item metric gates keep the dropdown-menu radio composition from drifting while avoiding a mechanism-layer radio-group change."
+      ]
+    },
+    {
+      "part_id": "radio_group_gallery_docs_surface",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/radio_group.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/radio_group/*.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+        "tools/diag-scripts/ui-gallery/radio-group/*.json"
+      ],
+      "facts": [
+        "Gallery mirrors the current upstream docs path through Demo and Usage before explicit Fret follow-ups.",
+        "Description, Choice Card, Fieldset, Disabled, Required Disabled, Invalid, RTL, API Reference, and Label Association stay labeled as Fret follow-ups.",
+        "Stable ui-gallery-radio-group-* ids support checked-state, choice-card/RTL, description layout, label-click focus, and required-disabled action-state diagnostics."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Radio Group docs-path slice with current main-worktree repo-ref source refs, radio-group/field/form/dropdown upstream goldens, primitive selection tests, shadcn recipe tests, web-vs-Fret layout/chrome/focus/overlay gates, Gallery docs-surface checks, diagnostics JSON, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "radio-group.docs-path.desktop",
+        "component": "radio-group",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/radio_group_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}
