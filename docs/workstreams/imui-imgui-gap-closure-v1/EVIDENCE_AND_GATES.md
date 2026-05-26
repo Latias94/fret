@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Collection Options Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI collection option records moved into focused private owners without changing
+public table, table-column, row/cell, or virtual-list option names and defaults.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs` now owns
+  `TableColumnWidth`, `TableColumnResizeOptions`, `TableSortDirection`, `TableColumnPin`, and
+  `TableColumn`, including identity inference, visibility, sorting, resizing, and pin helpers.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table.rs` now owns `TableOptions`,
+  `TableRowOptions`, and `TableCellOptions`, including table debug formatting and default
+  row/column gap policy.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/virtual_list.rs` now owns
+  `VirtualListOptions`, including viewport, measurement, cache, gap, scroll-margin, known-height,
+  and handle defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/collections.rs` is now a 9-line module/re-export index,
+  preserving the existing public paths through `imui::options`, `imui::options::controls`, and the
+  root `imui` facade exports.
+- `tools/gate_imui_workstream_source.py` now points the dedicated table-column accessor-first gate
+  at the table-column owner and forbids table-column/table/virtual-list bodies from drifting back
+  into root `collections.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --test
+  imui_virtual_list_smoke --no-fail-fast`: pass; 10 tests.
+- `cargo nextest run -p fret-imui composition --no-fail-fast`: pass; 37 tests, 144 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Text Options Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI text-control option records moved into focused private owners without changing

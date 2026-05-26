@@ -90,6 +90,13 @@ Last updated: 2026-05-26
       `InputTextMode` and `InputTextOptions`, `text/picker.rs` owns picker filter/default popup
       options, and `text/textarea.rs` owns textarea submit-key policy and defaults. The root
       `text.rs` file is now a thin module/re-export index.
+- [x] Split IMUI collection option types out of
+      `ecosystem/fret-ui-kit/src/imui/options/collections.rs` into private owner modules without
+      changing table, table-column, or virtual-list option type names and defaults.
+      Result: `collections/table_column.rs` owns table column identity/visibility/sort/resize/pin
+      helpers, `collections/table.rs` owns table/row/cell options, and
+      `collections/virtual_list.rs` owns virtual-list defaults. The root `collections.rs` file is
+      now a thin module/re-export index.
 
 ## P0 - Source Baseline
 
