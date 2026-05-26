@@ -60,6 +60,13 @@ Last updated: 2026-05-26
       owns long-press arm/cancel, `drag/pointer_region.rs` owns pointer-region drag lifecycle, and
       `drag/response.rs` owns `DragResponse` population. The root drag runtime file keeps
       drag-kind/threshold helpers and the pressable drag state machine.
+- [x] Split IMUI slider a11y/interaction/visual ownership out of
+      `ecosystem/fret-ui-kit/src/imui/slider_controls.rs` into private owner modules without
+      changing the public slider facade surface.
+      Result: `slider_controls/a11y.rs` owns semantics value/range/step decoration,
+      `slider_controls/interaction.rs` owns pointer/key model editing and lifecycle signals, and
+      `slider_controls/visual.rs` owns track/fill/value badge assembly. The root slider file keeps
+      label identity, option normalization, response population, and final element assembly.
 
 ## P0 - Source Baseline
 

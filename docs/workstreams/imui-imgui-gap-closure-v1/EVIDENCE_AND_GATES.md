@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Slider Controls Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI slider semantics, pointer/key interaction, and visual track/value badge
+assembly moved into focused private owners without changing the public slider facade surface.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/a11y.rs` now owns slider semantics value,
+  numeric range, step, and jump decoration.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction.rs` now owns pointer down/move/up,
+  keyboard editing, model mutation, active-item state, and lifecycle edit signals.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/visual.rs` now owns track/fill geometry,
+  progress calculation, caption text, and value badge assembly.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls.rs` keeps label identity parsing, option
+  normalization, response population, and final element assembly.
+- `tools/gate_imui_workstream_source.py` now requires the slider sub-owners and forbids semantics,
+  pointer/key handler bodies, and visual `ContainerProps` assembly from drifting back into the root
+  slider file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui slider --no-fail-fast`: pass; 2 tests, 179 skipped.
+- `cargo nextest run -p fret-imui composition --no-fail-fast`: pass; 37 tests, 144 skipped.
+- `cargo nextest run -p fret-imui label_identity --no-fail-fast`: pass; 7 tests, 174 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; 473 dedicated directories, 47 standalone
+  markdown files.
+- `git diff --check`: pass.
+
 ## Interaction Runtime Drag Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI drag runtime internals moved into focused private owners without changing
