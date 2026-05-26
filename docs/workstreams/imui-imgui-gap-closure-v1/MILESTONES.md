@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 text-picker pick-response merge owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/response.rs` now owns selected-value re-read,
+`model_value_changed_for(...)` lookup, and `ResponseExt` merge writes for picked completion/history
+candidates. `text_picker_controls.rs` keeps input/popup orchestration and final response assembly.
+
 2026-05-27 text-picker open-policy owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/open_policy.rs` now owns popup open/panel-id
 snapshot reads, expanded-state calculation, empty/exact-match close policy, and open-on-focus

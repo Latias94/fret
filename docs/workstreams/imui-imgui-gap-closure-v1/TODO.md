@@ -80,6 +80,15 @@ Last updated: 2026-05-27
       calculation, empty/exact-match close policy, and open-on-focus anchoring. The root file keeps
       candidate resolution, input/popup orchestration, keyboard reconciliation, and response
       assembly.
+- [x] Split IMUI input-text picker picked-response merge out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private owner module without
+      changing model re-read timing, element-id change detection, changed/edited/
+      deactivated-after-edit merge semantics, popup rendering, keyboard navigation, or final
+      response shape.
+      Result: `text_picker_controls/response.rs` owns selected-value re-read,
+      `model_value_changed_for(...)`, and picked-candidate `ResponseExt` merge writes. The root
+      file keeps candidate resolution, input/popup orchestration, keyboard reconciliation, and final
+      response assembly.
 - [x] Split IMUI textarea element assembly out of
       `ecosystem/fret-ui-kit/src/imui/text_controls.rs` into a private owner module without changing
       the textarea facade, response semantics, select-all-on-focus behavior, submit/cancel command

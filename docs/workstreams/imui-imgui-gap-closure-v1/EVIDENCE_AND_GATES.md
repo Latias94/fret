@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Text-Picker Pick-Response Merge Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI input-text picker picked-response merge moved behind a private owner without
+changing model re-read timing, element-id change detection, `changed`/`edited`/
+`deactivated_after_edit` merge semantics, popup rendering, keyboard navigation, or final
+`InputTextPickerResponse` shape.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` now keeps input/popup orchestration and
+  delegates picked-response mutation to a private response owner.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/response.rs` owns selected-value re-read,
+  `model_value_changed_for(...)` lookup, and `ResponseExt` merge writes for picked candidates.
+- `tools/gate_imui_workstream_source.py` now requires the response owner and rejects direct
+  `model_value_changed_for(...)` and `input.merge_*` writes from the root text-picker owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass; 6 tests, 175
+  skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Text-Picker Open-Policy Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI input-text picker popup open policy moved behind a narrower private owner

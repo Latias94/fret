@@ -11,6 +11,7 @@ mod input;
 mod keyboard;
 mod open_policy;
 mod popup;
+mod response;
 
 use candidates::resolve_text_picker_candidates;
 use input::{
@@ -23,6 +24,7 @@ use open_policy::{
     text_picker_expanded,
 };
 use popup::{InputTextPickerPopupInput, render_text_picker_popup};
+use response::merge_text_picker_pick_response;
 
 pub(super) fn input_text_completion_model_with_options<
     H: UiHost,
@@ -176,20 +178,7 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
     let picked_index = popup.picked_index;
     let picked = popup.picked;
 
-    if picked.is_some() {
-        let selected_now = ui.with_cx_mut(|cx| {
-            cx.read_model(model, fret_ui::Invalidation::Paint, |_app, value| {
-                value.clone()
-            })
-            .unwrap_or_default()
-        });
-        let picked_changed = input.id().is_some_and(|element_id| {
-            ui.with_cx_mut(|cx| super::model_value_changed_for(cx, element_id, selected_now))
-        });
-        input.merge_core_changed(picked_changed);
-        input.merge_edited(picked_changed);
-        input.merge_deactivated_after_edit(picked_changed);
-    }
+    merge_text_picker_pick_response(ui, model, &mut input, picked.is_some());
 
     InputTextPickerResponse {
         input,
