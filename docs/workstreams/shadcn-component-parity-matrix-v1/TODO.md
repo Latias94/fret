@@ -180,3 +180,7 @@ date: 2026-05-26
       `pointer-events-none` now maps to `HitTestGate(false)` while preserving absolute inline-end
       placement, compact tabular text paint, RTL anchoring, and the existing provider/mobile/
       rail/menu/action diagnostics evidence.
+- [x] SCPM-560: Replace the final `not_in_harness` holes with explicit audit packets: Carousel,
+      Chart, and Native Select are `audited_deferred` with zero queues and concrete resume
+      conditions, while Toast and Typography are `audited_skipped` because they are a Sonner
+      compatibility alias and a docs/helper surface rather than standalone component contracts.

@@ -1233,3 +1233,22 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage continues to record Sidebar `HOV`, `FOCUS-VIS`, `DRAG`, `OPEN`, `KEY`,
   `MOB`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M49 - Close Final Matrix Holes
+
+Status: complete on 2026-05-27.
+
+The final five `not_in_harness` rows are replaced with explicit machine-readable audit packets.
+
+Completed criteria:
+
+- Carousel, Chart, and Native Select now report `audited_deferred` with zero repair, hardening, and
+  gate queues. Their packets preserve existing source refs, audits, diagnostics, and the concrete
+  condition for resuming work.
+- Toast and Typography now report `audited_skipped` with zero repair, hardening, and gate queues.
+  Toast is a Sonner compatibility alias, and Typography is a docs/helper surface rather than a
+  standalone registry component contract.
+- The matrix generator understands `audited_deferred` and `audited_skipped`, so these packets do not
+  get misclassified as `regression_locked`.
+- The regenerated matrix reports 54 `regression_locked`, 3 `audited_deferred`, 2
+  `audited_skipped`, and no `harness_hardening`, `inventory_only`, or `not_in_harness` rows.

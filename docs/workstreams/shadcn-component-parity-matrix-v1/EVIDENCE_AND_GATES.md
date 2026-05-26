@@ -2279,3 +2279,26 @@ screenshots.
 - Sidebar row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP`,
   depth `HOV, FOCUS-VIS, DRAG, OPEN, KEY, MOB, RTL, TEXT-MET, PAINT`, `Missing depth = ok`,
   queues `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 final audited-deferred/skipped closure validation:
+
+- `python -m py_compile tools\parity-discovery\shadcn_component_harness_matrix.py`: PASS.
+- Packet JSON validation for `carousel_agent_packet_p0_v1.json`, `chart_agent_packet_p0_v1.json`,
+  `native_select_agent_packet_p0_v1.json`, `toast_agent_packet_p0_v1.json`, and
+  `typography_agent_packet_p0_v1.json`: PASS.
+- Existing diagnostics JSON validation for Carousel, Chart, Native Select, Toast, and Typography
+  evidence folders: PASS.
+- `python tools\parity-discovery\shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- Matrix summary: 54 `regression_locked`, 3 `audited_deferred`, 2 `audited_skipped`, 0
+  `harness_hardening`, 0 `inventory_only`, and 0 `not_in_harness`.
+- Closure row spot checks:
+  - Carousel: `audited_deferred`, `Next gap = resume_when_priority_changes`.
+  - Chart: `audited_deferred`, `Next gap = resume_when_priority_changes`.
+  - Native Select: `audited_deferred`, `Next gap = resume_when_priority_changes`.
+  - Toast: `audited_skipped`, `Next gap = no_component_contract_target`.
+  - Typography: `audited_skipped`, `Next gap = no_component_contract_target`.
+- `python tools\check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files.
+- `git diff --check`: PASS; Git reported only CRLF-to-LF normalization warnings for generated
+  matrix/workstream files.

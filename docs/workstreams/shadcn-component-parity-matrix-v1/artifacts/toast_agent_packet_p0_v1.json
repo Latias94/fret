@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "component": "toast",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-27",
+  "generated_by": "manual audited-skipped packet v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/toast.rs + ecosystem/fret-ui-shadcn/src/sonner.rs + apps/fret-ui-gallery/src/ui/pages/toast.rs",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toast_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Toast audited-skipped packet remains machine-readable."
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/toast/ui-gallery-toast-visible.json | Out-Null",
+      "status": "pass",
+      "scope": "Compatibility Toast gallery script remains parseable."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.toast.deprecated.docs",
+      "snapshot": "toast-deprecated",
+      "theme": "light",
+      "mode": "static",
+      "variant": "deprecated-docs",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/toast/ui-gallery-toast-visible.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/toast/ui-gallery-toast-visible.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 2,
+    "status_counts": {
+      "pass_known": 2,
+      "needs_hardening": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "gallery_composition": 1,
+      "policy": 0,
+      "mechanism_core": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "recipe": 1,
+      "app_demo": 1,
+      "policy": 0,
+      "mechanism": 0,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 2
+    },
+    "top_findings": [
+      "Toast is intentionally audited_skipped, not missing: upstream toast is deprecated in favor of Sonner.",
+      "Fret keeps toast as a compatibility alias and treats Sonner as the maintained parity target.",
+      "No standalone Toast component contract should be grown in this matrix."
+    ],
+    "promotion_target_counts": {
+      "diag_script": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 1,
+    "upstream_source_ref_count": 2,
+    "upstream_dom_snapshot_count": 0,
+    "interaction_script_count": 1,
+    "responsive_viewport_count": 0,
+    "fret_semantics_fact_count": 1,
+    "fret_interaction_fact_count": 1,
+    "fret_text_paint_fact_count": 1
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/radix/toast.mdx + repo-ref/ui/apps/v4/content/docs/components/base/sonner.mdx",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/toast.rs + ecosystem/fret-ui-shadcn/src/sonner.rs + apps/fret-ui-gallery/src/ui/pages/toast.rs",
+    "part_count": 2,
+    "parts": [
+      {
+        "part_id": "toast_deprecated_surface",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "docs/audits/shadcn-toast.md",
+          "ecosystem/fret-ui-shadcn/src/toast.rs",
+          "docs/audits/shadcn-sonner.md",
+          "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sonner_agent_packet_p0_v1.json"
+        ],
+        "facts": [
+          "Upstream Toast is deprecated and points users to Sonner.",
+          "Fret treats Sonner as the primary maintained toast parity target.",
+          "The toast module is a compatibility alias rather than a separate component contract."
+        ]
+      },
+      {
+        "part_id": "toast_gallery_deprecation_page",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/toast.rs",
+          "tools/diag-scripts/ui-gallery/toast/ui-gallery-toast-visible.json"
+        ],
+        "facts": [
+          "The gallery keeps a minimal Deprecated page.",
+          "The page points callers toward the Sonner surface.",
+          "This is a deliberate Skip, not missing implementation."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "audited_skipped",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Record Toast as a deliberately skipped compatibility surface rather than leaving it not_in_harness.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "toast.audited-skipped",
+        "component": "toast",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toast_agent_packet_p0_v1.json",
+        "status": "audited_skipped",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

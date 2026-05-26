@@ -117,6 +117,12 @@ recipe bug.
   `docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_group_agent_packet_p0_v1.json`
   and
   `docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/pagination_agent_packet_p0_v1.json`
+  and the final audited-deferred / audited-skipped packets:
+  `docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/carousel_agent_packet_p0_v1.json`,
+  `docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/chart_agent_packet_p0_v1.json`,
+  `docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/native_select_agent_packet_p0_v1.json`,
+  `docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toast_agent_packet_p0_v1.json`,
+  and `docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/typography_agent_packet_p0_v1.json`
 
 ## Output
 

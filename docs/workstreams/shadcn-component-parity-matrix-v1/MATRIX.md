@@ -39,13 +39,13 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 54,
-    "fret_layout": 54,
-    "fret_text_paint": 34,
-    "interaction_script": 54,
-    "responsive_viewport": 10,
-    "source_refs": 54,
-    "upstream_dom_snapshot": 54
+    "fret_bundle_semantics": 59,
+    "fret_layout": 59,
+    "fret_text_paint": 39,
+    "interaction_script": 59,
+    "responsive_viewport": 14,
+    "source_refs": 59,
+    "upstream_dom_snapshot": 58
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
@@ -54,17 +54,18 @@ State-depth legend:
     "disabled": 24,
     "drag": 7,
     "focus_visible": 21,
-    "hover": 18,
-    "keyboard": 33,
-    "mobile": 16,
-    "open": 27,
-    "paint_token": 52,
+    "hover": 19,
+    "keyboard": 35,
+    "mobile": 18,
+    "open": 28,
+    "paint_token": 57,
     "pressed": 4,
-    "rtl": 33,
-    "text_metrics": 34
+    "rtl": 35,
+    "text_metrics": 39
   },
   "status_counts": {
-    "not_in_harness": 5,
+    "audited_deferred": 3,
+    "audited_skipped": 2,
     "regression_locked": 54
   }
 }
@@ -85,8 +86,8 @@ State-depth legend:
 | button-group | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, TEXT-MET, PAINT | KEY | 1 | 1 | repair=0, hardening=0, gate=0 | expand_keyboard_state_depth |
 | calendar | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV, RESP | HOV, FOCUS-VIS, OPEN, MOB, PAINT | TEXT-MET | 4 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | card | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | KEY, RTL, TEXT-MET, PAINT | - | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
-| carousel | registry | Defer | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
-| chart | registry | Defer | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| carousel | registry | Defer | audited_deferred | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP | KEY, MOB, RTL, TEXT-MET, PAINT | - | 0 | 1 | repair=0, hardening=0, gate=0 | resume_when_priority_changes |
+| chart | registry | Defer | audited_deferred | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP | HOV, KEY, TEXT-MET, PAINT | - | 0 | 1 | repair=0, hardening=0, gate=0 | resume_when_priority_changes |
 | checkbox | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | collapsible | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, OPEN, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | combobox | non_registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV, RESP | OPEN, MOB | KEY, TEXT-MET, PAINT | 2 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
@@ -108,7 +109,7 @@ State-depth legend:
 | kbd | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | label | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | menubar | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | DIS, OPEN, PAINT | KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
-| native-select | registry | Defer | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| native-select | registry | Defer | audited_deferred | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP | OPEN, RTL, TEXT-MET, PAINT | - | 0 | 1 | repair=0, hardening=0, gate=0 | resume_when_priority_changes |
 | navigation-menu | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | HOV, FOCUS-VIS, OPEN, KEY, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | pagination | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, OPEN, KEY, MOB, RTL, TEXT-MET, PAINT | - | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | popover | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | OPEN, KEY, MOB | PAINT | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
@@ -128,15 +129,17 @@ State-depth legend:
 | table | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | HOV, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | tabs | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | textarea | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
-| toast | non_registry | Skip | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| toast | non_registry | Skip | audited_skipped | SRC, LAYOUT, SEM, TEXT, BEHAV | TEXT-MET, PAINT | - | 0 | 1 | repair=0, hardening=0, gate=0 | no_component_contract_target |
 | toggle | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, HOV, FOCUS-VIS, PRESS, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | toggle-group | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, HOV, FOCUS-VIS, PRESS, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | tooltip | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | DIS, HOV, FOCUS-VIS, OPEN, KEY, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
-| typography | non_registry | Skip | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| typography | non_registry | Skip | audited_skipped | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP | MOB, TEXT-MET, PAINT | - | 0 | 1 | repair=0, hardening=0, gate=0 | no_component_contract_target |
 
 ## Interpretation
 
 - `regression_locked` means the current suite report has no repair or hardening queue for that component slice. It does not mean every state, breakpoint, DPI, font metric, and interaction path is covered.
+- `audited_deferred` means the surface has a machine-readable audit packet and zero repair/hardening queues, but the owner decision is to resume only when its priority changes.
+- `audited_skipped` means the surface has a machine-readable audit packet explaining why it is not a standalone component contract for this matrix.
 - `Depth` records state signals proven by manifest targets, component packets, validation gates, and Fret diagnostics summaries. `Missing depth` is filtered through component-specific applicability so irrelevant states are not treated as gaps.
 - `coverage_targeted` means a priority target exists in the manifest, but it is not yet represented as a current suite report.
 - `inventory_only` means the component exists in the shadcn inventory but does not yet have a harness seed.
