@@ -138,12 +138,13 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
 - Debug draw proof:
   - `imui_debug_draw_basics` — canvas-backed draw-list authoring and metadata through
     `fret::imui::kit`
-- Product proof:
-  - `cargo run -p fret-demo --bin imui_editor_proof_demo`
+- Product workbench:
+  - `cargo run -p fret-demo --bin imui_editor_workbench_demo`
   - discover product proofs with `cargo run -p fretboard-dev -- list native-demos --all`
-  - `imui_editor_proof_demo` is the heavier proof where explicit stable identity is already visible
-  - use it when you need the intended generic/editor owner split plus state, command/action
-    dispatch, editor controls, menu/popup behavior, and diagnostic `test_id` anchors
+  - `imui_editor_workbench_demo` is the canonical editor workbench route; it currently delegates to
+    the workspace shell owner while the older proof demos remain smaller supporting surfaces
+  - use it when you need the first-open editor-grade IMUI workbench path; drop to
+    `imui_editor_proof_demo` only when you need the older dense panel proof directly
 - Reference/smoke:
   - `imui_hello_demo` — tiny runnable facade smoke; useful, but not the main first-contact path
     - this is the smallest IMUI text/control smoke; use it when checking that visible text,
@@ -185,8 +186,9 @@ Stable identity rule for the immediate-mode lane:
 - Rebuild rows each frame; do not treat element values as cloneable reusable UI.
 - `imui_action_basics` is still the right generic/default proof even though it does not need keyed
   identity yet; `imui_editor_controls_basics` is the editor-control first-contact proof, while
-  `imui_editor_proof_demo` remains the heavier product proof where explicit stable identity is
-  already visible.
+  `imui_editor_workbench_demo` is the canonical product workbench route and
+  `imui_editor_proof_demo` remains the supporting dense panel proof where explicit stable identity
+  is already visible.
 
 Comparison / still-evolving examples (not recommended for onboarding) are labeled in the cookbook index:
 
@@ -259,7 +261,8 @@ Explicit advanced/reference roster:
 - `imui_hello_demo` is a tiny IMUI smoke/reference surface. It remains useful for the smallest
   runnable facade check and the smallest text/control rendering check, but the generic/editor
   immediate teaching path should start from `imui_action_basics` and `imui_editor_controls_basics`;
-  use `imui_editor_proof_demo` when you need the heavier editor product proof.
+  use `imui_editor_workbench_demo` when you need the canonical editor workbench route, and use
+  `imui_editor_proof_demo` only for the supporting dense editor panel proof.
   - when launched through `fretboard`, select `fret-demo` or `fret-examples-imui` explicitly:
     `cargo run -p fretboard -- dev native --package fret-demo --bin imui_hello_demo`
     or

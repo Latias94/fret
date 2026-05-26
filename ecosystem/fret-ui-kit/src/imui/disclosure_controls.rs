@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, KeyCode, MouseButton, Px, SemanticsRole};
+use fret_core::{KeyCode, MouseButton, Px};
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult};
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    Overflow, PressableA11y, PressableProps, SizeStyle, SpacerProps, SpacingLength,
+    ColumnProps, ContainerProps, LayoutStyle, Length, Overflow, PressableProps, SizeStyle,
+    SpacingLength,
 };
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{Invalidation, UiHost};
 
 use super::label_identity::parse_label_identity;
 use super::{
@@ -15,6 +15,11 @@ use super::{
 };
 use crate::declarative::ModelWatchExt;
 use crate::primitives::collapsible as radix_collapsible;
+
+mod visual;
+
+#[cfg(test)]
+use visual::{header_row, resolve_disclosure_palette};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DisclosureKind {
@@ -158,7 +163,7 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                     },
                     ..Default::default()
                 };
-                props.a11y = disclosure_a11y(&spec, open_now);
+                props.a11y = visual::disclosure_a11y(&spec, open_now);
 
                 let mut header = cx.pressable_with_id(props, move |cx, state, trigger_id| {
                     let spec = spec_for_pressable.clone();
@@ -292,7 +297,7 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                     );
                     super::sanitize_response_for_enabled(enabled, trigger_response);
 
-                    vec![header_row(cx, &spec, action_label, open_now, state)]
+                    vec![visual::header_row(cx, &spec, action_label, open_now, state)]
                 });
 
                 if spec.has_children() {
@@ -319,7 +324,7 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                         overflow: Overflow::Visible,
                         ..Default::default()
                     };
-                    props.padding = disclosure_content_padding(&spec).into();
+                    props.padding = visual::disclosure_content_padding(&spec).into();
 
                     cx.container(props, move |cx| {
                         vec![cx.column(
@@ -387,491 +392,5 @@ fn disclosure_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     response
 }
 
-fn disclosure_a11y(spec: &DisclosureSpec, open_now: bool) -> PressableA11y {
-    match spec.kind {
-        DisclosureKind::CollapsingHeader => PressableA11y {
-            role: Some(SemanticsRole::Button),
-            label: Some(spec.label.clone()),
-            expanded: spec.has_children().then_some(open_now),
-            ..Default::default()
-        },
-        DisclosureKind::TreeNode => PressableA11y {
-            role: Some(SemanticsRole::TreeItem),
-            label: Some(spec.label.clone()),
-            level: Some(spec.level),
-            selected: spec.selected,
-            expanded: spec.has_children().then_some(open_now),
-            pos_in_set: spec.pos_in_set,
-            set_size: spec.set_size,
-            ..Default::default()
-        },
-    }
-}
-
-fn disclosure_content_padding(spec: &DisclosureSpec) -> Edges {
-    match spec.kind {
-        DisclosureKind::CollapsingHeader => Edges {
-            top: Px(4.0),
-            right: Px(0.0),
-            bottom: Px(0.0),
-            left: Px(0.0),
-        },
-        DisclosureKind::TreeNode => Edges {
-            top: Px(0.0),
-            right: Px(0.0),
-            bottom: Px(0.0),
-            left: Px(0.0),
-        },
-    }
-}
-
-fn header_row<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    spec: &DisclosureSpec,
-    label: Arc<str>,
-    open_now: bool,
-    state: fret_ui::element::PressableState,
-) -> AnyElement {
-    let theme = Theme::global(&*cx.app);
-    let palette = resolve_disclosure_palette(theme, spec, state);
-    let border = theme.color_token("border");
-    let indicator: Option<Arc<str>> = if spec.leaf {
-        None
-    } else if open_now {
-        Some(Arc::from("v"))
-    } else {
-        Some(Arc::from(">"))
-    };
-    let row_padding = match spec.kind {
-        DisclosureKind::CollapsingHeader => Edges {
-            top: Px(4.0),
-            right: Px(6.0),
-            bottom: Px(4.0),
-            left: Px(6.0),
-        },
-        DisclosureKind::TreeNode => {
-            let indent = Px(16.0 * (spec.level.saturating_sub(1) as f32));
-            Edges {
-                top: Px(2.0),
-                right: Px(6.0),
-                bottom: Px(2.0),
-                left: Px(6.0 + indent.0),
-            }
-        }
-    };
-    let border_edges = match spec.kind {
-        DisclosureKind::CollapsingHeader => Edges::all(Px(1.0)),
-        DisclosureKind::TreeNode => Edges::all(Px(0.0)),
-    };
-
-    let mut row_props = ContainerProps::default();
-    row_props.layout = LayoutStyle {
-        size: SizeStyle {
-            width: Length::Fill,
-            height: Length::Auto,
-            ..Default::default()
-        },
-        overflow: Overflow::Visible,
-        ..Default::default()
-    };
-    row_props.padding = row_padding.into();
-    row_props.background = palette.background;
-    row_props.border = border_edges;
-    row_props.border_color = (spec.kind == DisclosureKind::CollapsingHeader).then_some(border);
-    row_props.corner_radii = Corners::all(super::control_chrome::CONTROL_RADIUS);
-
-    cx.container(row_props, move |cx| {
-        vec![cx.flex(
-            FlexProps {
-                layout: LayoutStyle {
-                    size: SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Auto,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                direction: Axis::Horizontal,
-                gap: SpacingLength::Px(Px(4.0)),
-                justify: MainAlign::Start,
-                align: CrossAlign::Center,
-                wrap: false,
-                ..Default::default()
-            },
-            move |cx| {
-                let mut out = Vec::new();
-                out.push(cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            size: SizeStyle {
-                                width: Length::Px(Px(12.0)),
-                                height: Length::Auto,
-                                ..Default::default()
-                            },
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        indicator
-                            .as_ref()
-                            .map(|indicator| {
-                                vec![
-                                    crate::declarative::text::text_chrome_glyph(
-                                        cx,
-                                        indicator.clone(),
-                                    )
-                                    .inherit_foreground(palette.foreground),
-                                ]
-                            })
-                            .unwrap_or_default()
-                    },
-                ));
-
-                out.push(disclosure_label_text(cx, label, palette.foreground));
-                out.push(cx.spacer(SpacerProps::default()));
-                out
-            },
-        )]
-    })
-}
-
-fn disclosure_label_text<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    label: Arc<str>,
-    foreground: Color,
-) -> AnyElement {
-    crate::declarative::text::text_list_row_label(cx, label).inherit_foreground(foreground)
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct DisclosurePalette {
-    background: Option<Color>,
-    foreground: Color,
-}
-
-fn resolve_disclosure_palette(
-    theme: &Theme,
-    spec: &DisclosureSpec,
-    state: fret_ui::element::PressableState,
-) -> DisclosurePalette {
-    let selected_bg = theme
-        .color_by_key("list.active.background")
-        .or_else(|| theme.color_by_key("selection.background"))
-        .unwrap_or_else(|| theme.color_token("selection.background"));
-    let hover_bg = theme
-        .color_by_key("list.hover.background")
-        .or_else(|| theme.color_by_key("accent"))
-        .unwrap_or_else(|| theme.color_token("accent"));
-    let idle_bg = theme
-        .color_by_key("card")
-        .or_else(|| theme.color_by_key("popover"))
-        .unwrap_or_else(|| theme.color_token("popover"));
-    let foreground = theme
-        .color_by_key("foreground")
-        .unwrap_or_else(|| theme.color_token("foreground"));
-    let hover_foreground = theme
-        .color_by_key("accent-foreground")
-        .or_else(|| theme.color_by_key("foreground"))
-        .unwrap_or_else(|| theme.color_token("foreground"));
-    let interactive = state.pressed || state.hovered || state.focused;
-
-    match spec.kind {
-        DisclosureKind::CollapsingHeader => {
-            if interactive {
-                DisclosurePalette {
-                    background: Some(if state.pressed { selected_bg } else { hover_bg }),
-                    foreground: hover_foreground,
-                }
-            } else {
-                DisclosurePalette {
-                    background: Some(idle_bg),
-                    foreground,
-                }
-            }
-        }
-        DisclosureKind::TreeNode => {
-            if spec.selected {
-                DisclosurePalette {
-                    background: Some(selected_bg),
-                    foreground: hover_foreground,
-                }
-            } else if interactive {
-                DisclosurePalette {
-                    background: Some(if state.pressed { selected_bg } else { hover_bg }),
-                    foreground: hover_foreground,
-                }
-            } else {
-                DisclosurePalette {
-                    background: None,
-                    foreground,
-                }
-            }
-        }
-    }
-}
-
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    use fret_app::App;
-    use fret_authoring::UiWriter;
-    use fret_core::{AppWindowId, Point, Rect, Size, TextOverflow, TextWrap};
-    use fret_ui::ThemeConfig;
-    use fret_ui::element::{ElementKind, PressableProps, PressableState};
-    use fret_ui::elements;
-
-    struct TestWriter<'cx, 'a, H: UiHost> {
-        cx: &'cx mut ElementContext<'a, H>,
-        out: &'cx mut Vec<AnyElement>,
-    }
-
-    impl<'cx, 'a, H: UiHost> UiWriter<H> for TestWriter<'cx, 'a, H> {
-        fn with_cx_mut<R>(&mut self, f: impl FnOnce(&mut ElementContext<'_, H>) -> R) -> R {
-            f(self.cx)
-        }
-
-        fn add(&mut self, element: AnyElement) {
-            self.out.push(element);
-        }
-    }
-
-    fn contains_text(root: &AnyElement, expected: &str) -> bool {
-        match &root.kind {
-            ElementKind::Text(props) if props.text.as_ref() == expected => true,
-            _ => root
-                .children
-                .iter()
-                .any(|child| contains_text(child, expected)),
-        }
-    }
-
-    fn first_pressable(root: &AnyElement) -> Option<&PressableProps> {
-        match &root.kind {
-            ElementKind::Pressable(props) => Some(props),
-            _ => root.children.iter().find_map(first_pressable),
-        }
-    }
-
-    fn first_text<'a>(root: &'a AnyElement, expected: &str) -> Option<&'a AnyElement> {
-        match &root.kind {
-            ElementKind::Text(props) if props.text.as_ref() == expected => Some(root),
-            _ => root
-                .children
-                .iter()
-                .find_map(|child| first_text(child, expected)),
-        }
-    }
-
-    fn test_bounds() -> Rect {
-        Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(320.0), Px(160.0)),
-        )
-    }
-
-    #[test]
-    fn collapsing_header_default_open_mounts_body() {
-        let mut app = App::new();
-        fret_ui::elements::with_element_cx(
-            &mut app,
-            Default::default(),
-            Default::default(),
-            "test",
-            |cx| {
-                let mut out = Vec::new();
-                let mut ui = TestWriter { cx, out: &mut out };
-                let response = collapsing_header_with_options(
-                    &mut ui,
-                    "header",
-                    Arc::from("Section"),
-                    CollapsingHeaderOptions {
-                        default_open: true,
-                        ..Default::default()
-                    },
-                    |ui| {
-                        ui.text("Body");
-                    },
-                );
-
-                assert!(response.open());
-                assert_eq!(out.len(), 1);
-                assert!(contains_text(&out[0], "Section"));
-                assert!(contains_text(&out[0], "Body"));
-            },
-        );
-    }
-
-    #[test]
-    fn tree_node_leaf_uses_tree_item_semantics() {
-        let mut app = App::new();
-        fret_ui::elements::with_element_cx(
-            &mut app,
-            Default::default(),
-            Default::default(),
-            "test",
-            |cx| {
-                let mut out = Vec::new();
-                let mut ui = TestWriter { cx, out: &mut out };
-                let response = tree_node_with_options(
-                    &mut ui,
-                    "leaf",
-                    Arc::from("Leaf"),
-                    TreeNodeOptions {
-                        leaf: true,
-                        level: 3,
-                        selected: true,
-                        ..Default::default()
-                    },
-                    |_ui| {},
-                );
-
-                assert!(!response.open());
-                let pressable = first_pressable(&out[0]).expect("expected pressable row");
-                assert_eq!(pressable.a11y.role, Some(SemanticsRole::TreeItem));
-                assert_eq!(pressable.a11y.level, Some(3));
-                assert!(pressable.a11y.selected);
-                assert_eq!(pressable.a11y.expanded, None);
-            },
-        );
-    }
-
-    #[test]
-    fn tree_node_default_options_start_at_level_one() {
-        let options = TreeNodeOptions::default();
-        assert_eq!(options.level, 1);
-        assert!(!options.selected);
-        assert!(!options.leaf);
-    }
-
-    #[test]
-    fn tree_node_hover_palette_prefers_accent_chrome_over_popover_fill() {
-        let mut app = App::new();
-        Theme::with_global_mut(&mut app, |theme| {
-            let mut cfg = ThemeConfig::default();
-            cfg.colors
-                .insert("list.active.background".to_string(), "#224466".to_string());
-            cfg.colors
-                .insert("accent".to_string(), "#335577".to_string());
-            cfg.colors
-                .insert("accent-foreground".to_string(), "#fefefe".to_string());
-            cfg.colors
-                .insert("foreground".to_string(), "#f5f6f7".to_string());
-            cfg.colors.insert("card".to_string(), "#101418".to_string());
-            theme.apply_config_patch(&cfg);
-        });
-
-        let theme = Theme::global(&app);
-        let spec = DisclosureSpec::tree_node(Arc::from("Scene"), TreeNodeOptions::default());
-
-        let hovered = resolve_disclosure_palette(
-            theme,
-            &spec,
-            PressableState {
-                hovered: true,
-                ..Default::default()
-            },
-        );
-        assert_eq!(
-            hovered.background,
-            Some(Color::from_srgb_hex_rgb(0x33_55_77))
-        );
-        assert_eq!(hovered.foreground, Color::from_srgb_hex_rgb(0xfe_fe_fe));
-
-        let idle = resolve_disclosure_palette(theme, &spec, PressableState::default());
-        assert_eq!(idle.background, None);
-        assert_eq!(idle.foreground, Color::from_srgb_hex_rgb(0xf5_f6_f7));
-    }
-
-    #[test]
-    fn tree_row_label_uses_shared_list_row_text_role() {
-        let window = AppWindowId::default();
-        let mut app = App::new();
-
-        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
-            let spec = DisclosureSpec::tree_node(
-                Arc::from("Very long tree node"),
-                TreeNodeOptions {
-                    leaf: true,
-                    ..Default::default()
-                },
-            );
-            header_row(
-                cx,
-                &spec,
-                spec.label.clone(),
-                false,
-                PressableState::default(),
-            )
-        });
-        let expected_palette = resolve_disclosure_palette(
-            Theme::global(&app),
-            &DisclosureSpec::tree_node(
-                Arc::from("Very long tree node"),
-                TreeNodeOptions {
-                    leaf: true,
-                    ..Default::default()
-                },
-            ),
-            PressableState::default(),
-        );
-
-        let text = first_text(&el, "Very long tree node").expect("expected tree row label text");
-        let ElementKind::Text(props) = &text.kind else {
-            panic!("expected tree row label to be text");
-        };
-
-        assert!(props.style.is_none());
-        assert!(props.color.is_none());
-        assert_eq!(props.layout.size.width, Length::Fill);
-        assert_eq!(props.layout.flex.shrink, 1.0);
-        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
-        assert_eq!(props.wrap, TextWrap::None);
-        assert_eq!(props.overflow, TextOverflow::Ellipsis);
-        assert!(text.inherited_text_style.is_some());
-        assert_eq!(text.inherited_foreground, Some(expected_palette.foreground));
-    }
-
-    #[test]
-    fn disclosure_indicator_uses_shared_chrome_glyph_text_role() {
-        let window = AppWindowId::default();
-        let mut app = App::new();
-
-        let el = elements::with_element_cx(&mut app, window, test_bounds(), "test", |cx| {
-            let spec = DisclosureSpec::tree_node(
-                Arc::from("Expandable tree node"),
-                TreeNodeOptions::default(),
-            );
-            header_row(
-                cx,
-                &spec,
-                spec.label.clone(),
-                false,
-                PressableState::default(),
-            )
-        });
-        let expected_palette = resolve_disclosure_palette(
-            Theme::global(&app),
-            &DisclosureSpec::tree_node(
-                Arc::from("Expandable tree node"),
-                TreeNodeOptions::default(),
-            ),
-            PressableState::default(),
-        );
-
-        let text = first_text(&el, ">").expect("expected disclosure indicator text");
-        let ElementKind::Text(props) = &text.kind else {
-            panic!("expected disclosure indicator to be text");
-        };
-
-        assert!(props.style.is_none());
-        assert!(props.color.is_none());
-        assert_eq!(props.layout.flex.shrink, 1.0);
-        assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
-        assert_eq!(props.wrap, TextWrap::None);
-        assert_eq!(props.overflow, TextOverflow::Clip);
-        assert!(text.inherited_text_style.is_some());
-        assert_eq!(text.inherited_foreground, Some(expected_palette.foreground));
-    }
-}
+mod tests;

@@ -110,10 +110,12 @@ required cookbook features for known Lab examples and print what it enabled.
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_action_basics`
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_debug_draw_basics`
     - `cargo run -p fret-cookbook --features cookbook-imui --example imui_editor_controls_basics`
-    - next proof after the three focused lessons:
+    - canonical editor workbench after the three focused lessons:
+      `cargo run -p fret-demo --bin imui_editor_workbench_demo`
+      for the product-facing editor workbench route that currently delegates to the workspace shell
+      owner while the supporting proof demos stay smaller and focused
+    - supporting editor proof when you need the older dense panel surface directly:
       `cargo run -p fret-demo --bin imui_editor_proof_demo`
-      for the heavier editor-panel path with state, command actions, menu/popup behavior, and
-      diagnostic `test_id` anchors
     - to discover product proofs outside the cookbook table:
       `cargo run -p fretboard-dev -- list native-demos --all`
     - if you are using the public workspace runner for the tiny smoke surface, choose a package

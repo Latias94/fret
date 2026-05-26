@@ -25,11 +25,11 @@ pub(crate) use fret_ui_kit::OverlayController;
 pub(crate) use fret_ui_kit::imui::UiWriterImUiFacadeExt;
 pub(crate) use fret_ui_kit::imui::{
     CheckboxOptions, ComboModelOptions, ComboOptions, FloatingAreaOptions, FloatingWindowOptions,
-    FloatingWindowResizeOptions, GridOptions, HorizontalOptions, ImUiHoveredFlags,
-    InputTextOptions, MenuItemOptions, PopupMenuOptions, PopupModalOptions, ScrollOptions,
-    SelectableOptions, SliderOptions, SwitchOptions, TableColumn, TableColumnPin, TableOptions,
-    VerticalOptions, VirtualListMeasureMode, VirtualListOptions, VirtualListScrollHandle,
-    WindowOptions,
+    FloatingWindowResizeOptions, GridOptions, HorizontalOptions, ImUiHoveredFlags, IndentOptions,
+    InputTextOptions, ItemFlowOptions, ListBoxOptions, MenuItemOptions, PopupMenuOptions,
+    PopupModalOptions, SameLineOptions, ScrollOptions, SelectableOptions, SliderOptions,
+    SpacingOptions, SwitchOptions, TableColumn, TableColumnPin, TableOptions, VerticalOptions,
+    VirtualListMeasureMode, VirtualListOptions, VirtualListScrollHandle, WindowOptions,
 };
 pub(crate) use fret_ui_kit::{OverlayPresence, OverlayRequest};
 

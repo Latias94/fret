@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "slug": "imui-table-body-owner-split-v1",
+  "title": "IMUI Table Body Owner Split v1",
+  "status": "closed",
+  "updated": "2026-05-25",
+  "scope_kind": "closeout",
+  "follow_on_of": "imui-table-header-owner-split-v1",
+  "problem": "After the private table header owner split, `ecosystem/fret-ui-kit/src/imui/table_controls.rs` still owns body row assembly, pinned column grouping, horizontal scroll wrapping, cell wrapping, and public table authoring. This lane moves the private body/pinning/scroll renderer behind `table_controls/body.rs` while keeping public IMUI table names, response shapes, test-id shapes, and runtime contracts unchanged.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/imui-table-body-owner-split-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-body-owner-split-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-body-owner-split-v1/MILESTONES.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/imui-table-body-owner-split-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/imui-table-body-owner-split-v1/CLOSEOUT_AUDIT_2026-05-25.md"
+    },
+    {
+      "role": "upstream_route",
+      "path": "docs/workstreams/imui-table-header-owner-split-v1/WORKSTREAM.json"
+    }
+  ],
+  "repro": {
+    "summary": "Run focused IMUI table smoke and interaction gates proving hidden columns, horizontal scroll, pinned groups, sortable headers, and resize behavior stay unchanged after the private body owner split.",
+    "commands": [
+      "cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_sortable_header_api_compiles table_resizable_column_api_compiles --no-fail-fast",
+      "cargo nextest run -p fret-imui table_sortable_header_reports_app_owned_trigger_without_sorting_rows table_resizable_header_reports_drag_response table_plain_header_left_click_does_not_activate_or_click --no-fail-fast"
+    ]
+  },
+  "gates": [
+    {
+      "name": "fret-ui-kit-check",
+      "command": "cargo check -p fret-ui-kit --features imui"
+    },
+    {
+      "name": "ui-kit-table-smoke",
+      "command": "cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_sortable_header_api_compiles table_resizable_column_api_compiles --no-fail-fast"
+    },
+    {
+      "name": "imui-table-interactions",
+      "command": "cargo nextest run -p fret-imui table_sortable_header_reports_app_owned_trigger_without_sorting_rows table_resizable_header_reports_drag_response table_plain_header_left_click_does_not_activate_or_click --no-fail-fast"
+    },
+    {
+      "name": "imui-source-policy",
+      "command": "python tools/gate_imui_workstream_source.py"
+    },
+    {
+      "name": "catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "ecosystem/fret-ui-kit/src/imui/table_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/body.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/header.rs",
+    "tools/gate_imui_workstream_source.py",
+    "docs/workstreams/imui-table-body-owner-split-v1/EVIDENCE_AND_GATES.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0212-element-identity-debug-paths-and-frame-staged-element-state.md",
+    "docs/adr/0319-public-authoring-state-lanes-and-identity-contract-v1.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed for the private table body/pinning/scroll owner split. Do not reopen it for public table APIs, table engines, sizing persistence, runtime table semantics, or new table behavior; start a new owner-split follow-on only with fresh proof pressure."
+  }
+}

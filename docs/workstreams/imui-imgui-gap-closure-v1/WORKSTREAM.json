@@ -3,7 +3,7 @@
   "slug": "imui-imgui-gap-closure-v1",
   "title": "ImUi Dear ImGui Gap Closure v1",
   "status": "active",
-  "updated": "2026-05-24",
+  "updated": "2026-05-26",
   "scope_kind": "execution",
   "follow_on_of": "imui-editor-grade-product-closure-v1",
   "problem": "Refresh the Dear ImGui gap read from current Fret sources and repo-ref/imgui before further fearless refactors: identify stale parity conclusions, rank the remaining gaps, name delete/refactor candidates, and keep each follow-on tied to repro, gate, and evidence.",
@@ -75,6 +75,10 @@
     {
       "role": "execution",
       "path": "docs/workstreams/imui-imgui-gap-closure-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "integration",
+      "path": "docs/workstreams/imui-imgui-gap-closure-v1/WORKTREE_CONVERGENCE_PLAN_2026-05-26.md"
     }
   ],
   "repro": {
@@ -449,6 +453,7 @@
     "ecosystem/fret-imui/src/frontend.rs",
     "ecosystem/fret-ui-kit/src/imui.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_writer/basic_items.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs",
     "ecosystem/fret-ui-kit/src/imui/facade_writer/selection_combo.rs",

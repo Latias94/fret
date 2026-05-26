@@ -46,12 +46,7 @@ pub(crate) fn run_native_with_fn_driver_with_hooks<D: 'static, S: 'static>(
 pub(crate) fn parse_editor_theme_preset_key(
     key: &str,
 ) -> Option<fret_ui_editor::theme::EditorThemePresetV1> {
-    match key.trim().to_ascii_lowercase().as_str() {
-        "" => None,
-        "default" => Some(fret_ui_editor::theme::EditorThemePresetV1::Default),
-        "imgui_like_dense" => Some(fret_ui_editor::theme::EditorThemePresetV1::ImguiLikeDense),
-        _ => None,
-    }
+    fret_ui_editor::theme::EditorThemePresetV1::from_key(key)
 }
 
 pub(crate) fn editor_theme_preset_from_env(
@@ -192,6 +187,8 @@ pub mod ime_smoke_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod imui_editor_proof_demo;
 #[cfg(not(target_arch = "wasm32"))]
+pub mod imui_editor_workbench_demo;
+#[cfg(not(target_arch = "wasm32"))]
 pub use fret_examples_imui::imui_floating_windows_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub use fret_examples_imui::imui_hello_demo;
@@ -265,6 +262,10 @@ mod authoring_surface_policy_tests {
         );
         assert_eq!(
             super::parse_editor_theme_preset_key(" imgui_like_dense "),
+            Some(fret_ui_editor::theme::EditorThemePresetV1::ImguiLikeDense)
+        );
+        assert_eq!(
+            super::parse_editor_theme_preset_key("IMGUI-LIKE-DENSE"),
             Some(fret_ui_editor::theme::EditorThemePresetV1::ImguiLikeDense)
         );
     }

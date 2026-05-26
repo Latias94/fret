@@ -1,7 +1,21 @@
 # ImUi Dear ImGui Gap Closure v1 - TODO
 
 Status: Active
-Last updated: 2026-05-24
+Last updated: 2026-05-26
+
+## Worktree Convergence - 2026-05-26
+
+- [x] Stop feature development in both dirty worktrees and record the convergence plan.
+- [x] Checkpoint the main worktree before merging:
+      `d078e25122 refactor(imui): checkpoint gap closure convergence slices`.
+- [x] Checkpoint the `imui-imgui-editor-grade-refactor` worktree before merging:
+      `05727e284b refactor(imui): checkpoint editor-grade convergence worktree`.
+- [x] Merge `imui-imgui-editor-grade-refactor` back into `main`, resolving overlapping IMUI
+      changes by topic instead of treating either side as globally authoritative.
+- [x] Preserve the editor-grade facade/container/listbox organization, the main image-item owner
+      split, and the union source gate coverage.
+- [x] Run focused convergence gates and record the result in `EVIDENCE_AND_GATES.md`.
+- [x] Continue follow-up IMUI development only from `F:/SourceCodes/Rust/fret` on `main`.
 
 ## P0 - Source Baseline
 
@@ -1337,3 +1351,50 @@ opening the slice.
       Result: `floating_window_content_props.rs` now owns the content surface layout, scroll
       layout, and container props, while `floating_window_content.rs` keeps the pointer/focus
       orchestration and consumes the prepared owner outputs.
+- [x] Split IMUI table render/body/header ownership out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls.rs` into private owner modules without
+      changing the public IMUI surface.
+      Result: `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` now owns table assembly,
+      test-id suffixing, palette resolution, and shared cell helpers; `table_controls/body.rs`
+      owns prepared cells, pinned row grouping, horizontal scroll wrapping, and cell wrapping; and
+      `table_controls/header.rs` plus `header/{trigger,resize}.rs` own sortable/plain header
+      behavior and resize interaction. The root `table_controls.rs` keeps only authoring collection
+      and row/cell facade wiring.
+- [x] Add a narrow optional `fret-plot/imui` adapter over existing declarative plot panels without
+      restoring retained plot code or adding plot dependencies to `fret-imui` /
+      `fret-ui-kit::imui`.
+      Result: `ecosystem/fret-plot/src/imui.rs` exposes thin `UiWriter` helpers for the declarative
+      plot panel props under the opt-in `imui` feature, while the default `fret-plot` surface stays
+      declarative and retained plot bridge code stays deleted.
+- [x] Add a narrow Dear ImGui `BeginListBox`-style container proof without moving selection,
+      filtering, active-descendant, command package, or collection policy into the container.
+      Result: `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` now owns the semantic scroll
+      host, `ListBoxOptions` exposes only layout/scroll/diagnostics semantics knobs, and the
+      focused `fret-imui` composition test proves listbox semantics, scroll forwarding, stacked
+      selectable rows, and no container-owned active-descendant policy.
+- [x] Split the IMUI facade basic text/separator wrapper bodies out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` into a private owner module without changing
+      the public IMUI facade trait surface.
+      Result: `ecosystem/fret-ui-kit/src/imui/facade_writer/basic_items.rs` owns the default bodies
+      for basic text, wrapped text, bullet text, plain separators, and separator text; the root
+      facade trait remains the public method hub and only forwards those calls.
+- [x] Split the IMUI facade image item/button default bodies out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` into a private owner module without changing
+      the public IMUI facade trait surface.
+      Result: `ecosystem/fret-ui-kit/src/imui/facade_writer/image_items.rs` owns the private
+      `image_item_with_options` / `image_button_with_options` forwarding and the image-button
+      default normalization, while `image_item_controls.rs` remains the interactive image widget
+      policy owner.
+- [x] Split the IMUI facade command-presentation default bodies out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` into the existing button/menu owner modules
+      without changing the public IMUI facade trait surface.
+      Result: `button_actions.rs` owns `button_command_with_options` presentation/default-enabled
+      forwarding, `menu_items.rs` owns `menu_item_command_with_options`
+      presentation/default-enabled/default-shortcut forwarding, and the source gate now rejects
+      `command_presentation_for_window` from drifting back into the root facade trait hub.
+- [x] Converge the dirty `main` and `imui-imgui-editor-grade-refactor` worktrees before continuing
+      IMUI feature work.
+      Result: `main` checkpoint `d078e25122`, IMUI worktree checkpoint `05727e284b`, and merge
+      commit `dee3d48f44` are recorded in `WORKTREE_CONVERGENCE_PLAN_2026-05-26.md` and
+      `EVIDENCE_AND_GATES.md`. The merged tree keeps the editor-grade facade/container/listbox
+      organization, preserves the `main` image-item owner split, and continues only from `main`.
