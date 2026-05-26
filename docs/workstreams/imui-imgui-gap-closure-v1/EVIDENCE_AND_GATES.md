@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Debug-Draw Options Owner-Split Evidence - 2026-05-26
+
+Claim verified: public debug draw options/style/vertex types moved out of
+`debug_draw_controls.rs` without changing debug draw API names or behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options.rs` now owns `DebugDrawOptions`,
+  interaction options, stroke style, rounding flags, image/svg options, and mesh vertex helper
+  types.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs` re-exports those public types and keeps
+  draw-list state plus helper orchestration.
+- `tools/gate_imui_workstream_source.py` now requires the options owner, root re-export shape, and
+  crate-local visibility for style/vertex helpers used by paint modules.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass with pre-existing `fret-ui` warnings
+  for `unexpected_cfgs` on `unstable-retained-bridge` and `dead_code` on
+  `current_effective_opacity`.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass; 1 test.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests
+  --no-fail-fast`: pass; 38 tests, 650 skipped, with the same pre-existing `fret-ui` warnings.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Debug-Draw Response Owner-Split Evidence - 2026-05-26
 
 Claim verified: `DebugDrawResponse` moved out of `debug_draw_controls.rs` without changing the

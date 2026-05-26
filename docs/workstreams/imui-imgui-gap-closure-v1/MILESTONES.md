@@ -85,6 +85,12 @@ storage and accessors. The opaque-output source gate follows the new owner, whil
 `debug_draw_controls.rs` keeps debug draw options, draw-list/style types, and helper orchestration.
 The public debug draw response API remains unchanged.
 
+2026-05-26 debug-draw options owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options.rs` now owns the public debug draw
+options, stroke/rounding/image/svg options, and mesh vertex helper types. `debug_draw_controls.rs`
+re-exports those types and keeps draw-list state plus helper orchestration. The public debug draw
+API remains unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

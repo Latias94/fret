@@ -517,6 +517,7 @@
     "ecosystem/fret-ui-editor/src/controls/transform_edit.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/response.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/tests.rs",
     "apps/fret-cookbook/examples/imui_debug_draw_basics.rs",
