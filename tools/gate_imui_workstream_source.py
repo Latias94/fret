@@ -14134,7 +14134,7 @@ def main() -> None:
         SourceCheck(
             Path("docs/workstreams/README.md"),
             required=[
-                "Dedicated directories: 445",
+                "Dedicated directories: 473",
                 "`docs/workstreams/imui-style-theme-editor-proof-v1/`",
                 "closed narrow proof for Dear ImGui-style editor theme preset switching in `fret-ui-editor`",
                 "without moving `GetStyle` / `PushStyleVar` / global style-stack policy into runtime",
