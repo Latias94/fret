@@ -1515,6 +1515,12 @@ the owner module without changing public names or behavior.
 item policy stays in `image_item_controls.rs`; the public facade method names and signatures stay
 unchanged.
 
+2026-05-27 image-item visual owner split result:
+`ecosystem/fret-ui-kit/src/imui/image_item_controls/visual.rs` now owns image item chrome
+selection, image props, size sanitization, opacity normalization, and UV validation.
+`image_item_controls.rs` keeps pressable behavior, context-menu key handling, activation lifecycle,
+and `ResponseExt` population.
+
 2026-05-26 facade command-presentation owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs` now owns the button command
 presentation/default-enabled forwarding path, and

@@ -1769,6 +1769,13 @@ opening the slice.
       `image_item_with_options` / `image_button_with_options` forwarding and the image-button
       default normalization, while `image_item_controls.rs` remains the interactive image widget
       policy owner.
+- [x] Split IMUI image-item visual/props helpers out of
+      `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` into a private owner module without
+      changing image/image-button roles, focusability, pressable response population, item sizing,
+      opacity sanitization, or UV filtering.
+      Result: `image_item_controls/visual.rs` owns chrome selection, image props, size
+      sanitization, opacity normalization, and UV validation. `image_item_controls.rs` keeps
+      pressable interaction wiring and `ResponseExt` population.
 - [x] Split the IMUI facade command-presentation default bodies out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` into the existing button/menu owner modules
       without changing the public IMUI facade trait surface.

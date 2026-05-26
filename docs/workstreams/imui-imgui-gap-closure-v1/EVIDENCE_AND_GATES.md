@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Image-Item Visual Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI image-item visual/props helpers moved out of the interaction owner without
+changing image/image-button roles, focusability, pressable response population, item sizing,
+opacity sanitization, UV filtering, or smoke-test surface.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` keeps pressable behavior, context-menu
+  key handling, activation lifecycle, and `ResponseExt` population.
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls/visual.rs` owns image item chrome selection,
+  image props, size sanitization, opacity normalization, and UV validation.
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls/tests.rs` now targets the visual owner for
+  props/sanitizer coverage.
+- `tools/gate_imui_workstream_source.py` now requires the visual owner and rejects props/sanitizer
+  helpers from drifting back into the root interaction owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib image_item_controls::tests
+  --no-fail-fast`: pass; 2 tests, 687 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_image_item_smoke
+  --no-fail-fast`: pass; 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Begin Menu Open-Policy Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI begin-menu open-policy mutations moved out of the state index without changing

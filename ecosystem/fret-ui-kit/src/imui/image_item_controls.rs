@@ -1,15 +1,16 @@
 //! Immediate-mode response-bearing image item helpers.
 
-use fret_core::scene::{ImageSamplingHint, UvRect};
-use fret_core::{ImageId, KeyCode, Px, SemanticsRole, Size, ViewportFit};
+use fret_core::{ImageId, KeyCode, SemanticsRole, Size};
 use fret_ui::UiHost;
 use fret_ui::action::ActivateReason;
-use fret_ui::element::{
-    ContainerProps, ImageProps, Length, PressableA11y, PressableKeyActivation, PressableProps,
-};
+use fret_ui::element::{Length, PressableA11y, PressableKeyActivation, PressableProps};
 
 use super::{ImageItemOptions, ImageItemVariant, ResponseExt, UiWriterImUiFacadeExt};
 use crate::declarative::chrome::control_chrome_pressable_with_id_props;
+
+mod visual;
+
+use visual::{image_item_chrome, image_props_for_item, sanitize_item_size};
 
 pub(super) fn image_item_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -126,68 +127,6 @@ fn image_item_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
 
     ui.add(element);
     response
-}
-
-fn image_item_chrome<H: UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    enabled: bool,
-    state: fret_ui::element::PressableState,
-    variant: ImageItemVariant,
-) -> ContainerProps {
-    match variant {
-        ImageItemVariant::Image => ContainerProps::default(),
-        ImageItemVariant::Button => {
-            let (_palette, mut chrome) = super::control_chrome::button_chrome(cx, enabled, state);
-            chrome.padding = fret_core::Edges::all(Px(2.0)).into();
-            chrome
-        }
-    }
-}
-
-fn image_props_for_item(
-    image: ImageId,
-    fit: ViewportFit,
-    sampling: ImageSamplingHint,
-    opacity: f32,
-    uv: Option<UvRect>,
-) -> ImageProps {
-    let mut props = ImageProps::new(image);
-    props.layout.size.width = Length::Fill;
-    props.layout.size.height = Length::Fill;
-    props.fit = fit;
-    props.sampling = sampling;
-    props.opacity = normalize_opacity(opacity);
-    props.uv = uv.filter(|uv| uv_rect_is_valid(*uv));
-    props
-}
-
-fn sanitize_item_size(size: Size) -> Size {
-    Size::new(sanitize_px(size.width), sanitize_px(size.height))
-}
-
-fn sanitize_px(px: Px) -> Px {
-    if px.0.is_finite() {
-        Px(px.0.max(0.0))
-    } else {
-        Px(0.0)
-    }
-}
-
-fn normalize_opacity(opacity: f32) -> f32 {
-    if opacity.is_finite() {
-        opacity.clamp(0.0, 1.0)
-    } else {
-        1.0
-    }
-}
-
-fn uv_rect_is_valid(uv: UvRect) -> bool {
-    uv.u0.is_finite()
-        && uv.v0.is_finite()
-        && uv.u1.is_finite()
-        && uv.v1.is_finite()
-        && uv.u1 > uv.u0
-        && uv.v1 > uv.v0
 }
 
 #[cfg(test)]
