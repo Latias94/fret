@@ -132,6 +132,14 @@ Last updated: 2026-05-26
       checks, `tooltip_overlay/panel.rs` owns concrete panel placement, chrome, semantics, and
       content column assembly, and the root file keeps tooltip lifecycle, interaction bounds,
       update, dismissal, and request orchestration.
+- [x] Split IMUI menu/popup/tab/tooltip option types out of
+      `ecosystem/fret-ui-kit/src/imui/options/menus.rs` into private owner modules without
+      changing option type names, fields, defaults, or re-export paths.
+      Result: `menus/popup.rs` owns popup menu/modal options, `menus/menu.rs` owns menu bar,
+      begin-menu/submenu, and menu-item options plus shortcut seams, `menus/tab.rs` owns tab-bar
+      selection/gap/test-id options, and `menus/tooltip.rs` owns tooltip placement, timing,
+      hoverable-content, and diagnostics options. The root `menus.rs` file is now a thin
+      module/re-export index.
 
 ## P0 - Source Baseline
 

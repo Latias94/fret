@@ -3,6 +3,48 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Menu Options Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI menu/popup/tab/tooltip option records moved into focused private owners
+without changing public option names, fields, defaults, or top-level re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/menus/popup.rs` now owns `PopupMenuOptions` and
+  `PopupModalOptions`, including popper placement, default sizes, modal/auto-focus, and
+  outside-press close defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/menu.rs` now owns `MenuBarOptions`,
+  `BeginMenuOptions`, `BeginSubmenuOptions`, and `MenuItemOptions`, including item-local shortcut
+  seams and submenu popup defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/tab.rs` now owns `TabBarOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/tooltip.rs` now owns `TooltipOptions`, including
+  popper placement, estimated size, window margin, delay overrides, hoverable-content policy, and
+  test id.
+- `ecosystem/fret-ui-kit/src/imui/options/menus.rs` is now a module/re-export index, preserving
+  existing public paths through `imui::options` and the root `imui` facade exports.
+- `tools/gate_imui_workstream_source.py` now requires the split menu-option owners and forbids
+  popup/menu/tab/tooltip option bodies from drifting back into root `menus.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_tooltip_smoke --test
+  imui_combo_smoke --no-fail-fast`: pass; 3 tests.
+- `cargo nextest run -p fret-imui interaction_menu_tabs popup_hover --no-fail-fast`: pass; 39
+  tests, 142 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- The focused `fret-ui-kit` and `fret-imui` runs waited on package-cache/build-directory locks,
+  then completed successfully in the same runs.
+
 ## Tooltip Overlay Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI tooltip pointer-open gating and panel composition moved into focused private
