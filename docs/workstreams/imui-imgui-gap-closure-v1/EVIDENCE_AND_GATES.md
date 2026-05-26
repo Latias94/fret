@@ -3,6 +3,50 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Widget Response Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI widget response records moved into focused private owners without changing
+public response type names, accessors, or composition behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/open.rs` now owns
+  `DisclosureResponse` and `ComboResponse`, including their sealed trigger/open/toggled storage and
+  read-only accessors.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/text_picker.rs` now owns
+  `InputTextPickerResponse` and its input/open/picked accessors.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/tabs.rs` now owns `TabBarResponse` and
+  `TabTriggerResponse`.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/table.rs` now owns `TableResponse`,
+  `TableHeaderResponse`, and `TableColumnResizeResponse`, including resize drag readout and width
+  clamp helpers.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/virtual_list.rs` now owns
+  `VirtualListResponse`.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets.rs` is now a 15-line module/re-export index
+  beside the existing child-region owner.
+- `tools/gate_imui_workstream_source.py` now requires the split widget-response owners and forbids
+  response bodies, `ResponseExt`, `DragResponse`, table sort policy, and virtual-list handle
+  storage from drifting back into the root `widgets.rs` file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests.
+- `cargo nextest run -p fret-imui composition --no-fail-fast`: pass; 37 tests, 144 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- `cargo nextest run -p fret-imui composition --no-fail-fast` initially waited on a package-cache
+  file lock, then completed successfully in the same run.
+
 ## Container Methods Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI facade container-method dispatch moved into focused private owners without

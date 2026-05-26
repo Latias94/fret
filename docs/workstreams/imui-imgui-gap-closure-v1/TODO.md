@@ -75,6 +75,14 @@ Last updated: 2026-05-26
       `container_methods/collections.rs` owns list-box / table / virtual-list dispatch, and
       `container_methods/menu_tabs.rs` owns menu-bar / tab-bar dispatch. The root container-methods
       file is now a thin re-export index.
+- [x] Split IMUI widget response types out of
+      `ecosystem/fret-ui-kit/src/imui/response/widgets.rs` into private owner modules without
+      changing response type names or accessors.
+      Result: `response/widgets/open.rs` owns disclosure/combo responses,
+      `response/widgets/text_picker.rs` owns input text picker responses,
+      `response/widgets/tabs.rs` owns tab responses, `response/widgets/table.rs` owns table
+      responses, and `response/widgets/virtual_list.rs` owns virtual-list responses. The root
+      `widgets.rs` file is now a thin module/re-export index beside the existing child-region owner.
 
 ## P0 - Source Baseline
 
