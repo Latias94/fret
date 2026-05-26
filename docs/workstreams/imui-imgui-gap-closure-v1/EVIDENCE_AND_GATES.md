@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Button Behavior Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI button pressable/action behavior moved into a focused private owner without
+changing button facade entry points, label identity, command gating, shortcut behavior, or response
+accessors.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/button_controls/behavior.rs` now owns `ButtonAction`,
+  `button_pressable(...)`, command gating, pressable props, shortcut/context-menu handling, command
+  dispatch source metadata, payload forwarding, and button `ResponseExt` population.
+- `ecosystem/fret-ui-kit/src/imui/button_controls.rs` keeps public entry routing for default,
+  small, arrow, invisible, action, and payload-action buttons plus label identity scoping.
+- `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` remains the layout, a11y, and chrome
+  owner and is consumed by the behavior owner.
+- `tools/gate_imui_workstream_source.py` now requires the behavior owner and rejects pressable
+  props, control chrome pressable assembly, key handlers, action dispatch, and direct response
+  population from drifting back into root `button_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --no-fail-fast`:
+  pass; 1 test.
+- `cargo nextest run -p fret-imui interaction_shortcuts::button_shortcuts
+  interaction_shortcuts::command_metadata::button_command_uses_command_metadata_and_gating
+  interaction_press --no-fail-fast`: pass; 12 tests, 169 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Combo Trigger Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI combo trigger behavior and trigger chrome moved into a focused private owner

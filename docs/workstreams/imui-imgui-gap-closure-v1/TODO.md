@@ -26,6 +26,13 @@ Last updated: 2026-05-26
       layout, a11y label construction, arrow labels/glyphs, and chrome/content assembly, while
       `button_controls.rs` keeps pressable behavior, shortcut handling, action dispatch, and
       response population.
+- [x] Split IMUI button pressable/action behavior out of
+      `ecosystem/fret-ui-kit/src/imui/button_controls.rs` into a private owner module without
+      changing the public button/small-button/arrow/invisible/action facade surface.
+      Result: `button_controls/behavior.rs` owns button action payload storage, command gating,
+      pressable props, shortcut/context-menu handling, action dispatch metadata/payload forwarding,
+      and button `ResponseExt` population. The root file now keeps public entry routing plus
+      label-identity scoping, while `visual.rs` remains the layout/a11y/chrome owner.
 - [x] Split IMUI input-text picker candidate visibility and keyboard state reconciliation out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into private owner modules without
       changing the public IMUI surface.

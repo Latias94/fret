@@ -20,6 +20,14 @@ handling, action dispatch, and response population. The public IMUI button APIs 
 The same verification pass repaired the existing DropdownMenuLabel source-policy drift by routing
 that shadcn label through the shared `text_menu_group_label(...)` role.
 
+2026-05-26 button behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/button_controls/behavior.rs` now owns button action payload
+storage, command gating, pressable construction, shortcut/context-menu handling, command dispatch
+source metadata, payload forwarding, and `ResponseExt` population. `button_controls.rs` now keeps
+the public entry routing and label-identity scope only, while `button_controls/visual.rs` remains
+the layout/a11y/chrome owner. The public button, small-button, arrow-button, invisible-button, and
+action-button APIs remain unchanged.
+
 2026-05-26 text-picker owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/candidates.rs` now owns candidate filtering,
 `max_items`, exact-match hiding, and open-when-empty visibility decisions.

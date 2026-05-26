@@ -1,21 +1,18 @@
 //! Immediate-mode button-style pressable helpers.
 
+mod behavior;
 mod visual;
 
 use std::{any::Any, sync::Arc};
 
-use fret_core::{KeyCode, Size};
+use fret_core::Size;
 use fret_runtime::ActionId;
 use fret_ui::UiHost;
-use fret_ui::action::ActivateReason;
-use fret_ui::element::PressableProps;
 
 use super::label_identity::parse_label_identity;
 use super::{
     ButtonArrowDirection, ButtonOptions, ButtonVariant, ResponseExt, UiWriterImUiFacadeExt,
 };
-use crate::command::ElementCommandGatingExt as _;
-use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 
 pub(super) fn button_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -64,7 +61,7 @@ pub(super) fn action_button_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> 
         ui,
         label,
         options,
-        Some(ButtonAction {
+        Some(behavior::ButtonAction {
             action,
             payload: None,
         }),
@@ -90,157 +87,23 @@ where
         ui,
         label,
         options,
-        Some(ButtonAction {
+        Some(behavior::ButtonAction {
             action,
             payload: Some(payload),
         }),
     )
 }
 
-#[derive(Clone)]
-struct ButtonAction {
-    action: ActionId,
-    payload: Option<Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>>,
-}
-
 fn button_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     label: Arc<str>,
     options: ButtonOptions,
-    action: Option<ButtonAction>,
+    action: Option<behavior::ButtonAction>,
 ) -> ResponseExt {
     let parts = parse_label_identity(label.as_ref());
     let identity = Arc::<str>::from(parts.identity);
     let visible_label = Arc::<str>::from(parts.visible);
     ui.push_id(("button-label", identity), |ui| {
-        button_impl_inner(ui, visible_label, options, action)
+        behavior::button_pressable(ui, visible_label, options, action)
     })
-}
-
-fn button_impl_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
-    ui: &mut W,
-    label: Arc<str>,
-    options: ButtonOptions,
-    action: Option<ButtonAction>,
-) -> ResponseExt {
-    let mut response = ResponseExt::default();
-
-    let element = ui.with_cx_mut(|cx| {
-        let response = &mut response;
-        let mut enabled = options.enabled && !super::imui_is_disabled(cx);
-        if let Some(action) = action.as_ref() {
-            enabled = enabled && cx.action_is_enabled(&action.action);
-        }
-        let variant = options.variant;
-        let mut props = PressableProps::default();
-        props.enabled = enabled;
-        props.focusable = enabled && options.focusable;
-        visual::apply_button_variant_layout(&mut props, variant);
-        props.a11y = visual::button_a11y(&label, &options, variant);
-        let activate_shortcut = options.activate_shortcut;
-        let shortcut_repeat = options.shortcut_repeat;
-
-        control_chrome_pressable_with_id_props(cx, move |cx, state, id| {
-            let behavior = super::item_behavior::install_pressable_item_behavior(cx, id);
-            let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
-
-            let action_for_activate = action.clone();
-            cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
-                if reason == ActivateReason::Keyboard {
-                    super::mark_lifecycle_instant_if_inactive(
-                        host,
-                        acx,
-                        &lifecycle_model_for_activate,
-                        false,
-                    );
-                }
-                host.record_transient_event(acx, super::KEY_CLICKED);
-                if let Some(action) = action_for_activate.clone() {
-                    host.record_pending_command_dispatch_source(acx, &action.action, reason);
-                    if let Some(payload) = action.payload.as_ref() {
-                        host.record_pending_action_payload(acx, &action.action, payload());
-                    }
-                    host.dispatch_command(Some(acx.window), action.action);
-                }
-                host.notify(acx);
-            }));
-
-            if enabled {
-                let lifecycle_model_for_shortcut = behavior.lifecycle_model.clone();
-                let action_for_shortcut = action.clone();
-                cx.key_on_key_down_for(
-                    id,
-                    Arc::new(move |host, acx, down| {
-                        if let Some(shortcut) = activate_shortcut {
-                            let matches_shortcut =
-                                down.key == shortcut.key && down.modifiers == shortcut.mods;
-                            if matches_shortcut
-                                && (!down.repeat || shortcut_repeat)
-                                && !down.ime_composing
-                            {
-                                super::mark_lifecycle_instant_if_inactive(
-                                    host,
-                                    acx,
-                                    &lifecycle_model_for_shortcut,
-                                    false,
-                                );
-                                host.record_transient_event(acx, super::KEY_CLICKED);
-                                if let Some(action) = action_for_shortcut.clone() {
-                                    host.record_pending_command_dispatch_source(
-                                        acx,
-                                        &action.action,
-                                        ActivateReason::Keyboard,
-                                    );
-                                    if let Some(payload) = action.payload.as_ref() {
-                                        host.record_pending_action_payload(
-                                            acx,
-                                            &action.action,
-                                            payload(),
-                                        );
-                                    }
-                                    host.dispatch_command(Some(acx.window), action.action);
-                                }
-                                host.notify(acx);
-                                return true;
-                            }
-                        }
-
-                        let is_menu_key = down.key == KeyCode::ContextMenu;
-                        let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
-                        if !(is_menu_key || is_shift_f10) {
-                            return false;
-                        }
-
-                        host.record_transient_event(acx, super::KEY_CONTEXT_MENU_REQUESTED);
-                        host.notify(acx);
-                        true
-                    }),
-                );
-            }
-
-            let clicked = cx.take_transient_for(id, super::KEY_CLICKED);
-            super::item_behavior::populate_pressable_item_response(
-                cx,
-                id,
-                state,
-                &behavior,
-                super::item_behavior::PressableItemResponseInput {
-                    enabled,
-                    clicked,
-                    changed: false,
-                    lifecycle_edited: false,
-                },
-                response,
-            );
-
-            let (chrome, visual_content) =
-                visual::resolve_button_visual(cx, enabled, state, variant, label.clone())
-                    .into_parts();
-
-            (props, chrome, move |cx| visual_content.children(cx))
-        })
-    });
-
-    ui.add(element);
-    response
 }

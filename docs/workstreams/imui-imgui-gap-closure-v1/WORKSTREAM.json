@@ -477,6 +477,7 @@
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/button_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/button_controls/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/combo_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs",
