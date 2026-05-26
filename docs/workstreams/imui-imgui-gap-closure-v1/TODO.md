@@ -240,6 +240,16 @@ Last updated: 2026-05-27
       Result: `table_controls/row_groups.rs` owns pinned-cell splitting, left/center/right row
       groups, horizontal center scroll, and the shared horizontal flex primitive. `body.rs` keeps
       `PreparedTableCell`, `TablePalette`, row semantics/background selection, and cell wrapping.
+- [x] Split IMUI pressable item response population out of
+      `ecosystem/fret-ui-kit/src/imui/item_behavior.rs` into a private owner module without
+      changing shared button/checkbox/radio/selectable/combo/image/debug-draw pressable behavior,
+      context-menu signals, pointer-click modifiers, drag response merging, hover query hooks, or
+      `ResponseExt` population semantics.
+      Result: `item_behavior/response.rs` owns transient signal reads, context anchor/modifier
+      reads, drag response merging, hover query hook installation, and final pressable response
+      population. `item_behavior.rs` keeps pressable hook installation, active-item/long-press/
+      lifecycle/context-menu models, pointer-up transient emission, and the existing re-exported
+      call surface.
 - [x] Split IMUI tab-family item collection, selected-model normalization, and panel/list assembly
       out of `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` into a private owner module
       without changing the public tab-bar builder or response surface.

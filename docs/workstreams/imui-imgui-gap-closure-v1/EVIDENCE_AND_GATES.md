@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Pressable Item Response Owner-Split Evidence - 2026-05-27
+
+Claim verified: shared IMUI pressable item response population moved out of the hook-installation
+owner without changing button, checkbox/radio, selectable, combo, image item, or debug-draw
+pressable behavior; context-menu signals; pointer-click modifiers; drag response merging; hover
+query hooks; or `ResponseExt` population semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/item_behavior/response.rs` now owns transient signal reads,
+  context anchor/modifier reads, drag response merging, hover query hook installation, and final
+  pressable response population.
+- `ecosystem/fret-ui-kit/src/imui/item_behavior.rs` now keeps pressable hook installation,
+  active-item/long-press/lifecycle/context-menu models, pointer-up transient emission, and the
+  existing `item_behavior::populate_pressable_item_response(...)` re-exported call surface.
+- `tools/gate_imui_workstream_source.py` now requires the response owner and rejects `ResponseExt`
+  population, drag response merging, and hover response wiring from drifting back into
+  `item_behavior.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib button_controls::tests
+  boolean_controls::tests selectable_controls::tests debug_draw_controls::tests::element
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui interaction_press interaction_drag
+  interaction_shortcuts::command_metadata::button_command_dispatches_with_metadata_and_payload
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table Row-Group Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI table pinned/scroll row-group mechanics moved out of the row/cell body owner

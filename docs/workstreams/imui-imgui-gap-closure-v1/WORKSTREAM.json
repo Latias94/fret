@@ -529,6 +529,8 @@
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/timers.rs",
     "ecosystem/fret-ui-kit/src/imui/interaction_runtime/pressable_response.rs",
+    "ecosystem/fret-ui-kit/src/imui/item_behavior.rs",
+    "ecosystem/fret-ui-kit/src/imui/item_behavior/response.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/kinds.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs",

@@ -214,6 +214,14 @@ left/center/right row-group assembly, horizontal center-scroll wrapping, and the
 flex primitive. `table_controls/body.rs` keeps `PreparedTableCell`, `TablePalette`, row
 semantics/background selection, and cell wrapping. Public IMUI table APIs remain unchanged.
 
+2026-05-27 pressable item response owner-split result:
+`ecosystem/fret-ui-kit/src/imui/item_behavior/response.rs` now owns shared pressable item response
+population: transient signal reads, context anchor/modifier reads, drag response merging, hover
+query hook installation, and final `ResponseExt` population. `item_behavior.rs` keeps pressable
+hook installation, active-item/long-press/lifecycle/context-menu models, pointer-up transient
+emission, and the existing `item_behavior::populate_pressable_item_response(...)` re-exported call
+surface. Public IMUI widget APIs remain unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:
