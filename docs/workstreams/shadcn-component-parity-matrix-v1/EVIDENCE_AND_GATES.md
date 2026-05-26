@@ -1627,6 +1627,43 @@ screenshots.
 - `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
   regenerated JSON/Markdown artifacts.
 
+2026-05-26 Kbd regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Kbd diagnostic JSON scripts: PASS for all JSON scripts under `tools/diag-scripts/ui-gallery/kbd`.
+- `python -m json.tool tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json | Out-Null`:
+  PASS.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/WORKSTREAM.json | Out-Null`:
+  PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\pages\kbd.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail kbd`: PASS, 8 tests passed and
+  1295 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail kbd`:
+  PASS, 4 tests passed and 147 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_kbd --status-level fail`: PASS, 1 test
+  passed.
+- `cargo nextest run -p fret-ui-shadcn --test fret_kbd_tooltip_slot --status-level fail fret_kbd_in_tooltip_content_overrides_bg_and_fg`:
+  PASS, 1 test passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail kbd`:
+  PASS, 4 tests passed and 373 skipped after an initial compile timeout was allowed to finish
+  naturally before a visible rerun.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json | Out-Null`:
+  PASS.
+- Matrix summary: 40 `regression_locked`, 1 `harness_hardening`, 13 `inventory_only`, and 5
+  `not_in_harness`.
+- Kbd row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0, hardening=0, gate=0`,
+  `Next gap = state_depth_model_satisfied`.
+- `python tools/check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files indexed.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.
+
 2026-05-26 Empty regression-lock validation:
 
 - `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/empty_agent_packet_p0_v1.json | Out-Null`:

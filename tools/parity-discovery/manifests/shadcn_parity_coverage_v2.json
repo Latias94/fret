@@ -1732,6 +1732,52 @@
         "tools/diag-scripts/ui-gallery/item/ui-gallery-item-vs-field-doc-intro-client721-startup-non-overlap.json",
         "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/item_agent_packet_p0_v1.json"
       ]
+    },
+    {
+      "rank": 45,
+      "priority": "P1",
+      "id": "kbd.docs-path.desktop",
+      "component": "kbd",
+      "state": "docs path key token chrome, grouped shortcut spacing, button/tooltip/input-group composition, tooltip-slot paint inversion, RTL follow-up, text metrics, and paint token output",
+      "trigger": "static, keyboard token display, tooltip slot, rtl, screenshot, text paint",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "Kbd had current shadcn docs/new-york-v4 source refs, kbd-* upstream goldens, recipe typography/chrome tests, web-vs-Fret height/layout gates, tooltip-slot paint coverage, Gallery docs-surface checks, a docs smoke diagnostic, and stable section test ids, but no component-matrix packet. The new slice locks the owner split: the recipe owns fixed-height keycap chrome, text metrics, grouped shortcut spacing, tooltip-slot color inversion, and RTL child order; Gallery owns docs teaching order plus button, tooltip, and input-group composition.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/kbd.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/kbd.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/kbd-demo.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/kbd-group.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/kbd-button.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/kbd-tooltip.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/kbd-input-group.tsx",
+        "goldens/shadcn-web/v4/new-york-v4/kbd-demo.json",
+        "goldens/shadcn-web/v4/new-york-v4/kbd-group.json",
+        "goldens/shadcn-web/v4/new-york-v4/kbd-button.json",
+        "goldens/shadcn-web/v4/new-york-v4/kbd-tooltip.json",
+        "goldens/shadcn-web/v4/new-york-v4/kbd-input-group.json"
+      ],
+      "fret_refs": [
+        "docs/audits/shadcn-kbd.md",
+        "ecosystem/fret-ui-shadcn/src/kbd.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/kbd.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_kbd.rs",
+        "ecosystem/fret-ui-shadcn/tests/fret_kbd_tooltip_slot.rs",
+        "apps/fret-ui-gallery/src/ui/pages/kbd.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/kbd/demo.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/kbd/usage.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/kbd/group.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/kbd/button.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/kbd/tooltip.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/kbd/input_group.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/kbd/rtl.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+        "tools/diag-scripts/ui-gallery/kbd/ui-gallery-kbd-docs-smoke.json",
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json"
+      ]
     }
   ]
 }

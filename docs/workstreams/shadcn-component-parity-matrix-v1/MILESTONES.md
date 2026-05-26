@@ -808,3 +808,28 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Item `HOV`, `FOCUS-VIS`, `OPEN`, `KEY`, `RTL`, `TEXT-MET`, and
   `PAINT` evidence; the component has no required state-depth gaps.
+
+## M34 - Promote Kbd
+
+Status: complete on 2026-05-26.
+
+`kbd.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after connecting
+the current shadcn Kbd docs path, new-york-v4 source, kbd demo/group/button/tooltip/input-group
+upstream goldens, recipe chrome/text/RTL tests, web-vs-Fret layout gates, tooltip-slot paint proof,
+Gallery docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Kbd docs path, new-york-v4 recipe source, demo/group/
+  button/tooltip/input-group examples, and tracked kbd upstream goldens.
+- The Kbd packet records the owner split: `fret-ui-shadcn` owns fixed keycap chrome, text metrics,
+  grouped shortcut spacing, tooltip-slot color inversion, and RTL order; Gallery owns button,
+  tooltip, input-group composition, docs teaching order, and stable diagnostics anchors.
+- The Gallery page now keeps the upstream docs path through `API Reference` before the Fret-only
+  `RTL` follow-up, matching the current upstream Kbd docs instead of stale base-path assumptions.
+- `kbd_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 40 `regression_locked`, 1 `harness_hardening`, 13
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Kbd `KEY`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
+  component has no required state-depth gaps.

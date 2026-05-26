@@ -39,13 +39,13 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 40,
-    "fret_layout": 40,
-    "fret_text_paint": 20,
-    "interaction_script": 40,
+    "fret_bundle_semantics": 41,
+    "fret_layout": 41,
+    "fret_text_paint": 21,
+    "interaction_script": 41,
     "responsive_viewport": 9,
-    "source_refs": 40,
-    "upstream_dom_snapshot": 40
+    "source_refs": 41,
+    "upstream_dom_snapshot": 41
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
@@ -55,19 +55,19 @@ State-depth legend:
     "drag": 3,
     "focus_visible": 13,
     "hover": 12,
-    "keyboard": 23,
+    "keyboard": 24,
     "mobile": 14,
     "open": 24,
-    "paint_token": 38,
+    "paint_token": 39,
     "pressed": 1,
-    "rtl": 20,
-    "text_metrics": 20
+    "rtl": 21,
+    "text_metrics": 21
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 14,
+    "inventory_only": 13,
     "not_in_harness": 5,
-    "regression_locked": 39
+    "regression_locked": 40
   }
 }
 ```
@@ -107,7 +107,7 @@ State-depth legend:
 | input-group | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT | - | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | input-otp | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | DIS, PAINT | FOCUS-VIS, KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | item | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | HOV, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
-| kbd | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| kbd | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | label | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | menubar | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | DIS, OPEN, PAINT | KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | native-select | registry | Defer | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |

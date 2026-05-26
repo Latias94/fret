@@ -4891,9 +4891,19 @@ fn kbd_page_records_docs_path_and_narrow_children_surface() {
     let page = read("src/ui/pages/kbd.rs");
     assert!(
         page.contains(
-            "Preview mirrors the shadcn Kbd docs path first: Demo, Usage, Group, Button, Tooltip, Input Group, RTL, and API Reference."
+            "Preview mirrors the current shadcn Kbd docs path first: Demo, Usage, Group, Button, Tooltip, Input Group, and API Reference. RTL is a Fret-only follow-up."
         ),
-        "src/ui/pages/kbd.rs should keep the shadcn docs-path ordering explicit on the first-party gallery page"
+        "src/ui/pages/kbd.rs should keep the current shadcn docs-path ordering explicit on the first-party gallery page"
+    );
+    let api_reference_index = page.find("api_reference, rtl").expect(
+        "src/ui/pages/kbd.rs should render API Reference before the Fret-only RTL follow-up",
+    );
+    let rtl_follow_up_index = page
+        .find("RTL is a Fret-only follow-up")
+        .expect("src/ui/pages/kbd.rs should label RTL as a Fret-only follow-up");
+    assert!(
+        api_reference_index > rtl_follow_up_index,
+        "src/ui/pages/kbd.rs should explain the Fret-only RTL follow-up before rendering it after API Reference"
     );
     assert!(
         page.contains(
