@@ -44,6 +44,15 @@ synchronization, clicked candidate commits, popup close, and picked-result repor
 candidate/keyboard snapshots, and final `InputTextPickerResponse` merge. The public completion and
 history picker APIs remain unchanged.
 
+2026-05-27 text-picker input-root owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs` now owns picker input option/test-id
+preparation, ComboBox semantics normalization, assistive semantics, root fill container
+construction, text input mounting, and input-focused keyboard handler installation.
+`text_picker_controls.rs` keeps candidate visibility, popup-open state reads, keyboard-state
+snapshot reconciliation, popup lifecycle policy, popup rendering delegation, and final
+`InputTextPickerResponse` merge. Completion/history picker behavior, active-descendant wiring,
+test-id derivation, and picked response semantics remain unchanged.
+
 2026-05-26 disclosure spec owner-split result:
 `ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs` now owns the private
 `DisclosureKind` / `DisclosureSpec` model, option normalization, level clamping, test-id routing,

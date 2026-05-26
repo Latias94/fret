@@ -47,6 +47,16 @@ Last updated: 2026-05-27
       handler installation, candidate selectable rows, active-element synchronization, click commit,
       popup close, and picked-result reporting. The root file keeps input composition, assistive
       semantics, open/close policy, candidate/keyboard snapshots, and final response merge.
+- [x] Split IMUI input-text picker input-root composition out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private owner module without
+      changing completion/history picker behavior, ComboBox semantics, test-id derivation, active
+      descendant wiring, root fill sizing, input-focused keyboard navigation, popup open/close
+      policy, or picked response merging.
+      Result: `text_picker_controls/input.rs` owns picker input option/test-id preparation,
+      assistive semantics, root container construction, text input mounting, and input-focused
+      keyboard handler installation. The root file keeps candidate visibility, popup-open state,
+      popup lifecycle policy, popup rendering delegation, and final `InputTextPickerResponse`
+      merge.
 - [x] Split IMUI textarea element assembly out of
       `ecosystem/fret-ui-kit/src/imui/text_controls.rs` into a private owner module without changing
       the textarea facade, response semantics, select-all-on-focus behavior, submit/cancel command

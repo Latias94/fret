@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Text Picker Input Root Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI input-text picker input option/test-id preparation, ComboBox semantics
+normalization, assistive semantics, root fill container construction, text input mounting, and
+input-focused keyboard handler installation moved into a private input-root owner without changing
+completion/history picker behavior, active-descendant wiring, popup lifecycle policy, picked
+response merging, or public facade APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs` now owns picker input preparation,
+  assistive semantics, root container construction, text input mounting, and input-focused keyboard
+  handler installation.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` now keeps candidate visibility,
+  popup-open state reads, keyboard-state snapshot reconciliation, popup lifecycle policy, popup
+  rendering delegation, and final `InputTextPickerResponse` merge.
+- `tools/gate_imui_workstream_source.py` now requires the input-root owner and rejects direct input
+  semantics/container/keyboard-handler construction from drifting back into the root picker file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Disclosure Header Row Visual Owner-Split Evidence - 2026-05-27
 
 Claim verified: disclosure header row container/flex assembly, indicator glyph mounting, label
