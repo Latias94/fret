@@ -35,6 +35,13 @@ caption color routing, and pill badge chrome. `control_chrome.rs` keeps style co
 Existing `control_chrome::control_text`, `fill_text`, `caption_text`, and `pill` call paths remain
 unchanged through the private root re-export.
 
+2026-05-27 control chrome layout owner-split result:
+`ecosystem/fret-ui-kit/src/imui/control_chrome/layout.rs` now owns shared IMUI row/stack flex
+helper props. `control_chrome.rs` keeps style constants, `ImUiControlPalette`, button/field
+chrome, text helper re-exports, and test module wiring. Existing `fill_row_props`,
+`centered_row_props`, and `fill_stack_props` call paths keep row direction, fill-width behavior,
+gap tokens, justification, and alignment.
+
 2026-05-26 text-picker owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/candidates.rs` now owns candidate filtering,
 `max_items`, exact-match hiding, and open-when-empty visibility decisions.

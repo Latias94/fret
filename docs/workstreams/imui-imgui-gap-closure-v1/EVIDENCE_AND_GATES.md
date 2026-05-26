@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Control Chrome Layout Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI shared control chrome row/stack layout helper props moved into a private
+layout owner without changing row direction, fill-width behavior, gap tokens, justification,
+alignment, or existing `control_chrome::*_props` call paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/layout.rs` now owns `fill_row_props`,
+  `centered_row_props`, and `fill_stack_props`.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome.rs` now keeps style constants,
+  `ImUiControlPalette`, button/field chrome, text helper re-exports, and test module wiring.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/tests.rs` now covers row/stack layout helper
+  direction, width, gap, justification, and alignment defaults.
+- `tools/gate_imui_workstream_source.py` now requires the layout owner and rejects direct row/stack
+  layout helper bodies from drifting back into `control_chrome.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib control_chrome::tests
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Control Chrome Text Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI shared control text helpers, caption color routing, and pill badge chrome

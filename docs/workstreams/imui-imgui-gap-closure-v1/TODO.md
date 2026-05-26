@@ -40,6 +40,13 @@ Last updated: 2026-05-27
       Result: `control_chrome/text.rs` owns `control_text`, `fill_text`, `caption_text`, and
       `pill`. The root `control_chrome.rs` keeps style constants, control palette, button/field
       chrome, row/stack layout props, and test module wiring.
+- [x] Split IMUI shared control chrome row/stack layout helpers out of
+      `ecosystem/fret-ui-kit/src/imui/control_chrome.rs` into a private owner module without
+      changing row direction, fill-width behavior, gap tokens, justification, or alignment for
+      existing `control_chrome::*_props` call paths.
+      Result: `control_chrome/layout.rs` owns `fill_row_props`, `centered_row_props`, and
+      `fill_stack_props`. The root `control_chrome.rs` keeps style constants, control palette,
+      button/field chrome, text helper re-exports, and test module wiring.
 - [x] Split IMUI input-text picker candidate visibility and keyboard state reconciliation out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into private owner modules without
       changing the public IMUI surface.

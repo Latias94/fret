@@ -1,7 +1,7 @@
 //! Shared visual chrome helpers for immediate controls.
 
-use fret_core::{Axis, Color, Corners, Edges, Px};
-use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, Length, MainAlign, PressableState};
+use fret_core::{Color, Corners, Edges, Px};
+use fret_ui::element::{ContainerProps, Length, PressableState};
 use fret_ui::{ElementContext, Theme, UiHost};
 
 // Dear ImGui's default style is compact and mostly square.
@@ -19,8 +19,10 @@ pub(super) const STACK_GAP: Px = Px(4.0);
 pub(super) const ROW_GAP: Px = Px(8.0);
 pub(super) const SLIDER_TRACK_HEIGHT: Px = Px(4.0);
 
+mod layout;
 mod text;
 
+pub(super) use layout::{centered_row_props, fill_row_props, fill_stack_props};
 pub(super) use text::{caption_text, control_text, fill_text, pill};
 
 #[derive(Debug, Clone, Copy)]
@@ -178,34 +180,6 @@ pub(super) fn field_chrome<H: UiHost>(
     chrome.corner_radii = Corners::all(CONTROL_RADIUS);
 
     (palette, chrome)
-}
-
-pub(super) fn fill_row_props(justify: MainAlign) -> FlexProps {
-    let mut props = FlexProps::default();
-    props.direction = Axis::Horizontal;
-    props.layout.size.width = Length::Fill;
-    props.gap = ROW_GAP.into();
-    props.justify = justify;
-    props.align = CrossAlign::Center;
-    props
-}
-
-pub(super) fn centered_row_props() -> FlexProps {
-    let mut props = FlexProps::default();
-    props.direction = Axis::Horizontal;
-    props.gap = ROW_GAP.into();
-    props.justify = MainAlign::Center;
-    props.align = CrossAlign::Center;
-    props
-}
-
-pub(super) fn fill_stack_props() -> FlexProps {
-    let mut props = FlexProps::default();
-    props.direction = Axis::Vertical;
-    props.layout.size.width = Length::Fill;
-    props.gap = STACK_GAP.into();
-    props.align = CrossAlign::Stretch;
-    props
 }
 
 #[cfg(test)]
