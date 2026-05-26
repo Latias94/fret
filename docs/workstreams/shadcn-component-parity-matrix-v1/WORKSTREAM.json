@@ -3,7 +3,7 @@
   "slug": "shadcn-component-parity-matrix-v1",
   "title": "Shadcn Component Parity Matrix v1",
   "status": "active",
-  "updated": "2026-05-25",
+  "updated": "2026-05-26",
   "scope_kind": "execution",
   "problem": "Fret's shadcn parity tracking still mixes human visual review with automated harness evidence. This lane records how far self-rendered component parity can be proven automatically across source refs, upstream DOM/CSS snapshots, Fret layout, semantics, text/paint, behavior scripts, responsive coverage, and repair queues.",
   "authoritative_docs": [
@@ -33,8 +33,202 @@
     "commands": [
       "python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py",
       "python tools/parity-discovery/shadcn_component_harness_matrix.py",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/button_group_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/calendar_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/select_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/combobox_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/popover_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/dropdown_menu_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/data_table_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/progress_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/badge_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/button_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/accordion_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/alert_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/alert_dialog_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/aspect_ratio_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/date_picker_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/resizable_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sidebar_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/avatar_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/breadcrumb_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/field_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/form_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_group_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/pagination_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-text-non-overlap.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-button-click-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-label-click-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-addon-after-control-tab-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-rows-per-page-select-open-screenshot-zinc-light.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-initial-bundle.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-keyboard-shift-arrow-nudges.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-handle-line-screenshots-zinc-light-dark.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-adaptive-panel-proof.json | Out-Null",
+      "cargo nextest run -p fret-ui-shadcn --test resizable_panel_group_layout --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail resizable::",
+      "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_resizable --status-level fail",
+      "cargo nextest run -p fret-ui-gallery --test resizable_docs_surface --status-level fail",
+      "cargo nextest run -p fret-ui-gallery --lib gallery_resizable_core_examples_keep_upstream_aligned_targets_present --status-level fail",
+      "python -m json.tool tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-provider-shortcut-toggle-focus.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-controlled-open-sync.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-mobile-sheet-escape-focus-restore.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-menu-button-chrome-fill.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-app-sidebar-dropdown-relation-action-state.json | Out-Null",
+      "cargo nextest run -p fret-ui-shadcn --lib --status-level fail sidebar",
+      "cargo nextest run -p fret-ui-shadcn --lib --status-level fail sidebar_provider_cookie_assignment_matches_upstream_name_path_and_ttl sidebar_provider_cookie_parser_reads_sidebar_state_only sidebar_provider_open_change_callbacks_follow_model_changes sidebar",
+      "cargo nextest run -p fret-ui-shadcn --lib sidebar_pressable_surfaces_keep_focus_visible_ring --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_action_inherits_menu_button_size_from_peer_context sidebar_menu_action_explicit_size_overrides_peer_context sidebar_menu_action_top_offset_tracks_menu_button_size --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_badge_inherits_menu_button_size_from_peer_context sidebar_menu_badge_explicit_size_overrides_peer_context --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --lib sidebar_group_action_scopes_child_foreground sidebar_menu_action_inherits_active_peer_foreground sidebar_menu_badge_inherits_active_peer_foreground --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail sidebar::",
+      "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_sidebar --status-level fail",
+      "cargo nextest run -p fret-ui-gallery --test sidebar_docs_surface --status-level fail",
+      "cargo nextest run -p fret-ui-gallery --lib gallery_sidebar_core_examples_keep_upstream_aligned_targets_present gallery_sidebar_ctrl_b_shortcut_collapses_icon_sidebar_from_focused_button gallery_sidebar_app_sidebar_triggers_keep_custom_children_lanes_rendered --status-level fail",
+      "python -m json.tool tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-input-open-calendar.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-required-invalid-semantics.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-dropdowns-mobile-drawer.json | Out-Null",
+      "cargo nextest run -p fret-ui-shadcn --lib date_picker_trigger_width_is_intrinsic_unless_caller_overrides_it --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --test date_picker_close_on_select --status-level fail",
+      "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_page_uses_typed_doc_sections_for_app_facing_snippets date_picker_input_snippet_keeps_upstream_ghost_icon_xs_trigger_surface date_picker_time_snippet_explicitly_opts_into_close_on_select --status-level fail",
       "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json | Out-Null",
       "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/WORKSTREAM.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-demo-relation-action-state.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/progress/ui-gallery-progress-numeric-semantics.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-hover-screenshot-zinc-light.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-usage-toggle.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-docs-smoke.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-action-text-non-overlap.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-demo-relation-action-state.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-docs-smoke.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-demo-screenshot.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-composable-children-overlay.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-rtl-screenshot.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-preview-code-toggle-layout.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-docs-screenshots.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-badge-and-group-count.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-dropdown-relation-action-state.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/avatar/ui-gallery-avatar-fallback-only-screenshot.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-links-semantic-link.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-custom-separator-single-line.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-responsive-toggle.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-rtl-screenshot.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-docs-smoke.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-responsive-orientation-container-md.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-password-masked-screenshot.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-radio-screenshot-zinc-dark.json | Out-Null",
+      "cargo nextest run -p fret-ui-shadcn --test drawer_layout_invariants --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout mechanism_harness::mechanism_harness_recipe_layout_cases_match_oracles --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement misc_overlays::fixtures::web_vs_fret_misc_overlays_drawer_cases_match_web_fixtures --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome drawer::fixtures::web_vs_fret_drawer_overlay_chrome_cases_match_web_fixtures --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout web_vs_fret_layout_calendar_variant_geometries_match_web_fixtures --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout calendar_04_range --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_calendar calendar_03 --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_calendar calendar_04 --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome calendar_04 --status-level fail",
+      "cargo nextest run -p fret-ui-kit --lib select_item_aligned_items_height_uses_larger_listbox_or_scroll_extent --status-level fail",
+      "cargo nextest run -p fret-ui-headless --lib vertical_keeps_natural_items_height_when_leading_label_forces_top_clamp --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout web_vs_fret_layout_select_scrollable_trigger_size --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement web_vs_fret_select_cases_match_web_fixtures --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome web_vs_fret_select_overlay_chrome_cases_match_web_fixtures --status-level fail",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\select\\ui-gallery-select-keyboard-commit-apple.json --dir target\\fret-diag-select-keyboard-commit-apple-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\select\\ui-gallery-select-commit-and-label-update.json --dir target\\fret-diag-select-commit-label-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "cargo nextest run -p fret-ui-gallery --lib gallery_compact_shell_gives_mobile_component_story_full_window_width --status-level fail",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\combobox\\ui-gallery-combobox-responsive-vp375x240-open.json --dir target\\fret-diag\\combobox-mobile-compact-shell --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery --release",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\combobox\\ui-gallery-combobox-responsive-open.json --dir target\\fret-diag\\combobox-desktop-compact-shell-regression --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery --release",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\popover\\ui-gallery-popover-demo-relation-action-state.json --dir target\\fret-diag-popover-relation-action-state-matrix-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "cargo nextest run -p fret-ui-shadcn --lib menu_section_label --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --lib dropdown_menu_label_element --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement dropdown_menu_demo::web_vs_fret_dropdown_menu_demo_cases_match_web_fixtures --status-level fail",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\dropdown-menu\\ui-gallery-dropdown-menu-submenu-open-smoke.json --dir target\\fret-diag-dropdown-menu-submenu-after-label-fix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\shadcn-parity\\ui-gallery-shadcn-parity-m3-input-layout.json --dir target\\fret-diag-input-docs-demo-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-demo-relation-action-state.json --dir target\\fret-diag-input-demo-relation-action-state-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "cargo nextest run -p fret-ui-shadcn --lib input_control_id_uses --status-level fail",
+      "target\\debug\\fretboard-dev.exe diag suite tools\\diag-scripts\\suites\\ui-gallery-data-table\\suite.json --dir target\\fret-diag-data-table-policy-matrix-rerun --session-auto --timeout-ms 900000 --ai-packet --reuse-launch --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\button-group\\ui-gallery-button-group-text-label-control-action-state.json --dir target\\fret-diag-button-group-text-action-state-matrix-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\progress\\ui-gallery-progress-numeric-semantics.json --dir target\\fret-diag-progress-numeric-semantics-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\progress\\ui-gallery-progress-docs-smoke.json --dir target\\fret-diag-progress-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "cargo nextest run -p fret-ui-shadcn --lib --status-level fail progress",
+      "cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_progress_numeric_semantics",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail progress::",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail web_vs_fret_progress_demo_control_chrome_matches",
+      "cargo nextest run -p fret-ui-gallery --test progress_docs_surface --status-level fail",
+      "cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_progress_label_row_keeps_docs_aligned_trailing_value_lane",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\badge\\ui-gallery-badge-link-render.json --dir target\\fret-diag-badge-link-render-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\badge\\ui-gallery-badge-link-hover-screenshot-zinc-light.json --dir target\\fret-diag-badge-link-hover-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "cargo nextest run -p fret-ui-shadcn --lib --status-level fail badge",
+      "cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_badge_link_visited_semantics",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail badge::",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail badge",
+      "cargo nextest run -p fret-ui-gallery --test badge_docs_surface --status-level fail",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\button\\ui-gallery-button-link-render.json --dir target\\fret-diag-button-link-render-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "cargo nextest run -p fret-ui-shadcn --lib --status-level fail button",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail button::",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail button",
+      "cargo nextest run -p fret-ui-gallery --test button_docs_surface --status-level fail",
+      "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\accordion\\ui-gallery-accordion-usage-toggle.json --dir target\\fret-diag-accordion-usage-toggle-p0-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\accordion\\ui-gallery-accordion-docs-smoke.json --dir target\\fret-diag-accordion-docs-smoke-p0-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "cargo nextest run -p fret-ui-shadcn --lib --status-level fail accordion",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail accordion::",
+      "cargo nextest run -p fret-ui-gallery --test accordion_docs_surface --status-level fail",
+      "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\alert\\ui-gallery-alert-docs-smoke.json --dir target\\fret-diag-alert-docs-smoke-p0-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\alert\\ui-gallery-alert-link-activation.json --dir target\\fret-diag-alert-link-activation-p0-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\alert\\ui-gallery-alert-action-text-non-overlap.json --dir target\\fret-diag-alert-action-text-non-overlap-p0-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "cargo nextest run -p fret-ui-shadcn --lib --status-level fail alert",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail alert::",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail alert",
+      "cargo nextest run -p fret-ui-gallery --test alert_docs_surface --status-level fail",
+      "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\overlay\\ui-gallery-alert-dialog-docs-smoke.json --dir target\\fret-diag-alert-dialog-docs-smoke-p0-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\alert-dialog\\ui-gallery-alert-dialog-demo-relation-action-state.json --dir target\\fret-diag-alert-dialog-demo-relation-action-state-p0-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\overlay\\ui-gallery-alert-dialog-destructive-inline-link-activate.json --dir target\\fret-diag-alert-dialog-destructive-inline-link-p0-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "cargo nextest run -p fret-ui-shadcn --lib --status-level fail alert_dialog",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome --status-level fail alert_dialog",
+      "cargo nextest run -p fret-ui-gallery --test alert_dialog_docs_surface --status-level fail",
+      "cargo nextest run -p fret-ui-kit --lib aspect_ratio --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout web_vs_fret_layout_aspect_ratio_demo_geometry_matches --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_misc_targeted --status-level fail",
+      "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app aspect_ratio_snippets_prefer_ui_cx_on_the_default_app_surface aspect_ratio_page_uses_typed_doc_sections_for_app_facing_snippets selected_aspect_ratio_snippet_helpers_prefer_into_ui_element_over_anyelement --status-level fail",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\aspect-ratio\\ui-gallery-aspect-ratio-docs-smoke.json --dir target\\fret-diag-aspect-ratio-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\aspect-ratio\\ui-gallery-aspect-ratio-demo-screenshot.json --dir target\\fret-diag-aspect-ratio-demo-screenshot-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\aspect-ratio\\ui-gallery-aspect-ratio-composable-children-overlay.json --dir target\\fret-diag-aspect-ratio-composable-children-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\aspect-ratio\\ui-gallery-aspect-ratio-rtl-screenshot.json --dir target\\fret-diag-aspect-ratio-rtl-screenshot-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "cargo nextest run -p fret-ui-kit --lib avatar --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --lib --status-level fail avatar",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail avatar::",
+      "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app avatar_snippets_prefer_ui_cx_on_the_default_app_surface avatar_page_uses_typed_doc_sections_for_app_facing_snippets avatar_page_api_reference_lists_family_parts_and_builder_lanes selected_avatar_snippet_helpers_prefer_into_ui_element_over_anyelement --status-level fail",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\avatar\\ui-gallery-avatar-docs-screenshots.json --dir target\\fret-diag-avatar-docs-screenshots-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\avatar\\ui-gallery-avatar-badge-and-group-count.json --dir target\\fret-diag-avatar-badge-group-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\avatar\\ui-gallery-avatar-dropdown-relation-action-state.json --dir target\\fret-diag-avatar-dropdown-relation-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\avatar\\ui-gallery-avatar-fallback-only-screenshot.json --dir target\\fret-diag-avatar-fallback-only-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "cargo nextest run -p fret-ui-shadcn --lib --status-level fail breadcrumb",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail breadcrumb::",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail breadcrumb",
+      "cargo nextest run -p fret-ui-gallery --test breadcrumb_docs_surface --status-level fail",
+      "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_import_policies breadcrumb --status-level fail",
+      "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app breadcrumb_snippets_prefer_ui_cx_on_the_default_app_surface breadcrumb_page_uses_typed_doc_sections_for_app_facing_snippets breadcrumb_page_teaches_rtl_dot_separator_example_and_logical_default_separator breadcrumb_rtl_snippet_keeps_translated_upstream_shape remaining_app_facing_tail_snippets_prefer_ui_cx_on_the_default_app_surface remaining_app_facing_tail_pages_use_typed_doc_sections_for_app_facing_snippets selected_breadcrumb_snippet_helpers_prefer_into_ui_element_over_anyelement --status-level fail",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-usage-home-command.json --dir target\\fret-diag-breadcrumb-usage-home-command-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-links-semantic-link.json --dir target\\fret-diag-breadcrumb-links-semantic-link-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json --dir target\\fret-diag-breadcrumb-demo-ellipsis-relation-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-custom-separator-single-line.json --dir target\\fret-diag-breadcrumb-custom-separator-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-responsive-toggle.json --dir target\\fret-diag-breadcrumb-responsive-toggle-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-rtl-screenshot.json --dir target\\fret-diag-breadcrumb-rtl-screenshot-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "cargo nextest run -p fret-ui-shadcn --lib --status-level fail field",
+      "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail field",
+      "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_field --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --test field_text_controls_auto_association --status-level fail",
+      "cargo nextest run -p fret-ui-shadcn --test field_select_auto_association --test field_responsive_orientation --status-level fail",
+      "cargo nextest run -p fret-ui-gallery --test field_docs_surface --status-level fail",
+      "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app field_snippets_prefer_ui_cx_on_the_default_app_surface field_page_uses_typed_doc_sections_for_app_facing_snippets field_page_usage_prefers_field_wrapper_family selected_field_and_form_snippets_prefer_field_wrapper_family --status-level fail",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-docs-smoke.json --dir target\\fret-diag-field-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-demo-label-control-action-state.json --dir target\\fret-diag-field-demo-label-control-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-responsive-orientation-container-md.json --dir target\\fret-diag-field-responsive-orientation-matrix-final --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-password-masked-screenshot.json --dir target\\fret-diag-field-password-masked-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-radio-screenshot-zinc-dark.json --dir target\\fret-diag-field-radio-zinc-dark-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "cargo fmt --check -p fret-ui-shadcn -p fret-ui-kit -p fret-ui-headless",
       "python tools/check_workstream_catalog.py",
       "git diff --check"
     ]
@@ -57,6 +251,682 @@
       "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/WORKSTREAM.json | Out-Null"
     },
     {
+      "name": "drawer-layout-invariants",
+      "command": "cargo nextest run -p fret-ui-shadcn --test drawer_layout_invariants --status-level fail"
+    },
+    {
+      "name": "drawer-mechanism-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout mechanism_harness::mechanism_harness_recipe_layout_cases_match_oracles --status-level fail"
+    },
+    {
+      "name": "drawer-overlay-placement",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement misc_overlays::fixtures::web_vs_fret_misc_overlays_drawer_cases_match_web_fixtures --status-level fail"
+    },
+    {
+      "name": "drawer-overlay-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome drawer::fixtures::web_vs_fret_drawer_overlay_chrome_cases_match_web_fixtures --status-level fail"
+    },
+    {
+      "name": "calendar-variant-geometry",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout web_vs_fret_layout_calendar_variant_geometries_match_web_fixtures --status-level fail"
+    },
+    {
+      "name": "calendar-range-layout-paint",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout calendar_04_range --status-level fail"
+    },
+    {
+      "name": "calendar-multiple-goldens",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_calendar calendar_03 --status-level fail"
+    },
+    {
+      "name": "calendar-range-goldens",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_calendar calendar_04 --status-level fail"
+    },
+    {
+      "name": "calendar-range-focus-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome calendar_04 --status-level fail"
+    },
+    {
+      "name": "select-kit-items-height",
+      "command": "cargo nextest run -p fret-ui-kit --lib select_item_aligned_items_height_uses_larger_listbox_or_scroll_extent --status-level fail"
+    },
+    {
+      "name": "select-headless-natural-height",
+      "command": "cargo nextest run -p fret-ui-headless --lib vertical_keeps_natural_items_height_when_leading_label_forces_top_clamp --status-level fail"
+    },
+    {
+      "name": "select-layout-trigger",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout web_vs_fret_layout_select_scrollable_trigger_size --status-level fail"
+    },
+    {
+      "name": "select-overlay-placement",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement web_vs_fret_select_cases_match_web_fixtures --status-level fail"
+    },
+    {
+      "name": "select-overlay-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome web_vs_fret_select_overlay_chrome_cases_match_web_fixtures --status-level fail"
+    },
+    {
+      "name": "select-keyboard-commit",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\select\\ui-gallery-select-keyboard-commit-apple.json --dir target\\fret-diag-select-keyboard-commit-apple-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery"
+    },
+    {
+      "name": "select-commit-label",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\select\\ui-gallery-select-commit-and-label-update.json --dir target\\fret-diag-select-commit-label-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "combobox-gallery-compact-shell",
+      "command": "cargo nextest run -p fret-ui-gallery --lib gallery_compact_shell_gives_mobile_component_story_full_window_width --status-level fail"
+    },
+    {
+      "name": "combobox-mobile-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\combobox\\ui-gallery-combobox-responsive-vp375x240-open.json --dir target\\fret-diag\\combobox-mobile-compact-shell --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery --release"
+    },
+    {
+      "name": "combobox-desktop-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\combobox\\ui-gallery-combobox-responsive-open.json --dir target\\fret-diag\\combobox-desktop-compact-shell-regression --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery --release"
+    },
+    {
+      "name": "popover-relation-action-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\popover\\ui-gallery-popover-demo-relation-action-state.json --dir target\\fret-diag-popover-relation-action-state-matrix-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "dropdown-menu-section-label",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib menu_section_label --status-level fail"
+    },
+    {
+      "name": "dropdown-menu-label-element",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib dropdown_menu_label_element --status-level fail"
+    },
+    {
+      "name": "dropdown-menu-web-golden-placement",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement dropdown_menu_demo::web_vs_fret_dropdown_menu_demo_cases_match_web_fixtures --status-level fail"
+    },
+    {
+      "name": "dropdown-menu-submenu-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\dropdown-menu\\ui-gallery-dropdown-menu-submenu-open-smoke.json --dir target\\fret-diag-dropdown-menu-submenu-after-label-fix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "input-layout-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\shadcn-parity\\ui-gallery-shadcn-parity-m3-input-layout.json --dir target\\fret-diag-input-docs-demo-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "input-demo-relation-action-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-demo-relation-action-state.json --dir target\\fret-diag-input-demo-relation-action-state-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "input-control-id-relations",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib input_control_id_uses --status-level fail"
+    },
+    {
+      "name": "data-table-policy-suite",
+      "command": "target\\debug\\fretboard-dev.exe diag suite tools\\diag-scripts\\suites\\ui-gallery-data-table\\suite.json --dir target\\fret-diag-data-table-policy-matrix-rerun --session-auto --timeout-ms 900000 --ai-packet --reuse-launch --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "button-group-text-action-state-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\button-group\\ui-gallery-button-group-text-label-control-action-state.json --dir target\\fret-diag-button-group-text-action-state-matrix-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "progress-numeric-semantics-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\progress\\ui-gallery-progress-numeric-semantics.json --dir target\\fret-diag-progress-numeric-semantics-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "progress-docs-smoke-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\progress\\ui-gallery-progress-docs-smoke.json --dir target\\fret-diag-progress-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "progress-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail progress"
+    },
+    {
+      "name": "progress-snapshot-semantics",
+      "command": "cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_progress_numeric_semantics"
+    },
+    {
+      "name": "progress-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail progress::"
+    },
+    {
+      "name": "progress-web-golden-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail web_vs_fret_progress_demo_control_chrome_matches"
+    },
+    {
+      "name": "progress-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test progress_docs_surface --status-level fail"
+    },
+    {
+      "name": "progress-gallery-label-layout",
+      "command": "cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_progress_label_row_keeps_docs_aligned_trailing_value_lane"
+    },
+    {
+      "name": "badge-link-render-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\badge\\ui-gallery-badge-link-render.json --dir target\\fret-diag-badge-link-render-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "badge-link-hover-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\badge\\ui-gallery-badge-link-hover-screenshot-zinc-light.json --dir target\\fret-diag-badge-link-hover-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "badge-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail badge"
+    },
+    {
+      "name": "badge-snapshot-semantics",
+      "command": "cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_badge_link_visited_semantics"
+    },
+    {
+      "name": "badge-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail badge::"
+    },
+    {
+      "name": "badge-web-golden-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail badge"
+    },
+    {
+      "name": "badge-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test badge_docs_surface --status-level fail"
+    },
+    {
+      "name": "button-link-render-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\button\\ui-gallery-button-link-render.json --dir target\\fret-diag-button-link-render-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "button-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail button"
+    },
+    {
+      "name": "button-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail button::"
+    },
+    {
+      "name": "button-web-golden-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail button"
+    },
+    {
+      "name": "button-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test button_docs_surface --status-level fail"
+    },
+    {
+      "name": "accordion-usage-toggle-diag",
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\accordion\\ui-gallery-accordion-usage-toggle.json --dir target\\fret-diag-accordion-usage-toggle-p0-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "accordion-docs-smoke-diag",
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\accordion\\ui-gallery-accordion-docs-smoke.json --dir target\\fret-diag-accordion-docs-smoke-p0-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "accordion-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail accordion"
+    },
+    {
+      "name": "accordion-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail accordion::"
+    },
+    {
+      "name": "accordion-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test accordion_docs_surface --status-level fail"
+    },
+    {
+      "name": "alert-docs-smoke-diag",
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\alert\\ui-gallery-alert-docs-smoke.json --dir target\\fret-diag-alert-docs-smoke-p0-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "alert-link-activation-diag",
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\alert\\ui-gallery-alert-link-activation.json --dir target\\fret-diag-alert-link-activation-p0-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "alert-action-non-overlap-diag",
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\alert\\ui-gallery-alert-action-text-non-overlap.json --dir target\\fret-diag-alert-action-text-non-overlap-p0-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "alert-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail alert"
+    },
+    {
+      "name": "alert-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail alert::"
+    },
+    {
+      "name": "alert-web-golden-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail alert"
+    },
+    {
+      "name": "alert-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test alert_docs_surface --status-level fail"
+    },
+    {
+      "name": "alert-dialog-docs-smoke-diag",
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\overlay\\ui-gallery-alert-dialog-docs-smoke.json --dir target\\fret-diag-alert-dialog-docs-smoke-p0-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "alert-dialog-demo-relation-action-diag",
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\alert-dialog\\ui-gallery-alert-dialog-demo-relation-action-state.json --dir target\\fret-diag-alert-dialog-demo-relation-action-state-p0-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "alert-dialog-destructive-inline-link-diag",
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\overlay\\ui-gallery-alert-dialog-destructive-inline-link-activate.json --dir target\\fret-diag-alert-dialog-destructive-inline-link-p0-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "alert-dialog-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail alert_dialog"
+    },
+    {
+      "name": "alert-dialog-web-golden-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome --status-level fail alert_dialog"
+    },
+    {
+      "name": "alert-dialog-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test alert_dialog_docs_surface --status-level fail"
+    },
+    {
+      "name": "date-picker-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/date_picker_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "date-picker-trigger-width",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib date_picker_trigger_width_is_intrinsic_unless_caller_overrides_it --status-level fail"
+    },
+    {
+      "name": "date-picker-close-on-select",
+      "command": "cargo nextest run -p fret-ui-shadcn --test date_picker_close_on_select --status-level fail"
+    },
+    {
+      "name": "date-picker-gallery-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app date_picker_page_uses_typed_doc_sections_for_app_facing_snippets date_picker_input_snippet_keeps_upstream_ghost_icon_xs_trigger_surface date_picker_time_snippet_explicitly_opts_into_close_on_select --status-level fail"
+    },
+    {
+      "name": "resizable-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/resizable_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "resizable-panel-group-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --test resizable_panel_group_layout --status-level fail"
+    },
+    {
+      "name": "resizable-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail resizable::"
+    },
+    {
+      "name": "resizable-web-golden-smoke",
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_resizable --status-level fail"
+    },
+    {
+      "name": "resizable-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test resizable_docs_surface --status-level fail"
+    },
+    {
+      "name": "resizable-gallery-core-targets",
+      "command": "cargo nextest run -p fret-ui-gallery --lib gallery_resizable_core_examples_keep_upstream_aligned_targets_present --status-level fail"
+    },
+    {
+      "name": "sidebar-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sidebar_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "sidebar-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail sidebar"
+    },
+    {
+      "name": "sidebar-cookie-persistence",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail sidebar_provider_cookie_assignment_matches_upstream_name_path_and_ttl sidebar_provider_cookie_parser_reads_sidebar_state_only sidebar_provider_open_change_callbacks_follow_model_changes sidebar"
+    },
+    {
+      "name": "sidebar-focus-visible-ring",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_pressable_surfaces_keep_focus_visible_ring --status-level fail"
+    },
+    {
+      "name": "sidebar-peer-size-state",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_action_inherits_menu_button_size_from_peer_context sidebar_menu_action_explicit_size_overrides_peer_context sidebar_menu_action_top_offset_tracks_menu_button_size --status-level fail"
+    },
+    {
+      "name": "sidebar-badge-peer-size-state",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_badge_inherits_menu_button_size_from_peer_context sidebar_menu_badge_explicit_size_overrides_peer_context --status-level fail"
+    },
+    {
+      "name": "sidebar-active-peer-foreground",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_group_action_scopes_child_foreground sidebar_menu_action_inherits_active_peer_foreground sidebar_menu_badge_inherits_active_peer_foreground --status-level fail"
+    },
+    {
+      "name": "sidebar-rail-directional-cursor-core",
+      "command": "cargo nextest run -p fret-core --lib cursor_icon_directional_resize_serializes_stably --status-level fail"
+    },
+    {
+      "name": "sidebar-rail-directional-cursor-runner",
+      "command": "cargo nextest run -p fret-runner-winit --lib map_directional_resize_cursor_icons_to_winit --status-level fail"
+    },
+    {
+      "name": "sidebar-rail-directional-cursor-recipe",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_rail_directional_cursor_tracks_side_and_collapsed_state sidebar_rail_hover_sets_directional_resize_cursor_icon sidebar_rail_hover_cursor_reads_provider_collapsed_state --status-level fail"
+    },
+    {
+      "name": "sidebar-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail sidebar::"
+    },
+    {
+      "name": "sidebar-web-golden-smoke",
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_sidebar --status-level fail"
+    },
+    {
+      "name": "sidebar-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test sidebar_docs_surface --status-level fail"
+    },
+    {
+      "name": "sidebar-gallery-core-targets",
+      "command": "cargo nextest run -p fret-ui-gallery --lib gallery_sidebar_core_examples_keep_upstream_aligned_targets_present gallery_sidebar_ctrl_b_shortcut_collapses_icon_sidebar_from_focused_button gallery_sidebar_app_sidebar_triggers_keep_custom_children_lanes_rendered --status-level fail"
+    },
+    {
+      "name": "aspect-ratio-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/aspect_ratio_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "aspect-ratio-kit-primitive",
+      "command": "cargo nextest run -p fret-ui-kit --lib aspect_ratio --status-level fail"
+    },
+    {
+      "name": "aspect-ratio-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout web_vs_fret_layout_aspect_ratio_demo_geometry_matches --status-level fail"
+    },
+    {
+      "name": "aspect-ratio-web-golden-markers",
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_misc_targeted --status-level fail"
+    },
+    {
+      "name": "aspect-ratio-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app aspect_ratio_snippets_prefer_ui_cx_on_the_default_app_surface aspect_ratio_page_uses_typed_doc_sections_for_app_facing_snippets selected_aspect_ratio_snippet_helpers_prefer_into_ui_element_over_anyelement --status-level fail"
+    },
+    {
+      "name": "aspect-ratio-docs-smoke-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\aspect-ratio\\ui-gallery-aspect-ratio-docs-smoke.json --dir target\\fret-diag-aspect-ratio-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "aspect-ratio-demo-screenshot-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\aspect-ratio\\ui-gallery-aspect-ratio-demo-screenshot.json --dir target\\fret-diag-aspect-ratio-demo-screenshot-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "aspect-ratio-composable-children-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\aspect-ratio\\ui-gallery-aspect-ratio-composable-children-overlay.json --dir target\\fret-diag-aspect-ratio-composable-children-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "aspect-ratio-rtl-screenshot-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\aspect-ratio\\ui-gallery-aspect-ratio-rtl-screenshot.json --dir target\\fret-diag-aspect-ratio-rtl-screenshot-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "avatar-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/avatar_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "avatar-kit-primitive",
+      "command": "cargo nextest run -p fret-ui-kit --lib avatar --status-level fail"
+    },
+    {
+      "name": "avatar-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail avatar"
+    },
+    {
+      "name": "avatar-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail avatar::"
+    },
+    {
+      "name": "avatar-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app avatar_snippets_prefer_ui_cx_on_the_default_app_surface avatar_page_uses_typed_doc_sections_for_app_facing_snippets avatar_page_api_reference_lists_family_parts_and_builder_lanes selected_avatar_snippet_helpers_prefer_into_ui_element_over_anyelement --status-level fail"
+    },
+    {
+      "name": "avatar-docs-screenshots-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\avatar\\ui-gallery-avatar-docs-screenshots.json --dir target\\fret-diag-avatar-docs-screenshots-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "avatar-badge-group-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\avatar\\ui-gallery-avatar-badge-and-group-count.json --dir target\\fret-diag-avatar-badge-group-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "avatar-dropdown-relation-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\avatar\\ui-gallery-avatar-dropdown-relation-action-state.json --dir target\\fret-diag-avatar-dropdown-relation-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "avatar-fallback-only-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\avatar\\ui-gallery-avatar-fallback-only-screenshot.json --dir target\\fret-diag-avatar-fallback-only-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "breadcrumb-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/breadcrumb_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "breadcrumb-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail breadcrumb"
+    },
+    {
+      "name": "breadcrumb-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail breadcrumb::"
+    },
+    {
+      "name": "breadcrumb-overlay-placement",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail breadcrumb"
+    },
+    {
+      "name": "breadcrumb-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test breadcrumb_docs_surface --status-level fail"
+    },
+    {
+      "name": "breadcrumb-import-policy",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_import_policies breadcrumb --status-level fail"
+    },
+    {
+      "name": "breadcrumb-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app breadcrumb_snippets_prefer_ui_cx_on_the_default_app_surface breadcrumb_page_uses_typed_doc_sections_for_app_facing_snippets breadcrumb_page_teaches_rtl_dot_separator_example_and_logical_default_separator breadcrumb_rtl_snippet_keeps_translated_upstream_shape remaining_app_facing_tail_snippets_prefer_ui_cx_on_the_default_app_surface remaining_app_facing_tail_pages_use_typed_doc_sections_for_app_facing_snippets selected_breadcrumb_snippet_helpers_prefer_into_ui_element_over_anyelement --status-level fail"
+    },
+    {
+      "name": "breadcrumb-usage-home-command-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-usage-home-command.json --dir target\\fret-diag-breadcrumb-usage-home-command-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "breadcrumb-links-semantic-link-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-links-semantic-link.json --dir target\\fret-diag-breadcrumb-links-semantic-link-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "breadcrumb-ellipsis-relation-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json --dir target\\fret-diag-breadcrumb-demo-ellipsis-relation-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "breadcrumb-custom-separator-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-custom-separator-single-line.json --dir target\\fret-diag-breadcrumb-custom-separator-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "breadcrumb-responsive-toggle-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-responsive-toggle.json --dir target\\fret-diag-breadcrumb-responsive-toggle-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "breadcrumb-rtl-screenshot-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-rtl-screenshot.json --dir target\\fret-diag-breadcrumb-rtl-screenshot-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "field-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/field_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "field-diag-json",
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-responsive-orientation-container-md.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-password-masked-screenshot.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-radio-screenshot-zinc-dark.json | Out-Null"
+    },
+    {
+      "name": "field-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail field"
+    },
+    {
+      "name": "field-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail field"
+    },
+    {
+      "name": "field-web-vs-fret-field",
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_field --status-level fail"
+    },
+    {
+      "name": "field-text-control-association",
+      "command": "cargo nextest run -p fret-ui-shadcn --test field_text_controls_auto_association --status-level fail"
+    },
+    {
+      "name": "field-select-responsive-association",
+      "command": "cargo nextest run -p fret-ui-shadcn --test field_select_auto_association --test field_responsive_orientation --status-level fail"
+    },
+    {
+      "name": "field-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test field_docs_surface --status-level fail"
+    },
+    {
+      "name": "field-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app field_snippets_prefer_ui_cx_on_the_default_app_surface field_page_uses_typed_doc_sections_for_app_facing_snippets field_page_usage_prefers_field_wrapper_family selected_field_and_form_snippets_prefer_field_wrapper_family --status-level fail"
+    },
+    {
+      "name": "field-docs-smoke-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-docs-smoke.json --dir target\\fret-diag-field-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "field-label-control-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-demo-label-control-action-state.json --dir target\\fret-diag-field-demo-label-control-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "field-responsive-orientation-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-responsive-orientation-container-md.json --dir target\\fret-diag-field-responsive-orientation-matrix-final --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "field-password-masked-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-password-masked-screenshot.json --dir target\\fret-diag-field-password-masked-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "field-radio-dark-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-radio-screenshot-zinc-dark.json --dir target\\fret-diag-field-radio-zinc-dark-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "form-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/form_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "form-diag-json",
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/form/ui-gallery-form-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/form/ui-gallery-form-submit-validation-semantics.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/form/ui-gallery-form-disabled-field-action-state.json | Out-Null; python -m json.tool ecosystem/fret-ui-shadcn/tests/fixtures/layout_form_bug_report_demo_cases_v1.json | Out-Null"
+    },
+    {
+      "name": "form-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail form"
+    },
+    {
+      "name": "form-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail form"
+    },
+    {
+      "name": "form-web-vs-fret-form",
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_form --status-level fail"
+    },
+    {
+      "name": "form-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app form_snippets_prefer_ui_cx_on_the_default_app_surface form_page_uses_typed_doc_sections_for_app_facing_snippets form_submit_validation_snippet_keeps_submit_driven_form_state_runtime_surface form_disabled_field_snippet_keeps_field_shell_and_control_semantics_separate form_docs_keep_field_level_required_on_form_field form_docs_keep_invalid_decoration_and_opt_out_owned_by_form_field --status-level fail"
+    },
+    {
+      "name": "form-docs-smoke-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\form\\ui-gallery-form-docs-smoke.json --dir target\\fret-diag-form-docs-smoke-gallery-dev --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "form-submit-validation-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\form\\ui-gallery-form-submit-validation-semantics.json --dir target\\fret-diag-form-submit-validation-gallery-dev --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "form-disabled-field-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\form\\ui-gallery-form-disabled-field-action-state.json --dir target\\fret-diag-form-disabled-field-gallery-dev --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "input-group-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_group_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "input-group-diag-json",
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-text-non-overlap.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-button-click-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-label-click-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-addon-after-control-tab-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json | Out-Null"
+    },
+    {
+      "name": "input-group-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail input_group_block_addon_rows_fill_width_for_auto_margins input_group"
+    },
+    {
+      "name": "input-group-web-golden-layout-filtered",
+      "command": "$env:FRET_WEB_VS_FRET_LAYOUT_INPUT_CASE_FILTER='input-group'; cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_input_geometry_matches_web_fixtures"
+    },
+    {
+      "name": "input-group-spinner-embedding",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail spinner_input_group"
+    },
+    {
+      "name": "input-group-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail input_group"
+    },
+    {
+      "name": "input-group-gallery-build",
+      "command": "cargo build -p fret-ui-gallery --bin fret-ui-gallery"
+    },
+    {
+      "name": "input-group-docs-smoke-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-group-docs-smoke.json --dir target\\fret-diag-input-group-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "input-group-text-non-overlap-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-group-text-non-overlap.json --dir target\\fret-diag-input-group-text-non-overlap-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "input-group-button-click-focus-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-group-button-click-focus.json --dir target\\fret-diag-input-group-button-click-focus-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "input-group-label-click-focus-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-group-label-click-focus.json --dir target\\fret-diag-input-group-label-click-focus-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "input-group-addon-tab-focus-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-group-addon-after-control-tab-focus.json --dir target\\fret-diag-input-group-addon-after-control-tab-focus-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "input-group-rtl-screenshot-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-group-rtl-screenshot.json --dir target\\fret-diag-input-group-rtl-screenshot-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "input-group-dropdown-relation-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input-group\\ui-gallery-input-group-dropdown-relation-action-state.json --dir target\\fret-diag-input-group-dropdown-relation-action-state-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "input-group-rtl-addon-order-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input-group\\ui-gallery-input-group-rtl-addon-order.json --dir target\\fret-diag-input-group-rtl-addon-order-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "pagination-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/pagination_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "pagination-diag-json",
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-rows-per-page-select-open-screenshot-zinc-light.json | Out-Null"
+    },
+    {
+      "name": "pagination-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail pagination_previous_next_hide_responsive_text_below_sm pagination"
+    },
+    {
+      "name": "pagination-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail pagination"
+    },
+    {
+      "name": "pagination-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test pagination_docs_surface --status-level fail"
+    },
+    {
+      "name": "pagination-docs-smoke-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\pagination\\ui-gallery-pagination-docs-smoke.json --dir target\\fret-diag-pagination-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "pagination-demo-action-selected-state-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\pagination\\ui-gallery-pagination-demo-action-selected-state.json --dir target\\fret-diag-pagination-demo-action-selected-state-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "pagination-rows-per-page-select-open-diag",
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\pagination\\ui-gallery-pagination-rows-per-page-select-open-screenshot-zinc-light.json --dir target\\fret-diag-pagination-rows-per-page-select-open-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe"
+    },
+    {
+      "name": "rustfmt-check",
+      "command": "cargo fmt --check -p fret-ui-shadcn -p fret-ui-kit -p fret-ui-headless"
+    },
+    {
       "name": "workstream-catalog",
       "command": "python tools/check_workstream_catalog.py"
     },
@@ -72,7 +942,32 @@
     "docs/shadcn-declarative-progress.md",
     "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json",
     "docs/workstreams/shadcn-parity-discovery-harness-v2/artifacts/shadcn_parity_suite_report_v2.json",
-    "docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json"
+    "docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/drawer_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/calendar_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/select_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/combobox_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/popover_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/dropdown_menu_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/data_table_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/button_group_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/progress_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/badge_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/button_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/accordion_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/alert_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/alert_dialog_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/aspect_ratio_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/avatar_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/breadcrumb_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/field_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/form_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_group_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/pagination_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/date_picker_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/resizable_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sidebar_agent_packet_p0_v1.json"
   ],
   "upstream_refs": [
     "repo-ref/ui/apps/v4/registry/new-york-v4/ui",
@@ -82,6 +977,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue by selecting the next high-risk inventory-only or coverage-targeted shadcn component, then promote it into a full harness seed with upstream source refs, Fret diagnostics evidence, behavior scripts, and packet checks. Do not use HTML tree equality as proof; compare self-rendered outcomes."
+    "notes": "Progress, badge, breadcrumb.docs-path.desktop-mobile, field.docs-path.desktop-responsive, form.docs-path.desktop, input-group.docs-path.desktop, pagination.docs-path.desktop, button, accordion, alert, alert-dialog, aspect-ratio.docs-demo.desktop, avatar.docs-demo.desktop, date-picker.docs-family.desktop-mobile, and resizable.docs-path.desktop are promoted from inventory_only to regression_locked. Sidebar is promoted from inventory_only to harness_hardening with repair=0, hardening=1, and gate=1; the focus-visible ring, href polymorphism, wasm desktop open cookie persistence, SidebarRail directional cursor state, and action/badge peer size-state slices are covered, but do not treat Sidebar as regression_locked until the residual React API-shape / peer/group/data-* class-state matrix is closed or explicitly split. Continue by hardening that Sidebar lane or auditing the next inventory_only row with source refs, upstream snapshot/golden, Fret diagnostics evidence, behavior script, and packet checks. Current matrix totals are 33 regression_locked, 1 harness_hardening, 20 inventory_only, and 5 not_in_harness. Do not use HTML tree equality as proof; compare self-rendered outcomes."
   }
 }

@@ -1,0 +1,545 @@
+{
+  "schema_version": 1,
+  "component": "sidebar",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual sidebar docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/sidebar.rs + apps/fret-ui-gallery/src/ui/pages/sidebar.rs + apps/fret-ui-gallery/src/ui/snippets/sidebar/*.rs + tools/diag-scripts/ui-gallery/sidebar/*.json",
+  "validation_gates": [
+        {
+            "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail sidebar",
+            "status": "pass",
+            "scope": "Sidebar recipe tests cover provider state, shortcut plumbing, widths, mobile sheet branch, rail hover/positioning, menu semantics, href/link behavior, as_child lanes, focus-visible ring wiring, and collapsed affordances."
+        },
+        {
+            "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_pressable_surfaces_keep_focus_visible_ring --status-level fail",
+            "status": "pass",
+            "scope": "Sidebar focus-visible ring gate proves SidebarMenuButton, SidebarGroupAction, and SidebarMenuAction keep visible rounded-md focus ring wiring."
+        },
+        {
+            "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_button_as_child_with_href_keeps_link_semantics_and_navigation sidebar_menu_sub_button_as_child_with_href_keeps_link_semantics_and_navigation sidebar_menu_button_href_without_on_navigate_emits_open_url_effect sidebar_menu_sub_button_href_without_on_navigate_emits_open_url_effect --status-level fail",
+            "status": "pass",
+            "scope": "Sidebar href polymorphism gate proves default and as_child SidebarMenuButton/SidebarMenuSubButton href paths expose link semantics, href values, and OpenUrl target/rel navigation."
+        },
+        {
+            "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_action_inherits_menu_button_size_from_peer_context sidebar_menu_action_explicit_size_overrides_peer_context sidebar_menu_action_top_offset_tracks_menu_button_size --status-level fail",
+            "status": "pass",
+            "scope": "Sidebar action peer size-state gate proves SidebarMenuAction inherits the nearest SidebarMenuButton size from the same SidebarMenuItem context while explicit action size overrides remain supported."
+        },
+        {
+            "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_badge_inherits_menu_button_size_from_peer_context sidebar_menu_badge_explicit_size_overrides_peer_context --status-level fail",
+            "status": "pass",
+            "scope": "Sidebar badge peer size-state gate proves SidebarMenuBadge inherits the nearest SidebarMenuButton size from the same SidebarMenuItem context while explicit badge size overrides remain supported."
+        },
+        {
+            "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_group_action_scopes_child_foreground sidebar_menu_action_inherits_active_peer_foreground sidebar_menu_badge_inherits_active_peer_foreground --status-level fail",
+            "status": "pass",
+            "scope": "Sidebar active peer foreground gate proves SidebarMenuAction and SidebarMenuBadge inherit same-item active SidebarMenuButton foreground, and SidebarGroupAction custom children inherit sidebar foreground."
+        },
+        {
+            "command": "cargo nextest run -p fret-core --lib cursor_icon_directional_resize_serializes_stably --status-level fail",
+            "status": "pass",
+            "scope": "Core cursor contract gate proves directional resize cursor variants serialize with stable portable names."
+        },
+        {
+            "command": "cargo nextest run -p fret-runner-winit --lib map_directional_resize_cursor_icons_to_winit --status-level fail",
+            "status": "pass",
+            "scope": "Winit runner gate proves directional resize cursor variants map to native winit cursor icons."
+        },
+        {
+            "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_rail_directional_cursor_tracks_side_and_collapsed_state sidebar_rail_hover_sets_directional_resize_cursor_icon sidebar_rail_hover_cursor_reads_provider_collapsed_state --status-level fail",
+            "status": "pass",
+            "scope": "SidebarRail directional cursor gate proves upstream side/state cursor affordances are represented by recipe hover behavior."
+        },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail sidebar::",
+      "status": "pass",
+      "scope": "Sidebar web-vs-Fret layout gate covers menu-button height geometry for the tracked sidebar web-golden cases."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_sidebar --status-level fail",
+      "status": "pass",
+      "scope": "Sidebar web-golden smoke confirms targeted upstream menu-button and height markers across sidebar-01 through sidebar-16 cases."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test sidebar_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Sidebar gallery docs surface keeps docs-first section order, app-shell wording, group-label asChild lane, and structure snippet copyability stable."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --lib gallery_sidebar_core_examples_keep_upstream_aligned_targets_present gallery_sidebar_ctrl_b_shortcut_collapses_icon_sidebar_from_focused_button gallery_sidebar_app_sidebar_triggers_keep_custom_children_lanes_rendered --status-level fail",
+      "status": "pass",
+      "scope": "Sidebar gallery render-flow gates keep core examples present, Ctrl+B collapse behavior wired, and AppSidebar trigger custom child lanes visible and ordered."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\sidebar\\ui-gallery-sidebar-provider-shortcut-toggle-focus.json --dir target\\fret-diag-sidebar-provider-shortcut-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Sidebar provider keyboard shortcut toggles the desktop sidebar from focused content and keeps focus behavior stable."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\sidebar\\ui-gallery-sidebar-controlled-open-sync.json --dir target\\fret-diag-sidebar-controlled-open-sync-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Sidebar controlled open model keeps external toggle and internal trigger in sync."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\sidebar\\ui-gallery-sidebar-mobile-sheet-escape-focus-restore.json --dir target\\fret-diag-sidebar-mobile-sheet-escape-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Sidebar mobile sheet branch opens, Escape dismisses it, and focus restores to SidebarTrigger."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\sidebar\\ui-gallery-sidebar-menu-button-chrome-fill.json --dir target\\fret-diag-sidebar-menu-button-chrome-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Sidebar menu button chrome fill remains aligned with the default trigger bounds."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\sidebar\\ui-gallery-sidebar-app-sidebar-dropdown-relation-action-state.json --dir target\\fret-diag-sidebar-app-sidebar-dropdown-matrix --session-auto --pack --ai-packet --include-screenshots --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Sidebar AppSidebar dropdown triggers keep authored SidebarMenuButton relation/action sources, row invocation, Escape focus restore, layout sidecars, screenshots, and bundle evidence."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.sidebar.01.light.vp1440x900",
+      "snapshot": "sidebar-01",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-internal-01",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.sidebar.13.open.light.vp1440x900",
+      "snapshot": "sidebar-13.open",
+      "theme": "light",
+      "mode": "open",
+      "variant": "dropdown-open",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.sidebar.16.light.vp1440x900",
+      "snapshot": "sidebar-16",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-internal-16",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "sidebar-01",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-internal-01",
+        "context_id": "upstream.sidebar.01.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/sidebar-01.json"
+      },
+      {
+        "snapshot": "sidebar-13.open",
+        "theme": "light",
+        "mode": "open",
+        "variant": "dropdown-open",
+        "context_id": "upstream.sidebar.13.open.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/sidebar-13.open.json"
+      },
+      {
+        "snapshot": "sidebar-16",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-internal-16",
+        "context_id": "upstream.sidebar.16.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/sidebar-16.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-provider-shortcut-toggle-focus.json",
+        "sidecar_path": "target/fret-diag-sidebar-provider-shortcut-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-mobile-sheet-escape-focus-restore.json",
+        "sidecar_path": "target/fret-diag-sidebar-mobile-sheet-escape-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-app-sidebar-dropdown-relation-action-state.json",
+        "sidecar_path": "target/fret-diag-sidebar-app-sidebar-dropdown-matrix"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-provider-shortcut-toggle-focus.json",
+        "bundle_path": "target/fret-diag-sidebar-provider-shortcut-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-controlled-open-sync.json",
+        "bundle_path": "target/fret-diag-sidebar-controlled-open-sync-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-mobile-sheet-escape-focus-restore.json",
+        "bundle_path": "target/fret-diag-sidebar-mobile-sheet-escape-matrix"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-app-sidebar-dropdown-relation-action-state.json",
+        "bundle_path": "target/fret-diag-sidebar-app-sidebar-dropdown-matrix"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 14,
+        "status_counts": {
+            "pass_known": 13,
+            "needs_hardening": 1,
+            "mismatch": 0,
+            "blocked": 0
+        },
+    "owner_counts": {
+      "component_recipe": 10,
+      "gallery_composition": 2,
+      "mechanism_core": 1,
+      "upstream_reference": 1,
+      "policy": 0,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "recipe": 10,
+      "app_demo": 2,
+      "mechanism": 1,
+      "upstream": 1,
+      "policy": 0,
+      "unknown": 0
+    },
+        "triage_level_counts": {
+            "critical": 0,
+            "high": 0,
+            "medium": 1,
+            "low": 0,
+            "none": 13
+        },
+        "top_findings": [
+            "Sidebar has broad export and behavior coverage, and wasm desktop open cookie persistence plus SidebarRail directional cursor state are now implemented, but audit remains partial because full React API-shape parity and the residual peer/group/data-* class-state matrix are not fully aligned.",
+            "Existing sidebar goldens, focus-visible ring tests, rail side/state cursor tests, action/badge peer size-state tests, active peer foreground tests, and runtime diagnostics prove important slices, not complete class-state parity across all peer/group/data-* states.",
+            "The component should stay harness_hardening until those known hardening lanes are either implemented or explicitly split."
+        ],
+        "promotion_target_counts": {
+            "diag_script": 5,
+            "component_fixture": 3,
+            "unit_test": 9,
+            "hardening_followup": 1,
+            "none": 0
+        },
+    "layout_sidecar_count": 3,
+    "bundle_schema2_count": 4,
+    "layout_test_id_count": 12,
+    "bundle_semantics_test_id_count": 10,
+    "measured_test_id_count": 12,
+    "upstream_dom_snapshot_count": 3,
+    "upstream_dom_target_count": 3,
+    "upstream_context_count": 3,
+    "upstream_dom_context_count": 3,
+    "upstream_live_fact_count": 6,
+        "fret_live_fact_count": 35,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 2,
+        "fret_semantics_fact_count": 11,
+        "fret_interaction_fact_count": 11,
+    "fret_text_paint_fact_count": 3,
+    "fret_text_paint_direct_fact_count": 3,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/sidebar.tsx + repo-ref/ui/apps/v4/registry/new-york-v4/internal/sidebar-*.tsx + goldens/shadcn-web/v4/new-york-v4/sidebar-*.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/sidebar.rs + apps/fret-ui-gallery/src/ui/pages/sidebar.rs + tools/diag-scripts/ui-gallery/sidebar/*.json",
+    "part_count": 14,
+    "upstream_dom_target_count": 3,
+        "fret_test_id_count": 14,
+        "upstream_semantics_fact_count": 1,
+        "upstream_interaction_fact_count": 2,
+        "fret_semantics_fact_count": 11,
+        "fret_interaction_fact_count": 12,
+    "parts": [
+      {
+        "part_id": "sidebar_upstream_source_and_goldens",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "docs/audits/shadcn-sidebar.md",
+          "goldens/shadcn-web/v4/new-york-v4/sidebar-01.json",
+          "goldens/shadcn-web/v4/new-york-v4/sidebar-13.open.json",
+          "goldens/shadcn-web/v4/new-york-v4/sidebar-16.json"
+        ],
+        "facts": [
+          "Sidebar has broad upstream docs/internal example coverage from sidebar-01 through sidebar-16.",
+          "The tracked open context covers the AppSidebar dropdown-open path.",
+          "The audit marks exports complete but behavior/class-state parity still partial."
+        ]
+      },
+      {
+        "part_id": "sidebar_provider_and_shortcut_behavior",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/sidebar.rs",
+          "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-provider-shortcut-toggle-focus.json",
+          "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-controlled-open-sync.json"
+        ],
+        "facts": [
+          "SidebarProvider exposes first-pass open/open_mobile state and shortcut handling.",
+          "Ctrl/Cmd+B toggles the desktop sidebar from a focused button.",
+          "Controlled open sync between external and internal triggers is covered by diagnostics."
+        ]
+      },
+      {
+        "part_id": "sidebar_mobile_sheet_behavior",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/sidebar.rs",
+          "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-mobile-sheet-escape-focus-restore.json",
+          "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-mobile-controlled-open-sync.json",
+          "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-mobile-shortcut-toggle.json"
+        ],
+        "facts": [
+          "Forced-mobile Sidebar uses the Sheet branch rather than desktop collapse semantics.",
+          "Escape dismisses the mobile sheet and restores focus to SidebarTrigger.",
+          "Mobile controlled open and shortcut toggles have dedicated diagnostics scripts."
+        ]
+      },
+      {
+        "part_id": "sidebar_menu_button_geometry_and_chrome",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/fixtures/layout_sidebar_menu_button_height_cases_v1.json",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/sidebar.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_sidebar.rs",
+          "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-menu-button-chrome-fill.json"
+        ],
+          "facts": [
+            "Menu-button heights are fixture-driven against the shadcn web goldens.",
+            "Sidebar web-golden smoke finds peer/menu-button markers across tracked upstream cases.",
+            "Menu-button chrome fill is locked to trigger bounds in diagnostics.",
+            "SidebarMenuButton, SidebarGroupAction, and SidebarMenuAction keep visible rounded-md focus-visible ring wiring.",
+            "SidebarMenuAction and SidebarMenuBadge inherit same-row SidebarMenuButton size state in focused recipe gates."
+          ]
+        },
+      {
+        "part_id": "sidebar_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/sidebar.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/sidebar/structure.rs",
+          "apps/fret-ui-gallery/tests/sidebar_docs_surface.rs"
+        ],
+        "facts": [
+          "Gallery docs order is docs-first before Notes.",
+          "The Structure snippet keeps SidebarGroupLabel asChild + CollapsibleTrigger copyable.",
+          "The page explicitly documents Sidebar as an app-shell surface rather than an editor rail primitive."
+        ]
+      },
+      {
+        "part_id": "sidebar_app_sidebar_dropdowns",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/sidebar/ui-gallery-sidebar-app-sidebar-dropdown-relation-action-state.json",
+          "tools/diag-scripts/suites/ui-gallery-sidebar-dropdown-relation-action-state/suite.json"
+        ],
+        "facts": [
+          "AppSidebar team and user dropdown triggers keep SidebarMenuButton relation/action sources.",
+          "Menu rows are invokable and focus restores on Escape.",
+          "Layout sidecar, screenshots, and bundle evidence are captured by the diagnostics script."
+        ]
+      },
+      {
+        "part_id": "sidebar_core_gallery_targets",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/driver/render_flow.rs",
+          "cargo nextest run -p fret-ui-gallery --lib gallery_sidebar_core_examples_keep_upstream_aligned_targets_present gallery_sidebar_ctrl_b_shortcut_collapses_icon_sidebar_from_focused_button gallery_sidebar_app_sidebar_triggers_keep_custom_children_lanes_rendered --status-level fail"
+        ],
+        "facts": [
+          "Core Sidebar docs-path section targets render with non-zero bounds.",
+          "The gallery Ctrl+B gate validates collapse behavior from a focused button.",
+          "AppSidebar trigger custom children keep icon, copy, and chevron lanes visible and ordered."
+        ]
+      },
+      {
+        "part_id": "sidebar_cookie_persistence",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "docs/audits/shadcn-sidebar.md",
+          "ecosystem/fret-ui-shadcn/src/sidebar.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail sidebar_provider_cookie_assignment_matches_upstream_name_path_and_ttl sidebar_provider_cookie_parser_reads_sidebar_state_only sidebar_provider_open_change_callbacks_follow_model_changes sidebar"
+        ],
+        "facts": [
+          "SidebarProvider now uses the upstream cookie name sidebar_state and max-age 604800.",
+          "The uncontrolled desktop open model reads the browser cookie on wasm targets when present.",
+          "Desktop open changes persist sidebar_state=true|false; path=/; max-age=604800 on wasm targets while non-wasm targets remain a no-op."
+        ]
+      },
+      {
+        "part_id": "sidebar_href_polymorphism",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+            "docs/audits/shadcn-sidebar.md",
+            "ecosystem/fret-ui-shadcn/src/sidebar.rs",
+            "cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_button_as_child_with_href_keeps_link_semantics_and_navigation sidebar_menu_sub_button_as_child_with_href_keeps_link_semantics_and_navigation sidebar_menu_button_href_without_on_navigate_emits_open_url_effect sidebar_menu_sub_button_href_without_on_navigate_emits_open_url_effect --status-level fail"
+        ],
+        "facts": [
+          "Default href paths expose link semantics and href value.",
+          "as_child href paths now preserve link semantics and href semantics values instead of falling back to button-centric semantics.",
+          "Default and as_child href paths emit Effect::OpenUrl with target/rel when no custom on_navigate handler is provided."
+        ]
+      },
+      {
+        "part_id": "sidebar_menu_action_peer_size_state",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "docs/audits/shadcn-sidebar.md",
+          "ecosystem/fret-ui-shadcn/src/sidebar.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_action_inherits_menu_button_size_from_peer_context sidebar_menu_action_explicit_size_overrides_peer_context sidebar_menu_action_top_offset_tracks_menu_button_size --status-level fail"
+        ],
+        "facts": [
+          "SidebarMenuItem now carries the nearest SidebarMenuButton size through a recipe-local context for same-row children rendered via into_element_with_children.",
+          "SidebarMenuAction inherits that peer size when no explicit action size is supplied, matching the upstream peer/menu-button size-driven top-offset outcome.",
+          "Explicit SidebarMenuAction::size(...) still overrides the inherited peer size for direct compatibility."
+        ]
+      },
+      {
+        "part_id": "sidebar_menu_badge_peer_size_state",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "docs/audits/shadcn-sidebar.md",
+          "ecosystem/fret-ui-shadcn/src/sidebar.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_badge_inherits_menu_button_size_from_peer_context sidebar_menu_badge_explicit_size_overrides_peer_context --status-level fail"
+        ],
+        "facts": [
+          "SidebarMenuBadge now reads the same nearest SidebarMenuButton size from the SidebarMenuItem recipe-local context when no explicit badge size is supplied.",
+          "Badge top offsets follow the upstream peer/menu-button size-driven outcome for same-row closure-composition children.",
+          "Explicit SidebarMenuBadge::size(...) still overrides the inherited peer size for direct compatibility."
+        ]
+      },
+      {
+        "part_id": "sidebar_active_peer_foreground_state",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "docs/audits/shadcn-sidebar.md",
+          "ecosystem/fret-ui-shadcn/src/sidebar.rs",
+          "goldens/shadcn-web/v4/new-york-v4/sidebar-07.json",
+          "goldens/shadcn-web/v4/new-york-v4/sidebar-11.json",
+          "cargo nextest run -p fret-ui-shadcn --lib sidebar_group_action_scopes_child_foreground sidebar_menu_action_inherits_active_peer_foreground sidebar_menu_badge_inherits_active_peer_foreground --status-level fail"
+        ],
+        "facts": [
+          "Upstream SidebarMenuAction and SidebarMenuBadge both include peer-data-[active=true]/menu-button:text-sidebar-accent-foreground in the tracked new-york-v4 goldens.",
+          "SidebarMenuItem now carries same-row SidebarMenuButton active state through the recipe-local context for closure-composition children.",
+          "SidebarMenuAction and SidebarMenuBadge inherit active peer foreground, while SidebarGroupAction custom children inherit sidebar foreground through currentColor."
+        ]
+      },
+      {
+        "part_id": "sidebar_rail_directional_cursor_state",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "evidence_refs": [
+          "docs/audits/shadcn-sidebar.md",
+          "crates/fret-core/src/cursor.rs",
+          "crates/fret-runner-winit/src/mapping/cursor.rs",
+          "crates/fret-launch/src/runner/web/effects.rs",
+          "ecosystem/fret-ui-shadcn/src/sidebar.rs",
+          "cargo nextest run -p fret-core --lib cursor_icon_directional_resize_serializes_stably --status-level fail",
+          "cargo nextest run -p fret-runner-winit --lib map_directional_resize_cursor_icons_to_winit --status-level fail",
+          "cargo nextest run -p fret-ui-shadcn --lib sidebar_rail_directional_cursor_tracks_side_and_collapsed_state sidebar_rail_hover_sets_directional_resize_cursor_icon sidebar_rail_hover_cursor_reads_provider_collapsed_state --status-level fail"
+        ],
+        "facts": [
+          "The portable CursorIcon contract now carries directional EResize and WResize resize affordances with stable serde names.",
+          "Native and web winit-backed runners map the directional resize affordances to winit EResize and WResize cursors.",
+          "SidebarRail now chooses the upstream side/state cursor outcome: expanded left/right request WResize/EResize, and collapsed left/right flip to EResize/WResize."
+        ]
+      },
+      {
+        "part_id": "sidebar_class_state_matrix_gap",
+        "status": "needs_hardening",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "docs/audits/shadcn-sidebar.md"
+        ],
+        "facts": [
+          "Full peer/group/data-* class-state parity remains narrower than upstream, even though action/badge peer size-state, active peer foreground, and rail side/state cursor slices are now gated.",
+          "Existing web goldens, peer size-state tests, active peer foreground tests, rail cursor tests, and diagnostics prove important slices rather than the full class-state matrix.",
+          "Additional focused gates are needed before a regression_locked claim is defensible."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "harness_hardening",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote Sidebar out of inventory-only by connecting source refs, upstream goldens, Fret layout/semantics/behavior diagnostics, and explicit hardening queues for known partial parity gaps.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 1,
+    "gate_queue_count": 1,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 1,
+      "gate_queue_count": 1
+    },
+    "reports": [
+      {
+        "id": "sidebar.docs-path.desktop-mobile",
+        "component": "sidebar",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sidebar_agent_packet_p0_v1.json",
+        "status": "harness_hardening",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 1,
+        "gate_queue_count": 1
+      }
+    ]
+  }
+}

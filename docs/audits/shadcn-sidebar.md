@@ -125,7 +125,7 @@ coverage for `sidebar-*` pages.
 - Added first-pass link-role parity for sidebar menu href paths by introducing
   `SemanticsRole::Link` (core + accesskit mapping) and switching default
   `SidebarMenuButton`/`SidebarMenuSubButton` href semantics to link role while keeping
-  `as_child` href paths button-centric.
+  the shared pressable surface and `as_child` composition path consistent.
 - Added targeted tests for href-link semantics and bare-href `Effect::OpenUrl` fallback behavior in
   `ecosystem/fret-ui-shadcn/src/sidebar.rs`.
 - Added first-pass anchor API coverage on `SidebarMenuButton`/`SidebarMenuSubButton`
@@ -133,6 +133,21 @@ coverage for `sidebar-*` pages.
   link-path automation/a11y inspection.
 - Added targeted tests asserting `href` semantics-value exposure in link paths and explicit
   non-exposure for `as_child` href paths in `ecosystem/fret-ui-shadcn/src/sidebar.rs`.
+- Hardened `as_child + href` link parity for `SidebarMenuButton` and `SidebarMenuSubButton`: explicit
+  `href` paths now preserve link role semantics, expose the href as the semantics value, and emit
+  `Effect::OpenUrl` with `target` / `rel` when no custom `on_navigate` handler is supplied.
+- Hardened a targeted `peer/menu-button` class-state slice: `SidebarMenuAction` now inherits the
+  nearest same-item `SidebarMenuButton` size when children are rendered through
+  `SidebarMenuItem::into_element_with_children`, so action top offsets follow the upstream
+  size-driven peer state without requiring callers to duplicate `.size(...)`; explicit action size
+  still wins.
+- Hardened the matching `SidebarMenuBadge` peer-size slice: badge top offsets now inherit the same
+  nearest same-item `SidebarMenuButton` size in the closure-composition path, while explicit badge
+  `.size(...)` overrides still win.
+- Hardened a targeted active peer foreground slice: `SidebarMenuAction` and `SidebarMenuBadge` now
+  follow upstream `peer-data-[active=true]/menu-button:text-sidebar-accent-foreground` by reading
+  same-item `SidebarMenuButton` active state from the recipe-local item context. `SidebarGroupAction`
+  also scopes custom child foreground through the shared currentColor path.
 
 ### Update note (2026-02-23)
 
@@ -185,6 +200,24 @@ coverage for `sidebar-*` pages.
 - Current recommendation: keep the runtime/sidebar API stable for app-shell usage, and introduce a
   separate container-aware rail surface later if editor-grade panel adaptation needs it.
 
+### Update note (2026-05-26)
+
+- Aligned first-pass `SidebarProvider` cookie persistence with the upstream
+  `SIDEBAR_COOKIE_NAME = "sidebar_state"` and `SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7`
+  contract.
+- The uncontrolled desktop `open` model now initializes from the browser cookie on wasm targets
+  when present, and desktop `open` changes persist `sidebar_state=true|false; path=/; max-age=604800`.
+  Non-wasm targets keep this as a no-op because Fret does not expose a cross-platform cookie store.
+- Added focused unit tests for the cookie assignment string and parser in
+  `ecosystem/fret-ui-shadcn/src/sidebar.rs`.
+- Hardened a `SidebarRail` `data-side` / `data-state` cursor slice by extending the portable
+  `CursorIcon` contract with directional `EResize` / `WResize` variants, wiring native/web winit
+  mappings, and making rail hover choose the upstream left/right + expanded/collapsed resize
+  affordance.
+- Remaining hardening is now the broader React API-shape/class-state parity surface, especially the
+  peer/group/data-* state matrix; cookie persistence and the rail directional cursor slice are no
+  longer blocking Sidebar gaps.
+
 ## Component-by-component audit (24/24)
 
 Status legend:
@@ -195,11 +228,11 @@ Status legend:
 
 | Component | Upstream role | Base UI/Radix contract touchpoint | Fret status | Primary gap | Owner layer |
 | --- | --- | --- | --- | --- | --- |
-| `SidebarProvider` | Owns `open/openMobile/state`, keyboard toggle, tooltip provider | Tooltip delay-group + controlled/uncontrolled open model | Partial | Core state, tooltip delay-group, provider-owned width overrides (`width` / `width_icon` / `width_mobile`), first-pass `Ctrl/Cmd+B` shortcut handling, provider callbacks (`on_open_change` / `on_open_mobile_change`), and function-style setter ergonomics (`set_open_with` / `set_open_mobile_with`) are implemented; cookie persistence and full React API-shape parity remain | `fret-ui-shadcn` |
-| `use_sidebar` | Access provider state/actions | Context read contract | Partial | Hook exists and now exposes `set_open/set_open_mobile` and function-style setters (`set_open_with` / `set_open_mobile_with`) on context; parity gaps remain around cookie-backed persistence and full React API-shape parity | `fret-ui-shadcn` |
-| `Sidebar` | Desktop shell + mobile sheet branch; side/variant/collapsible data-state channel | Sheet/Dialog for mobile | Partial | `side/collapsible` + mobile `Sheet` are in place, the desktop/mobile width matrix now reads provider-owned resolved widths first, and theme tokens remain recipe fallback; richer data-slot channels and cookie persistence parity remain | `fret-ui-shadcn` |
+| `SidebarProvider` | Owns `open/openMobile/state`, keyboard toggle, tooltip provider | Tooltip delay-group + controlled/uncontrolled open model | Partial | Core state, tooltip delay-group, provider-owned width overrides (`width` / `width_icon` / `width_mobile`), first-pass `Ctrl/Cmd+B` shortcut handling, provider callbacks (`on_open_change` / `on_open_mobile_change`), function-style setter ergonomics (`set_open_with` / `set_open_mobile_with`), and wasm cookie persistence for desktop `open` are implemented; full React API-shape parity remains | `fret-ui-shadcn` |
+| `use_sidebar` | Access provider state/actions | Context read contract | Partial | Hook exists and now exposes `set_open/set_open_mobile` and function-style setters (`set_open_with` / `set_open_mobile_with`) on context; parity gaps remain around full React API-shape parity and broader class-state channels | `fret-ui-shadcn` |
+| `Sidebar` | Desktop shell + mobile sheet branch; side/variant/collapsible data-state channel | Sheet/Dialog for mobile | Partial | `side/collapsible` + mobile `Sheet` are in place, the desktop/mobile width matrix now reads provider-owned resolved widths first, theme tokens remain recipe fallback, and provider cookie persistence is wired for wasm; richer data-slot channels and class-state parity remain | `fret-ui-shadcn` |
 | `SidebarTrigger` | Toggle sidebar state | Provider action + button semantics | Partial | Toggle behavior and RTL icon flip are wired; upstream data-slot conventions and full keyboard shortcut/API-shape parity remain to align | `fret-ui-shadcn` |
-| `SidebarRail` | Thin rail toggle affordance | Provider action + pointer affordance | Partial | Rail toggle + side/offcanvas hit-box placement matrix are wired, hover chrome now matches the upstream default-vs-offcanvas split (hairline-only vs filled surface), and hover requests `CursorIcon::ColResize` as a first-pass cursor affordance; richer directional cursor semantics and remaining class-state polish still remain | `fret-ui-shadcn` |
+| `SidebarRail` | Thin rail toggle affordance | Provider action + pointer affordance | Partial | Rail toggle + side/offcanvas hit-box placement matrix are wired, hover chrome now matches the upstream default-vs-offcanvas split (hairline-only vs filled surface), and rail hover now uses directional `EResize` / `WResize` according to side + collapsed state; remaining class-state polish still remains | `fret-ui-shadcn` |
 | `SidebarInset` | Peer/inset content container | None (layout recipe) | Partial | First-pass `variant=inset` peer-surface matrix is now wired (margin/radius/shadow + collapsed margin step); responsive breakpoint choreography and full class-state parity remain | `fret-ui-shadcn` |
 | `SidebarInput` | Sidebar-local input style wrapper | None (input styling wrapper) | Partial | 32px height + background wrapper exists; full class-level state variants are still narrower than upstream | `fret-ui-shadcn` |
 | `SidebarSeparator` | Sidebar-local separator wrapper | None (separator styling wrapper) | Partial | Sidebar-border + horizontal wrapper exists; upstream data-slot/class and variant nuances remain | `fret-ui-shadcn` |
@@ -208,17 +241,17 @@ Status legend:
 | `SidebarContent` | `min-h-0 flex-1 overflow-auto`, icon-collapsed overflow hidden | None (layout recipe) | Partial | Core `min-h-0 flex-1` + collapsed overflow contract is now wired; responsive/variant choreography and full class-state channel parity remain | `fret-ui-shadcn` |
 | `SidebarGroup` | Group container (`relative`, `min-w-0`, `p-2`) | None (layout recipe) | Partial | Wrapper `relative + min-w-0 + w-full + p-2` contract is now wired; full upstream slot/state class matrix remains | `fret-ui-shadcn` |
 | `SidebarGroupLabel` | Collapsed animation (`-mt-8`, `opacity-0`), focus ring styling | None (layout recipe) | Partial | Provider-driven collapse motion is wired, and first-pass `children(...)` + `as_child(true)` composition now covers the upstream collapsible-group label lane; remaining gaps are full slot/class-state parity and more literal slot-root styling parity | `fret-ui-shadcn` |
-| `SidebarGroupAction` | Group-level action button (absolute position, focus ring) | Button semantics | Partial | Absolute action surface + mobile hit-area expansion (`after:-inset-2` intent) are wired via unified pressable semantics (default and `as_child`); remaining gaps are full pseudo-element/state-class parity and richer asChild composition semantics | `fret-ui-shadcn` |
+| `SidebarGroupAction` | Group-level action button (absolute position, focus ring) | Button semantics | Partial | Absolute action surface + mobile hit-area expansion (`after:-inset-2` intent) are wired via unified pressable semantics (default and `as_child`), and custom children inherit the resolved sidebar foreground through currentColor; remaining gaps are full pseudo-element/state-class parity and richer asChild composition semantics | `fret-ui-shadcn` |
 | `SidebarGroupContent` | Group body wrapper | None (layout recipe) | Partial | First-pass `w-full + text-sm` wrapper exists; upstream data-slot/class matrix parity still missing | `fret-ui-shadcn` |
 | `SidebarMenu` | Menu list container (`ul`-like semantics) | None (list semantics) | Partial | List semantics (`SemanticsRole::List`) now present; upstream data-slot/class matrix parity still missing | `fret-ui-shadcn` |
-| `SidebarMenuItem` | Menu item container (`li`-like semantics) | None (list item semantics) | Partial | Relative list-item semantics + hover context are present; full group/peer class-state and `asChild` parity still missing | `fret-ui-shadcn` |
-| `SidebarMenuButton` | Core action row; active/size variants; collapsed tooltip | Tooltip trigger/content contract | Partial | Collapsed tooltip + `variant(default/outline)` + `href/on_navigate` + `as_child` API surface are now wired, `as_child` supports custom-child composition, default `href` path now uses `SemanticsRole::Link`, non-`as_child` `href` now populates semantics value, and `href` falls back to `Effect::OpenUrl` when no `on_navigate` is provided; remaining gaps are true anchor polymorphism (native link attributes/render target) and full class-state parity (`peer/group/data-*`) | `fret-ui-shadcn` |
-| `SidebarMenuAction` | Per-row action button | Button semantics | Partial | Size/top/collapsed surface + desktop hover-gated visibility exist, and both default/`as_child` paths now use unified pressable semantics that preserve command/activate behavior while enabling mobile hit-area expansion; remaining gaps are pseudo-element/state-class parity and full peer/group state matrix parity | `fret-ui-shadcn` |
-| `SidebarMenuBadge` | Per-row badge slot | None (layout/styling wrapper) | Partial | First-pass absolute badge surface (size-dependent top offsets, collapsed hide) exists; pointer-events/class-state matrix and tabular-number styling parity are incomplete | `fret-ui-shadcn` |
+| `SidebarMenuItem` | Menu item container (`li`-like semantics) | None (list item semantics) | Partial | Relative list-item semantics + hover/focus/open context are present, and same-row menu-button size/active state is exposed to `SidebarMenuAction` and `SidebarMenuBadge` in the closure-composition path; full group/peer class-state and `asChild` parity still missing | `fret-ui-shadcn` |
+| `SidebarMenuButton` | Core action row; active/size variants; collapsed tooltip | Tooltip trigger/content contract | Partial | Collapsed tooltip + `variant(default/outline)` + `href/on_navigate` + `as_child` API surface are now wired, `as_child` supports custom-child composition, default and `as_child` `href` paths now use `SemanticsRole::Link`, `href` paths populate semantics value, and `href` falls back to `Effect::OpenUrl` with `target`/`rel` when no `on_navigate` is provided; remaining gaps are full class-state parity (`peer/group/data-*`) and any future dedicated native anchor render target if the renderer grows one | `fret-ui-shadcn` |
+| `SidebarMenuAction` | Per-row action button | Button semantics | Partial | Size/top/collapsed surface + desktop hover-gated visibility exist, the closure-composition path now inherits `SidebarMenuButton` peer size and active foreground state while keeping explicit action size override, and both default/`as_child` paths use unified pressable semantics that preserve command/activate behavior while enabling mobile hit-area expansion; remaining gaps are pseudo-element/state-class parity and the broader peer/group state matrix | `fret-ui-shadcn` |
+| `SidebarMenuBadge` | Per-row badge slot | None (layout/styling wrapper) | Partial | First-pass absolute badge surface exists, the closure-composition path now inherits `SidebarMenuButton` peer size and active foreground state while keeping explicit size overrides, collapsed hide is wired, and compact tabular readout styling is gated; pointer-events and the broader class-state matrix remain incomplete | `fret-ui-shadcn` |
 | `SidebarMenuSkeleton` | Loading skeleton row | None (layout/styling wrapper) | Partial | First-pass skeleton row surface exists; upstream random width strategy and icon/text slot data markers are simplified | `fret-ui-shadcn` |
 | `SidebarMenuSub` | Nested menu list wrapper | None (list semantics) | Partial | Nested sub-menu wrapper + list semantics exist; exact class transforms/spacing matrix still simplified | `fret-ui-shadcn` |
 | `SidebarMenuSubItem` | Nested menu item wrapper | None (list item semantics) | Partial | Nested sub-item wrapper + list-item semantics exist; peer/group class-state parity remains incomplete | `fret-ui-shadcn` |
-| `SidebarMenuSubButton` | Nested row button/link wrapper | Button/link semantics | Partial | Nested sub-button surface exists with active/size/collapsed behavior, first-pass `as_child` custom-child composition is wired, default `href` path now uses `SemanticsRole::Link`, non-`as_child` `href` now populates semantics value, and `href` falls back to `Effect::OpenUrl` when no `on_navigate` is provided; remaining gaps are native anchor semantics parity (attributes/render target) and full class matrix parity | `fret-ui-shadcn` |
+| `SidebarMenuSubButton` | Nested row button/link wrapper | Button/link semantics | Partial | Nested sub-button surface exists with active/size/collapsed behavior, first-pass `as_child` custom-child composition is wired, default and `as_child` `href` paths now use `SemanticsRole::Link`, `href` paths populate semantics value, and `href` falls back to `Effect::OpenUrl` with `target`/`rel` when no `on_navigate` is provided; remaining gap is the broader peer/group/data-* class matrix parity | `fret-ui-shadcn` |
 
 ## Key divergences and likely root causes
 
@@ -245,9 +278,10 @@ Remaining impact/gap:
 - Keyboard shortcut is now present as a first pass (`Ctrl/Cmd+B -> sidebar.toggle`), and
   provider-level change callbacks (`on_open_change` / `on_open_mobile_change`) plus function-style
   setter ergonomics (`set_open_with` / `set_open_mobile_with`) are now available.
-  Cookie persistence and full React API-shape parity are still TODO.
+  Cookie persistence is wired for the wasm desktop `open` path; full React API-shape parity is still
+  a hardening lane.
 - Mobile `openMobile` sheet path is now surfaced in a first pass; remaining gaps are richer
-  callback shape (`setOpen`/`setOpenMobile` parity) and cookie persistence semantics.
+  callback shape (`setOpen`/`setOpenMobile` parity) and broader API-shape semantics.
 
 ### 3) Behavioral parity gap (0 missing exports)
 
@@ -258,15 +292,18 @@ Impact:
 
 - Upstream examples can be ported with lower structural friction, but behavior-level adaptation is
   still required in advanced cases.
-- Existing `sidebar-*` goldens can pass while interaction/state parity remains partial.
+- Existing `sidebar-*` goldens can pass while interaction/state parity remains partial. Targeted
+  peer-size and active peer foreground slices are now gated for `SidebarMenuAction` and
+  `SidebarMenuBadge`, but the broader peer/group/data-* matrix is still not complete.
 
 ### 4) Semantics and polymorphism gaps
 
 - Upstream frequently composes via `asChild` and semantic list structure (`ul/li` wrappers).
 - Fret now supports first-pass `as_child` composition on key menu rows, routes bare `href`
-  activations to `Effect::OpenUrl`, default `href` paths now expose link semantics, and non-
-  `as_child` href values are surfaced via semantics value.
-- Remaining gap is dedicated anchor primitives/attributes for full upstream polymorphism parity.
+  activations to `Effect::OpenUrl` with `target`/`rel`, and default plus `as_child` href paths
+  expose link semantics and href semantics values.
+- Remaining polymorphism risk is now narrower: if the renderer grows a dedicated native anchor
+  render target later, Sidebar can move from link-role pressable translation to that primitive.
 
 Impact:
 

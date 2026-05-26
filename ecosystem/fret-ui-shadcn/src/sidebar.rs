@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::cell::Cell;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -144,6 +145,8 @@ fn resolve_sidebar_widths(
 
 const SIDEBAR_TOGGLE_SHORTCUT_KEY: KeyCode = KeyCode::KeyB;
 const SIDEBAR_TOGGLE_COMMAND_ID: &str = "sidebar.toggle";
+const SIDEBAR_COOKIE_NAME: &str = "sidebar_state";
+const SIDEBAR_COOKIE_MAX_AGE_SECONDS: u64 = 60 * 60 * 24 * 7;
 
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
@@ -181,6 +184,47 @@ fn sidebar_provider_open_change_events(
 
     (open_changed, open_mobile_changed)
 }
+
+fn sidebar_cookie_assignment(open: bool) -> String {
+    format!("{SIDEBAR_COOKIE_NAME}={open}; path=/; max-age={SIDEBAR_COOKIE_MAX_AGE_SECONDS}")
+}
+
+fn sidebar_open_from_cookie_header(cookie_header: &str) -> Option<bool> {
+    cookie_header.split(';').find_map(|entry| {
+        let (name, value) = entry.trim().split_once('=')?;
+        if name.trim() != SIDEBAR_COOKIE_NAME {
+            return None;
+        }
+
+        match value.trim() {
+            "true" => Some(true),
+            "false" => Some(false),
+            _ => None,
+        }
+    })
+}
+
+#[cfg(target_arch = "wasm32")]
+fn read_sidebar_open_cookie() -> Option<bool> {
+    let document = web_sys::window()?.document()?;
+    let cookies = document.cookie().ok()?;
+    sidebar_open_from_cookie_header(&cookies)
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn read_sidebar_open_cookie() -> Option<bool> {
+    None
+}
+
+#[cfg(target_arch = "wasm32")]
+fn persist_sidebar_open_cookie(open: bool) {
+    if let Some(document) = web_sys::window().and_then(|window| window.document()) {
+        let _ = document.set_cookie(&sidebar_cookie_assignment(open));
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn persist_sidebar_open_cookie(_open: bool) {}
 
 fn sidebar_open_url_on_activate(
     url: Arc<str>,
@@ -305,6 +349,15 @@ fn sidebar_rail_line_bg(theme: &Theme, hovered: bool, pressed: bool) -> Color {
         sidebar_border(theme)
     } else {
         Color::TRANSPARENT
+    }
+}
+
+fn sidebar_rail_cursor_icon(side: SidebarSide, collapsed: bool) -> CursorIcon {
+    match (side, collapsed) {
+        (SidebarSide::Left, false) => CursorIcon::WResize,
+        (SidebarSide::Right, false) => CursorIcon::EResize,
+        (SidebarSide::Left, true) => CursorIcon::EResize,
+        (SidebarSide::Right, true) => CursorIcon::WResize,
     }
 }
 
@@ -766,8 +819,10 @@ impl SidebarProvider {
     {
         ensure_sidebar_shortcut_binding(cx);
 
-        let open =
-            controllable_state::use_controllable_model(cx, self.open, || self.default_open).model();
+        let open = controllable_state::use_controllable_model(cx, self.open, || {
+            read_sidebar_open_cookie().unwrap_or(self.default_open)
+        })
+        .model();
         let open_mobile = controllable_state::use_controllable_model(cx, self.open_mobile, || {
             self.default_open_mobile
         })
@@ -786,6 +841,9 @@ impl SidebarProvider {
             });
         if let (Some(open), Some(handler)) = (open_changed, self.on_open_change.as_ref()) {
             handler(open);
+        }
+        if let Some(open) = open_changed {
+            persist_sidebar_open_cookie(open);
         }
         if let (Some(open_mobile), Some(handler)) =
             (open_mobile_changed, self.on_open_mobile_change.as_ref())
@@ -1607,6 +1665,8 @@ impl SidebarRail {
         let side = surface_ctx.map(|ctx| ctx.side).unwrap_or_default();
         let collapsible = surface_ctx.map(|ctx| ctx.collapsible).unwrap_or_default();
         let variant = surface_ctx.map(|ctx| ctx.variant).unwrap_or_default();
+        let collapsed = sidebar_collapsed_in_scope(cx);
+        let cursor_icon = sidebar_rail_cursor_icon(side, collapsed);
         let rail_layout = sidebar_rail_layout(side, variant).merge(self.layout);
         let line_offset = sidebar_rail_line_offset(collapsible);
 
@@ -1649,7 +1709,7 @@ impl SidebarRail {
                 if hovered {
                     host.push_effect(Effect::CursorSetIcon {
                         window: acx.window,
-                        icon: CursorIcon::ColResize,
+                        icon: cursor_icon,
                     });
                 }
             }));
@@ -2510,7 +2570,10 @@ impl SidebarGroupAction {
                 chrome.merge(user_chrome.clone()),
                 content_layout.clone(),
             );
-            vec![cx.container(props, move |_cx| children)]
+            let fg_ref = ColorRef::Color(fg);
+            vec![cx.container(props, move |cx| {
+                current_color::scope_children(cx, fg_ref.clone(), move |_cx| children)
+            })]
         })
     }
 }
@@ -2607,17 +2670,31 @@ pub struct SidebarMenuItem {
     layout: LayoutRefinement,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug)]
 struct SidebarMenuItemContext {
     hovered: bool,
     open: bool,
     focus_within: bool,
+    menu_button_size: Cell<Option<SidebarMenuButtonSize>>,
+    menu_button_active: Cell<bool>,
 }
 
-fn use_sidebar_menu_item_context<H: UiHost>(
-    cx: &ElementContext<'_, H>,
-) -> Option<SidebarMenuItemContext> {
-    cx.provided::<SidebarMenuItemContext>().copied()
+impl SidebarMenuItemContext {
+    fn new(hovered: bool, open: bool, focus_within: bool) -> Self {
+        Self {
+            hovered,
+            open,
+            focus_within,
+            menu_button_size: Cell::new(None),
+            menu_button_active: Cell::new(false),
+        }
+    }
+}
+
+fn use_sidebar_menu_item_context<'a, H: UiHost>(
+    cx: &'a ElementContext<'_, H>,
+) -> Option<&'a SidebarMenuItemContext> {
+    cx.provided::<SidebarMenuItemContext>()
 }
 
 #[track_caller]
@@ -2639,6 +2716,32 @@ fn sidebar_menu_item_open_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> Opt
 
 fn sidebar_menu_item_focus_within_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<bool> {
     use_sidebar_menu_item_context(cx).map(|ctx| ctx.focus_within)
+}
+
+fn record_sidebar_menu_button_size_in_scope<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    size: SidebarMenuButtonSize,
+) {
+    if let Some(ctx) = use_sidebar_menu_item_context(cx) {
+        ctx.menu_button_size.set(Some(size));
+    }
+}
+
+fn sidebar_menu_button_size_in_scope<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+) -> Option<SidebarMenuButtonSize> {
+    use_sidebar_menu_item_context(cx).and_then(|ctx| ctx.menu_button_size.get())
+}
+
+fn record_sidebar_menu_button_active_in_scope<H: UiHost>(cx: &ElementContext<'_, H>, active: bool) {
+    if let Some(ctx) = use_sidebar_menu_item_context(cx) {
+        ctx.menu_button_active
+            .set(ctx.menu_button_active.get() || active);
+    }
+}
+
+fn sidebar_menu_button_active_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> bool {
+    use_sidebar_menu_item_context(cx).is_some_and(|ctx| ctx.menu_button_active.get())
 }
 
 fn any_element_subtree_has_focus<H: UiHost>(
@@ -2723,11 +2826,7 @@ impl SidebarMenuItem {
 
             with_sidebar_menu_item_state(
                 cx,
-                SidebarMenuItemContext {
-                    hovered,
-                    open,
-                    focus_within,
-                },
+                SidebarMenuItemContext::new(hovered, open, focus_within),
                 |cx| {
                     let render_children = render_children.clone();
                     let children = render_children(cx);
@@ -2768,11 +2867,7 @@ impl SidebarMenuItem {
                 .any(|child| any_element_subtree_has_focus(cx, child));
             with_sidebar_menu_item_state(
                 cx,
-                SidebarMenuItemContext {
-                    hovered,
-                    open,
-                    focus_within,
-                },
+                SidebarMenuItemContext::new(hovered, open, focus_within),
                 |cx| {
                     let node = cx
                         .container(props, move |_cx| children)
@@ -2787,7 +2882,7 @@ impl SidebarMenuItem {
 pub struct SidebarMenuAction {
     label: Arc<str>,
     children: Vec<AnyElement>,
-    size: SidebarMenuButtonSize,
+    size: Option<SidebarMenuButtonSize>,
     as_child: bool,
     show_on_hover: bool,
     disabled: bool,
@@ -2823,7 +2918,7 @@ impl SidebarMenuAction {
         Self {
             label: Arc::from("Sidebar Menu Action"),
             children: children.into_iter().collect(),
-            size: SidebarMenuButtonSize::Default,
+            size: None,
             as_child: false,
             show_on_hover: false,
             disabled: false,
@@ -2847,7 +2942,7 @@ impl SidebarMenuAction {
     }
 
     pub fn size(mut self, size: SidebarMenuButtonSize) -> Self {
-        self.size = size;
+        self.size = Some(size);
         self
     }
 
@@ -2929,7 +3024,12 @@ impl SidebarMenuAction {
             }
         }
 
-        let top = sidebar_menu_affordance_top(self.size);
+        let size = self
+            .size
+            .or_else(|| sidebar_menu_button_size_in_scope(cx))
+            .unwrap_or_default();
+        let peer_menu_button_active = sidebar_menu_button_active_in_scope(cx);
+        let top = sidebar_menu_affordance_top(size);
         let is_mobile = use_sidebar(cx).is_some_and(|ctx| ctx.device_shell_mode.is_mobile());
         let dir = crate::direction::use_direction(cx, None);
         let (right, size, hit_expand) = {
@@ -3017,7 +3117,7 @@ impl SidebarMenuAction {
             let theme = Theme::global(&*cx.app);
             let fg = if disabled {
                 alpha_mul(sidebar_fg(theme), 0.5)
-            } else if st.hovered || st.pressed {
+            } else if peer_menu_button_active || st.hovered || st.pressed {
                 sidebar_accent_fg(theme)
             } else {
                 sidebar_fg(theme)
@@ -3039,7 +3139,10 @@ impl SidebarMenuAction {
                 chrome.merge(user_chrome.clone()),
                 content_layout.clone(),
             );
-            vec![cx.container(props, move |_cx| children)]
+            let fg_ref = ColorRef::Color(fg);
+            vec![cx.container(props, move |cx| {
+                current_color::scope_children(cx, fg_ref.clone(), move |_cx| children)
+            })]
         })
     }
 }
@@ -3047,7 +3150,7 @@ impl SidebarMenuAction {
 #[derive(Debug, Clone)]
 pub struct SidebarMenuBadge {
     label: Arc<str>,
-    size: SidebarMenuButtonSize,
+    size: Option<SidebarMenuButtonSize>,
     collapsed: bool,
     test_id: Option<Arc<str>>,
     chrome: ChromeRefinement,
@@ -3058,7 +3161,7 @@ impl SidebarMenuBadge {
     pub fn new(label: impl Into<Arc<str>>) -> Self {
         Self {
             label: label.into(),
-            size: SidebarMenuButtonSize::Default,
+            size: None,
             collapsed: false,
             test_id: None,
             chrome: ChromeRefinement::default(),
@@ -3067,7 +3170,7 @@ impl SidebarMenuBadge {
     }
 
     pub fn size(mut self, size: SidebarMenuButtonSize) -> Self {
-        self.size = size;
+        self.size = Some(size);
         self
     }
 
@@ -3102,7 +3205,12 @@ impl SidebarMenuBadge {
             });
         }
 
-        let top = sidebar_menu_affordance_top(self.size);
+        let size = self
+            .size
+            .or_else(|| sidebar_menu_button_size_in_scope(cx))
+            .unwrap_or_default();
+        let peer_menu_button_active = sidebar_menu_button_active_in_scope(cx);
+        let top = sidebar_menu_affordance_top(size);
         let (props, fg) = {
             let theme = Theme::global(&*cx.app);
             let right = theme
@@ -3114,7 +3222,11 @@ impl SidebarMenuBadge {
             let min_w = theme
                 .metric_by_key("component.sidebar.menu_badge.min_w")
                 .unwrap_or(Px(20.0));
-            let fg = sidebar_fg(theme);
+            let fg = if peer_menu_button_active {
+                sidebar_accent_fg(theme)
+            } else {
+                sidebar_fg(theme)
+            };
             let dir = crate::direction::use_direction(cx, None);
             let base_layout = LayoutRefinement::default()
                 .absolute()
@@ -3583,12 +3695,12 @@ impl SidebarMenuSubButton {
         let target = self.target.clone();
         let rel = self.rel.clone();
         let as_child = self.as_child;
-        let a11y_role = if href.is_some() && !as_child {
+        let a11y_role = if href.is_some() {
             SemanticsRole::Link
         } else {
             SemanticsRole::Button
         };
-        let href_for_semantics = if !as_child { href.clone() } else { None };
+        let href_for_semantics = href.clone();
         let slot_children = self.children;
         let disabled = self.disabled
             || on_click
@@ -3933,6 +4045,9 @@ impl SidebarMenuButton {
         expanded_progress: f32,
         slot_children: Option<Vec<AnyElement>>,
     ) -> AnyElement {
+        record_sidebar_menu_button_size_in_scope(cx, self.size);
+        record_sidebar_menu_button_active_in_scope(cx, self.active);
+
         let (ring, pressable_layout) = {
             let theme = Theme::global(&*cx.app);
             let radius = decl_style::radius(theme, Radius::Md);
@@ -3962,12 +4077,12 @@ impl SidebarMenuButton {
         let target = self.target.clone();
         let rel = self.rel.clone();
         let as_child = self.as_child;
-        let a11y_role = if href.is_some() && !as_child {
+        let a11y_role = if href.is_some() {
             SemanticsRole::Link
         } else {
             SemanticsRole::Button
         };
-        let href_for_semantics = if !as_child { href.clone() } else { None };
+        let href_for_semantics = href.clone();
         let disabled = self.disabled
             || on_click
                 .as_ref()
@@ -6189,6 +6304,272 @@ mod tests {
     }
 
     #[test]
+    fn sidebar_menu_action_inherits_menu_button_size_from_peer_context() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-menu-action-peer-size",
+            |cx| {
+                let item = SidebarMenuItem::new(cx.spacer(SpacerProps {
+                    min: Px(0.0),
+                    ..Default::default()
+                }))
+                .into_element_with_children(cx, |cx| {
+                    let button = SidebarMenuButton::new("Projects")
+                        .size(SidebarMenuButtonSize::Lg)
+                        .test_id("sidebar-menu-button")
+                        .into_element(cx);
+                    let action = SidebarMenuAction::new(Vec::<AnyElement>::new())
+                        .test_id("sidebar-menu-action")
+                        .into_element(cx);
+                    vec![button, action]
+                });
+                let menu = SidebarMenu::new([item]).into_element(cx);
+                vec![menu]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let button = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-menu-button"))
+            .expect("expected sidebar menu button semantics node");
+        let action = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-menu-action"))
+            .expect("expected sidebar menu action semantics node");
+
+        let actual_top = action.bounds.origin.y.0 - button.bounds.origin.y.0;
+        assert!(
+            (actual_top - 10.0).abs() <= 1.0,
+            "expected menu action to inherit lg peer top offset ~10px, got {actual_top}px"
+        );
+    }
+
+    #[test]
+    fn sidebar_menu_action_explicit_size_overrides_peer_context() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-menu-action-peer-size-explicit",
+            |cx| {
+                let item = SidebarMenuItem::new(cx.spacer(SpacerProps {
+                    min: Px(0.0),
+                    ..Default::default()
+                }))
+                .into_element_with_children(cx, |cx| {
+                    let button = SidebarMenuButton::new("Projects")
+                        .size(SidebarMenuButtonSize::Lg)
+                        .test_id("sidebar-menu-button")
+                        .into_element(cx);
+                    let action = SidebarMenuAction::new(Vec::<AnyElement>::new())
+                        .size(SidebarMenuButtonSize::Sm)
+                        .test_id("sidebar-menu-action")
+                        .into_element(cx);
+                    vec![button, action]
+                });
+                let menu = SidebarMenu::new([item]).into_element(cx);
+                vec![menu]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let button = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-menu-button"))
+            .expect("expected sidebar menu button semantics node");
+        let action = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-menu-action"))
+            .expect("expected sidebar menu action semantics node");
+
+        let actual_top = action.bounds.origin.y.0 - button.bounds.origin.y.0;
+        assert!(
+            (actual_top - 4.0).abs() <= 1.0,
+            "expected explicit sm menu action size to override lg peer top offset with ~4px, got {actual_top}px"
+        );
+    }
+
+    #[test]
+    fn sidebar_menu_badge_inherits_menu_button_size_from_peer_context() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-menu-badge-peer-size",
+            |cx| {
+                let item = SidebarMenuItem::new(cx.spacer(SpacerProps {
+                    min: Px(0.0),
+                    ..Default::default()
+                }))
+                .into_element_with_children(cx, |cx| {
+                    let button = SidebarMenuButton::new("Projects")
+                        .size(SidebarMenuButtonSize::Lg)
+                        .test_id("sidebar-menu-button")
+                        .into_element(cx);
+                    let badge = SidebarMenuBadge::new("12")
+                        .test_id("sidebar-menu-badge")
+                        .into_element(cx);
+                    vec![button, badge]
+                });
+                let menu = SidebarMenu::new([item]).into_element(cx);
+                vec![menu]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let button = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-menu-button"))
+            .expect("expected sidebar menu button semantics node");
+        let badge = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-menu-badge"))
+            .expect("expected sidebar menu badge semantics node");
+
+        let actual_top = badge.bounds.origin.y.0 - button.bounds.origin.y.0;
+        assert!(
+            (actual_top - 10.0).abs() <= 1.0,
+            "expected menu badge to inherit lg peer top offset ~10px, got {actual_top}px"
+        );
+    }
+
+    #[test]
+    fn sidebar_menu_badge_explicit_size_overrides_peer_context() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-menu-badge-peer-size-explicit",
+            |cx| {
+                let item = SidebarMenuItem::new(cx.spacer(SpacerProps {
+                    min: Px(0.0),
+                    ..Default::default()
+                }))
+                .into_element_with_children(cx, |cx| {
+                    let button = SidebarMenuButton::new("Projects")
+                        .size(SidebarMenuButtonSize::Lg)
+                        .test_id("sidebar-menu-button")
+                        .into_element(cx);
+                    let badge = SidebarMenuBadge::new("12")
+                        .size(SidebarMenuButtonSize::Sm)
+                        .test_id("sidebar-menu-badge")
+                        .into_element(cx);
+                    vec![button, badge]
+                });
+                let menu = SidebarMenu::new([item]).into_element(cx);
+                vec![menu]
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let button = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-menu-button"))
+            .expect("expected sidebar menu button semantics node");
+        let badge = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-menu-badge"))
+            .expect("expected sidebar menu badge semantics node");
+
+        let actual_top = badge.bounds.origin.y.0 - button.bounds.origin.y.0;
+        assert!(
+            (actual_top - 4.0).abs() <= 1.0,
+            "expected explicit sm menu badge size to override lg peer top offset with ~4px, got {actual_top}px"
+        );
+    }
+
+    #[test]
     fn sidebar_menu_action_mobile_hit_area_expands_vs_desktop() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -6456,7 +6837,31 @@ mod tests {
     }
 
     #[test]
-    fn sidebar_rail_hover_sets_col_resize_cursor_icon() {
+    fn sidebar_rail_directional_cursor_tracks_side_and_collapsed_state() {
+        assert_eq!(
+            sidebar_rail_cursor_icon(SidebarSide::Left, false),
+            CursorIcon::WResize,
+            "expanded left sidebar rail should use the upstream w-resize affordance"
+        );
+        assert_eq!(
+            sidebar_rail_cursor_icon(SidebarSide::Right, false),
+            CursorIcon::EResize,
+            "expanded right sidebar rail should use the upstream e-resize affordance"
+        );
+        assert_eq!(
+            sidebar_rail_cursor_icon(SidebarSide::Left, true),
+            CursorIcon::EResize,
+            "collapsed left sidebar rail should flip to e-resize like upstream data-state rules"
+        );
+        assert_eq!(
+            sidebar_rail_cursor_icon(SidebarSide::Right, true),
+            CursorIcon::WResize,
+            "collapsed right sidebar rail should flip to w-resize like upstream data-state rules"
+        );
+    }
+
+    #[test]
+    fn sidebar_rail_hover_sets_directional_resize_cursor_icon() {
         let window = AppWindowId::default();
         let mut app = App::new();
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
@@ -6477,9 +6882,12 @@ mod tests {
             bounds,
             "shadcn-sidebar-rail-hover-cursor",
             |cx| {
-                SidebarProvider::new().with(cx, |cx| {
-                    vec![SidebarRail::new().test_id("sidebar-rail").into_element(cx)]
-                })
+                let sidebar = Sidebar::new(Vec::<AnyElement>::new())
+                    .side(SidebarSide::Right)
+                    .into_element_with_children(cx, |cx| {
+                        vec![SidebarRail::new().test_id("sidebar-rail").into_element(cx)]
+                    });
+                vec![sidebar]
             },
         );
         ui.set_root(root);
@@ -6520,10 +6928,91 @@ mod tests {
                 matches!(
                     effect,
                     Effect::CursorSetIcon { window: w, icon }
-                        if *w == window && *icon == CursorIcon::ColResize
+                        if *w == window && *icon == CursorIcon::EResize
                 )
             }),
-            "expected sidebar rail hover to request col-resize cursor icon"
+            "expected right expanded sidebar rail hover to request e-resize cursor icon"
+        );
+    }
+
+    #[test]
+    fn sidebar_rail_hover_cursor_reads_provider_collapsed_state() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(1024.0), Px(640.0)),
+        );
+        let open_model = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-sidebar-rail-hover-cursor-collapsed",
+            |cx| {
+                SidebarProvider::new()
+                    .open(Some(open_model.clone()))
+                    .with(cx, |cx| {
+                        let sidebar = Sidebar::new(Vec::<AnyElement>::new())
+                            .side(SidebarSide::Left)
+                            .collapsible(SidebarCollapsible::Icon)
+                            .into_element_with_children(cx, |cx| {
+                                vec![SidebarRail::new().test_id("sidebar-rail").into_element(cx)]
+                            });
+                        vec![sidebar]
+                    })
+            },
+        );
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let rail = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("sidebar-rail"))
+            .expect("expected sidebar rail semantics node");
+
+        let center = Point::new(
+            Px(rail.bounds.origin.x.0 + rail.bounds.size.width.0 * 0.5),
+            Px(rail.bounds.origin.y.0 + rail.bounds.size.height.0 * 0.5),
+        );
+
+        let _ = app.flush_effects();
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                buttons: fret_core::MouseButtons::default(),
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(|effect| {
+                matches!(
+                    effect,
+                    Effect::CursorSetIcon { window: w, icon }
+                        if *w == window && *icon == CursorIcon::EResize
+                )
+            }),
+            "expected left collapsed sidebar rail hover to request e-resize cursor icon"
         );
     }
 
@@ -8118,6 +8607,34 @@ mod tests {
     }
 
     #[test]
+    fn sidebar_group_action_scopes_child_foreground() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(80.0)),
+        );
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "sidebar-group-action-foreground",
+            |cx| SidebarGroupAction::new([ui::text("+").into_element(cx)]).into_element(cx),
+        );
+
+        let text_element = find_text_element(&element, "+").expect("expected group action text");
+        let theme = Theme::global(&app);
+        assert_eq!(
+            text_element.inherited_foreground,
+            Some(sidebar_fg(theme)),
+            "expected SidebarGroupAction to scope its child foreground to sidebar foreground"
+        );
+    }
+
+    #[test]
     fn sidebar_menu_action_and_badge_anchor_to_inline_end_in_rtl() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -8223,6 +8740,64 @@ mod tests {
         assert_eq!(ltr_container.border.right, Px(0.0));
         assert_eq!(rtl_container.border.left, Px(0.0));
         assert_ne!(rtl_container.border.right, Px(0.0));
+    }
+
+    #[test]
+    fn sidebar_pressable_surfaces_keep_focus_visible_ring() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+        let theme = Theme::global(&app).snapshot();
+        let expected_radius =
+            fret_ui_kit::MetricRef::radius(fret_ui_kit::Radius::Md).resolve(&theme);
+
+        let menu_button = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "sidebar-menu-button-focus",
+            |cx| SidebarMenuButton::new("Projects").into_element(cx),
+        );
+        let group_action = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "sidebar-group-action-focus",
+            |cx| SidebarGroupAction::new([ui::text("+").into_element(cx)]).into_element(cx),
+        );
+        let menu_action = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "sidebar-menu-action-focus",
+            |cx| SidebarMenuAction::new([ui::text("...").into_element(cx)]).into_element(cx),
+        );
+
+        for (name, element) in [
+            ("SidebarMenuButton", &menu_button),
+            ("SidebarGroupAction", &group_action),
+            ("SidebarMenuAction", &menu_action),
+        ] {
+            let pressable = find_first_pressable(element)
+                .unwrap_or_else(|| panic!("expected {name} pressable"));
+            let ring = pressable
+                .focus_ring
+                .unwrap_or_else(|| panic!("expected {name} focus-visible ring"));
+            assert!(
+                ring.color.a > 0.0,
+                "expected {name} focus-visible ring to use a visible ring color"
+            );
+            assert_eq!(
+                ring.corner_radii,
+                fret_core::Corners::all(expected_radius),
+                "expected {name} focus-visible ring radius to follow shadcn rounded-md chrome"
+            );
+        }
     }
 
     #[test]
@@ -8465,6 +9040,87 @@ mod tests {
     }
 
     #[test]
+    fn sidebar_menu_action_inherits_active_peer_foreground() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(80.0)),
+        );
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "sidebar-menu-action-active",
+            |cx| {
+                SidebarMenuItem::new(cx.spacer(SpacerProps {
+                    min: Px(0.0),
+                    ..Default::default()
+                }))
+                .into_element_with_children(cx, |cx| {
+                    let button = SidebarMenuButton::new("Projects")
+                        .active(true)
+                        .into_element(cx);
+                    let action =
+                        SidebarMenuAction::new([ui::text("...").into_element(cx)]).into_element(cx);
+                    vec![button, action]
+                })
+            },
+        );
+
+        let text_element = find_text_element(&element, "...").expect("expected menu action text");
+        let theme = Theme::global(&app);
+        assert_eq!(
+            text_element.inherited_foreground,
+            Some(sidebar_accent_fg(theme)),
+            "expected SidebarMenuAction to inherit active peer menu button foreground"
+        );
+    }
+
+    #[test]
+    fn sidebar_menu_badge_inherits_active_peer_foreground() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(80.0)),
+        );
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "sidebar-menu-badge-active",
+            |cx| {
+                SidebarMenuItem::new(cx.spacer(SpacerProps {
+                    min: Px(0.0),
+                    ..Default::default()
+                }))
+                .into_element_with_children(cx, |cx| {
+                    let button = SidebarMenuButton::new("Projects")
+                        .active(true)
+                        .into_element(cx);
+                    let badge = SidebarMenuBadge::new("12").into_element(cx);
+                    vec![button, badge]
+                })
+            },
+        );
+
+        let text_element = find_text_element(&element, "12").expect("expected menu badge text");
+        let theme = Theme::global(&app);
+        assert_eq!(
+            text_element.inherited_foreground,
+            Some(sidebar_accent_fg(theme)),
+            "expected SidebarMenuBadge to inherit active peer menu button foreground"
+        );
+    }
+
+    #[test]
     fn sidebar_group_label_as_child_renders_custom_child_and_keeps_child_semantics() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -8526,7 +9182,7 @@ mod tests {
     }
 
     #[test]
-    fn sidebar_menu_sub_button_as_child_with_href_keeps_button_semantics() {
+    fn sidebar_menu_sub_button_as_child_with_href_keeps_link_semantics_and_navigation() {
         let window = AppWindowId::default();
         let mut app = App::new();
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
@@ -8553,6 +9209,8 @@ mod tests {
                 let button = SidebarMenuSubButton::new("Child")
                     .as_child(true)
                     .href("https://example.com/docs")
+                    .target("_blank")
+                    .rel("noopener noreferrer")
                     .children([child])
                     .test_id("sidebar-menu-sub-button")
                     .into_element(cx);
@@ -8574,18 +9232,65 @@ mod tests {
             .expect("expected sidebar menu sub button semantics node");
         assert_eq!(
             button.role,
-            SemanticsRole::Button,
-            "expected as_child sidebar menu sub button href path to keep button semantics"
+            SemanticsRole::Link,
+            "expected as_child sidebar menu sub button href path to preserve link semantics"
         );
         assert_eq!(
             button.value.as_deref(),
-            None,
-            "expected as_child sidebar menu sub button href path to avoid default href semantics value"
+            Some("https://example.com/docs"),
+            "expected as_child sidebar menu sub button href path to expose href semantics value"
+        );
+
+        let center = Point::new(
+            Px(button.bounds.origin.x.0 + button.bounds.size.width.0 * 0.5),
+            Px(button.bounds.origin.y.0 + button.bounds.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+                is_click: true,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(|effect| {
+                matches!(
+                    effect,
+                    Effect::OpenUrl {
+                        url,
+                        target,
+                        rel,
+                    } if url == "https://example.com/docs"
+                        && target.as_deref() == Some("_blank")
+                        && rel.as_deref() == Some("noopener noreferrer")
+                )
+            }),
+            "expected as_child sidebar menu sub button href fallback to emit Effect::OpenUrl with target/rel"
         );
     }
 
     #[test]
-    fn sidebar_menu_button_as_child_with_href_keeps_button_semantics() {
+    fn sidebar_menu_button_as_child_with_href_keeps_link_semantics_and_navigation() {
         let window = AppWindowId::default();
         let mut app = App::new();
         apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
@@ -8612,6 +9317,8 @@ mod tests {
                 let button = SidebarMenuButton::new("Projects")
                     .as_child(true)
                     .href("https://example.com/docs")
+                    .target("_blank")
+                    .rel("noopener noreferrer")
                     .children([child])
                     .test_id("sidebar-menu-button")
                     .into_element(cx);
@@ -8633,13 +9340,60 @@ mod tests {
             .expect("expected sidebar menu button semantics node");
         assert_eq!(
             button.role,
-            SemanticsRole::Button,
-            "expected as_child sidebar menu button href path to keep button semantics"
+            SemanticsRole::Link,
+            "expected as_child sidebar menu button href path to preserve link semantics"
         );
         assert_eq!(
             button.value.as_deref(),
-            None,
-            "expected as_child sidebar menu button href path to avoid default href semantics value"
+            Some("https://example.com/docs"),
+            "expected as_child sidebar menu button href path to expose href semantics value"
+        );
+
+        let center = Point::new(
+            Px(button.bounds.origin.x.0 + button.bounds.size.width.0 * 0.5),
+            Px(button.bounds.origin.y.0 + button.bounds.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                click_count: 1,
+                pointer_type: fret_core::PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position: center,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+                is_click: true,
+            }),
+        );
+
+        let effects = app.flush_effects();
+        assert!(
+            effects.iter().any(|effect| {
+                matches!(
+                    effect,
+                    Effect::OpenUrl {
+                        url,
+                        target,
+                        rel,
+                    } if url == "https://example.com/docs"
+                        && target.as_deref() == Some("_blank")
+                        && rel.as_deref() == Some("noopener noreferrer")
+                )
+            }),
+            "expected as_child sidebar menu button href fallback to emit Effect::OpenUrl with target/rel"
         );
     }
 
@@ -8686,6 +9440,38 @@ mod tests {
             sidebar_provider_open_change_events(&mut state, false, false);
         assert_eq!(open_changed, Some(false));
         assert_eq!(open_mobile_changed, Some(false));
+    }
+
+    #[test]
+    fn sidebar_provider_cookie_assignment_matches_upstream_name_path_and_ttl() {
+        assert_eq!(
+            sidebar_cookie_assignment(true),
+            "sidebar_state=true; path=/; max-age=604800"
+        );
+        assert_eq!(
+            sidebar_cookie_assignment(false),
+            "sidebar_state=false; path=/; max-age=604800"
+        );
+    }
+
+    #[test]
+    fn sidebar_provider_cookie_parser_reads_sidebar_state_only() {
+        assert_eq!(
+            sidebar_open_from_cookie_header("theme=dark; sidebar_state=true; other=1"),
+            Some(true)
+        );
+        assert_eq!(
+            sidebar_open_from_cookie_header("sidebar_state=false; theme=dark"),
+            Some(false)
+        );
+        assert_eq!(
+            sidebar_open_from_cookie_header("sidebar_state=maybe; theme=dark"),
+            None
+        );
+        assert_eq!(
+            sidebar_open_from_cookie_header("other_sidebar_state=true; theme=dark"),
+            None
+        );
     }
 
     #[test]

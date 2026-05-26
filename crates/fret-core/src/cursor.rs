@@ -11,8 +11,27 @@ pub enum CursorIcon {
     Default,
     Pointer,
     Text,
+    EResize,
+    WResize,
     ColResize,
     RowResize,
     NwseResize,
     NeswResize,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn cursor_icon_directional_resize_serializes_stably() {
+        assert_eq!(
+            serde_json::to_string(&CursorIcon::EResize).expect("serialize e-resize cursor"),
+            "\"e_resize\""
+        );
+        assert_eq!(
+            serde_json::to_string(&CursorIcon::WResize).expect("serialize w-resize cursor"),
+            "\"w_resize\""
+        );
+    }
 }
