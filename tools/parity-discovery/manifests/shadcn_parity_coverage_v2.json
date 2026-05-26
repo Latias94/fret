@@ -1778,6 +1778,54 @@
         "tools/diag-scripts/ui-gallery/kbd/ui-gallery-kbd-docs-smoke.json",
         "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json"
       ]
+    },
+    {
+      "rank": 46,
+      "priority": "P1",
+      "id": "label.docs-path.desktop",
+      "component": "label",
+      "state": "docs path label/control association, disabled opacity, inline children lane, current Demo/Usage docs order, RTL follow-up, text metrics, and paint token output",
+      "trigger": "static, click label, disabled control, keyboard focus handoff, rtl, screenshot, text paint",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "Label had current shadcn docs/new-york-v4 source refs, the label-demo upstream golden, primitive association tests, shadcn recipe children tests, web-vs-Fret label-demo geometry, targeted upstream marker checks, Gallery authoring checks, and label click diagnostics, but no component-matrix packet. The new slice locks the owner split: the primitive owns label/control registration and click forwarding, the shadcn recipe owns flex row text/chrome and inline children, and Gallery owns Fret follow-ups for Field, RTL, composable content, and API notes.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/label.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/label.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/label-demo.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-with-label.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/textarea-with-label.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-group-label.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/base/ui/label.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/radix/ui/label.tsx",
+        "goldens/shadcn-web/v4/new-york-v4/label-demo.json",
+        "goldens/shadcn-web/v4/new-york-v4/input-with-label.json",
+        "goldens/shadcn-web/v4/new-york-v4/textarea-with-label.json",
+        "goldens/shadcn-web/v4/new-york-v4/input-group-label.json"
+      ],
+      "fret_refs": [
+        "docs/audits/shadcn-label.md",
+        "ecosystem/fret-ui-kit/src/primitives/label.rs",
+        "ecosystem/fret-ui-shadcn/src/label.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_misc_targeted.rs",
+        "ecosystem/fret-ui-shadcn/tests/input_label_focus.rs",
+        "ecosystem/fret-ui-shadcn/tests/textarea_label_focus.rs",
+        "apps/fret-ui-gallery/src/ui/pages/label.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/label/demo.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/label/usage.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/label/label_in_field.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/label/rtl.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/label/children.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+        "tools/diag-scripts/ui-gallery/label/ui-gallery-label-docs-smoke.json",
+        "tools/diag-scripts/ui-gallery/label/ui-gallery-label-click-label-toggles-checkbox.json",
+        "tools/diag-scripts/ui-gallery/label/ui-gallery-label-children-click-label-toggles-checkbox.json",
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/label_agent_packet_p0_v1.json"
+      ]
     }
   ]
 }

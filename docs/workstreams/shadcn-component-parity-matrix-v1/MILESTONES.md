@@ -833,3 +833,29 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Kbd `KEY`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
   component has no required state-depth gaps.
+
+## M35 - Promote Label
+
+Status: complete on 2026-05-26.
+
+`label.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after connecting
+the current shadcn Label docs path, new-york-v4 source, label/input/textarea/input-group upstream
+goldens, primitive association tests, shadcn recipe tests, web-vs-Fret layout and source-marker
+gates, Gallery docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Label docs path, new-york-v4 recipe source, label demo,
+  related input/textarea/input-group label examples, base/radix recipe references, and tracked
+  upstream goldens.
+- The Label packet records the owner split: `fret-ui-kit` owns label/control registration, disabled
+  opacity, and click forwarding; `fret-ui-shadcn` owns the flex row, gap, foreground scoping, and
+  inline children lane; Gallery owns Field/RTL/Composable Content/API follow-ups.
+- The Gallery page now keeps the upstream docs path through `Demo` and `Usage` before Fret-only
+  follow-ups, matching the current upstream Label docs instead of stale base/radix assumptions.
+- `label_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 41 `regression_locked`, 1 `harness_hardening`, 12
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Label `DIS`, `KEY`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
+  component has no required state-depth gaps.

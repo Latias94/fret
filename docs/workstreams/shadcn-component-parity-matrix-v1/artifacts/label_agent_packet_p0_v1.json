@@ -1,0 +1,287 @@
+{
+  "schema_version": 1,
+  "component": "label",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual label docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-kit/src/primitives/label.rs + ecosystem/fret-ui-shadcn/src/label.rs + ecosystem/fret-ui-shadcn/tests/{web_vs_fret_layout/basic.rs,web_vs_fret_misc_targeted.rs,input_label_focus.rs,textarea_label_focus.rs} + apps/fret-ui-gallery/src/ui/pages/label.rs + apps/fret-ui-gallery/src/ui/snippets/label/*.rs + apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs + tools/diag-scripts/ui-gallery/label/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/label_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Label component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/label -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Label docs smoke, click-to-toggle, click-to-focus alias, and children click diagnostics parse cleanly."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-kit --lib --status-level fail label_for_disabled_control_uses_half_opacity label_for_control_click_invokes_registered_control_action_inside_ancestor_pressable",
+      "status": "pass",
+      "scope": "Primitive Label gates cover disabled associated-label opacity and click forwarding through ambient pressable shells."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail label",
+      "status": "pass",
+      "scope": "Shadcn Label recipe tests cover inline children before text and control-registry labelled_by linkage."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail label_demo",
+      "status": "pass",
+      "scope": "Label web-vs-Fret layout gate covers the official checkbox + label docs demo geometry."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_misc_targeted --status-level fail",
+      "status": "pass",
+      "scope": "Targeted web-golden marker gate keeps the upstream label peer-disabled class marker tied to label-demo."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test input_label_focus --test textarea_label_focus --status-level fail",
+      "status": "pass",
+      "scope": "Input and Textarea label focus tests keep FieldLabel/control_id association behavior stable."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail label",
+      "status": "pass",
+      "scope": "Gallery authoring tests keep Label snippets on the default app surface and assert the current Demo/Usage docs path before Fret follow-ups."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.label.demo.light.vp1440x900",
+      "snapshot": "label-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.label.input-with-label.light.vp1440x900",
+      "snapshot": "input-with-label",
+      "theme": "light",
+      "mode": "static",
+      "variant": "input",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.label.textarea-with-label.light.vp1440x900",
+      "snapshot": "textarea-with-label",
+      "theme": "light",
+      "mode": "static",
+      "variant": "textarea",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.label.input-group-label.light.vp1440x900",
+      "snapshot": "input-group-label",
+      "theme": "light",
+      "mode": "static",
+      "variant": "input-group",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": [
+    {
+      "id": "fret.label.primitive",
+      "layer": "kit_primitive",
+      "owner": "fret-ui-kit",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/primitives/label.rs"
+      ]
+    },
+    {
+      "id": "fret.label.recipe",
+      "layer": "recipe",
+      "owner": "fret-ui-shadcn",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/label.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_misc_targeted.rs",
+        "ecosystem/fret-ui-shadcn/tests/input_label_focus.rs",
+        "ecosystem/fret-ui-shadcn/tests/textarea_label_focus.rs"
+      ]
+    },
+    {
+      "id": "fret.label.gallery",
+      "layer": "app_demo",
+      "owner": "fret-ui-gallery",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/label.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/label/*.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+      ]
+    },
+    {
+      "id": "fret.label.diagnostics",
+      "layer": "runner",
+      "owner": "diagnostics_surface",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/label/*.json"
+      ]
+    }
+  ],
+  "summary": {
+    "status_counts": {
+      "regression_locked": 1
+    },
+    "covered_axes": [
+      "source_refs",
+      "upstream_dom_snapshot",
+      "fret_layout",
+      "fret_bundle_semantics",
+      "fret_text_paint",
+      "interaction_script"
+    ],
+    "state_depth": [
+      "disabled",
+      "keyboard",
+      "rtl",
+      "text_metrics",
+      "paint_token"
+    ],
+    "layout_sidecar_count": 2,
+    "bundle_schema2_count": 3,
+    "layout_test_id_count": 5,
+    "bundle_semantics_test_id_count": 5,
+    "measured_test_id_count": 5,
+    "upstream_dom_snapshot_count": 4,
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 4,
+    "upstream_dom_context_count": 4,
+    "upstream_live_fact_count": 5,
+    "upstream_semantics_fact_count": 3,
+    "upstream_interaction_fact_count": 3,
+    "fret_live_fact_count": 12,
+    "fret_semantics_fact_count": 6,
+    "fret_interaction_fact_count": 5,
+    "fret_text_paint_fact_count": 4,
+    "fret_text_paint_direct_fact_count": 2,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 4,
+    "fret_text_paint_row_count": 2,
+    "fret_text_paint_association_row_count": 2,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 4,
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0
+  },
+  "live_facts": {
+    "owner_split": [
+      "The kit primitive owns label/control registration, controls_element semantics, disabled opacity, and click forwarding to registered controls.",
+      "The shadcn recipe owns the Label root surface, flex row layout, 8px inline gap, foreground scoping, and the explicit inline children / wrapped-root escape hatches.",
+      "Gallery owns docs teaching order plus Field, RTL, Composable Content, and API Reference follow-ups; form-specific structure remains on Field and FieldLabel."
+    ],
+    "source_truth": [
+      "Current docs/source truth is the main-worktree repo-ref Label docs page plus the new-york-v4 Label recipe and label-demo example.",
+      "The current upstream Label docs page defines Demo and Usage only; Label in Field, RTL, Composable Content, and API Reference are Fret follow-ups.",
+      "Input, Textarea, and Input Group label examples are related upstream composition references, not additional sections on the current Label docs page."
+    ],
+    "regression_gates": [
+      "web_vs_fret_layout label_demo covers the official checkbox + label geometry against label-demo.",
+      "web_vs_fret_misc_targeted keeps the upstream peer-disabled class marker present in label-demo.",
+      "kit primitive tests cover disabled opacity and ambient pressable click forwarding.",
+      "Label diagnostic scripts cover docs smoke, demo label click toggling, and composable children label click toggling."
+    ]
+  },
+  "parts": [
+    {
+      "part_id": "label_primitive_association",
+      "status": "pass_known",
+      "owner": "kit_primitive",
+      "layer": "mechanism_policy",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/primitives/label.rs"
+      ],
+      "facts": [
+        "Label::for_control registers the label in the control registry and exposes controls_element semantics when a matching control is present.",
+        "Pointer activation on a label forwards focus or toggle actions to the registered control while consuming ambient pressable suppression for plain associated labels.",
+        "Disabled associated labels apply opacity 0.5 and disabled semantics, matching the upstream peer/group disabled visual outcome."
+      ]
+    },
+    {
+      "part_id": "label_recipe_surface",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/label.rs"
+      ],
+      "facts": [
+        "The shadcn Label recipe owns the source-aligned flex row with center alignment and 8px gap.",
+        "Label text uses the shared label typography refinement with foreground token inheritance.",
+        "Label::children(...) prepends inline content while keeping the label text as the accessible name and association label; Label::wrap(...) remains the explicit full-subtree lane."
+      ]
+    },
+    {
+      "part_id": "label_layout_and_source_markers",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_misc_targeted.rs"
+      ],
+      "facts": [
+        "The label-demo layout gate matches checkbox and label geometry against the tracked upstream golden.",
+        "The targeted marker gate keeps the upstream peer-disabled label marker present in label-demo.",
+        "Input and Textarea label-focus tests keep field-local label/control handoff stable for related Label composition surfaces."
+      ]
+    },
+    {
+      "part_id": "label_gallery_docs_surface",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/label.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/label/*.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+        "tools/diag-scripts/ui-gallery/label/*.json"
+      ],
+      "facts": [
+        "Gallery mirrors the current upstream docs path through Demo and Usage before Fret follow-ups.",
+        "Label in Field, RTL, Composable Content, and API Reference remain explicitly labeled Fret follow-ups.",
+        "Stable ui-gallery-label-* ids support docs smoke, click-to-toggle, and composable children diagnostics."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Label docs-path slice with current main-worktree repo-ref source refs, label web goldens, primitive association tests, shadcn recipe tests, web-vs-Fret layout/marker gates, Gallery docs-surface checks, diagnostics JSON, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "label.docs-path.desktop",
+        "component": "label",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/label_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

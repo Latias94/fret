@@ -4825,6 +4825,7 @@ fn label_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Label in Field\", label_in_field)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Composable Content\", children)",
             "DocSection::build(cx, \"API Reference\", api_reference)",
         ],
         &[
@@ -4832,7 +4833,23 @@ fn label_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Label in Field\", label_in_field)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Composable Content\", children)",
         ],
+    );
+}
+
+#[test]
+fn label_page_records_current_docs_path_before_fret_followups() {
+    let page = read("src/ui/pages/label.rs");
+    assert!(
+        page.contains(
+            "Preview mirrors the current shadcn Label docs path first: Demo and Usage. Label in Field, RTL, Composable Content, and API Reference are Fret follow-ups."
+        ),
+        "src/ui/pages/label.rs should keep the current shadcn docs path separate from Fret follow-ups"
+    );
+    assert!(
+        page.contains("vec![demo, usage, label_in_field, rtl, children, api_reference]"),
+        "src/ui/pages/label.rs should render Demo and Usage before Fret follow-up sections"
     );
 }
 

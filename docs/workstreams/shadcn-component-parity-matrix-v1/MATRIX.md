@@ -39,35 +39,35 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 41,
-    "fret_layout": 41,
-    "fret_text_paint": 21,
-    "interaction_script": 41,
+    "fret_bundle_semantics": 42,
+    "fret_layout": 42,
+    "fret_text_paint": 22,
+    "interaction_script": 42,
     "responsive_viewport": 9,
-    "source_refs": 41,
-    "upstream_dom_snapshot": 41
+    "source_refs": 42,
+    "upstream_dom_snapshot": 42
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
   "registry_component_count": 54,
   "state_depth_component_counts": {
-    "disabled": 15,
+    "disabled": 16,
     "drag": 3,
     "focus_visible": 13,
     "hover": 12,
-    "keyboard": 24,
+    "keyboard": 25,
     "mobile": 14,
     "open": 24,
-    "paint_token": 39,
+    "paint_token": 40,
     "pressed": 1,
-    "rtl": 21,
-    "text_metrics": 21
+    "rtl": 22,
+    "text_metrics": 22
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 13,
+    "inventory_only": 12,
     "not_in_harness": 5,
-    "regression_locked": 40
+    "regression_locked": 41
   }
 }
 ```
@@ -108,7 +108,7 @@ State-depth legend:
 | input-otp | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | DIS, PAINT | FOCUS-VIS, KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | item | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | HOV, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | kbd | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
-| label | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| label | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | menubar | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | DIS, OPEN, PAINT | KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | native-select | registry | Defer | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | navigation-menu | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | HOV, FOCUS-VIS, OPEN, KEY, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |

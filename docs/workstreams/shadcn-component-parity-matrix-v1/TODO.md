@@ -117,3 +117,7 @@ date: 2026-05-26
       covering current shadcn docs/source refs, kbd-* upstream goldens, fixed keycap chrome,
       grouped shortcut spacing, tooltip-slot paint inversion, RTL order, Gallery docs ordering,
       and text/paint evidence.
+- [x] SCPM-420: Promote Label from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn docs/source refs, label upstream goldens, primitive association and
+      disabled opacity, click forwarding, inline children, Gallery docs ordering, RTL follow-up,
+      and text/paint evidence.
