@@ -1085,3 +1085,34 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Toggle Group `DIS`, `HOV`, `FOCUS-VIS`, `PRESS`, `KEY`, `RTL`,
   `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M44 - Promote Slider
+
+Status: complete on 2026-05-27.
+
+`slider.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Slider docs path, new-york-v4 source/demo, Base/Radix richer examples,
+slider-demo and field-slider upstream goldens, primitive and recipe semantics/chrome tests,
+web-vs-Fret layout/control-chrome gates, Radix primitive state proof, Gallery docs-surface checks,
+diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Slider docs path, new-york-v4 recipe/demo, Base/Radix
+  recipe and example references, the tracked slider-demo and field-slider upstream goldens, and the
+  Radix ArrowRight golden.
+- The Slider packet records the owner split: `fret-ui-kit` owns numeric semantics, value mapping,
+  pointer drag, keyboard stepping, RTL direction rules, and control association; `fret-ui-shadcn`
+  owns root/track/range/thumb chrome, disabled/hover/focus-visible paint, vertical min-h-44 floor,
+  text metrics, paint token output, and derived test-id prefixes; Gallery owns current docs ordering
+  plus Base/Radix and Fret follow-ups.
+- The Gallery page now follows current upstream docs through `Demo` and `Usage`, then appends
+  `Range (Base/Radix)`, `Multiple Thumbs (Base/Radix)`, `Vertical (Base/Radix)`,
+  `Controlled (Base/Radix)`, `Disabled (Base/Radix)`, `RTL (Fret)`, `API Reference (Fret)`,
+  `Label Association (Fret)`, `Extras (Fret)`, and `Notes`.
+- `slider_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 50 `regression_locked`, 1 `harness_hardening`, 3
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Slider `DIS`, `HOV`, `FOCUS-VIS`, `DRAG`, `KEY`, `RTL`,
+  `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.

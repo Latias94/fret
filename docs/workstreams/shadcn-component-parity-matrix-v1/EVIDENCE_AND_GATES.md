@@ -2087,3 +2087,38 @@ screenshots.
   `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
 - `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
   regenerated JSON/Markdown artifacts.
+
+2026-05-27 Slider regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/slider_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Slider diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/slider`.
+- `python -m json.tool` checks for the coverage manifest and generated matrix JSON: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail slider`: PASS, 18 tests passed
+  and 1286 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail slider`:
+  PASS, 1 test passed and 150 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_field_geometry_matches_web_fixtures`:
+  PASS, 1 test passed and 150 skipped. This fixture runner includes the `field-slider` track
+  geometry and thumb inset cases.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail slider`:
+  PASS, 1 test passed and 75 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_slider_numeric_semantics`:
+  PASS, 1 test passed and 31 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail slider`:
+  PASS, 1 test passed and 41 skipped.
+- `cargo nextest run -p fret-ui-gallery --test slider_docs_surface --status-level fail`: PASS, 5
+  tests passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail slider`:
+  PASS, 5 tests passed and 372 skipped.
+- `cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_slider_vertical_examples_keep_upstream_recipe_min_height_floor`:
+  PASS, 1 test passed and 111 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- Matrix summary: 50 `regression_locked`, 1 `harness_hardening`, 3 `inventory_only`, and 5
+  `not_in_harness`.
+- Slider row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `DIS, HOV, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.

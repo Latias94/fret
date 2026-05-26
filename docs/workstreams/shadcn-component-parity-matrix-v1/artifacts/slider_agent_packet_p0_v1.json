@@ -1,0 +1,316 @@
+{
+  "schema_version": 1,
+  "component": "slider",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-27",
+  "generated_by": "manual slider docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-kit/src/primitives/slider.rs + ecosystem/fret-ui-kit/src/declarative/slider.rs + ecosystem/fret-ui-shadcn/src/slider.rs + ecosystem/fret-ui-shadcn/tests/{web_vs_fret_layout/basic.rs,web_vs_fret_layout/field.rs,web_vs_fret_field.rs,web_vs_fret_control_chrome.rs,snapshots.rs,radix_web_primitives_state.rs} + apps/fret-ui-gallery/src/ui/pages/slider.rs + apps/fret-ui-gallery/src/ui/snippets/slider/*.rs + apps/fret-ui-gallery/tests/{slider_docs_surface.rs,ui_authoring_surface_default_app.rs} + tools/diag-scripts/ui-gallery/slider/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/slider_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Slider component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/slider -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Slider diagnostic scripts parse and cover docs screenshots, set-value, numeric action state, range drag stability, label click focus, drag/scroll no-jump, and related screenshot evidence."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail slider",
+      "status": "pass",
+      "scope": "Slider primitive and recipe tests cover controlled/uncontrolled values, numeric accessibility SetValue, pointer drag, closest-thumb selection, min steps between thumbs, no thumb jump on pointer down, range bounds, unique thumb test ids, vertical min-h-44 floor, commit callbacks, keyboard steps, RTL, inverted axes, disabled state, hover/focus-visible paint, and text/paint output."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail slider",
+      "status": "pass",
+      "scope": "Slider web-vs-Fret layout gates compare slider-demo geometry and field-slider track/thumb inset geometry against current new-york-v4 goldens."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail slider",
+      "status": "pass",
+      "scope": "Slider chrome gate keeps track height, range paint, thumb size, border, radius, background, shadow, hover ring, focus-visible ring, and disabled opacity aligned with upstream."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_field_geometry_matches_web_fixtures",
+      "status": "pass",
+      "scope": "Field fixture runner includes the field-slider track geometry and thumb inset cases, keeping Slider label/description/value ownership wired through the field composition golden."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_slider_numeric_semantics",
+      "status": "pass",
+      "scope": "Snapshot gate keeps thumb-level slider semantics, numeric value/min/max/step, and text paint observable."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail slider",
+      "status": "pass",
+      "scope": "Radix web primitive state gate keeps ArrowRight keyboard step behavior aligned with Fret."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_slider_vertical_examples_keep_upstream_recipe_min_height_floor",
+      "status": "pass",
+      "scope": "Gallery layout gate keeps Base/Radix vertical examples clamped by the recipe-owned min-h-44 floor without treating caller h-40 as the recipe default."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test slider_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery docs-surface tests keep current shadcn Demo/Usage ordering, Base/Radix follow-up labels, source-axis wording, public-surface decision, copyable snippets, and diagnostics anchors aligned."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail slider",
+      "status": "pass",
+      "scope": "Gallery authoring tests keep Slider snippets on the default app surface, preserve builder-level test-id prefix stamping, and prevent stale section names."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.slider.demo.light.vp1440x900",
+      "snapshot": "slider-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "current docs top preview defaultValue [50] with caller-owned w-[60%]",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.field-slider.light.vp1440x900",
+      "snapshot": "field-slider",
+      "theme": "light",
+      "mode": "static",
+      "variant": "field composition track and thumb insets",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "radix.slider.arrow-right.light.vp1440x900",
+      "snapshot": "slider-example.slider.arrow-right.light",
+      "theme": "light",
+      "mode": "keyboard ArrowRight",
+      "variant": "primitive keyboard value step",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": [
+    {
+      "id": "fret.slider.primitive",
+      "layer": "policy",
+      "owner": "fret-ui-kit",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/primitives/slider.rs",
+        "ecosystem/fret-ui-kit/src/declarative/slider.rs",
+        "ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs"
+      ]
+    },
+    {
+      "id": "fret.slider.recipe",
+      "layer": "recipe",
+      "owner": "fret-ui-shadcn",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/slider.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/field.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "ecosystem/fret-ui-shadcn/tests/snapshots.rs"
+      ]
+    },
+    {
+      "id": "fret.slider.gallery",
+      "layer": "app_demo",
+      "owner": "fret-ui-gallery",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/slider.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/slider/*.rs",
+        "apps/fret-ui-gallery/tests/slider_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+      ]
+    },
+    {
+      "id": "fret.slider.diagnostics",
+      "layer": "runner",
+      "owner": "diagnostics_surface",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-docs-screenshots.json",
+        "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-set-value.json",
+        "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-range-drag-stability.json",
+        "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-label-click-focus.json",
+        "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-numeric-action-state.json",
+        "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-drag-scroll-range-jump.json"
+      ]
+    }
+  ],
+  "summary": {
+    "status_counts": {
+      "regression_locked": 1
+    },
+    "covered_axes": [
+      "source_refs",
+      "upstream_dom_snapshot",
+      "fret_layout",
+      "fret_bundle_semantics",
+      "fret_text_paint",
+      "interaction_script"
+    ],
+    "state_depth": [
+      "disabled",
+      "hover",
+      "focus_visible",
+      "drag",
+      "keyboard",
+      "rtl",
+      "text_metrics",
+      "paint_token"
+    ],
+    "layout_sidecar_count": 5,
+    "bundle_schema2_count": 5,
+    "layout_test_id_count": 8,
+    "bundle_semantics_test_id_count": 8,
+    "measured_test_id_count": 8,
+    "upstream_dom_snapshot_count": 3,
+    "upstream_dom_target_count": 3,
+    "upstream_context_count": 3,
+    "upstream_dom_context_count": 3,
+    "upstream_live_fact_count": 6,
+    "upstream_semantics_fact_count": 3,
+    "upstream_interaction_fact_count": 3,
+    "fret_live_fact_count": 15,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 7,
+    "fret_text_paint_fact_count": 5,
+    "fret_text_paint_direct_fact_count": 3,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 5,
+    "fret_text_paint_row_count": 3,
+    "fret_text_paint_association_row_count": 2,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 3,
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0
+  },
+  "live_facts": {
+    "owner_split": [
+      "The kit primitive owns numeric slider semantics, value normalization, pointer-to-value mapping, closest-thumb selection, min-step constraints, keyboard Arrow/Home/End behavior, RTL direction rules, and label/control association.",
+      "The shadcn recipe owns root/track/range/thumb chrome, track height, thumb size, border/radius/shadow, bg-white thumb paint, hover and focus-visible ring behavior, disabled opacity, vertical min-h-44 floor, text metrics, paint token output, and derived test-id prefixes.",
+      "Gallery owns the current docs teaching order: current shadcn Demo and Usage first, Base/Radix Range/Multiple Thumbs/Vertical/Controlled/Disabled follow-ups, and Fret RTL/API/Label/Extras/Notes follow-ups."
+    ],
+    "source_truth": [
+      "Current main-worktree repo-ref truth uses repo-ref/ui/apps/v4/content/docs/components/slider.mdx with top ComponentPreview slider-demo and Usage only.",
+      "Current new-york-v4 slider-demo uses defaultValue [50], max 100, step 1, and caller-owned className w-[60%]; the Fret Gallery demo mirrors that with vec![50.0] and w_percent(60.0).",
+      "Current new-york-v4 Slider source owns relative flex w-full root, disabled opacity, vertical h-full/min-h-44/w-auto/flex-col, h-1.5 horizontal track, w-1.5 vertical track, bg-primary range, size-4 bg-white thumb, hover ring, and focus-visible ring.",
+      "Base/radix registry examples remain secondary references for Range, Multiple Thumbs, Vertical, Controlled, and Disabled examples; RTL remains a Fret/Radix direction follow-up."
+    ],
+    "regression_gates": [
+      "Slider primitive and recipe tests keep SetValue semantics, pointer drag, closest-thumb selection, min steps, no thumb jump, range bounds, unique test ids, vertical floor, commit callbacks, keyboard steps, RTL, inverted axes, disabled state, hover/focus-visible paint, and text/paint output stable.",
+      "web_vs_fret_layout compares slider-demo geometry and field-slider track/thumb inset geometry against current new-york-v4 goldens.",
+      "web_vs_fret_control_chrome keeps Slider track/range/thumb chrome aligned with upstream paint and state tokens.",
+      "radix_web_primitives_state keeps ArrowRight keyboard step behavior aligned with the Radix primitive reference.",
+      "slider_docs_surface keeps current source-axis wording, docs order, Base/Radix follow-up labels, copyable snippets, Fret follow-ups, and diagnostics anchors stable.",
+      "Slider diagnostics cover docs screenshots, SetValue, numeric action state, range drag stability, label click focus, and drag/scroll no-jump behavior."
+    ]
+  },
+  "parts": [
+    {
+      "part_id": "slider_primitive_numeric_state_and_input",
+      "status": "pass_known",
+      "owner": "component_policy",
+      "layer": "policy",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/primitives/slider.rs",
+        "ecosystem/fret-ui-kit/src/declarative/slider.rs",
+        "ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs"
+      ],
+      "facts": [
+        "Thumb nodes expose Slider semantics with numeric value, min, max, step, orientation, and SetValue support.",
+        "Pointer drag, pointer down on track, keyboard ArrowRight/Home/End, RTL, and inverted-axis behavior update the model through shared primitive helpers.",
+        "Radix web primitive state proof covers ArrowRight keyboard stepping."
+      ]
+    },
+    {
+      "part_id": "slider_recipe_layout_and_chrome",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/slider.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/field.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "ecosystem/fret-ui-shadcn/tests/snapshots.rs",
+        "goldens/shadcn-web/v4/new-york-v4/slider-demo.json",
+        "goldens/shadcn-web/v4/new-york-v4/field-slider.json"
+      ],
+      "facts": [
+        "Web-golden layout gates cover slider-demo geometry plus field-slider track and thumb insets.",
+        "Chrome gates cover root, track, range, thumb, disabled, hover, focus-visible, text metrics, and paint token output.",
+        "Vertical layout tests keep the upstream min-h-44 floor as a minimum, while caller-owned h-40 remains a Base/Radix example-local constraint."
+      ]
+    },
+    {
+      "part_id": "slider_gallery_docs_surface",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/slider.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/slider/*.rs",
+        "apps/fret-ui-gallery/tests/slider_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+        "tools/diag-scripts/ui-gallery/slider/ui-gallery-slider-docs-screenshots.json"
+      ],
+      "facts": [
+        "Gallery mirrors the current shadcn docs path through Demo and Usage before Base/Radix and Fret follow-ups.",
+        "The Demo snippet maps current slider-demo defaultValue [50] and caller-owned w-[60%] via w_percent(60.0).",
+        "Range, Multiple Thumbs, Vertical, Controlled, and Disabled stay visible as Base/Radix follow-ups instead of being mislabeled as current shadcn docs-path sections.",
+        "RTL, Label Association, Extras, API Reference, and Notes stay explicit Fret follow-ups because current shadcn docs do not require widening the leaf Slider recipe surface."
+      ]
+    },
+    {
+      "part_id": "slider_packet_and_matrix_closure",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/slider_agent_packet_p0_v1.json",
+        "tools/parity-discovery/shadcn_component_harness_matrix.py",
+        "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json"
+      ],
+      "facts": [
+        "The packet has zero repair, hardening, and gate queues.",
+        "The manifest target ties current source refs, upstream snapshots, Fret tests, diagnostics scripts, and the packet together.",
+        "The Slider state depth covers disabled, hover, focus-visible, drag, keyboard, RTL, text metrics, and paint token evidence."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Slider docs-path slice with current main-worktree repo-ref source refs, slider-demo and field-slider upstream goldens, primitive/recipe semantics and chrome tests, web-vs-Fret layout/control-chrome gates, Radix primitive state proof, Gallery docs-surface checks, diagnostics JSON, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "slider.docs-path.desktop",
+        "component": "slider",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/slider_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

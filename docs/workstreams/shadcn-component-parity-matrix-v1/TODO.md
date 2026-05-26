@@ -155,3 +155,8 @@ date: 2026-05-26
       hover/focus-visible/pressed/keyboard behavior, Gallery docs ordering, split Single/Small/
       Large examples, diagnostics JSON, Radix state proof, RTL/Children/Label follow-ups, and
       text/paint evidence.
+- [x] SCPM-510: Promote Slider from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn Demo/Usage source refs, slider-demo and field-slider upstream
+      goldens, recipe track/range/thumb chrome, thumb-level numeric semantics, pointer drag,
+      keyboard stepping, RTL, disabled/hover/focus-visible behavior, Gallery docs ordering,
+      Base/Radix follow-up examples, diagnostics JSON, Radix state proof, and text/paint evidence.
