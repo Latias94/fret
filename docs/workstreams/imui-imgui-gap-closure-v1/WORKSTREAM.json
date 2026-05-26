@@ -505,6 +505,7 @@
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/candidates.rs",
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard.rs",
+    "ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/core_state.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/flags.rs",

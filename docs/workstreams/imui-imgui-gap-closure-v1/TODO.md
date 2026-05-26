@@ -40,6 +40,13 @@ Last updated: 2026-05-26
       visibility decisions, and `text_picker_controls/keyboard.rs` owns active-source cleanup plus
       pending keyboard pick extraction. The root file keeps input/popup composition and response
       merging.
+- [x] Split IMUI input-text picker popup item rendering and pick commit out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private owner module without
+      changing completion/history picker behavior.
+      Result: `text_picker_controls/popup.rs` owns popup mounting, optional popup-scoped keyboard
+      handler installation, candidate selectable rows, active-element synchronization, click commit,
+      popup close, and picked-result reporting. The root file keeps input composition, assistive
+      semantics, open/close policy, candidate/keyboard snapshots, and final response merge.
 - [x] Split IMUI disclosure spec construction out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private owner module without
       changing the public collapsing-header/tree-node surface.

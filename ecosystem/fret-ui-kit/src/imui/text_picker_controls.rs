@@ -6,18 +6,17 @@ use fret_core::SemanticsRole;
 use fret_ui::UiHost;
 use fret_ui::element::{ContainerProps, Length};
 
-use super::{
-    InputTextPickerOptions, InputTextPickerResponse, ResponseExt, SelectableOptions,
-    UiWriterImUiFacadeExt,
-};
+use super::{InputTextPickerOptions, InputTextPickerResponse, ResponseExt, UiWriterImUiFacadeExt};
 
 mod candidates;
 mod keyboard;
+mod popup;
 
 use candidates::resolve_text_picker_candidates;
 use keyboard::{
     InputTextPickerKeyboardState, install_picker_keyboard_handler, reconcile_picker_keyboard_state,
 };
+use popup::{InputTextPickerPopupInput, render_text_picker_popup};
 
 pub(super) fn input_text_completion_model_with_options<
     H: UiHost,
@@ -187,88 +186,31 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         ui.open_popup_at(id, anchor);
     }
 
-    let mut picked_index = pending_keyboard_pick.as_ref().map(|pick| pick.source_index);
-    let mut picked = pending_keyboard_pick
-        .as_ref()
-        .map(|pick| pick.value.clone());
-    let item_test_id_base = test_id.clone();
-    let selected_value = current.clone();
-    let model_for_pick = model.clone();
-    let popup_open_for_items = popup_open.clone();
-    let keyboard_state_for_popup = keyboard_state.clone();
-    let visible_candidates_for_popup_key = visible_candidates.clone();
-    let popup_open_for_popup_key = popup_open.clone();
-    let model_for_popup_key = model.clone();
-    let install_popup_keyboard_handler = enabled
-        && options.keyboard_navigation
-        && input.focused()
-        && picker_candidate_visible
-        && !hide_for_exact_match;
-    let keyboard_repeat = options.keyboard_repeat;
-    let opened = ui.begin_popup_menu_with_options(id, input.id(), options.popup, |ui| {
-        if install_popup_keyboard_handler
-            && let Some(keyboard_state) = keyboard_state_for_popup.clone()
-        {
-            let cx = ui.cx_mut();
-            let key_owner = cx.root_id();
-            install_picker_keyboard_handler(
-                cx,
-                key_owner,
-                model_for_popup_key.clone(),
-                popup_open_for_popup_key.clone(),
-                keyboard_state,
-                visible_candidates_for_popup_key.clone(),
-                keyboard_repeat,
-            );
-        }
-        for (visible_index, (source_index, candidate)) in visible_candidates.iter().enumerate() {
-            let checked = selected_value.as_str() == candidate.as_ref();
-            let active = active_source_index == Some(*source_index);
-            let item_test_id = item_test_id_base
-                .as_ref()
-                .map(|base| Arc::from(format!("{base}.option.{visible_index}")));
-            let response = ui.selectable_with_options(
-                candidate.clone(),
-                SelectableOptions {
-                    selected: checked,
-                    highlighted: active,
-                    test_id: item_test_id,
-                    ..Default::default()
-                },
-            );
-            if active
-                && let (Some(state), Some(element)) =
-                    (keyboard_state_for_popup.as_ref(), response.id())
-            {
-                let _ = ui
-                    .cx_mut()
-                    .app
-                    .models_mut()
-                    .update(state, |state| state.active_element = Some(element));
-            }
-            if response.clicked() {
-                let next_value = candidate.to_string();
-                let _ = ui
-                    .cx_mut()
-                    .app
-                    .models_mut()
-                    .update(&model_for_pick, |value| *value = next_value.clone());
-                let _ = ui
-                    .cx_mut()
-                    .app
-                    .models_mut()
-                    .update(&popup_open_for_items, |open| *open = false);
-                if let Some(state) = keyboard_state_for_popup.as_ref() {
-                    let _ = ui.cx_mut().app.models_mut().update(state, |state| {
-                        state.active_source_index = Some(*source_index);
-                        state.active_element = response.id();
-                    });
-                }
-                picked_index = Some(*source_index);
-                picked = Some(candidate.clone());
-            }
-        }
-    });
+    let popup = render_text_picker_popup(
+        ui,
+        InputTextPickerPopupInput {
+            id,
+            trigger: input.id(),
+            popup: options.popup,
+            model: model.clone(),
+            popup_open: popup_open.clone(),
+            keyboard_state: keyboard_state.clone(),
+            visible_candidates: &visible_candidates,
+            selected_value: current.clone(),
+            active_source_index,
+            pending_keyboard_pick,
+            item_test_id_base: test_id.clone(),
+            install_keyboard_handler: enabled
+                && options.keyboard_navigation
+                && input.focused()
+                && picker_candidate_visible
+                && !hide_for_exact_match,
+            keyboard_repeat: options.keyboard_repeat,
+        },
+    );
+    let opened = popup.opened;
+    let picked_index = popup.picked_index;
+    let picked = popup.picked;
 
     if picked.is_some() {
         let selected_now = ui.with_cx_mut(|cx| {
