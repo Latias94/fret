@@ -192,3 +192,33 @@ Skipped broader gates:
 - `--all-features`, `compat-retained-canvas`, and workspace clippy were not run for this task
   because the touched implementation is headless runtime lookup maintenance and the required
   no-default runtime/clippy gates cover that slice.
+
+### 2026-05-26 - FNRS-030 completed
+
+Changes:
+
+- Added `store_dispatch_pipeline_publishes_coherent_commit_state` to lock dispatch coherency across
+  graph state, `NodeGraphChanges`, lookup freshness, history, and subscribers.
+- Extracted common `NodeGraphStore` commit finalization helpers:
+  - `install_committed_graph_state`
+  - `publish_graph_commit`
+- Routed dispatch, profiled dispatch, undo, profiled undo, redo, and profiled redo through the same
+  graph-state install/publish path.
+
+Fresh gates:
+
+- `cargo fmt -p fret-node --check`: passed.
+- `cargo nextest run -p fret-node --no-default-features runtime`: passed, 46 tests.
+- `cargo check -p fret-node --no-default-features`: passed.
+- `cargo clippy -p fret-node --no-default-features --all-targets -- -D warnings`: passed.
+
+Evidence anchors:
+
+- `ecosystem/fret-node/src/runtime/store.rs`
+- `ecosystem/fret-node/src/runtime/tests.rs`
+
+Skipped broader gates:
+
+- `--all-features`, `compat-retained-canvas`, and workspace clippy were not run for this task
+  because the changed behavior is the headless store commit pipeline and required no-default
+  runtime/check/clippy gates cover the affected slice.

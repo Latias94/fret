@@ -5,8 +5,8 @@ Last updated: 2026-05-26
 
 ## Current State
 
-The workstream has been opened from the `fret-node` audit findings. `FNRS-010` and `FNRS-020` are
-complete.
+The workstream has been opened from the `fret-node` audit findings. `FNRS-010`, `FNRS-020`, and
+`FNRS-030` are complete.
 
 Completed:
 
@@ -19,16 +19,19 @@ Completed:
 - `NodeGraphLookups::apply_op` now updates hidden state, reconnectability, removed node ports,
   cascaded edge removal, and detached group parent state.
 - Lookup apply no longer has a catch-all success arm; lookup-unaffected operations are explicit.
+- `NodeGraphStore` dispatch/undo/redo paths now share common graph-state install/publish helpers.
+- A dispatch coherency test proves graph state, changes, lookups, history, and subscribers observe
+  the same committed metadata update.
 - Fresh validation:
   - `cargo fmt -p fret-node --check`: passed.
-  - `cargo nextest run -p fret-node --no-default-features runtime`: passed, 45 tests.
+  - `cargo nextest run -p fret-node --no-default-features runtime`: passed, 46 tests.
   - `cargo check -p fret-node --no-default-features`: passed.
   - `cargo clippy -p fret-node --no-default-features --all-targets -- -D warnings`: passed.
 
 Primary remaining finding:
 
-The next risk is pipeline drift: dispatch, change emission, lookup updates, history, subscribers,
-and controller/binding sync are still spread across repeated store paths.
+With runtime/store correctness closed, the next risk is UI state mirror drift in binding/controller
+sync and retained/declarative compatibility surfaces.
 
 ## Authoritative Docs
 
@@ -46,17 +49,16 @@ Related background:
 
 ## Next Task
 
-Run `FNRS-030 - Harden store dispatch as the single runtime commit pipeline`.
+Run `FNRS-040 - Reduce UI state mirrors after runtime/store gates are green`.
 
 Expected workflow:
 
-1. Use `run-workstream-task` for `FNRS-030`.
-2. Audit the repeated commit paths in `NodeGraphStore` (`dispatch_transaction`,
-   `dispatch_transaction_with_profile`, `undo`, `undo_with_profile`, `redo`, `redo_with_profile`).
-3. Add a focused dispatch-order/coherency test before refactoring.
-4. Consolidate common commit finalization only if the test exposes meaningful duplication risk.
+1. Use `run-workstream-task` for `FNRS-040`.
+2. Start with an inventory of long-lived UI mirrors in `binding`, `controller_store_sync`, and
+   retained/declarative canvas surfaces.
+3. Pick one narrow mirror-removal or quarantine slice with a focused compatibility gate.
 4. Run fresh gates and update `EVIDENCE_AND_GATES.md`.
-5. Mark `FNRS-030` complete in `TODO.md` only after reviewable evidence exists.
+5. Mark `FNRS-040` complete in `TODO.md` only after reviewable evidence exists.
 
 ## Known Constraints
 
@@ -67,8 +69,8 @@ Expected workflow:
 
 ## Parallelism
 
-Parallel workers may start inventory-only work for FNRS-050, but implementation work should stay
-serialized until FNRS-030 confirms the store commit pipeline shape.
+Parallel workers may start FNRS-050 inventory-only docs work if needed, but implementation work on
+UI mirrors should stay serialized until the first FNRS-040 slice picks exact file scope.
 
 After FNRS-020:
 

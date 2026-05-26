@@ -9,8 +9,8 @@
     "docs/node-graph-roadmap.md",
     "docs/workstreams/fret-node-declarative-fearless-refactor-v1"
   ],
-  "phase": "store-dispatch-pipeline",
-  "current_task": "FNRS-030",
+  "phase": "ui-mirror-cleanup",
+  "current_task": "FNRS-040",
   "next_skill": "run-workstream-task",
   "dependencies": [
     "docs/workstreams/fret-node-declarative-fearless-refactor-v1"
@@ -40,7 +40,7 @@
     {
       "id": "M3",
       "name": "Store dispatch pipeline hardened",
-      "status": "in_progress",
+      "status": "complete",
       "tasks": [
         "FNRS-030"
       ]
@@ -48,7 +48,7 @@
     {
       "id": "M4",
       "name": "UI mirror cleanup started safely",
-      "status": "pending",
+      "status": "in_progress",
       "tasks": [
         "FNRS-040"
       ]

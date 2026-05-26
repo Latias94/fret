@@ -491,11 +491,8 @@ impl NodeGraphStore {
         if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&committed) {
             return Err(DispatchError::Apply(Self::reject_tx(key, message)));
         }
-        self.graph = scratch;
-        self.bump_graph_revision();
-        self.lookups.apply_transaction(&self.graph, &committed);
+        let changes = self.install_committed_graph_state(scratch, &committed);
         self.history.record(committed.clone());
-        let changes = NodeGraphChanges::from_transaction(&committed);
 
         if let Some(middleware) = self.middleware.as_deref_mut() {
             let snapshot = NodeGraphStoreSnapshot {
@@ -508,11 +505,7 @@ impl NodeGraphStore {
             middleware.after_dispatch(snapshot, &committed, &changes);
         }
 
-        self.emit(NodeGraphStoreEvent::GraphCommitted {
-            committed: &committed,
-            changes: &changes,
-        });
-        self.notify_selectors();
+        self.publish_graph_commit(&committed, &changes);
         Ok(DispatchOutcome { committed, changes })
     }
 
@@ -571,11 +564,8 @@ impl NodeGraphStore {
         if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&committed) {
             return Err(Self::reject_tx(key, message));
         }
-        self.graph = scratch;
-        self.bump_graph_revision();
-        self.lookups.apply_transaction(&self.graph, &committed);
+        let changes = self.install_committed_graph_state(scratch, &committed);
         self.history.record(committed.clone());
-        let changes = NodeGraphChanges::from_transaction(&committed);
 
         if let Some(middleware) = self.middleware.as_deref_mut() {
             let snapshot = NodeGraphStoreSnapshot {
@@ -588,11 +578,7 @@ impl NodeGraphStore {
             middleware.after_dispatch(snapshot, &committed, &changes);
         }
 
-        self.emit(NodeGraphStoreEvent::GraphCommitted {
-            committed: &committed,
-            changes: &changes,
-        });
-        self.notify_selectors();
+        self.publish_graph_commit(&committed, &changes);
         Ok(DispatchOutcome { committed, changes })
     }
 
@@ -624,15 +610,8 @@ impl NodeGraphStore {
         }
 
         let committed = committed.unwrap_or_default();
-        let changes = NodeGraphChanges::from_transaction(&committed);
-        self.graph = scratch;
-        self.bump_graph_revision();
-        self.lookups.apply_transaction(&self.graph, &committed);
-        self.emit(NodeGraphStoreEvent::GraphCommitted {
-            committed: &committed,
-            changes: &changes,
-        });
-        self.notify_selectors();
+        let changes = self.install_committed_graph_state(scratch, &committed);
+        self.publish_graph_commit(&committed, &changes);
         Ok(Some(DispatchOutcome { committed, changes }))
     }
 
@@ -657,15 +636,8 @@ impl NodeGraphStore {
         }
 
         let committed = committed.unwrap_or_default();
-        let changes = NodeGraphChanges::from_transaction(&committed);
-        self.graph = scratch;
-        self.bump_graph_revision();
-        self.lookups.apply_transaction(&self.graph, &committed);
-        self.emit(NodeGraphStoreEvent::GraphCommitted {
-            committed: &committed,
-            changes: &changes,
-        });
-        self.notify_selectors();
+        let changes = self.install_committed_graph_state(scratch, &committed);
+        self.publish_graph_commit(&committed, &changes);
         Ok(Some(DispatchOutcome { committed, changes }))
     }
 
@@ -688,15 +660,8 @@ impl NodeGraphStore {
         }
 
         let committed = committed.unwrap_or_default();
-        let changes = NodeGraphChanges::from_transaction(&committed);
-        self.graph = scratch;
-        self.bump_graph_revision();
-        self.lookups.apply_transaction(&self.graph, &committed);
-        self.emit(NodeGraphStoreEvent::GraphCommitted {
-            committed: &committed,
-            changes: &changes,
-        });
-        self.notify_selectors();
+        let changes = self.install_committed_graph_state(scratch, &committed);
+        self.publish_graph_commit(&committed, &changes);
         Ok(Some(DispatchOutcome { committed, changes }))
     }
 
@@ -721,15 +686,8 @@ impl NodeGraphStore {
         }
 
         let committed = committed.unwrap_or_default();
-        let changes = NodeGraphChanges::from_transaction(&committed);
-        self.graph = scratch;
-        self.bump_graph_revision();
-        self.lookups.apply_transaction(&self.graph, &committed);
-        self.emit(NodeGraphStoreEvent::GraphCommitted {
-            committed: &committed,
-            changes: &changes,
-        });
-        self.notify_selectors();
+        let changes = self.install_committed_graph_state(scratch, &committed);
+        self.publish_graph_commit(&committed, &changes);
         Ok(Some(DispatchOutcome { committed, changes }))
     }
 
@@ -747,6 +705,22 @@ impl NodeGraphStore {
                 ops: tx.ops.clone(),
             })
         }
+    }
+
+    fn install_committed_graph_state(
+        &mut self,
+        graph: Graph,
+        committed: &GraphTransaction,
+    ) -> NodeGraphChanges {
+        self.graph = graph;
+        self.bump_graph_revision();
+        self.lookups.apply_transaction(&self.graph, committed);
+        NodeGraphChanges::from_transaction(committed)
+    }
+
+    fn publish_graph_commit(&mut self, committed: &GraphTransaction, changes: &NodeGraphChanges) {
+        self.emit(NodeGraphStoreEvent::GraphCommitted { committed, changes });
+        self.notify_selectors();
     }
 
     fn reject_tx(key: String, message: String) -> ApplyPipelineError {

@@ -116,7 +116,7 @@ Completion notes:
 
 ## FNRS-030 - Harden store dispatch as the single runtime commit pipeline
 
-Status: ready
+Status: done
 Owner: planner/worker
 Dependencies: FNRS-010, FNRS-020
 
@@ -150,9 +150,24 @@ Review notes:
 - This task may split if a large bypass surface is found.
 - Do not remove retained compatibility transport until equivalent store-first evidence exists.
 
+Completion notes:
+
+- Added a store dispatch coherency test proving graph state, `NodeGraphChanges`, lookups, history,
+  and subscribers observe the same committed metadata update.
+- Extracted common store commit finalization helpers for installing committed graph state,
+  advancing revision, updating lookups, deriving changes, emitting `GraphCommitted`, and notifying
+  selectors.
+- `dispatch_transaction`, `dispatch_transaction_with_profile`, `undo`, `undo_with_profile`,
+  `redo`, and `redo_with_profile` now share the same graph-state install/publish path.
+- Fresh validation on 2026-05-26:
+  - `cargo fmt -p fret-node --check`: passed.
+  - `cargo nextest run -p fret-node --no-default-features runtime`: 46 passed.
+  - `cargo check -p fret-node --no-default-features`: passed.
+  - `cargo clippy -p fret-node --no-default-features --all-targets -- -D warnings`: passed.
+
 ## FNRS-040 - Reduce UI state mirrors after runtime/store gates are green
 
-Status: blocked on FNRS-030
+Status: ready
 Owner: planner/worker
 Dependencies: FNRS-030
 

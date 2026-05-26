@@ -1064,6 +1064,76 @@ fn store_dispatch_changes_records_history_and_supports_undo() {
 }
 
 #[test]
+fn store_dispatch_pipeline_publishes_coherent_commit_state() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let (g0, a, _b, _out_port, _in_port, eid) = make_graph();
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
+
+    let observed: Rc<RefCell<Option<(bool, Option<EdgeReconnectable>)>>> =
+        Rc::new(RefCell::new(None));
+    let observed2 = observed.clone();
+    store.subscribe(move |ev| {
+        if let NodeGraphStoreEvent::GraphCommitted { changes, .. } = ev {
+            let hidden = changes
+                .nodes
+                .iter()
+                .any(|change| matches!(change, NodeChange::Hidden { hidden: true, .. }));
+            let reconnectable = changes.edges.iter().find_map(|change| match change {
+                EdgeChange::Reconnectable { reconnectable, .. } => *reconnectable,
+                _ => None,
+            });
+            *observed2.borrow_mut() = Some((hidden, reconnectable));
+        }
+    });
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![
+            GraphOp::SetNodeHidden {
+                id: a,
+                from: false,
+                to: true,
+            },
+            GraphOp::SetEdgeReconnectable {
+                id: eid,
+                from: None,
+                to: Some(EdgeReconnectable::Bool(false)),
+            },
+        ],
+    };
+
+    let outcome = store.dispatch_transaction(&tx).expect("dispatch");
+
+    assert!(store.graph().nodes.get(&a).unwrap().hidden);
+    assert!(store.lookups().node_lookup.get(&a).unwrap().hidden);
+    assert_eq!(
+        store.lookups().edge_lookup.get(&eid).unwrap().reconnectable,
+        Some(EdgeReconnectable::Bool(false))
+    );
+    assert!(store.can_undo());
+    assert!(
+        outcome
+            .changes
+            .nodes
+            .iter()
+            .any(|change| matches!(change, NodeChange::Hidden { id, hidden: true } if *id == a))
+    );
+    assert!(outcome.changes.edges.iter().any(|change| matches!(
+        change,
+        EdgeChange::Reconnectable {
+            id,
+            reconnectable: Some(EdgeReconnectable::Bool(false))
+        } if *id == eid
+    )));
+    assert_eq!(
+        *observed.borrow(),
+        Some((true, Some(EdgeReconnectable::Bool(false))))
+    );
+}
+
+#[test]
 fn store_does_not_commit_rejected_profile_edits() {
     use crate::rules::{ConnectPlan, Diagnostic, DiagnosticSeverity, DiagnosticTarget};
     use crate::types::TypeDesc;
