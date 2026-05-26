@@ -329,6 +329,12 @@ Last updated: 2026-05-27
       roving focus, menubar close-auto-focus suppression, and horizontal-arrow menu switching.
       `interaction.rs` now keeps enabled/action gating, pressable props, activation dispatch, and
       response population.
+- [x] Split IMUI multi-select state storage and normalization out of
+      `ecosystem/fret-ui-kit/src/imui/multi_select.rs` into a private owner module without
+      widening the public collection helper surface.
+      Result: `multi_select/state.rs` owns `ImUiMultiSelectState`, selected-order normalization,
+      anchor repair, and crate-local mutation helpers. The root `multi_select.rs` keeps model hook,
+      selectable response wiring, click-modifier policy, and response changed reporting.
 
 ## P0 - Source Baseline
 
@@ -1581,6 +1587,9 @@ Readiness order for the next locally testable review slices:
    2026-05-14 state-catalog gate follow-up: `ImUiMultiSelectState` is now covered by the reusable
    opaque-struct catalog because shared collection state is part of the public policy-layer
    contract, not a freely mutable data bag.
+   2026-05-27 multi-select state owner split: `ImUiMultiSelectState`, ordered-selection
+   normalization, anchor repair, and crate-local selection mutation helpers now live in
+   `multi_select/state.rs`; the root helper keeps click-modifier policy and response wiring.
 7. Child-region depth: reopen only with a concrete `BeginChild()`-style behavior target.
    Current readiness audit: `P3_CHILD_REGION_READINESS_2026-05-06.md`. Fret already covers
    keyed scrollable child areas, chrome, scroll handles, nested shell panes, and app-owned

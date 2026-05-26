@@ -1,5 +1,7 @@
 //! Immediate multi-select collection helpers.
 
+mod state;
+
 use std::sync::Arc;
 
 use fret_core::Modifiers;
@@ -8,72 +10,7 @@ use fret_ui::{ElementContext, Invalidation, UiHost};
 
 use super::{ResponseExt, SelectableOptions, UiWriterImUiFacadeExt};
 
-/// Model state for an immediate multi-select collection.
-///
-/// This is intentionally small:
-/// - `selected` stores the currently selected keys,
-/// - `anchor` stores the range-selection anchor used for shift-click expansion.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct ImUiMultiSelectState<K> {
-    selected: Vec<K>,
-    anchor: Option<K>,
-}
-
-impl<K> ImUiMultiSelectState<K> {
-    pub fn new(selected: Vec<K>, anchor: Option<K>) -> Self {
-        Self { selected, anchor }
-    }
-
-    pub fn selected(&self) -> &[K] {
-        &self.selected
-    }
-
-    pub fn selected_count(&self) -> usize {
-        self.selected.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.selected.is_empty()
-    }
-
-    pub fn anchor(&self) -> Option<&K> {
-        self.anchor.as_ref()
-    }
-
-    pub fn first_selected(&self) -> Option<&K> {
-        self.selected.first()
-    }
-
-    pub fn clear(&mut self) {
-        self.selected.clear();
-        self.anchor = None;
-    }
-}
-
-impl<K: Clone> ImUiMultiSelectState<K> {
-    pub fn single(key: K) -> Self {
-        Self {
-            selected: vec![key.clone()],
-            anchor: Some(key),
-        }
-    }
-}
-
-impl<K: Clone + PartialEq> ImUiMultiSelectState<K> {
-    pub fn from_ordered_selection(all_keys: &[K], selected: Vec<K>, anchor: Option<K>) -> Self {
-        let selected = normalize_selection_order(all_keys, selected);
-        let anchor = anchor
-            .filter(|anchor| selected.iter().any(|item| item == anchor))
-            .or_else(|| selected.first().cloned());
-        Self { selected, anchor }
-    }
-}
-
-impl<K: PartialEq> ImUiMultiSelectState<K> {
-    pub fn is_selected(&self, key: &K) -> bool {
-        self.selected.iter().any(|item| item == key)
-    }
-}
+pub use state::ImUiMultiSelectState;
 
 /// Returns a controllable selection model for an immediate multi-select collection.
 pub fn multi_select_use_model<H: UiHost, K: Clone + 'static>(
@@ -136,73 +73,14 @@ fn apply_click<K: Clone + PartialEq>(
     let previous = state.clone();
 
     if modifiers.shift {
-        apply_range_click(state, all_keys, key);
+        state.range_select_from_anchor_or_single(all_keys, key);
     } else if primary_modifier_down(modifiers) {
-        apply_toggle_click(state, all_keys, key);
+        state.toggle_in_order(all_keys, key);
     } else {
-        state.selected = vec![key.clone()];
-        state.anchor = Some(key.clone());
+        state.replace_with_single(key);
     }
 
     previous != *state
-}
-
-fn apply_range_click<K: Clone + PartialEq>(
-    state: &mut ImUiMultiSelectState<K>,
-    all_keys: &[K],
-    key: &K,
-) {
-    let anchor = state.anchor.clone().unwrap_or_else(|| key.clone());
-    let Some(anchor_index) = all_keys.iter().position(|item| item == &anchor) else {
-        state.selected = vec![key.clone()];
-        state.anchor = Some(key.clone());
-        return;
-    };
-    let Some(key_index) = all_keys.iter().position(|item| item == key) else {
-        state.selected = vec![key.clone()];
-        state.anchor = Some(key.clone());
-        return;
-    };
-
-    let (start, end) = if anchor_index <= key_index {
-        (anchor_index, key_index)
-    } else {
-        (key_index, anchor_index)
-    };
-    state.selected = all_keys[start..=end].to_vec();
-    state.anchor = Some(anchor);
-}
-
-fn apply_toggle_click<K: Clone + PartialEq>(
-    state: &mut ImUiMultiSelectState<K>,
-    all_keys: &[K],
-    key: &K,
-) {
-    let mut selected = state.selected.clone();
-    if let Some(index) = selected.iter().position(|item| item == key) {
-        selected.remove(index);
-    } else {
-        selected.push(key.clone());
-    }
-    *state = ImUiMultiSelectState::from_ordered_selection(all_keys, selected, Some(key.clone()));
-}
-
-fn normalize_selection_order<K: Clone + PartialEq>(all_keys: &[K], selected: Vec<K>) -> Vec<K> {
-    let mut ordered = Vec::new();
-
-    for key in all_keys {
-        if selected.iter().any(|item| item == key) && !ordered.iter().any(|item| item == key) {
-            ordered.push(key.clone());
-        }
-    }
-
-    for key in selected {
-        if !ordered.iter().any(|item| item == &key) {
-            ordered.push(key);
-        }
-    }
-
-    ordered
 }
 
 fn primary_modifier_down(modifiers: Modifiers) -> bool {

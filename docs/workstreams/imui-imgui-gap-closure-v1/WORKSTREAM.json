@@ -507,6 +507,7 @@
     "ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layout.rs",
     "ecosystem/fret-ui-kit/tests/imui_perf_guard_smoke.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select.rs",
+    "ecosystem/fret-ui-kit/src/imui/multi_select/state.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/visual.rs",

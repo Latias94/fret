@@ -176,6 +176,13 @@ options, stroke/rounding/image/svg options, and mesh vertex helper types. `debug
 re-exports those types and keeps draw-list state plus helper orchestration. The public debug draw
 API remains unchanged.
 
+2026-05-27 multi-select state owner-split result:
+`ecosystem/fret-ui-kit/src/imui/multi_select/state.rs` now owns `ImUiMultiSelectState`,
+ordered-selection normalization, anchor repair, and crate-local mutation helpers. The root
+`multi_select.rs` keeps model hook, selectable response wiring, click-modifier policy, and response
+changed reporting, so collection helper state remains accessor-first without broadening the public
+surface.
+
 2026-05-26 popup-menu policy/panel owner-split result:
 `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/policy.rs` now owns menu navigation state,
 popup submenu policy state, and root submenu synchronization. `popup_overlay/menu/panel.rs` now

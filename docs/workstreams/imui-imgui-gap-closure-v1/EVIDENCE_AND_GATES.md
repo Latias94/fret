@@ -5854,6 +5854,29 @@ cargo run -p fret-demo --bin docking_arbitration_demo
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
 
+2026-05-27 IMUI multi-select state owner split:
+
+- Claim verified: `ImUiMultiSelectState` storage, ordered-selection normalization, anchor repair,
+  and crate-local selection mutation helpers moved from `multi_select.rs` into
+  `multi_select/state.rs` without changing the public collection helper API.
+- `ecosystem/fret-ui-kit/src/imui/multi_select.rs` now keeps model hook, selectable response wiring,
+  click-modifier policy, and response changed reporting.
+- `tools/gate_imui_workstream_source.py` now covers `multi_select/state.rs` in the opaque-struct
+  catalog and rejects the state body or selection normalization from drifting back into the root.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-kit`,
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo nextest run -p fret-ui-kit --features imui --lib multi_select::tests --no-fail-fast`,
+  `cargo fmt -p fret-ui-kit --check --verbose`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\check_workstream_catalog.py`, and `git diff --check`.
+- A first `cargo nextest run -p fret-ui-kit --features imui --lib multi_select::tests
+  --no-fail-fast` attempt timed out after 124s while background Cargo/rustc processes kept running.
+  Those timeout remnants were stopped before rerunning the same filter with `TMP`/`TEMP` pointed at
+  `.fret/tmp`; the rerun passed 6/6 tests.
+
 2026-05-25 IMUI table render/body/header owner split:
 
 - Source gap before fix: `ecosystem/fret-ui-kit/src/imui/table_controls.rs` still owned table
