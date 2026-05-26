@@ -168,6 +168,13 @@ installation, and text-area chrome/text-style selection. `text_controls.rs` keep
 assembly plus shared helper routing. Public `textarea_model(...)` and `textarea_model_with_options`
 facade behavior remains unchanged.
 
+2026-05-26 floating-window resize state owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` now owns active resize snapshot
+lookup, drag delta application, min/max size clamping, left/top origin updates, collapse reset,
+device-pixel snapping, and resize state/test-id output. `floating_window_resize.rs` is now a thin
+`handles`/`state` index plus the shared resize-handle test-id record; `handles.rs` still owns
+pointer-region handle rendering and drag lifecycle wiring.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

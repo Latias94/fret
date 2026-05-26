@@ -157,6 +157,14 @@ Last updated: 2026-05-26
       transient activation/collapse keys; `floating_surface/state.rs` owns floating-area and
       floating-window state records. The root `floating_surface.rs` now keeps area composition,
       pointer-region wiring, layer wiring, and private re-exports.
+- [x] Split IMUI floating-window resize state/snapshot ownership out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` into a private owner module
+      without changing resize handles, left/right/top/bottom/corner resize behavior, collapse
+      reset, device-pixel snapping, or resize test-id generation.
+      Result: `floating_window_resize/state.rs` owns active resize snapshot lookup, drag delta
+      application, min/max size clamping, origin updates for left/top handles, collapse reset,
+      device-pixel snapping, and resize state/test-id output. The root file is now a thin
+      `handles`/`state` index plus the shared handle test-id record.
 - [x] Split IMUI selectable keyboard ownership out of
       `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` into a private owner module without
       changing selectable activation, popup close, menu navigation, or context-menu behavior.

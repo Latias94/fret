@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Floating Window Resize State Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI floating-window resize snapshot/state calculation moved out of the root
+resize module without changing resize handles, left/right/corner resize behavior, collapse reset,
+device-pixel snapping, or resize test-id output.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` now owns active resize snapshot
+  lookup, drag delta application, min/max size clamping, origin updates for left/top handles,
+  collapse reset, device-pixel snapping, and resize state/test-id output.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` is now a thin `handles`/`state` index
+  plus the shared `FloatingWindowResizeHandleTestIds` record.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs` remains the owner for resize
+  handle layout, pointer-region drag lifecycle wiring, cursor updates, and activation handoff.
+- `tools/gate_imui_workstream_source.py` now requires the state owner and rejects snapshot lookup,
+  resize drag calculation, and pixel snapping from drifting back into `floating_window_resize.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating::window_options::floating_window_resizes_when_dragging_corner_handle
+  floating::window_options::floating_window_resizes_from_left_updates_origin_and_width
+  floating::window_options::floating_window_resizable_false_hides_resize_handles
+  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
+  floating::input_modes::floating_window_activate_on_click_can_be_disabled_for_resize_handles
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Textarea Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI textarea element assembly moved out of the root text-controls owner without
