@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Floating-Window Resize Drag-Apply Owner-Split Evidence - 2026-05-27
+
+Claim verified: floating-window resize delta application moved out of the resize state lifecycle
+owner without changing active resize snapshots, left/top origin updates, min/max size clamping,
+corner-handle resize behavior, collapsed reset policy, device-pixel snapping, or resize test ids.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` keeps `cx.state_for(...)`
+  lifecycle, collapsed/non-drag reset policy, device-pixel snapping, resize output assembly, and
+  handle test-id packaging.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply.rs` owns drag delta
+  calculation, min/max clamping, left/top origin reconciliation, all eight resize-handle branches,
+  and `last_resize_position` advancement.
+- `tools/gate_imui_workstream_source.py` now requires the drag-apply owner and rejects resize
+  geometry branches from drifting back into the lifecycle state owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating_window_resizes_when_dragging_corner_handle
+  floating_window_resizes_from_left_updates_origin_and_width --no-fail-fast`: pass; 2 tests, 179
+  skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table-Column Visibility Snapshot Owner-Split Evidence - 2026-05-27
 
 Claim verified: runtime table-column visibility state no longer owns the persistence-friendly

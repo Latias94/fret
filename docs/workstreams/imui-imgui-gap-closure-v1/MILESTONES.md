@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 floating-window resize drag-apply owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply.rs` now owns resize drag
+delta calculation, min/max clamping, left/top origin reconciliation, all eight handle branches,
+and `last_resize_position` advancement. `state.rs` keeps lifecycle state lookup, collapsed/non-drag
+reset policy, device-pixel snapping, resize output assembly, and handle test-id packaging.
+
 2026-05-27 table-column visibility snapshot owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/snapshot.rs` now owns
 `TableColumnVisibilitySnapshot`, `TableColumnVisibilityEntry`, serde derives, public data fields,

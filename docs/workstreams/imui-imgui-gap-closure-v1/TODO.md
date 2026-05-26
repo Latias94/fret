@@ -228,6 +228,14 @@ Last updated: 2026-05-27
       Result: `floating_window_resize/snapshot.rs` owns active resize drag discovery and snapshot
       capture. `state.rs` now focuses on applying resize deltas, clamping size, updating origin,
       resetting collapsed/non-drag state, snapping to device pixels, and producing resize output.
+- [x] Split IMUI floating-window resize drag-delta application out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` into a private owner module
+      without changing active resize snapshots, left/top origin updates, min/max size clamping,
+      corner-handle behavior, collapsed reset policy, device-pixel snapping, or resize test ids.
+      Result: `floating_window_resize/state/drag_apply.rs` owns drag delta calculation, min/max
+      clamping, left/top origin reconciliation, all eight resize-handle branches, and
+      `last_resize_position` advancement. `state.rs` keeps lifecycle state lookup, reset/snap
+      policy, resize output assembly, and handle test-id packaging.
 - [x] Split IMUI floating-window resize handle layout and pointer behavior out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs` into private owner modules
       without changing resize handle placement, cursors, drag lifecycle, activation handoff, or

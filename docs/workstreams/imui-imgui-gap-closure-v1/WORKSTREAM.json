@@ -558,6 +558,7 @@
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/snapshot.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region/resize.rs",
     "ecosystem/fret-ui-kit/src/imui/tooltip_overlay.rs",
