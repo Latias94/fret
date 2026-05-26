@@ -23,12 +23,12 @@ pub(super) fn preview_collapsible(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement
         "This page is docs/public-surface parity work, not a mechanism-layer fix.",
     ]);
     let notes = doc_layout::notes_block([
-        "API reference: `ecosystem/fret-ui-shadcn/src/collapsible.rs`. Reference stack: shadcn Collapsible docs and examples, the default registry recipe, Radix Primitives collapsible semantics, and Base UI collapsible ownership.",
-        "Preview mirrors the shadcn/base Collapsible docs path first after skipping `Installation`: `Demo`, `Usage`, `Controlled State`, `Basic`, `Settings Panel`, `File Tree`, `RTL`, and `API Reference`.",
-        "`Demo` follows the current shadcn demo's repository-list surface, while `Basic`, `Settings Panel`, `File Tree`, and `RTL` track the base docs examples.",
+        "API reference: `ecosystem/fret-ui-shadcn/src/collapsible.rs`. Reference stack: current shadcn Collapsible docs and examples, the new-york-v4 registry recipe, Radix Primitives collapsible semantics, and Base/Radix registry ownership cross-checks.",
+        "Preview starts with the current shadcn Collapsible docs path after skipping `Installation`: `Demo` and `Usage`, then keeps `Controlled State`, `Basic`, `Settings Panel`, `File Tree`, `RTL`, and `API Reference` as explicit Fret follow-ups.",
+        "`Demo` follows the current shadcn demo's repository-list surface, while `Basic`, `Settings Panel`, `File Tree`, and `RTL` remain registry-shaped Fret follow-ups.",
         "`shadcn::Collapsible` remains the compact Fret-first builder for the common trigger/content lane, while `shadcn::CollapsibleRoot`, `shadcn::CollapsibleTriggerPart`, and `shadcn::CollapsibleContentPart` cover the copyable composable children lane on the curated facade.",
         "A broader generic `Collapsible::children([...])` / `compose()` root API is not currently warranted here: Collapsible only needs trigger/content, and the typed parts lane plus `shadcn::raw::collapsible::primitives::*` already cover the upstream nested composition / `asChild` story without widening the default recipe surface.",
-        "Radix Primitives and Base UI agree on the relevant semantics axis here: controllable/uncontrolled open state, trigger-expanded/controls relationships, and measured panel lifecycle. Those outcomes are already handled in `fret-ui-kit` / `fret-ui-shadcn`, so the remaining work here is docs/public-surface alignment rather than a `fret-ui` mechanism bug.",
+        "Radix Primitives owns the relevant semantics axis here: controllable/uncontrolled open state, trigger-expanded/controls relationships, and measured panel lifecycle. Those outcomes are already handled in `fret-ui-kit` / `fret-ui-shadcn`, so the remaining work here is docs/public-surface alignment rather than a `fret-ui` mechanism bug.",
         "Keep width, gap, and card layout caller-owned when the upstream example does; the recipe owns disclosure semantics, trigger/content wiring, and the measured open/close motion substrate.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
@@ -72,7 +72,7 @@ pub(super) fn preview_collapsible(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Collapsible docs path first: Demo, Usage, Controlled State, Basic, Settings Panel, File Tree, RTL, and API Reference. The lead demo follows the current repository-list example, the usage section keeps the composable children API on the curated facade, and `Notes` records the source axes plus the current children-API decision.",
+            "Preview starts with the current shadcn Collapsible `Demo` and `Usage`, then keeps Controlled State, Basic, Settings Panel, File Tree, RTL, and API Reference as explicit Fret follow-ups. The lead demo follows the current repository-list example, the usage section keeps the composable children API on the curated facade, and `Notes` records the source axes plus the current children-API decision.",
         ),
         vec![
             demo,

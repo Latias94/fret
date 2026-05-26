@@ -4,7 +4,8 @@
     "name": "UI gallery: Checkbox disabled action-state",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "env_defaults": {
-      "FRET_UI_GALLERY_START_PAGE": "checkbox"
+      "FRET_UI_GALLERY_START_PAGE": "checkbox",
+      "FRET_UI_GALLERY_START_SECTION": "Disabled"
     },
     "tags": [
       "ui_gallery",
@@ -15,7 +16,7 @@
       "action-state"
     ],
     "target_hints": [
-      "Starts directly on the Checkbox page.",
+      "Starts directly on the Checkbox page's Disabled section.",
       "Verifies that a disabled Checkbox exposes disabled=true, suppresses invoke, and does not mutate checked state through control or label activation."
     ]
   },

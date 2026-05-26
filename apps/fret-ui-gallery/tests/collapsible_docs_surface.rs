@@ -7,11 +7,11 @@ fn collapsible_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/collapsible.rs");
 
     for needle in [
-        "Reference stack: shadcn Collapsible docs and examples, the default registry recipe, Radix Primitives collapsible semantics, and Base UI collapsible ownership.",
+        "Reference stack: current shadcn Collapsible docs and examples, the new-york-v4 registry recipe, Radix Primitives collapsible semantics, and Base/Radix registry ownership cross-checks.",
         "`shadcn::Collapsible` remains the compact Fret-first builder for the common trigger/content lane, while `shadcn::CollapsibleRoot`, `shadcn::CollapsibleTriggerPart`, and `shadcn::CollapsibleContentPart` cover the copyable composable children lane on the curated facade.",
         "A broader generic `Collapsible::children([...])` / `compose()` root API is not currently warranted here",
         "docs/public-surface alignment rather than a `fret-ui` mechanism bug",
-        "Preview mirrors the shadcn/base Collapsible docs path first after skipping `Installation`: `Demo`, `Usage`, `Controlled State`, `Basic`, `Settings Panel`, `File Tree`, `RTL`, and `API Reference`.",
+        "Preview starts with the current shadcn Collapsible docs path after skipping `Installation`: `Demo` and `Usage`, then keeps `Controlled State`, `Basic`, `Settings Panel`, `File Tree`, `RTL`, and `API Reference` as explicit Fret follow-ups.",
         ".test_id_prefix(\"ui-gallery-collapsible-demo\")",
         ".test_id_prefix(\"ui-gallery-collapsible-usage\")",
         ".test_id_prefix(\"ui-gallery-collapsible-controlled\")",

@@ -640,3 +640,89 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Pagination `DIS`, `FOCUS-VIS`, `OPEN`, `KEY`, `MOB`, `RTL`,
   `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M28 - Promote Card
+
+Status: complete on 2026-05-26.
+
+`card.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after connecting
+the existing Card audit, current main-worktree `repo-ref` source refs, `card-demo` and
+`card-with-form` upstream goldens, recipe slot/grid/chrome tests, Gallery docs-surface checks,
+action-state diagnostics, text-paint follow-ups, RTL render-flow evidence, and a component-matrix
+packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Card docs path, new-york-v4 visual source, base source,
+  docs-demo and with-form examples, and tracked `card-demo` / `card-with-form` upstream goldens.
+- The Card packet records the owner split: `fret-ui-shadcn` owns intrinsic card chrome, slot
+  padding, title/description typography, header grid/action placement, and footer wrap budget;
+  Gallery owns page width constraints, example form composition, media examples, and Fret-only
+  rich text follow-ups; the runtime grid contract remains the mechanism layer proof for the
+  `1fr auto` header slot family.
+- Runtime diagnostics cover docs smoke and demo action-state behavior, while existing text-wrap,
+  hitbox, image-cover, screenshot, composition, and meeting-notes scripts remain parse-checked
+  coverage anchors.
+- `card_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 34 `regression_locked`, 1 `harness_hardening`, 19
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Card `HOV`, `FOCUS-VIS`, `KEY`, `RTL`, `TEXT-MET`, and `PAINT`
+  evidence; the component has no required state-depth gaps.
+
+## M29 - Promote Checkbox
+
+Status: complete on 2026-05-26.
+
+`checkbox.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the existing Checkbox audit, current main-worktree `repo-ref` source refs, `checkbox-demo`
+/ `checkbox-with-text` / `checkbox-disabled` / focus upstream goldens, recipe semantics tests,
+web-vs-Fret layout/chrome gates, Gallery docs-surface checks, disabled/required/table diagnostics,
+RTL/text/paint follow-ups, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Checkbox docs path, new-york-v4 visual source, registry
+  demo/with-text/disabled/field examples, form checkbox examples, and tracked checkbox upstream
+  goldens.
+- The Checkbox packet records the owner split: `fret-ui-shadcn` owns the 16px leaf control,
+  checked/disabled/required/invalid/indeterminate semantics, focus-visible chrome, and no-children
+  API decision; Gallery/Field own labels, descriptions, fieldset framing, table composition, RTL
+  layout, and larger click targets.
+- Runtime diagnostics cover disabled action-state, required disabled group action-state, and table
+  mixed-state behavior. The suite is intentionally run without `--reuse-launch` because each script
+  starts at a different virtualized section.
+- `checkbox_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 35 `regression_locked`, 1 `harness_hardening`, 18
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Checkbox `DIS`, `FOCUS-VIS`, `KEY`, `RTL`, `TEXT-MET`, and
+  `PAINT` evidence; the component has no required state-depth gaps.
+
+## M30 - Promote Collapsible
+
+Status: complete on 2026-05-26.
+
+`collapsible.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Collapsible docs path, new-york-v4 source, `collapsible-demo`
+upstream golden, recipe semantics tests, web-vs-Fret layout proof, Gallery docs-surface checks,
+docs-smoke diagnostics, a gallery-dev open/close behavior diagnostic, and a component-matrix
+packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Collapsible docs path, new-york-v4 recipe source, base
+  and Radix secondary refs, and the tracked `collapsible-demo` upstream golden.
+- The Collapsible packet records the owner split: `fret-ui-shadcn` owns disclosure semantics,
+  trigger/content wiring, disabled suppression, keyboard toggle behavior, and measured motion;
+  Gallery owns repository-list composition, width/gap/card layout, docs-path teaching order, RTL
+  follow-up layout, and notes diagnostics.
+- Runtime diagnostics cover docs smoke plus the basic double-click open/close sequence; the latter
+  is run through `cargo run -p fret-ui-gallery --features gallery-dev` because the script requires
+  the gallery-dev launch feature.
+- `collapsible_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs
+  with zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 36 `regression_locked`, 1 `harness_hardening`, 17
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Collapsible `DIS`, `OPEN`, `KEY`, `RTL`, `TEXT-MET`, and
+  `PAINT` evidence; the component has no required state-depth gaps.

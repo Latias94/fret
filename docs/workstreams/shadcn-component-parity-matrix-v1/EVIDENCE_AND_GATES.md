@@ -29,6 +29,7 @@ python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts
 python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/avatar_agent_packet_p0_v1.json | Out-Null
 python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/breadcrumb_agent_packet_p0_v1.json | Out-Null
 python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/field_agent_packet_p0_v1.json | Out-Null
+python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/card_agent_packet_p0_v1.json | Out-Null
 python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json | Out-Null
 python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/WORKSTREAM.json | Out-Null
 python -m json.tool tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json | Out-Null
@@ -51,6 +52,7 @@ python -m json.tool tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcru
 python -m json.tool tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-custom-separator-single-line.json | Out-Null
 python -m json.tool tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-responsive-toggle.json | Out-Null
 python -m json.tool tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-rtl-screenshot.json | Out-Null
+python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-screenshot.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-compositions.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-description-no-early-wrap.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-content-button-hitbox-not-stretched.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-image-event-cover-screenshot.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-meeting-notes-list-no-early-wrap.json | Out-Null
 python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-docs-smoke.json | Out-Null
 python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json | Out-Null
 python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-responsive-orientation-container-md.json | Out-Null
@@ -159,6 +161,12 @@ cargo nextest run -p fret-ui-shadcn --test web_vs_fret_field --status-level fail
 cargo nextest run -p fret-ui-shadcn --test field_text_controls_auto_association --status-level fail
 cargo nextest run -p fret-ui-shadcn --test field_select_auto_association --test field_responsive_orientation --status-level fail
 cargo nextest run -p fret-ui-gallery --test field_docs_surface --status-level fail
+cargo nextest run -p fret-ui-shadcn --lib --status-level fail card
+cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail card
+cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail card
+cargo nextest run -p fret-ui-gallery --test card_docs_surface --status-level fail
+cargo nextest run -p fret-ui-gallery --test card_rich_description_surface --status-level fail
+cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_card
 cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app field_snippets_prefer_ui_cx_on_the_default_app_surface field_page_uses_typed_doc_sections_for_app_facing_snippets field_page_usage_prefers_field_wrapper_family selected_field_and_form_snippets_prefer_field_wrapper_family --status-level fail
 target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\field\ui-gallery-field-docs-smoke.json --dir target\fret-diag-field-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\debug\fret-ui-gallery.exe
 target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\field\ui-gallery-field-demo-label-control-action-state.json --dir target\fret-diag-field-demo-label-control-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\debug\fret-ui-gallery.exe
@@ -1517,3 +1525,148 @@ screenshots.
 - Pagination row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
   depth `DIS, FOCUS-VIS, OPEN, KEY, MOB, RTL, TEXT-MET, PAINT`, `Missing depth = -`, queues
   `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-26 Card regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/card_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Card diagnostic JSON scripts: PASS for docs-smoke, demo-action-state, demo screenshot,
+  compositions, description no-early-wrap, content button hitbox, image event cover, and meeting
+  notes list scripts.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail card`: PASS, 56 tests passed
+  and 1247 skipped. Existing `fret-ui` warnings remained: unexpected cfg
+  `unstable-retained-bridge` and unused `current_effective_opacity`.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail card`:
+  PASS, 15 tests passed and 136 skipped after a prior load/lock timeout was rerun.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail card`:
+  PASS, 3 tests passed and 73 skipped.
+- `cargo nextest run -p fret-ui-gallery --test card_docs_surface --status-level fail`: PASS, 4
+  tests passed after updating Card-only test expectations from the stale
+  `use fret::{UiChild, AppComponentCx};` import order to the current
+  `use fret::{AppComponentCx, UiChild};` snippet surface.
+- `cargo nextest run -p fret-ui-gallery --test card_rich_description_surface --status-level fail`:
+  PASS, 2 tests passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail card`:
+  PASS, 14 tests passed and 363 skipped.
+- `cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_card`: PASS, 11 tests
+  passed and 101 skipped after the first compile exceeded the command timeout and was allowed to
+  finish naturally before a visible rerun.
+- `target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\card\ui-gallery-card-demo-action-state.json --dir target\fret-diag-card-demo-action-state-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\debug\fret-ui-gallery.exe`:
+  PASS, run_id `1779762833890`, AI packet
+  `target/fret-diag-card-demo-action-state-matrix/sessions/1779762815568-118164/1779762833890/ai.packet`,
+  share zip
+  `target/fret-diag-card-demo-action-state-matrix/sessions/1779762815568-118164/share/1779762833890.zip`.
+- `target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\card\ui-gallery-card-docs-smoke.json --dir target\fret-diag-card-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\debug\fret-ui-gallery.exe`:
+  PASS, run_id `1779762865717`, AI packet
+  `target/fret-diag-card-docs-smoke-matrix/sessions/1779762858788-153676/1779762865717/ai.packet`,
+  share zip
+  `target/fret-diag-card-docs-smoke-matrix/sessions/1779762858788-153676/share/1779762865717.zip`.
+- `rustfmt --edition 2024 --check apps\fret-ui-gallery\tests\card_docs_surface.rs apps\fret-ui-gallery\tests\card_rich_description_surface.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs`:
+  PASS. `cargo fmt -p fret-ui-gallery --check` was not used as the Card proof because unrelated
+  pre-existing formatting diffs in `menubar_docs_surface.rs` and `resizable_docs_surface.rs`
+  blocked the package-level check.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json | Out-Null`:
+  PASS.
+- Matrix summary: 34 `regression_locked`, 1 `harness_hardening`, 19 `inventory_only`, and 5
+  `not_in_harness`.
+- Card row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `KEY, RTL, TEXT-MET, PAINT`, `Missing depth = -`, queues `repair=0, hardening=0, gate=0`,
+  `Next gap = state_depth_model_satisfied`.
+
+2026-05-26 Checkbox regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/checkbox_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Checkbox diagnostic JSON scripts: PASS for disabled action-state, required disabled group
+  action-state, table mixed-state action, and the checkbox semantics suite manifest.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail checkbox`:
+  PASS, 8 tests passed and 369 skipped after updating Checkbox-only page/source expectations from
+  stale base-docs wording to the current `content/docs/components/checkbox.mdx` and new-york-v4
+  registry source.
+- `cargo nextest run -p fret-ui-gallery --test checkbox_demo_surface --status-level fail`: PASS, 2
+  tests passed.
+- `cargo nextest run -p fret-ui-gallery --test checkbox_table_action_first_surface --status-level fail`:
+  PASS, 2 tests passed.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail checkbox`: PASS, 27 tests passed
+  and 1276 skipped. Existing `fret-ui` warnings remained: unexpected cfg
+  `unstable-retained-bridge` and unused `current_effective_opacity`.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail checkbox`:
+  PASS, 6 tests passed and 145 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail checkbox`:
+  PASS, 2 tests passed and 74 skipped.
+- Diagnostic suite finding: running
+  `target\debug\fretboard-dev.exe diag suite tools\diag-scripts\suites\ui-gallery-checkbox-semantics\suite.json --dir target\fret-diag-checkbox-semantics-matrix-rerun --session-auto --timeout-ms 900000 --ai-packet --reuse-launch --launch -- target\debug\fret-ui-gallery.exe`
+  is not the correct gate for this suite because the scripts intentionally use different
+  `FRET_UI_GALLERY_START_SECTION` values; the runner rejects that with conflicting
+  `meta.env_defaults`. The earlier reuse-launch attempt also showed why inherited section state can
+  hide virtualized targets.
+- `target\debug\fretboard-dev.exe diag suite tools\diag-scripts\suites\ui-gallery-checkbox-semantics\suite.json --dir target\fret-diag-checkbox-semantics-matrix-no-reuse --session-auto --timeout-ms 900000 --ai-packet --launch -- target\debug\fret-ui-gallery.exe`:
+  PASS without `--reuse-launch`, 3 scripts passed. Run ids: disabled action-state
+  `1779765613522`, required disabled group `1779765645478`, table mixed-state action
+  `1779765684887`. Suite summary:
+  `target/fret-diag-checkbox-semantics-matrix-no-reuse/sessions/1779765591228-116716/suite.summary.json`.
+- Suite evidence: 9 `bundle.schema2.json` files and 3 screenshots were written under
+  `target/fret-diag-checkbox-semantics-matrix-no-reuse/sessions/1779765591228-116716`; the suite
+  summary records 3 scripts with evidence, 0 focus mismatches, and no blocking reason counts.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- Matrix summary: 35 `regression_locked`, 1 `harness_hardening`, 18 `inventory_only`, and 5
+  `not_in_harness`.
+- Checkbox row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
+  depth `DIS, FOCUS-VIS, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+- `python -m json.tool` checks for the Checkbox packet, generated matrix JSON, `WORKSTREAM.json`,
+  the coverage manifest, and the promoted Checkbox diagnostic scripts: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `python tools/check_workstream_catalog.py`: PASS, 445 dedicated directories and 47 standalone
+  markdown files indexed.
+- `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\pages\checkbox.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs`:
+  PASS.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.
+
+2026-05-26 Collapsible regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/collapsible_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Collapsible diagnostic JSON scripts: PASS for docs smoke, basic double-click open/close,
+  repository-list demo, RTL open scroll, and notes bottom screenshot.
+- `cargo nextest run -p fret-ui-gallery --test collapsible_docs_surface --status-level fail`: PASS,
+  3 tests passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail collapsible`:
+  PASS, 4 tests passed and 373 skipped.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail collapsible`: PASS, 18 tests
+  passed and 1285 skipped. Existing `fret-ui` warnings remained: unexpected cfg
+  `unstable-retained-bridge` and unused `current_effective_opacity`.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail collapsible`:
+  PASS, 1 test passed and 150 skipped.
+- `target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\collapsible\ui-gallery-collapsible-docs-smoke.json --dir target\fret-diag-collapsible-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\debug\fret-ui-gallery.exe`:
+  PASS, run_id `1779767577902`, AI packet
+  `target/fret-diag-collapsible-docs-smoke-matrix/sessions/1779767556243-93380/1779767577902/ai.packet`,
+  share zip
+  `target/fret-diag-collapsible-docs-smoke-matrix/sessions/1779767556243-93380/share/1779767577902.zip`.
+- `target\debug\fretboard-dev.exe diag run tools\diag-scripts\ui-gallery\collapsible\ui-gallery-collapsible-basic-double-click-close.json --dir target\fret-diag-collapsible-basic-double-click-matrix-cargo --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- cargo run -p fret-ui-gallery --features gallery-dev`:
+  PASS, run_id `1779768290081`, AI packet
+  `target/fret-diag-collapsible-basic-double-click-matrix-cargo/sessions/1779767637298-152156/1779768290081/ai.packet`,
+  share zip
+  `target/fret-diag-collapsible-basic-double-click-matrix-cargo/sessions/1779767637298-152156/share/1779768290081.zip`,
+  screenshot
+  `target/fret-diag-collapsible-basic-double-click-matrix-cargo/sessions/1779767637298-152156/screenshots/1779768331488-ui-gallery-collapsible-basic-open/window-4294967297-tick-19-frame-19.png`.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- Matrix summary: 36 `regression_locked`, 1 `harness_hardening`, 17 `inventory_only`, and 5
+  `not_in_harness`.
+- Collapsible row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
+  depth `DIS, OPEN, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+- `python -m json.tool` checks for the Collapsible packet, generated matrix JSON,
+  `WORKSTREAM.json`, the coverage manifest, and promoted Collapsible diagnostic scripts: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `python tools/check_workstream_catalog.py`: PASS, 445 dedicated directories and 47 standalone
+  markdown files indexed.
+- `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\pages\collapsible.rs apps\fret-ui-gallery\tests\collapsible_docs_surface.rs`:
+  PASS.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.

@@ -4,7 +4,8 @@
     "name": "UI gallery: Checkbox table mixed-state action",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "env_defaults": {
-      "FRET_UI_GALLERY_START_PAGE": "checkbox"
+      "FRET_UI_GALLERY_START_PAGE": "checkbox",
+      "FRET_UI_GALLERY_START_SECTION": "Table"
     },
     "tags": [
       "ui_gallery",
@@ -16,7 +17,7 @@
       "action-state"
     ],
     "target_hints": [
-      "Starts directly on the Checkbox page.",
+      "Starts directly on the Checkbox page's Table section.",
       "Verifies that the table select-all checkbox exports explicit mixed/true checked-state semantics while keeping invoke enabled through row and select-all mutations."
     ]
   },
