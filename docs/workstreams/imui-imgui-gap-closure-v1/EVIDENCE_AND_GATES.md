@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Menu Item Keyboard Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI menu-item keyboard/navigation behavior moved out of the menu item
+interaction owner without changing popup menu roving focus, item-local shortcuts, menubar
+horizontal-arrow switching, command dispatch metadata, or response population.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard.rs` now owns item-local activate shortcut
+  handling, popup menu roving focus, menubar close-auto-focus suppression, and horizontal-arrow
+  menu switching.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` keeps enabled/action gating,
+  pressable props, activation dispatch, command dispatch metadata helper, and active-trigger
+  response population.
+- `tools/gate_imui_workstream_source.py` now requires the keyboard owner and rejects popup roving
+  focus, arrow-key handling, and menubar horizontal switching from drifting back into
+  `menu_controls/interaction.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation
+  interaction_menu_tabs::submenu_shortcuts
+  interaction_shortcuts::command_metadata::menu_item_command_uses_command_metadata_shortcut_and_gating
+  popup_hover::item_keyboard --no-fail-fast`: pass; 15 tests, 166 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Text Picker Popup Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI input-text picker popup item rendering and pick commit moved into a focused

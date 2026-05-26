@@ -154,6 +154,13 @@ horizontal-arrow switching, command dispatch source metadata, and `ResponseExt` 
 label text, and custom `pressable_hook` insertion point. Public menu item and command menu item
 facade APIs remain unchanged.
 
+2026-05-26 menu-item keyboard owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard.rs` now owns item-local activate shortcut
+handling, popup menu roving focus, menubar close-auto-focus suppression, and horizontal-arrow menu
+switching. `menu_controls/interaction.rs` keeps enabled/action gating, pressable props, activation
+dispatch, and response population. Public menu item, command menu item, submenu, and menubar
+keyboard behavior remain unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

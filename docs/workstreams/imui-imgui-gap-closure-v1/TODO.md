@@ -202,6 +202,13 @@ Last updated: 2026-05-26
       command dispatch source metadata, and menu-item `ResponseExt` population. The element file
       keeps row panel/indicator/shortcut/label visual assembly and the custom `pressable_hook`
       insertion point.
+- [x] Split IMUI menu-item keyboard/navigation behavior out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` into a private owner module
+      without changing popup menu roving focus, shortcut, or menubar horizontal-arrow behavior.
+      Result: `menu_controls/keyboard.rs` owns item-local activate shortcut handling, popup menu
+      roving focus, menubar close-auto-focus suppression, and horizontal-arrow menu switching.
+      `interaction.rs` now keeps enabled/action gating, pressable props, activation dispatch, and
+      response population.
 
 ## P0 - Source Baseline
 
