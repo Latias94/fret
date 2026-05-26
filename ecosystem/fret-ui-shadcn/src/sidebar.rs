@@ -3253,11 +3253,32 @@ impl SidebarMenuBadge {
         let text = decl_text::text_control_readout_compact_tabular_emphasis(cx, self.label)
             .inherit_foreground(fg);
 
-        let mut badge = shadcn_layout::container_hstack_centered(cx, props, Space::N0, vec![text]);
+        let badge_layout = props.layout;
+        let mut inner_props = props;
+        inner_props.layout = LayoutStyle {
+            size: SizeStyle {
+                width: Length::Fill,
+                height: Length::Fill,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        let mut badge =
+            shadcn_layout::container_hstack_centered(cx, inner_props, Space::N0, vec![text]);
         if let Some(test_id) = self.test_id {
             badge = badge.test_id(test_id);
         }
-        badge
+
+        let mut gate_layout = badge_layout;
+        gate_layout.overflow = Overflow::Visible;
+        cx.hit_test_gate_props(
+            fret_ui::element::HitTestGateProps {
+                layout: gate_layout,
+                hit_test: false,
+            },
+            move |_cx| [badge],
+        )
     }
 }
 
@@ -4449,6 +4470,13 @@ mod tests {
         match &el.kind {
             ElementKind::Container(props) => Some(props),
             _ => el.children.iter().find_map(find_first_container),
+        }
+    }
+
+    fn find_first_hit_test_gate(el: &AnyElement) -> Option<&fret_ui::element::HitTestGateProps> {
+        match &el.kind {
+            ElementKind::HitTestGate(props) => Some(props),
+            _ => el.children.iter().find_map(find_first_hit_test_gate),
         }
     }
 
@@ -8670,10 +8698,10 @@ mod tests {
             find_first_pressable(&ltr_action).expect("expected LTR menu action pressable");
         let rtl_action_pressable =
             find_first_pressable(&rtl_action).expect("expected RTL menu action pressable");
-        let ltr_badge_container =
-            find_first_container(&ltr_badge).expect("expected LTR menu badge container");
-        let rtl_badge_container =
-            find_first_container(&rtl_badge).expect("expected RTL menu badge container");
+        let ltr_badge_gate =
+            find_first_hit_test_gate(&ltr_badge).expect("expected LTR menu badge hit-test gate");
+        let rtl_badge_gate =
+            find_first_hit_test_gate(&rtl_badge).expect("expected RTL menu badge hit-test gate");
 
         assert_eq!(
             ltr_action_pressable.layout.inset.left,
@@ -8693,19 +8721,19 @@ mod tests {
         );
 
         assert_eq!(
-            ltr_badge_container.layout.inset.left,
+            ltr_badge_gate.layout.inset.left,
             fret_ui::element::InsetEdge::Auto
         );
         assert_ne!(
-            ltr_badge_container.layout.inset.right,
+            ltr_badge_gate.layout.inset.right,
             fret_ui::element::InsetEdge::Auto
         );
         assert_ne!(
-            rtl_badge_container.layout.inset.left,
+            rtl_badge_gate.layout.inset.left,
             fret_ui::element::InsetEdge::Auto
         );
         assert_eq!(
-            rtl_badge_container.layout.inset.right,
+            rtl_badge_gate.layout.inset.right,
             fret_ui::element::InsetEdge::Auto
         );
     }
@@ -9037,6 +9065,44 @@ mod tests {
             Some(&expected_style)
         );
         assert_eq!(text_element.inherited_foreground, Some(sidebar_fg(theme)));
+    }
+
+    #[test]
+    fn sidebar_menu_badge_is_hit_test_transparent_like_shadcn_pointer_events_none() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(96.0), Px(64.0)),
+        );
+
+        let element =
+            elements::with_element_cx(&mut app, window, bounds, "sidebar-menu-badge", |cx| {
+                SidebarMenuBadge::new("128").into_element(cx)
+            });
+
+        let gate = find_first_hit_test_gate(&element)
+            .expect("expected SidebarMenuBadge to install a hit-test gate");
+        assert!(
+            !gate.hit_test,
+            "expected SidebarMenuBadge to mirror shadcn `pointer-events-none`"
+        );
+        assert_eq!(
+            gate.layout.position,
+            fret_ui::element::PositionStyle::Absolute,
+            "expected the hit-test gate to own the badge absolute positioning"
+        );
+        assert_ne!(
+            gate.layout.inset.right,
+            fret_ui::element::InsetEdge::Auto,
+            "expected the LTR badge gate to remain anchored to the inline end"
+        );
+        assert!(
+            find_text_element(&element, "128").is_some(),
+            "expected hit-test transparency to preserve badge paint/text content"
+        );
     }
 
     #[test]

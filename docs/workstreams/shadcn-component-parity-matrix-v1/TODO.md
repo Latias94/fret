@@ -175,3 +175,8 @@ date: 2026-05-26
       recipe semantics, automatic/manual keyboard navigation, click selection, disabled/
       focus-visible/open/RTL/text/paint state depth, web-vs-Fret layout/text paint, Radix state
       proof, Gallery docs ordering, diagnostics JSON, and matrix packet evidence.
+- [x] SCPM-550: Promote Sidebar from harness_hardening to regression_locked by closing the
+      runtime-observable class-state blocker for `SidebarMenuBadge`: upstream
+      `pointer-events-none` now maps to `HitTestGate(false)` while preserving absolute inline-end
+      placement, compact tabular text paint, RTL anchoring, and the existing provider/mobile/
+      rail/menu/action diagnostics evidence.

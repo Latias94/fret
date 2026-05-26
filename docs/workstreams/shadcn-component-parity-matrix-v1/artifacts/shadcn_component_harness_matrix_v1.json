@@ -2645,10 +2645,10 @@
         "source_refs": true,
         "upstream_dom_snapshot": true
       },
-      "gate_queue_count": 1,
-      "hardening_queue_count": 1,
+      "gate_queue_count": 0,
+      "hardening_queue_count": 0,
       "harness_report_count": 1,
-      "harness_status": "harness_hardening",
+      "harness_status": "regression_locked",
       "implementation_status": "Present",
       "inventory_kind": "registry",
       "likely_owner_layer": "fret-ui-shadcn",
@@ -2687,7 +2687,7 @@
         "sidebar.docs-path.desktop-mobile"
       ],
       "target_states": [
-        "docs path app shell, provider shortcut, controlled open sync, mobile sheet, hover rail directional cursor, RTL icon, dropdown open, menu-button chrome, wasm desktop open cookie persistence, and known class-state hardening gaps"
+        "docs path app shell, provider shortcut, controlled open sync, mobile sheet, hover rail directional cursor, RTL icon, dropdown open, menu-button chrome, wasm desktop open cookie persistence, and badge pointer-events transparency"
       ],
       "target_viewport_classes": [
         "mobile_effective_375x240"
@@ -3881,9 +3881,8 @@
       "text_metrics": 34
     },
     "status_counts": {
-      "harness_hardening": 1,
       "not_in_harness": 5,
-      "regression_locked": 53
+      "regression_locked": 54
     }
   }
 }

@@ -35,8 +35,8 @@ Current golden parity snapshot (new-york-v4):
 - Keys referenced by tests: `578/578` (`100%`, tracked-only, normalized `.open`) as of 2026-02-03
   - Note: this is **breadth coverage** (every golden key is gated somewhere), not full 1:1 parity across
   viewports, DPIs, fonts, and interaction state machines.
-- Machine harness matrix as of 2026-05-27: 59 shadcn registry/non-registry surfaces tracked, 53
-  component slices `regression_locked`, 1 component slice in `harness_hardening`, 0 implemented
+- Machine harness matrix as of 2026-05-27: 59 shadcn registry/non-registry surfaces tracked, 54
+  component slices `regression_locked`, 0 component slices in `harness_hardening`, 0 implemented
   surfaces still `inventory_only`, and 5 surfaces currently `not_in_harness`.
 
 ## Near-Term Roadmap (shadcn-web v4/new-york-v4)

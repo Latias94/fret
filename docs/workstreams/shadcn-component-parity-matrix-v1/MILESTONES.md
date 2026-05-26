@@ -1211,3 +1211,25 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Tabs `DIS`, `FOCUS-VIS`, `OPEN`, `KEY`, `RTL`, `TEXT-MET`, and
   `PAINT` evidence; the component has no required state-depth gaps.
+
+## M48 - Regression-Lock Sidebar
+
+Status: complete on 2026-05-27.
+
+`sidebar.docs-path.desktop-mobile` is promoted from `harness_hardening` to `regression_locked` after
+closing the remaining runtime-observable Sidebar class-state blocker for `SidebarMenuBadge`.
+
+Completed criteria:
+
+- `SidebarMenuBadge` now represents the upstream `pointer-events-none` class with a
+  `HitTestGate(false)` wrapper while preserving absolute inline-end placement and badge text paint.
+- The focused badge gate covers hit-test transparency, RTL inline-end anchoring, and compact
+  tabular readout styling together with the existing action/badge peer-size and active peer
+  foreground gates.
+- The Sidebar packet now reports zero repair, hardening, and gate queues. Full React
+  DOM/data-slot/class-name and API-shape one-to-one parity remains an audit portability note rather
+  than a matrix-blocking Fret runtime queue.
+- The regenerated matrix reports 54 `regression_locked`, 0 `harness_hardening`, 0
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage continues to record Sidebar `HOV`, `FOCUS-VIS`, `DRAG`, `OPEN`, `KEY`,
+  `MOB`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.

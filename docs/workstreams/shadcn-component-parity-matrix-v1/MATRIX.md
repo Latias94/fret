@@ -64,9 +64,8 @@ State-depth legend:
     "text_metrics": 34
   },
   "status_counts": {
-    "harness_hardening": 1,
     "not_in_harness": 5,
-    "regression_locked": 53
+    "regression_locked": 54
   }
 }
 ```
@@ -120,7 +119,7 @@ State-depth legend:
 | select | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | OPEN, KEY, MOB, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | separator | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | MOB, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | sheet | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV, RESP | DIS, HOV, FOCUS-VIS, OPEN, MOB, PAINT | KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
-| sidebar | registry | Present | harness_hardening | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP | HOV, FOCUS-VIS, DRAG, OPEN, KEY, MOB, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=1, gate=1 | state_depth_model_satisfied |
+| sidebar | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP | HOV, FOCUS-VIS, DRAG, OPEN, KEY, MOB, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | skeleton | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | slider | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, HOV, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | sonner | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP | HOV, DRAG, OPEN, MOB, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |

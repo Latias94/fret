@@ -795,16 +795,33 @@ The harness-hardening seed covers:
 - interaction diagnostics: provider shortcut toggle, controlled open sync, mobile sheet Escape
   focus restore, mobile controlled/shortcut paths, menu-button chrome fill, and AppSidebar
   dropdown relation/action state are represented by existing scripts and packet evidence.
-- explicit hardening queues: wasm desktop `open` cookie persistence is now implemented and tested,
-  but the audit still records full React API-shape and the residual peer/group/data-* class-state
-  matrix as incomplete, so the matrix must not claim `regression_locked` yet.
+- explicit hardening queues at seed time: wasm desktop `open` cookie persistence was implemented and
+  tested, but the audit still recorded full React API-shape and residual peer/group/data-* class-state
+  parity as incomplete, so the seed did not claim `regression_locked`.
 
-The matrix row now carries `SRC`, `UP-DOM`, `LAYOUT`, `SEM`, `TEXT`, `BEHAV`, and `RESP`; its current
-state-depth signals are `HOV`, `FOCUS-VIS`, `OPEN`, `KEY`, `MOB`, `RTL`, `TEXT-MET`, and `PAINT`,
-with `Missing depth = ok` and `Next gap = state_depth_model_satisfied`. Queue counts are now
-`repair=0`, `hardening=1`, and `gate=1`. The next machine-actionable gap is to close or split the
-remaining React API-shape / peer/group/data-* class-state hardening lane before promoting Sidebar to
-`regression_locked`.
+At seed time the matrix row carried `SRC`, `UP-DOM`, `LAYOUT`, `SEM`, `TEXT`, `BEHAV`, and `RESP`;
+state-depth signals were `HOV`, `FOCUS-VIS`, `OPEN`, `KEY`, `MOB`, `RTL`, `TEXT-MET`, and `PAINT`,
+with `Missing depth = ok` and `Next gap = state_depth_model_satisfied`. Seed queue counts were
+`repair=0`, `hardening=1`, and `gate=1`; the closure below removes that remaining runtime
+hardening queue.
+
+### Sidebar Regression-Lock Closure
+
+`sidebar.docs-path.desktop-mobile` is now promoted from `harness_hardening` to `regression_locked`.
+The closure keeps the prior provider/mobile/rail/menu evidence and adds the last runtime-observable
+badge class-state gate:
+
+- upstream truth: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sidebar.tsx`
+  defines `SidebarMenuBadge` with `pointer-events-none`, absolute inline-end placement, active-peer
+  foreground, and tabular text styling.
+- recipe closure: `SidebarMenuBadge` now wraps the badge paint surface in `HitTestGate(false)`, so
+  the badge is transparent to hit-testing while its layout, text, and paint remain present.
+- focused gate: `sidebar_menu_badge_is_hit_test_transparent_like_shadcn_pointer_events_none`,
+  `sidebar_menu_action_and_badge_anchor_to_inline_end_in_rtl`, and
+  `sidebar_menu_badge_uses_shared_compact_tabular_readout_role` pass together.
+- packet closure: `sidebar_agent_packet_p0_v1.json` now has `repair=0`, `hardening=0`, and `gate=0`.
+  Full React DOM/data-slot/class-name and API-shape one-to-one parity remains a non-blocking
+  portability note instead of a Fret runtime hardening queue.
 
 ## Interpretation
 
@@ -2239,3 +2256,26 @@ screenshots.
 - Tabs row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
   `DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
   `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Sidebar regression-lock validation:
+
+- `rustfmt --edition 2024 --check ecosystem\fret-ui-shadcn\src\sidebar.rs`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_badge_is_hit_test_transparent_like_shadcn_pointer_events_none sidebar_menu_action_and_badge_anchor_to_inline_end_in_rtl sidebar_menu_badge_uses_shared_compact_tabular_readout_role --status-level fail`:
+  PASS, 3 tests passed and 1303 skipped.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail sidebar`: PASS, 83 tests passed
+  and 1223 skipped.
+- `python -m json.tool docs\workstreams\shadcn-component-parity-matrix-v1\artifacts\sidebar_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- `python -m json.tool tools\parity-discovery\manifests\shadcn_parity_coverage_v2.json | Out-Null`:
+  PASS.
+- `python -m json.tool docs\workstreams\shadcn-component-parity-matrix-v1\WORKSTREAM.json | Out-Null`:
+  PASS.
+- `python tools\parity-discovery\shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool docs\workstreams\shadcn-component-parity-matrix-v1\artifacts\shadcn_component_harness_matrix_v1.json | Out-Null`:
+  PASS.
+- Matrix summary: 54 `regression_locked`, 0 `harness_hardening`, 0 `inventory_only`, and 5
+  `not_in_harness`.
+- Sidebar row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP`,
+  depth `HOV, FOCUS-VIS, DRAG, OPEN, KEY, MOB, RTL, TEXT-MET, PAINT`, `Missing depth = ok`,
+  queues `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
