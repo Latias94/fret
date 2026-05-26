@@ -52,6 +52,14 @@ Last updated: 2026-05-26
       `hover/timers.rs` owns deterministic per-element hover timer tokens, and
       `hover/long_press.rs` owns long-press timer emission. The root hover runtime file keeps the
       exported query helpers and local response-state assembly.
+- [x] Split IMUI interaction-runtime drag internals out of
+      `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag.rs` into private owner modules
+      without changing pressable drag, pointer-region drag/resize, active-item, or long-press
+      behavior.
+      Result: `drag/active_item.rs` owns active-item set/clear helpers, `drag/long_press_timer.rs`
+      owns long-press arm/cancel, `drag/pointer_region.rs` owns pointer-region drag lifecycle, and
+      `drag/response.rs` owns `DragResponse` population. The root drag runtime file keeps
+      drag-kind/threshold helpers and the pressable drag state machine.
 
 ## P0 - Source Baseline
 

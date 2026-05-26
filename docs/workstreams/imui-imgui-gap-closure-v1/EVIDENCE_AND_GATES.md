@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Interaction Runtime Drag Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI drag runtime internals moved into focused private owners without changing
+pressable drag, pointer-region drag/resize, active-item, or long-press behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/active_item.rs` now owns active-item
+  mark/clear helpers.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/long_press_timer.rs` now owns long-press
+  timer arm/cancel for pressable drag.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pointer_region.rs` now owns
+  pointer-region drag setup, thresholded movement, cancellation, pointer capture release, and
+  finish handling.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/response.rs` now owns `DragResponse`
+  population, delta/total tracking, and drag transient reads.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag.rs` keeps drag-kind/threshold helpers
+  and the pressable drag move/down/up state machine.
+- `tools/gate_imui_workstream_source.py` now requires the drag sub-owners and forbids active-item,
+  pointer-region, long-press timer, and response bodies from drifting back into the root drag
+  runtime file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_drag --no-fail-fast`: pass; 8 tests, 173 skipped.
+- `cargo nextest run -p fret-imui interaction_press --no-fail-fast`: pass; 9 tests, 172 skipped.
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass; 25 tests, 156 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Interaction Runtime Hover Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI hover runtime internals moved into focused private owners without changing

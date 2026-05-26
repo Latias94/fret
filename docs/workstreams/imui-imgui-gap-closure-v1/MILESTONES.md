@@ -80,6 +80,14 @@ timer emission. `interaction_runtime/hover.rs` keeps the exported hover query he
 block read, local delay state accumulation, and response readout. The public hover and long-press
 behavior remains unchanged.
 
+2026-05-26 interaction-runtime drag owner-split result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/active_item.rs` now owns active-item
+set/clear helpers, `drag/long_press_timer.rs` owns long-press arm/cancel, `drag/pointer_region.rs`
+owns pointer-region drag/resize lifecycle, and `drag/response.rs` owns pressable drag response
+population. `interaction_runtime/drag.rs` keeps drag-kind/threshold helpers and the pressable drag
+state machine. Pressable drag, floating-window resize/move, active-item blocking, and long-press
+behavior remain unchanged.
+
 2026-05-26 menu-family menu owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now owns top-level
 `begin_menu_with_options(...)` menu open/close orchestration, trigger wiring, menubar active-menu
