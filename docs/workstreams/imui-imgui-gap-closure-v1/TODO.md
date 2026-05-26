@@ -151,6 +151,14 @@ Last updated: 2026-05-27
       `container_methods/collections.rs` owns list-box / table / virtual-list dispatch, and
       `container_methods/menu_tabs.rs` owns menu-bar / tab-bar dispatch. The root container-methods
       file is now a thin re-export index.
+- [x] Split IMUI facade container wrapper methods out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs` into private owner
+      modules without changing `ImUiFacade` method names or behavior.
+      Result: `container_wrappers/flow.rs` owns item-flow / same-line / dummy / spacing / indent
+      wrappers, `container_wrappers/layout.rs` owns horizontal / vertical / grid / scroll /
+      child-region wrappers, `container_wrappers/collections.rs` owns list-box / table /
+      virtual-list wrappers, and `container_wrappers/menu_tabs.rs` owns menu-bar / tab-bar
+      wrappers. The root container-wrappers file is now a thin module index.
 - [x] Split IMUI widget response types out of
       `ecosystem/fret-ui-kit/src/imui/response/widgets.rs` into private owner modules without
       changing response type names or accessors.

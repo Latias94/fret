@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Facade Container Wrapper Owner-Split Evidence - 2026-05-27
+
+Claim verified: root `ImUiFacade` container wrapper methods moved into private flow, layout,
+collection, and menu/tab wrapper owners without changing method names, focus forwarding, list-box
+label normalization, table/virtual-list responses, or child-region/menu/tab composition behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs` is now a thin module index.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/flow.rs` owns `items`,
+  `same_line`, `dummy`, `spacing`, and `indent` root wrappers.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/layout.rs` owns horizontal,
+  vertical, grid, scroll, and child-region root wrappers.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections.rs` owns list-box,
+  table, and virtual-list root wrappers.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/menu_tabs.rs` owns menu-bar and
+  tab-bar root wrappers.
+- `tools/gate_imui_workstream_source.py` now requires the wrapper index/sub-owner shape and rejects
+  container behavior from drifting back into the root wrapper index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui composition::layout_collections --no-fail-fast`: pass; 28 tests,
+  153 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Debug-Draw Options Sub-Owner Split Evidence - 2026-05-27
 
 Claim verified: public debug draw root/interaction options, stroke/path-style policy,

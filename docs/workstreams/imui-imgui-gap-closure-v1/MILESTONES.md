@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 facade container-wrapper owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs` is now a thin module index.
+Flow wrappers live in `container_wrappers/flow.rs`, layout wrappers live in
+`container_wrappers/layout.rs`, collection wrappers live in `container_wrappers/collections.rs`,
+and menu/tab wrappers live in `container_wrappers/menu_tabs.rs`. `ImUiFacade` method names and
+forwarding behavior remain unchanged, while the wrapper owner structure now mirrors the existing
+`container_methods` split.
+
 2026-05-27 debug-draw options sub-owner split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options.rs` is now a thin module/re-export
 index. Root canvas and interaction options live in `options/root.rs`, stroke style/path conversion
