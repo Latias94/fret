@@ -39,6 +39,12 @@ Bezier, arc, fast-arc, and elliptical-arc authoring methods plus their sampling/
 `path_builder.rs` keeps the path type, point-list basics, stroke/fill command recording, and
 point-count/empty accessors. The public `ImUiDebugDrawPath` API remains unchanged.
 
+2026-05-27 debug-draw paint media owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` now owns image, image-region,
+image-quad, rounded-image, rounded-image-region, SVG image, and SVG mask-icon painting. Root
+`paint.rs` keeps clip-stack balancing and command-class dispatch to media vs shape painters.
+Debug-draw scene output and public authoring APIs remain unchanged.
+
 2026-05-26 button visual owner-split result:
 `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` now owns button variant layout,
 accessibility labels, arrow glyph/label mapping, and visual chrome/content assembly.

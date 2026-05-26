@@ -534,6 +534,9 @@ Readiness order for the next locally testable review slices:
    `debug_draw_controls/path_builder/shape_methods.rs` now owns rect, Bezier, arc, fast-arc, and
    elliptical-arc authoring methods. `path_builder.rs` keeps point basics, stroke/fill recording,
    and path state accessors.
+   2026-05-27 debug-draw paint media owner split: `debug_draw_controls/paint/media.rs` now owns
+   image, image-region, image-quad, rounded-image, rounded-image-region, SVG image, and SVG
+   mask-icon painting. Root `paint.rs` keeps clip-stack balancing and media/shape command dispatch.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,

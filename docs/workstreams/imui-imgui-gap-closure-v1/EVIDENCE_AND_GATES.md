@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Debug-Draw Paint Media Owner-Split Evidence - 2026-05-27
+
+Claim verified: debug draw image/SVG media painting moved out of the root paint dispatcher without
+changing clip-stack balancing, shape command dispatch, image opacity/UV sanitization, rounded-image
+clip behavior, SVG paint behavior, or debug-draw public authoring APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs` keeps clip-stack balancing and
+  command-class dispatch to media vs shape painters.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` owns image, image-region,
+  image-quad, rounded-image, rounded-image-region, SVG image, and SVG mask-icon painting.
+- `tools/gate_imui_workstream_source.py` now requires the media owner and rejects image/SVG paint
+  helpers from drifting back into root `paint.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke
+  --no-fail-fast`: pass; 1 test.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests
+  --no-fail-fast`: pass; 38 tests, 651 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Path-Builder Shape-Method Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug draw path-builder rect/Bezier/arc authoring methods moved out of the root
