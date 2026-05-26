@@ -83,6 +83,13 @@ Last updated: 2026-05-26
       `response/widgets/tabs.rs` owns tab responses, `response/widgets/table.rs` owns table
       responses, and `response/widgets/virtual_list.rs` owns virtual-list responses. The root
       `widgets.rs` file is now a thin module/re-export index beside the existing child-region owner.
+- [x] Split IMUI text-control option types out of
+      `ecosystem/fret-ui-kit/src/imui/options/controls/text.rs` into private owner modules without
+      changing option type names, fields, defaults, or re-export paths.
+      Result: `text/filters.rs` owns named/custom input filters, `text/input.rs` owns
+      `InputTextMode` and `InputTextOptions`, `text/picker.rs` owns picker filter/default popup
+      options, and `text/textarea.rs` owns textarea submit-key policy and defaults. The root
+      `text.rs` file is now a thin module/re-export index.
 
 ## P0 - Source Baseline
 

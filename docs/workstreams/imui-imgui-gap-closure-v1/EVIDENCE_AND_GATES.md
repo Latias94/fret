@@ -3,6 +3,49 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Text Options Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI text-control option records moved into focused private owners without changing
+public option names, fields, defaults, or top-level re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/filters.rs` now owns `InputTextFilters`,
+  named filter helpers, decimal/scientific character policy, and `InputTextCustomFilter`.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/input.rs` now owns `InputTextMode` and
+  `InputTextOptions`, including text-field semantics and command-policy defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/picker.rs` now owns
+  `InputTextPickerFilter` and `InputTextPickerOptions`, including default popup sizing and picker
+  behavior flags.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/textarea.rs` now owns
+  `TextAreaSubmitKey` and `TextAreaOptions`, including multiline submit/cancel defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text.rs` is now a 9-line module/re-export index,
+  preserving the existing public paths through `imui::options`, `imui::options::controls`, and the
+  root `imui` facade exports.
+- `tools/gate_imui_workstream_source.py` now requires the split text-option owners and forbids
+  filter/input/picker/textarea bodies from drifting back into the root `text.rs` file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib text_controls::tests --no-fail-fast`:
+  pass; 3 tests, 685 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_textarea_smoke --no-fail-fast`:
+  pass; 1 test.
+- `cargo nextest run -p fret-imui models_text --no-fail-fast`: pass; 29 tests, 152 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- `cargo nextest run -p fret-ui-kit --features imui --lib text_controls::tests --no-fail-fast`
+  initially waited on a package-cache file lock, then completed successfully in the same run.
+
 ## Widget Response Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI widget response records moved into focused private owners without changing
