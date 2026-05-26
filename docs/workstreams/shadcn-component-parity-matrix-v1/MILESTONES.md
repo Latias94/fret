@@ -753,3 +753,29 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Command `DIS`, `FOCUS-VIS`, `OPEN`, `KEY`, `RTL`, `TEXT-MET`,
   and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M32 - Promote Empty
+
+Status: complete on 2026-05-26.
+
+`empty.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after connecting
+the current shadcn Empty docs path, new-york-v4 source, empty demo/background/outline/icon/avatar
+upstream goldens, recipe typography and responsive-padding tests, web-vs-Fret layout gates, Gallery
+docs-surface checks, action-state diagnostics, text/paint scripts, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Empty docs path, new-york-v4 recipe source, demo/outline/
+  background/avatar/avatar-group/input-group/icon examples, and tracked empty upstream goldens.
+- The Empty packet records the owner split: `fret-ui-shadcn` owns root dashed chrome,
+  responsive `p-6 md:p-12` container padding, media icon variant, title/description text styling,
+  and slot composition; Gallery owns preview height, background paint, action/link wiring,
+  input-group width, docs teaching order, RTL follow-up composition, and runtime diagnostics.
+- The Gallery page now keeps the upstream docs path through `API Reference` before the Fret-only
+  RTL follow-up, matching the current upstream Empty docs instead of stale base-path assumptions.
+- `empty_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 38 `regression_locked`, 1 `harness_hardening`, 15
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Empty `KEY`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
+  component has no required state-depth gaps.

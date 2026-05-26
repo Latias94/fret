@@ -39,35 +39,35 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 38,
-    "fret_layout": 38,
-    "fret_text_paint": 18,
-    "interaction_script": 38,
+    "fret_bundle_semantics": 39,
+    "fret_layout": 39,
+    "fret_text_paint": 19,
+    "interaction_script": 39,
     "responsive_viewport": 9,
-    "source_refs": 38,
-    "upstream_dom_snapshot": 38
+    "source_refs": 39,
+    "upstream_dom_snapshot": 39
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
   "registry_component_count": 54,
   "state_depth_component_counts": {
     "disabled": 15,
-    "drag": 2,
+    "drag": 3,
     "focus_visible": 12,
     "hover": 11,
-    "keyboard": 21,
-    "mobile": 13,
+    "keyboard": 22,
+    "mobile": 14,
     "open": 23,
-    "paint_token": 36,
+    "paint_token": 37,
     "pressed": 1,
-    "rtl": 18,
-    "text_metrics": 18
+    "rtl": 19,
+    "text_metrics": 19
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 16,
+    "inventory_only": 15,
     "not_in_harness": 5,
-    "regression_locked": 37
+    "regression_locked": 38
   }
 }
 ```
@@ -99,7 +99,7 @@ State-depth legend:
 | dialog | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | DIS, HOV, FOCUS-VIS, OPEN, PAINT | KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | drawer | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV, RESP | OPEN, MOB, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | dropdown-menu | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV, RESP | OPEN, KEY, MOB, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
-| empty | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| empty | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DRAG, KEY, MOB, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | field | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP | MOB, TEXT-MET, PAINT | - | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | form | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, RTL, TEXT-MET, PAINT | - | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | hover-card | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | HOV, OPEN, PAINT | KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |

@@ -18,7 +18,7 @@ pub(super) fn preview_empty(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         "`empty(|cx| ui::children![cx; ...])` and the `empty_*` helper family remain available as typed lazy-builder conveniences when eager child construction would be awkward.",
         "`empty_media(...).variant(...)` covers the documented `default` and `icon` media variants without widening the public surface.",
         "The gallery `Demo` and `RTL` previews now follow the upstream `new-york-v4` teaching shape more closely: icon media, a centered two-button action row, and a semantic link CTA rendered through `ButtonRender::Link` instead of a generic `asChild` escape hatch.",
-        "Gallery section order now mirrors the upstream Empty docs first: `Demo`, `Usage`, the example set through `RTL`, then `API Reference`.",
+        "Gallery section order mirrors the upstream Empty docs first: `Demo`, `Usage`, the example set through `InputGroup`, then `API Reference`; `RTL` remains an explicit Fret follow-up.",
         "Current recipe defaults intentionally remain aligned to the in-repo `new-york-v4` web geometry gates (`p-6 md:p-12`, `gap-6`, dashed card chrome) rather than re-translating the base source classes one-to-one in this pass.",
         "Caller-owned refinements stay explicit for preview height, background paint, inline content layout, embedded `InputGroup` width, and page/grid placement constraints.",
         "No extra generic `asChild` / `compose()` surface is needed here: the existing children-based slot API already matches the upstream composition model.",
@@ -58,7 +58,7 @@ pub(super) fn preview_empty(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         Some(
             "Preview mirrors the shadcn Empty docs path first, then records the current Fret ownership and source-of-truth choices in API Reference.",
         ),
-        vec![demo, usage, outline, background, avatar, avatar_group, input_group, rtl, api_reference],
+        vec![demo, usage, outline, background, avatar, avatar_group, input_group, api_reference, rtl],
     )
     .test_id("ui-gallery-empty-component");
 

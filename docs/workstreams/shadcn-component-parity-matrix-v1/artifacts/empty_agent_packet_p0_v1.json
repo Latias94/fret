@@ -1,0 +1,310 @@
+{
+  "schema_version": 1,
+  "component": "empty",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual empty docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/empty.rs + ecosystem/fret-ui-shadcn/tests/{empty_responsive_padding.rs,web_vs_fret_empty.rs,web_vs_fret_layout/empty.rs} + apps/fret-ui-gallery/src/ui/pages/empty.rs + apps/fret-ui-gallery/src/ui/snippets/empty/*.rs + apps/fret-ui-gallery/tests/empty_docs_surface.rs + apps/fret-ui-gallery/src/driver/render_flow.rs + tools/diag-scripts/ui-gallery/empty/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/empty_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Empty component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/suites/ui-gallery-empty-demo-action-state/suite.json | Out-Null; Get-ChildItem -Path tools/diag-scripts/ui-gallery/empty -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Empty docs smoke, demo action-state, action-row layout, background/outline screenshots, and RTL diagnostic scripts parse cleanly."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail empty",
+      "status": "pass",
+      "scope": "Empty recipe tests cover title children typography, shared text role contracts, and description scoped text styling.",
+      "tests_passed": 12,
+      "tests_skipped": 1291
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test empty_responsive_padding --status-level fail",
+      "status": "pass",
+      "scope": "Empty responsive padding switches at the Tailwind md container-query threshold instead of the viewport width.",
+      "tests_passed": 1,
+      "tests_skipped": 0
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail empty",
+      "status": "pass",
+      "scope": "Empty web-vs-Fret layout gates cover demo/background/outline geometry and icon-card grid geometry.",
+      "tests_passed": 6,
+      "tests_skipped": 145
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_empty --status-level fail",
+      "status": "pass",
+      "scope": "Targeted Empty golden smoke checks keep all tracked empty-* new-york-v4 snapshots tied to dashed rounded p-6 containers.",
+      "tests_passed": 1,
+      "tests_skipped": 0
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test empty_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery Empty docs-surface tests keep action-state anchors, diagnostic scripts, and upstream docs order before the Fret-only RTL follow-up aligned.",
+      "tests_passed": 3,
+      "tests_skipped": 0
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_empty_demo_keeps_upstream_action_row_and_link_separation",
+      "status": "pass",
+      "scope": "Gallery render-flow proof keeps the Empty Demo action row on one line and the link CTA separated below it.",
+      "tests_passed": 1,
+      "tests_skipped": 111
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.empty.demo.light.vp1440x900",
+      "snapshot": "empty-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.empty.background.light.vp1440x900",
+      "snapshot": "empty-background",
+      "theme": "light",
+      "mode": "static",
+      "variant": "background",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.empty.outline.light.vp1440x900",
+      "snapshot": "empty-outline",
+      "theme": "light",
+      "mode": "static",
+      "variant": "outline",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.empty.icon.light.vp1440x900",
+      "snapshot": "empty-icon",
+      "theme": "light",
+      "mode": "static",
+      "variant": "icon-grid",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": [
+    {
+      "id": "fret.empty.recipe",
+      "layer": "recipe",
+      "owner": "fret-ui-shadcn",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/empty.rs",
+        "ecosystem/fret-ui-shadcn/tests/empty_responsive_padding.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/empty.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_empty.rs"
+      ]
+    },
+    {
+      "id": "fret.empty.gallery",
+      "layer": "app_demo",
+      "owner": "fret-ui-gallery",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/empty.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/empty/*.rs",
+        "apps/fret-ui-gallery/tests/empty_docs_surface.rs",
+        "apps/fret-ui-gallery/src/driver/render_flow.rs"
+      ]
+    },
+    {
+      "id": "fret.empty.diagnostics",
+      "layer": "runner",
+      "owner": "diagnostics_surface",
+      "evidence_refs": [
+        "tools/diag-scripts/suites/ui-gallery-empty-demo-action-state/suite.json",
+        "tools/diag-scripts/ui-gallery/empty/*.json"
+      ]
+    }
+  ],
+  "summary": {
+    "status_counts": {
+      "regression_locked": 1
+    },
+    "covered_axes": [
+      "source_refs",
+      "upstream_dom_snapshot",
+      "fret_layout",
+      "fret_bundle_semantics",
+      "fret_text_paint",
+      "interaction_script"
+    ],
+    "state_depth": [
+      "keyboard",
+      "rtl",
+      "text_metrics",
+      "paint_token"
+    ],
+    "layout_sidecar_count": 2,
+    "bundle_schema2_count": 1,
+    "layout_test_id_count": 9,
+    "bundle_semantics_test_id_count": 6,
+    "measured_test_id_count": 9,
+    "upstream_dom_snapshot_count": 7,
+    "upstream_dom_target_count": 7,
+    "upstream_context_count": 4,
+    "upstream_dom_context_count": 7,
+    "upstream_live_fact_count": 4,
+    "upstream_semantics_fact_count": 2,
+    "upstream_interaction_fact_count": 1,
+    "fret_live_fact_count": 12,
+    "fret_semantics_fact_count": 6,
+    "fret_interaction_fact_count": 5,
+    "fret_text_paint_fact_count": 5,
+    "fret_text_paint_direct_fact_count": 3,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 6,
+    "fret_text_paint_row_count": 2,
+    "fret_text_paint_association_row_count": 1,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 4,
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0
+  },
+  "live_facts": {
+    "owner_split": [
+      "The Empty recipe owns root dashed chrome, responsive p-6/md:p-12 container padding, media icon variant chrome, title typography, description muted text, and slot composition.",
+      "Gallery owns preview height, background paint, action/link wiring, input-group width, docs teaching order, and the Fret-only RTL follow-up.",
+      "No mechanism-layer change is required for Empty; child Button/Link controls own focus, keyboard, and activation semantics."
+    ],
+    "source_truth": [
+      "Current docs/source truth is the main-worktree repo-ref new-york-v4 Empty docs, recipe, and examples.",
+      "The Gallery page mirrors upstream docs through API Reference before adding the Fret-only RTL follow-up.",
+      "The recipe intentionally stays aligned with the in-repo new-york-v4 web goldens rather than stale base-path refs."
+    ],
+    "regression_gates": [
+      "web_vs_fret_layout empty covers demo/background/outline/icon-grid geometry.",
+      "web_vs_fret_empty keeps the tracked empty-* golden family present.",
+      "empty_docs_surface and render_flow gates cover action-state anchors, docs order, and action-row/link CTA layout."
+    ]
+  },
+  "parts": [
+    {
+      "part_id": "empty_root_chrome",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/empty.rs",
+        "ecosystem/fret-ui-shadcn/tests/empty_responsive_padding.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/empty.rs"
+      ],
+      "facts": [
+        "Root layout uses min-w-0/w-full and a vertical center stack.",
+        "Dashed rounded card chrome, p-6/md:p-12 padding, gap-6, and border/text tokens match the tracked new-york-v4 geometry gates.",
+        "Container-query padding follows the Empty container width so editor panel resizing matches the intended responsive behavior."
+      ]
+    },
+    {
+      "part_id": "empty_slot_typography",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/empty.rs"
+      ],
+      "facts": [
+        "EmptyHeader keeps max-w-sm, gap-2, centered column layout.",
+        "EmptyMedia variant=icon owns muted background, foreground text, size-10, rounded-lg, and centered child layout.",
+        "EmptyTitle and EmptyDescription apply source-aligned text metrics, balance/wrap behavior, muted foreground, and scoped inherited text styling."
+      ]
+    },
+    {
+      "part_id": "empty_gallery_docs_surface",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/empty.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/empty/*.rs",
+        "apps/fret-ui-gallery/tests/empty_docs_surface.rs"
+      ],
+      "facts": [
+        "The Gallery page follows Demo, Usage, Outline, Background, Avatar, Avatar Group, InputGroup, and API Reference before the Fret-only RTL follow-up.",
+        "Usage leads with direct Empty/EmptyHeader/EmptyMedia/EmptyContent compound children to match the upstream JSX slot model.",
+        "Demo keeps folder-code icon media, a centered two-button action row, and a semantic link CTA."
+      ]
+    },
+    {
+      "part_id": "empty_action_and_text_paint",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-demo-action-state.json",
+        "tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-demo-actions-layout-sidecar.json",
+        "tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-background-gradient-screenshot.json",
+        "tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-outline-screenshot.json",
+        "tools/diag-scripts/ui-gallery/empty/ui-gallery-empty-rtl-code-tab-scroll-range.json"
+      ],
+      "facts": [
+        "Child buttons and link CTA carry the focus and activation semantics; Empty itself remains structural.",
+        "Diagnostic scripts cover action-state anchors, layout sidecars, screenshots, RTL, text metrics, and paint/token output.",
+        "The render-flow test keeps the action row and link CTA visually separated."
+      ]
+    },
+    {
+      "part_id": "empty_packet_and_matrix_closure",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/empty_agent_packet_p0_v1.json",
+        "tools/parity-discovery/shadcn_component_harness_matrix.py",
+        "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json"
+      ],
+      "facts": [
+        "The packet has zero repair, hardening, and gate queues.",
+        "The manifest target ties current source refs, upstream snapshots, Fret tests, diagnostics scripts, and the packet together.",
+        "The required Empty state depth covers keyboard, RTL, text metrics, and paint token evidence."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Empty docs-path slice with current main-worktree repo-ref source refs, empty-* web goldens, recipe typography/responsive-padding tests, web-vs-Fret layout gates, Gallery docs-surface checks, action-state diagnostics, text/paint scripts, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "empty.docs-path.desktop",
+        "component": "empty",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/empty_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}
