@@ -172,6 +172,14 @@ Last updated: 2026-05-26
       Result: `floating_window_resize/snapshot.rs` owns active resize drag discovery and snapshot
       capture. `state.rs` now focuses on applying resize deltas, clamping size, updating origin,
       resetting collapsed/non-drag state, snapping to device pixels, and producing resize output.
+- [x] Split IMUI floating-window resize handle layout and pointer behavior out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs` into private owner modules
+      without changing resize handle placement, cursors, drag lifecycle, activation handoff, or
+      pointer capture/release behavior.
+      Result: `floating_window_resize/handles/layout.rs` owns handle geometry and resize cursors,
+      `floating_window_resize/handles/pointer.rs` owns pointer-region wiring, pointer capture,
+      runtime drag begin/update/cancel, cursor updates, and activation handoff. `handles.rs` now
+      only stacks the body/blocker with the eight resize handles.
 - [x] Split IMUI selectable keyboard ownership out of
       `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` into a private owner module without
       changing selectable activation, popup close, menu navigation, or context-menu behavior.

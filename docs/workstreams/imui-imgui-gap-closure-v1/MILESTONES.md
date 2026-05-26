@@ -182,6 +182,12 @@ clamping, origin updates, collapse reset, device-pixel snapping, and output asse
 floating-window facade behavior and internal `floating_window_resize::current_resize_snapshot(...)`
 call sites remain unchanged.
 
+2026-05-26 floating-window resize handle owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs` now owns handle geometry
+and resize cursors, while `handles/pointer.rs` owns pointer-region wiring, pointer capture,
+runtime drag begin/update/cancel, cursor updates, and activation handoff. `handles.rs` now only
+stacks body/blocker with the eight resize handles.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

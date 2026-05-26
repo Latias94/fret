@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Floating Window Resize Handle Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI floating-window resize handle layout and pointer behavior moved out of the
+handle stack owner without changing handle placement, cursors, pointer capture/release, runtime drag
+begin/update/cancel, activation handoff, or resize behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs` now owns handle
+  geometry and resize cursor selection for all eight resize handles.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer.rs` now owns
+  pointer-region wiring, pointer capture/release, runtime drag begin/update/cancel, cursor updates,
+  and resize-handle activation handoff.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs` now only stacks the
+  body/blocker with the eight resize handles.
+- `tools/gate_imui_workstream_source.py` now rejects layout and pointer behavior from drifting back
+  into `handles.rs`, while also keeping layout and pointer owners separate from resize state.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating::window_options::floating_window_resizes_when_dragging_corner_handle
+  floating::window_options::floating_window_resizes_from_left_updates_origin_and_width
+  floating::window_options::floating_window_resizable_false_hides_resize_handles
+  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
+  floating::input_modes::floating_window_activate_on_click_can_be_disabled_for_resize_handles
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Floating Window Resize Snapshot Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI floating-window active resize snapshot discovery moved out of the resize state
