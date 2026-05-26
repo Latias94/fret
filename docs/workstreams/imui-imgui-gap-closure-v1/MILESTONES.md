@@ -28,6 +28,13 @@ source reconciliation and pending keyboard pick extraction. `text_picker_control
 input/popup composition, selectable item rendering, command-free model updates, and response
 merging. The public input-text completion/history APIs remain unchanged.
 
+2026-05-26 disclosure spec owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs` now owns the private
+`DisclosureKind` / `DisclosureSpec` model, option normalization, level clamping, test-id routing,
+and leaf/children classification. `disclosure_controls.rs` keeps immediate pressable behavior,
+keyboard/context-menu handling, open-model updates, content mounting, and `DisclosureResponse`
+population. The public collapsing-header and tree-node APIs remain unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

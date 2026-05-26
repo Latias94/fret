@@ -3,6 +3,47 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Disclosure Spec Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI disclosure spec construction and option normalization moved out of
+`disclosure_controls.rs` without changing the public collapsing-header or tree-node surface.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs` owns private `DisclosureKind`,
+  `DisclosureSpec`, option-to-spec normalization, tree level clamping, test-id routing, and
+  leaf/children classification.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` keeps pressable behavior,
+  keyboard/context-menu activation, model/toggle wiring, content mounting, and
+  `DisclosureResponse` population.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs` consumes the private spec owner
+  for a11y and visual policy without owning model construction.
+- `tools/gate_imui_workstream_source.py` now requires the split owner and rejects
+  `DisclosureKind` / `DisclosureSpec` definitions from drifting back into the root behavior file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass with pre-existing `fret-ui` warnings
+  for `unexpected_cfgs` on `unstable-retained-bridge` and `dead_code` on
+  `current_effective_opacity`.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; validated 445 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls::tests
+  --no-fail-fast`: pass; 6 tests.
+
+Gate note:
+
+- A first `cargo nextest run -p fret-ui-kit --features imui disclosure_controls::tests
+  --no-fail-fast` attempt timed out because it omitted `--lib` and started compiling broader test
+  targets. The corrected lib-only command above passed.
+
 ## Text Picker Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI input-text picker candidate visibility and keyboard state reconciliation moved
@@ -189,6 +230,7 @@ Gate notes:
   - `ecosystem/fret-ui-kit/src/declarative/table.rs`
   - `ecosystem/fret-ui-kit/src/imui/control_chrome.rs`
   - `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs`
   - `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs`

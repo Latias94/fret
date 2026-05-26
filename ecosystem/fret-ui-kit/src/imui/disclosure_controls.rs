@@ -16,82 +16,13 @@ use super::{
 use crate::declarative::ModelWatchExt;
 use crate::primitives::collapsible as radix_collapsible;
 
+mod spec;
 mod visual;
+
+use spec::DisclosureSpec;
 
 #[cfg(test)]
 use visual::{header_row, resolve_disclosure_palette};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum DisclosureKind {
-    CollapsingHeader,
-    TreeNode,
-}
-
-#[derive(Debug, Clone)]
-struct DisclosureSpec {
-    kind: DisclosureKind,
-    label: Arc<str>,
-    enabled: bool,
-    open: Option<fret_runtime::Model<bool>>,
-    default_open: bool,
-    activate_shortcut: Option<fret_runtime::KeyChord>,
-    shortcut_repeat: bool,
-    selected: bool,
-    leaf: bool,
-    level: u32,
-    pos_in_set: Option<u32>,
-    set_size: Option<u32>,
-    root_test_id: Option<Arc<str>>,
-    header_test_id: Option<Arc<str>>,
-    content_test_id: Option<Arc<str>>,
-}
-
-impl DisclosureSpec {
-    fn collapsing_header(label: Arc<str>, options: CollapsingHeaderOptions) -> Self {
-        Self {
-            kind: DisclosureKind::CollapsingHeader,
-            label,
-            enabled: options.enabled,
-            open: options.open,
-            default_open: options.default_open,
-            activate_shortcut: options.activate_shortcut,
-            shortcut_repeat: options.shortcut_repeat,
-            selected: false,
-            leaf: false,
-            level: 1,
-            pos_in_set: None,
-            set_size: None,
-            root_test_id: options.test_id,
-            header_test_id: options.header_test_id,
-            content_test_id: options.content_test_id,
-        }
-    }
-
-    fn tree_node(label: Arc<str>, options: TreeNodeOptions) -> Self {
-        let level = options.level.max(1);
-        Self {
-            kind: DisclosureKind::TreeNode,
-            label,
-            enabled: options.enabled,
-            open: options.open,
-            default_open: options.default_open,
-            activate_shortcut: options.activate_shortcut,
-            shortcut_repeat: options.shortcut_repeat,
-            selected: options.selected,
-            leaf: options.leaf,
-            level,
-            pos_in_set: options.pos_in_set,
-            set_size: options.set_size,
-            root_test_id: None,
-            header_test_id: options.test_id,
-            content_test_id: options.content_test_id,
-        }
-    }
-
-    fn has_children(&self) -> bool {
-        !self.leaf
-    }
-}
 
 pub(super) fn collapsing_header_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,

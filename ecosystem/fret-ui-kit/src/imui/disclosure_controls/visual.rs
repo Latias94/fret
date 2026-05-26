@@ -7,7 +7,7 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use super::{DisclosureKind, DisclosureSpec};
+use super::spec::{DisclosureKind, DisclosureSpec};
 
 pub(super) fn disclosure_a11y(spec: &DisclosureSpec, open_now: bool) -> PressableA11y {
     match spec.kind {

@@ -33,6 +33,12 @@ Last updated: 2026-05-26
       visibility decisions, and `text_picker_controls/keyboard.rs` owns active-source cleanup plus
       pending keyboard pick extraction. The root file keeps input/popup composition and response
       merging.
+- [x] Split IMUI disclosure spec construction out of
+      `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private owner module without
+      changing the public collapsing-header/tree-node surface.
+      Result: `disclosure_controls/spec.rs` owns `DisclosureKind`, `DisclosureSpec`, option-to-spec
+      normalization, and leaf/children classification. The root file keeps pressable behavior,
+      model/toggle wiring, content mounting, and response population.
 
 ## P0 - Source Baseline
 
