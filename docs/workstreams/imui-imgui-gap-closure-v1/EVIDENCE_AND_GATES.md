@@ -3,6 +3,47 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Tooltip Overlay Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI tooltip pointer-open gating and panel composition moved into focused private
+owners without changing the public tooltip facade, hover/dismissal behavior, rich-content builder,
+or text-tooltip helper path.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/trigger.rs` now owns non-touch pointer-move open
+  gating, last-pointer model updates, pointer-transit buffer checks, and the redraw trigger for the
+  first pointer-move open.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel.rs` now owns concrete tooltip panel
+  placement, popover/border chrome, tooltip semantics/test id wiring, and rich-content column
+  facade assembly.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay.rs` keeps trigger id validation, tooltip event
+  model setup, interaction floating-bounds calculation, open/update scheduling, open-model sync,
+  dismiss request handling, hoverable-content tracking, and `request_tooltip(...)` orchestration.
+- `tools/gate_imui_workstream_source.py` now requires the split tooltip owners and rejects
+  pointer-transit internals, pointer-open state writes, panel chrome/composition, and tooltip
+  semantics from drifting back into the root tooltip orchestration file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_tooltip_smoke --no-fail-fast`:
+  pass; 1 test.
+- `cargo nextest run -p fret-ui-kit --features imui --lib tooltip_overlay::tests
+  --no-fail-fast`: pass; 3 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- An earlier shared-target `tooltip_overlay::tests` run timed out after 244 seconds while cargo was
+  waiting behind package/build locks. The same focused lib test passed when rerun serially.
+
 ## Child-Region Resize Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI child-region resize handle and drag-response ownership moved into a focused

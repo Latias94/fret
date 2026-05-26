@@ -117,6 +117,13 @@ Last updated: 2026-05-26
       pointer-region drag wiring, enabled/min/max response writes, and drag edge reconciliation.
       The root file keeps scroll-area/content composition, framed chrome, root test-id routing, and
       stack assembly.
+- [x] Split IMUI tooltip overlay pointer-open and panel composition ownership out of
+      `ecosystem/fret-ui-kit/src/imui/tooltip_overlay.rs` into private owner modules without
+      changing the public tooltip facade or hover/dismissal behavior.
+      Result: `tooltip_overlay/trigger.rs` now owns pointer-move open gating and pointer-transit
+      checks, `tooltip_overlay/panel.rs` owns concrete panel placement, chrome, semantics, and
+      content column assembly, and the root file keeps tooltip lifecycle, interaction bounds,
+      update, dismissal, and request orchestration.
 
 ## P0 - Source Baseline
 
