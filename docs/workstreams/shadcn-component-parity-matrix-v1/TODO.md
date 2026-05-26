@@ -129,3 +129,7 @@ date: 2026-05-26
       seed covering current shadcn docs/source refs, vertical/horizontal scroll-area upstream
       goldens, runtime and primitive scroll behavior, recipe focus/visibility/drag/overflow
       gates, Gallery docs ordering, RTL follow-up, and text/paint evidence.
+- [x] SCPM-450: Promote Separator from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, separator-demo upstream golden, primitive and
+      recipe semantics, horizontal/vertical rule geometry and chrome, Gallery docs ordering,
+      decorative-hidden diagnostics, RTL follow-up, and text/paint evidence.

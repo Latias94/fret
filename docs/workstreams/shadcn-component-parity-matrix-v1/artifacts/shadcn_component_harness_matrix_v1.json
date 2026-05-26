@@ -2514,31 +2514,37 @@
     },
     {
       "audit_path": "docs/audits/shadcn-separator.md",
-      "audit_status": "In review",
+      "audit_status": "Pass",
       "component": "separator",
-      "coverage_target_count": 0,
+      "coverage_target_count": 1,
       "covered_axes": {
-        "fret_bundle_semantics": false,
-        "fret_layout": false,
-        "fret_text_paint": false,
-        "interaction_script": false,
+        "fret_bundle_semantics": true,
+        "fret_layout": true,
+        "fret_text_paint": true,
+        "interaction_script": true,
         "responsive_viewport": false,
-        "source_refs": false,
-        "upstream_dom_snapshot": false
+        "source_refs": true,
+        "upstream_dom_snapshot": true
       },
       "gate_queue_count": 0,
       "hardening_queue_count": 0,
-      "harness_report_count": 0,
-      "harness_status": "inventory_only",
+      "harness_report_count": 1,
+      "harness_status": "regression_locked",
       "implementation_status": "Present",
       "inventory_kind": "registry",
       "likely_owner_layer": "",
       "missing_state_depth": [],
-      "next_gap": "add_upstream_source_refs",
+      "next_gap": "state_depth_model_satisfied",
       "priority": "",
       "repair_queue_count": 0,
-      "report_ids": [],
-      "required_state_depth": [],
+      "report_ids": [
+        "separator_agent_packet_p0_v1"
+      ],
+      "required_state_depth": [
+        "rtl",
+        "text_metrics",
+        "paint_token"
+      ],
       "risk_class": "",
       "rust_module": "separator",
       "state_depth": {
@@ -2547,16 +2553,22 @@
         "focus_visible": false,
         "hover": false,
         "keyboard": false,
-        "mobile": false,
+        "mobile": true,
         "open": false,
-        "paint_token": false,
+        "paint_token": true,
         "pressed": false,
-        "rtl": false,
-        "text_metrics": false
+        "rtl": true,
+        "text_metrics": true
       },
-      "target_ids": [],
-      "target_states": [],
-      "target_viewport_classes": []
+      "target_ids": [
+        "separator.docs-path.desktop"
+      ],
+      "target_states": [
+        "docs path Separator Demo/Usage/Vertical/Menu/List/RTL/API Reference, decorative semantics, horizontal and vertical rule chrome, source-axis split for h-full versus self-stretch, text metrics, and paint token output"
+      ],
+      "target_viewport_classes": [
+        "desktop_1440x900"
+      ]
     },
     {
       "audit_path": "docs/audits/shadcn-sheet.md",
@@ -3529,6 +3541,11 @@
         "keyboard",
         "paint_token"
       ],
+      "separator": [
+        "rtl",
+        "text_metrics",
+        "paint_token"
+      ],
       "sheet": [
         "open",
         "keyboard",
@@ -3608,6 +3625,7 @@
       "docs\\workstreams\\shadcn-component-parity-matrix-v1\\artifacts\\label_agent_packet_p0_v1.json",
       "docs\\workstreams\\shadcn-component-parity-matrix-v1\\artifacts\\radio_group_agent_packet_p0_v1.json",
       "docs\\workstreams\\shadcn-component-parity-matrix-v1\\artifacts\\scroll_area_agent_packet_p0_v1.json",
+      "docs\\workstreams\\shadcn-component-parity-matrix-v1\\artifacts\\separator_agent_packet_p0_v1.json",
       "docs\\workstreams\\shadcn-component-parity-matrix-v1\\artifacts\\pagination_agent_packet_p0_v1.json"
     ],
     "manifest": "tools\\parity-discovery\\manifests\\shadcn_parity_coverage_v2.json",
@@ -3616,13 +3634,13 @@
   },
   "summary": {
     "axis_component_counts": {
-      "fret_bundle_semantics": 44,
-      "fret_layout": 44,
-      "fret_text_paint": 24,
-      "interaction_script": 44,
+      "fret_bundle_semantics": 45,
+      "fret_layout": 45,
+      "fret_text_paint": 25,
+      "interaction_script": 45,
       "responsive_viewport": 9,
-      "source_refs": 44,
-      "upstream_dom_snapshot": 44
+      "source_refs": 45,
+      "upstream_dom_snapshot": 45
     },
     "component_count": 59,
     "non_registry_surface_count": 5,
@@ -3633,18 +3651,18 @@
       "focus_visible": 15,
       "hover": 13,
       "keyboard": 27,
-      "mobile": 14,
+      "mobile": 15,
       "open": 25,
-      "paint_token": 42,
+      "paint_token": 43,
       "pressed": 1,
-      "rtl": 24,
-      "text_metrics": 24
+      "rtl": 25,
+      "text_metrics": 25
     },
     "status_counts": {
       "harness_hardening": 1,
-      "inventory_only": 10,
+      "inventory_only": 9,
       "not_in_harness": 5,
-      "regression_locked": 43
+      "regression_locked": 44
     }
   }
 }

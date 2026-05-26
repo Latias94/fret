@@ -1,0 +1,247 @@
+{
+  "schema_version": 1,
+  "component": "separator",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-27",
+  "generated_by": "manual separator docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-kit/src/primitives/separator.rs + ecosystem/fret-ui-shadcn/src/separator.rs + ecosystem/fret-ui-shadcn/tests/{web_vs_fret_control_chrome.rs,web_vs_fret_layout/separator.rs} + apps/fret-ui-gallery/src/ui/pages/separator.rs + apps/fret-ui-gallery/src/ui/snippets/separator/*.rs + apps/fret-ui-gallery/tests/separator_docs_surface.rs + tools/diag-scripts/ui-gallery/separator/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/separator_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Separator component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/separator -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Separator docs smoke and decorative-hidden semantics diagnostics parse cleanly."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail separator",
+      "status": "pass",
+      "scope": "Separator recipe tests cover decorative-by-default semantics, horizontal h-px/w-full defaults, vertical w-px self-stretch mapping, explicit fill-height opt-out, and semantic vertical opt-in."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail separator",
+      "status": "pass",
+      "scope": "Separator web-vs-Fret layout gate compares the tracked separator-demo horizontal and vertical rule geometry against the upstream new-york-v4 golden."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail web_vs_fret_separator_demo_geometry_matches",
+      "status": "pass",
+      "scope": "Separator control-chrome gate keeps the docs-demo rule paint, 1px thickness, and vertical rule sizing aligned with the upstream golden."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test separator_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery docs-surface tests keep the Separator docs order, source-axis notes, copyable snippets, responsive menu composition, shared text roles, and RTL follow-up."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.separator.demo.light.vp1440x900",
+      "snapshot": "separator-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": [
+    {
+      "id": "fret.separator.primitive",
+      "layer": "kit_primitive",
+      "owner": "fret-ui-kit",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/primitives/separator.rs"
+      ]
+    },
+    {
+      "id": "fret.separator.recipe",
+      "layer": "recipe",
+      "owner": "fret-ui-shadcn",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/separator.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/separator.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs"
+      ]
+    },
+    {
+      "id": "fret.separator.gallery",
+      "layer": "app_demo",
+      "owner": "fret-ui-gallery",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/separator.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/separator/*.rs",
+        "apps/fret-ui-gallery/tests/separator_docs_surface.rs"
+      ]
+    },
+    {
+      "id": "fret.separator.diagnostics",
+      "layer": "runner",
+      "owner": "diagnostics_surface",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-docs-smoke.json",
+        "tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-decorative-hidden-semantics.json"
+      ]
+    }
+  ],
+  "summary": {
+    "status_counts": {
+      "regression_locked": 1
+    },
+    "covered_axes": [
+      "source_refs",
+      "upstream_dom_snapshot",
+      "fret_layout",
+      "fret_bundle_semantics",
+      "fret_text_paint",
+      "interaction_script"
+    ],
+    "state_depth": [
+      "mobile",
+      "rtl",
+      "text_metrics",
+      "paint_token"
+    ],
+    "layout_sidecar_count": 2,
+    "bundle_schema2_count": 2,
+    "layout_test_id_count": 6,
+    "bundle_semantics_test_id_count": 4,
+    "measured_test_id_count": 6,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 2,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1,
+    "upstream_live_fact_count": 5,
+    "upstream_semantics_fact_count": 2,
+    "upstream_interaction_fact_count": 1,
+    "fret_live_fact_count": 8,
+    "fret_semantics_fact_count": 5,
+    "fret_interaction_fact_count": 2,
+    "fret_text_paint_fact_count": 3,
+    "fret_text_paint_direct_fact_count": 1,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 3,
+    "fret_text_paint_row_count": 2,
+    "fret_text_paint_association_row_count": 2,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 3,
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0
+  },
+  "live_facts": {
+    "owner_split": [
+      "The kit primitive owns orientation, semantic separator role/orientation, decorative hiding, 1px border-token paint, and the vertical auto-height versus fill-height switch.",
+      "The shadcn recipe owns decorative-by-default behavior, shrink-0, horizontal h-px/w-full defaults, vertical w-px sizing, and the Base/Radix self-stretch mapping used by docs-style auto-height rows.",
+      "Gallery owns the docs-path teaching order, responsive menu/list/RTL examples, shared text roles around the leaf rule, and stable ui-gallery-separator-* ids."
+    ],
+    "source_truth": [
+      "Current main-worktree repo-ref truth includes the shadcn Separator docs page, the new-york-v4 recipe/source and separator-demo example, plus base/radix recipe variants used for the Base UI docs examples.",
+      "The current new-york-v4 source uses data-vertical:h-full, while registry/bases/{base,radix} use data-vertical:self-stretch; Fret keeps the self-stretch recipe default for auto-height flex rows and preserves an explicit fill-height opt-out.",
+      "The tracked separator-demo web golden proves the Fret default still matches the current new-york-v4 docs-demo geometry for both horizontal and vertical rules."
+    ],
+    "regression_gates": [
+      "fret-ui-shadcn separator unit tests cover default decorative semantics, horizontal constraints, vertical self-stretch, fill-height opt-out, and semantic vertical opt-in.",
+      "web_vs_fret_layout separator compares horizontal and vertical rule geometry against separator-demo.",
+      "web_vs_fret_control_chrome keeps the docs-demo rule thickness and paint aligned with the upstream golden.",
+      "separator_docs_surface keeps the Gallery teaching surface on the docs-aligned order and prevents local text-policy drift.",
+      "Separator diagnostics cover page smoke anchors and raw hidden-semantics proof for decorative rules."
+    ]
+  },
+  "parts": [
+    {
+      "part_id": "separator_primitive_semantics",
+      "status": "pass_known",
+      "owner": "kit_primitive",
+      "layer": "policy",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/primitives/separator.rs",
+        "ecosystem/fret-ui-shadcn/src/separator.rs"
+      ],
+      "facts": [
+        "The primitive exposes semantic separator role/orientation when decorative is false.",
+        "The shadcn wrapper defaults decorative to true, matching Radix/shadcn recipe usage for visual dividers.",
+        "The decorative-hidden diagnostics script keeps hidden separators out of default selectors while raw semantics can still inspect the effective hidden flag."
+      ]
+    },
+    {
+      "part_id": "separator_recipe_geometry_and_chrome",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/separator.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/separator.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "goldens/shadcn-web/v4/new-york-v4/separator-demo.json"
+      ],
+      "facts": [
+        "Horizontal separators render h-px/w-full with shrink-0 and border-token paint.",
+        "Vertical separators render w-px with a self-stretch default so Base/Radix auto-height flex rows stretch without caller-owned fixed height.",
+        "The explicit fill-height lane remains available for compositions that intentionally mirror the current new-york-v4 data-vertical:h-full source axis."
+      ]
+    },
+    {
+      "part_id": "separator_gallery_docs_surface",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/separator.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/separator/*.rs",
+        "apps/fret-ui-gallery/tests/separator_docs_surface.rs"
+      ],
+      "facts": [
+        "Gallery mirrors the current docs-path teaching surface through Demo, Usage, Vertical, Menu, List, RTL, and API Reference.",
+        "The Demo snippet stays on the horizontal top preview, while vertical/menu/list/RTL examples stay in dedicated sections.",
+        "Menu visible text routes through shared text roles instead of local one-off text sizing or color policy."
+      ]
+    },
+    {
+      "part_id": "separator_packet_and_matrix_closure",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/separator_agent_packet_p0_v1.json",
+        "tools/parity-discovery/shadcn_component_harness_matrix.py",
+        "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json"
+      ],
+      "facts": [
+        "The packet has zero repair, hardening, and gate queues.",
+        "The manifest target ties current source refs, upstream snapshot, Fret tests, diagnostics scripts, and the packet together.",
+        "The Separator state depth covers the responsive menu branch plus RTL, text metrics, and paint token evidence."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Separator docs-path slice with current main-worktree repo-ref source refs, separator-demo upstream golden, primitive/recipe semantics tests, web-vs-Fret layout and chrome gates, Gallery docs-surface checks, diagnostics JSON, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "separator.docs-path.desktop",
+        "component": "separator",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/separator_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

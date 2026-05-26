@@ -1950,6 +1950,50 @@
         "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-wheel-burst-coalescing.json",
         "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/scroll_area_agent_packet_p0_v1.json"
       ]
+    },
+    {
+      "rank": 49,
+      "priority": "P1",
+      "id": "separator.docs-path.desktop",
+      "component": "separator",
+      "state": "docs path Separator Demo/Usage/Vertical/Menu/List/RTL/API Reference, decorative semantics, horizontal and vertical rule chrome, source-axis split for h-full versus self-stretch, text metrics, and paint token output",
+      "trigger": "static, decorative semantics, rtl, screenshot, text paint",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "Separator had current shadcn docs/new-york-v4 source refs, base/radix recipe references, the separator-demo upstream golden, primitive and recipe semantics tests, web-vs-Fret layout/chrome gates, Gallery docs-surface checks, and separator diagnostics, but no component-matrix packet. The new slice locks the owner split: the kit primitive owns orientation and semantic/decorative behavior, the shadcn recipe owns decorative-by-default visual rule chrome plus the Base/Radix self-stretch mapping, and Gallery owns docs ordering plus responsive menu/list/RTL examples.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/separator.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/separator.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/separator-demo.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/base/ui/separator.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/base/examples/separator-example.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/radix/ui/separator.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/radix/examples/separator-example.tsx",
+        "repo-ref/primitives/packages/react/separator/src/separator.tsx",
+        "repo-ref/base-ui/packages/react/src/separator/Separator.tsx",
+        "goldens/shadcn-web/v4/new-york-v4/separator-demo.json"
+      ],
+      "fret_refs": [
+        "docs/audits/shadcn-separator.md",
+        "ecosystem/fret-ui-kit/src/primitives/separator.rs",
+        "ecosystem/fret-ui-shadcn/src/separator.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/separator.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "apps/fret-ui-gallery/src/ui/pages/separator.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/separator/demo.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/separator/usage.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/separator/vertical.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/separator/menu.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/separator/list.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/separator/rtl.rs",
+        "apps/fret-ui-gallery/tests/separator_docs_surface.rs",
+        "tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-docs-smoke.json",
+        "tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-decorative-hidden-semantics.json",
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/separator_agent_packet_p0_v1.json"
+      ]
     }
   ]
 }

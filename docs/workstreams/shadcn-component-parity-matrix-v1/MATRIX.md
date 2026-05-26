@@ -39,13 +39,13 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 44,
-    "fret_layout": 44,
-    "fret_text_paint": 24,
-    "interaction_script": 44,
+    "fret_bundle_semantics": 45,
+    "fret_layout": 45,
+    "fret_text_paint": 25,
+    "interaction_script": 45,
     "responsive_viewport": 9,
-    "source_refs": 44,
-    "upstream_dom_snapshot": 44
+    "source_refs": 45,
+    "upstream_dom_snapshot": 45
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
@@ -56,18 +56,18 @@ State-depth legend:
     "focus_visible": 15,
     "hover": 13,
     "keyboard": 27,
-    "mobile": 14,
+    "mobile": 15,
     "open": 25,
-    "paint_token": 42,
+    "paint_token": 43,
     "pressed": 1,
-    "rtl": 24,
-    "text_metrics": 24
+    "rtl": 25,
+    "text_metrics": 25
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 10,
+    "inventory_only": 9,
     "not_in_harness": 5,
-    "regression_locked": 43
+    "regression_locked": 44
   }
 }
 ```
@@ -119,7 +119,7 @@ State-depth legend:
 | resizable | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | DRAG, KEY, RTL, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | scroll-area | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | HOV, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | select | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | OPEN, KEY, MOB, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
-| separator | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| separator | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | MOB, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | sheet | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV, RESP | DIS, HOV, FOCUS-VIS, OPEN, MOB, PAINT | KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | sidebar | registry | Present | harness_hardening | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP | HOV, FOCUS-VIS, DRAG, OPEN, KEY, MOB, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=1, gate=1 | state_depth_model_satisfied |
 | skeleton | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |

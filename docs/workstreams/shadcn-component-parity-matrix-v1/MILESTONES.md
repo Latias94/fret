@@ -916,3 +916,31 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Scroll Area `HOV`, `FOCUS-VIS`, `DRAG`, `KEY`, `RTL`,
   `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M38 - Promote Separator
+
+Status: complete on 2026-05-27.
+
+`separator.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Separator docs path, new-york-v4 source, base/radix recipe sources,
+separator-demo upstream golden, primitive/recipe semantics tests, web-vs-Fret layout and chrome
+gates, Gallery docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Separator docs path, new-york-v4 recipe/demo, base/radix
+  recipe/example references, Radix/Base UI primitive references, and the tracked separator-demo
+  upstream golden.
+- The Separator packet records the owner split: `fret-ui-kit` owns orientation plus semantic and
+  decorative behavior; `fret-ui-shadcn` owns decorative-by-default visual rule chrome, shrink-0,
+  horizontal h-px/w-full, vertical w-px, and the Base/Radix self-stretch mapping; Gallery owns docs
+  ordering, responsive menu/list/RTL examples, and stable diagnostics anchors.
+- The Gallery page now states the source-axis split explicitly: current new-york-v4 uses
+  `data-vertical:h-full`, while base/radix use `data-vertical:self-stretch`; Fret defaults to the
+  stretch lane for auto-height flex rows and preserves an explicit fill-height opt-out.
+- `separator_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs
+  with zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 44 `regression_locked`, 1 `harness_hardening`, 9
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Separator `MOB`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
+  component has no required state-depth gaps.
