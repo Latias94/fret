@@ -640,3 +640,32 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Pagination `DIS`, `FOCUS-VIS`, `OPEN`, `KEY`, `MOB`, `RTL`,
   `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M28 - Promote Card
+
+Status: complete on 2026-05-26.
+
+`card.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after connecting
+the existing Card audit, current main-worktree `repo-ref` source refs, `card-demo` and
+`card-with-form` upstream goldens, recipe slot/grid/chrome tests, Gallery docs-surface checks,
+action-state diagnostics, text-paint follow-ups, RTL render-flow evidence, and a component-matrix
+packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Card docs path, new-york-v4 visual source, base source,
+  docs-demo and with-form examples, and tracked `card-demo` / `card-with-form` upstream goldens.
+- The Card packet records the owner split: `fret-ui-shadcn` owns intrinsic card chrome, slot
+  padding, title/description typography, header grid/action placement, and footer wrap budget;
+  Gallery owns page width constraints, example form composition, media examples, and Fret-only
+  rich text follow-ups; the runtime grid contract remains the mechanism layer proof for the
+  `1fr auto` header slot family.
+- Runtime diagnostics cover docs smoke and demo action-state behavior, while existing text-wrap,
+  hitbox, image-cover, screenshot, composition, and meeting-notes scripts remain parse-checked
+  coverage anchors.
+- `card_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 34 `regression_locked`, 1 `harness_hardening`, 19
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Card `HOV`, `FOCUS-VIS`, `KEY`, `RTL`, `TEXT-MET`, and `PAINT`
+  evidence; the component has no required state-depth gaps.

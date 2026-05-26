@@ -39,13 +39,13 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 34,
-    "fret_layout": 34,
-    "fret_text_paint": 14,
-    "interaction_script": 34,
+    "fret_bundle_semantics": 35,
+    "fret_layout": 35,
+    "fret_text_paint": 15,
+    "interaction_script": 35,
     "responsive_viewport": 9,
-    "source_refs": 34,
-    "upstream_dom_snapshot": 34
+    "source_refs": 35,
+    "upstream_dom_snapshot": 35
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
@@ -55,19 +55,19 @@ State-depth legend:
     "drag": 2,
     "focus_visible": 10,
     "hover": 11,
-    "keyboard": 17,
+    "keyboard": 18,
     "mobile": 13,
     "open": 21,
-    "paint_token": 32,
+    "paint_token": 33,
     "pressed": 1,
-    "rtl": 14,
-    "text_metrics": 14
+    "rtl": 15,
+    "text_metrics": 15
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 20,
+    "inventory_only": 19,
     "not_in_harness": 5,
-    "regression_locked": 33
+    "regression_locked": 34
   }
 }
 ```
@@ -86,7 +86,7 @@ State-depth legend:
 | button | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, HOV, FOCUS-VIS, PRESS, KEY, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | button-group | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, TEXT-MET, PAINT | KEY | 1 | 1 | repair=0, hardening=0, gate=0 | expand_keyboard_state_depth |
 | calendar | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV, RESP | HOV, FOCUS-VIS, OPEN, MOB, PAINT | TEXT-MET | 4 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
-| card | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| card | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | KEY, RTL, TEXT-MET, PAINT | - | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | carousel | registry | Defer | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | chart | registry | Defer | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | checkbox | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |

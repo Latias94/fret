@@ -1391,6 +1391,59 @@
         "tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-rows-per-page-select-open-screenshot-zinc-light.json",
         "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/pagination_agent_packet_p0_v1.json"
       ]
+    },
+    {
+      "rank": 39,
+      "priority": "P1",
+      "id": "card.docs-path.desktop",
+      "component": "card",
+      "state": "docs path root chrome, header grid/action slot geometry, section padding, footer width budget, title/description children lanes, action-state behavior, RTL form controls, and text paint",
+      "trigger": "static, click, focus, set_value, keyboard, rtl, screenshot, text paint",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "Card had an existing audit, current main-worktree repo-ref source refs, card-demo/card-with-form web goldens, recipe tests, web-vs-Fret layout/chrome gates, Gallery docs-surface tests, action-state diagnostics, text-wrap diagnostics, and RTL render-flow gates, but no component-matrix packet. The new slice locks root chrome, caller-owned width, source-aligned header grid/action placement, footer wrap budget, copyable title/description children lanes, and runtime form/link/button semantics.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/card.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/card.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/base/ui/card.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/card-demo.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/card-with-form.tsx",
+        "goldens/shadcn-web/v4/new-york-v4/card-demo.json",
+        "goldens/shadcn-web/v4/new-york-v4/card-with-form.json"
+      ],
+      "fret_refs": [
+        "docs/audits/shadcn-card.md",
+        "ecosystem/fret-ui-shadcn/src/card.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/card.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "apps/fret-ui-gallery/src/ui/pages/card.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/card/demo.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/card/usage.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/card/size.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/card/image.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/card/rtl.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/card/title_children.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/card/description_children.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/card/compositions.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/card/card_content.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/card/meeting_notes.rs",
+        "apps/fret-ui-gallery/tests/card_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/card_rich_description_surface.rs",
+        "apps/fret-ui-gallery/src/driver/render_flow.rs",
+        "tools/diag-scripts/ui-gallery/card/ui-gallery-card-docs-smoke.json",
+        "tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json",
+        "tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-screenshot.json",
+        "tools/diag-scripts/ui-gallery/card/ui-gallery-card-compositions.json",
+        "tools/diag-scripts/ui-gallery/card/ui-gallery-card-description-no-early-wrap.json",
+        "tools/diag-scripts/ui-gallery/card/ui-gallery-card-content-button-hitbox-not-stretched.json",
+        "tools/diag-scripts/ui-gallery/card/ui-gallery-card-image-event-cover-screenshot.json",
+        "tools/diag-scripts/ui-gallery/card/ui-gallery-card-meeting-notes-list-no-early-wrap.json",
+        "tools/diag-scripts/suites/ui-gallery-card-demo-action-state/suite.json",
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/card_agent_packet_p0_v1.json"
+      ]
     }
   ]
 }

@@ -62,7 +62,7 @@ fn card_docs_path_snippets_stay_copyable_and_docs_aligned() {
     let meeting_notes = include_str!("../src/ui/snippets/card/meeting_notes.rs");
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "shadcn::card(|cx| {",
         "shadcn::card_header(|cx| {",

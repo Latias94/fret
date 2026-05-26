@@ -28,7 +28,8 @@ example implementations in `repo-ref/ui`.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/card.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/card.mdx`
+- Visual component implementation: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/card.tsx`
 - Component implementation: `repo-ref/ui/apps/v4/registry/bases/base/ui/card.tsx`
 - Example compositions: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/card-demo.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/card-with-form.tsx`
 

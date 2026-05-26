@@ -28,7 +28,7 @@ fn card_rich_description_snippet_prefers_copyable_card_description_children_help
         &path,
         &source,
         &[
-            "use fret::{UiChild, AppComponentCx};",
+            "use fret::{AppComponentCx, UiChild};",
             "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",

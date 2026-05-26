@@ -89,3 +89,7 @@ date: 2026-05-26
       seed covering root/list/link semantics, active selected state, Enter-only keyboard
       activation, responsive previous/next text, RTL icon order, ellipsis hidden semantics, app
       action dispatch, and rows-per-page Select overlay composition.
+- [x] SCPM-350: Promote Card from inventory-only to a regression-locked docs-path harness seed
+      covering root chrome, caller-owned width, source-aligned header grid/action slot placement,
+      footer width budget, rich title/description children lanes, action-state diagnostics, RTL
+      form controls, and text/paint follow-ups.
