@@ -190,6 +190,10 @@ Readiness order for the next locally testable review slices:
    hold, context-menu, pointer-click, and pointer-modifier behavior now lives in
    `response/hover/press_context.rs`. The root `response/hover.rs` keeps storage only for those
    signals.
+   2026-05-26 hover-state owner split: `ResponseExt` raw pointer hover, popup-barrier hover,
+   hover-delay, active-item block, and nav-highlight mutators/accessors now live in
+   `response/hover/hover_state.rs`. The root `response/hover.rs` keeps the hover state storage
+   fields only.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,

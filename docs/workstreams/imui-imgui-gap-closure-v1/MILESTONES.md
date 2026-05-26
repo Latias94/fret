@@ -60,6 +60,12 @@ secondary-click, double-click, long-press, hold, context-menu, pointer-click, po
 clear helpers plus read-only accessors. `response/hover.rs` keeps storage for those signals only.
 The public `ResponseExt` API remains unchanged.
 
+2026-05-26 hover-state owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover/hover_state.rs` now owns the `ResponseExt` raw
+pointer-hover, popup-barrier hover, hover-delay, active-item block, and nav-highlight mutators plus
+read-only accessors. `response/hover.rs` keeps the hover state storage fields only. The public
+`ResponseExt` API remains unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:
