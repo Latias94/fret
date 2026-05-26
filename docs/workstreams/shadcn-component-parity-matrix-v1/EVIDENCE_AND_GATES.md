@@ -2002,3 +2002,29 @@ screenshots.
 - Spinner row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
   `DIS, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0, hardening=0, gate=0`,
   `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Textarea regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/textarea_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Textarea diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/textarea`.
+- `python -m json.tool` checks for the coverage manifest and `WORKSTREAM.json`: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail textarea`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail textarea`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail textarea`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_textarea --status-level fail`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --test textarea_label_focus --status-level fail`: PASS.
+- `cargo nextest run -p fret-ui-gallery --test textarea_docs_surface --status-level fail`: PASS.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail textarea`:
+  PASS.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- Matrix summary: 47 `regression_locked`, 1 `harness_hardening`, 6 `inventory_only`, and 5
+  `not_in_harness`.
+- Textarea row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
+  depth `DIS, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.

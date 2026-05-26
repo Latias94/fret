@@ -141,3 +141,7 @@ date: 2026-05-26
       seed covering current shadcn docs/source refs, spinner-* upstream goldens, status semantics,
       leaf chrome and spin behavior, disabled host controls, reduced-motion safety, Gallery docs
       ordering, Color/Item examples, RTL/Extras follow-ups, and text/paint evidence.
+- [x] SCPM-480: Promote Textarea from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, textarea-* upstream goldens, leaf control
+      chrome and semantics, resize drag clamping, label association, Gallery docs ordering, base/
+      radix Field follow-up, diagnostics JSON, RTL, and text/paint evidence.

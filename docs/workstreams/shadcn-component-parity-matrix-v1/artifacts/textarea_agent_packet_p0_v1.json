@@ -1,0 +1,290 @@
+{
+  "schema_version": 1,
+  "component": "textarea",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-27",
+  "generated_by": "manual textarea docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/textarea.rs + ecosystem/fret-ui-shadcn/tests/{web_vs_fret_layout/textarea.rs,web_vs_fret_textarea.rs,web_vs_fret_control_chrome.rs,textarea_label_focus.rs} + apps/fret-ui-gallery/src/ui/pages/textarea.rs + apps/fret-ui-gallery/src/ui/snippets/textarea/*.rs + apps/fret-ui-gallery/tests/{textarea_docs_surface.rs,ui_authoring_surface_default_app.rs} + tools/diag-scripts/ui-gallery/textarea/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/textarea_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Textarea component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/textarea -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Textarea docs screenshot, caret-visible keyboard text entry, label-click-focus, and required-invalid semantics diagnostics parse cleanly."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail textarea",
+      "status": "pass",
+      "scope": "Textarea recipe tests cover leaf semantics, required and invalid state, rows-driven min height, focus-visible ring animation, hidden resize handle accessibility, and resize drag height clamping."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail textarea",
+      "status": "pass",
+      "scope": "Textarea web-vs-Fret layout gates compare the current upstream textarea demo, disabled, with-label, with-text, and with-button docs examples against new-york-v4 goldens."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail textarea",
+      "status": "pass",
+      "scope": "Textarea chrome gates keep default, invalid, focus-visible, and invalid-focus border/ring paint token outcomes aligned with upstream goldens."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_textarea --status-level fail",
+      "status": "pass",
+      "scope": "Textarea text-paint gate covers placeholder, caret, keyboard typing, text metrics, required/invalid semantics, and chrome-adjacent paint output."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test textarea_label_focus --status-level fail",
+      "status": "pass",
+      "scope": "Textarea label association gate keeps label click forwarding and focus-visible behavior stable."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test textarea_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery docs-surface tests keep current shadcn Textarea docs ordering, source-axis wording, leaf API decision, With Label snippet, base/radix Field follow-up, and diagnostic anchors aligned."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail textarea",
+      "status": "pass",
+      "scope": "Gallery authoring tests keep Textarea snippets on the default app surface and preserve typed docs sections."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.textarea.demo.light.vp1440x900",
+      "snapshot": "textarea-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.textarea.with-label.light.vp1440x900",
+      "snapshot": "textarea-with-label",
+      "theme": "light",
+      "mode": "static",
+      "variant": "with-label",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.textarea.with-button.light.vp1440x900",
+      "snapshot": "textarea-with-button",
+      "theme": "light",
+      "mode": "static",
+      "variant": "with-button",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": [
+    {
+      "id": "fret.textarea.recipe",
+      "layer": "recipe",
+      "owner": "fret-ui-shadcn",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/textarea.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/textarea.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_textarea.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "ecosystem/fret-ui-shadcn/tests/textarea_label_focus.rs"
+      ]
+    },
+    {
+      "id": "fret.textarea.gallery",
+      "layer": "app_demo",
+      "owner": "fret-ui-gallery",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/textarea.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/textarea/*.rs",
+        "apps/fret-ui-gallery/tests/textarea_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+      ]
+    },
+    {
+      "id": "fret.textarea.diagnostics",
+      "layer": "runner",
+      "owner": "diagnostics_surface",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-docs-screenshot.json",
+        "tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-caret-visible.json",
+        "tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-label-click-focus.json",
+        "tools/diag-scripts/ui-gallery/textarea/ui-gallery-textarea-required-invalid-semantics.json"
+      ]
+    }
+  ],
+  "summary": {
+    "status_counts": {
+      "regression_locked": 1
+    },
+    "covered_axes": [
+      "source_refs",
+      "upstream_dom_snapshot",
+      "fret_layout",
+      "fret_bundle_semantics",
+      "fret_text_paint",
+      "interaction_script"
+    ],
+    "state_depth": [
+      "disabled",
+      "focus_visible",
+      "drag",
+      "keyboard",
+      "rtl",
+      "text_metrics",
+      "paint_token"
+    ],
+    "layout_sidecar_count": 4,
+    "bundle_schema2_count": 4,
+    "layout_test_id_count": 8,
+    "bundle_semantics_test_id_count": 8,
+    "measured_test_id_count": 8,
+    "upstream_dom_snapshot_count": 8,
+    "upstream_dom_target_count": 8,
+    "upstream_context_count": 3,
+    "upstream_dom_context_count": 8,
+    "upstream_live_fact_count": 6,
+    "upstream_semantics_fact_count": 3,
+    "upstream_interaction_fact_count": 2,
+    "fret_live_fact_count": 14,
+    "fret_semantics_fact_count": 6,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 6,
+    "fret_text_paint_direct_fact_count": 4,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 6,
+    "fret_text_paint_row_count": 4,
+    "fret_text_paint_association_row_count": 2,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 4,
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0
+  },
+  "live_facts": {
+    "owner_split": [
+      "The Textarea recipe owns the leaf text control chrome, min-h-16 floor, full-width/min-width behavior, placeholder paint, focus-visible ring, invalid/required semantics, and pointer-only resize handle.",
+      "Callers own width caps, submit-button stacking, visible required markers, helper text placement, and broader Field or Label composition around the textarea.",
+      "Gallery owns the current docs-path teaching order, base/radix Field follow-up, RTL follow-up, label association follow-up, and stable ui-gallery-textarea-* diagnostics anchors."
+    ],
+    "source_truth": [
+      "Current main-worktree repo-ref truth uses repo-ref/ui/apps/v4/content/docs/components/textarea.mdx for Demo, Usage, Disabled, With Label, With Text, and With Button.",
+      "Current new-york-v4 Textarea source keeps placeholder muted foreground, focus-visible border/ring, invalid border/ring, flex field-sizing-content, min-h-16, w-full, rounded-md border, transparent background, px-3 py-2, text-base/md:text-sm, shadow-xs, outline-none, and disabled opacity/cursor behavior.",
+      "Current new-york-v4 examples cover the default placeholder, disabled control, label htmlFor/id association, support-team helper text, and stacked Send message button.",
+      "Base/radix registry examples provide the Field follow-up lane with Message label, six-row textarea, description after the control, invalid, and disabled examples.",
+      "No dedicated Textarea primitive exists under repo-ref/primitives or repo-ref/base-ui, so this family stays in recipe and docs-surface ownership instead of a new mechanism-layer primitive."
+    ],
+    "regression_gates": [
+      "Textarea recipe tests keep required and invalid semantics, rows-driven initial height, focus-visible ring animation, hidden resize handle accessibility, and resize drag clamp behavior stable.",
+      "web_vs_fret_layout textarea compares the current upstream docs examples including disabled, with-label, with-text, and with-button.",
+      "web_vs_fret_control_chrome textarea compares default, invalid, focus-visible, and invalid-focus chrome.",
+      "web_vs_fret_textarea covers placeholder, caret, keyboard text entry, text metrics, required/invalid semantics, and paint tokens.",
+      "textarea_docs_surface keeps current source-axis wording, docs order, copyable snippets, base/radix Field follow-up, and diagnostics anchors stable.",
+      "Textarea diagnostics cover docs screenshots, caret-visible keyboard entry, label-click focus, required invalid semantics, and RTL follow-up screenshots."
+    ]
+  },
+  "parts": [
+    {
+      "part_id": "textarea_recipe_leaf_semantics_and_resize",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/textarea.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_textarea.rs",
+        "ecosystem/fret-ui-shadcn/tests/textarea_label_focus.rs"
+      ],
+      "facts": [
+        "Textarea::new(model) renders a leaf TextField control with placeholder support, keyboard editing, required and invalid semantics, and explicit label association hooks.",
+        "The recipe owns disabled opacity, focus-visible ring paint, invalid border/ring paint, default min height, rows-derived min height, and the pointer-only resize drag affordance.",
+        "The resize handle is hidden from the visible accessibility tree while still capturing pointer drag and clamping height back to the minimum floor."
+      ]
+    },
+    {
+      "part_id": "textarea_web_golden_layout_and_chrome",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/textarea.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "goldens/shadcn-web/v4/new-york-v4/textarea-demo.json",
+        "goldens/shadcn-web/v4/new-york-v4/textarea-with-label.json",
+        "goldens/shadcn-web/v4/new-york-v4/textarea-with-button.json"
+      ],
+      "facts": [
+        "Web-golden layout gates cover default, disabled, with-label, with-text, and with-button docs examples.",
+        "Chrome gates cover default, invalid, focus-visible, and invalid-focus border and ring output.",
+        "Text paint gates cover placeholder, caret, typed text, text metrics, and token-backed foreground/background/border paint."
+      ]
+    },
+    {
+      "part_id": "textarea_gallery_docs_surface",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/textarea.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/textarea/*.rs",
+        "apps/fret-ui-gallery/tests/textarea_docs_surface.rs"
+      ],
+      "facts": [
+        "Gallery mirrors the current upstream docs path through Demo, Usage, Disabled, With Label, With Text, and With Button before Fret/base-radix follow-ups.",
+        "The With Label snippet maps upstream htmlFor/id to Label::for_control(...) plus Textarea::control_id(...).",
+        "The Field snippet follows the base/radix Field example with Message, a six-row textarea, and the description after the control.",
+        "Copyable snippets stay on the leaf-control lane and avoid generic children, compose, or asChild APIs on Textarea itself."
+      ]
+    },
+    {
+      "part_id": "textarea_packet_and_matrix_closure",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/textarea_agent_packet_p0_v1.json",
+        "tools/parity-discovery/shadcn_component_harness_matrix.py",
+        "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json"
+      ],
+      "facts": [
+        "The packet has zero repair, hardening, and gate queues.",
+        "The manifest target ties current source refs, upstream snapshots, Fret tests, diagnostics scripts, and the packet together.",
+        "The Textarea state depth covers disabled, focus-visible, resize drag, keyboard, RTL, text metrics, and paint token evidence."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Textarea docs-path slice with current main-worktree repo-ref source refs, textarea-* upstream goldens, recipe semantics/resize tests, web-vs-Fret layout and chrome gates, Gallery docs-surface checks, diagnostics JSON, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "textarea.docs-path.desktop",
+        "component": "textarea",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/textarea_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

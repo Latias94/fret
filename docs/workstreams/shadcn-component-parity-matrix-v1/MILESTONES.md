@@ -998,3 +998,31 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Spinner `DIS`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
   component has no required state-depth gaps.
+
+## M41 - Promote Textarea
+
+Status: complete on 2026-05-27.
+
+`textarea.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Textarea docs path, new-york-v4 source/examples, base/radix Field
+examples, textarea-* upstream goldens, recipe semantics/resize tests, web-vs-Fret layout, chrome,
+text-paint, and label-focus gates, Gallery docs-surface checks, diagnostics JSON, and a
+component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Textarea docs path, new-york-v4 recipe/examples,
+  base/radix recipe and Field example references, and the tracked textarea upstream goldens.
+- The Textarea packet records the owner split: `fret-ui-shadcn` owns the leaf text control chrome,
+  min-h-16, full-width/min-width behavior, placeholder/caret/focus/invalid paint, required/invalid
+  semantics, and resize affordance; Label/Field and callers own surrounding composition; Gallery
+  owns current docs ordering plus Fret/base-radix follow-ups.
+- The Gallery page now follows current upstream docs through `Demo`, `Usage`, `Disabled`,
+  `With Label`, `With Text`, and `With Button`, then appends `API Reference`, `Invalid`,
+  `Required`, `RTL`, `Field`, `Label Association`, and `Notes`.
+- `textarea_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs
+  with zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 47 `regression_locked`, 1 `harness_hardening`, 6
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Textarea `DIS`, `FOCUS-VIS`, `DRAG`, `KEY`, `RTL`,
+  `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.

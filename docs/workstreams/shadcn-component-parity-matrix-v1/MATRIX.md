@@ -39,35 +39,35 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 47,
-    "fret_layout": 47,
-    "fret_text_paint": 27,
-    "interaction_script": 47,
+    "fret_bundle_semantics": 48,
+    "fret_layout": 48,
+    "fret_text_paint": 28,
+    "interaction_script": 48,
     "responsive_viewport": 9,
-    "source_refs": 47,
-    "upstream_dom_snapshot": 47
+    "source_refs": 48,
+    "upstream_dom_snapshot": 48
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
   "registry_component_count": 54,
   "state_depth_component_counts": {
-    "disabled": 18,
-    "drag": 4,
-    "focus_visible": 15,
+    "disabled": 19,
+    "drag": 5,
+    "focus_visible": 16,
     "hover": 13,
-    "keyboard": 27,
+    "keyboard": 28,
     "mobile": 15,
     "open": 25,
-    "paint_token": 45,
+    "paint_token": 46,
     "pressed": 1,
-    "rtl": 27,
-    "text_metrics": 27
+    "rtl": 28,
+    "text_metrics": 28
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 7,
+    "inventory_only": 6,
     "not_in_harness": 5,
-    "regression_locked": 46
+    "regression_locked": 47
   }
 }
 ```
@@ -129,7 +129,7 @@ State-depth legend:
 | switch | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | table | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | HOV, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | tabs | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
-| textarea | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| textarea | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | toast | non_registry | Skip | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | toggle | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | toggle-group | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
