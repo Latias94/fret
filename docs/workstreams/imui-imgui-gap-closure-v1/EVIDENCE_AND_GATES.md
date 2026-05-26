@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Disclosure Header Row Visual Owner-Split Evidence - 2026-05-27
+
+Claim verified: disclosure header row container/flex assembly, indicator glyph mounting, label
+text mounting, row padding, border, and radius props moved out of the broader visual owner without
+changing collapsing-header/tree-node a11y, palette policy, indicator glyphs, label text roles,
+indentation, row chrome, or trigger behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header.rs` now owns header row
+  construction, including row container props, flex row layout, indicator glyph, label text, and
+  spacer assembly.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs` now keeps disclosure a11y,
+  content padding, and palette resolution.
+- `tools/gate_imui_workstream_source.py` now requires the header-row owner and rejects direct
+  container/flex/text row construction from drifting back into `disclosure_controls/visual.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls::tests
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_disclosure_smoke
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  interaction_shortcuts::disclosure_tree::tree_node_children_stack_vertically_inside_open_parents
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Popup Modal Layout Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI popup modal palette, centered panel geometry, layer/backdrop props, dialog

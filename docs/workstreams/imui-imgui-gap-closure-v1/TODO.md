@@ -69,6 +69,13 @@ Last updated: 2026-05-27
       sanitization, and trigger `ResponseExt` population. The root file keeps label identity,
       spec/open-model wiring, content mounting, and aggregate `DisclosureResponse` open/toggled
       state.
+- [x] Split IMUI disclosure header-row visual construction out of
+      `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs` into a private owner module
+      without changing collapsing-header/tree-node a11y, palette policy, indicator glyphs, label
+      text roles, row chrome, indentation, or trigger behavior.
+      Result: `disclosure_controls/visual/header.rs` owns header row container/flex assembly,
+      indicator glyph mounting, label text mounting, row padding, border, and radius props.
+      `visual.rs` keeps disclosure a11y, content padding, and palette resolution.
 - [x] Split IMUI combo trigger behavior and visual chrome out of
       `ecosystem/fret-ui-kit/src/imui/combo_controls.rs` into a private owner module without
       changing the public combo/combo-model facade surface.

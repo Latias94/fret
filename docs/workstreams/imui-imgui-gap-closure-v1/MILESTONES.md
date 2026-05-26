@@ -59,6 +59,13 @@ hover-delay reads, enabled sanitization, and trigger `ResponseExt` population.
 mounting, and aggregate open/toggled response state. The public collapsing-header and tree-node
 APIs remain unchanged.
 
+2026-05-27 disclosure header-row visual owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header.rs` now owns header row
+container/flex assembly, indicator glyph mounting, label text mounting, row padding, border, and
+radius props. `disclosure_controls/visual.rs` keeps disclosure a11y, content padding, and palette
+resolution. Trigger pressable behavior, shortcut/context-menu handling, indicator glyphs, label
+text roles, indentation, and row chrome remain unchanged.
+
 2026-05-26 combo trigger owner-split result:
 `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs` now owns ComboBox pressable
 construction, accessibility label derivation, shortcut activation, context-menu key handling,
