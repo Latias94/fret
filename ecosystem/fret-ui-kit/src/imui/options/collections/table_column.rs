@@ -4,41 +4,11 @@ use fret_core::Px;
 
 use super::super::super::label_identity::parse_label_identity;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TableColumnWidth {
-    Px(Px),
-    Fill(f32),
-}
+mod primitives;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct TableColumnResizeOptions {
-    pub min_width: Option<Px>,
-    pub max_width: Option<Px>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TableSortDirection {
-    Ascending,
-    Descending,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum TableColumnPin {
-    #[default]
-    None,
-    Left,
-    Right,
-}
-
-impl TableColumnWidth {
-    pub fn px(width: Px) -> Self {
-        Self::Px(width)
-    }
-
-    pub fn fill(weight: f32) -> Self {
-        Self::Fill(weight)
-    }
-}
+pub use primitives::{
+    TableColumnPin, TableColumnResizeOptions, TableColumnWidth, TableSortDirection,
+};
 
 #[derive(Debug, Clone)]
 pub struct TableColumn {
@@ -212,15 +182,6 @@ impl TableColumn {
     pub fn with_pin(mut self, pin: TableColumnPin) -> Self {
         self.pin = pin;
         self
-    }
-}
-
-impl Default for TableColumnResizeOptions {
-    fn default() -> Self {
-        Self {
-            min_width: Some(Px(32.0)),
-            max_width: None,
-        }
     }
 }
 

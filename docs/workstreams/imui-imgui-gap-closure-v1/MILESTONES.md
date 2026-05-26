@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 table-column primitive option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/collections/table_column/primitives.rs` now owns
+`TableColumnWidth`, `TableColumnResizeOptions`, `TableSortDirection`, `TableColumnPin`, width
+constructors, and default resize limits. `table_column.rs` keeps the `TableColumn` builder,
+identity inference, accessor-first seams, and visibility/sort/resize/pin policy methods.
+
 2026-05-27 floating-window resize drag-apply owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply.rs` now owns resize drag
 delta calculation, min/max clamping, left/top origin reconciliation, all eight handle branches,

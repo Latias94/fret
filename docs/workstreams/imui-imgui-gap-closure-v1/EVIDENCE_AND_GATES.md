@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Table-Column Primitive Option Owner-Split Evidence - 2026-05-27
+
+Claim verified: table-column primitive option types moved out of the `TableColumn` builder owner
+without changing public re-export paths, width constructors, resize defaults, sort direction,
+pinning helpers, column identity inference, visibility policy, or table composition behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs` keeps `TableColumn`
+  construction, identity inference, visibility/sort/resize/pin builder methods, accessor-first
+  seams, and `set_visible_for_policy(...)`.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table_column/primitives.rs` owns
+  `TableColumnWidth`, `TableColumnResizeOptions`, `TableSortDirection`, `TableColumnPin`, width
+  constructors, and default resize limits.
+- Existing callers still import the same names through `fret_ui_kit::imui` and
+  `options::collections::table_column` re-exports.
+- `tools/gate_imui_workstream_source.py` now requires the primitive owner and rejects primitive
+  type bodies from drifting back into the `TableColumn` builder owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  table_column_helpers_compile table_column_pinning_helpers_compile
+  table_resizable_column_api_compiles table_sortable_header_api_compiles --no-fail-fast`: pass; 4
+  tests, 5 skipped.
+- `cargo nextest run -p fret-imui
+  table_helper_pins_left_and_right_columns_while_center_columns_scroll
+  table_column_visibility_menu_item_updates_visibility_state --no-fail-fast`: pass; 2 tests, 179
+  skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Floating-Window Resize Drag-Apply Owner-Split Evidence - 2026-05-27
 
 Claim verified: floating-window resize delta application moved out of the resize state lifecycle

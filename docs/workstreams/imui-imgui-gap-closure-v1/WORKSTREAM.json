@@ -574,6 +574,7 @@
     "ecosystem/fret-ui-kit/src/imui/options/collections.rs",
     "ecosystem/fret-ui-kit/src/imui/options/collections/table.rs",
     "ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs",
+    "ecosystem/fret-ui-kit/src/imui/options/collections/table_column/primitives.rs",
     "ecosystem/fret-ui-kit/src/imui/options/collections/virtual_list.rs",
     "ecosystem/fret-ui-kit/src/imui/options/containers.rs",
     "ecosystem/fret-ui-kit/src/imui/options/containers/child_region.rs",

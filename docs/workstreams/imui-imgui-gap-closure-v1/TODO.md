@@ -181,6 +181,14 @@ Last updated: 2026-05-27
       helpers, `collections/table.rs` owns table/row/cell options, and
       `collections/virtual_list.rs` owns virtual-list defaults. The root `collections.rs` file is
       now a thin module/re-export index.
+- [x] Split IMUI table-column primitive option types out of
+      `ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs` into a private owner
+      module without changing public re-export paths, width constructors, resize defaults, sort
+      direction, pinning helpers, identity inference, or table composition behavior.
+      Result: `options/collections/table_column/primitives.rs` owns `TableColumnWidth`,
+      `TableColumnResizeOptions`, `TableSortDirection`, `TableColumnPin`, width constructors, and
+      default resize limits. `table_column.rs` keeps the `TableColumn` builder, identity
+      inference, accessor seams, and visibility/sort/resize/pin policy methods.
 - [x] Split IMUI table-column visibility snapshot data shapes out of
       `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state.rs` into a private owner
       module without changing public re-export paths, serde payload shape, empty-id filtering,
