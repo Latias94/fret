@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Child-Region Resize Response Owner-Split Evidence - 2026-05-27
+
+Claim verified: child-region X/Y resize response records moved behind a private owner without
+changing public re-export paths, aggregate `ChildRegionResponse` accessors, X/Y drag accessors,
+min/max clamping helpers, or existing resize option smoke coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/child_region.rs` now keeps aggregate
+  `ChildRegionResponse` storage, aggregate accessors, and re-exports the resize response types.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize.rs` owns
+  `ChildRegionResizeXResponse`, `ChildRegionResizeYResponse`, drag accessors, min/max accessors,
+  width/height clamping helpers, and the clamping unit tests.
+- `tools/gate_imui_workstream_source.py` now checks the aggregate response and resize response
+  owners separately, including opaque field checks for the moved resize records.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui child_region_resize --no-fail-fast`: pass; 4
+  tests, 733 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke
+  --no-fail-fast`: pass; 3 tests, 0 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Text-Picker Pick-Response Merge Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI input-text picker picked-response merge moved behind a private owner without

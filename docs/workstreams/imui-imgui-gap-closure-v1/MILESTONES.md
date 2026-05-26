@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 child-region resize response owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize.rs` now owns
+`ChildRegionResizeXResponse`, `ChildRegionResizeYResponse`, drag/min/max accessors, width/height
+clamping helpers, and clamping tests. `child_region.rs` keeps aggregate `ChildRegionResponse`
+storage, aggregate accessors, and resize response re-exports.
+
 2026-05-27 text-picker pick-response merge owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/response.rs` now owns selected-value re-read,
 `model_value_changed_for(...)` lookup, and `ResponseExt` merge writes for picked completion/history

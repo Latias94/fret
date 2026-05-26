@@ -569,6 +569,7 @@
     "ecosystem/fret-ui-kit/src/imui/tooltip_overlay/trigger.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/child_region.rs",
+    "ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/open.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/table.rs",
     "ecosystem/fret-ui-kit/src/imui/response/widgets/tabs.rs",
