@@ -4585,7 +4585,7 @@ fn skeleton_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/skeleton/usage.rs",
         ],
         &[
-            "use fret::{UiChild, AppComponentCx};",
+            "use fret::{AppComponentCx, UiChild};",
             "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",

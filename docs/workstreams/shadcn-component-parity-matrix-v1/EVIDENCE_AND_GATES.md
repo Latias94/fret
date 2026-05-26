@@ -1946,3 +1946,31 @@ screenshots.
   hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
 - `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
   regenerated JSON/Markdown artifacts.
+
+2026-05-27 Skeleton regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/skeleton_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Skeleton diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/skeleton`.
+- `python -m json.tool` checks for the coverage manifest and `WORKSTREAM.json`: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail skeleton`: PASS, 5 tests passed
+  and 1298 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail skeleton`:
+  PASS, 2 tests passed and 149 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test reduced_motion_continuous_frames --status-level fail skeleton_respects_reduced_motion_and_does_not_request_frames`:
+  PASS, 1 test passed and 1 skipped after waiting on cargo locks.
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_misc_targeted --status-level fail shadcn_misc_goldens_are_targeted_gates`:
+  PASS, 1 test passed.
+- `cargo nextest run -p fret-ui-gallery --test skeleton_docs_surface --status-level fail`: PASS, 3
+  tests passed after waiting on cargo locks.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail skeleton`:
+  PASS, 3 tests passed and 375 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- Matrix summary: 45 `regression_locked`, 1 `harness_hardening`, 8 `inventory_only`, and 5
+  `not_in_harness`.
+- Skeleton row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
+  depth `RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0, hardening=0, gate=0`,
+  `Next gap = state_depth_model_satisfied`.

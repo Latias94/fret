@@ -944,3 +944,31 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Separator `MOB`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
   component has no required state-depth gaps.
+
+## M39 - Promote Skeleton
+
+Status: complete on 2026-05-27.
+
+`skeleton.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Skeleton docs path, new-york-v4 source, skeleton-demo/card upstream
+goldens, recipe layout/pulse tests, reduced-motion proof, targeted upstream marker checks, Gallery
+docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Skeleton docs path, new-york-v4 recipe/demo/card
+  references, base/radix recipe/example expansion, and the tracked skeleton-demo/card upstream
+  goldens.
+- The Skeleton packet records the owner split: `fret-ui-shadcn` owns the visual leaf chrome,
+  pulse animation, and reduced-motion behavior; callers own placeholder size and shape; Gallery
+  owns the current docs ordering, base/radix example expansion, RTL follow-up, and stable
+  diagnostics anchors.
+- The Gallery page now states the source-axis split explicitly: current shadcn docs cover `Demo`,
+  `Usage`, and `Card`, while `Avatar`, `Text`, `Form`, and `Table` come from base/radix registry
+  examples and `RTL` / `API Reference` / `Notes` are Fret follow-ups.
+- `skeleton_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs
+  with zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 45 `regression_locked`, 1 `harness_hardening`, 8
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Skeleton `RTL`, `TEXT-MET`, and `PAINT` evidence; the component
+  has no required state-depth gaps.

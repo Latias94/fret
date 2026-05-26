@@ -133,3 +133,7 @@ date: 2026-05-26
       seed covering current shadcn docs/source refs, separator-demo upstream golden, primitive and
       recipe semantics, horizontal/vertical rule geometry and chrome, Gallery docs ordering,
       decorative-hidden diagnostics, RTL follow-up, and text/paint evidence.
+- [x] SCPM-460: Promote Skeleton from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, skeleton-demo/card upstream goldens, recipe
+      leaf chrome and pulse behavior, reduced-motion safety, Gallery docs ordering, base/radix
+      example expansion, RTL follow-up, and text/paint evidence.

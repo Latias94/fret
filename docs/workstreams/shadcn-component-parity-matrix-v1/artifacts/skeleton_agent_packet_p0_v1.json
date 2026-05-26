@@ -1,0 +1,242 @@
+{
+  "schema_version": 1,
+  "component": "skeleton",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-27",
+  "generated_by": "manual skeleton docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/skeleton.rs + ecosystem/fret-ui-shadcn/tests/{web_vs_fret_layout/skeleton.rs,reduced_motion_continuous_frames.rs,web_vs_fret_misc_targeted.rs} + apps/fret-ui-gallery/src/ui/pages/skeleton.rs + apps/fret-ui-gallery/src/ui/snippets/skeleton/*.rs + apps/fret-ui-gallery/tests/{skeleton_docs_surface.rs,ui_authoring_surface_default_app.rs} + tools/diag-scripts/ui-gallery/skeleton/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/skeleton_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Skeleton component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/skeleton -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Skeleton docs smoke and zinc-dark screenshot diagnostics parse cleanly and cover the stable Gallery docs anchors."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail skeleton",
+      "status": "pass",
+      "scope": "Skeleton recipe tests cover size-free leaf defaults, the Fret block convenience, pulse alpha modulation, and stable non-pulse paint."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail skeleton",
+      "status": "pass",
+      "scope": "Skeleton web-vs-Fret layout gate compares the tracked skeleton-demo and skeleton-card placeholder geometry against upstream new-york-v4 goldens."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test reduced_motion_continuous_frames --status-level fail skeleton_respects_reduced_motion_and_does_not_request_frames",
+      "status": "pass",
+      "scope": "Reduced-motion gate keeps Skeleton pulse animation from requesting frames when the runtime prefers reduced motion."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test skeleton_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery docs-surface tests keep the current shadcn docs path, base/radix example follow-up, leaf API decision, copyable snippets, RTL follow-up, and diagnostic anchors aligned."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail skeleton",
+      "status": "pass",
+      "scope": "Gallery authoring tests keep Skeleton snippets on the default app surface and preserve typed docs sections."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.skeleton.demo.light.vp1440x900",
+      "snapshot": "skeleton-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.skeleton.card.light.vp1440x900",
+      "snapshot": "skeleton-card",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-card",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": [
+    {
+      "id": "fret.skeleton.recipe",
+      "layer": "recipe",
+      "owner": "fret-ui-shadcn",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/skeleton.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/skeleton.rs",
+        "ecosystem/fret-ui-shadcn/tests/reduced_motion_continuous_frames.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_misc_targeted.rs"
+      ]
+    },
+    {
+      "id": "fret.skeleton.gallery",
+      "layer": "app_demo",
+      "owner": "fret-ui-gallery",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/skeleton.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/skeleton/*.rs",
+        "apps/fret-ui-gallery/tests/skeleton_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+      ]
+    },
+    {
+      "id": "fret.skeleton.diagnostics",
+      "layer": "runner",
+      "owner": "diagnostics_surface",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/skeleton/ui-gallery-skeleton-docs-smoke.json",
+        "tools/diag-scripts/ui-gallery/skeleton/ui-gallery-skeleton-demo-screenshot-zinc-dark.json",
+        "tools/diag-scripts/ui-gallery/skeleton/ui-gallery-skeleton-examples-screenshots-zinc-dark.json"
+      ]
+    }
+  ],
+  "summary": {
+    "status_counts": {
+      "regression_locked": 1
+    },
+    "covered_axes": [
+      "source_refs",
+      "upstream_dom_snapshot",
+      "fret_layout",
+      "fret_bundle_semantics",
+      "fret_text_paint",
+      "interaction_script"
+    ],
+    "state_depth": [
+      "rtl",
+      "text_metrics",
+      "paint_token"
+    ],
+    "layout_sidecar_count": 2,
+    "bundle_schema2_count": 3,
+    "layout_test_id_count": 8,
+    "bundle_semantics_test_id_count": 10,
+    "measured_test_id_count": 10,
+    "upstream_dom_snapshot_count": 2,
+    "upstream_dom_target_count": 2,
+    "upstream_context_count": 2,
+    "upstream_dom_context_count": 2,
+    "upstream_live_fact_count": 5,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 1,
+    "fret_live_fact_count": 10,
+    "fret_semantics_fact_count": 4,
+    "fret_interaction_fact_count": 3,
+    "fret_text_paint_fact_count": 4,
+    "fret_text_paint_direct_fact_count": 2,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 4,
+    "fret_text_paint_row_count": 2,
+    "fret_text_paint_association_row_count": 2,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 3,
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0
+  },
+  "live_facts": {
+    "owner_split": [
+      "The Skeleton recipe owns bg-accent, rounded-md, animate-pulse timing, and reduced-motion-safe pulse scheduling.",
+      "Callers own width, height, aspect ratio, and rounded-full avatar shapes because upstream puts those constraints on example-local className values.",
+      "Gallery owns the teaching order, the base/radix example expansion, the RTL follow-up, and stable ui-gallery-skeleton-* diagnostics anchors."
+    ],
+    "source_truth": [
+      "Current main-worktree repo-ref truth uses repo-ref/ui/apps/v4/content/docs/components/skeleton.mdx for Demo, Usage, and Card.",
+      "Current new-york-v4 Skeleton source is a size-free div with data-slot=skeleton, bg-accent, animate-pulse, and rounded-md.",
+      "Base/radix registry examples add Avatar, Card, Text, Form, and Table compositions without defining a dedicated headless Skeleton primitive.",
+      "No dedicated Skeleton primitive exists under repo-ref/primitives or repo-ref/base-ui, so this family stays in recipe and docs-surface ownership."
+    ],
+    "regression_gates": [
+      "Skeleton unit tests keep the size-free leaf default, block convenience, pulse alpha, and non-pulse paint stable.",
+      "web_vs_fret_layout skeleton compares skeleton-demo and skeleton-card geometry against upstream goldens.",
+      "reduced_motion_continuous_frames keeps animate-pulse from requesting animation frames under reduced motion.",
+      "skeleton_docs_surface keeps current source-axis wording, docs order, copyable snippets, RTL, and diagnostics anchors stable.",
+      "Skeleton diagnostics cover docs smoke anchors plus zinc-dark screenshot paths for placeholder chrome and layout."
+    ]
+  },
+  "parts": [
+    {
+      "part_id": "skeleton_recipe_leaf_and_chrome",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/skeleton.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/skeleton.rs",
+        "ecosystem/fret-ui-shadcn/tests/reduced_motion_continuous_frames.rs"
+      ],
+      "facts": [
+        "Skeleton::new() stays a size-free leaf primitive with no child slot, matching the upstream div boundary.",
+        "Default paint maps to accent background, rounded-md radius, and pulse animation.",
+        "Skeleton::block() remains a Fret convenience for w-full h-4 placeholders and does not replace the upstream default path."
+      ]
+    },
+    {
+      "part_id": "skeleton_docs_examples_and_gallery",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/skeleton.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/skeleton/*.rs",
+        "apps/fret-ui-gallery/tests/skeleton_docs_surface.rs"
+      ],
+      "facts": [
+        "Gallery mirrors the current shadcn docs path through Demo, Usage, and Card before adding base/radix Avatar/Text/Form/Table examples.",
+        "RTL, API Reference, and Notes are explicit Fret follow-ups rather than upstream docs sections.",
+        "Copyable snippets keep AppComponentCx and UiChild imports on the default app-facing surface."
+      ]
+    },
+    {
+      "part_id": "skeleton_packet_and_matrix_closure",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/skeleton_agent_packet_p0_v1.json",
+        "tools/parity-discovery/shadcn_component_harness_matrix.py",
+        "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json"
+      ],
+      "facts": [
+        "The packet has zero repair, hardening, and gate queues.",
+        "The manifest target ties current source refs, upstream snapshots, Fret tests, diagnostics scripts, and the packet together.",
+        "The Skeleton state depth covers RTL, text metrics, and paint token evidence without inventing activation, pointer, or disclosure requirements for a visual leaf primitive."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Skeleton docs-path slice with current main-worktree repo-ref source refs, skeleton-demo/card upstream goldens, recipe layout/pulse tests, reduced-motion proof, Gallery docs-surface checks, diagnostics JSON, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "skeleton.docs-path.desktop",
+        "component": "skeleton",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/skeleton_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

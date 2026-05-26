@@ -39,13 +39,13 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 45,
-    "fret_layout": 45,
-    "fret_text_paint": 25,
-    "interaction_script": 45,
+    "fret_bundle_semantics": 46,
+    "fret_layout": 46,
+    "fret_text_paint": 26,
+    "interaction_script": 46,
     "responsive_viewport": 9,
-    "source_refs": 45,
-    "upstream_dom_snapshot": 45
+    "source_refs": 46,
+    "upstream_dom_snapshot": 46
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
@@ -58,16 +58,16 @@ State-depth legend:
     "keyboard": 27,
     "mobile": 15,
     "open": 25,
-    "paint_token": 43,
+    "paint_token": 44,
     "pressed": 1,
-    "rtl": 25,
-    "text_metrics": 25
+    "rtl": 26,
+    "text_metrics": 26
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 9,
+    "inventory_only": 8,
     "not_in_harness": 5,
-    "regression_locked": 44
+    "regression_locked": 45
   }
 }
 ```
@@ -122,7 +122,7 @@ State-depth legend:
 | separator | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | MOB, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | sheet | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV, RESP | DIS, HOV, FOCUS-VIS, OPEN, MOB, PAINT | KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | sidebar | registry | Present | harness_hardening | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP | HOV, FOCUS-VIS, DRAG, OPEN, KEY, MOB, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=1, gate=1 | state_depth_model_satisfied |
-| skeleton | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| skeleton | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | slider | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | sonner | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | spinner | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |

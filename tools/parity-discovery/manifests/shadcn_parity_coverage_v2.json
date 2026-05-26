@@ -1994,6 +1994,54 @@
         "tools/diag-scripts/ui-gallery/separator/ui-gallery-separator-decorative-hidden-semantics.json",
         "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/separator_agent_packet_p0_v1.json"
       ]
+    },
+    {
+      "rank": 50,
+      "priority": "P1",
+      "id": "skeleton.docs-path.desktop",
+      "component": "skeleton",
+      "state": "docs path Skeleton Demo/Usage/Card, base/radix Avatar/Text/Form/Table examples, size-free leaf primitive, caller-owned sizing and shape, pulse/reduced-motion behavior, RTL follow-up, text metrics, and paint token output",
+      "trigger": "static, reduced motion, rtl, screenshot, text paint",
+      "viewport_class": "desktop_1440x900",
+      "status": "covered_v2",
+      "next_action": "regression_lock",
+      "likely_layer": "recipe",
+      "promotion_target": "regression_gate",
+      "why": "Skeleton had current shadcn docs/new-york-v4 source refs, skeleton-demo and skeleton-card upstream goldens, recipe layout and pulse tests, reduced-motion coverage, targeted upstream marker checks, Gallery docs-surface checks, and Skeleton diagnostics, but no component-matrix packet. The new slice locks the owner split: the shadcn recipe owns the visual leaf chrome and pulse behavior, callers own placeholder size and shape, and Gallery owns current Demo/Usage/Card docs ordering plus the base/radix Avatar/Text/Form/Table expansion and Fret follow-ups.",
+      "upstream_refs": [
+        "repo-ref/ui/apps/v4/content/docs/components/skeleton.mdx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/ui/skeleton.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/skeleton-demo.tsx",
+        "repo-ref/ui/apps/v4/registry/new-york-v4/examples/skeleton-card.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/base/ui/skeleton.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/base/examples/skeleton-example.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/radix/ui/skeleton.tsx",
+        "repo-ref/ui/apps/v4/registry/bases/radix/examples/skeleton-example.tsx",
+        "goldens/shadcn-web/v4/new-york-v4/skeleton-demo.json",
+        "goldens/shadcn-web/v4/new-york-v4/skeleton-card.json"
+      ],
+      "fret_refs": [
+        "docs/audits/shadcn-skeleton.md",
+        "ecosystem/fret-ui-shadcn/src/skeleton.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/skeleton.rs",
+        "ecosystem/fret-ui-shadcn/tests/reduced_motion_continuous_frames.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_misc_targeted.rs",
+        "apps/fret-ui-gallery/src/ui/pages/skeleton.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/skeleton/demo.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/skeleton/usage.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/skeleton/avatar.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/skeleton/card.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/skeleton/text.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/skeleton/form.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/skeleton/table.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/skeleton/rtl.rs",
+        "apps/fret-ui-gallery/tests/skeleton_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+        "tools/diag-scripts/ui-gallery/skeleton/ui-gallery-skeleton-docs-smoke.json",
+        "tools/diag-scripts/ui-gallery/skeleton/ui-gallery-skeleton-demo-screenshot-zinc-dark.json",
+        "tools/diag-scripts/ui-gallery/skeleton/ui-gallery-skeleton-examples-screenshots-zinc-dark.json",
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/skeleton_agent_packet_p0_v1.json"
+      ]
     }
   ]
 }
