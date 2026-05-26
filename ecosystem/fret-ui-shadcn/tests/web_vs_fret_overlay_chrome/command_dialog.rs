@@ -52,6 +52,12 @@ fn assert_command_dialog_focused_item_chrome_matches_web_named(
         _ => shadcn::themes::ShadcnColorScheme::Light,
     };
     setup_app_with_shadcn_theme_scheme(&mut app, scheme);
+    app.with_global_mut(fret_ui::elements::ElementRuntime::new, |rt, _app| {
+        rt.set_window_prefers_reduced_motion(window, Some(true));
+    });
+    app.with_global_mut(fret_ui::ElementRuntime::default, |rt, _app| {
+        rt.set_window_prefers_reduced_motion(window, Some(true));
+    });
 
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);

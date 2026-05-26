@@ -39,35 +39,35 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 37,
-    "fret_layout": 37,
-    "fret_text_paint": 17,
-    "interaction_script": 37,
+    "fret_bundle_semantics": 38,
+    "fret_layout": 38,
+    "fret_text_paint": 18,
+    "interaction_script": 38,
     "responsive_viewport": 9,
-    "source_refs": 37,
-    "upstream_dom_snapshot": 37
+    "source_refs": 38,
+    "upstream_dom_snapshot": 38
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
   "registry_component_count": 54,
   "state_depth_component_counts": {
-    "disabled": 14,
+    "disabled": 15,
     "drag": 2,
-    "focus_visible": 11,
+    "focus_visible": 12,
     "hover": 11,
-    "keyboard": 20,
+    "keyboard": 21,
     "mobile": 13,
-    "open": 22,
-    "paint_token": 35,
+    "open": 23,
+    "paint_token": 36,
     "pressed": 1,
-    "rtl": 17,
-    "text_metrics": 17
+    "rtl": 18,
+    "text_metrics": 18
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 17,
+    "inventory_only": 16,
     "not_in_harness": 5,
-    "regression_locked": 36
+    "regression_locked": 37
   }
 }
 ```
@@ -92,7 +92,7 @@ State-depth legend:
 | checkbox | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | collapsible | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, OPEN, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | combobox | non_registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV, RESP | OPEN, MOB | KEY, TEXT-MET, PAINT | 2 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
-| command | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| command | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | context-menu | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | OPEN, KEY, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | data-table | non_registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | RTL, PAINT | KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | date-picker | non_registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV, RESP | OPEN, KEY, MOB, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |

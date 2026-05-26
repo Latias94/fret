@@ -1,0 +1,402 @@
+{
+  "schema_version": 1,
+  "component": "command",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual command docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/command.rs + ecosystem/fret-ui-kit/src/headless/cmdk_score.rs + ecosystem/fret-ui-kit/src/headless/cmdk_selection.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/input.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/command_dialog.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/misc_overlays/fixtures.rs + apps/fret-ui-gallery/src/ui/pages/command.rs + apps/fret-ui-gallery/src/ui/snippets/command/*.rs + apps/fret-ui-gallery/tests/{command_page_contract.rs,command_diag_surface.rs,ui_authoring_surface_default_app.rs} + tools/diag-scripts/ui-gallery/command/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/command_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Command component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/suites/ui-gallery-command/suite.json | Out-Null; Get-ChildItem -Path tools/diag-scripts/ui-gallery/command -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Command docs, shortcut, disabled focusable keyboard suppression, retained active-descendant, filtering, RTL, and accessibility diagnostic scripts parse cleanly."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail command",
+      "status": "pass",
+      "scope": "Command recipe tests cover active-descendant navigation, filtering/scoring, value/keywords aliases, empty/loading/group/separator row rendering, row children, command dispatch, dialog open-change reasons, close-on-select behavior, viewport test-id forwarding, and builder surfaces.",
+      "tests_passed": 75,
+      "tests_skipped": 1228
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_command_demo",
+      "status": "pass",
+      "scope": "Command demo web-vs-Fret layout gate covers input height/order, listbox height, option height, and option insets against command-demo.json.",
+      "tests_passed": 1,
+      "tests_skipped": 150
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome --status-level fail command_dialog",
+      "status": "pass",
+      "scope": "CommandDialog overlay chrome fixture covers panel chrome, focused item background/text, highlighted option chrome, light/dark, and tight viewport variants.",
+      "tests_passed": 1,
+      "tests_skipped": 22
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail web_vs_fret_misc_overlays_command_dialog_cases_match_web_fixtures",
+      "status": "pass",
+      "scope": "CommandDialog-specific misc overlay fixture covers centered placement, input/listbox heights, item heights, item insets, and tight viewport variants without depending on unrelated tooltip cases.",
+      "tests_passed": 1,
+      "tests_skipped": 34
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test command_page_contract --test command_diag_surface --test ui_authoring_surface_default_app --status-level fail command",
+      "status": "pass",
+      "scope": "Gallery Command tests keep docs-vs-registry source notes, shell-vs-cmdk split children contract, diagnostics scripts, authoring-surface snippets, list viewport test ids, and typed doc sections aligned.",
+      "tests_passed": 14,
+      "tests_skipped": 370
+    },
+    {
+      "command": "rustfmt --edition 2024 --check ecosystem/fret-ui-shadcn/src/command.rs ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/misc_overlays/fixtures.rs ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/command_dialog.rs",
+      "status": "pass",
+      "scope": "Touched Command recipe and web-golden harness files remain rustfmt-clean."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.command.demo.light.vp1440x900",
+      "snapshot": "command-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.command.dialog.open.light.vp1440x900",
+      "snapshot": "command-dialog.open",
+      "theme": "light",
+      "mode": "open",
+      "variant": "dialog",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.command.dialog.focus.light.vp1440x900",
+      "snapshot": "command-dialog.focus-first",
+      "theme": "light",
+      "mode": "focus-visible",
+      "variant": "dialog-focused-item",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.command.dialog.open.light.vp375x240",
+      "snapshot": "command-dialog.vp375x240.open",
+      "theme": "light",
+      "mode": "open",
+      "variant": "dialog-tight-viewport",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 240
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "command-demo",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/command-demo.json"
+      },
+      {
+        "snapshot": "command-dialog.open",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/command-dialog.open.json"
+      },
+      {
+        "snapshot": "command-dialog.focus-first",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/command-dialog.focus-first.open.json"
+      },
+      {
+        "snapshot": "command-dialog.focus-first-vp375x240",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/command-dialog.focus-first-vp375x240.open.json"
+      },
+      {
+        "snapshot": "command-dialog.highlight-first-vp375x240",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/command-dialog.highlight-first-vp375x240.open.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "test": "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/input.rs",
+        "layout_scope": "command-demo input/listbox/option geometry and insets"
+      },
+      {
+        "test": "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/misc_overlays/fixtures.rs",
+        "layout_scope": "command-dialog overlay center, list metrics, option heights, and tight viewport insets"
+      },
+      {
+        "test": "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/command_dialog.rs",
+        "layout_scope": "command-dialog panel and row chrome paint"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-basic-placeholder-bundle.json",
+        "scope": "basic dialog placeholder and open state bundle semantics"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-retained-active-descendant-action-state.json",
+        "scope": "retained active-descendant relation and action state bundle semantics"
+      }
+    ],
+    "screenshots": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-icons-screenshots.json",
+        "scope": "docs demo icon row text/paint screenshot"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots-zinc-dark.json",
+        "scope": "dark theme shortcut row text/paint screenshot"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/command/ui-gallery-command-rtl-screenshot.json",
+        "scope": "RTL command palette text/paint screenshot"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 8,
+    "status_counts": {
+      "pass_known": 8,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 3,
+      "mechanism_core": 1,
+      "gallery_composition": 2,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 3,
+      "app_demo": 2,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 8
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 5,
+      "component_fixture": 3,
+      "unit_test": 3,
+      "none": 0
+    },
+    "layout_sidecar_count": 3,
+    "bundle_schema2_count": 2,
+    "layout_test_id_count": 14,
+    "bundle_semantics_test_id_count": 12,
+    "measured_test_id_count": 14,
+    "upstream_dom_snapshot_count": 5,
+    "upstream_dom_target_count": 5,
+    "upstream_context_count": 4,
+    "upstream_dom_context_count": 5,
+    "upstream_live_fact_count": 8,
+    "upstream_semantics_fact_count": 4,
+    "upstream_interaction_fact_count": 3,
+    "fret_live_fact_count": 18,
+    "fret_semantics_fact_count": 12,
+    "fret_interaction_fact_count": 10,
+    "fret_text_paint_fact_count": 6,
+    "fret_text_paint_direct_fact_count": 3,
+    "fret_text_paint_associated_fact_count": 3,
+    "fret_text_paint_bundle_entry_count": 8,
+    "fret_text_paint_row_count": 3,
+    "fret_text_paint_association_row_count": 2,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 4
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/command.mdx + repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx + repo-ref/ui/apps/v4/registry/new-york-v4/examples/command-demo.tsx + repo-ref/ui/apps/v4/registry/new-york-v4/examples/command-dialog.tsx + goldens/shadcn-web/v4/new-york-v4/command-demo.json + command-dialog*.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/command.rs + ecosystem/fret-ui-kit/src/headless/cmdk_score.rs + ecosystem/fret-ui-kit/src/headless/cmdk_selection.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/input.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/command_dialog.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/misc_overlays/fixtures.rs + apps/fret-ui-gallery/src/ui/pages/command.rs + apps/fret-ui-gallery/src/ui/snippets/command/*.rs + tools/diag-scripts/ui-gallery/command/*.json",
+    "part_count": 8,
+    "upstream_dom_target_count": 5,
+    "fret_test_id_count": 14,
+    "upstream_semantics_fact_count": 4,
+    "upstream_interaction_fact_count": 3,
+    "fret_semantics_fact_count": 12,
+    "fret_interaction_fact_count": 10,
+    "parts": [
+      {
+        "part_id": "command_upstream_source_and_examples",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "repo-ref/ui/apps/v4/content/docs/components/command.mdx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/command-demo.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/command-dialog.tsx",
+          "goldens/shadcn-web/v4/new-york-v4/command-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/command-dialog.open.json"
+        ],
+        "facts": [
+          "The current upstream docs page is `content/docs/components/command.mdx`, not the older base/radix docs path.",
+          "The new-york-v4 registry source owns root chrome, list max height, group spacing, CommandDialog h-12 overrides, item py-3 overrides, shortcut typography, and selected-row chrome.",
+          "The tracked upstream snapshots cover command-demo plus command-dialog open, focused, highlighted, and tight viewport states."
+        ]
+      },
+      {
+        "part_id": "command_recipe_items_do_not_shrink_in_scroll_list",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/command.rs",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail web_vs_fret_misc_overlays_command_dialog_cases_match_web_fixtures"
+        ],
+        "facts": [
+          "Command items opt out of flex shrink inside scrollable command lists so the web-aligned 44px CommandDialog rows stay uniform instead of distributing fractional shrink across rows.",
+          "CommandDialog group spacing now matches the source-aligned option insets for the second group after a separator.",
+          "The fix stays in the shadcn recipe layer because it is a source-owned row/list policy, not a core layout mechanism change."
+        ]
+      },
+      {
+        "part_id": "command_dialog_overlay_chrome",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/command_dialog.rs",
+          "ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_command_dialog_cases_v1.json"
+        ],
+        "facts": [
+          "CommandDialog panel chrome matches the web golden.",
+          "Focused row background/text and highlighted option chrome match light/dark and tight viewport snapshots.",
+          "The focused-row chrome assertion uses reduced motion because this gate asserts row paint, not the dialog entry opacity transition."
+        ]
+      },
+      {
+        "part_id": "command_active_descendant_and_filtering",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "evidence_refs": [
+          "ecosystem/fret-ui-kit/src/headless/cmdk_score.rs",
+          "ecosystem/fret-ui-kit/src/headless/cmdk_selection.rs",
+          "ecosystem/fret-ui-shadcn/src/command.rs",
+          "docs/adr/0073-active-descendant-and-composite-widget-semantics.md"
+        ],
+        "facts": [
+          "Focus stays in the input while the active result is exposed through active-descendant semantics.",
+          "Keyboard navigation, Enter activation, value aliases, keyword matching, and filter ordering are covered by the Command recipe tests.",
+          "Disabled focusable keyboard suppression and retained active-descendant diagnostics remain scripted under the Command diagnostics suite."
+        ]
+      },
+      {
+        "part_id": "command_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/command.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/command/*.rs",
+          "apps/fret-ui-gallery/tests/command_page_contract.rs",
+          "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+        ],
+        "facts": [
+          "The Gallery Command page keeps the docs-vs-registry source split explicit.",
+          "Default snippets stay on the direct CommandPalette/CommandDialog recipe lane while the manual split shell remains a labeled Fret follow-up.",
+          "The docs path preserves Demo, About, Usage, Basic, Shortcuts, Groups, Scrollable, RTL, and API Reference before Fret-only extras."
+        ]
+      },
+      {
+        "part_id": "command_diagnostics_surface",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/tests/command_diag_surface.rs",
+          "tools/diag-scripts/suites/ui-gallery-command/suite.json",
+          "tools/diag-scripts/ui-gallery/command/*.json"
+        ],
+        "facts": [
+          "The diagnostics scripts cover docs screenshots, shortcut activation, disabled focusable keyboard suppression, controlled active selection, retained active descendant, filtering, RTL, loading, and accessibility activation.",
+          "The Gallery diagnostic-surface tests keep shortcut injection and dialog-open chains stable.",
+          "All Command diagnostic JSON files parse cleanly."
+        ]
+      },
+      {
+        "part_id": "command_text_paint_and_rtl",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-icons-screenshots.json",
+          "tools/diag-scripts/ui-gallery/command/ui-gallery-command-docs-demo-shortcuts-screenshots-zinc-dark.json",
+          "tools/diag-scripts/ui-gallery/command/ui-gallery-command-rtl-screenshot.json",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/command_dialog.rs"
+        ],
+        "facts": [
+          "Text/paint evidence is covered by command docs screenshot scripts, RTL screenshot scripts, and web-vs-Fret overlay chrome color checks.",
+          "Shortcut text and selected-row foreground/background remain source-aligned.",
+          "RTL command examples remain on the docs path instead of a hidden follow-up."
+        ]
+      },
+      {
+        "part_id": "command_packet_and_matrix_closure",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/command_agent_packet_p0_v1.json",
+          "tools/parity-discovery/shadcn_component_harness_matrix.py",
+          "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json"
+        ],
+        "facts": [
+          "The packet has zero repair, hardening, and gate queues.",
+          "The manifest target ties current source refs, upstream snapshots, Fret tests, diagnostics scripts, and the packet together.",
+          "The required Command state depth covers disabled, open, keyboard, RTL, text metrics, and paint token evidence."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Command docs-path slice with current main-worktree repo-ref source refs, command-demo and command-dialog web goldens, recipe active-descendant/filtering tests, CommandDialog overlay chrome and placement/list-metrics gates, Gallery docs-surface checks, diagnostics JSON checks, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "command.docs-path.desktop-overlay",
+        "component": "command",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/command_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

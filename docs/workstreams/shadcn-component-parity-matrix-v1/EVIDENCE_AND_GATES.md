@@ -1670,3 +1670,39 @@ screenshots.
   PASS.
 - `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
   regenerated JSON/Markdown artifacts.
+
+2026-05-26 Command regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/command_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Command diagnostic JSON scripts: PASS for the command suite manifest plus all JSON scripts under
+  `tools/diag-scripts/ui-gallery/command`.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail command`: PASS, 75 tests passed
+  and 1228 skipped. Existing `fret-ui` warnings remained: unexpected cfg
+  `unstable-retained-bridge` and unused `current_effective_opacity`.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_command_demo`:
+  PASS, 1 test passed and 150 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome --status-level fail command_dialog`:
+  PASS, 1 test passed and 22 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail web_vs_fret_misc_overlays_command_dialog_cases_match_web_fixtures`:
+  PASS, 1 test passed and 34 skipped. This dedicated Command gate avoids the unrelated full
+  misc-overlays tooltip failure while still covering dialog centering, input/listbox heights,
+  option heights, option insets, and tight viewport variants.
+- `cargo nextest run -p fret-ui-gallery --test command_page_contract --test command_diag_surface --test ui_authoring_surface_default_app --status-level fail command`:
+  PASS, 14 tests passed and 370 skipped.
+- `rustfmt --edition 2024 --check ecosystem/fret-ui-shadcn/src/command.rs ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/misc_overlays/fixtures.rs ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/command_dialog.rs`:
+  PASS.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool` checks for the generated matrix JSON, `WORKSTREAM.json`, the Command packet,
+  the coverage manifest, and promoted Command diagnostic scripts: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `python tools/check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files indexed.
+- Matrix summary: 37 `regression_locked`, 1 `harness_hardening`, 16 `inventory_only`, and 5
+  `not_in_harness`.
+- Command row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0,
+  hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.

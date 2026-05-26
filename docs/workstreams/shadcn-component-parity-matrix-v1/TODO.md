@@ -101,3 +101,7 @@ date: 2026-05-26
       seed covering current shadcn docs/source refs, repository-list disclosure composition,
       controlled/uncontrolled open behavior, keyboard toggle, disabled trigger suppression,
       trigger/content semantics, RTL follow-up layout, and text/paint follow-ups.
+- [x] SCPM-380: Promote Command from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn docs/source refs, cmdk active-descendant/filtering behavior,
+      CommandDialog overlay chrome and placement/list metrics, disabled keyboard suppression,
+      shortcuts, RTL, and text/paint follow-ups.

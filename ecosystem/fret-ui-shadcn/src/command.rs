@@ -1478,7 +1478,11 @@ impl CommandList {
                 let text_style = item_text_style(&theme);
                 let item_layout = decl_style::layout_style(
                     &theme,
-                    LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
+                    LayoutRefinement::default()
+                        .w_full()
+                        .min_h(row_h)
+                        .min_w_0()
+                        .flex_shrink_0(),
                 );
                 (
                     row_gap,
@@ -2239,7 +2243,7 @@ impl CommandPalette {
         self.item_pad_y = MetricRef::space(Space::N3);
         self.group_pad_x = MetricRef::space(Space::N2);
         self.group_pad_y = MetricRef::space(Space::N1);
-        self.group_next_top_pad_zero = true;
+        self.group_next_top_pad_zero = false;
         self
     }
 
@@ -2656,7 +2660,11 @@ impl CommandPalette {
             let text_style = item_text_style(&theme);
             let item_layout = decl_style::layout_style(
                 &theme,
-                LayoutRefinement::default().w_full().min_h(row_h).min_w_0(),
+                LayoutRefinement::default()
+                    .w_full()
+                    .min_h(row_h)
+                    .min_w_0()
+                    .flex_shrink_0(),
             );
 
             let mut key_counts: HashMap<RowKey, u32> = HashMap::new();

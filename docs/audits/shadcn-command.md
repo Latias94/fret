@@ -16,9 +16,10 @@ instead of API compatibility.
 
 ## Upstream references (source of truth)
 
-- shadcn docs surface: `repo-ref/ui/apps/v4/content/docs/components/{base,radix}/command.mdx`
-- shadcn registry recipe surface: `repo-ref/ui/apps/v4/registry/bases/{base,radix}/ui/command.tsx`
-- shadcn docs demo surface: `repo-ref/ui/apps/v4/registry/bases/{base,radix}/examples/command-example.tsx`
+- shadcn docs surface: `repo-ref/ui/apps/v4/content/docs/components/command.mdx`
+- shadcn registry recipe surface: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/command.tsx`
+- shadcn docs demo surface: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/command-demo.tsx`
+- shadcn dialog example surface: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/command-dialog.tsx`
 - Base UI headless/docs reference:
   `repo-ref/base-ui/docs/src/app/(docs)/react/components/autocomplete/demos/command-palette/tailwind/index.tsx`
 - cmdk repo: `repo-ref/cmdk`
@@ -61,10 +62,11 @@ Key upstream semantics:
 
 - Pass: `CommandDemo` matches the public shadcn docs example surface for the copyable Gallery lane:
   `max-w-sm`, rounded border, and the icon/disabled/shortcut content shape used by
-  `examples/{base,radix}/command-demo.tsx`.
+  `registry/new-york-v4/examples/command-demo.tsx`.
 - Pass: `CommandDemo` still matches the upstream split sizing: input wrapper uses `h-9` while the
   input uses `h-10` (the input overflows the wrapper slightly in the web golden).
-- Pass: `CommandDialog` matches the upstream overrides (`h-12` wrapper + `h-12` input, and `pt-0` for sibling groups).
+- Pass: `CommandDialog` matches the upstream overrides (`h-12` wrapper + `h-12` input,
+  `py-3` item rows, source-aligned group spacing/insets, and dialog overlay chrome).
 - Pass: `Command` root chrome (rounded border + popover background) stays recipe-owned because upstream defines it in the component source.
 - Pass: `CommandPalette` defaults to a `w-full` root layout to avoid cmdk listbox width collapse when embedded in recipes (e.g. `Combobox`).
 - Note: Width caps such as upstream `max-w-sm` remain caller-owned; gallery `Usage` applies that at the call site rather than baking it into the recipe root.
@@ -95,7 +97,7 @@ Key upstream semantics:
 
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib command::tests`
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail command`
 - Contract test: `command_dialog_open_change_builders_set_handlers`
 - Contract test: `command_dialog_test_id_builders_forward_to_palette_semantics`
 - Contract test: `command_item_children_surface_renders_custom_row_while_preserving_option_label`
@@ -115,25 +117,20 @@ Key upstream semantics:
   - `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/command/ui-gallery-command-palette-separator-always-render-visible.json --dir target/fret-diag-command-separator --session-auto --pack --ai-packet --timeout-ms 240000 --launch -- target/debug/fret-ui-gallery`
 - shadcn-web golden + gates:
   - Golden: `goldens/shadcn-web/v4/new-york-v4/command-demo.json`
-  - Layout gates:
-    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout -- web_vs_fret_layout_command_demo_input_height_matches`
-    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout -- web_vs_fret_layout_command_demo_listbox_height_matches`
-    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout -- web_vs_fret_layout_command_demo_listbox_option_height_matches`
-    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout -- web_vs_fret_layout_command_demo_listbox_option_insets_match`
+  - Layout gate:
+    - `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_command_demo`
   - Golden: `goldens/shadcn-web/v4/new-york-v4/command-dialog.open.json`
-  - Chrome gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_chrome -- web_vs_fret_command_dialog_panel_chrome_matches`
-  - Placement gate: `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement -- web_vs_fret_command_dialog_overlay_center_matches`
-  - List metrics gates (v4 dialog surface overrides):
-    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement -- web_vs_fret_command_dialog_input_height_matches`
-    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement -- web_vs_fret_command_dialog_listbox_height_matches`
-    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement -- web_vs_fret_command_dialog_listbox_option_height_matches`
-    - `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_overlay_placement -- web_vs_fret_command_dialog_listbox_option_insets_match`
-    - Tiny viewport variants: `*_tiny_viewport` (ensures the web-style “centered even when overflowing” behavior stays aligned)
+  - Chrome gate:
+    - `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome --status-level fail command_dialog`
+  - Placement + list metrics gate:
+    - `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail web_vs_fret_misc_overlays_command_dialog_cases_match_web_fixtures`
+    - Covers overlay centering, input/listbox heights, option heights, option insets, and tight
+      viewport variants.
   - UI Gallery docs-surface gate:
-    - `cargo nextest run -p fret-ui-gallery --lib gallery_command_core_examples_keep_upstream_aligned_targets_present`
-    - `cargo nextest run -p fret-ui-gallery --lib gallery_command_docs_demo_keeps_upstream_max_width --features gallery-chart`
-    - `cargo nextest run -p fret-ui-gallery --lib gallery_command_basic_opens_dialog_with_default_recipe_a11y_label --features gallery-chart`
-    - `cargo nextest run -p fret-ui-gallery --lib gallery_command_follow_up_sections_remain_explicit_after_docs_aligned_examples --features gallery-chart`
+    - `cargo nextest run -p fret-ui-gallery --test command_page_contract --test command_diag_surface --test ui_authoring_surface_default_app --status-level fail command`
+  - Diagnostic script parse gate:
+    - `python -m json.tool tools/diag-scripts/suites/ui-gallery-command/suite.json | Out-Null`
+    - `Get-ChildItem -Path tools/diag-scripts/ui-gallery/command -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }`
 
 ## Follow-ups (non-P0)
 

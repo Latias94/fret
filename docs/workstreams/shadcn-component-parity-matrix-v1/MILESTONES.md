@@ -726,3 +726,30 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Collapsible `DIS`, `OPEN`, `KEY`, `RTL`, `TEXT-MET`, and
   `PAINT` evidence; the component has no required state-depth gaps.
+
+## M31 - Promote Command
+
+Status: complete on 2026-05-26.
+
+`command.docs-path.desktop-overlay` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Command docs path, new-york-v4 source, `command-demo` and
+`command-dialog` upstream goldens, recipe active-descendant/filtering tests, CommandDialog overlay
+chrome and placement/list-metrics gates, Gallery docs-surface checks, diagnostics JSON checks, and a
+component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Command docs path, new-york-v4 recipe source, command
+  demo/dialog examples, cmdk reference, and tracked command upstream goldens.
+- The Command packet records the owner split: `fret-ui-shadcn` owns root/list/item chrome,
+  cmdk-style active descendant, filtering/scoring, non-shrinking scroll-list rows, dialog
+  `h-12`/`py-3`/group spacing overrides, and palette test-id seams; Gallery owns docs-path teaching
+  order, width caps, screenshots, RTL, and Fret-only behavior demos.
+- The CommandDialog list metrics gate exposed real row-height and group-inset drift; rows now keep
+  44px option geometry under constrained scroll viewports and group spacing matches the web golden.
+- `command_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 37 `regression_locked`, 1 `harness_hardening`, 16
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Command `DIS`, `FOCUS-VIS`, `OPEN`, `KEY`, `RTL`, `TEXT-MET`,
+  and `PAINT` evidence; the component has no required state-depth gaps.
