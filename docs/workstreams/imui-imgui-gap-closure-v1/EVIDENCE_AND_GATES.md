@@ -5877,6 +5877,27 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   Those timeout remnants were stopped before rerunning the same filter with `TMP`/`TEMP` pointed at
   `.fret/tmp`; the rerun passed 6/6 tests.
 
+2026-05-27 IMUI virtual-list runtime/row owner split:
+
+- Claim verified: runtime option projection and row mechanics moved out of
+  `virtual_list_controls.rs` without changing the facade virtual-list API or fixed/known/measured
+  row clipping semantics.
+- `virtual_list_controls/runtime.rs` now owns runtime option projection, measure-mode repair, and
+  viewport layout.
+- `virtual_list_controls/row.rs` now owns row packing, row test-id suffixing, row-height
+  resolution, striped row chrome, and fixed-height overflow clipping.
+- `virtual_list_controls.rs` keeps keyed list assembly, focus child mounting, render-range
+  tracking, scroll-handle ownership, and list-level semantics.
+- Focused gates passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `git diff --check`,
+  `cargo fmt -p fret-ui-kit`,
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo nextest run -p fret-ui-kit --features imui --lib virtual_list_controls::tests --no-fail-fast`,
+  `cargo fmt -p fret-ui-kit --check --verbose`, and `python tools\check_workstream_catalog.py`.
+
 2026-05-25 IMUI table render/body/header owner split:
 
 - Source gap before fix: `ecosystem/fret-ui-kit/src/imui/table_controls.rs` still owned table

@@ -183,6 +183,13 @@ ordered-selection normalization, anchor repair, and crate-local mutation helpers
 changed reporting, so collection helper state remains accessor-first without broadening the public
 surface.
 
+2026-05-27 virtual-list runtime/row owner-split result:
+`ecosystem/fret-ui-kit/src/imui/virtual_list_controls/runtime.rs` now owns runtime option projection
+and list viewport layout. `virtual_list_controls/row.rs` owns row packing, row test-id suffixing,
+row-height resolution, striped row chrome, and fixed-height clipping. The root
+`virtual_list_controls.rs` keeps keyed list assembly, focus child mounting, render-range tracking,
+and list-level semantics.
+
 2026-05-26 popup-menu policy/panel owner-split result:
 `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/policy.rs` now owns menu navigation state,
 popup submenu policy state, and root submenu synchronization. `popup_overlay/menu/panel.rs` now

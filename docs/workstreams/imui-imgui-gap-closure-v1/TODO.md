@@ -335,6 +335,13 @@ Last updated: 2026-05-27
       Result: `multi_select/state.rs` owns `ImUiMultiSelectState`, selected-order normalization,
       anchor repair, and crate-local mutation helpers. The root `multi_select.rs` keeps model hook,
       selectable response wiring, click-modifier policy, and response changed reporting.
+- [x] Split IMUI virtual-list runtime projection and row mechanics out of
+      `ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs` into private owner modules without
+      changing the facade virtual-list API or row clipping semantics.
+      Result: `virtual_list_controls/runtime.rs` owns runtime option projection and list layout,
+      `virtual_list_controls/row.rs` owns row packing, test-id suffixing, row-height resolution,
+      striped row chrome, and fixed-height clipping. The root file keeps keyed list assembly,
+      render-range tracking, focus child mounting, and list-level semantics.
 
 ## P0 - Source Baseline
 

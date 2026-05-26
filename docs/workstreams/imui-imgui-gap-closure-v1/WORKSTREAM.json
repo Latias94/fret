@@ -870,6 +870,8 @@
     "ecosystem/fret-ui-kit/src/imui/table_controls/test_ids.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/virtual_list_controls/row.rs",
+    "ecosystem/fret-ui-kit/src/imui/virtual_list_controls/runtime.rs",
     "ecosystem/fret-ui-kit/tests/imui_table_smoke.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls/items.rs",
     "ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs",
