@@ -66,7 +66,7 @@ Completion notes:
 
 ## FNRS-020 - Make lookup cache updates exhaustive and stale-safe
 
-Status: ready
+Status: done
 Owner: planner/worker
 Dependencies: FNRS-010
 
@@ -99,9 +99,24 @@ Review notes:
 - Prefer precise incremental updates where the operation payload has enough information.
 - Prefer a deliberate rebuild over partial incremental handling when precision would be fragile.
 
+Completion notes:
+
+- Added store-level regression coverage for stale lookup updates after `SetNodeHidden` and
+  `SetEdgeReconnectable`.
+- Added regression coverage for `RemovePort` updating node port lookup state and incident edge
+  lookup state.
+- Added regression coverage for `RemoveGroup` clearing detached node parent lookup state.
+- `NodeGraphLookups::apply_op` no longer has a catch-all success arm; lookup-unaffected operations
+  are explicitly listed.
+- Fresh validation on 2026-05-26:
+  - `cargo fmt -p fret-node --check`: passed.
+  - `cargo nextest run -p fret-node --no-default-features runtime`: 45 passed.
+  - `cargo check -p fret-node --no-default-features`: passed.
+  - `cargo clippy -p fret-node --no-default-features --all-targets -- -D warnings`: passed.
+
 ## FNRS-030 - Harden store dispatch as the single runtime commit pipeline
 
-Status: blocked on FNRS-010 and FNRS-020
+Status: ready
 Owner: planner/worker
 Dependencies: FNRS-010, FNRS-020
 

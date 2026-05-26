@@ -9,8 +9,8 @@
     "docs/node-graph-roadmap.md",
     "docs/workstreams/fret-node-declarative-fearless-refactor-v1"
   ],
-  "phase": "runtime-lookup-correctness",
-  "current_task": "FNRS-020",
+  "phase": "store-dispatch-pipeline",
+  "current_task": "FNRS-030",
   "next_skill": "run-workstream-task",
   "dependencies": [
     "docs/workstreams/fret-node-declarative-fearless-refactor-v1"
@@ -32,7 +32,7 @@
     {
       "id": "M2",
       "name": "Lookup cache correctness closed",
-      "status": "in_progress",
+      "status": "complete",
       "tasks": [
         "FNRS-020"
       ]
@@ -40,7 +40,7 @@
     {
       "id": "M3",
       "name": "Store dispatch pipeline hardened",
-      "status": "pending",
+      "status": "in_progress",
       "tasks": [
         "FNRS-030"
       ]

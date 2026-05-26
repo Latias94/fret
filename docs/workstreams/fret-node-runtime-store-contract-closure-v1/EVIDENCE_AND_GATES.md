@@ -163,3 +163,32 @@ Verification pass:
 - Broader gates such as `--all-features`, `compat-retained-canvas`, and workspace clippy were not
   run for this task because `FNRS-010` touched headless runtime change/apply semantics only; the
   required task gates plus no-default package clippy cover this slice.
+
+### 2026-05-26 - FNRS-020 completed
+
+Changes:
+
+- Added regression tests for stale lookup entries after `SetNodeHidden` and
+  `SetEdgeReconnectable` dispatch.
+- Added regression tests for lookup state after `RemovePort` and `RemoveGroup` dispatch.
+- Updated `NodeGraphLookups::apply_op` for hidden state, reconnectability, removed node ports,
+  cascaded edge removal, and detached group parent state.
+- Replaced the lookup apply catch-all with an explicit list of lookup-unaffected operations.
+
+Fresh gates:
+
+- `cargo fmt -p fret-node --check`: passed.
+- `cargo nextest run -p fret-node --no-default-features runtime`: passed, 45 tests.
+- `cargo check -p fret-node --no-default-features`: passed.
+- `cargo clippy -p fret-node --no-default-features --all-targets -- -D warnings`: passed.
+
+Evidence anchors:
+
+- `ecosystem/fret-node/src/runtime/lookups.rs`
+- `ecosystem/fret-node/src/runtime/tests.rs`
+
+Skipped broader gates:
+
+- `--all-features`, `compat-retained-canvas`, and workspace clippy were not run for this task
+  because the touched implementation is headless runtime lookup maintenance and the required
+  no-default runtime/clippy gates cover that slice.

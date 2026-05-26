@@ -471,6 +471,13 @@ impl NodeGraphLookups {
                 }
                 false
             }
+            GraphOp::SetNodeHidden { id, to, .. } => {
+                if let Some(n) = self.node_lookup.get_mut(id) {
+                    n.hidden = *to;
+                    return true;
+                }
+                false
+            }
             GraphOp::SetNodeCollapsed { id, to, .. } => {
                 if let Some(n) = self.node_lookup.get_mut(id) {
                     n.collapsed = *to;
@@ -485,7 +492,10 @@ impl NodeGraphLookups {
                 }
                 false
             }
-            GraphOp::RemovePort { edges, .. } => {
+            GraphOp::RemovePort { id, port, edges } => {
+                if let Some(n) = self.node_lookup.get_mut(&port.node) {
+                    n.ports.retain(|port_id| port_id != id);
+                }
                 for (edge_id, _edge) in edges {
                     if let Some(conn) = self.connection_from_edge_lookup(*edge_id) {
                         self.remove_edge_connection(conn);
@@ -534,6 +544,26 @@ impl NodeGraphLookups {
                 self.update_edge_kind_in_connection_lookup(conn, *to);
                 true
             }
+            GraphOp::SetEdgeReconnectable { id, to, .. } => {
+                if let Some(e) = self.edge_lookup.get_mut(id) {
+                    e.reconnectable = *to;
+                    return true;
+                }
+                let Some(edge) = graph.edges.get(id) else {
+                    return false;
+                };
+                let endpoints = EdgeEndpoints {
+                    from: edge.from,
+                    to: edge.to,
+                };
+                let Some((entry, _conn)) =
+                    Self::edge_lookup_entry_from_graph(graph, *id, edge.kind, endpoints, *to)
+                else {
+                    return false;
+                };
+                self.edge_lookup.insert(*id, entry);
+                true
+            }
             GraphOp::SetEdgeEndpoints { id, from, to } => {
                 if let Some(prev) = self.edge_lookup.get(id).copied() {
                     self.remove_edge_connection(HandleConnection {
@@ -572,7 +602,48 @@ impl NodeGraphLookups {
                 let _ = from;
                 true
             }
-            _ => true,
+            GraphOp::RemoveGroup { detached, .. } => {
+                for (node_id, _previous_parent) in detached {
+                    if let Some(n) = self.node_lookup.get_mut(node_id) {
+                        n.parent = None;
+                    }
+                }
+                true
+            }
+
+            GraphOp::SetNodeSelectable { .. }
+            | GraphOp::SetNodeDraggable { .. }
+            | GraphOp::SetNodeConnectable { .. }
+            | GraphOp::SetNodeDeletable { .. }
+            | GraphOp::SetNodeExtent { .. }
+            | GraphOp::SetNodeExpandParent { .. }
+            | GraphOp::SetNodeData { .. }
+            | GraphOp::AddPort { .. }
+            | GraphOp::SetPortConnectable { .. }
+            | GraphOp::SetPortConnectableStart { .. }
+            | GraphOp::SetPortConnectableEnd { .. }
+            | GraphOp::SetPortType { .. }
+            | GraphOp::SetPortData { .. }
+            | GraphOp::SetEdgeSelectable { .. }
+            | GraphOp::SetEdgeDeletable { .. }
+            | GraphOp::AddImport { .. }
+            | GraphOp::RemoveImport { .. }
+            | GraphOp::SetImportAlias { .. }
+            | GraphOp::AddSymbol { .. }
+            | GraphOp::RemoveSymbol { .. }
+            | GraphOp::SetSymbolName { .. }
+            | GraphOp::SetSymbolType { .. }
+            | GraphOp::SetSymbolDefaultValue { .. }
+            | GraphOp::SetSymbolMeta { .. }
+            | GraphOp::AddGroup { .. }
+            | GraphOp::SetGroupRect { .. }
+            | GraphOp::SetGroupTitle { .. }
+            | GraphOp::SetGroupColor { .. }
+            | GraphOp::AddStickyNote { .. }
+            | GraphOp::RemoveStickyNote { .. }
+            | GraphOp::SetStickyNoteText { .. }
+            | GraphOp::SetStickyNoteRect { .. }
+            | GraphOp::SetStickyNoteColor { .. } => true,
         }
     }
 
