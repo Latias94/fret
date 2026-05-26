@@ -97,6 +97,13 @@ Last updated: 2026-05-26
       helpers, `collections/table.rs` owns table/row/cell options, and
       `collections/virtual_list.rs` owns virtual-list defaults. The root `collections.rs` file is
       now a thin module/re-export index.
+- [x] Split IMUI floating-surface drag-kind and state ownership out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into private owner modules without
+      changing floating-area, floating-window, drag, resize, activation, or collapse behavior.
+      Result: `floating_surface/kinds.rs` owns drag/resize kind ids, resize-handle tags, and
+      transient activation/collapse keys; `floating_surface/state.rs` owns floating-area and
+      floating-window state records. The root `floating_surface.rs` now keeps area composition,
+      pointer-region wiring, layer wiring, and private re-exports.
 
 ## P0 - Source Baseline
 

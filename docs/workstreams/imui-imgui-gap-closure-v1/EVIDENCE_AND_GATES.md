@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Floating Surface Kinds/State Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI floating-surface drag-kind and state records moved into focused private owners
+without changing floating-area, floating-window, drag, resize, activation, collapse, or z-order
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/kinds.rs` now owns floating-area drag-kind ids,
+  floating-window resize-kind ids, resize-handle tags, and transient activation/collapse event
+  keys.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/state.rs` now owns
+  `FloatingWindowChromeResponse`, `FloatingAreaState`, and `FloatWindowState`, including all
+  floating-window test-id fields and resize/drag pointer state.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` keeps floating-area composition,
+  pointer-region drag-surface wiring, layer registration, and private re-exports only.
+- `tools/gate_imui_workstream_source.py` now requires the split floating-surface owner files and
+  forbids drag-kind constants, resize-kind functions, and floating state records from drifting back
+  into the root `floating_surface.rs` file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass; 25 tests, 156 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_perf_guard_smoke --no-fail-fast`:
+  pass; 5 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- The first parallel nextest attempt timed out after 4 minutes while cargo/rustc processes were
+  still waiting/running under package-cache and target-dir contention. After those processes exited
+  naturally, the same focused nextest gates passed when rerun serially.
+
 ## Collection Options Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI collection option records moved into focused private owners without changing

@@ -10,88 +10,17 @@ use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use super::{FloatingAreaContext, FloatingAreaOptions, FloatingAreaResponse, ImUiFacade};
 
+mod kinds;
 mod layer;
+mod state;
 
+pub(super) use kinds::{
+    FloatWindowResizeHandle, KEY_FLOAT_WINDOW_ACTIVATE, KEY_FLOAT_WINDOW_TOGGLE_COLLAPSED,
+    OnFloatingAreaLeftDoubleClick, float_window_drag_kind_for_element,
+    float_window_resize_kind_for_element,
+};
 pub(super) use layer::{float_layer_bring_to_front_if_activated, floating_layer_element};
-
-#[derive(Debug, Clone, Copy, Default)]
-pub(super) struct FloatingWindowChromeResponse {
-    pub(super) size: Option<fret_core::Size>,
-    pub(super) resizing: bool,
-    pub(super) collapsed: bool,
-}
-
-const FLOAT_WINDOW_DRAG_KIND_MASK: u64 = 0x4000_0000_0000_0000;
-const FLOAT_WINDOW_RESIZE_KIND_BASE: u64 =
-    super::fnv1a64(b"fret-ui-kit.imui.float_window.resize.v1");
-
-pub(super) const KEY_FLOAT_WINDOW_ACTIVATE: u64 =
-    super::fnv1a64(b"fret-ui-kit.imui.float_window.activate.v1");
-pub(super) const KEY_FLOAT_WINDOW_TOGGLE_COLLAPSED: u64 =
-    super::fnv1a64(b"fret-ui-kit.imui.float_window.toggle_collapsed.v1");
-
-pub(super) type OnFloatingAreaLeftDoubleClick =
-    Arc<dyn Fn(&mut dyn fret_ui::action::UiPointerActionHost, fret_ui::action::ActionCx) + 'static>;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum FloatWindowResizeHandle {
-    Left,
-    Right,
-    Top,
-    Bottom,
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight,
-}
-
-#[derive(Debug)]
-pub(super) struct FloatingAreaState {
-    pub(super) position: Point,
-    pub(super) last_drag_position: Option<Point>,
-    pub(super) test_id: Arc<str>,
-}
-
-#[derive(Debug)]
-pub(super) struct FloatWindowState {
-    pub(super) size: fret_core::Size,
-    pub(super) last_resize_position: Option<Point>,
-    pub(super) title_bar_test_id: Arc<str>,
-    pub(super) close_button_test_id: Arc<str>,
-    pub(super) resize_left_test_id: Arc<str>,
-    pub(super) resize_right_test_id: Arc<str>,
-    pub(super) resize_top_test_id: Arc<str>,
-    pub(super) resize_bottom_test_id: Arc<str>,
-    pub(super) resize_top_left_test_id: Arc<str>,
-    pub(super) resize_top_right_test_id: Arc<str>,
-    pub(super) resize_bottom_left_test_id: Arc<str>,
-    pub(super) resize_corner_test_id: Arc<str>,
-}
-
-pub(super) fn float_window_drag_kind_for_element(
-    element: GlobalElementId,
-) -> fret_runtime::DragKindId {
-    fret_runtime::DragKindId(FLOAT_WINDOW_DRAG_KIND_MASK | element.0)
-}
-
-pub(super) fn float_window_resize_kind_for_element(
-    element: GlobalElementId,
-    handle: FloatWindowResizeHandle,
-) -> fret_runtime::DragKindId {
-    let handle_tag = match handle {
-        FloatWindowResizeHandle::Left => 1,
-        FloatWindowResizeHandle::Right => 2,
-        FloatWindowResizeHandle::Top => 3,
-        FloatWindowResizeHandle::Bottom => 4,
-        FloatWindowResizeHandle::TopLeft => 5,
-        FloatWindowResizeHandle::TopRight => 6,
-        FloatWindowResizeHandle::BottomLeft => 7,
-        FloatWindowResizeHandle::BottomRight => 8,
-    };
-    fret_runtime::DragKindId(
-        FLOAT_WINDOW_RESIZE_KIND_BASE ^ element.0.wrapping_mul(0x9e37_79b9_7f4a_7c15) ^ handle_tag,
-    )
-}
+pub(super) use state::{FloatWindowState, FloatingAreaState, FloatingWindowChromeResponse};
 
 pub(super) fn floating_area_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
