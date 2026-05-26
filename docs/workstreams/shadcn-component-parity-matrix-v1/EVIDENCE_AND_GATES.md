@@ -2160,3 +2160,42 @@ screenshots.
   `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP`, depth
   `HOV, DRAG, OPEN, MOB, TEXT-MET, PAINT`, `Missing depth = ok`, queues
   `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Switch regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/switch_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Switch diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/switch`.
+- `python -m json.tool` checks for the coverage manifest, generated matrix JSON, and
+  `WORKSTREAM.json`: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/pages/switch.rs apps/fret-ui-gallery/tests/switch_docs_surface.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs ecosystem/fret-ui-shadcn/src/switch.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-kit --lib --status-level fail switch`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail switch`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail switch`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_field_geometry_matches_web_fixtures`:
+  PASS. This fixture runner includes the `field-switch` geometry case.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail form_rhf_switch`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail form_tanstack_switch`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail switch`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail switch`:
+  PASS.
+- `cargo nextest run -p fret-ui-gallery --test switch_docs_surface --status-level fail`: PASS.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail switch`:
+  PASS.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python tools/check_workstream_catalog.py`: PASS.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.
+- Matrix summary: 52 `regression_locked`, 1 `harness_hardening`, 1 `inventory_only`, and 5
+  `not_in_harness`.
+- Switch row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `DIS, HOV, FOCUS-VIS, PRESS, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.

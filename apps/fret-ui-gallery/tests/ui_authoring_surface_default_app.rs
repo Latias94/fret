@@ -10404,26 +10404,28 @@ fn switch_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
-            "DocSection::build(cx, \"Description\", description)",
-            "DocSection::build(cx, \"Choice Card\", choice_card)",
-            "DocSection::build(cx, \"Disabled\", disabled)",
-            "DocSection::build(cx, \"Invalid\", invalid)",
-            "DocSection::build(cx, \"Size\", sizes)",
-            "DocSection::build(cx, \"RTL\", rtl)",
-            "DocSection::build(cx, \"Label Association\", label)",
-            "DocSection::build(cx, \"Style Override\", style_override)",
+            "DocSection::build(cx, \"Description (Registry)\", description)",
+            "DocSection::build(cx, \"Choice Card (Fret)\", choice_card)",
+            "DocSection::build(cx, \"Disabled (Base/Radix)\", disabled)",
+            "DocSection::build(cx, \"Invalid (Registry)\", invalid)",
+            "DocSection::build(cx, \"Size (Base/Radix)\", sizes)",
+            "DocSection::build(cx, \"RTL (Fret)\", rtl)",
+            "DocSection::build(cx, \"Label Association (Fret)\", label)",
+            "DocSection::build(cx, \"Style Override (Fret)\", style_override)",
+            "DocSection::build(cx, \"API Reference (Fret)\", api_reference)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
-            "DocSection::new(\"Description\", description)",
-            "DocSection::new(\"Choice Card\", choice_card)",
-            "DocSection::new(\"Disabled\", disabled)",
-            "DocSection::new(\"Invalid\", invalid)",
-            "DocSection::new(\"Size\", sizes)",
-            "DocSection::new(\"RTL\", rtl)",
-            "DocSection::new(\"Label Association\", label)",
-            "DocSection::new(\"Style Override\", style_override)",
+            "DocSection::new(\"Description (Registry)\", description)",
+            "DocSection::new(\"Choice Card (Fret)\", choice_card)",
+            "DocSection::new(\"Disabled (Base/Radix)\", disabled)",
+            "DocSection::new(\"Invalid (Registry)\", invalid)",
+            "DocSection::new(\"Size (Base/Radix)\", sizes)",
+            "DocSection::new(\"RTL (Fret)\", rtl)",
+            "DocSection::new(\"Label Association (Fret)\", label)",
+            "DocSection::new(\"Style Override (Fret)\", style_override)",
+            "DocSection::new(\"API Reference (Fret)\", api_reference)",
         ],
     );
 }
@@ -10787,19 +10789,19 @@ fn switch_page_teaches_rtl_as_logical_layout_not_extra_physical_alignment() {
 
     assert!(
         switch_page.contains(
-            "The `RTL` preview keeps the translated upstream one-row example shape. `DirectionProvider(Rtl)` is sufficient here: `FieldContent` stays on the logical text side and `Switch` stays on the opposite edge without teaching an extra physical alignment prop."
+            "The `RTL (Fret)` preview translates the registry-style one-row field example. `DirectionProvider(Rtl)` is sufficient here: `FieldContent` stays on the logical text side and `Switch` stays on the opposite edge without teaching an extra physical alignment prop."
         ),
         "src/ui/pages/switch.rs should record that RTL parity stays on the existing logical field composition surface"
     );
     assert!(
         switch_page.contains(
-            "Translated upstream RTL row with logical field text on inline-start and the switch on the opposite edge."
+            "Translated registry-style row with logical field text on inline-start and the switch on the opposite edge."
         ),
         "src/ui/pages/switch.rs should describe the RTL section as the translated upstream row"
     );
     assert!(
         switch_page.contains(
-            "Preview mirrors the shadcn Switch docs path first: Demo, Usage, Description, Choice Card, Disabled, Invalid, Size, RTL, including the translated upstream RTL row, with source-aligned label/control binding on the docs-path rows before `Label Association`, `Style Override`, and `API Reference` continue as explicit Fret follow-ups."
+            "Preview mirrors the current shadcn Switch docs path first: `Demo` and `Usage`."
         ),
         "src/ui/pages/switch.rs should keep the translated upstream RTL row visible in the page-level teaching summary"
     );

@@ -1,0 +1,349 @@
+{
+  "schema_version": 1,
+  "component": "switch",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-27",
+  "generated_by": "manual switch docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-kit/src/primitives/switch.rs + ecosystem/fret-ui-shadcn/src/switch.rs + ecosystem/fret-ui-shadcn/tests/{web_vs_fret_layout/switch.rs,web_vs_fret_layout/field.rs,web_vs_fret_layout/form.rs,web_vs_fret_control_chrome.rs,radix_web_primitives_state.rs} + apps/fret-ui-gallery/src/ui/pages/switch.rs + apps/fret-ui-gallery/src/ui/snippets/switch/*.rs + apps/fret-ui-gallery/tests/{switch_docs_surface.rs,ui_authoring_surface_default_app.rs} + tools/diag-scripts/ui-gallery/switch/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/switch_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Switch component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/switch -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Switch diagnostic scripts parse and cover docs smoke screenshots, label click forwarding, choice-card checked-state mutation, command-gated disabled action state, read-only suppression, label-click focus, layout screenshots, and dark-theme paint."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-kit --lib --status-level fail switch",
+      "status": "pass",
+      "scope": "Switch primitive tests keep Radix-style role/checked a11y metadata and controlled/default checked-state selection stable."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail switch",
+      "status": "pass",
+      "scope": "Switch recipe tests cover click mutation, checked semantics, static checked value, required/invalid/read-only semantics, control-registry label activation, optional checked state, thumb/track transitions, command gating, small-size thumb centering, dark thumb paint, hover/active/focus-visible paint, and text/paint output."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail switch",
+      "status": "pass",
+      "scope": "Switch web-vs-Fret layout gate compares switch-demo track size and unchecked thumb offset against current new-york-v4 goldens."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_field_geometry_matches_web_fixtures",
+      "status": "pass",
+      "scope": "Field web-vs-Fret fixture runner keeps current new-york-v4 field-switch control sizing wired through caller-owned Field composition."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail form_rhf_switch",
+      "status": "pass",
+      "scope": "RHF Form web-vs-Fret layout gate keeps current new-york-v4 form-rhf-switch control sizing wired through caller-owned Form/Card composition."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail form_tanstack_switch",
+      "status": "pass",
+      "scope": "TanStack Form web-vs-Fret layout gate keeps current new-york-v4 form-tanstack-switch control sizing wired through caller-owned Form/Card composition."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail switch",
+      "status": "pass",
+      "scope": "Switch chrome gates keep border, radius, focus-visible ring color/spread, and paint token output aligned with upstream switch-demo and switch-demo.focus goldens."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail switch",
+      "status": "pass",
+      "scope": "Radix primitive state gate keeps click-to-toggle checked semantics aligned against the Radix switch timeline."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test switch_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery docs-surface tests keep current Demo/Usage ordering, registry/base-radix/Fret follow-up labels, copyable snippets, leaf-control API decision, and diagnostics anchors aligned."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail switch",
+      "status": "pass",
+      "scope": "Gallery authoring tests keep Switch snippets on the default app surface, preserve typed DocSection builders, and prevent stale docs-path labels."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.switch.demo.light.vp1440x900",
+      "snapshot": "switch-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "current docs top preview with Airplane Mode label/control binding",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.switch.demo.focus.light.vp1440x900",
+      "snapshot": "switch-demo.focus",
+      "theme": "light",
+      "mode": "keyboard focus-visible",
+      "variant": "current docs top preview focused switch",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.field-switch.light.vp1440x900",
+      "snapshot": "field-switch",
+      "theme": "light",
+      "mode": "static",
+      "variant": "current registry Field horizontal switch composition",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.form-switch.light.vp1440x900",
+      "snapshot": "form-rhf-switch + form-tanstack-switch",
+      "theme": "light",
+      "mode": "static",
+      "variant": "current registry form switch control sizing and invalid ownership",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "radix.switch.toggle.light.vp1440x900",
+      "snapshot": "switch-example.switch.toggle.light",
+      "theme": "light",
+      "mode": "click toggle",
+      "variant": "Radix primitive checked-state timeline",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": [
+    {
+      "id": "fret.switch.primitive",
+      "layer": "policy",
+      "owner": "fret-ui-kit",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/primitives/switch.rs",
+        "ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs"
+      ]
+    },
+    {
+      "id": "fret.switch.recipe",
+      "layer": "recipe",
+      "owner": "fret-ui-shadcn",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/switch.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/switch.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/field.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/form.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs"
+      ]
+    },
+    {
+      "id": "fret.switch.gallery",
+      "layer": "app_demo",
+      "owner": "fret-ui-gallery",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/switch.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/switch/*.rs",
+        "apps/fret-ui-gallery/tests/switch_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+      ]
+    },
+    {
+      "id": "fret.switch.diagnostics",
+      "layer": "runner",
+      "owner": "diagnostics_surface",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-docs-smoke.json",
+        "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-docs-label-clicks.json",
+        "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-choice-card-checked-state-mutation.json",
+        "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-command-gated-action-state.json",
+        "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-action-state.json",
+        "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-read-only-dynamic-action-state.json",
+        "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-label-click-focus.json",
+        "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-layout-screenshot.json",
+        "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-airplane-off-screenshot-zinc-dark.json"
+      ]
+    }
+  ],
+  "summary": {
+    "status_counts": {
+      "regression_locked": 1
+    },
+    "covered_axes": [
+      "source_refs",
+      "upstream_dom_snapshot",
+      "fret_layout",
+      "fret_bundle_semantics",
+      "fret_text_paint",
+      "interaction_script"
+    ],
+    "state_depth": [
+      "disabled",
+      "hover",
+      "focus_visible",
+      "pressed",
+      "keyboard",
+      "rtl",
+      "text_metrics",
+      "paint_token"
+    ],
+    "layout_sidecar_count": 6,
+    "bundle_schema2_count": 9,
+    "layout_test_id_count": 10,
+    "bundle_semantics_test_id_count": 10,
+    "measured_test_id_count": 10,
+    "upstream_dom_snapshot_count": 6,
+    "upstream_dom_target_count": 6,
+    "upstream_context_count": 5,
+    "upstream_dom_context_count": 6,
+    "upstream_live_fact_count": 8,
+    "upstream_semantics_fact_count": 5,
+    "upstream_interaction_fact_count": 4,
+    "fret_live_fact_count": 16,
+    "fret_semantics_fact_count": 10,
+    "fret_interaction_fact_count": 9,
+    "fret_text_paint_fact_count": 5,
+    "fret_text_paint_direct_fact_count": 3,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 5,
+    "fret_text_paint_row_count": 3,
+    "fret_text_paint_association_row_count": 2,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 3,
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0
+  },
+  "live_facts": {
+    "owner_split": [
+      "The kit primitive owns Radix-style switch role/checked a11y metadata and controlled/default checked-state selection.",
+      "The shadcn recipe owns the leaf switch track/thumb chrome, intrinsic default and small sizes, checked/unchecked paint, disabled opacity, hover/active paint, focus-visible ring, required/invalid/read-only semantics, command gating, label/control registration, and test-id derivation.",
+      "Gallery owns the current docs teaching order: current shadcn Demo and Usage first, current new-york-v4 Field/Form registry examples for description/invalid ownership, Base/Radix size/disabled examples, and Fret follow-ups for choice card, read-only, command gate, RTL, label association, style override, and API notes."
+    ],
+    "source_truth": [
+      "Current main-worktree repo-ref truth uses repo-ref/ui/apps/v4/content/docs/components/switch.mdx with top ComponentPreview switch-demo and Usage only.",
+      "Current new-york-v4 switch-demo composes Switch id airplane-mode with Label htmlFor airplane-mode in an inline row; the Fret Gallery demo mirrors this through ControlId and Label::for_control.",
+      "Current new-york-v4 Switch source owns inline-flex h-[1.15rem] w-8, rounded-full transparent border, shadow-xs, disabled opacity, focus-visible border/ring, checked primary track, unchecked input track, and size-4 thumb translation.",
+      "Current new-york-v4 Field/Form switch examples are secondary registry references for horizontal field composition and invalid ownership; Base/Radix registry examples remain secondary references for disabled and size variants.",
+      "Radix and Base UI remain headless references for role=switch, checked state, focusable root, and Root/Thumb anatomy; the Fret shadcn recipe intentionally keeps thumb painting internal on the copyable leaf-control surface."
+    ],
+    "regression_gates": [
+      "Switch primitive tests keep role/checked a11y metadata and checked-state model selection stable.",
+      "Switch recipe tests keep click mutation, checked semantics, static checked values, optional values, required/invalid/read-only semantics, label activation, command gating, thumb/track transitions, dark-scheme thumb paint, small-size centering, hover/active/focus-visible paint, and text/paint output stable.",
+      "web_vs_fret_layout compares switch-demo track size and unchecked thumb offset plus Field/Form switch control geometry against current new-york-v4 goldens.",
+      "web_vs_fret_control_chrome keeps switch-demo border/radius and focus-visible ring paint aligned with upstream.",
+      "radix_web_primitives_state keeps click-to-toggle checked semantics aligned with the Radix primitive timeline.",
+      "switch_docs_surface and diagnostics JSON keep current docs-path sections, registry/base-radix/Fret follow-up labels, label/control forwarding, checked-state mutation, command-gated disabled action-state, read-only suppression, RTL layout, screenshots, text metrics, and paint token evidence observable."
+    ]
+  },
+  "parts": [
+    {
+      "part_id": "switch_primitive_a11y_and_state",
+      "status": "pass_known",
+      "owner": "component_policy",
+      "layer": "policy",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/primitives/switch.rs",
+        "ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs"
+      ],
+      "facts": [
+        "Switch semantics expose role Switch and checked=true/false state.",
+        "Controlled checked models win over default state on the primitive bridge.",
+        "Radix state proof covers click-to-toggle checked behavior."
+      ]
+    },
+    {
+      "part_id": "switch_recipe_layout_chrome_and_semantics",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/switch.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/switch.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/field.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/form.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "goldens/shadcn-web/v4/new-york-v4/switch-demo.json",
+        "goldens/shadcn-web/v4/new-york-v4/switch-demo.focus.json",
+        "goldens/shadcn-web/v4/new-york-v4/field-switch.json",
+        "goldens/shadcn-web/v4/new-york-v4/form-rhf-switch.json",
+        "goldens/shadcn-web/v4/new-york-v4/form-tanstack-switch.json"
+      ],
+      "facts": [
+        "Web-golden layout gates cover switch-demo track size, thumb offset, and Field/Form switch control sizing.",
+        "Chrome gates cover switch border/radius and focus-visible ring color/spread.",
+        "Recipe tests cover disabled, hover, active/pressed, focus-visible, required, invalid, read-only, command gating, text metrics, and paint token output."
+      ]
+    },
+    {
+      "part_id": "switch_gallery_docs_surface",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/switch.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/switch/*.rs",
+        "apps/fret-ui-gallery/tests/switch_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+        "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-docs-smoke.json",
+        "tools/diag-scripts/ui-gallery/switch/ui-gallery-switch-docs-label-clicks.json"
+      ],
+      "facts": [
+        "Gallery mirrors the current upstream docs path through Demo and Usage before registry, Base/Radix, and Fret follow-ups.",
+        "Description and Invalid are explicitly labeled as current new-york-v4 registry follow-ups instead of current docs-path sections.",
+        "Disabled and Size are explicitly labeled as Base/Radix registry follow-ups.",
+        "Choice Card, Read Only, Command Gate, RTL, Label Association, Style Override, and API Reference are explicit Fret follow-ups."
+      ]
+    },
+    {
+      "part_id": "switch_packet_and_matrix_closure",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/switch_agent_packet_p0_v1.json",
+        "tools/parity-discovery/shadcn_component_harness_matrix.py",
+        "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json"
+      ],
+      "facts": [
+        "The packet has zero repair, hardening, and gate queues.",
+        "The manifest target ties current source refs, upstream snapshots, Fret tests, diagnostics scripts, and the packet together.",
+        "The Switch state depth covers disabled, hover, focus-visible, pressed/active, keyboard, RTL, text metrics, and paint token evidence."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Switch docs-path slice with current main-worktree repo-ref source refs, switch-demo/field/form upstream goldens, primitive/recipe semantics and chrome tests, web-vs-Fret layout/control-chrome gates, Radix primitive state proof, Gallery docs-surface checks, diagnostics JSON, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "switch.docs-path.desktop",
+        "component": "switch",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/switch_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

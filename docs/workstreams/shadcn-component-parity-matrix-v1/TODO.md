@@ -165,3 +165,8 @@ date: 2026-05-26
       wrapper Lucide icon defaults, demo/types upstream open goldens, open toast placement/chrome,
       constrained viewport behavior, hover pause, swipe dismiss, live-region semantics, Gallery
       docs ordering, Fret follow-up sections, diagnostics JSON, and text/paint evidence.
+- [x] SCPM-530: Promote Switch from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn Demo/Usage source refs, switch-demo and Field/Form upstream goldens,
+      primitive and recipe semantics, click/Space toggle behavior, disabled/hover/focus-visible/
+      pressed/RTL/text/paint state depth, web-vs-Fret layout/chrome, Radix state proof, Gallery
+      docs ordering, diagnostics JSON, and matrix packet evidence.

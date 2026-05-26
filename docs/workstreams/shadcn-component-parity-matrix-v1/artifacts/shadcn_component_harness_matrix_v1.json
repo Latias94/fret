@@ -2936,49 +2936,64 @@
     },
     {
       "audit_path": "docs/audits/shadcn-switch.md",
-      "audit_status": "In review",
+      "audit_status": "Pass",
       "component": "switch",
-      "coverage_target_count": 0,
+      "coverage_target_count": 1,
       "covered_axes": {
-        "fret_bundle_semantics": false,
-        "fret_layout": false,
-        "fret_text_paint": false,
-        "interaction_script": false,
+        "fret_bundle_semantics": true,
+        "fret_layout": true,
+        "fret_text_paint": true,
+        "interaction_script": true,
         "responsive_viewport": false,
-        "source_refs": false,
-        "upstream_dom_snapshot": false
+        "source_refs": true,
+        "upstream_dom_snapshot": true
       },
       "gate_queue_count": 0,
       "hardening_queue_count": 0,
-      "harness_report_count": 0,
-      "harness_status": "inventory_only",
+      "harness_report_count": 1,
+      "harness_status": "regression_locked",
       "implementation_status": "Present",
       "inventory_kind": "registry",
       "likely_owner_layer": "",
       "missing_state_depth": [],
-      "next_gap": "add_upstream_source_refs",
+      "next_gap": "state_depth_model_satisfied",
       "priority": "",
       "repair_queue_count": 0,
-      "report_ids": [],
-      "required_state_depth": [],
+      "report_ids": [
+        "switch_agent_packet_p0_v1"
+      ],
+      "required_state_depth": [
+        "disabled",
+        "focus_visible",
+        "keyboard",
+        "rtl",
+        "text_metrics",
+        "paint_token"
+      ],
       "risk_class": "",
       "rust_module": "switch",
       "state_depth": {
-        "disabled": false,
+        "disabled": true,
         "drag": false,
-        "focus_visible": false,
-        "hover": false,
-        "keyboard": false,
+        "focus_visible": true,
+        "hover": true,
+        "keyboard": true,
         "mobile": false,
         "open": false,
-        "paint_token": false,
-        "pressed": false,
-        "rtl": false,
-        "text_metrics": false
+        "paint_token": true,
+        "pressed": true,
+        "rtl": true,
+        "text_metrics": true
       },
-      "target_ids": [],
-      "target_states": [],
-      "target_viewport_classes": []
+      "target_ids": [
+        "switch.docs-path.desktop"
+      ],
+      "target_states": [
+        "current docs path Switch Demo/Usage, new-york-v4 leaf track/thumb chrome, checked/unchecked semantics, disabled/read-only/required/invalid states, hover/active paint, keyboard Space toggle, focus-visible ring, RTL follow-up layout, text metrics, and paint token output"
+      ],
+      "target_viewport_classes": [
+        "desktop_1440x900"
+      ]
     },
     {
       "audit_path": "docs/audits/shadcn-table.md",
@@ -3697,6 +3712,14 @@
         "text_metrics",
         "paint_token"
       ],
+      "switch": [
+        "disabled",
+        "focus_visible",
+        "keyboard",
+        "rtl",
+        "text_metrics",
+        "paint_token"
+      ],
       "table": [
         "hover",
         "paint_token"
@@ -3798,6 +3821,7 @@
       "docs\\workstreams\\shadcn-component-parity-matrix-v1\\artifacts\\toggle_group_agent_packet_p0_v1.json",
       "docs\\workstreams\\shadcn-component-parity-matrix-v1\\artifacts\\slider_agent_packet_p0_v1.json",
       "docs\\workstreams\\shadcn-component-parity-matrix-v1\\artifacts\\sonner_agent_packet_p0_v1.json",
+      "docs\\workstreams\\shadcn-component-parity-matrix-v1\\artifacts\\switch_agent_packet_p0_v1.json",
       "docs\\workstreams\\shadcn-component-parity-matrix-v1\\artifacts\\pagination_agent_packet_p0_v1.json"
     ],
     "manifest": "tools\\parity-discovery\\manifests\\shadcn_parity_coverage_v2.json",
@@ -3806,35 +3830,35 @@
   },
   "summary": {
     "axis_component_counts": {
-      "fret_bundle_semantics": 52,
-      "fret_layout": 52,
-      "fret_text_paint": 32,
-      "interaction_script": 52,
+      "fret_bundle_semantics": 53,
+      "fret_layout": 53,
+      "fret_text_paint": 33,
+      "interaction_script": 53,
       "responsive_viewport": 10,
-      "source_refs": 52,
-      "upstream_dom_snapshot": 52
+      "source_refs": 53,
+      "upstream_dom_snapshot": 53
     },
     "component_count": 59,
     "non_registry_surface_count": 5,
     "registry_component_count": 54,
     "state_depth_component_counts": {
-      "disabled": 22,
+      "disabled": 23,
       "drag": 7,
-      "focus_visible": 19,
-      "hover": 17,
-      "keyboard": 31,
+      "focus_visible": 20,
+      "hover": 18,
+      "keyboard": 32,
       "mobile": 16,
       "open": 26,
-      "paint_token": 50,
-      "pressed": 3,
-      "rtl": 31,
-      "text_metrics": 32
+      "paint_token": 51,
+      "pressed": 4,
+      "rtl": 32,
+      "text_metrics": 33
     },
     "status_counts": {
       "harness_hardening": 1,
-      "inventory_only": 2,
+      "inventory_only": 1,
       "not_in_harness": 5,
-      "regression_locked": 51
+      "regression_locked": 52
     }
   }
 }

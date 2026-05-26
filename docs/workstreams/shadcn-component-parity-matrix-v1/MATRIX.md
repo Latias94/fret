@@ -39,35 +39,35 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 52,
-    "fret_layout": 52,
-    "fret_text_paint": 32,
-    "interaction_script": 52,
+    "fret_bundle_semantics": 53,
+    "fret_layout": 53,
+    "fret_text_paint": 33,
+    "interaction_script": 53,
     "responsive_viewport": 10,
-    "source_refs": 52,
-    "upstream_dom_snapshot": 52
+    "source_refs": 53,
+    "upstream_dom_snapshot": 53
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
   "registry_component_count": 54,
   "state_depth_component_counts": {
-    "disabled": 22,
+    "disabled": 23,
     "drag": 7,
-    "focus_visible": 19,
-    "hover": 17,
-    "keyboard": 31,
+    "focus_visible": 20,
+    "hover": 18,
+    "keyboard": 32,
     "mobile": 16,
     "open": 26,
-    "paint_token": 50,
-    "pressed": 3,
-    "rtl": 31,
-    "text_metrics": 32
+    "paint_token": 51,
+    "pressed": 4,
+    "rtl": 32,
+    "text_metrics": 33
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 2,
+    "inventory_only": 1,
     "not_in_harness": 5,
-    "regression_locked": 51
+    "regression_locked": 52
   }
 }
 ```
@@ -126,7 +126,7 @@ State-depth legend:
 | slider | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, HOV, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | sonner | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP | HOV, DRAG, OPEN, MOB, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | spinner | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
-| switch | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| switch | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, HOV, FOCUS-VIS, PRESS, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | table | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | HOV, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | tabs | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | textarea | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |

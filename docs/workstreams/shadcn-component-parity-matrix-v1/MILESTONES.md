@@ -1147,3 +1147,36 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Sonner `HOV`, `DRAG`, `OPEN`, `MOB`, `TEXT-MET`, and `PAINT`
   evidence; the component has no required state-depth gaps.
+
+## M46 - Promote Switch
+
+Status: complete on 2026-05-27.
+
+`switch.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Switch docs path, new-york-v4 recipe/demo, secondary Field/Form and
+Base/Radix registry examples, switch-demo/field/form upstream goldens, primitive and recipe
+semantics/chrome tests, web-vs-Fret layout/control-chrome gates, Radix primitive state proof,
+Gallery docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Switch docs path, new-york-v4 recipe/demo, secondary
+  Field/Form registry examples, secondary Base/Radix registry examples, the tracked switch-demo,
+  switch-demo.focus, field-switch, form-rhf-switch, and form-tanstack-switch upstream goldens, and
+  the Radix click-state golden.
+- The Switch packet records the owner split: `fret-ui-kit` owns role/checked a11y metadata and
+  checked-state selection; `fret-ui-shadcn` owns leaf track/thumb chrome, default and small sizes,
+  checked/unchecked paint, disabled opacity, hover/active/focus-visible paint, required/invalid/
+  read-only semantics, command gating, label/control registration, Space-key activation, text
+  metrics, paint token output, and test-id derivation; Gallery owns current docs ordering plus
+  registry/Base/Radix/Fret follow-ups.
+- The Gallery page now follows current upstream docs through `Demo` and `Usage`, then labels
+  `Description (Registry)`, `Choice Card (Fret)`, `Disabled (Base/Radix)`, `Read Only (Fret)`,
+  `Command Gate (Fret)`, `Invalid (Registry)`, `Size (Base/Radix)`, `RTL (Fret)`,
+  `Label Association (Fret)`, `Style Override (Fret)`, and `API Reference (Fret)` explicitly.
+- `switch_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 52 `regression_locked`, 1 `harness_hardening`, 1
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Switch `DIS`, `HOV`, `FOCUS-VIS`, `PRESS`, `KEY`, `RTL`,
+  `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
