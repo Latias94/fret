@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Menu-Family Menu Owner-Split Evidence - 2026-05-26
+
+Claim verified: top-level IMUI menu open/close orchestration moved out of
+`menu_family_controls.rs` without changing facade menu behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now owns
+  `begin_menu_with_options(...)`, including trigger wiring, menubar active-menu policy updates,
+  popup open/close requests, disabled cleanup, and `DisclosureResponse` population.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs` keeps menubar policy state, menu-bar
+  element construction, module wiring, and tests.
+- `tools/gate_imui_workstream_source.py` now requires the menu owner, requires the root forwarding
+  shape, and forbids menu orchestration from drifting back into the root file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass with pre-existing `fret-ui` warnings
+  for `unexpected_cfgs` on `unstable-retained-bridge` and `dead_code` on
+  `current_effective_opacity`.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_family_controls::tests
+  --no-fail-fast`: pass; 1 test, 687 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs --no-fail-fast`: pass; 18 tests, 163
+  skipped, with the same pre-existing `fret-ui` warnings.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
+Gate note:
+
+- The first `fret-imui interaction_menu_tabs` run timed out while shared cargo work continued in
+  the background. The process was allowed to finish naturally; the same command was then rerun and
+  passed.
+
 ## Core-State Owner-Split Evidence - 2026-05-26
 
 Claim verified: `ResponseExt` core response/id/enabled behavior moved out of the root hover

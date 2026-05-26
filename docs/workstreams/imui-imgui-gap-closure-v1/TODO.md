@@ -197,6 +197,9 @@ Readiness order for the next locally testable review slices:
    2026-05-26 core-state owner split: `ResponseExt` core `fret_authoring::Response`, id, enabled,
    clicked, changed, rect, hover, press, and focus mutators/accessors now live in
    `response/hover/core_state.rs`. The root `response/hover.rs` keeps core/id/enabled storage only.
+   2026-05-26 menu-family menu owner split: `begin_menu_with_options(...)` now lives in
+   `menu_family_controls/menu.rs`. The root `menu_family_controls.rs` keeps menubar policy state,
+   menu-bar element construction, module wiring, and tests only.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,

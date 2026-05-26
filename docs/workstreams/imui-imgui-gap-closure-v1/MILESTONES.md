@@ -72,6 +72,13 @@ core-response, id, enabled, clicked, changed, rect, hover, press, and focus muta
 `response/hover.rs` keeps core/id/enabled storage only. The public `ResponseExt` API remains
 unchanged.
 
+2026-05-26 menu-family menu owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now owns top-level
+`begin_menu_with_options(...)` menu open/close orchestration, trigger wiring, menubar active-menu
+policy updates, and popup mounting. `menu_family_controls.rs` keeps menubar policy state,
+menu-bar element construction, module wiring, and tests. The public facade menu API remains
+unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

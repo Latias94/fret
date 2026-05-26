@@ -476,6 +476,7 @@
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs",
