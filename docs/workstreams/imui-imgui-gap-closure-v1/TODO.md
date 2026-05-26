@@ -186,6 +186,10 @@ Readiness order for the next locally testable review slices:
    clearing, and read-only accessors now live in `response/hover/lifecycle.rs`. The root
    `response/hover.rs` still owns the lifecycle storage fields but no longer owns lifecycle
    behavior bodies.
+   2026-05-26 press/context owner split: `ResponseExt` secondary-click, double-click, long-press,
+   hold, context-menu, pointer-click, and pointer-modifier behavior now lives in
+   `response/hover/press_context.rs`. The root `response/hover.rs` keeps storage only for those
+   signals.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,

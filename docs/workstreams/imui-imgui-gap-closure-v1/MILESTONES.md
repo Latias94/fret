@@ -54,6 +54,12 @@ lifecycle signal mutators, merge helpers, clearing, and read-only accessors for 
 deactivation, edits, and deactivate-after-edit. `response/hover.rs` keeps lifecycle storage but no
 longer owns lifecycle method bodies. The public `ResponseExt` API remains unchanged.
 
+2026-05-26 press/context owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover/press_context.rs` now owns the `ResponseExt`
+secondary-click, double-click, long-press, hold, context-menu, pointer-click, pointer-modifier, and
+clear helpers plus read-only accessors. `response/hover.rs` keeps storage for those signals only.
+The public `ResponseExt` API remains unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:
