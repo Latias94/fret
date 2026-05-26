@@ -3,6 +3,49 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Hover Query Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI hovered query flags and query policy moved out of the `ResponseExt` storage
+owner without changing the public hover API or popup/tooltip hover behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/hover/flags.rs` now owns `ImUiHoveredFlags`, bitwise
+  composition, and the ImGui-style flag constants.
+- `ecosystem/fret-ui-kit/src/imui/response/hover/query.rs` now owns `hovered_like_imgui(...)` and
+  `is_hovered(...)`, including tooltip expansion, popup/active-item overrides, stationary delay,
+  and shared-delay behavior.
+- `ecosystem/fret-ui-kit/src/imui/response/hover.rs` stays focused on `ResponseExt` storage,
+  crate-local mutators, public accessors, and drag convenience helpers.
+- `tools/gate_imui_workstream_source.py` now requires the new flags/query owners, requires the
+  root module forwarding shape, and forbids the flag/query implementation from drifting back into
+  the storage owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass with pre-existing `fret-ui` warnings
+  for `unexpected_cfgs` on `unstable-retained-bridge` and `dead_code` on
+  `current_effective_opacity`.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests.
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass; 21 tests, 160 skipped, with
+  the same pre-existing `fret-ui` warnings.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; validated 445 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+
+Gate note:
+
+- The first `fret-imui popup_hover` run timed out while compiling behind shared cargo/rustc work;
+  the orphaned cargo process was allowed to finish naturally, then the same command was rerun and
+  passed.
+
 ## Boolean Visual Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI checkbox/radio/switch visual chrome moved out of behavior files without

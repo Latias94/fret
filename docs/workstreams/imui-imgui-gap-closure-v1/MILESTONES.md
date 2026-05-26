@@ -42,6 +42,12 @@ checkbox/radio pressable orchestration, shortcut/context-menu handling, and resp
 while `boolean_controls/switch.rs` keeps switch active-trigger behavior and model updates. The
 public checkbox, radio, and switch APIs remain unchanged.
 
+2026-05-26 hover query owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/hover/flags.rs` now owns `ImUiHoveredFlags`, while
+`ecosystem/fret-ui-kit/src/imui/response/hover/query.rs` owns the ImGui-style hovered query
+helpers. `response/hover.rs` keeps `ResponseExt` storage, crate-local mutators, public accessors,
+and drag convenience helpers. The public hover flags and `ResponseExt` API remain unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

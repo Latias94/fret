@@ -178,6 +178,10 @@ Readiness order for the next locally testable review slices:
    through crate-local core setters. The adapter signal record is now read-only too: adapter seam
    inputs keep builder-friendly public options, but emitted `AdapterSignalRecord` /
    `AdapterSignalMetadata` values expose identity, response, and metadata through accessors.
+   2026-05-26 hover query owner split: `ImUiHoveredFlags` now lives in
+   `response/hover/flags.rs`, while `hovered_like_imgui(...)` / `is_hovered(...)` query policy
+   lives in `response/hover/query.rs`. The root `response/hover.rs` stays focused on
+   `ResponseExt` storage, mutators, accessors, and drag convenience helpers.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,
