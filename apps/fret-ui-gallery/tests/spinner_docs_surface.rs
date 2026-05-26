@@ -7,13 +7,14 @@ fn spinner_page_documents_source_axes_and_leaf_api_decision() {
     let source = include_str!("../src/ui/pages/spinner.rs");
 
     for needle in [
-        "Reference stack: shadcn Spinner docs, the default registry recipe, the demo/custom/size/button/badge/input-group/empty examples, and the RTL example.",
+        "Reference stack: current shadcn Spinner docs, the new-york-v4 recipe, and the demo/custom/size/color/button/badge/input-group/empty/item examples.",
         "Secondary shadcn recipe references: the base and radix registry variants plus their spinner examples all keep Spinner as a leaf `svg` recipe plus host-owned slot composition.",
         "leaf `svg` recipe plus host-owned slot composition",
         "Neither Radix Primitives nor Base UI defines a dedicated Spinner primitive",
         "did not identify a missing `fret-ui` mechanism bug",
         "no extra generic `compose()` or composable children API is needed here",
-        "Preview mirrors the shadcn Spinner docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`",
+        "Preview mirrors the current shadcn Spinner docs path through `Demo`, `Usage`, `Customization`, `Size`, `Color`, `Button`, `Badge`, `Input Group`, `Empty`, `Item`, and `API Reference`",
+        "`RTL` and `Extras` stay focused Fret follow-ups after the current upstream docs path",
         "DocSection::build(cx, \"Extras\", extras)",
         "DocSection::build(cx, \"API Reference\", api_reference)",
     ] {
@@ -31,13 +32,15 @@ fn spinner_page_documents_source_axes_and_leaf_api_decision() {
             usage,
             customization,
             sizes,
+            colors,
             buttons,
             badges,
             input_group,
             empty,
+            item,
+            api_reference,
             rtl,
             extras,
-            api_reference,
         ]
         "#,
     );
@@ -52,11 +55,13 @@ fn spinner_snippets_stay_copyable_and_docs_aligned() {
     let usage = include_str!("../src/ui/snippets/spinner/usage.rs");
     let customization = include_str!("../src/ui/snippets/spinner/customization.rs");
     let sizes = include_str!("../src/ui/snippets/spinner/sizes.rs");
+    let colors = include_str!("../src/ui/snippets/spinner/colors.rs");
     let buttons = include_str!("../src/ui/snippets/spinner/buttons.rs");
     let input_group = include_str!("../src/ui/snippets/spinner/input_group.rs");
+    let item = include_str!("../src/ui/snippets/spinner/item.rs");
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "use fret_ui_shadcn::facade as shadcn;",
         "shadcn::Spinner::new()",
         ".test_id(\"ui-gallery-spinner-usage\")",
@@ -98,6 +103,19 @@ fn spinner_snippets_stay_copyable_and_docs_aligned() {
     }
 
     for needle in [
+        "Color::from_srgb_hex_rgb(hex)",
+        "color_spinner(cx, 0xef4444, \"ui-gallery-spinner-color-red\")",
+        ".color(ColorRef::Color(",
+        ".w_px(Px(24.0)).h_px(Px(24.0))",
+        "\"ui-gallery-spinner-color-purple\"",
+    ] {
+        assert!(
+            colors.contains(needle),
+            "spinner color snippet should keep the upstream color example copyable; missing `{needle}`",
+        );
+    }
+
+    for needle in [
         ".disabled(true)",
         ".size(shadcn::ButtonSize::Sm)",
         ".leading_children([shadcn::Spinner::new().into_element(cx)])",
@@ -106,6 +124,20 @@ fn spinner_snippets_stay_copyable_and_docs_aligned() {
         assert!(
             buttons.contains(needle),
             "spinner button snippet should keep the disabled button loading examples copyable; missing `{needle}`",
+        );
+    }
+
+    for needle in [
+        "shadcn::ItemMedia::new([shadcn::Spinner::new().into_element(cx)])",
+        ".variant(shadcn::ItemMediaVariant::Icon)",
+        "shadcn::ItemTitle::new(\"Downloading...\")",
+        "shadcn::ItemDescription::new(\"129 MB / 1000 MB\")",
+        "shadcn::Progress::new(progress_value)",
+        ".test_id(\"ui-gallery-spinner-item\")",
+    ] {
+        assert!(
+            item.contains(needle),
+            "spinner item snippet should keep the current upstream Item example copyable; missing `{needle}`",
         );
     }
 
@@ -121,7 +153,16 @@ fn spinner_snippets_stay_copyable_and_docs_aligned() {
         );
     }
 
-    let combined = [usage, customization, sizes, buttons, input_group].join("\n");
+    let combined = [
+        usage,
+        customization,
+        sizes,
+        colors,
+        buttons,
+        input_group,
+        item,
+    ]
+    .join("\n");
     assert!(
         !combined.contains(".children(["),
         "spinner docs snippets should not widen the leaf surface into a generic children API",
@@ -159,14 +200,16 @@ fn spinner_docs_diag_script_covers_docs_path_and_follow_ups() {
         "\"ui-gallery-spinner-usage-content\"",
         "\"ui-gallery-spinner-customization-content\"",
         "\"ui-gallery-spinner-size-content\"",
+        "\"ui-gallery-spinner-color-content\"",
         "\"ui-gallery-spinner-button-content\"",
         "\"ui-gallery-spinner-badge-content\"",
         "\"ui-gallery-spinner-input-group-content\"",
         "\"ui-gallery-spinner-empty-content\"",
+        "\"ui-gallery-spinner-item-content\"",
+        "\"ui-gallery-spinner-api-reference-content\"",
         "\"ui-gallery-spinner-rtl-content\"",
         "\"ui-gallery-spinner-extras-content\"",
-        "\"ui-gallery-spinner-api-reference-content\"",
-        "\"ui-gallery-spinner-docs.11-api-reference\"",
+        "\"ui-gallery-spinner-docs.13-extras\"",
     ] {
         assert!(
             script.contains(needle),

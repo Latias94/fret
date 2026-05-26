@@ -1974,3 +1974,31 @@ screenshots.
 - Skeleton row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
   depth `RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0, hardening=0, gate=0`,
   `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Spinner regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/spinner_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Spinner diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/spinner`.
+- `python -m json.tool` checks for the coverage manifest and `WORKSTREAM.json`: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail spinner`: PASS, 3 tests passed
+  and 1300 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail spinner`:
+  PASS, 13 tests passed and 138 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test reduced_motion_continuous_frames --status-level fail spinner_respects_reduced_motion_and_does_not_request_frames`:
+  PASS, 1 test passed and 1 skipped after waiting on cargo locks.
+- `cargo nextest run -p fret-a11y-accesskit --lib --status-level fail maps_extended_semantics_roles_to_accesskit_roles`:
+  PASS, 1 test passed and 22 skipped.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail spinner`:
+  PASS, 3 tests passed and 375 skipped after waiting on cargo locks.
+- `cargo nextest run -p fret-ui-gallery --test spinner_docs_surface --status-level fail`: PASS, 3
+  tests passed after correcting rustfmt-stable snippet assertions for the new Color section.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- Matrix summary: 46 `regression_locked`, 1 `harness_hardening`, 7 `inventory_only`, and 5
+  `not_in_harness`.
+- Spinner row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `DIS, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0, hardening=0, gate=0`,
+  `Next gap = state_depth_model_satisfied`.

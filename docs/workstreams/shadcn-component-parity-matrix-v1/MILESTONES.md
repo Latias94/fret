@@ -972,3 +972,29 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Skeleton `RTL`, `TEXT-MET`, and `PAINT` evidence; the component
   has no required state-depth gaps.
+
+## M40 - Promote Spinner
+
+Status: complete on 2026-05-27.
+
+`spinner.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Spinner docs path, new-york-v4 source, spinner-* upstream goldens,
+recipe status/motion tests, reduced-motion proof, web-vs-Fret host-composition gates, Gallery
+docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Spinner docs path, new-york-v4 recipe/examples,
+  base/radix leaf recipe references, and the tracked spinner upstream goldens.
+- The Spinner packet records the owner split: `fret-ui-shadcn` owns the visual status leaf,
+  current-color, size-4, and spin behavior; host recipes own Button/Badge/InputGroup/Empty/Item
+  composition; Gallery owns current docs ordering plus RTL/Extras follow-ups.
+- The Gallery page now follows current upstream docs through `Demo`, `Usage`, `Customization`,
+  `Size`, `Color`, `Button`, `Badge`, `Input Group`, `Empty`, `Item`, and `API Reference`, then
+  appends Fret-only `RTL` and `Extras`.
+- `spinner_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 46 `regression_locked`, 1 `harness_hardening`, 7
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Spinner `DIS`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
+  component has no required state-depth gaps.

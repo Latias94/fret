@@ -137,3 +137,7 @@ date: 2026-05-26
       seed covering current shadcn docs/source refs, skeleton-demo/card upstream goldens, recipe
       leaf chrome and pulse behavior, reduced-motion safety, Gallery docs ordering, base/radix
       example expansion, RTL follow-up, and text/paint evidence.
+- [x] SCPM-470: Promote Spinner from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, spinner-* upstream goldens, status semantics,
+      leaf chrome and spin behavior, disabled host controls, reduced-motion safety, Gallery docs
+      ordering, Color/Item examples, RTL/Extras follow-ups, and text/paint evidence.
