@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Container Methods Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI facade container-method dispatch moved into focused private owners without
+changing public facade method names or collection/layout behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/flow.rs` now owns item-flow,
+  same-line, dummy, spacing, and indent dispatch.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/layout.rs` now owns horizontal,
+  vertical, grid, scroll, and child-region dispatch.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections.rs` now owns
+  list-box, table, and virtual-list dispatch.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/menu_tabs.rs` now owns menu-bar
+  and tab-bar dispatch.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods.rs` is now a 22-line re-export
+  index that keeps the existing `container_methods::...` call sites stable.
+- `tools/gate_imui_workstream_source.py` now requires the split owners and forbids collection,
+  layout, and layout-sugar bodies from drifting back into the root container-methods file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui composition --no-fail-fast`: pass; 37 tests, 144 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; 473 dedicated directories, 47 standalone
+  markdown files.
+- `git diff --check`: pass.
+
 ## Slider Controls Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI slider semantics, pointer/key interaction, and visual track/value badge

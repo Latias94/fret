@@ -67,6 +67,14 @@ Last updated: 2026-05-26
       `slider_controls/interaction.rs` owns pointer/key model editing and lifecycle signals, and
       `slider_controls/visual.rs` owns track/fill/value badge assembly. The root slider file keeps
       label identity, option normalization, response population, and final element assembly.
+- [x] Split IMUI facade container-method dispatch out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods.rs` into private owner modules
+      without changing facade method names.
+      Result: `container_methods/flow.rs` owns item-flow / same-line / dummy / spacing / indent
+      sugar, `container_methods/layout.rs` owns layout container / scroll / child-region dispatch,
+      `container_methods/collections.rs` owns list-box / table / virtual-list dispatch, and
+      `container_methods/menu_tabs.rs` owns menu-bar / tab-bar dispatch. The root container-methods
+      file is now a thin re-export index.
 
 ## P0 - Source Baseline
 
