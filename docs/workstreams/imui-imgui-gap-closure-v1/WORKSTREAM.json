@@ -855,6 +855,7 @@
     "ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/palette.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/render.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/test_ids.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/virtual_list_controls.rs",

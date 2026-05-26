@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Table Row-Group Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI table pinned/scroll row-group mechanics moved out of the row/cell body owner
+without changing row semantics, cell wrapping, pinned left/right grouping, horizontal center-scroll
+wrapping, column gaps, or public table response behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` now owns pinned-cell splitting,
+  left/center/right row-group assembly, horizontal center-scroll wrapping, and the shared
+  horizontal flex primitive.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/body.rs` now keeps `PreparedTableCell`,
+  `TablePalette`, row semantics/background selection, and cell wrapping.
+- `tools/gate_imui_workstream_source.py` now requires the row-group owner and rejects pinned split,
+  horizontal scroll, and row-flex mechanics from drifting back into `body.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls::tests --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  composition::layout_collections::table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells
+  composition::layout_collections::table_helper_pins_left_and_right_columns_while_center_columns_scroll
+  composition::layout_collections::table_helper_skips_hidden_columns_in_header_and_body
+  label_identity::table_headers::table_resizable_header_reports_drag_response
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table Header Row Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI table header row assembly moved out of the root render owner without changing

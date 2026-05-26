@@ -233,6 +233,13 @@ Last updated: 2026-05-27
       collection, and header row wrapping. `render.rs` keeps palette, visible-column, scroll, and
       header-presence decisions plus body rows, root chrome, semantics, and final response
       assembly.
+- [x] Split IMUI table row-group mechanics out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls/body.rs` into a private owner module without
+      changing row semantics, cell wrapping, pinned left/right grouping, horizontal center-scroll
+      wrapping, column gaps, or table response behavior.
+      Result: `table_controls/row_groups.rs` owns pinned-cell splitting, left/center/right row
+      groups, horizontal center scroll, and the shared horizontal flex primitive. `body.rs` keeps
+      `PreparedTableCell`, `TablePalette`, row semantics/background selection, and cell wrapping.
 - [x] Split IMUI tab-family item collection, selected-model normalization, and panel/list assembly
       out of `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` into a private owner module
       without changing the public tab-bar builder or response surface.

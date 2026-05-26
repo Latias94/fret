@@ -208,6 +208,12 @@ visible header cell assembly, sortable/plain wrapper selection, resize response 
 palette, visible-column, horizontal-scroll, and header-presence decisions plus body rows, root
 chrome, semantics, and final `TableResponse` assembly. Public IMUI table APIs remain unchanged.
 
+2026-05-27 table row-group owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` now owns pinned-cell splitting,
+left/center/right row-group assembly, horizontal center-scroll wrapping, and the shared horizontal
+flex primitive. `table_controls/body.rs` keeps `PreparedTableCell`, `TablePalette`, row
+semantics/background selection, and cell wrapping. Public IMUI table APIs remain unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

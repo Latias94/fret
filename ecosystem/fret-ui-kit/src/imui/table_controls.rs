@@ -17,6 +17,7 @@ mod header;
 mod header_row;
 mod palette;
 mod render;
+mod row_groups;
 mod test_ids;
 
 struct BuiltTableRow {
