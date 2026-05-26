@@ -181,6 +181,15 @@ Last updated: 2026-05-27
       helpers, `collections/table.rs` owns table/row/cell options, and
       `collections/virtual_list.rs` owns virtual-list defaults. The root `collections.rs` file is
       now a thin module/re-export index.
+- [x] Split IMUI table-column visibility snapshot data shapes out of
+      `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state.rs` into a private owner
+      module without changing public re-export paths, serde payload shape, empty-id filtering,
+      duplicate restore policy, or runtime visibility application.
+      Result: `table_column_visibility/state/snapshot.rs` owns
+      `TableColumnVisibilitySnapshot`, `TableColumnVisibilityEntry`, serde derives, public data
+      fields, and snapshot/entry accessors. `state.rs` keeps runtime override storage, mutation
+      helpers, snapshot restore/apply orchestration, and `TableColumn` visibility policy
+      application.
 - [x] Split IMUI container/layout option types out of
       `ecosystem/fret-ui-kit/src/imui/options/containers.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.

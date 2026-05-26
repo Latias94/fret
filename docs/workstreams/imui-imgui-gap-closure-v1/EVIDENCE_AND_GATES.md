@@ -3,6 +3,44 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Table-Column Visibility Snapshot Owner-Split Evidence - 2026-05-27
+
+Claim verified: runtime table-column visibility state no longer owns the persistence-friendly
+snapshot data shapes without changing public re-export paths, serde payload shape, empty-id
+filtering, duplicate restore policy, or runtime column visibility application.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state.rs` keeps runtime visibility
+  overrides, model mutation helpers, snapshot restore/apply orchestration, and
+  `TableColumn::set_visible_for_policy(...)` use.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/snapshot.rs` owns
+  `TableColumnVisibilitySnapshot`, `TableColumnVisibilityEntry`, serde derives, public data
+  fields, and snapshot/entry accessors.
+- Existing callers continue to import `TableColumnVisibilitySnapshot` and
+  `TableColumnVisibilityEntry` through `table_column_visibility::state` re-exports and the
+  root IMUI surface.
+- `tools/gate_imui_workstream_source.py` now requires the snapshot owner and rejects serde/data
+  shapes from drifting back into the runtime state owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_column_visibility::tests
+  --no-fail-fast`: pass; 7 tests, 682 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  table_column_visibility_snapshot_api_compiles_and_roundtrips
+  table_column_visibility_snapshot_entries_are_public_data_shape
+  table_column_visibility_state_applies_runtime_visibility_by_column_id --no-fail-fast`: pass; 3
+  tests, 6 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Paint Media Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug draw image/SVG media painting moved out of the root paint dispatcher without

@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 table-column visibility snapshot owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/snapshot.rs` now owns
+`TableColumnVisibilitySnapshot`, `TableColumnVisibilityEntry`, serde derives, public data fields,
+and snapshot/entry accessors. `state.rs` keeps runtime override storage, mutation helpers, snapshot
+restore/apply orchestration, and column visibility policy application. The root IMUI re-export
+surface and serde payload shape remain unchanged.
+
 2026-05-27 debug-draw summary owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries.rs` is now a thin re-export index.
 `summaries/command.rs` owns `DebugDrawCommandKind` plus per-command summary storage/accessors, and
