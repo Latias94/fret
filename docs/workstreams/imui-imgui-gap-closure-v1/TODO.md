@@ -530,6 +530,10 @@ Readiness order for the next locally testable review slices:
    owns stroke style and path-style conversion, `options/round_corners.rs` owns rounded-corner
    flags, `options/media.rs` owns image/svg option bags, and `options/vertex.rs` owns mesh
    vertices.
+   2026-05-27 debug-draw path-builder shape-method owner split:
+   `debug_draw_controls/path_builder/shape_methods.rs` now owns rect, Bezier, arc, fast-arc, and
+   elliptical-arc authoring methods. `path_builder.rs` keeps point basics, stroke/fill recording,
+   and path state accessors.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,

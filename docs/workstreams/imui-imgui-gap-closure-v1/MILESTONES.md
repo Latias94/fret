@@ -33,6 +33,12 @@ lives in `options/stroke.rs`, rounded-corner flags live in `options/round_corner
 option bags live in `options/media.rs`, and mesh vertices live in `options/vertex.rs`. The public
 debug draw API and root `debug_draw_controls` re-export surface remain unchanged.
 
+2026-05-27 debug-draw path-builder shape-method owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods.rs` now owns rect,
+Bezier, arc, fast-arc, and elliptical-arc authoring methods plus their sampling/sanitization calls.
+`path_builder.rs` keeps the path type, point-list basics, stroke/fill command recording, and
+point-count/empty accessors. The public `ImUiDebugDrawPath` API remains unchanged.
+
 2026-05-26 button visual owner-split result:
 `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` now owns button variant layout,
 accessibility labels, arrow glyph/label mapping, and visual chrome/content assembly.

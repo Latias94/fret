@@ -620,6 +620,8 @@
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/round_corners.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/stroke.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/vertex.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/response.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/command.rs",

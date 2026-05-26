@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Debug-Draw Path-Builder Shape-Method Owner-Split Evidence - 2026-05-27
+
+Claim verified: debug draw path-builder rect/Bezier/arc authoring methods moved out of the root
+path-builder owner without changing the public `ImUiDebugDrawPath` API, path sampling behavior,
+invalid-input handling, stroke/fill command recording, or path state accessors.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder.rs` keeps the path type,
+  point-list basics, stroke/fill command recording, and point-count/empty accessors.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods.rs` owns
+  `rect`, `rect_with_rounding`, quadratic/cubic Bezier sampling, arc/fast-arc sampling, and
+  elliptical-arc sampling.
+- `tools/gate_imui_workstream_source.py` now requires the shape-method owner and rejects sampling
+  helpers from drifting back into root `path_builder.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  debug_draw_controls::tests::path_builder --no-fail-fast`: pass; 12 tests, 677 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table Header Label Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI table header label/sort helpers moved out of the header assembly owner without
