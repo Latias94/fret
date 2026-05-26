@@ -145,6 +145,12 @@ Each TODO is labeled:
       behavior-first note:
       - `docs/workstreams/docking-multiwindow-imgui-parity/M16_SOURCE_DRIFT_GUARD_2026-05-14.md`
       - `tools/gate_docking_multiwindow_workstream_source.py`
+    - [x] 2026-05-26 local Wayland guard refresh reran source/policy/capability/fallback gates
+      without recording acceptance:
+      - `docs/workstreams/docking-multiwindow-imgui-parity/M20_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-26.md`
+      - Source guards, policy-skip matrix, Wayland campaign validation, Linux capability posture,
+        and in-window fallback behavior passed locally.
+      - This remains non-acceptance evidence; manual Wayland compositor acceptance is still open.
 
 ## P0 — Editor-grade “hand feel” (multi-monitor / DPI)
 
