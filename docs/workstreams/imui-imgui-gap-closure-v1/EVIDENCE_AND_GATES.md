@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Debug-Draw Summary Owner-Split Evidence - 2026-05-27
+
+Claim verified: debug draw command summary types and aggregate list summary ownership moved out of
+the shared summary file without changing public summary type names, accessor-first storage,
+command-kind classification, clip-stack metrics, or external smoke usage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries.rs` is now a thin module/re-export
+  index.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/command.rs` owns
+  `DebugDrawCommandKind` and `DebugDrawCommandSummary`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/list.rs` owns
+  `DebugDrawListSummary` counters, final clip-depth update, and command classification.
+- `tools/gate_imui_workstream_source.py` now requires the summary index/sub-owner shape and moves
+  the opaque-summary checks to the concrete owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  debug_draw_controls::tests::draw_list::summaries --no-fail-fast`: pass; 4 tests, 685 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke
+  --no-fail-fast`: pass; 1 test.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
 ## Facade Container Wrapper Owner-Split Evidence - 2026-05-27
 
 Claim verified: root `ImUiFacade` container wrapper methods moved into private flow, layout,

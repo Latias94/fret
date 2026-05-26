@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 debug-draw summary owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries.rs` is now a thin re-export index.
+`summaries/command.rs` owns `DebugDrawCommandKind` plus per-command summary storage/accessors, and
+`summaries/list.rs` owns aggregate list summary counters and classification. The public
+`DebugDrawCommandSummary` / `DebugDrawListSummary` accessor-first contract remains unchanged.
+
 2026-05-27 facade container-wrapper owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs` is now a thin module index.
 Flow wrappers live in `container_wrappers/flow.rs`, layout wrappers live in
