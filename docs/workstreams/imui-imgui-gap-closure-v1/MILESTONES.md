@@ -195,6 +195,12 @@ open-request resolution, disabled-popup cleanup, and render-state recording. `me
 begin-menu flow orchestration, trigger mounting, popup mounting, and final `DisclosureResponse`
 assembly.
 
+2026-05-27 begin-menu state capture owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture.rs` now owns
+`BeginMenuState`, `MenuRenderState`, row/popup/was-open model capture, row/open-menu reads, and
+render-state recording. `menu_state.rs` now focuses on menubar open-menu mutation, active-trigger
+synchronization, open-request resolution, and disabled-popup cleanup.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

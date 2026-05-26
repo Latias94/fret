@@ -216,6 +216,14 @@ Last updated: 2026-05-26
       models, menubar open-menu synchronization, active trigger state writes, open-request
       resolution, disabled-popup cleanup, and render-state recording. `menu.rs` now keeps public
       flow orchestration plus trigger and popup mounting.
+- [x] Split IMUI begin-menu state capture/read helpers out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs` into a private owner
+      module without changing row/popup/was-open model identity, render-state recording, or menubar
+      open-policy behavior.
+      Result: `menu_family_controls/menu_state/capture.rs` owns `BeginMenuState`,
+      `MenuRenderState`, model capture, row/open-menu reads, and render-state recording.
+      `menu_state.rs` now focuses on menubar open-menu mutation, active-trigger synchronization,
+      open-request resolution, and disabled-popup cleanup.
 - [x] Split IMUI tab-family item collection, selected-model normalization, and panel/list assembly
       out of `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` into a private owner module
       without changing the public tab-bar builder or response surface.

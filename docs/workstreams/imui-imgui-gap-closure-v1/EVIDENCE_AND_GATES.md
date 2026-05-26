@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Begin Menu State Capture Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI begin-menu state capture/read helpers moved out of the menubar mutation owner
+without changing row/popup/was-open model identity, render-state recording, open-menu reads, or
+menubar open-policy behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture.rs` now owns
+  `BeginMenuState`, `MenuRenderState`, row/popup/was-open model capture, row/open-menu reads, and
+  render-state recording.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs` now focuses on menubar
+  open-menu mutation, active-trigger synchronization, open-request resolution, and disabled-popup
+  cleanup.
+- `tools/gate_imui_workstream_source.py` now requires the capture owner and rejects model capture
+  and render-state recording from drifting back into `menu_state.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_family_controls::tests --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation
+  interaction_menu_tabs::submenu_shortcuts
+  interaction_shortcuts::command_metadata::menu_item_command_uses_command_metadata_shortcut_and_gating
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Begin Menu State Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI begin-menu state/open-policy behavior moved out of the flow owner without
