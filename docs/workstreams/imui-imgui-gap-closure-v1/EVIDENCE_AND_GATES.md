@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Child-Region Resize Axis Owner-Split Evidence - 2026-05-27
+
+Claim verified: child-region resize axis geometry moved behind a private owner without changing
+resize handle keys, cursor selection, absolute handle layout, pointer-region drag wiring,
+response writes, or child-region resize option smoke coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/child_region/resize.rs` now keeps X/Y handle entry points,
+  enabled/min/max response writes, pointer-region drag lifecycle wiring, and drag edge merging.
+- `ecosystem/fret-ui-kit/src/imui/child_region/resize/axis.rs` owns X/Y handle width/height
+  constants, axis keys, resize cursors, and absolute handle layout.
+- `tools/gate_imui_workstream_source.py` now requires the axis owner and rejects layout constants,
+  `ChildRegionResizeAxis`, `CursorIcon`, `InsetStyle`, `Length::Px`, and `PositionStyle` from the
+  root resize owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui child_region_resize --no-fail-fast`: pass; 4
+  tests, 733 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke
+  --no-fail-fast`: pass; 3 tests, 0 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Child-Region Resize Response Owner-Split Evidence - 2026-05-27
 
 Claim verified: child-region X/Y resize response records moved behind a private owner without

@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 child-region resize axis owner-split result:
+`ecosystem/fret-ui-kit/src/imui/child_region/resize/axis.rs` now owns X/Y handle width/height
+constants, axis keys, resize cursors, and absolute handle layout. `resize.rs` keeps handle entry
+points, response writes, pointer-region drag lifecycle wiring, and drag edge merging.
+
 2026-05-27 child-region resize response owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize.rs` now owns
 `ChildRegionResizeXResponse`, `ChildRegionResizeYResponse`, drag/min/max accessors, width/height
