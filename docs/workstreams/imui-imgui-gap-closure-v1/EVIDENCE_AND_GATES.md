@@ -4115,6 +4115,30 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   `image_items.rs` owner markers while forbidding pressable/chrome policy from drifting into the
   facade owner.
 
+2026-05-26 IMUI facade command-presentation owner split:
+
+- Source gap before fix: `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` still resolved command
+  presentation for `button_command_with_options` and `menu_item_command_with_options` directly in
+  the root public trait body.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs` now owns the button command
+  presentation/default-enabled forwarding path.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs` now owns the menu command
+  presentation/default-enabled/default-shortcut forwarding path.
+- `facade_writer.rs` remains the public `UiWriterImUiFacadeExt` method roster and forwards both
+  command helpers to the private owner modules. Public method names and signatures stayed unchanged.
+- `tools/gate_imui_workstream_source.py` now requires the root forwarding shape, requires the owner
+  module command-presentation markers, and forbids command-presentation lookup from drifting back
+  into the root trait hub.
+- Validation:
+  - `cargo fmt --check -p fret-ui-kit`: pass.
+  - `python tools\gate_imui_workstream_source.py`: pass.
+  - `git diff --check`: pass.
+  - `cargo check -p fret-ui-kit --features imui --lib`: pass with the existing `fret-ui`
+    `unstable-retained-bridge` unexpected-cfg and `current_effective_opacity` dead-code warnings.
+  - `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test imui_adapter_seam_smoke --test imui_response_contract_smoke --no-fail-fast`: pass; 6 tests.
+- Gate note: one first attempt used a nonexistent `imui_menu_smoke` test target and failed during
+  test-target selection; the real owner-adjacent smoke run above passed.
+
 2026-05-26 worktree convergence plan:
 
 - Situation before convergence: `F:/SourceCodes/Rust/fret` is on `main` at `09e568ed`, ahead of

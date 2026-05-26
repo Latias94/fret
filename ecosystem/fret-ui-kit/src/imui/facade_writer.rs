@@ -619,17 +619,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         command: impl Into<CommandId>,
         options: MenuItemOptions,
     ) -> ResponseExt {
-        let command = command.into();
-        let presentation =
-            self.with_cx_mut(|cx| crate::command::command_presentation_for_window(cx, &command));
-
-        let mut options = options;
-        options.enabled = options.enabled && presentation.enabled;
-        if options.shortcut.is_none() {
-            options.shortcut = presentation.shortcut;
-        }
-
-        menu_controls::menu_item_action_with_options(self, presentation.label, command, options)
+        menu_items::menu_item_command_with_options(self, command.into(), options)
     }
 
     fn begin_menu(
@@ -897,14 +887,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         command: impl Into<CommandId>,
         options: ButtonOptions,
     ) -> ResponseExt {
-        let command = command.into();
-        let presentation =
-            self.with_cx_mut(|cx| crate::command::command_presentation_for_window(cx, &command));
-
-        let mut options = options;
-        options.enabled = options.enabled && presentation.enabled;
-
-        button_controls::action_button_with_options(self, presentation.label, command, options)
+        button_actions::button_command_with_options(self, command.into(), options)
     }
 
     fn checkbox_model(

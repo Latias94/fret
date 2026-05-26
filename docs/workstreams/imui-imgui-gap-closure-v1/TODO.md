@@ -1385,11 +1385,16 @@ opening the slice.
       `image_item_with_options` / `image_button_with_options` forwarding and the image-button
       default normalization, while `image_item_controls.rs` remains the interactive image widget
       policy owner.
-- [ ] Converge the dirty `main` and `imui-imgui-editor-grade-refactor` worktrees before continuing
+- [x] Split the IMUI facade command-presentation default bodies out of
+      `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` into the existing button/menu owner modules
+      without changing the public IMUI facade trait surface.
+      Result: `button_actions.rs` owns `button_command_with_options` presentation/default-enabled
+      forwarding, `menu_items.rs` owns `menu_item_command_with_options`
+      presentation/default-enabled/default-shortcut forwarding, and the source gate now rejects
+      `command_presentation_for_window` from drifting back into the root facade trait hub.
+- [x] Converge the dirty `main` and `imui-imgui-editor-grade-refactor` worktrees before continuing
       IMUI feature work.
-      Plan: use `main` as the integration base because it contains the six committed shadcn/parity
-      foundation commits, checkpoint both dirty worktrees, merge the IMUI branch into `main`, and
-      resolve conflicts by topic according to
-      `WORKTREE_CONVERGENCE_PLAN_2026-05-26.md`. The `main`-only
-      `facade_writer/image_items.rs` slice was completed with source-gate and workstream evidence
-      before checkpointing, so it can be included in the `main` checkpoint.
+      Result: `main` checkpoint `d078e25122`, IMUI worktree checkpoint `05727e284b`, and merge
+      commit `dee3d48f44` are recorded in `WORKTREE_CONVERGENCE_PLAN_2026-05-26.md` and
+      `EVIDENCE_AND_GATES.md`. The merged tree keeps the editor-grade facade/container/listbox
+      organization, preserves the `main` image-item owner split, and continues only from `main`.

@@ -7038,6 +7038,8 @@ def main() -> None:
                 "basic_items::separator_text_with_options(self, label.into(), options)",
                 "image_items::image_item_with_options(self, id, image, size, options)",
                 "image_items::image_button_with_options(self, id, image, size, options)",
+                "menu_items::menu_item_command_with_options(self, command.into(), options)",
+                "button_actions::button_command_with_options(self, command.into(), options)",
                 "#[cfg(test)]\nmod tests;",
                 "/// Render an in-window floating window.",
                 "/// - `floating_layer(...)` owns bring-to-front ordering and hit-test order,",
@@ -7054,6 +7056,7 @@ def main() -> None:
                 "Render a minimal in-window floating window.",
                 "This is intentionally v1-small",
                 "Z-order and focus arbitration are tracked as a separate work item",
+                "crate::command::command_presentation_for_window(cx, &command)",
             ],
         ),
         SourceCheck(
@@ -11342,6 +11345,9 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs"),
             required=[
+                "pub(super) fn button_command_with_options",
+                "crate::command::command_presentation_for_window(cx, &command)",
+                "button_controls::action_button_with_options(ui, presentation.label, command, options)",
                 "resp.id()",
                 "resp.enabled()",
             ],
@@ -11355,6 +11361,10 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs"),
             required=[
+                "pub(super) fn menu_item_command_with_options",
+                "crate::command::command_presentation_for_window(cx, &command)",
+                "options.shortcut = presentation.shortcut;",
+                "menu_controls::menu_item_action_with_options(ui, presentation.label, command, options)",
                 "resp.id()",
                 "resp.enabled()",
             ],

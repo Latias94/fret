@@ -1203,6 +1203,15 @@ the owner module without changing public names or behavior.
 item policy stays in `image_item_controls.rs`; the public facade method names and signatures stay
 unchanged.
 
+2026-05-26 facade command-presentation owner split result:
+`ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs` now owns the button command
+presentation/default-enabled forwarding path, and
+`ecosystem/fret-ui-kit/src/imui/facade_writer/menu_items.rs` owns the menu command
+presentation/default-enabled/default-shortcut forwarding path. The root `UiWriterImUiFacadeExt`
+trait in `facade_writer.rs` still exposes the same public method roster and now only forwards these
+command helpers to the owner modules. `facade_writer.rs` dropped from 984 to 971 lines after this
+slice.
+
 2026-05-26 worktree convergence decision:
 `WORKTREE_CONVERGENCE_PLAN_2026-05-26.md` records the integration strategy for the dirty `main` and
 `imui-imgui-editor-grade-refactor` worktrees. `main` remains the final integration base because it
