@@ -3,10 +3,12 @@
 use std::hash::Hash;
 use std::sync::Arc;
 
+#[cfg(test)]
+use fret_core::Rect;
 use fret_core::scene::DashPatternV1;
 use fret_core::scene::ImageSamplingHint;
 use fret_core::{
-    Color, PathStyle, Point, Px, Rect, SceneMeshVertex, StrokeCapV1, StrokeJoinV1, StrokeStyle,
+    Color, PathStyle, Point, Px, SceneMeshVertex, StrokeCapV1, StrokeJoinV1, StrokeStyle,
     StrokeStyleV2, SvgFit, UvPoint, ViewportFit,
 };
 use fret_ui::UiHost;
@@ -24,11 +26,13 @@ mod paint_helpers;
 mod paint_shapes;
 mod path_builder;
 mod paths;
+mod response;
 mod summaries;
 
 use commands::DebugDrawCommand;
 use element::debug_draw_element;
 pub use path_builder::ImUiDebugDrawPath;
+pub use response::DebugDrawResponse;
 pub use summaries::{DebugDrawCommandKind, DebugDrawCommandSummary, DebugDrawListSummary};
 
 const DEFAULT_ELLIPSE_SEGMENTS: usize = 32;
@@ -85,51 +89,6 @@ impl DebugDrawInteractionOptions {
     pub fn with_a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
         self
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct DebugDrawResponse {
-    response: ResponseExt,
-    list_summary: DebugDrawListSummary,
-    command_summaries: Arc<[DebugDrawCommandSummary]>,
-}
-
-impl DebugDrawResponse {
-    pub(crate) fn new(
-        response: ResponseExt,
-        list_summary: DebugDrawListSummary,
-        command_summaries: Arc<[DebugDrawCommandSummary]>,
-    ) -> Self {
-        Self {
-            response,
-            list_summary,
-            command_summaries,
-        }
-    }
-
-    pub fn response(&self) -> ResponseExt {
-        self.response
-    }
-
-    pub fn command_summaries(&self) -> &[DebugDrawCommandSummary] {
-        &self.command_summaries
-    }
-
-    pub fn list_summary(&self) -> DebugDrawListSummary {
-        self.list_summary
-    }
-
-    pub fn clicked(&self) -> bool {
-        self.response.clicked()
-    }
-
-    pub fn hovered_like_imgui(&self) -> bool {
-        self.response.hovered_like_imgui()
-    }
-
-    pub fn rect(&self) -> Option<Rect> {
-        self.response.rect()
     }
 }
 

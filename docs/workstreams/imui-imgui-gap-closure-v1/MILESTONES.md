@@ -79,6 +79,12 @@ policy updates, and popup mounting. `menu_family_controls.rs` keeps menubar poli
 menu-bar element construction, module wiring, and tests. The public facade menu API remains
 unchanged.
 
+2026-05-26 debug-draw response owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/response.rs` now owns `DebugDrawResponse`
+storage and accessors. The opaque-output source gate follows the new owner, while
+`debug_draw_controls.rs` keeps debug draw options, draw-list/style types, and helper orchestration.
+The public debug draw response API remains unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

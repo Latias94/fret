@@ -200,6 +200,10 @@ Readiness order for the next locally testable review slices:
    2026-05-26 menu-family menu owner split: `begin_menu_with_options(...)` now lives in
    `menu_family_controls/menu.rs`. The root `menu_family_controls.rs` keeps menubar policy state,
    menu-bar element construction, module wiring, and tests only.
+   2026-05-26 debug-draw response owner split: `DebugDrawResponse` now lives in
+   `debug_draw_controls/response.rs`, and the opaque-output source gate follows the new owner. The
+   root `debug_draw_controls.rs` keeps debug draw options, draw-list/style types, and helper
+   orchestration.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,
