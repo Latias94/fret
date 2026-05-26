@@ -174,6 +174,14 @@ Last updated: 2026-05-27
       transient activation/collapse keys; `floating_surface/state.rs` owns floating-area and
       floating-window state records. The root `floating_surface.rs` now keeps area composition,
       pointer-region wiring, layer wiring, and private re-exports.
+- [x] Split IMUI floating-area composition out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into a private owner module without
+      changing floating-area position state, drag snapshot application, layer registration,
+      no-input/pass-through gates, test ids, or `FloatingAreaResponse` semantics.
+      Result: `floating_surface/area.rs` owns area registration, drag position reconciliation,
+      state/test-id updates, facade content mounting, absolute area layout, interaction gates, and
+      response assembly. The root `floating_surface.rs` keeps drag-surface pointer-region behavior,
+      layer/kind/state re-exports, and module wiring.
 - [x] Split IMUI floating-window resize state/snapshot ownership out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` into a private owner module
       without changing resize handles, left/right/top/bottom/corner resize behavior, collapse

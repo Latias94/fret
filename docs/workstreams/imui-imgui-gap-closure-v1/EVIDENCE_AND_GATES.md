@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Floating Area Composition Owner-Split Evidence - 2026-05-27
+
+Claim verified: floating-area layer registration, drag snapshot application, state/test-id updates,
+IMUI facade content mounting, absolute area layout, no-input/pass-through gates, and
+`FloatingAreaResponse` assembly moved into a private area owner without changing floating-area
+position, dragging, test-id, no-inputs, pointer pass-through, layer ordering, or response
+semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs` now owns floating-area composition,
+  state reconciliation, interaction gates, and response assembly.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` now keeps drag-surface pointer-region
+  behavior, layer/kind/state re-exports, and module wiring.
+- `tools/gate_imui_workstream_source.py` now requires the area owner and rejects direct area
+  layout/state/gate construction from drifting back into `floating_surface.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Text Picker Input Root Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI input-text picker input option/test-id preparation, ComboBox semantics

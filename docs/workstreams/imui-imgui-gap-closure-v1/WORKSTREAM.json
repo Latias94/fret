@@ -537,6 +537,7 @@
     "ecosystem/fret-ui-kit/src/imui/item_behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/item_behavior/response.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/kinds.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/state.rs",
