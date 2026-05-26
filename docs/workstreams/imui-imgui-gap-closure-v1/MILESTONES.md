@@ -35,6 +35,14 @@ and leaf/children classification. `disclosure_controls.rs` keeps immediate press
 keyboard/context-menu handling, open-model updates, content mounting, and `DisclosureResponse`
 population. The public collapsing-header and tree-node APIs remain unchanged.
 
+2026-05-26 disclosure trigger owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger.rs` now owns header pressable
+construction, shortcut activation, context-menu key/right-click handling, double-click signaling,
+hover-delay reads, enabled sanitization, and trigger `ResponseExt` population.
+`disclosure_controls.rs` keeps label identity normalization, spec/open-model setup, content
+mounting, and aggregate open/toggled response state. The public collapsing-header and tree-node
+APIs remain unchanged.
+
 2026-05-26 boolean visual owner-split result:
 `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` now owns checkbox badges, radio
 indicators, switch state badges, and shared boolean label text. `boolean_controls.rs` keeps

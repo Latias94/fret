@@ -39,6 +39,14 @@ Last updated: 2026-05-26
       Result: `disclosure_controls/spec.rs` owns `DisclosureKind`, `DisclosureSpec`, option-to-spec
       normalization, and leaf/children classification. The root file keeps pressable behavior,
       model/toggle wiring, content mounting, and response population.
+- [x] Split IMUI disclosure trigger behavior and response population out of
+      `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private owner module without
+      changing the public collapsing-header/tree-node surface.
+      Result: `disclosure_controls/trigger.rs` owns pressable props, shortcut activation,
+      context-menu request handling, right/double-click events, hover-delay reads, enabled
+      sanitization, and trigger `ResponseExt` population. The root file keeps label identity,
+      spec/open-model wiring, content mounting, and aggregate `DisclosureResponse` open/toggled
+      state.
 - [x] Split IMUI boolean-control visual chrome out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` and its switch owner without changing
       the public checkbox/radio/switch surface.

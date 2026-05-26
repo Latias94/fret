@@ -3,6 +3,50 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Disclosure Trigger Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI disclosure trigger behavior and trigger-response population moved into a
+focused private owner without changing the public collapsing-header/tree-node facade, open model
+semantics, content mounting, or response accessors.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger.rs` now owns header pressable
+  construction, shortcut activation, context-menu key/right-click handling, double-click signaling,
+  hover-delay reads, enabled sanitization, and trigger `ResponseExt` population.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` keeps label identity normalization,
+  spec/open-model wiring, content mounting, and aggregate `DisclosureResponse` open/toggled state.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs` remains the option-to-spec owner,
+  while `visual.rs` remains the a11y/visual row owner.
+- `tools/gate_imui_workstream_source.py` now requires the split trigger owner and rejects
+  pressable/keyboard/context-menu/response-population bodies from drifting back into root
+  `disclosure_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls::tests
+  --no-fail-fast`: pass; 6 tests, 682 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::submenu_shortcuts --no-fail-fast`:
+  pass; 3 tests, 178 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation --no-fail-fast`: pass; 6
+  tests, 175 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- A broader combined `cargo nextest run -p fret-imui interaction_menu_tabs::submenu_shortcuts
+  interaction_menu_tabs::menu_activation --no-fail-fast` attempt timed out after 244 seconds while
+  its cargo/nextest process was still compiling. The process finished naturally afterward, and both
+  focused filters passed when rerun serially.
+
 ## Popup Menu Policy/Panel Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI popup-menu policy state and popup panel composition moved into focused private
