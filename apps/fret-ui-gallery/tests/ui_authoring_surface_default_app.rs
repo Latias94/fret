@@ -6818,31 +6818,31 @@ fn tabs_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
-            "DocSection::build(cx, \"Line\", line)",
-            "DocSection::build(cx, \"Vertical\", vertical)",
-            "DocSection::build(cx, \"Disabled\", disabled)",
-            "DocSection::build(cx, \"Icons\", icons)",
-            "DocSection::build(cx, \"RTL\", rtl)",
-            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Line (Base/Radix)\", line)",
+            "DocSection::build(cx, \"Vertical (Base/Radix)\", vertical)",
+            "DocSection::build(cx, \"Disabled (Base/Radix)\", disabled)",
+            "DocSection::build(cx, \"Icons (Base/Radix)\", icons)",
+            "DocSection::build(cx, \"RTL (Fret)\", rtl)",
+            "DocSection::build(cx, \"API Reference (Fret)\", api_reference)",
             "DocSection::build(cx, \"Composable Parts (Fret)\", parts)",
-            "DocSection::build(cx, \"List\", list)",
-            "DocSection::build(cx, \"Vertical (Line)\", vertical_line)",
-            "DocSection::build(cx, \"Extras\", extras)",
+            "DocSection::build(cx, \"List (Base/Radix)\", list)",
+            "DocSection::build(cx, \"Vertical Line (Fret)\", vertical_line)",
+            "DocSection::build(cx, \"Extras (Fret)\", extras)",
             "DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
-            "DocSection::new(\"Line\", line)",
-            "DocSection::new(\"Vertical\", vertical)",
-            "DocSection::new(\"Disabled\", disabled)",
-            "DocSection::new(\"Icons\", icons)",
-            "DocSection::new(\"RTL\", rtl)",
-            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Line (Base/Radix)\", line)",
+            "DocSection::new(\"Vertical (Base/Radix)\", vertical)",
+            "DocSection::new(\"Disabled (Base/Radix)\", disabled)",
+            "DocSection::new(\"Icons (Base/Radix)\", icons)",
+            "DocSection::new(\"RTL (Fret)\", rtl)",
+            "DocSection::new(\"API Reference (Fret)\", api_reference)",
             "DocSection::new(\"Composable Parts (Fret)\", parts)",
-            "DocSection::new(\"List\", list)",
-            "DocSection::new(\"Vertical (Line)\", vertical_line)",
-            "DocSection::new(\"Extras\", extras)",
+            "DocSection::new(\"List (Base/Radix)\", list)",
+            "DocSection::new(\"Vertical Line (Fret)\", vertical_line)",
+            "DocSection::new(\"Extras (Fret)\", extras)",
             "DocSection::new(\"Notes\", notes)",
         ],
     );
@@ -6855,7 +6855,7 @@ fn tabs_page_uses_typed_notes_blocks_for_api_reference_and_notes() {
         &[
             "let api_reference = doc_layout::notes_block([",
             "let notes = doc_layout::notes_block([",
-            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let api_reference = DocSection::build(cx, \"API Reference (Fret)\", api_reference)",
             "let notes = DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
@@ -6910,7 +6910,7 @@ fn tabs_page_teaches_rtl_activation_direction_and_fuller_example_shape() {
 
     assert!(
         tabs_page.contains(
-            "RTL parity for logical previous/next movement, flipped `activation_direction` metadata, and the fuller upstream card example."
+            "Fret RTL parity for logical previous/next movement, flipped `activation_direction` metadata, and the fuller registry-style card example."
         ),
         "src/ui/pages/tabs.rs should describe the RTL section as more than a keynav-only gate"
     );
@@ -6922,7 +6922,7 @@ fn tabs_page_teaches_rtl_activation_direction_and_fuller_example_shape() {
     );
     assert!(
         tabs_page.contains(
-            "The `RTL` section now uses a fuller upstream-style four-tab card example instead of a gallery-only two-tab keynav gate"
+            "The `RTL (Fret)` section now uses a fuller registry-style four-tab card example instead of a gallery-only two-tab keynav gate"
         ),
         "src/ui/pages/tabs.rs should record that the RTL snippet stays close to the upstream card shape"
     );
@@ -6959,9 +6959,9 @@ fn tabs_icons_snippet_uses_trigger_children_for_upstream_icon_composition() {
         &[
             ".trigger_children([",
             "icon::icon(cx, IconId::new_static(\"lucide.app-window\"))",
-            "cx.text(\"Preview\")",
+            "decl_text::text_button_label(cx, \"Preview\")",
             "icon::icon(cx, IconId::new_static(\"lucide.code\"))",
-            "cx.text(\"Code\")",
+            "decl_text::text_button_label(cx, \"Code\")",
         ],
     );
 
@@ -6978,7 +6978,7 @@ fn tabs_page_records_docs_shape_and_trigger_children_alignment() {
 
     assert!(
         tabs_page.contains(
-            "`Line`, `Vertical`, and `Disabled` now keep the same text/value shape as the upstream docs examples, while `Icons` demonstrates icon + label trigger composition through `TabsItem::trigger_children(...)` without leaving the default builder lane."
+            "`Line (Base/Radix)`, `Vertical (Base/Radix)`, and `Disabled (Base/Radix)` keep the same text/value shape as Base/Radix registry examples, while `Icons (Base/Radix)` demonstrates icon + label trigger composition through `TabsItem::trigger_children(...)` without leaving the default builder lane."
         ),
         "src/ui/pages/tabs.rs should record the docs-path shape alignment and trigger-children lane"
     );

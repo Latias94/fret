@@ -43,7 +43,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         )
                         .into_element(cx)],
                     )
-                    .trigger_test_id("ui-gallery-tabs-rtl-trigger-overview"),
+                    .trigger_test_id("ui-gallery-tabs-rtl-trigger-overview")
+                    .content_test_id("ui-gallery-tabs-rtl-panel-overview"),
                     shadcn::TabsItem::new(
                         "analytics",
                         "Analytics",
@@ -54,7 +55,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         )
                         .into_element(cx)],
                     )
-                    .trigger_test_id("ui-gallery-tabs-rtl-trigger-analytics"),
+                    .trigger_test_id("ui-gallery-tabs-rtl-trigger-analytics")
+                    .content_test_id("ui-gallery-tabs-rtl-panel-analytics"),
                     shadcn::TabsItem::new(
                         "reports",
                         "Reports",
@@ -65,7 +67,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         )
                         .into_element(cx)],
                     )
-                    .trigger_test_id("ui-gallery-tabs-rtl-trigger-reports"),
+                    .trigger_test_id("ui-gallery-tabs-rtl-trigger-reports")
+                    .content_test_id("ui-gallery-tabs-rtl-panel-reports"),
                     shadcn::TabsItem::new(
                         "settings",
                         "Settings",
@@ -76,7 +79,8 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
                         )
                         .into_element(cx)],
                     )
-                    .trigger_test_id("ui-gallery-tabs-rtl-trigger-settings"),
+                    .trigger_test_id("ui-gallery-tabs-rtl-trigger-settings")
+                    .content_test_id("ui-gallery-tabs-rtl-panel-settings"),
                 ]
             })
             .refine_layout(

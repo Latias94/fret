@@ -1180,3 +1180,34 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Switch `DIS`, `HOV`, `FOCUS-VIS`, `PRESS`, `KEY`, `RTL`,
   `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M47 - Promote Tabs
+
+Status: complete on 2026-05-27.
+
+`tabs.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after connecting
+the current shadcn Tabs docs path, new-york-v4 recipe/demo, secondary Base/Radix registry examples,
+the tabs-demo upstream golden, primitive and recipe semantics/chrome tests, APG keyboard gates,
+web-vs-Fret layout/text-paint gates, Radix primitive state proof, Gallery docs-surface checks,
+diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Tabs docs path, new-york-v4 recipe/demo, secondary
+  Base/Radix registry examples, the tracked tabs-demo upstream golden, and the Radix click-state
+  golden.
+- The Tabs packet records the owner split: `fret-ui-kit` owns value selection, orientation
+  semantics, pointer-down policy, tab/list/content roles, and force-mount visibility;
+  `fret-ui-shadcn` owns root/list/trigger/content chrome, selected/disabled/focus-visible paint,
+  variants, callbacks, content presence, text metrics, paint token output, and test-id derivation;
+  Gallery owns current docs ordering plus Base/Radix and Fret follow-ups.
+- The Gallery page now follows current upstream docs through `Demo` and `Usage`, then labels
+  `Line (Base/Radix)`, `Vertical (Base/Radix)`, `Disabled (Base/Radix)`,
+  `Icons (Base/Radix)`, `List (Base/Radix)`, `RTL (Fret)`, `API Reference (Fret)`,
+  `Composable Parts (Fret)`, `Vertical Line (Fret)`, `Extras (Fret)`, and `Notes` explicitly.
+- `tabs_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 53 `regression_locked`, 1 `harness_hardening`, 0
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Tabs `DIS`, `FOCUS-VIS`, `OPEN`, `KEY`, `RTL`, `TEXT-MET`, and
+  `PAINT` evidence; the component has no required state-depth gaps.

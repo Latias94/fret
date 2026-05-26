@@ -170,3 +170,8 @@ date: 2026-05-26
       primitive and recipe semantics, click/Space toggle behavior, disabled/hover/focus-visible/
       pressed/RTL/text/paint state depth, web-vs-Fret layout/chrome, Radix state proof, Gallery
       docs ordering, diagnostics JSON, and matrix packet evidence.
+- [x] SCPM-540: Promote Tabs from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn Demo/Usage source refs, tabs-demo upstream golden, primitive and
+      recipe semantics, automatic/manual keyboard navigation, click selection, disabled/
+      focus-visible/open/RTL/text/paint state depth, web-vs-Fret layout/text paint, Radix state
+      proof, Gallery docs ordering, diagnostics JSON, and matrix packet evidence.

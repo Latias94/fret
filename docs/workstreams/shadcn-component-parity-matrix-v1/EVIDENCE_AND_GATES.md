@@ -2199,3 +2199,43 @@ screenshots.
 - Switch row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
   `DIS, HOV, FOCUS-VIS, PRESS, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
   `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Tabs regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/tabs_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Tabs diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/tabs`.
+- `python -m json.tool` checks for the coverage manifest, generated matrix JSON, and
+  `WORKSTREAM.json`: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/pages/tabs.rs apps/fret-ui-gallery/src/ui/snippets/tabs/rtl.rs apps/fret-ui-gallery/tests/tabs_docs_surface.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-kit --lib --status-level fail tabs`: PASS, 6 tests passed and 574
+  skipped.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail tabs`: PASS, 36 tests passed and
+  1269 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test tabs_keyboard_navigation --status-level fail`: PASS,
+  2 tests passed.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail tabs`:
+  PASS, 6 tests passed and 145 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_misc_targeted --status-level fail shadcn_misc_goldens_are_targeted_gates`:
+  PASS, 1 test passed.
+- `cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_tabs_default`:
+  PASS, 1 test passed and 31 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail tabs`:
+  PASS, 1 test passed and 41 skipped.
+- `cargo nextest run -p fret-ui-gallery --test tabs_docs_surface --status-level fail`: PASS, 3
+  tests passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail tabs`:
+  PASS, 13 tests passed and 364 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python tools/check_workstream_catalog.py`: PASS.
+- `git diff --check`: PASS; Git reported only CRLF-to-LF normalization warnings for generated
+  matrix/manifest files.
+- Matrix summary: 53 `regression_locked`, 1 `harness_hardening`, 0 `inventory_only`, and 5
+  `not_in_harness`.
+- Tabs row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.

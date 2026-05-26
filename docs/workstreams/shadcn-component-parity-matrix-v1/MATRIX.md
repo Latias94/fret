@@ -39,35 +39,34 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 53,
-    "fret_layout": 53,
-    "fret_text_paint": 33,
-    "interaction_script": 53,
+    "fret_bundle_semantics": 54,
+    "fret_layout": 54,
+    "fret_text_paint": 34,
+    "interaction_script": 54,
     "responsive_viewport": 10,
-    "source_refs": 53,
-    "upstream_dom_snapshot": 53
+    "source_refs": 54,
+    "upstream_dom_snapshot": 54
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
   "registry_component_count": 54,
   "state_depth_component_counts": {
-    "disabled": 23,
+    "disabled": 24,
     "drag": 7,
-    "focus_visible": 20,
+    "focus_visible": 21,
     "hover": 18,
-    "keyboard": 32,
+    "keyboard": 33,
     "mobile": 16,
-    "open": 26,
-    "paint_token": 51,
+    "open": 27,
+    "paint_token": 52,
     "pressed": 4,
-    "rtl": 32,
-    "text_metrics": 33
+    "rtl": 33,
+    "text_metrics": 34
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 1,
     "not_in_harness": 5,
-    "regression_locked": 52
+    "regression_locked": 53
   }
 }
 ```
@@ -128,7 +127,7 @@ State-depth legend:
 | spinner | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | switch | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, HOV, FOCUS-VIS, PRESS, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | table | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | HOV, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
-| tabs | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| tabs | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | textarea | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | toast | non_registry | Skip | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | toggle | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, HOV, FOCUS-VIS, PRESS, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
