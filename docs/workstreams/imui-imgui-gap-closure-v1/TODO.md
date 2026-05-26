@@ -47,6 +47,13 @@ Last updated: 2026-05-26
       sanitization, and trigger `ResponseExt` population. The root file keeps label identity,
       spec/open-model wiring, content mounting, and aggregate `DisclosureResponse` open/toggled
       state.
+- [x] Split IMUI combo trigger behavior and visual chrome out of
+      `ecosystem/fret-ui-kit/src/imui/combo_controls.rs` into a private owner module without
+      changing the public combo/combo-model facade surface.
+      Result: `combo_controls/trigger.rs` owns ComboBox pressable props, a11y label derivation,
+      shortcut activation, context-menu request handling, trigger `ResponseExt` population, and
+      open/menu badge visual assembly. The root file keeps label identity, popup open/close model
+      wiring, popup mounting, and aggregate `ComboResponse` open/toggled state.
 - [x] Split IMUI boolean-control visual chrome out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` and its switch owner without changing
       the public checkbox/radio/switch surface.

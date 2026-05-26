@@ -43,6 +43,13 @@ hover-delay reads, enabled sanitization, and trigger `ResponseExt` population.
 mounting, and aggregate open/toggled response state. The public collapsing-header and tree-node
 APIs remain unchanged.
 
+2026-05-26 combo trigger owner-split result:
+`ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs` now owns ComboBox pressable
+construction, accessibility label derivation, shortcut activation, context-menu key handling,
+trigger `ResponseExt` population, and the open/menu badge chrome. `combo_controls.rs` keeps label
+identity normalization, popup open/close model wiring, popup mounting, and aggregate
+`ComboResponse` open/toggled state. The public combo and combo-model facade APIs remain unchanged.
+
 2026-05-26 boolean visual owner-split result:
 `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` now owns checkbox badges, radio
 indicators, switch state badges, and shared boolean label text. `boolean_controls.rs` keeps

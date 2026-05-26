@@ -3,6 +3,43 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Combo Trigger Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI combo trigger behavior and trigger chrome moved into a focused private owner
+without changing the public combo/combo-model facade, popup model wiring, or response accessors.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs` now owns `ComboTriggerOptions`,
+  `combo_trigger(...)`, ComboBox semantics, shortcut activation, context-menu request handling,
+  pressable `ResponseExt` population, and open/menu trigger chrome.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls.rs` keeps label identity normalization, popup
+  model reads, trigger click-to-open/close, popup mounting, disabled close policy, and aggregate
+  `ComboResponse` open/toggled lifecycle flags.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/tests.rs` follows the a11y-label helper to the
+  new trigger owner.
+- `tools/gate_imui_workstream_source.py` now requires the new trigger owner and rejects
+  `PressableProps`, `PressableA11y`, `control_chrome_pressable_with_id_props`,
+  `pressable_on_activate`, `key_on_key_down_for`, and direct pressable response population from
+  drifting back into root `combo_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib combo_controls::tests
+  --no-fail-fast`: pass; 2 tests, 686 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_combo_smoke --no-fail-fast`:
+  pass; 2 tests.
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast`: pass; 11 tests, 170 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Disclosure Trigger Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI disclosure trigger behavior and trigger-response population moved into a
