@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Child-Region Resize Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI child-region resize handle and drag-response ownership moved into a focused
+private owner without changing the public child-region facade, response surface, scroll
+forwarding, framed chrome, or root/content test-id behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/child_region/resize.rs` now owns resize axis layout, handle
+  constants, pointer-region drag wiring, enabled/min/max response writes, and drag start/stop edge
+  reconciliation for both X and Y resize handles.
+- `ecosystem/fret-ui-kit/src/imui/child_region.rs` keeps child-region content building, scroll-area
+  configuration, framed chrome, viewport/content/root test-id routing, and resize stack assembly.
+- `tools/gate_imui_workstream_source.py` now requires the split resize owner and rejects resize
+  drag-state, handle constants, axis layout, and pointer-region drag wiring from drifting back into
+  the root child-region composition file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke
+  --no-fail-fast`: pass; 3 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- The focused `fret-ui-kit` build/test commands waited briefly on package-cache/build-directory
+  locks, then completed successfully in the same runs.
+
 ## Selectable Keyboard Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI selectable keyboard policy moved into a focused private owner without changing

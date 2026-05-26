@@ -110,6 +110,13 @@ Last updated: 2026-05-26
       Result: `selectable_controls/keyboard.rs` now owns shortcut handling, popup close-on-activate
       behavior, context-menu requests, and popup menu arrow-key navigation. The root file keeps
       label identity, pressable assembly, and row rendering.
+- [x] Split IMUI child-region resize handle/drag ownership out of
+      `ecosystem/fret-ui-kit/src/imui/child_region.rs` into a private owner module without
+      changing the public child-region facade or response surface.
+      Result: `child_region/resize.rs` now owns resize axis layout, resize handle constants,
+      pointer-region drag wiring, enabled/min/max response writes, and drag edge reconciliation.
+      The root file keeps scroll-area/content composition, framed chrome, root test-id routing, and
+      stack assembly.
 
 ## P0 - Source Baseline
 
