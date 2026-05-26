@@ -2,58 +2,19 @@
 
 use std::sync::Arc;
 
-use fret_core::{Corners, Edges, KeyCode, Px, SemanticsRole};
+use fret_core::{KeyCode, SemanticsRole};
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHostExt as _;
-use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, PressableA11y,
-    PressableProps,
-};
+use fret_ui::element::{Length, MainAlign, PressableA11y, PressableProps};
 
 use super::label_identity::parse_label_identity;
 use super::{CheckboxOptions, RadioOptions, ResponseExt, UiWriterImUiFacadeExt};
 use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 
 mod switch;
+mod visual;
 
 pub(super) use switch::switch_model_with_options;
-
-fn radio_indicator<H: UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    palette: super::control_chrome::ImUiControlPalette,
-    selected: bool,
-) -> AnyElement {
-    let mut outer = ContainerProps::default();
-    outer.layout.size.width = Length::Px(super::control_chrome::RADIO_INDICATOR_SIZE);
-    outer.layout.size.height = Length::Px(super::control_chrome::RADIO_INDICATOR_SIZE);
-    outer.border = Edges::all(Px(1.0));
-    outer.border_color = Some(if selected {
-        palette.accent_background
-    } else {
-        palette.border
-    });
-    outer.corner_radii = Corners::all(Px(999.0));
-
-    cx.container(outer, move |cx| {
-        if !selected {
-            return Vec::new();
-        }
-
-        let mut center = FlexProps::default();
-        center.layout.size.width = Length::Fill;
-        center.layout.size.height = Length::Fill;
-        center.justify = MainAlign::Center;
-        center.align = CrossAlign::Center;
-
-        let mut dot = ContainerProps::default();
-        dot.layout.size.width = Length::Px(super::control_chrome::RADIO_DOT_SIZE);
-        dot.layout.size.height = Length::Px(super::control_chrome::RADIO_DOT_SIZE);
-        dot.background = Some(palette.accent_background);
-        dot.corner_radii = Corners::all(Px(999.0));
-
-        vec![cx.flex(center, move |cx| vec![cx.container(dot, |_| Vec::new())])]
-    })
-}
 
 pub(super) fn checkbox_model<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -177,20 +138,7 @@ fn checkbox_model_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?S
             );
 
             let (palette, chrome) = super::control_chrome::field_chrome(cx, enabled, state);
-            let indicator = super::control_chrome::pill(
-                cx,
-                Arc::from(if value { "[x]" } else { "[ ]" }),
-                if value {
-                    palette.accent_background
-                } else {
-                    palette.subtle_background
-                },
-                if value {
-                    palette.accent_foreground
-                } else {
-                    palette.muted_foreground
-                },
-            );
+            let indicator = visual::checkbox_indicator(cx, palette, value);
 
             (props, chrome, move |cx| {
                 vec![cx.flex(
@@ -198,11 +146,7 @@ fn checkbox_model_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?S
                     move |cx| {
                         vec![
                             indicator,
-                            super::control_chrome::fill_text(
-                                cx,
-                                label_for_visuals.clone(),
-                                palette.foreground,
-                            ),
+                            visual::boolean_label(cx, label_for_visuals.clone(), palette),
                         ]
                     },
                 )]
@@ -325,7 +269,7 @@ fn radio_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
             );
 
             let (palette, chrome) = super::control_chrome::field_chrome(cx, enabled, state);
-            let indicator = radio_indicator(cx, palette, selected);
+            let indicator = visual::radio_indicator(cx, palette, selected);
 
             (props, chrome, move |cx| {
                 vec![cx.flex(
@@ -333,11 +277,7 @@ fn radio_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                     move |cx| {
                         vec![
                             indicator,
-                            super::control_chrome::fill_text(
-                                cx,
-                                label_for_visuals.clone(),
-                                palette.foreground,
-                            ),
+                            visual::boolean_label(cx, label_for_visuals.clone(), palette),
                         ]
                     },
                 )]

@@ -3,6 +3,47 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Boolean Visual Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI checkbox/radio/switch visual chrome moved out of behavior files without
+changing the public boolean-control surface.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` owns checkbox badges, radio
+  indicators, switch state badges, and shared boolean label text.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` keeps checkbox/radio label identity,
+  pressable behavior, shortcut/context-menu handling, model reads/updates, and `ResponseExt`
+  population.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs` keeps switch active-trigger behavior,
+  shortcut handling, model updates, and response population while delegating badge/label rendering
+  to the shared visual owner.
+- `tools/gate_imui_workstream_source.py` now requires the visual owner and rejects checkbox/radio
+  badge or switch state-badge rendering from drifting back into behavior files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass with pre-existing `fret-ui` warnings
+  for `unexpected_cfgs` on `unstable-retained-bridge` and `dead_code` on
+  `current_effective_opacity`.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; validated 445 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test
+  imui_adapter_seam_smoke --no-fail-fast`: pass; 4 tests.
+- `cargo nextest run -p fret-imui models_controls --no-fail-fast`: pass; 6 tests.
+
+Gate note:
+
+- The `fret-imui models_controls` run waited on external package-cache/build-directory locks before
+  compiling, but completed successfully.
+
 ## Disclosure Spec Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI disclosure spec construction and option normalization moved out of
@@ -229,6 +270,9 @@ Gate notes:
   - `ecosystem/fret-ui-kit/src/declarative/file_tree.rs`
   - `ecosystem/fret-ui-kit/src/declarative/table.rs`
   - `ecosystem/fret-ui-kit/src/imui/control_chrome.rs`
+  - `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs`
+  - `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs`
+  - `ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs`
   - `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs`
   - `ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs`
   - `ecosystem/fret-ui-kit/src/imui/menu_controls.rs`

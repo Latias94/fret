@@ -39,6 +39,12 @@ Last updated: 2026-05-26
       Result: `disclosure_controls/spec.rs` owns `DisclosureKind`, `DisclosureSpec`, option-to-spec
       normalization, and leaf/children classification. The root file keeps pressable behavior,
       model/toggle wiring, content mounting, and response population.
+- [x] Split IMUI boolean-control visual chrome out of
+      `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` and its switch owner without changing
+      the public checkbox/radio/switch surface.
+      Result: `boolean_controls/visual.rs` owns checkbox badges, radio indicators, switch state
+      badges, and shared boolean label text. The root checkbox/radio file and `switch.rs` keep
+      pressable behavior, shortcut handling, model updates, and response population.
 
 ## P0 - Source Baseline
 

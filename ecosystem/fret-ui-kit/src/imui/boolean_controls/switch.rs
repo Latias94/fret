@@ -6,6 +6,7 @@ use fret_ui::element::{Length, MainAlign, PressableProps};
 
 use super::super::label_identity::parse_label_identity;
 use super::super::{ResponseExt, SwitchOptions, UiWriterImUiFacadeExt};
+use super::visual;
 use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 
 pub(in crate::imui) fn switch_model_with_options<
@@ -126,31 +127,14 @@ fn switch_model_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Siz
             );
 
             let (palette, chrome) = super::super::control_chrome::field_chrome(cx, enabled, state);
-            let state_badge = super::super::control_chrome::pill(
-                cx,
-                Arc::from(if value { "On" } else { "Off" }),
-                if value {
-                    palette.accent_background
-                } else {
-                    palette.subtle_background
-                },
-                if value {
-                    palette.accent_foreground
-                } else {
-                    palette.muted_foreground
-                },
-            );
+            let state_badge = visual::switch_state_badge(cx, palette, value);
 
             (props, chrome, move |cx| {
                 vec![cx.flex(
                     super::super::control_chrome::fill_row_props(MainAlign::SpaceBetween),
                     move |cx| {
                         vec![
-                            super::super::control_chrome::fill_text(
-                                cx,
-                                label_for_visuals.clone(),
-                                palette.foreground,
-                            ),
+                            visual::boolean_label(cx, label_for_visuals.clone(), palette),
                             state_badge,
                         ]
                     },

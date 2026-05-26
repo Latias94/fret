@@ -35,6 +35,13 @@ and leaf/children classification. `disclosure_controls.rs` keeps immediate press
 keyboard/context-menu handling, open-model updates, content mounting, and `DisclosureResponse`
 population. The public collapsing-header and tree-node APIs remain unchanged.
 
+2026-05-26 boolean visual owner-split result:
+`ecosystem/fret-ui-kit/src/imui/boolean_controls/visual.rs` now owns checkbox badges, radio
+indicators, switch state badges, and shared boolean label text. `boolean_controls.rs` keeps
+checkbox/radio pressable orchestration, shortcut/context-menu handling, and response population,
+while `boolean_controls/switch.rs` keeps switch active-trigger behavior and model updates. The
+public checkbox, radio, and switch APIs remain unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:
