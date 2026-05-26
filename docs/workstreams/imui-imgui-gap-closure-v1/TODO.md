@@ -165,6 +165,13 @@ Last updated: 2026-05-26
       application, min/max size clamping, origin updates for left/top handles, collapse reset,
       device-pixel snapping, and resize state/test-id output. The root file is now a thin
       `handles`/`state` index plus the shared handle test-id record.
+- [x] Split IMUI floating-window active resize snapshot lookup out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` into a private owner module
+      without changing resize handle enumeration, runtime drag matching, or downstream resize
+      calculation.
+      Result: `floating_window_resize/snapshot.rs` owns active resize drag discovery and snapshot
+      capture. `state.rs` now focuses on applying resize deltas, clamping size, updating origin,
+      resetting collapsed/non-drag state, snapping to device pixels, and producing resize output.
 - [x] Split IMUI selectable keyboard ownership out of
       `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` into a private owner module without
       changing selectable activation, popup close, menu navigation, or context-menu behavior.

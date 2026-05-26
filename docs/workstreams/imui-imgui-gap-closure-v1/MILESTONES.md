@@ -175,6 +175,13 @@ device-pixel snapping, and resize state/test-id output. `floating_window_resize.
 `handles`/`state` index plus the shared resize-handle test-id record; `handles.rs` still owns
 pointer-region handle rendering and drag lifecycle wiring.
 
+2026-05-26 floating-window resize snapshot owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_resize/snapshot.rs` now owns active resize drag
+discovery and snapshot capture. `state.rs` now focuses on resize delta application, min/max
+clamping, origin updates, collapse reset, device-pixel snapping, and output assembly. Public
+floating-window facade behavior and internal `floating_window_resize::current_resize_snapshot(...)`
+call sites remain unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

@@ -533,6 +533,7 @@
     "ecosystem/fret-ui-kit/src/imui/floating_surface/state.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_window_resize/snapshot.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region.rs",
     "ecosystem/fret-ui-kit/src/imui/child_region/resize.rs",

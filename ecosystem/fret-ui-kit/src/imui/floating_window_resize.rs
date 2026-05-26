@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
 mod handles;
+mod snapshot;
 mod state;
 
 pub(super) use handles::resize_stack_element;
-pub(in crate::imui) use state::{current_resize_snapshot, prepare_resize_state};
+pub(in crate::imui) use snapshot::{FloatingWindowResizeSnapshot, current_resize_snapshot};
+pub(in crate::imui) use state::prepare_resize_state;
 
 #[derive(Debug, Clone)]
 pub(super) struct FloatingWindowResizeHandleTestIds {
