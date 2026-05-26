@@ -39,35 +39,35 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 36,
-    "fret_layout": 36,
-    "fret_text_paint": 16,
-    "interaction_script": 36,
+    "fret_bundle_semantics": 37,
+    "fret_layout": 37,
+    "fret_text_paint": 17,
+    "interaction_script": 37,
     "responsive_viewport": 9,
-    "source_refs": 36,
-    "upstream_dom_snapshot": 36
+    "source_refs": 37,
+    "upstream_dom_snapshot": 37
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
   "registry_component_count": 54,
   "state_depth_component_counts": {
-    "disabled": 13,
+    "disabled": 14,
     "drag": 2,
     "focus_visible": 11,
     "hover": 11,
-    "keyboard": 19,
+    "keyboard": 20,
     "mobile": 13,
-    "open": 21,
-    "paint_token": 34,
+    "open": 22,
+    "paint_token": 35,
     "pressed": 1,
-    "rtl": 16,
-    "text_metrics": 16
+    "rtl": 17,
+    "text_metrics": 17
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 18,
+    "inventory_only": 17,
     "not_in_harness": 5,
-    "regression_locked": 35
+    "regression_locked": 36
   }
 }
 ```
@@ -90,7 +90,7 @@ State-depth legend:
 | carousel | registry | Defer | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | chart | registry | Defer | not_in_harness | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | checkbox | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
-| collapsible | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| collapsible | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, OPEN, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | combobox | non_registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV, RESP | OPEN, MOB | KEY, TEXT-MET, PAINT | 2 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | command | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | context-menu | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | OPEN, KEY, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |

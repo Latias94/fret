@@ -97,3 +97,7 @@ date: 2026-05-26
       covering leaf-control chrome, required/invalid ownership, disabled action-state, label
       forwarding, indeterminate mixed state, focus-visible ring, RTL field composition, and
       text/paint follow-ups.
+- [x] SCPM-370: Promote Collapsible from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, repository-list disclosure composition,
+      controlled/uncontrolled open behavior, keyboard toggle, disabled trigger suppression,
+      trigger/content semantics, RTL follow-up layout, and text/paint follow-ups.
