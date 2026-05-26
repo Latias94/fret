@@ -24,9 +24,9 @@ pub(super) fn static_layer_cache_key(
     b.finish()
 }
 
-pub(super) fn try_replay_static_scene_cache<FTouch>(
+pub(super) fn try_replay_static_scene_cache<H: UiHost, FTouch>(
     cache: &mut SceneOpTileCache<u64>,
-    scene: &mut fret_core::Scene,
+    cx: &mut impl super::cached_static_scene_adapter::PaintRootCachedStaticSceneCx<H>,
     paint_cache: &mut CanvasPaintCache,
     key: u64,
     replay_delta: Point,
@@ -35,12 +35,13 @@ pub(super) fn try_replay_static_scene_cache<FTouch>(
 where
     FTouch: Fn(&mut CanvasPaintCache, &[SceneOp]),
 {
+    let scene = super::cached_static_scene_adapter::paint_root_cached_static_scene(cx);
     cache.try_replay_with(key, scene, replay_delta, |ops| touch(paint_cache, ops))
 }
 
 pub(super) fn store_and_replay_static_scene_cache<H: UiHost, FTouch>(
     cache: &mut SceneOpTileCache<u64>,
-    cx: &mut PaintCx<'_, H>,
+    cx: &mut impl super::cached_static_scene_adapter::PaintRootCachedStaticSceneCx<H>,
     paint_cache: &mut CanvasPaintCache,
     key: u64,
     replay_delta: Point,
@@ -50,5 +51,5 @@ pub(super) fn store_and_replay_static_scene_cache<H: UiHost, FTouch>(
     FTouch: Fn(&mut CanvasPaintCache, &[SceneOp]),
 {
     cache.store_ops(key, ops);
-    let _ = try_replay_static_scene_cache(cache, cx.scene, paint_cache, key, replay_delta, &touch);
+    let _ = try_replay_static_scene_cache(cache, cx, paint_cache, key, replay_delta, &touch);
 }

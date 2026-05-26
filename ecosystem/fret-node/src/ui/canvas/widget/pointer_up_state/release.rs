@@ -4,8 +4,8 @@ use fret_ui::UiHost;
 use crate::runtime::callbacks::{ViewportMoveEndOutcome, ViewportMoveKind};
 
 use super::super::{
-    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, pointer_up_release_cx::PointerUpReleaseCx,
-    widget_tail::WidgetPaintInvalidationCx,
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, low_level_adapter::CanvasPaintInvalidationCx,
+    pointer_up_release_cx::PointerUpReleaseCx,
 };
 use crate::ui::canvas::state::ViewSnapshot;
 
@@ -14,7 +14,7 @@ pub(in super::super) fn handle_sticky_wire_ignored_release<
     M: NodeGraphCanvasMiddleware,
 >(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl WidgetPaintInvalidationCx<H>,
+    cx: &mut impl CanvasPaintInvalidationCx<H>,
     button: MouseButton,
 ) -> bool {
     if button == MouseButton::Left

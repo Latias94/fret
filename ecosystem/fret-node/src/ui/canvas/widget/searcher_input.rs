@@ -3,7 +3,7 @@ mod dispatch;
 
 use fret_core::{KeyCode, Modifiers};
 
-use super::widget_tail::WidgetHandledCx;
+use super::low_level_adapter::CanvasHandledCx;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -13,7 +13,7 @@ pub(super) enum SearcherStepDirection {
 }
 
 pub(in super::super) trait SearcherInputCx<H, M: NodeGraphCanvasMiddleware>:
-    WidgetHandledCx<H>
+    CanvasHandledCx<H>
 {
     fn try_activate_searcher_row(
         &mut self,

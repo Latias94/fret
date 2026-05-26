@@ -1,8 +1,8 @@
 use super::*;
 use crate::core::{Graph, GraphId};
 use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
-use crate::ui::canvas::widget::widget_tail::{
-    WidgetHandledCx, WidgetPaintInvalidationCx, WidgetRedrawCx,
+use crate::ui::canvas::widget::low_level_adapter::{
+    CanvasHandledCx, CanvasPaintInvalidationCx, CanvasRedrawCx,
 };
 use fret_core::Px;
 use fret_runtime::ModelStore;
@@ -18,19 +18,19 @@ struct StubCx {
     activated_item_label: Option<String>,
 }
 
-impl WidgetRedrawCx<StubHost> for StubCx {
+impl CanvasRedrawCx<StubHost> for StubCx {
     fn request_redraw(&mut self) {
         self.redraws += 1;
     }
 }
 
-impl WidgetPaintInvalidationCx<StubHost> for StubCx {
+impl CanvasPaintInvalidationCx<StubHost> for StubCx {
     fn invalidate_paint(&mut self) {
         self.paint_invalidations += 1;
     }
 }
 
-impl WidgetHandledCx<StubHost> for StubCx {
+impl CanvasHandledCx<StubHost> for StubCx {
     fn stop_propagation(&mut self) {
         self.stopped = true;
     }

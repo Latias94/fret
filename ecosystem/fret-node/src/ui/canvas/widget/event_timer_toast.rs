@@ -1,12 +1,12 @@
 use fret_core::TimerToken;
 use fret_ui::UiHost;
 
-use super::widget_tail::{WidgetPaintInvalidationCx, invalidate_widget_paint};
+use super::low_level_adapter::{CanvasPaintInvalidationCx, invalidate_canvas_paint};
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 
 pub(super) fn clear_expired_toast<H: UiHost, M>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl WidgetPaintInvalidationCx<H>,
+    cx: &mut impl CanvasPaintInvalidationCx<H>,
     token: TimerToken,
 ) -> bool
 where
@@ -22,6 +22,6 @@ where
     }
 
     canvas.interaction.toast = None;
-    invalidate_widget_paint(cx);
+    invalidate_canvas_paint(cx);
     true
 }

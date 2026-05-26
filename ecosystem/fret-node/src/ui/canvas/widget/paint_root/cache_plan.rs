@@ -22,23 +22,27 @@ pub(super) struct PaintRootCachePlan {
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn prepare_paint_root_cache_plan<H: UiHost>(
         &mut self,
-        cx: &mut PaintCx<'_, H>,
+        cx: &impl super::cache_plan_adapter::PaintRootCachePlanCx<H>,
         snapshot: &ViewSnapshot,
         viewport_rect: Rect,
         viewport_w: f32,
         viewport_h: f32,
     ) -> PaintRootCachePlan {
+        let host = cx.paint_root_cache_plan_host();
+        let bounds = cx.paint_root_cache_plan_bounds();
+        let scale_factor = cx.paint_root_cache_plan_scale_factor();
+
         let hovered_edge = hover::resolve_paint_root_hovered_edge(&self.interaction);
-        let (geom, index) = self.canvas_derived(&*cx.app, snapshot);
-        self.publish_derived_outputs(&*cx.app, snapshot, cx.bounds, &geom);
+        let (geom, index) = self.canvas_derived(host, snapshot);
+        self.publish_derived_outputs(host, snapshot, bounds, &geom);
 
         let zoom = snapshot.zoom;
         let can_use_static_scene_cache = tiles::can_use_static_scene_cache(
             snapshot,
-            cx.bounds,
+            bounds,
             self.geometry.drag_preview.is_none(),
         );
-        let tile_sizes = tiles::static_scene_cache_tile_sizes(cx.bounds, zoom);
+        let tile_sizes = tiles::static_scene_cache_tile_sizes(bounds, zoom);
         let nodes_cache_rect = tiles::static_cache_rect(
             can_use_static_scene_cache,
             viewport_rect,
@@ -54,11 +58,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             tile_sizes.edges_cache_tile_size_canvas,
         );
 
-        let style_key = self.static_scene_style_key(cx.scale_factor);
+        let style_key = self.static_scene_style_key(scale_factor);
         let geom_key = self
             .geometry
             .geom_key
-            .unwrap_or_else(|| self.geometry_key(&*cx.app, snapshot));
+            .unwrap_or_else(|| self.geometry_key(host, snapshot));
 
         PaintRootCachePlan {
             hovered_edge,

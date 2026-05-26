@@ -42,7 +42,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 view_interacting,
                 replay_delta,
             );
-            self.paint_edge_overlays_selected_hovered(cx, snapshot, geom, zoom);
+            super::overlay_adapter::paint_root_cached_edge_overlays_selected_hovered(
+                self, cx, snapshot, geom, zoom,
+            );
         } else {
             self.paint_root_edges_uncached(
                 cx,

@@ -1,7 +1,7 @@
 use super::super::super::{
     ContextMenuTarget, InsertNodeCandidate, NodeGraphCanvasWith, NoopNodeGraphCanvasMiddleware,
     SearcherRowsMode, SearcherState,
-    widget_tail::{WidgetHandledCx, WidgetPaintInvalidationCx, WidgetRedrawCx},
+    low_level_adapter::{CanvasHandledCx, CanvasPaintInvalidationCx, CanvasRedrawCx},
 };
 use super::super::SearcherInputCx;
 use super::*;
@@ -21,19 +21,19 @@ struct StubCx {
     activated_row: Option<usize>,
 }
 
-impl WidgetRedrawCx<StubHost> for StubCx {
+impl CanvasRedrawCx<StubHost> for StubCx {
     fn request_redraw(&mut self) {
         self.redraws += 1;
     }
 }
 
-impl WidgetPaintInvalidationCx<StubHost> for StubCx {
+impl CanvasPaintInvalidationCx<StubHost> for StubCx {
     fn invalidate_paint(&mut self) {
         self.paint_invalidations += 1;
     }
 }
 
-impl WidgetHandledCx<StubHost> for StubCx {
+impl CanvasHandledCx<StubHost> for StubCx {
     fn stop_propagation(&mut self) {
         self.stopped = true;
     }

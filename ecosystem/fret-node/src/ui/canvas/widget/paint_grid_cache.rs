@@ -15,7 +15,7 @@ pub(super) struct GridTileWarmupStats {
 
 pub(super) fn warm_grid_tiles<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut PaintCx<'_, H>,
+    cx: &mut impl super::paint_grid_cache_adapter::PaintGridTileCacheCx<H>,
     plan: &super::paint_grid_plan::GridPaintPlan,
     view_interacting: bool,
 ) -> GridTileWarmupStats {

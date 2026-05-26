@@ -22,5 +22,5 @@ pub(super) fn begin_background_marquee<H: UiHost, M, Cx>(
         clear_selection_on_up,
     });
     cx.capture_self_pointer();
-    super::widget_tail::invalidate_widget_paint(cx);
+    super::low_level_adapter::invalidate_canvas_paint(cx);
 }

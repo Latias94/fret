@@ -10,12 +10,15 @@ mod tiled;
 use crate::ui::canvas::widget::*;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
-    fn replay_cached_edge_build_state<H: UiHost>(
+    fn replay_cached_edge_build_state<H, Cx>(
         &mut self,
-        cx: &mut PaintCx<'_, H>,
+        cx: &mut Cx,
         state: &EdgesBuildState,
         replay_delta: Point,
-    ) {
+    ) where
+        H: UiHost,
+        Cx: super::replay_adapter::PaintRootCachedEdgeReplayCx<H>,
+    {
         replay::replay_cached_edge_build_state(self, cx, state, replay_delta);
     }
 
@@ -23,9 +26,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         replay::store_finished_edge_build_state(self, key, state);
     }
 
-    pub(super) fn paint_root_edges_uncached<H: UiHost>(
+    pub(super) fn paint_root_edges_uncached<H, Cx>(
         &mut self,
-        cx: &mut PaintCx<'_, H>,
+        cx: &mut Cx,
         snapshot: &ViewSnapshot,
         geom: &Arc<CanvasGeometry>,
         index: &Arc<CanvasSpatialDerived>,
@@ -33,7 +36,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         hovered_edge: Option<EdgeId>,
         zoom: f32,
         view_interacting: bool,
-    ) {
+    ) where
+        H: UiHost,
+        Cx: super::fallback_adapter::PaintRootCachedEdgeFallbackCx<H>,
+    {
         fallback::paint_root_edges_uncached(
             self,
             cx,
@@ -47,12 +53,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         );
     }
 
-    pub(super) fn try_replay_cached_edges<H: UiHost>(
+    pub(super) fn try_replay_cached_edges<H, Cx>(
         &mut self,
-        cx: &mut PaintCx<'_, H>,
+        cx: &mut Cx,
         key: u64,
         replay_delta: Point,
-    ) -> bool {
+    ) -> bool
+    where
+        H: UiHost,
+        Cx: super::replay_adapter::PaintRootCachedEdgeReplayCx<H>,
+    {
         replay::try_replay_cached_edges(self, cx, key, replay_delta)
     }
 

@@ -3377,8 +3377,6 @@ impl<H: UiHost> UiTree<H> {
             | crate::declarative::frame::ElementInstance::VirtualList(_)
             | crate::declarative::frame::ElementInstance::ManagedSurface(_)
             | crate::declarative::frame::ElementInstance::ViewportSurface(_) => false,
-            #[cfg(feature = "unstable-retained-bridge")]
-            crate::declarative::frame::ElementInstance::RetainedSubtree(_) => false,
             crate::declarative::frame::ElementInstance::Canvas(_)
             | crate::declarative::frame::ElementInstance::Spacer(_)
             | crate::declarative::frame::ElementInstance::Image(_)

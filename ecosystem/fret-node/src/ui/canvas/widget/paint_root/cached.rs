@@ -8,6 +8,10 @@ mod cached_groups;
 mod cached_nodes;
 #[path = "cached_pass.rs"]
 mod cached_pass;
+#[path = "cached_static_scene_adapter.rs"]
+mod cached_static_scene_adapter;
+#[path = "cached_static_scene_retained_cx.rs"]
+mod cached_static_scene_retained_cx;
 #[path = "static_cache.rs"]
 mod static_cache;
 #[path = "static_layer.rs"]
@@ -30,7 +34,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let render_cull_rect = frame.render_cull_rect;
 
         let plan = self.prepare_paint_root_cache_plan(
-            cx,
+            &*cx,
             &snapshot,
             viewport_rect,
             viewport_w,

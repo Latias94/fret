@@ -1,22 +1,23 @@
 use fret_core::{AppWindowId, Rect};
 
-pub(in super::super) trait WireCommitCx<H> {
+use super::super::low_level_adapter::{self, CanvasPointerCaptureReleaseCx};
+
+pub(in super::super) trait WireCommitCx<H>:
+    CanvasPointerCaptureReleaseCx<H>
+{
     fn host(&mut self) -> &mut H;
     fn window(&self) -> Option<AppWindowId>;
     fn bounds(&self, last_bounds: Option<Rect>) -> Rect;
-    fn release_pointer_capture(&mut self);
-    fn request_redraw(&mut self);
-    fn invalidate_paint(&mut self);
 }
 
 pub(in super::super) fn invalidate_commit_paint<H>(cx: &mut impl WireCommitCx<H>) {
-    cx.request_redraw();
-    cx.invalidate_paint();
+    low_level_adapter::invalidate_canvas_paint(cx);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ui::canvas::widget::low_level_adapter::{CanvasPaintInvalidationCx, CanvasRedrawCx};
 
     #[derive(Default)]
     struct StubHost;
@@ -41,15 +42,21 @@ mod tests {
         fn bounds(&self, last_bounds: Option<Rect>) -> Rect {
             last_bounds.unwrap_or_default()
         }
+    }
 
+    impl CanvasPointerCaptureReleaseCx<StubHost> for StubCx {
         fn release_pointer_capture(&mut self) {
             self.released = true;
         }
+    }
 
+    impl CanvasRedrawCx<StubHost> for StubCx {
         fn request_redraw(&mut self) {
             self.redraws += 1;
         }
+    }
 
+    impl CanvasPaintInvalidationCx<StubHost> for StubCx {
         fn invalidate_paint(&mut self) {
             self.paint_invalidations += 1;
         }

@@ -1,13 +1,13 @@
-use super::super::widget_tail::{WidgetHandledCx, finish_widget_handled};
+use super::super::low_level_adapter::{CanvasHandledCx, finish_canvas_handled};
 
-pub(super) fn finish_double_click<H>(cx: &mut impl WidgetHandledCx<H>) {
-    finish_widget_handled(cx);
+pub(super) fn finish_double_click<H>(cx: &mut impl CanvasHandledCx<H>) {
+    finish_canvas_handled(cx);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ui::canvas::widget::widget_tail::{WidgetPaintInvalidationCx, WidgetRedrawCx};
+    use crate::ui::canvas::widget::low_level_adapter::{CanvasPaintInvalidationCx, CanvasRedrawCx};
 
     struct StubHost;
 
@@ -18,19 +18,19 @@ mod tests {
         paint_invalidations: usize,
     }
 
-    impl WidgetRedrawCx<StubHost> for StubCx {
+    impl CanvasRedrawCx<StubHost> for StubCx {
         fn request_redraw(&mut self) {
             self.redraws += 1;
         }
     }
 
-    impl WidgetPaintInvalidationCx<StubHost> for StubCx {
+    impl CanvasPaintInvalidationCx<StubHost> for StubCx {
         fn invalidate_paint(&mut self) {
             self.paint_invalidations += 1;
         }
     }
 
-    impl WidgetHandledCx<StubHost> for StubCx {
+    impl CanvasHandledCx<StubHost> for StubCx {
         fn stop_propagation(&mut self) {
             self.stopped = true;
         }

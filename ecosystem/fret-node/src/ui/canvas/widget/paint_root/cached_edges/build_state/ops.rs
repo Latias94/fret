@@ -1,31 +1,7 @@
 use super::*;
 
-fn extend_clip_stack_ops(ops: &mut Vec<SceneOp>, tmp: &[SceneOp]) {
-    if tmp.is_empty() {
-        return;
-    }
-
-    match ops.pop() {
-        Some(SceneOp::PopClip) => {
-            ops.extend_from_slice(tmp);
-            ops.push(SceneOp::PopClip);
-        }
-        Some(other) => {
-            ops.push(other);
-            ops.extend_from_slice(tmp);
-        }
-        None => {
-            ops.extend_from_slice(tmp);
-        }
-    }
-
-    if !matches!(ops.last(), Some(SceneOp::PopClip)) {
-        ops.push(SceneOp::PopClip);
-    }
-}
-
 pub(super) fn initial_clip_ops(clip_rect: Rect) -> Vec<SceneOp> {
-    vec![SceneOp::PushClipRect { rect: clip_rect }, SceneOp::PopClip]
+    super::clip_ops::paint_root_cached_edge_build_state_initial_clip_ops(clip_rect)
 }
 
 pub(super) fn finish_build_state_step(
@@ -37,6 +13,6 @@ pub(super) fn finish_build_state_step(
     skipped: bool,
 ) -> bool {
     *next_edge_slot = next_edge;
-    extend_clip_stack_ops(ops, tmp.ops());
+    super::clip_ops::paint_root_cached_edge_build_state_merge_temp_ops(ops, tmp.ops());
     skipped || *next_edge_slot < edge_count
 }

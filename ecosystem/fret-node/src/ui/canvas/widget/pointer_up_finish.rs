@@ -1,7 +1,7 @@
 use fret_ui::UiHost;
 
 pub(super) fn finish_pointer_up<H: UiHost>(
-    cx: &mut impl super::widget_tail::PointerCaptureReleaseCx<H>,
+    cx: &mut impl super::low_level_adapter::CanvasPointerCaptureReleaseCx<H>,
 ) {
-    super::widget_tail::finish_pointer_capture_release(cx);
+    super::low_level_adapter::finish_canvas_pointer_capture_release(cx);
 }

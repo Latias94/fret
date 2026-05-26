@@ -1,0 +1,148 @@
+# Fret Node Event Runtime Adapter v1 - Evidence And Gates
+
+Status: Closed
+Last updated: 2026-05-25
+
+## Smallest Current Repro
+
+```bash
+cargo check -p fret-node --features compat-retained-canvas
+```
+
+## Gate Set
+
+### Scope Gate
+
+```bash
+python3 -m json.tool docs/workstreams/fret-node-event-runtime-adapter-v1/WORKSTREAM.json
+python3 tools/check_workstream_catalog.py
+```
+
+### Targeted Iteration Gate
+
+```bash
+cargo test -p fret-node --features compat-retained-canvas event_runtime_adapter
+```
+
+### Package Gates
+
+```bash
+cargo check -p fret-node
+cargo check -p fret-node --features compat-retained-canvas
+```
+
+### Boundary Gate
+
+```bash
+python3 tools/check_layering.py
+git diff --check
+```
+
+## Evidence Anchors
+
+- `docs/workstreams/fret-node-event-runtime-adapter-v1/DESIGN.md`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_runtime_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_router.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/event_router_cx.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_event.rs`
+- `ecosystem/fret-node/src/lib.rs`
+
+## Closeout Evidence - 2026-05-25
+
+Claim:
+
+- The event runtime adapter lane is complete and closed.
+- The shipped adapter satisfies the target state without expanding into command dispatch,
+  paint/prepaint, layout, semantics, or route-policy rewrites.
+- Follow-ons are split to `fret-node-paint-prepaint-adapter-v1` and a future narrow route-policy
+  audit lane if needed.
+
+Fresh validation:
+
+- `cargo fmt --check --package fret-node` passed.
+- `cargo test -p fret-node --features compat-retained-canvas event_runtime_adapter` passed.
+- `cargo check -p fret-node` passed.
+- `cargo check -p fret-node --features compat-retained-canvas` passed.
+- `python3 -m json.tool docs/workstreams/fret-node-event-runtime-adapter-v1/WORKSTREAM.json` passed.
+- `python3 tools/check_layering.py` passed.
+- `python3 tools/check_workstream_catalog.py` passed.
+- `git diff --check` passed.
+
+## Initial Scope Evidence - 2026-05-25
+
+Claim:
+
+- Event routing is separate from the command dispatch and paint/prepaint adapter families.
+- The first proof should target retained event runtime entrypoint preparation, because route
+  internals already compose retained-agnostic route traits.
+
+Fresh validation:
+
+- `cargo fmt --package fret-node` passed.
+- `cargo test -p fret-node --features compat-retained-canvas event_runtime_adapter` passed.
+- `cargo check -p fret-node` passed.
+- `cargo check -p fret-node --features compat-retained-canvas` passed.
+- `python3 -m json.tool docs/workstreams/fret-node-event-runtime-adapter-v1/WORKSTREAM.json` passed.
+- `python3 tools/check_workstream_catalog.py` passed.
+- `python3 tools/check_layering.py` passed.
+- `git diff --check` passed.
+
+Notes:
+
+- This lane intentionally starts after `fret-node-low-level-adapter-v1`; do not reopen that lane for
+  event runtime adapter work.
+
+## NEA-020 Adapter Proof - 2026-05-25
+
+Claim:
+
+- `event_runtime_adapter.rs` owns retained-agnostic event route preparation and dispatch through
+  `CanvasEventRuntimeCx` and `dispatch_canvas_event`.
+- `retained_widget_runtime_event.rs` now binds retained `EventCx` to that adapter and no longer owns
+  runtime theme sync, view state sync, bounds update, or direct route dispatch.
+- Command dispatch and paint/prepaint remain outside this lane.
+
+Fresh validation:
+
+- `cargo fmt --package fret-node` passed.
+- `cargo test -p fret-node --features compat-retained-canvas event_runtime_adapter` passed.
+- `cargo check -p fret-node` passed.
+- `cargo check -p fret-node --features compat-retained-canvas` passed.
+- `python3 -m json.tool docs/workstreams/fret-node-event-runtime-adapter-v1/WORKSTREAM.json` passed.
+- `python3 tools/check_workstream_catalog.py` passed.
+- `python3 tools/check_layering.py` passed.
+- `git diff --check` passed.
+
+Evidence:
+
+- `ecosystem/fret-node/src/ui/canvas/widget/event_runtime_adapter.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/retained_widget_runtime_event.rs`
+- `ecosystem/fret-node/src/lib.rs`
+
+## NEA-030 Retained Edge Audit - 2026-05-25
+
+Claim:
+
+- After `NEA-020`, the event runtime entrypoint has no additional old retained event runtime edge to
+  delete without crossing into layout, semantics, command, paint/prepaint, or route policy work.
+- The remaining retained event path is the intended facade-to-binding-to-adapter chain:
+  `retained_widget.rs` -> `retained_widget_runtime.rs` -> `retained_widget_runtime_event.rs` ->
+  `event_runtime_adapter.rs`.
+- Remaining retained `EventCx` impl files are policy-specific bindings for existing route traits,
+  not owners of runtime event preparation.
+
+Audit evidence:
+
+- `rg -n "retained_widget_runtime_event|event_runtime_adapter|handle_retained_event|CanvasEventRuntimeCx|dispatch_canvas_event|sync_runtime_theme\\(|sync_view_state\\(|handle_event\\(cx, event|last_bounds" ecosystem/fret-node/src/ui/canvas/widget ecosystem/fret-node/src/lib.rs -S`
+- `rg -n "EventCx|CommandCx|LayoutCx|PaintCx|PrepaintCx|retained_bridge|compat_retained_canvas" ecosystem/fret-node/src/ui/canvas/widget/event_runtime_adapter.rs ecosystem/fret-node/src/ui/canvas/widget/event_router.rs ecosystem/fret-node/src/ui/canvas/widget/event_router_cx.rs ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer.rs ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_button.rs ecosystem/fret-node/src/ui/canvas/widget/event_router_pointer_button/down.rs -S`
+
+Fresh validation:
+
+- `cargo fmt --check --package fret-node` passed.
+- `cargo test -p fret-node --features compat-retained-canvas event_runtime_adapter` passed.
+- `cargo check -p fret-node` passed.
+- `cargo check -p fret-node --features compat-retained-canvas` passed.
+- `python3 -m json.tool docs/workstreams/fret-node-event-runtime-adapter-v1/WORKSTREAM.json` passed.
+- `python3 tools/check_layering.py` passed.
+- `python3 tools/check_workstream_catalog.py` passed.
+- `git diff --check` passed.

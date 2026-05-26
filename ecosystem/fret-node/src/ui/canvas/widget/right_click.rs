@@ -5,14 +5,14 @@ use fret_core::Point;
 use fret_ui::UiHost;
 
 use super::context_menu::opening::ContextMenuOpeningCx;
-use super::widget_tail::PointerCaptureReleaseCx;
+use super::low_level_adapter::CanvasPointerCaptureReleaseCx;
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::ui::canvas::state::ViewSnapshot;
 
 pub(super) use threshold::pending_right_click_exceeded_drag_threshold;
 
 pub(super) trait RightClickCx<H: UiHost, M: NodeGraphCanvasMiddleware>:
-    ContextMenuOpeningCx<H> + PointerCaptureReleaseCx<H>
+    ContextMenuOpeningCx<H> + CanvasPointerCaptureReleaseCx<H>
 {
 }
 
@@ -20,7 +20,7 @@ impl<H, M, T> RightClickCx<H, M> for T
 where
     H: UiHost,
     M: NodeGraphCanvasMiddleware,
-    T: ContextMenuOpeningCx<H> + PointerCaptureReleaseCx<H>,
+    T: ContextMenuOpeningCx<H> + CanvasPointerCaptureReleaseCx<H>,
 {
 }
 

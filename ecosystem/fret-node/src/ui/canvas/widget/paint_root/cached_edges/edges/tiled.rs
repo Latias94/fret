@@ -2,9 +2,9 @@ use super::super::geometry::cache_tile_rect;
 use super::super::keys;
 use super::*;
 
-pub(super) fn paint_tiled_edges_cache<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn paint_tiled_edges_cache<H, M, Cx>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut PaintCx<'_, H>,
+    cx: &mut Cx,
     snapshot: &ViewSnapshot,
     geom: &Arc<CanvasGeometry>,
     index: &Arc<CanvasSpatialDerived>,
@@ -15,7 +15,13 @@ pub(super) fn paint_tiled_edges_cache<H: UiHost, M: NodeGraphCanvasMiddleware>(
     zoom: f32,
     view_interacting: bool,
     replay_delta: Point,
-) {
+) where
+    H: UiHost,
+    M: NodeGraphCanvasMiddleware,
+    Cx: super::super::build_state_adapter::PaintRootCachedEdgeBuildStateCx<H>
+        + super::super::replay_adapter::PaintRootCachedEdgeReplayCx<H>
+        + crate::ui::canvas::widget::low_level_adapter::CanvasRedrawCx<H>,
+{
     let edges_base_key =
         keys::edges_tiles_base_key(base_key, style_key, edges_cache_tile_size_canvas);
 
@@ -52,8 +58,12 @@ pub(super) fn paint_tiled_edges_cache<H: UiHost, M: NodeGraphCanvasMiddleware>(
             .edges_build_states
             .remove(&tile_key)
             .unwrap_or_else(|| {
+                let host =
+                    super::super::build_state_adapter::paint_root_cached_edge_build_state_host(
+                        &*cx,
+                    );
                 canvas.init_edges_build_state(
-                    &*cx.app,
+                    host,
                     snapshot,
                     geom,
                     index,
@@ -63,17 +73,22 @@ pub(super) fn paint_tiled_edges_cache<H: UiHost, M: NodeGraphCanvasMiddleware>(
                 )
             });
 
-        let mut tmp = fret_core::Scene::default();
-        if canvas.paint_edges_build_state_step(
-            &mut tmp,
-            &*cx.app,
-            cx.services,
-            zoom,
-            cx.scale_factor,
-            &mut state,
-            &mut wire_budget,
-            &mut marker_budget,
-        ) {
+        let needs_more = {
+            let inputs =
+                super::super::build_state_adapter::paint_root_cached_edge_build_state_step_inputs(
+                    cx,
+                );
+            canvas.paint_edges_build_state_step(
+                inputs.host,
+                inputs.services,
+                zoom,
+                inputs.scale_factor,
+                &mut state,
+                &mut wire_budget,
+                &mut marker_budget,
+            )
+        };
+        if needs_more {
             skipped = true;
         }
 

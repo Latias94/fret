@@ -1,7 +1,8 @@
 use crate::ui::canvas::state::InteractionState;
 
 use super::super::{
-    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, widget_tail::PointerCaptureReleaseCx,
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+    low_level_adapter::CanvasPointerCaptureReleaseCx,
 };
 
 pub(in super::super) fn clear_searcher_overlay(interaction: &mut InteractionState) -> bool {
@@ -19,13 +20,13 @@ pub(in super::super) fn clear_pending_searcher_row_drag(
     interaction.pending_insert_node_drag.take().is_some()
 }
 
-fn release_dismissed_searcher_capture<H>(cx: &mut impl PointerCaptureReleaseCx<H>) {
+fn release_dismissed_searcher_capture<H>(cx: &mut impl CanvasPointerCaptureReleaseCx<H>) {
     cx.release_pointer_capture();
 }
 
 pub(in super::super) fn dismiss_searcher_overlay<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl PointerCaptureReleaseCx<H>,
+    cx: &mut impl CanvasPointerCaptureReleaseCx<H>,
 ) {
     clear_searcher_overlay(&mut canvas.interaction);
     release_dismissed_searcher_capture(cx);

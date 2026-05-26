@@ -1,10 +1,11 @@
 use super::super::searcher_activation::SearcherPointerHit;
 use super::super::{
-    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, widget_tail::HandledPointerCaptureReleaseCx,
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+    low_level_adapter::HandledCanvasPointerCaptureReleaseCx,
 };
 
 pub(in super::super) trait SearcherReleaseCx<H, M: NodeGraphCanvasMiddleware>:
-    HandledPointerCaptureReleaseCx<H>
+    HandledCanvasPointerCaptureReleaseCx<H>
 {
     fn try_activate_searcher_row(
         &mut self,

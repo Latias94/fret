@@ -2,18 +2,21 @@ use fret_core::{MouseButton, Point};
 
 use super::super::{
     NodeGraphCanvasMiddleware, NodeGraphCanvasWith,
+    low_level_adapter::HandledCanvasPointerCaptureReleaseCx,
     searcher_activation_state::SearcherArmCx,
     searcher_ui::{dismiss_searcher_event, finish_searcher_event},
-    widget_tail::HandledPointerCaptureReleaseCx,
 };
 use super::SearcherPointerHit;
 
 pub(in super::super) trait SearcherPointerDownCx<H>:
-    SearcherArmCx + HandledPointerCaptureReleaseCx<H>
+    SearcherArmCx + HandledCanvasPointerCaptureReleaseCx<H>
 {
 }
 
-impl<H, T> SearcherPointerDownCx<H> for T where T: SearcherArmCx + HandledPointerCaptureReleaseCx<H> {}
+impl<H, T> SearcherPointerDownCx<H> for T where
+    T: SearcherArmCx + HandledCanvasPointerCaptureReleaseCx<H>
+{
+}
 
 pub(super) fn handle_searcher_pointer_down_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,

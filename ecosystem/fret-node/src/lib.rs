@@ -110,9 +110,141 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pan_zoom_move.rs");
     const UI_CANVAS_WIDGET_PAINT_INVALIDATION_RS: &str =
         include_str!("ui/canvas/widget/paint_invalidation.rs");
+    const UI_CANVAS_WIDGET_PREPAINT_CULL_WINDOW_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/prepaint_cull_window_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_cache.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_CACHE_WARM_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_cache/warm.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_CACHE_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_cache_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_cache_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_diagnostics_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_diagnostics_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_GRID_STATS_RS: &str =
+        include_str!("ui/canvas/widget/paint_grid_stats.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cache_plan.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cache_plan_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cache_plan_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_GROUPS_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_groups.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_NODES_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_nodes.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/anchor_target.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/anchor_target_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/anchor_target_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/fallback.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/fallback_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/fallback_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_EDGES_FALLBACK_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/edges/fallback.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_KEYS_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/keys.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/replay_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/replay_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/edges/replay.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_REPLAY_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/labels/replay.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/build_state_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/build_state_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_STEP_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/build_state/step.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_TEMP_SCENE_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/build_state/temp_scene.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_OPS_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/build_state/ops.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_CLIP_OPS_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/build_state/clip_ops.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_SINGLE_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/edges/single.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_TILED_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/edges/tiled.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_BUILD_STATE_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/label_build_state_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_BUILD_STATE_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/label_build_state_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_SINGLE_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/labels/single.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_TILED_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/labels/tiled.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/overlay_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/overlay_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_SINGLE_RECT_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/single_rect.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_TILE_PATH_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_edges/tile_path.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_static_scene_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_static_scene_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CACHE_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame/cache.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame/background.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_background_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_background_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_clip_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_clip_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_diagnostics_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_diagnostics_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_viewport_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/frame_viewport_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_IMMEDIATE_PASS_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/immediate_pass.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_PASS_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/cached_pass.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/pass_scene_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/pass_scene_retained_cx.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_STATIC_CACHE_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/static_cache.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_STATIC_LAYER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/static_layer.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/tail.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/tail_cleanup_adapter.rs");
+    const UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_RETAINED_CX_RS: &str =
+        include_str!("ui/canvas/widget/paint_root/tail_cleanup_retained_cx.rs");
     const UI_CANVAS_WIDGET_REDRAW_REQUEST_RS: &str =
         include_str!("ui/canvas/widget/redraw_request.rs");
-    const UI_CANVAS_WIDGET_TAIL_RS: &str = include_str!("ui/canvas/widget/widget_tail.rs");
+    const UI_CANVAS_COMMAND_ADAPTER_RS: &str = include_str!("ui/canvas/widget/command_adapter.rs");
+    const UI_CANVAS_RETAINED_COMMAND_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/retained_command_adapter.rs");
+    const UI_CANVAS_LOW_LEVEL_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/low_level_adapter.rs");
+    const UI_CANVAS_RETAINED_LOW_LEVEL_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/retained_low_level_adapter.rs");
     const UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS: &str =
         include_str!("ui/canvas/widget/wire_drag/commit_cx.rs");
     const UI_CANVAS_WIDGET_WIRE_DRAG_MOVE_CX_RS: &str =
@@ -152,6 +284,10 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/pointer_up_left_route/dispatch.rs");
     const UI_CANVAS_WIDGET_POINTER_UP_LEFT_ROUTE_DOUBLE_CLICK_RS: &str =
         include_str!("ui/canvas/widget/pointer_up_left_route/double_click.rs");
+    const UI_CANVAS_WIDGET_POINTER_DOWN_CLOSE_BUTTON_CX_RS: &str =
+        include_str!("ui/canvas/widget/pointer_down_close_button_cx.rs");
+    const UI_CANVAS_WIDGET_POINTER_DOWN_GESTURE_START_CLOSE_BUTTON_RS: &str =
+        include_str!("ui/canvas/widget/pointer_down_gesture_start/close_button.rs");
     const UI_CANVAS_WIDGET_CANCEL_RS: &str = include_str!("ui/canvas/widget/cancel.rs");
     const UI_CANVAS_WIDGET_CANCEL_VIEWPORT_STATE_RS: &str =
         include_str!("ui/canvas/widget/cancel_viewport_state.rs");
@@ -233,11 +369,15 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/event_pointer_up.rs");
     const UI_CANVAS_WIDGET_EVENT_POINTER_UP_DISPATCH_RS: &str =
         include_str!("ui/canvas/widget/event_pointer_up/dispatch.rs");
+    const UI_CANVAS_WIDGET_EVENT_RUNTIME_ADAPTER_RS: &str =
+        include_str!("ui/canvas/widget/event_runtime_adapter.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_UP_RS: &str =
         include_str!("ui/canvas/widget/event_router_pointer_button/up.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_MOVE_RS: &str =
         include_str!("ui/canvas/widget/event_router_pointer_button/move_event.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_RS: &str = include_str!("ui/canvas/widget/event_router.rs");
+    const UI_CANVAS_WIDGET_EVENT_ROUTER_CX_RS: &str =
+        include_str!("ui/canvas/widget/event_router_cx.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_RS: &str =
         include_str!("ui/canvas/widget/event_router_pointer.rs");
     const UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_RS: &str =
@@ -345,8 +485,6 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/group_preview_move_cx.rs");
     const UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS: &str =
         include_str!("ui/canvas/widget/keyboard_shortcuts.rs");
-    const UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RETAINED_CX_RS: &str =
-        include_str!("ui/canvas/widget/keyboard_shortcuts_retained_cx.rs");
     const UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_COMMANDS_RS: &str =
         include_str!("ui/canvas/widget/keyboard_shortcuts_commands.rs");
     const UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_OVERLAY_RS: &str =
@@ -534,6 +672,12 @@ mod surface_policy_tests {
         include_str!("ui/canvas/widget/timer_motion_viewport/animation.rs");
     const UI_CANVAS_WIDGET_TIMER_MOTION_VIEWPORT_DEBOUNCE_RS: &str =
         include_str!("ui/canvas/widget/timer_motion_viewport/debounce.rs");
+    const UI_CANVAS_WIDGET_RETAINED_RUNTIME_EVENT_RS: &str =
+        include_str!("ui/canvas/widget/retained_widget_runtime_event.rs");
+    const UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_RS: &str =
+        include_str!("ui/canvas/widget/retained_widget_cull_window.rs");
+    const UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_SHIFT_RS: &str =
+        include_str!("ui/canvas/widget/retained_widget_cull_window_shift.rs");
     const UI_CANVAS_WIDGET_VIEWPORT_MOTION_CX_RS: &str =
         include_str!("ui/canvas/widget/viewport_motion_cx.rs");
     const UI_VIEW_QUEUE_RS: &str = include_str!("ui/canvas/widget/view_queue.rs");
@@ -607,7 +751,9 @@ mod surface_policy_tests {
         assert!(!CARGO_TOML.contains("\nimui = ["));
         assert!(!CARGO_TOML.contains("fret-authoring"));
         assert!(!CARGO_TOML.contains("compat-retained-bridge"));
-        assert!(CARGO_TOML.contains("compat-retained-canvas = [\"fret-ui\"]"));
+        assert!(CARGO_TOML.contains(
+            "compat-retained-canvas = [\"fret-ui\", \"fret-ui/compat-retained-widgets\"]"
+        ));
         assert!(
             !CARGO_TOML.contains("fret-ui/unstable-retained-bridge"),
             "fret-node compat-retained-canvas must no longer enable the deleted fret-ui bridge"
@@ -630,11 +776,11 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn retained_canvas_tail_policy_helpers_stay_off_retained_bridge() {
-        let tail_policy_sources = [
+    fn retained_canvas_low_level_adapter_policy_helpers_stay_off_retained_bridge() {
+        let adapter_policy_sources = [
             UI_CANVAS_WIDGET_PAINT_INVALIDATION_RS,
             UI_CANVAS_WIDGET_REDRAW_REQUEST_RS,
-            UI_CANVAS_WIDGET_TAIL_RS,
+            UI_CANVAS_LOW_LEVEL_ADAPTER_RS,
             UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS,
             UI_CANVAS_WIDGET_POINTER_UP_FINISH_RS,
             UI_CANVAS_WIDGET_POINTER_UP_SESSION_CLEANUP_RS,
@@ -654,6 +800,11 @@ mod surface_policy_tests {
         .join("\n");
 
         for forbidden in [
+            "widget_tail",
+            "retained_widget_tail",
+            "WidgetRedrawCx",
+            "WidgetPaintInvalidationCx",
+            "WidgetHandledCx",
             "retained_bridge",
             "EventCx",
             "CommandCx",
@@ -661,10 +812,78 @@ mod surface_policy_tests {
             "PaintCx",
         ] {
             assert!(
-                !tail_policy_sources.contains(forbidden),
-                "canvas widget tail policy helpers must stay retained-Cx agnostic; found `{forbidden}`"
+                !adapter_policy_sources.contains(forbidden),
+                "canvas low-level adapter policy helpers must stay retained-Cx agnostic; found `{forbidden}`"
             );
         }
+
+        assert!(UI_CANVAS_LOW_LEVEL_ADAPTER_RS.contains("trait CanvasRedrawCx"));
+        assert!(UI_CANVAS_LOW_LEVEL_ADAPTER_RS.contains("trait CanvasPaintInvalidationCx"));
+        assert!(UI_CANVAS_LOW_LEVEL_ADAPTER_RS.contains("trait CanvasHandledCx"));
+        assert!(UI_CANVAS_LOW_LEVEL_ADAPTER_RS.contains("trait CanvasPointerCaptureReleaseCx"));
+        assert!(
+            UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS
+                .contains("trait WireCommitCx<H>:\n    CanvasPointerCaptureReleaseCx<H>")
+        );
+        for forbidden in [
+            "    fn release_pointer_capture(",
+            "    fn request_redraw(",
+            "    fn invalidate_paint(",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS
+                    .split("#[cfg(test)]")
+                    .next()
+                    .unwrap_or(UI_CANVAS_WIDGET_WIRE_DRAG_COMMIT_CX_RS)
+                    .contains(forbidden),
+                "wire commit low-level operations must stay inherited from low_level_adapter; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_RETAINED_LOW_LEVEL_ADAPTER_RS
+                .contains("impl<H: UiHost> low_level_adapter::CanvasRedrawCx<H> for EventCx")
+        );
+        assert!(UI_CANVAS_RETAINED_LOW_LEVEL_ADAPTER_RS.contains(
+            "impl<H: UiHost> low_level_adapter::CanvasPointerCaptureReleaseCx<H> for CommandCx"
+        ));
+    }
+
+    #[test]
+    fn retained_canvas_command_dispatch_adapter_replaces_close_button_retained_edge() {
+        for forbidden in [
+            "retained_bridge",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_COMMAND_ADAPTER_RS.contains(forbidden),
+                "canvas command adapter contract must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(UI_CANVAS_COMMAND_ADAPTER_RS.contains("trait CanvasCommandDispatchCx"));
+        assert!(
+            UI_CANVAS_RETAINED_COMMAND_ADAPTER_RS
+                .contains("impl<H: UiHost> command_adapter::CanvasCommandDispatchCx for EventCx")
+        );
+        assert!(
+            UI_CANVAS_WIDGET_POINTER_DOWN_CLOSE_BUTTON_CX_RS
+                .contains("CanvasHandledCx<H> + CanvasCommandDispatchCx")
+        );
+        assert!(
+            !UI_CANVAS_WIDGET_POINTER_DOWN_CLOSE_BUTTON_CX_RS
+                .split("#[cfg(test)]")
+                .next()
+                .unwrap_or(UI_CANVAS_WIDGET_POINTER_DOWN_CLOSE_BUTTON_CX_RS)
+                .contains("dispatch_close_command"),
+            "close-button cx must inherit command dispatch from command_adapter"
+        );
+        assert!(
+            !UI_CANVAS_RS.contains("pointer_down_close_button_retained_cx"),
+            "close-button must not keep a dedicated retained command adapter"
+        );
     }
 
     #[test]
@@ -1590,7 +1809,7 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn keyboard_shortcut_command_helpers_stay_off_retained_cx() {
+    fn keyboard_shortcut_command_helpers_use_command_adapter() {
         for forbidden in [
             "retained_bridge",
             "EventCx",
@@ -1605,8 +1824,25 @@ mod surface_policy_tests {
         }
 
         assert!(
-            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS.contains("trait KeyboardShortcutCommandSink"),
-            "keyboard shortcut retained adapter should stay isolated behind a named command seam"
+            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS.contains("trait KeyboardShortcutDispatchCx"),
+            "keyboard shortcut command route should stay behind a named command seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS.contains("CanvasCommandDispatchCx"),
+            "keyboard shortcut command route must inherit command dispatch from command_adapter"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS.contains("CanvasHandledCx"),
+            "keyboard shortcut command route must keep handled semantics on the low-level adapter"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_COMMANDS_RS
+                .contains("command_adapter::dispatch_canvas_command"),
+            "keyboard shortcut command helpers must dispatch through command_adapter"
+        );
+        assert!(
+            !UI_CANVAS_RS.contains("keyboard_shortcuts_retained_cx"),
+            "keyboard shortcuts must not keep a dedicated retained command adapter"
         );
     }
 
@@ -1627,8 +1863,12 @@ mod surface_policy_tests {
         }
 
         assert!(
-            UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RETAINED_CX_RS.contains("EventCx"),
-            "keyboard shortcut retained adapter should stay explicit and isolated"
+            !UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS
+                .split("#[cfg(test)]")
+                .next()
+                .unwrap_or(UI_CANVAS_WIDGET_KEYBOARD_SHORTCUTS_RS)
+                .contains("dispatch_keyboard_command"),
+            "keyboard shortcut wrapper must inherit dispatch from command_adapter"
         );
     }
 
@@ -2745,6 +2985,7 @@ mod surface_policy_tests {
     fn top_level_event_router_stays_off_retained_bridge() {
         let router_sources = [
             UI_CANVAS_WIDGET_EVENT_ROUTER_RS,
+            UI_CANVAS_WIDGET_EVENT_ROUTER_CX_RS,
             UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_RS,
             UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_RS,
             UI_CANVAS_WIDGET_EVENT_ROUTER_POINTER_BUTTON_DOWN_RS,
@@ -2758,12 +2999,1505 @@ mod surface_policy_tests {
             "CommandCx",
             "LayoutCx",
             "PaintCx",
+            "PrepaintCx",
         ] {
             assert!(
                 !router_sources.contains(forbidden),
                 "top-level event routing should stay behind retained-agnostic Cx seams; found `{forbidden}`"
             );
         }
+    }
+
+    #[test]
+    fn event_runtime_adapter_keeps_route_preparation_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_EVENT_RUNTIME_ADAPTER_RS.contains(forbidden),
+                "event runtime adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_EVENT_RUNTIME_ADAPTER_RS.contains("trait CanvasEventRuntimeCx"),
+            "event runtime route preparation should live behind a named adapter seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_EVENT_RUNTIME_ADAPTER_RS.contains("dispatch_canvas_event"),
+            "event runtime dispatch should go through the adapter seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_RETAINED_RUNTIME_EVENT_RS
+                .contains("impl<H: UiHost, M: NodeGraphCanvasMiddleware>"),
+            "retained event entrypoint should bind the adapter to the retained context explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_RETAINED_RUNTIME_EVENT_RS
+                .contains("event_runtime_adapter::dispatch_canvas_event"),
+            "retained event entrypoint should delegate route preparation and dispatch"
+        );
+        for forbidden in [
+            "sync_runtime_theme(",
+            "sync_view_state(",
+            "handle_event(cx, event",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_RETAINED_RUNTIME_EVENT_RS.contains(forbidden),
+                "retained event entrypoint should only bind and forward, not own route preparation; found `{forbidden}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_prepaint_adapter_keeps_cull_window_route_preparation_off_retained_cx() {
+        let prepaint_sources = [
+            UI_CANVAS_WIDGET_PREPAINT_CULL_WINDOW_ADAPTER_RS,
+            UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_SHIFT_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !prepaint_sources.contains(forbidden),
+                "prepaint cull-window adapter helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PREPAINT_CULL_WINDOW_ADAPTER_RS.contains("trait PrepaintCullWindowCx"),
+            "prepaint cull-window route preparation should live behind a named adapter seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PREPAINT_CULL_WINDOW_ADAPTER_RS.contains("sync_prepaint_cull_window"),
+            "prepaint cull-window route preparation should use the adapter entrypoint"
+        );
+        for required in [
+            "prepaint_cull_window_host()",
+            "prepaint_cull_window_bounds()",
+            "record_node_graph_cull_window_shift",
+            "sync_view_state(cx.prepaint_cull_window_host())",
+            "build_cull_window_key(",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PREPAINT_CULL_WINDOW_ADAPTER_RS.contains(required),
+                "prepaint cull-window adapter is missing route-preparation contract `{required}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_RS
+                .contains("impl<H: UiHost> prepaint_cull_window_adapter::PrepaintCullWindowCx<H>"),
+            "retained prepaint entrypoint should bind the adapter to the retained context explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_RS
+                .contains("prepaint_cull_window_adapter::sync_prepaint_cull_window"),
+            "retained prepaint entrypoint should delegate cull-window route preparation"
+        );
+        for forbidden in [
+            "sync_view_state(",
+            "should_track_cull_window(",
+            "build_cull_window_key(",
+            "apply_cull_window_key(",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_RS.contains(forbidden),
+                "retained prepaint entrypoint should only bind and forward, not own route preparation; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_SHIFT_RS
+                .contains("record_node_graph_cull_window_shift"),
+            "cull-window key shift debug recording should go through the adapter seam"
+        );
+        assert!(
+            !UI_CANVAS_WIDGET_RETAINED_CULL_WINDOW_SHIFT_RS
+                .contains("debug_record_node_graph_cull_window_shift"),
+            "cull-window key shift should not call retained debug recording directly"
+        );
+    }
+
+    #[test]
+    fn paint_root_cache_plan_adapter_keeps_route_inputs_off_retained_cx() {
+        let cache_plan_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_ADAPTER_RS,
+        ]
+        .join("\n");
+
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !cache_plan_sources.contains(forbidden),
+                "paint-root cache-plan adapter helpers must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_ADAPTER_RS
+                .contains("trait PaintRootCachePlanCx"),
+            "paint-root cache-plan preparation should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_root_cache_plan_host",
+            "paint_root_cache_plan_bounds",
+            "paint_root_cache_plan_scale_factor",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_ADAPTER_RS.contains(required),
+                "paint-root cache-plan adapter is missing route-input contract `{required}`"
+            );
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RS.contains(required),
+                "paint-root cache-plan preparation should use adapter route input `{required}`"
+            );
+        }
+
+        for forbidden in ["cx.app", "cx.bounds", "cx.scale_factor"] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RS.contains(forbidden),
+                "paint-root cache-plan preparation should not read retained PaintCx fields directly; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RETAINED_CX_RS
+                .contains("impl<H: UiHost> super::cache_plan_adapter::PaintRootCachePlanCx<H>"),
+            "retained cache-plan binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHE_PLAN_RETAINED_CX_RS.contains("for PaintCx<'_, H>"),
+            "retained cache-plan binding should isolate PaintCx to the retained adapter module"
+        );
+    }
+
+    #[test]
+    fn paint_root_frame_viewport_adapter_keeps_bounds_route_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_ADAPTER_RS.contains(forbidden),
+                "paint-root frame viewport adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_ADAPTER_RS
+                .contains("trait PaintRootFrameViewportCx"),
+            "frame viewport preparation should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_root_frame_bounds",
+            "prepare_paint_root_frame_viewport",
+            "viewport_from_pan_zoom",
+            "compute_render_cull_rect",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_ADAPTER_RS.contains(required),
+                "frame viewport adapter is missing route-preparation contract `{required}`"
+            );
+        }
+
+        for forbidden in [
+            "cx.bounds",
+            "viewport_from_pan_zoom(cx.",
+            "compute_render_cull_rect(snapshot, cx.",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_RS.contains(forbidden),
+                "paint-root frame setup should not read retained PaintCx bounds for viewport preparation directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_RS
+                .contains("frame_viewport_adapter::prepare_paint_root_frame_viewport"),
+            "paint-root frame setup should delegate viewport preparation to the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::frame_viewport_adapter::PaintRootFrameViewportCx<H>"
+            ),
+            "retained frame viewport binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_VIEWPORT_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained frame viewport binding should isolate PaintCx to the retained adapter module"
+        );
+    }
+
+    #[test]
+    fn paint_root_frame_clip_adapter_keeps_root_clip_emission_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "SceneOp",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_ADAPTER_RS.contains(forbidden),
+                "paint-root frame clip adapter must stay retained-Cx and scene-op agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_ADAPTER_RS
+                .contains("trait PaintRootFrameClipCx"),
+            "frame clip emission should live behind a named adapter seam"
+        );
+        for required in [
+            "push_paint_root_frame_clip",
+            "push_paint_root_frame_clip_rect",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_ADAPTER_RS.contains(required),
+                "frame clip adapter is missing scene-emission contract `{required}`"
+            );
+        }
+
+        for forbidden in ["cx.scene", "SceneOp::PushClipRect", "PushClipRect {"] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_RS.contains(forbidden),
+                "paint-root frame setup should not emit the root frame clip directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_RS
+                .contains("frame_clip_adapter::push_paint_root_frame_clip"),
+            "paint-root frame setup should delegate root clip emission to the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_RETAINED_CX_RS
+                .contains("impl<H: UiHost> super::frame_clip_adapter::PaintRootFrameClipCx<H>"),
+            "retained frame clip binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_RETAINED_CX_RS.contains("for PaintCx<'_, H>"),
+            "retained frame clip binding should isolate PaintCx to the retained adapter module"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CLIP_RETAINED_CX_RS.contains("SceneOp::PushClipRect"),
+            "retained frame clip binding should own the root clip SceneOp emission"
+        );
+    }
+
+    #[test]
+    fn paint_root_frame_diagnostics_adapter_keeps_path_cache_stats_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "CanvasCacheStatsRegistry",
+            "CanvasCacheKey",
+            "frame_id()",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_ADAPTER_RS.contains(forbidden),
+                "paint-root frame diagnostics adapter must stay retained-Cx and registry agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_ADAPTER_RS
+                .contains("trait PaintRootFrameDiagnosticsCx"),
+            "frame path-cache diagnostics should live behind a named adapter seam"
+        );
+        for required in ["record_paint_root_path_cache_stats", "CacheStats"] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_ADAPTER_RS.contains(required),
+                "frame diagnostics adapter is missing required contract `{required}`"
+            );
+        }
+
+        for forbidden in [
+            "cx.window",
+            "cx.node",
+            "cx.app.frame_id()",
+            "cx.app.with_global_mut",
+            "CanvasCacheKey",
+            "CanvasCacheStatsRegistry",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CACHE_RS.contains(forbidden),
+                "paint-root frame cache diagnostics should not read retained PaintCx fields directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_CACHE_RS
+                .contains("frame_diagnostics_adapter::record_paint_root_path_cache_stats"),
+            "paint-root frame cache diagnostics should delegate path-cache stats to the adapter"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::frame_diagnostics_adapter::PaintRootFrameDiagnosticsCx<H>"
+            ),
+            "retained frame diagnostics binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained frame diagnostics binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in [
+            "self.window",
+            "self.node",
+            "self.app.frame_id()",
+            "self.app",
+            "CanvasCacheKey",
+            "CanvasCacheStatsRegistry",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_DIAGNOSTICS_RETAINED_CX_RS.contains(required),
+                "retained frame diagnostics binding should own retained diagnostics read/write `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_frame_background_adapter_keeps_background_quad_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "SceneOp",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_ADAPTER_RS.contains(forbidden),
+                "paint-root frame background adapter must stay retained-Cx and scene-op agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_ADAPTER_RS
+                .contains("trait PaintRootFrameBackgroundCx"),
+            "frame background emission should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_root_frame_background",
+            "viewport_rect: Rect",
+            "background: Color",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_ADAPTER_RS.contains(required),
+                "frame background adapter is missing scene-emission contract `{required}`"
+            );
+        }
+
+        for forbidden in ["cx.scene", "SceneOp::Quad", "Quad {"] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RS.contains(forbidden),
+                "paint-root frame background should not emit the background quad directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RS
+                .contains("frame_background_adapter::paint_root_frame_background"),
+            "paint-root frame background should delegate background quad emission to the adapter"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RS.contains("resolve_canvas_chrome_hint"),
+            "paint-root frame background should retain chrome hint policy in this lane"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::frame_background_adapter::PaintRootFrameBackgroundCx<H>"
+            ),
+            "retained frame background binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained frame background binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in [
+            "self.scene",
+            "SceneOp::Quad",
+            "DrawOrder(0)",
+            "Paint::Solid",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_FRAME_BACKGROUND_RETAINED_CX_RS.contains(required),
+                "retained frame background binding should own background scene emission `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_grid_cache_adapter_keeps_tile_warmup_scene_sink_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_GRID_CACHE_ADAPTER_RS.contains(forbidden),
+                "paint grid cache adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_CACHE_ADAPTER_RS.contains("trait PaintGridTileCacheCx"),
+            "grid tile cache warmup should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_grid_scene",
+            "request_grid_paint_redraw",
+            "CanvasRedrawCx",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_GRID_CACHE_ADAPTER_RS.contains(required),
+                "grid cache adapter is missing warmup contract `{required}`"
+            );
+        }
+
+        let grid_cache_warmup_sources = [
+            UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RS,
+            UI_CANVAS_WIDGET_PAINT_GRID_CACHE_WARM_RS,
+        ]
+        .join("\n");
+        for forbidden in ["PaintCx", "cx.scene", "request_paint_redraw(cx)"] {
+            assert!(
+                !grid_cache_warmup_sources.contains(forbidden),
+                "grid tile cache warmup should not read retained PaintCx or scene fields directly; found `{forbidden}`"
+            );
+        }
+        for required in [
+            "paint_grid_cache_adapter::paint_grid_scene",
+            "paint_grid_cache_adapter::request_grid_paint_redraw",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_GRID_CACHE_WARM_RS.contains(required),
+                "grid tile cache warmup should delegate through adapter contract `{required}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::paint_grid_cache_adapter::PaintGridTileCacheCx<H>"
+            ),
+            "retained grid cache binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RETAINED_CX_RS.contains("for PaintCx<'_, H>"),
+            "retained grid cache binding should isolate PaintCx to the retained adapter module"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_CACHE_RETAINED_CX_RS.contains("&mut *self.scene"),
+            "retained grid cache binding should own retained scene sink access"
+        );
+    }
+
+    #[test]
+    fn paint_grid_diagnostics_adapter_keeps_tile_cache_stats_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "CanvasCacheStatsRegistry",
+            "CanvasCacheKey",
+            "frame_id()",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_ADAPTER_RS.contains(forbidden),
+                "paint grid diagnostics adapter must stay retained-Cx and registry agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_ADAPTER_RS
+                .contains("trait PaintGridDiagnosticsCx"),
+            "grid diagnostics recording should live behind a named adapter seam"
+        );
+        for required in [
+            "record_grid_tile_cache_stats",
+            "GridTileCacheStatsSnapshot",
+            "SceneOpTileCacheStats",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_ADAPTER_RS.contains(required),
+                "grid diagnostics adapter is missing required contract `{required}`"
+            );
+        }
+
+        for forbidden in [
+            "PaintCx",
+            "cx.window",
+            "cx.node",
+            "cx.app.frame_id()",
+            "cx.app.with_global_mut",
+            "CanvasCacheKey",
+            "CanvasCacheStatsRegistry",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_GRID_STATS_RS.contains(forbidden),
+                "grid diagnostics stats collection should not read retained PaintCx fields directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_STATS_RS
+                .contains("paint_grid_diagnostics_adapter::record_grid_tile_cache_stats"),
+            "grid diagnostics stats collection should delegate registry recording to the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::paint_grid_diagnostics_adapter::PaintGridDiagnosticsCx<H>"
+            ),
+            "retained grid diagnostics binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_RETAINED_CX_RS.contains("for PaintCx<'_, H>"),
+            "retained grid diagnostics binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in [
+            "self.window",
+            "self.node",
+            "self.app.frame_id()",
+            "self.app",
+            "CanvasCacheKey",
+            "CanvasCacheStatsRegistry",
+            "record_scene_op_tile_cache_with_budget",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_GRID_DIAGNOSTICS_RETAINED_CX_RS.contains(required),
+                "retained grid diagnostics binding should own retained diagnostics read/write `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_tail_cleanup_adapter_keeps_root_pop_clip_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "SceneOp",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_ADAPTER_RS.contains(forbidden),
+                "paint-root tail cleanup adapter must stay retained-Cx and scene-op agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_ADAPTER_RS
+                .contains("trait PaintRootTailCleanupCx"),
+            "tail cleanup pop emission should live behind a named adapter seam"
+        );
+        for required in ["pop_paint_root_tail_clip", "PaintRootTailCleanupCx"] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_ADAPTER_RS.contains(required),
+                "tail cleanup adapter is missing scene-emission contract `{required}`"
+            );
+        }
+
+        for forbidden in ["cx.scene", "SceneOp::PopClip", "PopClip"] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_RS.contains(forbidden),
+                "paint-root tail cleanup should not emit root PopClip directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_RS
+                .contains("tail_cleanup_adapter::pop_paint_root_tail_clip"),
+            "paint-root tail cleanup should delegate root PopClip emission to the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_RETAINED_CX_RS
+                .contains("impl<H: UiHost> super::tail_cleanup_adapter::PaintRootTailCleanupCx<H>"),
+            "retained tail cleanup binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_RETAINED_CX_RS.contains("for PaintCx<'_, H>"),
+            "retained tail cleanup binding should isolate PaintCx to the retained adapter module"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_TAIL_CLEANUP_RETAINED_CX_RS.contains("SceneOp::PopClip"),
+            "retained tail cleanup binding should own root PopClip scene emission"
+        );
+    }
+
+    #[test]
+    fn paint_root_pass_scene_adapter_keeps_immediate_scene_sink_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "SceneOp",
+            "cx.scene",
+            "cx.services",
+            "cx.scale_factor",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_ADAPTER_RS.contains(forbidden),
+                "paint-root pass scene adapter must stay retained-Cx and scene-op agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_ADAPTER_RS
+                .contains("trait PaintRootPassSceneCx"),
+            "pass scene routing should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_root_pass_groups_static",
+            "paint_root_pass_groups_selected_overlay",
+            "paint_root_pass_nodes_static",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_ADAPTER_RS.contains(required),
+                "pass scene adapter is missing static scene routing contract `{required}`"
+            );
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_IMMEDIATE_PASS_RS.contains(required),
+                "immediate pass should delegate static scene routing through `{required}`"
+            );
+        }
+
+        for forbidden in ["cx.scene", "cx.services", "cx.scale_factor"] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_IMMEDIATE_PASS_RS.contains(forbidden),
+                "immediate paint-root pass should not read retained scene sink fields directly; found `{forbidden}`"
+            );
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_PASS_RS.contains(forbidden),
+                "cached paint-root pass should stay direct-scene-free at the pass-router level; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_RETAINED_CX_RS
+                .contains("impl<H: UiHost> super::pass_scene_adapter::PaintRootPassSceneCx<H>"),
+            "retained pass scene binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_RETAINED_CX_RS.contains("for PaintCx<'_, H>"),
+            "retained pass scene binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in [
+            "self.scene",
+            "self.services",
+            "self.scale_factor",
+            "paint_groups_static",
+            "paint_groups_selected_overlay",
+            "paint_nodes_static",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_PASS_SCENE_RETAINED_CX_RS.contains(required),
+                "retained pass scene binding should own static scene routing detail `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_cached_static_scene_adapter_keeps_replay_scene_sink_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "SceneOp",
+            "cx.scene",
+            "cx.services",
+            "cx.scale_factor",
+            "cx.app",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_ADAPTER_RS.contains(forbidden),
+                "paint-root cached static scene adapter must stay retained-Cx and scene-op agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_ADAPTER_RS
+                .contains("trait PaintRootCachedStaticSceneCx"),
+            "cached static scene replay should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_root_cached_static_host",
+            "paint_root_cached_static_services",
+            "paint_root_cached_static_scale_factor",
+            "paint_root_cached_static_scene",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_ADAPTER_RS.contains(required),
+                "cached static scene adapter is missing retained route-input contract `{required}`"
+            );
+        }
+
+        let static_cache_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_STATIC_CACHE_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_STATIC_LAYER_RS,
+        ]
+        .join("\n");
+        for forbidden in ["PaintCx", "cx.scene"] {
+            assert!(
+                !static_cache_sources.contains(forbidden),
+                "cached static replay helpers should not depend on retained PaintCx scene fields directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            static_cache_sources.contains("paint_root_cached_static_scene"),
+            "cached static replay helpers should obtain scene replay access through the adapter"
+        );
+
+        let cached_static_build_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_GROUPS_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_NODES_RS,
+        ]
+        .join("\n");
+        for forbidden in ["cx.scene", "cx.services", "cx.scale_factor", "cx.app"] {
+            assert!(
+                !cached_static_build_sources.contains(forbidden),
+                "cached static group/node builders should not read retained PaintCx fields directly; found `{forbidden}`"
+            );
+        }
+        for required in [
+            "paint_root_cached_static_host",
+            "paint_root_cached_static_services",
+            "paint_root_cached_static_scale_factor",
+        ] {
+            assert!(
+                cached_static_build_sources.contains(required),
+                "cached static group/node builders should use adapter route input `{required}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::cached_static_scene_adapter::PaintRootCachedStaticSceneCx<H>"
+            ),
+            "retained cached static scene binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained cached static scene binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in [
+            "self.app",
+            "self.services",
+            "self.scale_factor",
+            "self.scene",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_STATIC_SCENE_RETAINED_CX_RS.contains(required),
+                "retained cached static scene binding should own retained field access `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_cached_edge_replay_adapter_keeps_scene_sink_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "SceneOp",
+            "cx.scene",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_ADAPTER_RS.contains(forbidden),
+                "paint-root cached edge replay adapter must stay retained-Cx and scene-op agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_ADAPTER_RS
+                .contains("trait PaintRootCachedEdgeReplayCx"),
+            "cached edge replay should live behind a named adapter seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_ADAPTER_RS
+                .contains("paint_root_cached_edge_replay_scene"),
+            "cached edge replay adapter is missing the scene replay sink contract"
+        );
+
+        let replay_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_REPLAY_RS,
+        ]
+        .join("\n");
+        for forbidden in ["PaintCx", "cx.scene"] {
+            assert!(
+                !replay_sources.contains(forbidden),
+                "cached edge/label replay helpers should not depend on retained PaintCx scene fields directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            replay_sources.contains("paint_root_cached_edge_replay_scene"),
+            "cached edge/label replay helpers should obtain scene replay access through the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RETAINED_CX_RS
+                .contains("impl<H: UiHost> super::replay_adapter::PaintRootCachedEdgeReplayCx<H>"),
+            "retained cached edge replay binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained cached edge replay binding should isolate PaintCx to the retained adapter module"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_REPLAY_RETAINED_CX_RS.contains("self.scene"),
+            "retained cached edge replay binding should own retained scene access"
+        );
+    }
+
+    #[test]
+    fn paint_root_cached_edge_build_state_adapter_keeps_route_inputs_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+            "self.app",
+            "self.services",
+            "self.scale_factor",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_ADAPTER_RS
+                    .contains(forbidden),
+                "paint-root cached edge build-state adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_ADAPTER_RS
+                .contains("trait PaintRootCachedEdgeBuildStateCx"),
+            "cached edge build-state route inputs should live behind a named adapter seam"
+        );
+        for required in [
+            "PaintRootCachedEdgeBuildStateStepInputs",
+            "paint_root_cached_edge_build_state_host",
+            "paint_root_cached_edge_build_state_step_inputs",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_ADAPTER_RS.contains(required),
+                "cached edge build-state adapter is missing route-input contract `{required}`"
+            );
+        }
+
+        let edge_build_state_route_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_SINGLE_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_TILED_RS,
+        ]
+        .join("\n");
+        for forbidden in [
+            "PaintCx",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+            "init_edge_labels_build_state",
+            "paint_edge_labels_build_state_step",
+        ] {
+            assert!(
+                !edge_build_state_route_sources.contains(forbidden),
+                "cached edge build-state route helpers should not depend on retained fields or label build-state; found `{forbidden}`"
+            );
+        }
+        for required in [
+            "paint_root_cached_edge_build_state_host",
+            "paint_root_cached_edge_build_state_step_inputs",
+        ] {
+            assert!(
+                edge_build_state_route_sources.contains(required),
+                "cached edge build-state route helpers should obtain route inputs through the adapter; missing `{required}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::build_state_adapter::PaintRootCachedEdgeBuildStateCx<H>"
+            ),
+            "retained cached edge build-state binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained cached edge build-state binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in ["self.app", "self.services", "self.scale_factor"] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_RETAINED_CX_RS
+                    .contains(required),
+                "retained cached edge build-state binding should own retained field access `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_cached_edge_label_build_state_adapter_keeps_route_inputs_off_retained_cx() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+            "self.app",
+            "self.services",
+            "self.scale_factor",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_BUILD_STATE_ADAPTER_RS
+                    .contains(forbidden),
+                "paint-root cached edge-label build-state adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_BUILD_STATE_ADAPTER_RS
+                .contains("trait PaintRootCachedEdgeLabelBuildStateCx"),
+            "cached edge-label build-state route inputs should live behind a named adapter seam"
+        );
+        for required in [
+            "PaintRootCachedEdgeLabelBuildStateStepInputs",
+            "paint_root_cached_edge_label_build_state_host",
+            "paint_root_cached_edge_label_build_state_step_inputs",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_BUILD_STATE_ADAPTER_RS
+                    .contains(required),
+                "cached edge-label build-state adapter is missing route-input contract `{required}`"
+            );
+        }
+
+        let edge_label_build_state_route_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_SINGLE_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_TILED_RS,
+        ]
+        .join("\n");
+        for forbidden in [
+            "PaintCx",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+            "init_edges_build_state",
+            "paint_edges_build_state_step",
+        ] {
+            assert!(
+                !edge_label_build_state_route_sources.contains(forbidden),
+                "cached edge-label build-state route helpers should not depend on retained fields or edge build-state; found `{forbidden}`"
+            );
+        }
+        for required in [
+            "paint_root_cached_edge_label_build_state_host",
+            "paint_root_cached_edge_label_build_state_step_inputs",
+        ] {
+            assert!(
+                edge_label_build_state_route_sources.contains(required),
+                "cached edge-label build-state route helpers should obtain route inputs through the adapter; missing `{required}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_BUILD_STATE_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::label_build_state_adapter::PaintRootCachedEdgeLabelBuildStateCx<H>"
+            ),
+            "retained cached edge-label build-state binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_BUILD_STATE_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained cached edge-label build-state binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in ["self.app", "self.services", "self.scale_factor"] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_BUILD_STATE_RETAINED_CX_RS
+                    .contains(required),
+                "retained cached edge-label build-state binding should own retained field access `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_cached_edge_build_state_temp_scene_adapter_keeps_construction_out_of_route_helpers()
+     {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_TEMP_SCENE_RS
+                    .contains(forbidden),
+                "paint-root cached edge build-state temp scene helper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_TEMP_SCENE_RS
+                .contains("paint_root_cached_edge_build_state_temp_scene"),
+            "cached edge build-state temp scene construction should live behind a named helper"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_TEMP_SCENE_RS
+                .contains("fret_core::Scene::default()"),
+            "cached edge build-state temp scene helper should own fresh scene construction"
+        );
+
+        let route_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_SINGLE_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_TILED_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_SINGLE_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGE_LABELS_TILED_RS,
+        ]
+        .join("\n");
+        for forbidden in [
+            "fret_core::Scene::default",
+            "Scene::default",
+            "let mut tmp",
+            "&mut tmp",
+        ] {
+            assert!(
+                !route_sources.contains(forbidden),
+                "cached edge/label route helpers should not construct temporary scenes directly; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_STEP_RS
+                .contains("paint_root_cached_edge_build_state_temp_scene"),
+            "build-state step helpers should obtain temporary scenes through the temp scene helper"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_STEP_RS
+                .contains("finish_build_state_step"),
+            "build-state step helpers should keep existing finish-step op merging"
+        );
+    }
+
+    #[test]
+    fn paint_root_cached_edge_build_state_clip_ops_adapter_keeps_clip_policy_behind_helper() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_CLIP_OPS_RS
+                    .contains(forbidden),
+                "paint-root cached edge build-state clip ops helper must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+        for required in [
+            "paint_root_cached_edge_build_state_initial_clip_ops",
+            "paint_root_cached_edge_build_state_merge_temp_ops",
+            "SceneOp::PushClipRect",
+            "SceneOp::PopClip",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_CLIP_OPS_RS.contains(required),
+                "cached edge build-state clip ops helper is missing clip policy `{required}`"
+            );
+        }
+
+        for forbidden in [
+            "SceneOp::PushClipRect",
+            "SceneOp::PopClip",
+            "append_temp_ops_before_trailing_pop_clip",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_OPS_RS.contains(forbidden),
+                "build-state ops facade should delegate clip-stack policy to clip_ops; found `{forbidden}`"
+            );
+        }
+        for required in [
+            "paint_root_cached_edge_build_state_initial_clip_ops",
+            "paint_root_cached_edge_build_state_merge_temp_ops",
+            "finish_build_state_step",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_BUILD_STATE_OPS_RS.contains(required),
+                "build-state ops facade should retain completion bookkeeping and delegate clip policy; missing `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_cached_edge_anchor_target_adapter_keeps_direct_anchor_route_off_cached_helper() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+            "self.app",
+            "self.services",
+            "self.scale_factor",
+            "self.scene",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_ADAPTER_RS
+                    .contains(forbidden),
+                "paint-root cached edge anchor target adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_ADAPTER_RS
+                .contains("trait PaintRootCachedEdgeAnchorTargetCx"),
+            "cached edge anchor target routing should live behind a named adapter seam"
+        );
+        for required in [
+            "PaintRootCachedEdgeAnchorTarget",
+            "resolve_paint_root_cached_edge_anchor_target",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_ADAPTER_RS
+                    .contains(required),
+                "cached edge anchor target adapter is missing route contract `{required}`"
+            );
+        }
+
+        for forbidden in [
+            "PaintCx",
+            "resolve_edge_anchor_target_id",
+            "resolve_edge_anchor_target_from_geometry",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RS.contains(forbidden),
+                "cached edge anchor target helper should not depend on retained Cx or shared edge-anchor helpers directly; found `{forbidden}`"
+            );
+        }
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RS
+                .contains("resolve_paint_root_cached_edge_anchor_target"),
+            "cached edge anchor target helper should route through the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::anchor_target_adapter::PaintRootCachedEdgeAnchorTargetCx<H>"
+            ),
+            "retained cached edge anchor target binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained cached edge anchor target binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in [
+            "resolve_edge_anchor_target_id",
+            "resolve_edge_anchor_target_from_geometry",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_ANCHOR_TARGET_RETAINED_CX_RS
+                    .contains(required),
+                "retained cached edge anchor target binding should own direct shared edge-anchor helper call `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_cached_edge_fallback_adapter_keeps_route_inputs_off_fallback_helpers() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+            "self.app",
+            "self.services",
+            "self.scale_factor",
+            "self.scene",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_ADAPTER_RS.contains(forbidden),
+                "paint-root cached edge fallback adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_ADAPTER_RS
+                .contains("trait PaintRootCachedEdgeFallbackCx"),
+            "cached edge fallback routing should live behind a named adapter seam"
+        );
+        for required in [
+            "paint_root_cached_edge_fallback_host",
+            "paint_root_cached_edge_fallback_paint_edges",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_ADAPTER_RS.contains(required),
+                "cached edge fallback adapter is missing route contract `{required}`"
+            );
+        }
+
+        let fallback_route_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_EDGES_FALLBACK_RS,
+        ]
+        .join("\n");
+        for forbidden in ["PaintCx", "cx.app", "&*cx.app", "canvas.paint_edges"] {
+            assert!(
+                !fallback_route_sources.contains(forbidden),
+                "cached edge fallback helpers should not depend on retained Cx or direct edge paint dispatch; found `{forbidden}`"
+            );
+        }
+        for required in [
+            "paint_root_cached_edge_fallback_host",
+            "paint_root_cached_edge_fallback_paint_edges",
+        ] {
+            assert!(
+                fallback_route_sources.contains(required),
+                "cached edge fallback helpers should route through the fallback adapter; missing `{required}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::fallback_adapter::PaintRootCachedEdgeFallbackCx<H>"
+            ),
+            "retained cached edge fallback binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained cached edge fallback binding should isolate PaintCx to the retained adapter module"
+        );
+        for required in ["self.app", "canvas.paint_edges"] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_FALLBACK_RETAINED_CX_RS.contains(required),
+                "retained cached edge fallback binding should own retained fallback operation `{required}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_cached_edge_key_helper_keeps_shared_fields_in_one_place() {
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_KEYS_RS.contains("fn cached_edge_key_builder"),
+            "cached edge key shared fields should live behind one key builder helper"
+        );
+        for required in [
+            "cached_edge_base_key",
+            "cached_edge_single_rect_key",
+            "edges_tiles_base_key",
+            "edge_labels_tiles_base_key",
+            "edges_single_rect_key",
+            "edge_labels_single_rect_key",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_KEYS_RS.contains(required),
+                "cached edge key helper module is missing `{required}`"
+            );
+        }
+
+        for scope in [
+            "fret-node.canvas.static_edges.tile.v1",
+            "fret-node.canvas.static_edge_labels.tile.v1",
+            "fret-node.canvas.static_edges.v1",
+            "fret-node.canvas.static_edge_labels.v1",
+        ] {
+            assert!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_KEYS_RS.contains(scope),
+                "cached edge key scope string must be preserved: `{scope}`"
+            );
+        }
+
+        for shared_field in [
+            "base_key.graph_rev",
+            "base_key.zoom_bits",
+            "base_key.node_origin_x_bits",
+            "base_key.node_origin_y_bits",
+            "base_key.draw_order.lo",
+            "base_key.draw_order.hi",
+            "base_key.presenter_rev",
+            "base_key.edge_types_rev",
+            "base_key.overrides_rev",
+            "b.add_u64(style_key)",
+            "b.add_f32_bits(edges_cache_tile_size_canvas)",
+        ] {
+            assert_eq!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_KEYS_RS
+                    .matches(shared_field)
+                    .count(),
+                1,
+                "cached edge key shared field should be written only by the shared helper: `{shared_field}`"
+            );
+        }
+
+        for rect_field in [
+            "edges_cache_rect.origin.x.0.to_bits()",
+            "edges_cache_rect.origin.y.0.to_bits()",
+        ] {
+            assert_eq!(
+                UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_KEYS_RS
+                    .matches(rect_field)
+                    .count(),
+                1,
+                "single-rect cache key field should stay local to the single-rect helper: `{rect_field}`"
+            );
+        }
+    }
+
+    #[test]
+    fn paint_root_cached_edge_overlay_adapter_keeps_direct_overlay_route_off_cached_paths() {
+        for forbidden in [
+            "retained_bridge",
+            "compat_retained_canvas",
+            "EventCx",
+            "CommandCx",
+            "LayoutCx",
+            "PaintCx",
+            "PrepaintCx",
+            "cx.app",
+            "cx.services",
+            "cx.scale_factor",
+            "self.app",
+            "self.services",
+            "self.scale_factor",
+            "self.scene",
+        ] {
+            assert!(
+                !UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_ADAPTER_RS.contains(forbidden),
+                "paint-root cached edge overlay adapter must stay retained-Cx agnostic; found `{forbidden}`"
+            );
+        }
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_ADAPTER_RS
+                .contains("trait PaintRootCachedEdgeOverlayCx"),
+            "cached edge overlay routing should live behind a named adapter seam"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_ADAPTER_RS
+                .contains("paint_root_cached_edge_overlays_selected_hovered"),
+            "cached edge overlay adapter should expose a selected/hovered overlay route"
+        );
+
+        let cached_path_route_sources = [
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_SINGLE_RECT_RS,
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_TILE_PATH_RS,
+        ]
+        .join("\n");
+        assert!(
+            !cached_path_route_sources.contains("paint_edge_overlays_selected_hovered"),
+            "cached edge routes should not call the retained selected/hovered overlay paint helper directly"
+        );
+        assert!(
+            cached_path_route_sources
+                .contains("overlay_adapter::paint_root_cached_edge_overlays_selected_hovered"),
+            "cached edge routes should call selected/hovered overlays through the adapter"
+        );
+
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_RETAINED_CX_RS.contains(
+                "impl<H: UiHost> super::overlay_adapter::PaintRootCachedEdgeOverlayCx<H>"
+            ),
+            "retained cached edge overlay binding should implement the adapter explicitly"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_RETAINED_CX_RS
+                .contains("for PaintCx<'_, H>"),
+            "retained cached edge overlay binding should isolate PaintCx to the retained adapter module"
+        );
+        assert!(
+            UI_CANVAS_WIDGET_PAINT_ROOT_CACHED_EDGES_OVERLAY_RETAINED_CX_RS
+                .contains("paint_edge_overlays_selected_hovered"),
+            "retained cached edge overlay binding should own the direct overlay paint helper call"
+        );
     }
 
     #[test]
@@ -2790,7 +4524,7 @@ mod surface_policy_tests {
     }
 
     #[test]
-    fn retained_canvas_widget_trait_stays_on_stable_widget_export() {
+    fn retained_canvas_widget_trait_stays_on_feature_gated_widget_export() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let ui_root = manifest_dir.join("src/ui");
         let mut files = Vec::new();
@@ -2807,13 +4541,13 @@ mod surface_policy_tests {
 
         assert!(
             offenders.is_empty(),
-            "widget trait imports must use the stable fret_ui::Widget export, not the compat facade:\n{}",
+            "widget trait imports must use the feature-gated fret_ui::Widget export, not the deleted compat facade:\n{}",
             offenders.join("\n")
         );
     }
 
     #[test]
-    fn retained_canvas_command_contexts_stay_on_stable_command_export() {
+    fn retained_canvas_command_contexts_stay_on_feature_gated_command_export() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let ui_root = manifest_dir.join("src/ui");
         let mut files = Vec::new();
@@ -2830,13 +4564,13 @@ mod surface_policy_tests {
 
         assert!(
             offenders.is_empty(),
-            "command ctx imports must use the stable fret_ui::CommandCx export, not the compat facade:\n{}",
+            "command ctx imports must use the feature-gated fret_ui::CommandCx export, not the deleted compat facade:\n{}",
             offenders.join("\n")
         );
     }
 
     #[test]
-    fn retained_canvas_event_contexts_stay_on_stable_event_export() {
+    fn retained_canvas_event_contexts_stay_on_feature_gated_event_export() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let ui_root = manifest_dir.join("src/ui");
         let mut files = Vec::new();
@@ -2853,13 +4587,13 @@ mod surface_policy_tests {
 
         assert!(
             offenders.is_empty(),
-            "event ctx imports must use the stable fret_ui::EventCx export, not the compat facade:\n{}",
+            "event ctx imports must use the feature-gated fret_ui::EventCx export, not the deleted compat facade:\n{}",
             offenders.join("\n")
         );
     }
 
     #[test]
-    fn retained_canvas_layout_contexts_stay_on_stable_layout_export() {
+    fn retained_canvas_layout_contexts_stay_on_feature_gated_layout_export() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let ui_root = manifest_dir.join("src/ui");
         let mut files = Vec::new();
@@ -2876,13 +4610,13 @@ mod surface_policy_tests {
 
         assert!(
             offenders.is_empty(),
-            "layout ctx imports must use the stable fret_ui::LayoutCx export, not the compat facade:\n{}",
+            "layout ctx imports must use the feature-gated fret_ui::LayoutCx export, not the deleted compat facade:\n{}",
             offenders.join("\n")
         );
     }
 
     #[test]
-    fn retained_canvas_paint_contexts_stay_on_stable_paint_export() {
+    fn retained_canvas_paint_contexts_stay_on_feature_gated_paint_export() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let ui_root = manifest_dir.join("src/ui");
         let mut files = Vec::new();
@@ -2899,13 +4633,13 @@ mod surface_policy_tests {
 
         assert!(
             offenders.is_empty(),
-            "paint ctx imports must use the stable fret_ui::PaintCx export, not the compat facade:\n{}",
+            "paint ctx imports must use the feature-gated fret_ui::PaintCx export, not the deleted compat facade:\n{}",
             offenders.join("\n")
         );
     }
 
     #[test]
-    fn retained_canvas_frame_contexts_stay_on_stable_frame_export() {
+    fn retained_canvas_frame_contexts_stay_on_feature_gated_frame_export() {
         let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
         let ui_root = manifest_dir.join("src/ui");
         let mut files = Vec::new();
@@ -2922,7 +4656,7 @@ mod surface_policy_tests {
 
         assert!(
             offenders.is_empty(),
-            "frame ctx imports must use the stable fret_ui::PrepaintCx / fret_ui::SemanticsCx exports, not the compat facade:\n{}",
+            "frame ctx imports must use the feature-gated fret_ui::PrepaintCx / fret_ui::SemanticsCx exports, not the deleted compat facade:\n{}",
             offenders.join("\n")
         );
     }

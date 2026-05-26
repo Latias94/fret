@@ -20,7 +20,7 @@ pub(super) fn handle_close_button_pointer_down<H: UiHost, M: NodeGraphCanvasMidd
         return false;
     }
 
-    cx.dispatch_close_command(command);
+    super::super::command_adapter::dispatch_canvas_command(cx, command);
     cx.stop_propagation();
     true
 }

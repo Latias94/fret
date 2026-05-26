@@ -2,11 +2,12 @@ use super::*;
 
 pub(super) fn replay_cached_edge_build_state<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut PaintCx<'_, H>,
+    cx: &mut impl super::super::replay_adapter::PaintRootCachedEdgeReplayCx<H>,
     state: &EdgesBuildState,
     replay_delta: Point,
 ) {
-    cx.scene.replay_ops_translated(&state.ops, replay_delta);
+    let scene = super::super::replay_adapter::paint_root_cached_edge_replay_scene(cx);
+    scene.replay_ops_translated(&state.ops, replay_delta);
     canvas.paint_cache.touch_paths_in_scene_ops(&state.ops);
 }
 
@@ -20,13 +21,14 @@ pub(super) fn store_finished_edge_build_state<M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn try_replay_cached_edges<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut PaintCx<'_, H>,
+    cx: &mut impl super::super::replay_adapter::PaintRootCachedEdgeReplayCx<H>,
     key: u64,
     replay_delta: Point,
 ) -> bool {
+    let scene = super::super::replay_adapter::paint_root_cached_edge_replay_scene(cx);
     canvas
         .edges_scene_cache
-        .try_replay_with(key, cx.scene, replay_delta, |ops| {
+        .try_replay_with(key, scene, replay_delta, |ops| {
             canvas.paint_cache.touch_paths_in_scene_ops(ops);
         })
 }

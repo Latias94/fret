@@ -12,12 +12,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         replay::store_finished_edge_label_state(self, key, state);
     }
 
-    pub(super) fn try_replay_cached_edge_labels<H: UiHost>(
+    pub(super) fn try_replay_cached_edge_labels<H, Cx>(
         &mut self,
-        cx: &mut PaintCx<'_, H>,
+        cx: &mut Cx,
         key: u64,
         replay_delta: Point,
-    ) -> bool {
+    ) -> bool
+    where
+        H: UiHost,
+        Cx: super::replay_adapter::PaintRootCachedEdgeReplayCx<H>,
+    {
         replay::try_replay_cached_edge_labels(self, cx, key, replay_delta)
     }
 

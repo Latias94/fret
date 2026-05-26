@@ -1,4 +1,4 @@
-use crate::ui::canvas::widget::widget_tail::WidgetPaintInvalidationCx;
+use crate::ui::canvas::widget::low_level_adapter::CanvasPaintInvalidationCx;
 use crate::ui::canvas::widget::*;
 
 use super::super::ui;
@@ -6,7 +6,7 @@ use super::hover;
 
 pub(super) fn handle_context_menu_pointer_move_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl WidgetPaintInvalidationCx<H>,
+    cx: &mut impl CanvasPaintInvalidationCx<H>,
     position: Point,
     zoom: f32,
 ) -> bool {

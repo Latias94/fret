@@ -1,5 +1,5 @@
 use super::{key_navigation, selection_activation};
-use crate::ui::canvas::widget::widget_tail::WidgetPaintInvalidationCx;
+use crate::ui::canvas::widget::low_level_adapter::CanvasPaintInvalidationCx;
 use crate::ui::canvas::widget::*;
 
 pub(super) fn handle_context_menu_pointer_down<H, M: NodeGraphCanvasMiddleware>(
@@ -14,7 +14,7 @@ pub(super) fn handle_context_menu_pointer_down<H, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_context_menu_pointer_move<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl WidgetPaintInvalidationCx<H>,
+    cx: &mut impl CanvasPaintInvalidationCx<H>,
     position: Point,
     zoom: f32,
 ) -> bool {

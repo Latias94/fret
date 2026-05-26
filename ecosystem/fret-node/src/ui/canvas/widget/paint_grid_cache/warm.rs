@@ -2,7 +2,7 @@ use super::*;
 
 pub(super) fn warm_grid_tiles<H: UiHost, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut PaintCx<'_, H>,
+    cx: &mut impl super::super::paint_grid_cache_adapter::PaintGridTileCacheCx<H>,
     plan: &super::super::paint_grid_plan::GridPaintPlan,
     view_interacting: bool,
 ) -> GridTileWarmupStats {
@@ -13,7 +13,7 @@ pub(super) fn warm_grid_tiles<H: UiHost, M: NodeGraphCanvasMiddleware>(
     let tile_size_canvas = plan.tile_size_canvas;
     let warmup = warm_scene_op_tiles_u64_with(
         &mut canvas.grid_scene_cache,
-        cx.scene,
+        super::super::paint_grid_cache_adapter::paint_grid_scene(cx),
         &canvas.grid_tiles_scratch,
         super::key::build_grid_tile_cache_key(plan),
         1,
@@ -23,7 +23,7 @@ pub(super) fn warm_grid_tiles<H: UiHost, M: NodeGraphCanvasMiddleware>(
         |tile| super::ops::grid_tile_ops_for_plan(plan, tile),
     );
     if warmup.skipped_tiles > 0 {
-        super::super::redraw_request::request_paint_redraw(cx);
+        super::super::paint_grid_cache_adapter::request_grid_paint_redraw(cx);
     }
     GridTileWarmupStats {
         tile_budget_limit,

@@ -1,12 +1,12 @@
 use fret_core::{AppWindowId, Point};
 use fret_ui::UiHost;
 
-use super::super::widget_tail::{PointerCaptureReleaseCx, WidgetHandledCx};
+use super::super::low_level_adapter::{CanvasHandledCx, CanvasPointerCaptureReleaseCx};
 use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::core::CanvasPoint;
 
 pub(in super::super) trait StickyWireTargetPickerCx<H>:
-    PointerCaptureReleaseCx<H> + WidgetHandledCx<H>
+    CanvasPointerCaptureReleaseCx<H> + CanvasHandledCx<H>
 {
     fn host(&mut self) -> &mut H;
     fn window(&self) -> Option<AppWindowId>;
@@ -36,15 +36,15 @@ pub(super) fn open_connection_insert_node_picker<H: UiHost, M: NodeGraphCanvasMi
 }
 
 fn finish_sticky_wire_target_picker<H>(
-    cx: &mut impl super::super::widget_tail::WidgetHandledCx<H>,
+    cx: &mut impl super::super::low_level_adapter::CanvasHandledCx<H>,
 ) {
-    super::super::widget_tail::finish_widget_handled(cx);
+    super::super::low_level_adapter::finish_canvas_handled(cx);
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::widget_tail::{
-        PointerCaptureReleaseCx, WidgetHandledCx, WidgetPaintInvalidationCx, WidgetRedrawCx,
+    use super::super::super::low_level_adapter::{
+        CanvasHandledCx, CanvasPaintInvalidationCx, CanvasPointerCaptureReleaseCx, CanvasRedrawCx,
     };
     use super::*;
 
@@ -61,25 +61,25 @@ mod tests {
         paint_invalidations: usize,
     }
 
-    impl WidgetRedrawCx<StubHost> for StubCx {
+    impl CanvasRedrawCx<StubHost> for StubCx {
         fn request_redraw(&mut self) {
             self.redraws += 1;
         }
     }
 
-    impl WidgetPaintInvalidationCx<StubHost> for StubCx {
+    impl CanvasPaintInvalidationCx<StubHost> for StubCx {
         fn invalidate_paint(&mut self) {
             self.paint_invalidations += 1;
         }
     }
 
-    impl WidgetHandledCx<StubHost> for StubCx {
+    impl CanvasHandledCx<StubHost> for StubCx {
         fn stop_propagation(&mut self) {
             self.stopped = true;
         }
     }
 
-    impl PointerCaptureReleaseCx<StubHost> for StubCx {
+    impl CanvasPointerCaptureReleaseCx<StubHost> for StubCx {
         fn release_pointer_capture(&mut self) {
             self.released = true;
         }

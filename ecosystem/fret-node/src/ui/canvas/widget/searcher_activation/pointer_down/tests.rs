@@ -1,11 +1,11 @@
 use super::super::super::{
     ContextMenuTarget, InsertNodeCandidate, NodeGraphCanvasWith, NoopNodeGraphCanvasMiddleware,
     SearcherRowsMode, SearcherState,
+    low_level_adapter::{
+        CanvasHandledCx, CanvasPaintInvalidationCx, CanvasPointerCaptureReleaseCx, CanvasRedrawCx,
+    },
     searcher_activation::SearcherPointerHit,
     searcher_activation_state::SearcherArmCx,
-    widget_tail::{
-        PointerCaptureReleaseCx, WidgetHandledCx, WidgetPaintInvalidationCx, WidgetRedrawCx,
-    },
 };
 use super::*;
 use crate::core::{CanvasPoint, Graph, GraphId, NodeKindKey};
@@ -39,25 +39,25 @@ impl SearcherArmCx for StubCx {
     }
 }
 
-impl WidgetRedrawCx<()> for StubCx {
+impl CanvasRedrawCx<()> for StubCx {
     fn request_redraw(&mut self) {
         self.redraws += 1;
     }
 }
 
-impl WidgetPaintInvalidationCx<()> for StubCx {
+impl CanvasPaintInvalidationCx<()> for StubCx {
     fn invalidate_paint(&mut self) {
         self.paint_invalidations += 1;
     }
 }
 
-impl WidgetHandledCx<()> for StubCx {
+impl CanvasHandledCx<()> for StubCx {
     fn stop_propagation(&mut self) {
         self.stopped = true;
     }
 }
 
-impl PointerCaptureReleaseCx<()> for StubCx {
+impl CanvasPointerCaptureReleaseCx<()> for StubCx {
     fn release_pointer_capture(&mut self) {
         self.released = true;
     }

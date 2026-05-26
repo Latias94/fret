@@ -1,13 +1,20 @@
 use super::*;
 
-pub(super) fn resolve_cached_edge_anchor_target<H: UiHost, M: NodeGraphCanvasMiddleware>(
+pub(super) fn resolve_cached_edge_anchor_target<H, M, Cx>(
     canvas: &NodeGraphCanvasWith<M>,
-    cx: &PaintCx<'_, H>,
+    cx: &Cx,
     snapshot: &ViewSnapshot,
     geom: &CanvasGeometry,
-) -> (Option<EdgeId>, Option<(EdgeRouteKind, Point, Point, Color)>) {
-    let edge_anchor_target_id = canvas.resolve_edge_anchor_target_id(cx, snapshot);
-    let edge_anchor_target =
-        canvas.resolve_edge_anchor_target_from_geometry(cx, geom, edge_anchor_target_id);
-    (edge_anchor_target_id, edge_anchor_target)
+) -> (
+    Option<EdgeId>,
+    Option<super::anchor_target_adapter::PaintRootCachedEdgeAnchorTarget>,
+)
+where
+    H: UiHost,
+    M: NodeGraphCanvasMiddleware,
+    Cx: super::anchor_target_adapter::PaintRootCachedEdgeAnchorTargetCx<H>,
+{
+    super::anchor_target_adapter::resolve_paint_root_cached_edge_anchor_target(
+        canvas, cx, snapshot, geom,
+    )
 }

@@ -1,6 +1,6 @@
 use fret_ui::UiHost;
 
-use super::super::{marquee_cx::MarqueeCx, widget_tail, wire_drag::WireCommitCx};
+use super::super::{low_level_adapter, marquee_cx::MarqueeCx, wire_drag::WireCommitCx};
 
 pub(in crate::ui::canvas::widget) trait LeftClickCx<H: UiHost>:
     MarqueeCx<H> + WireCommitCx<H>
@@ -20,5 +20,5 @@ where
 
 pub(super) fn capture_pointer_and_invalidate_paint<H: UiHost>(cx: &mut impl LeftClickCx<H>) {
     cx.capture_self_pointer();
-    widget_tail::invalidate_widget_paint(cx);
+    low_level_adapter::invalidate_canvas_paint(cx);
 }

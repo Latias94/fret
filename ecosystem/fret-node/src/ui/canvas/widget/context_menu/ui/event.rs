@@ -1,19 +1,19 @@
 use super::super::*;
 use super::{ContextMenuHoverEdgePolicy, overlay};
-use crate::ui::canvas::widget::widget_tail::{WidgetHandledCx, WidgetPaintInvalidationCx};
+use crate::ui::canvas::widget::low_level_adapter::{CanvasHandledCx, CanvasPaintInvalidationCx};
 
 pub(in crate::ui::canvas::widget) trait ContextMenuFocusCx<H>:
-    WidgetHandledCx<H>
+    CanvasHandledCx<H>
 {
     fn request_context_menu_focus(&mut self);
 }
 
-pub(super) fn invalidate_context_menu_paint<H>(cx: &mut impl WidgetPaintInvalidationCx<H>) {
-    super::super::widget_tail::invalidate_widget_paint(cx);
+pub(super) fn invalidate_context_menu_paint<H>(cx: &mut impl CanvasPaintInvalidationCx<H>) {
+    super::super::low_level_adapter::invalidate_canvas_paint(cx);
 }
 
-pub(super) fn finish_context_menu_event<H>(cx: &mut impl WidgetHandledCx<H>) -> bool {
-    super::super::widget_tail::finish_widget_handled(cx);
+pub(super) fn finish_context_menu_event<H>(cx: &mut impl CanvasHandledCx<H>) -> bool {
+    super::super::low_level_adapter::finish_canvas_handled(cx);
     true
 }
 
@@ -30,7 +30,7 @@ pub(super) fn open_context_menu_event<H, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn restore_context_menu_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl WidgetHandledCx<H>,
+    cx: &mut impl CanvasHandledCx<H>,
     menu: ContextMenuState,
 ) -> bool {
     overlay::restore_context_menu(&mut canvas.interaction, menu);
@@ -39,7 +39,7 @@ pub(super) fn restore_context_menu_event<H, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn dismiss_context_menu_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl WidgetHandledCx<H>,
+    cx: &mut impl CanvasHandledCx<H>,
 ) -> bool {
     if !overlay::clear_context_menu(&mut canvas.interaction) {
         return false;
@@ -50,7 +50,7 @@ pub(super) fn dismiss_context_menu_event<H, M: NodeGraphCanvasMiddleware>(
 
 pub(super) fn handle_context_menu_escape_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl WidgetHandledCx<H>,
+    cx: &mut impl CanvasHandledCx<H>,
 ) -> bool {
     dismiss_context_menu_event(canvas, cx)
 }
@@ -62,7 +62,7 @@ mod tests {
     use crate::io::{NodeGraphEditorConfig, NodeGraphViewState};
     use crate::ui::canvas::widget::{
         NoopNodeGraphCanvasMiddleware,
-        widget_tail::{WidgetHandledCx, WidgetRedrawCx},
+        low_level_adapter::{CanvasHandledCx, CanvasRedrawCx},
     };
     use crate::ui::presenter::{NodeGraphContextMenuAction, NodeGraphContextMenuItem};
     use fret_core::{Point, Px};
@@ -79,19 +79,19 @@ mod tests {
         paint_invalidations: usize,
     }
 
-    impl WidgetRedrawCx<StubHost> for StubCx {
+    impl CanvasRedrawCx<StubHost> for StubCx {
         fn request_redraw(&mut self) {
             self.redraws += 1;
         }
     }
 
-    impl WidgetPaintInvalidationCx<StubHost> for StubCx {
+    impl CanvasPaintInvalidationCx<StubHost> for StubCx {
         fn invalidate_paint(&mut self) {
             self.paint_invalidations += 1;
         }
     }
 
-    impl WidgetHandledCx<StubHost> for StubCx {
+    impl CanvasHandledCx<StubHost> for StubCx {
         fn stop_propagation(&mut self) {
             self.stopped = true;
         }

@@ -3,7 +3,7 @@ use fret_ui::UiHost;
 
 use super::super::super::paint_invalidation::invalidate_paint;
 use super::super::super::{
-    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, widget_tail::WidgetPaintInvalidationCx,
+    NodeGraphCanvasMiddleware, NodeGraphCanvasWith, low_level_adapter::CanvasPaintInvalidationCx,
 };
 use crate::ui::canvas::state::PendingEdgeInsertDrag;
 
@@ -14,7 +14,7 @@ pub(super) fn activate_pending_edge_insert_drag<H: UiHost, M, Cx>(
     position: Point,
 ) where
     M: NodeGraphCanvasMiddleware,
-    Cx: WidgetPaintInvalidationCx<H>,
+    Cx: CanvasPaintInvalidationCx<H>,
 {
     super::super::super::pending_connection_session::activate_pending_edge_insert_drag(
         &mut canvas.interaction,

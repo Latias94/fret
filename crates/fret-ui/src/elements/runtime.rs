@@ -2213,6 +2213,7 @@ impl WindowElementState {
             .insert(element, opacity.clamp(0.0, 1.0));
     }
 
+    #[cfg(feature = "diagnostics")]
     pub(crate) fn current_effective_opacity(&self, element: GlobalElementId) -> Option<f32> {
         self.cur_effective_opacity
             .get(&element)

@@ -4,7 +4,7 @@ mod checks;
 use fret_core::Point;
 use fret_ui::UiHost;
 
-use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, widget_tail};
+use super::super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, low_level_adapter};
 use crate::ui::canvas::state::ViewSnapshot;
 
 pub(in super::super) fn handle_pending_wire_drag_release<H: UiHost, M, Cx>(
@@ -15,7 +15,7 @@ pub(in super::super) fn handle_pending_wire_drag_release<H: UiHost, M, Cx>(
 ) -> bool
 where
     M: NodeGraphCanvasMiddleware,
-    Cx: widget_tail::PointerCaptureReleaseCx<H>,
+    Cx: low_level_adapter::CanvasPointerCaptureReleaseCx<H>,
 {
     let Some(pending) = canvas.interaction.pending_wire_drag.take() else {
         return false;

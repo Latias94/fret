@@ -10,7 +10,7 @@ pub(in super::super) fn handle_edge_insert_drag_move<H: UiHost, M, Cx>(
 ) -> bool
 where
     M: NodeGraphCanvasMiddleware,
-    Cx: WidgetPaintInvalidationCx<H>,
+    Cx: CanvasPaintInvalidationCx<H>,
 {
     if !state::update_edge_insert_drag_position(&mut canvas.interaction, position) {
         return false;

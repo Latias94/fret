@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "slug": "fret-node-paint-root-frame-diagnostics-adapter-v1",
+  "title": "Fret Node Paint Root Frame Diagnostics Adapter v1",
+  "status": "closed",
+  "updated": "2026-05-25",
+  "scope_kind": "execution",
+  "follow_on_of": "fret-node-paint-root-frame-clip-adapter-v1",
+  "problem": "Split paint-root frame path-cache diagnostics recording behind a named adapter seam without widening into cache begin, viewport, clip, background paint, grid paint, tail cleanup, or cached/immediate passes.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-node-paint-root-frame-diagnostics-adapter-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-paint-root-frame-diagnostics-adapter-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-paint-root-frame-diagnostics-adapter-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/fret-node-paint-root-frame-diagnostics-adapter-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/fret-node-paint-root-frame-diagnostics-adapter-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fret-node-paint-root-frame-diagnostics-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use focused source-policy coverage plus `fret-node` checks to move path-cache diagnostics recording behind an adapter seam.",
+    "commands": [
+      "cargo test -p fret-node --features compat-retained-canvas paint_root_frame_diagnostics_adapter"
+    ]
+  },
+  "gates": [
+    {
+      "name": "paint-root-frame-diagnostics-source-policy",
+      "command": "cargo test -p fret-node --features compat-retained-canvas paint_root_frame_diagnostics_adapter"
+    },
+    {
+      "name": "node-default-check",
+      "command": "cargo check -p fret-node"
+    },
+    {
+      "name": "node-retained-compat-check",
+      "command": "cargo check -p fret-node --features compat-retained-canvas"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python3 tools/check_workstream_catalog.py"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/fret-node-paint-root-frame-clip-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
+    "docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/FRAME_SETUP_SCOPE_AUDIT_2026-05-25.md",
+    "docs/workstreams/fret-node-paint-root-frame-diagnostics-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
+    "docs/workstreams/fret-node-paint-root-frame-diagnostics-adapter-v1/DESIGN.md",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame/cache.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame_diagnostics_adapter.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/frame_diagnostics_retained_cx.rs",
+    "ecosystem/fret-node/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
+    "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This lane is closed. Start a separate operation-family follow-on for background paint, grid paint, tail cleanup, cached/immediate pass clip emission, or other diagnostics families; do not reopen this lane for a broad diagnostics adapter."
+  }
+}

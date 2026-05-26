@@ -5,7 +5,7 @@ use crate::ui::canvas::state::{InteractionState, NodeDrag, PendingNodeDrag};
 
 pub(in super::super) fn abort_pending_node_drag<H: UiHost>(
     interaction: &mut InteractionState,
-    cx: &mut impl super::super::widget_tail::PointerCaptureReleaseCx<H>,
+    cx: &mut impl super::super::low_level_adapter::CanvasPointerCaptureReleaseCx<H>,
 ) -> bool {
     if interaction.pending_node_drag.take().is_none() {
         return false;

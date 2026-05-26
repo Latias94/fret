@@ -1,9 +1,9 @@
 mod event;
 mod overlay;
 
-use super::widget_tail::{
-    HandledPointerCaptureReleaseCx, PointerCaptureReleaseCx, WidgetHandledCx,
-    WidgetPaintInvalidationCx,
+use super::low_level_adapter::{
+    CanvasHandledCx, CanvasPaintInvalidationCx, CanvasPointerCaptureReleaseCx,
+    HandledCanvasPointerCaptureReleaseCx,
 };
 use super::*;
 
@@ -26,14 +26,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         );
     }
 
-    pub(super) fn dismiss_searcher_overlay<H>(&mut self, cx: &mut impl PointerCaptureReleaseCx<H>) {
+    pub(super) fn dismiss_searcher_overlay<H>(
+        &mut self,
+        cx: &mut impl CanvasPointerCaptureReleaseCx<H>,
+    ) {
         super::searcher_activation_state::dismiss_searcher_overlay(self, cx);
     }
 }
 
 pub(super) fn dismiss_searcher_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl HandledPointerCaptureReleaseCx<H>,
+    cx: &mut impl HandledCanvasPointerCaptureReleaseCx<H>,
 ) -> bool {
     event::dismiss_searcher_event(canvas, cx)
 }
@@ -53,15 +56,15 @@ pub(super) fn restore_searcher_overlay(
 
 pub(super) fn handle_searcher_escape_event<H, M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    cx: &mut impl HandledPointerCaptureReleaseCx<H>,
+    cx: &mut impl HandledCanvasPointerCaptureReleaseCx<H>,
 ) -> bool {
     event::handle_searcher_escape_event(canvas, cx)
 }
 
-pub(super) fn invalidate_searcher_paint<H>(cx: &mut impl WidgetPaintInvalidationCx<H>) {
+pub(super) fn invalidate_searcher_paint<H>(cx: &mut impl CanvasPaintInvalidationCx<H>) {
     event::invalidate_searcher_paint(cx);
 }
 
-pub(super) fn finish_searcher_event<H>(cx: &mut impl WidgetHandledCx<H>) -> bool {
+pub(super) fn finish_searcher_event<H>(cx: &mut impl CanvasHandledCx<H>) -> bool {
     event::finish_searcher_event(cx)
 }

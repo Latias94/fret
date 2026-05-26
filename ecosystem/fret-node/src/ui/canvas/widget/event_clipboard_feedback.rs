@@ -1,12 +1,12 @@
 use fret_ui::UiHost;
 
 use super::event_clipboard_feedback_cx::ClipboardFeedbackCx;
-use super::widget_tail::{WidgetPaintInvalidationCx, invalidate_widget_paint};
+use super::low_level_adapter::{CanvasPaintInvalidationCx, invalidate_canvas_paint};
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith};
 use crate::rules::DiagnosticSeverity;
 
-pub(super) fn request_paste_feedback<H: UiHost>(cx: &mut impl WidgetPaintInvalidationCx<H>) {
-    invalidate_widget_paint(cx);
+pub(super) fn request_paste_feedback<H: UiHost>(cx: &mut impl CanvasPaintInvalidationCx<H>) {
+    invalidate_canvas_paint(cx);
 }
 
 pub(super) fn show_clipboard_unavailable_toast<H: UiHost, M, Cx>(

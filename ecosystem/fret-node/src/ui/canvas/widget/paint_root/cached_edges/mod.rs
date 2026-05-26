@@ -1,13 +1,25 @@
 use crate::ui::canvas::widget::*;
 
 mod anchor_target;
+mod anchor_target_adapter;
+mod anchor_target_retained_cx;
 mod build_state;
+mod build_state_adapter;
+mod build_state_retained_cx;
 mod dispatch;
 mod edges;
 mod fallback;
+mod fallback_adapter;
+mod fallback_retained_cx;
 mod geometry;
 mod keys;
+mod label_build_state_adapter;
+mod label_build_state_retained_cx;
 mod labels;
+mod overlay_adapter;
+mod overlay_retained_cx;
+mod replay_adapter;
+mod replay_retained_cx;
 mod single_rect;
 mod tile_path;
 

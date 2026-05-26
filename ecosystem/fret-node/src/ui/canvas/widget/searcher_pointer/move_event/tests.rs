@@ -1,7 +1,7 @@
 use super::super::super::{
     ContextMenuTarget, InsertNodeCandidate, NodeGraphCanvasWith, NoopNodeGraphCanvasMiddleware,
     SearcherRowsMode, SearcherState,
-    widget_tail::{WidgetPaintInvalidationCx, WidgetRedrawCx},
+    low_level_adapter::{CanvasPaintInvalidationCx, CanvasRedrawCx},
 };
 use super::*;
 use crate::core::{Graph, GraphId, NodeKindKey};
@@ -18,13 +18,13 @@ struct StubCx {
     paint_invalidations: usize,
 }
 
-impl WidgetRedrawCx<StubHost> for StubCx {
+impl CanvasRedrawCx<StubHost> for StubCx {
     fn request_redraw(&mut self) {
         self.redraws += 1;
     }
 }
 
-impl WidgetPaintInvalidationCx<StubHost> for StubCx {
+impl CanvasPaintInvalidationCx<StubHost> for StubCx {
     fn invalidate_paint(&mut self) {
         self.paint_invalidations += 1;
     }

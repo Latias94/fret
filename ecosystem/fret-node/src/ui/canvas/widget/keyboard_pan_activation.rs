@@ -1,4 +1,4 @@
-use super::widget_tail::{WidgetHandledCx, WidgetPaintInvalidationCx};
+use super::low_level_adapter::{CanvasHandledCx, CanvasPaintInvalidationCx};
 use super::{NodeGraphCanvasMiddleware, NodeGraphCanvasWith, ViewSnapshot, menu_session};
 use fret_ui::UiHost;
 
@@ -11,7 +11,7 @@ pub(super) fn handle_pan_activation_key_down<H: UiHost, M, Cx>(
 ) -> bool
 where
     M: NodeGraphCanvasMiddleware,
-    Cx: WidgetHandledCx<H>,
+    Cx: CanvasHandledCx<H>,
 {
     if modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr {
         return false;
@@ -46,7 +46,7 @@ pub(super) fn handle_pan_activation_key_up<H: UiHost, M, Cx>(
 ) -> bool
 where
     M: NodeGraphCanvasMiddleware,
-    Cx: WidgetPaintInvalidationCx<H>,
+    Cx: CanvasPaintInvalidationCx<H>,
 {
     let Some(crate::io::NodeGraphKeyCode(key_code)) = snapshot.interaction.pan_activation_key_code
     else {
@@ -62,6 +62,6 @@ where
     true
 }
 
-fn invalidate_pan_activation<H: UiHost>(cx: &mut impl WidgetPaintInvalidationCx<H>) {
-    super::widget_tail::invalidate_widget_paint(cx);
+fn invalidate_pan_activation<H: UiHost>(cx: &mut impl CanvasPaintInvalidationCx<H>) {
+    super::low_level_adapter::invalidate_canvas_paint(cx);
 }

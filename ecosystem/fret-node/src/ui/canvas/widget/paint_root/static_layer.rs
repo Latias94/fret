@@ -7,21 +7,23 @@ pub(super) enum StaticSceneLayerTarget {
 }
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
-    fn try_replay_static_scene_layer<H: UiHost, FTouch>(
+    fn try_replay_static_scene_layer<H, Cx, FTouch>(
         &mut self,
-        cx: &mut PaintCx<'_, H>,
+        cx: &mut Cx,
         target: StaticSceneLayerTarget,
         key: u64,
         replay_delta: Point,
         touch: &FTouch,
     ) -> bool
     where
+        H: UiHost,
+        Cx: super::cached_static_scene_adapter::PaintRootCachedStaticSceneCx<H>,
         FTouch: Fn(&mut CanvasPaintCache, &[SceneOp]),
     {
         match target {
             StaticSceneLayerTarget::Groups => super::static_cache::try_replay_static_scene_cache(
                 &mut self.groups_scene_cache,
-                cx.scene,
+                cx,
                 &mut self.paint_cache,
                 key,
                 replay_delta,
@@ -29,7 +31,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             ),
             StaticSceneLayerTarget::Nodes => super::static_cache::try_replay_static_scene_cache(
                 &mut self.nodes_scene_cache,
-                cx.scene,
+                cx,
                 &mut self.paint_cache,
                 key,
                 replay_delta,
@@ -38,15 +40,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
     }
 
-    fn store_and_replay_static_scene_layer<H: UiHost, FTouch>(
+    fn store_and_replay_static_scene_layer<H, Cx, FTouch>(
         &mut self,
-        cx: &mut PaintCx<'_, H>,
+        cx: &mut Cx,
         target: StaticSceneLayerTarget,
         key: u64,
         replay_delta: Point,
         ops: Vec<SceneOp>,
         touch: FTouch,
     ) where
+        H: UiHost,
+        Cx: super::cached_static_scene_adapter::PaintRootCachedStaticSceneCx<H>,
         FTouch: Fn(&mut CanvasPaintCache, &[SceneOp]),
     {
         match target {
@@ -75,9 +79,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
     }
 
-    pub(super) fn paint_root_static_layer_cached<H: UiHost, FTouch, FBuild>(
+    pub(super) fn paint_root_static_layer_cached<H, Cx, FTouch, FBuild>(
         &mut self,
-        cx: &mut PaintCx<'_, H>,
+        cx: &mut Cx,
         target: StaticSceneLayerTarget,
         scope: &'static str,
         base_key: DerivedBaseKey,
@@ -87,8 +91,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         touch: FTouch,
         build_ops: FBuild,
     ) where
+        H: UiHost,
+        Cx: super::cached_static_scene_adapter::PaintRootCachedStaticSceneCx<H>,
         FTouch: Fn(&mut CanvasPaintCache, &[SceneOp]) + Copy,
-        FBuild: FnOnce(&mut Self, &mut PaintCx<'_, H>) -> Vec<SceneOp>,
+        FBuild: FnOnce(&mut Self, &mut Cx) -> Vec<SceneOp>,
     {
         let key = super::static_cache::static_layer_cache_key(
             scope,

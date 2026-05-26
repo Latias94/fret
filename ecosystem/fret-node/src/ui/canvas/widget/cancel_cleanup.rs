@@ -24,20 +24,20 @@ pub(super) fn clear_hover_and_focus<M: NodeGraphCanvasMiddleware>(
 }
 
 pub(super) fn finish_cancel<H>(
-    cx: &mut impl super::widget_tail::HandledPointerCaptureReleaseCx<H>,
+    cx: &mut impl super::low_level_adapter::HandledCanvasPointerCaptureReleaseCx<H>,
     consume: bool,
 ) {
     cx.release_pointer_capture();
     if consume {
         cx.stop_propagation();
     }
-    super::widget_tail::invalidate_widget_paint(cx);
+    super::low_level_adapter::invalidate_canvas_paint(cx);
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::widget_tail::{
-        PointerCaptureReleaseCx, WidgetHandledCx, WidgetPaintInvalidationCx, WidgetRedrawCx,
+    use super::super::low_level_adapter::{
+        CanvasHandledCx, CanvasPaintInvalidationCx, CanvasPointerCaptureReleaseCx, CanvasRedrawCx,
     };
     use super::*;
 
@@ -51,25 +51,25 @@ mod tests {
         paint_invalidations: usize,
     }
 
-    impl WidgetRedrawCx<StubHost> for StubCx {
+    impl CanvasRedrawCx<StubHost> for StubCx {
         fn request_redraw(&mut self) {
             self.redraws += 1;
         }
     }
 
-    impl WidgetPaintInvalidationCx<StubHost> for StubCx {
+    impl CanvasPaintInvalidationCx<StubHost> for StubCx {
         fn invalidate_paint(&mut self) {
             self.paint_invalidations += 1;
         }
     }
 
-    impl WidgetHandledCx<StubHost> for StubCx {
+    impl CanvasHandledCx<StubHost> for StubCx {
         fn stop_propagation(&mut self) {
             self.stopped = true;
         }
     }
 
-    impl PointerCaptureReleaseCx<StubHost> for StubCx {
+    impl CanvasPointerCaptureReleaseCx<StubHost> for StubCx {
         fn release_pointer_capture(&mut self) {
             self.released = true;
         }

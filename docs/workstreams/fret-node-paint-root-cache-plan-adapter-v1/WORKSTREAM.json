@@ -1,0 +1,75 @@
+{
+  "schema_version": 1,
+  "slug": "fret-node-paint-root-cache-plan-adapter-v1",
+  "title": "Fret Node Paint Root Cache Plan Adapter v1",
+  "status": "closed",
+  "updated": "2026-05-25",
+  "scope_kind": "execution",
+  "follow_on_of": "fret-node-paint-prepaint-adapter-v1",
+  "problem": "Split node graph paint-root cache-plan preparation behind a named adapter seam without broadening into frame setup or scene emission.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/TODO.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "next",
+      "path": "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md"
+    }
+  ],
+  "repro": {
+    "summary": "Use focused cache-plan source-policy tests plus `fret-node` checks to move cache-plan route inputs behind an adapter seam.",
+    "commands": [
+      "cargo check -p fret-node",
+      "cargo check -p fret-node --features compat-retained-canvas"
+    ]
+  },
+  "gates": [
+    {
+      "name": "node-default-check",
+      "command": "cargo check -p fret-node"
+    },
+    {
+      "name": "node-retained-compat-check",
+      "command": "cargo check -p fret-node --features compat-retained-canvas"
+    },
+    {
+      "name": "paint-root-cache-plan-source-policy",
+      "command": "cargo test -p fret-node --features compat-retained-canvas paint_root_cache_plan_adapter"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/fret-node-paint-prepaint-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
+    "docs/workstreams/fret-node-paint-prepaint-adapter-v1/PAINT_ROOT_SCOPE_AUDIT_2026-05-25.md",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan_adapter.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/paint_root/cache_plan_retained_cx.rs",
+    "docs/workstreams/fret-node-paint-root-cache-plan-adapter-v1/CLOSEOUT_AUDIT_2026-05-25.md",
+    "docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/",
+    "ecosystem/fret-node/src/lib.rs"
+  ],
+  "adr_refs": [
+    "docs/adr/0330-retained-runtime-internal-and-compat-surface.md",
+    "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md"
+  ],
+  "continue_policy": {
+    "default_action": "follow_on",
+    "notes": "This lane is closed. Continue frame setup audit work in docs/workstreams/fret-node-paint-root-frame-setup-adapter-v1/."
+  }
+}
