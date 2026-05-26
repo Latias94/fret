@@ -1116,3 +1116,34 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Slider `DIS`, `HOV`, `FOCUS-VIS`, `DRAG`, `KEY`, `RTL`,
   `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M45 - Promote Sonner
+
+Status: complete on 2026-05-27.
+
+`sonner.docs-path.desktop-mobile` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Sonner docs path, new-york-v4 wrapper/demo/types examples,
+sonner-demo and sonner-types upstream open goldens, toast policy tests, Sonner recipe tests,
+web-vs-Fret layout/overlay placement/overlay chrome gates, Gallery docs-surface checks,
+diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Sonner docs path, new-york-v4 wrapper/demo/types
+  examples, Radix/Base Toast references, tracked sonner-demo and sonner-types upstream goldens,
+  and constrained open viewport variants.
+- The Sonner packet records the owner split: `fret-ui-kit` owns the toast store, lifecycle,
+  timers, stacking, swipe mechanics, live-region semantics, text metrics, and generic toast
+  rendering; `fret-ui-shadcn` owns Toaster defaults, Lucide icon overrides, message helpers,
+  status variants, width/offset/gap defaults, and test-id derivation; Gallery owns current docs
+  ordering plus Fret follow-ups.
+- The Gallery page now follows current upstream docs through `Demo`, `About`, `Usage`,
+  `Examples`, `Types`, and `Changelog`, then appends `Mounting (Fret)`,
+  `Description (Fret)`, `Position (Fret)`, `API Reference (Fret)`, `Extras (Fret)`, and
+  `Notes`.
+- `sonner_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 51 `regression_locked`, 1 `harness_hardening`, 2
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Sonner `HOV`, `DRAG`, `OPEN`, `MOB`, `TEXT-MET`, and `PAINT`
+  evidence; the component has no required state-depth gaps.

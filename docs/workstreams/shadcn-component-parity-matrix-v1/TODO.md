@@ -160,3 +160,8 @@ date: 2026-05-26
       goldens, recipe track/range/thumb chrome, thumb-level numeric semantics, pointer drag,
       keyboard stepping, RTL, disabled/hover/focus-visible behavior, Gallery docs ordering,
       Base/Radix follow-up examples, diagnostics JSON, Radix state proof, and text/paint evidence.
+- [x] SCPM-520: Promote Sonner from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn Demo/About/Usage/Examples/Types/Changelog source refs, Sonner
+      wrapper Lucide icon defaults, demo/types upstream open goldens, open toast placement/chrome,
+      constrained viewport behavior, hover pause, swipe dismiss, live-region semantics, Gallery
+      docs ordering, Fret follow-up sections, diagnostics JSON, and text/paint evidence.

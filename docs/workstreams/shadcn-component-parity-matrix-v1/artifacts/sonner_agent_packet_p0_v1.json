@@ -1,0 +1,315 @@
+{
+  "schema_version": 1,
+  "component": "sonner",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-27",
+  "generated_by": "manual sonner docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-kit/src/window_overlays/{toast.rs,render.rs} + ecosystem/fret-ui-shadcn/src/sonner.rs + ecosystem/fret-ui-shadcn/tests/{web_vs_fret_layout/sonner.rs,web_vs_fret_overlay_placement/sonner.rs,web_vs_fret_overlay_chrome/sonner.rs,fixtures/sonner_toast_open_cases_v1.json} + apps/fret-ui-gallery/src/ui/pages/sonner.rs + apps/fret-ui-gallery/src/ui/snippets/sonner/*.rs + apps/fret-ui-gallery/tests/{sonner_docs_surface.rs,ui_authoring_surface_default_app.rs} + tools/diag-scripts/ui-gallery/sonner/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sonner_agent_packet_p0_v1.json | Out-Null",
+      "status": "pending",
+      "scope": "Sonner component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/sonner -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pending",
+      "scope": "Sonner diagnostic scripts parse and cover docs screenshots, demo layout collapse, open/close, interrupt, stack shift, live-region mutation, success icon paint, and swipe dismiss."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-kit --lib --status-level fail window_overlays::toast",
+      "status": "pending",
+      "scope": "Toast policy tests cover pause/resume, removal flow, Sonner-style swipe directions, drag thresholds, dismiss, upsert, icon preservation, and max-toast eviction."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail sonner",
+      "status": "pending",
+      "scope": "Sonner recipe tests cover message options, shadcn Lucide icon defaults, layout-neutral Toaster mounting, toast layer visibility, and dismiss-all behavior."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail sonner",
+      "status": "pending",
+      "scope": "Sonner web-vs-Fret layout gates compare sonner-demo and sonner-types trigger button heights against current new-york-v4 goldens."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail sonner",
+      "status": "pending",
+      "scope": "Sonner open-mode overlay placement gates compare demo, types, status variants, promise loading, and constrained viewport toast rectangles against upstream open goldens."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome --status-level fail sonner",
+      "status": "pending",
+      "scope": "Sonner overlay chrome gate keeps the checked-in open-toast shadow footprint aligned for light and dark themes."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test sonner_docs_surface --status-level fail",
+      "status": "pending",
+      "scope": "Gallery docs-surface tests keep current docs order, Fret-only follow-up labels, copyable snippets, message-oriented API scope, and diagnostics anchors aligned."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail sonner",
+      "status": "pending",
+      "scope": "Gallery authoring tests keep Sonner snippets on the default app surface and preserve typed DocSection builders."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.sonner.demo.light.vp1440x900",
+      "snapshot": "sonner-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "current docs top preview trigger",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.sonner.demo.open.light.vp1440x900",
+      "snapshot": "sonner-demo.open",
+      "theme": "light",
+      "mode": "open toast",
+      "variant": "message toast with description and Undo action",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.sonner.types.open.light.vp1440x900",
+      "snapshot": "sonner-types.open + status variants + promise-loading",
+      "theme": "light",
+      "mode": "open toast",
+      "variant": "default, success, info, warning, error, and promise loading variants",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.sonner.constrained.light.vp1440x240",
+      "snapshot": "sonner-demo.vp1440x240.open + sonner-types.vp1440x240*.open",
+      "theme": "light",
+      "mode": "open toast constrained viewport",
+      "variant": "short viewport placement and collapse behavior",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 240
+      }
+    }
+  ],
+  "evidence_contexts": [
+    {
+      "id": "fret.sonner.toast-policy",
+      "layer": "policy",
+      "owner": "fret-ui-kit",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/window_overlays/toast.rs",
+        "ecosystem/fret-ui-kit/src/window_overlays/render.rs"
+      ]
+    },
+    {
+      "id": "fret.sonner.recipe",
+      "layer": "recipe",
+      "owner": "fret-ui-shadcn",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/sonner.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/sonner.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/sonner.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/sonner.rs",
+        "ecosystem/fret-ui-shadcn/tests/fixtures/sonner_toast_open_cases_v1.json"
+      ]
+    },
+    {
+      "id": "fret.sonner.gallery",
+      "layer": "app_demo",
+      "owner": "fret-ui-gallery",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/sonner.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/sonner/*.rs",
+        "apps/fret-ui-gallery/tests/sonner_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+      ]
+    },
+    {
+      "id": "fret.sonner.diagnostics",
+      "layer": "runner",
+      "owner": "diagnostics_surface",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-docs-screenshots.json",
+        "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-demo-layout-collapse-screenshots.json",
+        "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-open-close-fixed-frame-delta.json",
+        "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-interrupt-fixed-frame-delta.json",
+        "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-stack-shift-stagger-fixed-frame-delta.json",
+        "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-stack-shift-stagger-interrupt-fixed-frame-delta.json",
+        "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-live-region-mutation.json",
+        "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-success-icon-screenshot.json",
+        "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-swipe-dismiss-fixed-frame-delta.json"
+      ]
+    }
+  ],
+  "summary": {
+    "status_counts": {
+      "regression_locked": 1
+    },
+    "covered_axes": [
+      "source_refs",
+      "upstream_dom_snapshot",
+      "fret_layout",
+      "fret_bundle_semantics",
+      "fret_text_paint",
+      "interaction_script"
+    ],
+    "state_depth": [
+      "hover",
+      "drag",
+      "open",
+      "mobile",
+      "text_metrics",
+      "paint_token"
+    ],
+    "layout_sidecar_count": 4,
+    "bundle_schema2_count": 9,
+    "layout_test_id_count": 9,
+    "bundle_semantics_test_id_count": 9,
+    "measured_test_id_count": 9,
+    "upstream_dom_snapshot_count": 18,
+    "upstream_dom_target_count": 18,
+    "upstream_context_count": 4,
+    "upstream_dom_context_count": 18,
+    "upstream_live_fact_count": 8,
+    "upstream_semantics_fact_count": 6,
+    "upstream_interaction_fact_count": 7,
+    "fret_live_fact_count": 18,
+    "fret_semantics_fact_count": 9,
+    "fret_interaction_fact_count": 9,
+    "fret_text_paint_fact_count": 6,
+    "fret_text_paint_direct_fact_count": 4,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 6,
+    "fret_text_paint_row_count": 4,
+    "fret_text_paint_association_row_count": 2,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 4,
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0
+  },
+  "live_facts": {
+    "owner_split": [
+      "fret-ui-kit owns the toast store, open/removing lifecycle, default duration, pause/resume, max-toast eviction, stack ordering, swipe drag/dismiss mechanics, live-region semantics, text metrics, and generic toast chrome rendering.",
+      "fret-ui-shadcn owns Toaster defaults, top-center placement, 356px width, 24px margin, 16px mobile offset, 14px gap, shadcn Lucide icon overrides, message helper APIs, status variants, promise handle surface, and test-id derivation.",
+      "Gallery owns the current docs teaching order and stable ui-gallery-sonner-* diagnostics anchors, with Mounting, Description, Position, API Reference, Extras, and Notes treated as Fret follow-ups rather than current upstream docs-path sections."
+    ],
+    "source_truth": [
+      "Current main-worktree repo-ref truth uses repo-ref/ui/apps/v4/content/docs/components/sonner.mdx with top sonner-demo preview, About, Installation, Usage, Examples containing only sonner-types, and a 2025-10-13 Lucide icon Changelog.",
+      "Current new-york-v4 sonner.tsx wraps Sonner with theme, toaster group class, Lucide success/info/warning/error/loading icons, and CSS variables for normal background/text/border/radius.",
+      "Current new-york-v4 sonner-demo opens a message toast with title, description, and Undo action; sonner-types opens default, success, info, warning, error, and promise-loading variants.",
+      "Radix Primitives Toast and Base UI Toast remain secondary headless references for lifecycle, live-region, swipe, and focus/accessibility outcomes; the shadcn-facing Fret surface intentionally stays message-oriented and does not add a generic children API."
+    ],
+    "regression_gates": [
+      "Toast policy tests keep pause/resume, drag/dismiss, Sonner-style swipe direction allowlists, upsert, max-toast eviction, icon preservation, and dismiss-all behavior stable.",
+      "Sonner recipe tests keep message options, Lucide icon defaults, layout-neutral Toaster mounting, toast-layer visibility, and global dismiss-all behavior stable.",
+      "web_vs_fret_layout compares Sonner trigger button heights against current sonner-demo and sonner-types upstream goldens.",
+      "web_vs_fret_overlay_placement compares open toast rectangles for demo/types/status/promise and constrained viewport cases against upstream open goldens.",
+      "web_vs_fret_overlay_chrome keeps the open-toast shadow footprint aligned with upstream light and dark baselines.",
+      "sonner_docs_surface and diagnostics JSON keep current docs-path sections, Fret follow-up labels, copyable message snippets, live-region mutation, success icon paint, stack shift, and swipe-dismiss behavior observable."
+    ]
+  },
+  "parts": [
+    {
+      "part_id": "sonner_toast_policy_and_lifecycle",
+      "status": "pass_known",
+      "owner": "component_policy",
+      "layer": "policy",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/window_overlays/toast.rs",
+        "ecosystem/fret-ui-kit/src/window_overlays/render.rs"
+      ],
+      "facts": [
+        "ToastStore owns open/removing entries, pause/resume timers, max-toast eviction, default duration, swipe drag state, and live-region rendering.",
+        "Sonner-style swipe direction defaults follow toast position and threshold logic, with fixed-frame diagnostics covering swipe dismiss and open/close flows.",
+        "The renderer exposes Alert toast entries and a polite Notifications live region for runtime diagnostics."
+      ]
+    },
+    {
+      "part_id": "sonner_recipe_defaults_and_open_goldens",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/sonner.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/sonner.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/sonner.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/sonner.rs",
+        "ecosystem/fret-ui-shadcn/tests/fixtures/sonner_toast_open_cases_v1.json",
+        "goldens/shadcn-web/v4/new-york-v4/sonner-demo.open.json",
+        "goldens/shadcn-web/v4/new-york-v4/sonner-types.open.json"
+      ],
+      "facts": [
+        "Toaster::new() keeps shadcn/Sonner defaults for top-center placement, width, margin, mobile offset, gap, close-button default, Notifications label, and Lucide icon overrides.",
+        "Open-mode web golden gates cover demo, types, status variants, promise loading, and constrained viewport toast rectangles.",
+        "Chrome gates cover the open-toast shadow and paint footprint for light and dark themes."
+      ]
+    },
+    {
+      "part_id": "sonner_gallery_docs_surface",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/sonner.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/sonner/*.rs",
+        "apps/fret-ui-gallery/tests/sonner_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+        "tools/diag-scripts/ui-gallery/sonner/ui-gallery-sonner-docs-screenshots.json"
+      ],
+      "facts": [
+        "Gallery mirrors the current upstream docs path through Demo, About, Usage, Examples, Types, and Changelog before Fret follow-ups.",
+        "Mounting, Description, Position, API Reference, Extras, and Notes are explicitly Fret-owned follow-ups.",
+        "Copyable snippets keep Toaster mounting inline and stay on the message-style lane without teaching a generic children or custom-content API."
+      ]
+    },
+    {
+      "part_id": "sonner_packet_and_matrix_closure",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sonner_agent_packet_p0_v1.json",
+        "tools/parity-discovery/shadcn_component_harness_matrix.py",
+        "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json"
+      ],
+      "facts": [
+        "The packet has zero repair, hardening, and gate queues.",
+        "The manifest target ties current source refs, upstream open snapshots, Fret tests, diagnostics scripts, and the packet together.",
+        "The Sonner state depth covers hover, drag, open, constrained viewport, text metrics, and paint token evidence."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Sonner docs-path slice with current main-worktree repo-ref source refs, sonner-demo/types upstream goldens and open-mode fixtures, Toaster defaults, overlay placement/chrome/layout gates, Gallery docs-surface checks, diagnostics JSON, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "sonner.docs-path.desktop-mobile",
+        "component": "sonner",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sonner_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

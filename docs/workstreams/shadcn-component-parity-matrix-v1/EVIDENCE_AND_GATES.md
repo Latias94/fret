@@ -2122,3 +2122,41 @@ screenshots.
 - Slider row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
   `DIS, HOV, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
   `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Sonner regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sonner_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Sonner diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/sonner`.
+- `python -m json.tool` checks for the coverage manifest, generated matrix JSON, and
+  `WORKSTREAM.json`: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/pages/sonner.rs apps/fret-ui-gallery/tests/sonner_docs_surface.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-kit --lib --status-level fail window_overlays::toast`: PASS, 15
+  tests passed and 565 skipped.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail sonner`: PASS, 7 tests passed
+  and 1297 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail sonner`:
+  PASS, 2 tests passed and 149 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail sonner`:
+  PASS, 1 test passed and 34 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome --status-level fail sonner`:
+  PASS, 2 tests passed and 21 skipped.
+- `cargo nextest run -p fret-ui-gallery --test sonner_docs_surface --status-level fail`: PASS, 3
+  tests passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail sonner`:
+  PASS, 3 tests passed and 374 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python tools/check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files indexed.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.
+- Matrix summary: 51 `regression_locked`, 1 `harness_hardening`, 2 `inventory_only`, and 5
+  `not_in_harness`.
+- Sonner row spot check: `regression_locked`, axes
+  `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP`, depth
+  `HOV, DRAG, OPEN, MOB, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.

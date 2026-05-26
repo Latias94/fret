@@ -6,7 +6,7 @@
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
       "Navigates to the Sonner page via the left nav search.",
-      "Captures the docs-path sections first (`Demo` through `API Reference`) so docs-surface parity stays reviewable."
+      "Captures the current docs-path sections first (`Demo` through `Changelog`) before Fret follow-ups so docs-surface parity stays reviewable."
     ]
   },
   "steps": [
@@ -106,6 +106,32 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-sonner-changelog-content" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-sonner-docs.06-changelog" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-sonner-mounting-content" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-sonner-docs.07-mounting-fret" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-sonner-description-content" },
       "delta_y": -120.0,
       "require_fully_within_container": true,
@@ -114,7 +140,7 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-sonner-docs.06-description" },
+    { "type": "capture_screenshot", "label": "ui-gallery-sonner-docs.08-description-fret" },
 
     {
       "type": "scroll_into_view",
@@ -127,7 +153,7 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-sonner-docs.07-position" },
+    { "type": "capture_screenshot", "label": "ui-gallery-sonner-docs.09-position-fret" },
 
     {
       "type": "scroll_into_view",
@@ -140,7 +166,7 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-sonner-docs.08-api-reference" },
+    { "type": "capture_screenshot", "label": "ui-gallery-sonner-docs.10-api-reference-fret" },
     { "type": "capture_bundle", "label": "ui-gallery-sonner-docs" }
   ]
 }

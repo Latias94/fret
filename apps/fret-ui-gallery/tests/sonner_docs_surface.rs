@@ -8,13 +8,17 @@ fn sonner_page_keeps_docs_path_and_scope_decisions() {
 
     for needle in [
         "Reference stack: shadcn Sonner docs, the default registry recipe, the demo/types examples, Radix Primitives Toast, and Base UI Toast.",
-        "Docs path stays `Demo`, `About`, `Usage`, `Examples`, `Types`, `Description`, `Position`, and `API Reference`",
+        "Current docs path stays `Demo`, `About`, `Usage`, `Examples`, `Types`, and `Changelog`",
         "generic composable `children([...])` API is not warranted here",
         "this pass did not identify a missing `fret-ui` mechanism bug",
         "DocSection::build(cx, \"About\", about)",
         "DocSection::build(cx, \"Examples\", examples)",
-        "DocSection::build(cx, \"API Reference\", api_reference)",
+        "DocSection::build(cx, \"Changelog\", changelog)",
         "DocSection::build(cx, \"Mounting (Fret)\", setup)",
+        "DocSection::build(cx, \"Description (Fret)\", description)",
+        "DocSection::build(cx, \"Position (Fret)\", position)",
+        "DocSection::build(cx, \"API Reference (Fret)\", api_reference)",
+        "DocSection::build(cx, \"Extras (Fret)\", extras)",
     ] {
         assert!(
             source.contains(needle),
@@ -31,10 +35,11 @@ fn sonner_page_keeps_docs_path_and_scope_decisions() {
             usage,
             examples,
             types,
+            changelog,
+            setup,
             description,
             position,
             api_reference,
-            setup,
             extras,
             notes,
         ]
@@ -161,10 +166,13 @@ fn sonner_docs_diag_script_covers_docs_path_sections() {
         "\"ui-gallery-sonner-usage-content\"",
         "\"ui-gallery-sonner-examples-content\"",
         "\"ui-gallery-sonner-types-content\"",
+        "\"ui-gallery-sonner-changelog-content\"",
+        "\"ui-gallery-sonner-mounting-content\"",
         "\"ui-gallery-sonner-description-content\"",
         "\"ui-gallery-sonner-position-content\"",
         "\"ui-gallery-sonner-api-reference-content\"",
-        "\"ui-gallery-sonner-docs.08-api-reference\"",
+        "\"ui-gallery-sonner-docs.09-position-fret\"",
+        "\"ui-gallery-sonner-docs.10-api-reference-fret\"",
     ] {
         assert!(
             script.contains(needle),
