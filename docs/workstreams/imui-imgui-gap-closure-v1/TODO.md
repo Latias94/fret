@@ -302,6 +302,15 @@ Last updated: 2026-05-27
       trigger-click toggling, open-request resolution, or disabled-popup cleanup.
       Result: `menu_family_controls/menu_state/open_policy.rs` owns the begin-menu open-policy
       state machine. `menu_state.rs` is now a thin capture/open-policy module index.
+- [x] Split IMUI begin-menu active-trigger open-policy out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy.rs` into a
+      private owner module without changing menubar active-trigger synchronization, group-active
+      writes, post-trigger reconciliation, trigger-click toggling, open-request resolution, or
+      disabled-popup cleanup.
+      Result: `menu_family_controls/menu_state/open_policy/active_trigger.rs` owns active-trigger
+      synchronization, post-trigger reconciliation, and `MenubarActiveTrigger` writes.
+      `open_policy.rs` now keeps trigger-click toggling, open-request resolution,
+      disabled-popup cleanup, and the private owner re-export.
 - [x] Split IMUI table header row assembly out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` into a private owner module
       without changing header visibility, sortable/plain header cells, resize response metadata,

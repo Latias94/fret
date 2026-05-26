@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Begin-Menu Active-Trigger Open-Policy Owner-Split Evidence - 2026-05-27
+
+Claim verified: begin-menu menubar active-trigger open-policy moved behind a narrower private
+owner without changing trigger activation, top-level menu switching, popup close reconciliation,
+open-request resolution, or disabled-popup cleanup behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy.rs` now keeps
+  trigger-click toggling, open-request resolution, disabled-popup cleanup, and the private
+  active-trigger owner re-export.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger.rs`
+  owns active-trigger open-menu synchronization, post-trigger menubar reconciliation, and
+  `MenubarActiveTrigger` group-active writes.
+- `tools/gate_imui_workstream_source.py` now requires the active-trigger owner and rejects
+  `GlobalElementId`, `MenubarActiveTrigger`, and `policy.group_active` writes from the root
+  open-policy owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui menu_family_controls::tests
+  --no-fail-fast`: pass; 1 test, 736 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs popup_hover --no-fail-fast`: pass; 39
+  tests, 142 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table-Column Primitive Option Owner-Split Evidence - 2026-05-27
 
 Claim verified: table-column primitive option types moved out of the `TableColumn` builder owner

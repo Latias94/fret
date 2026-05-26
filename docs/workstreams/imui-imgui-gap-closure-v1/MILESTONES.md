@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 begin-menu active-trigger open-policy owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger.rs`
+now owns active-trigger open-menu synchronization, post-trigger menubar reconciliation, and
+`MenubarActiveTrigger` group-active writes. `open_policy.rs` keeps trigger-click toggling,
+open-request resolution, disabled-popup cleanup, and the private owner re-export.
+
 2026-05-27 table-column primitive option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/collections/table_column/primitives.rs` now owns
 `TableColumnWidth`, `TableColumnResizeOptions`, `TableSortDirection`, `TableColumnPin`, width
