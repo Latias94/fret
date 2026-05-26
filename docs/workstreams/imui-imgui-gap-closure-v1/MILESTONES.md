@@ -28,6 +28,13 @@ the public entry routing and label-identity scope only, while `button_controls/v
 the layout/a11y/chrome owner. The public button, small-button, arrow-button, invisible-button, and
 action-button APIs remain unchanged.
 
+2026-05-27 control chrome text owner-split result:
+`ecosystem/fret-ui-kit/src/imui/control_chrome/text.rs` now owns compact control text helpers,
+caption color routing, and pill badge chrome. `control_chrome.rs` keeps style constants,
+`ImUiControlPalette`, button/field chrome, row/stack layout props, and test module wiring.
+Existing `control_chrome::control_text`, `fill_text`, `caption_text`, and `pill` call paths remain
+unchanged through the private root re-export.
+
 2026-05-26 text-picker owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/candidates.rs` now owns candidate filtering,
 `max_items`, exact-match hiding, and open-when-empty visibility decisions.

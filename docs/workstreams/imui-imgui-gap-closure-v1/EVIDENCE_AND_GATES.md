@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Control Chrome Text Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI shared control text helpers, caption color routing, and pill badge chrome
+moved into a private control-chrome text owner without changing compact button/control label text
+roles, caption muted-foreground routing, pill badge chrome, or existing `control_chrome::*` call
+paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/text.rs` now owns `control_text`,
+  `fill_text`, `caption_text`, and `pill`.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome.rs` now keeps style constants,
+  `ImUiControlPalette`, button/field chrome, row/stack layout props, and test module wiring.
+- `tools/gate_imui_workstream_source.py` now requires the text owner and rejects direct text/pill
+  helper bodies from drifting back into `control_chrome.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib control_chrome::tests
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Floating Area Composition Owner-Split Evidence - 2026-05-27
 
 Claim verified: floating-area layer registration, drag snapshot application, state/test-id updates,

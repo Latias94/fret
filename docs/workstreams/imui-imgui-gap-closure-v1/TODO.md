@@ -33,6 +33,13 @@ Last updated: 2026-05-27
       pressable props, shortcut/context-menu handling, action dispatch metadata/payload forwarding,
       and button `ResponseExt` population. The root file now keeps public entry routing plus
       label-identity scoping, while `visual.rs` remains the layout/a11y/chrome owner.
+- [x] Split IMUI shared control chrome text/pill helpers out of
+      `ecosystem/fret-ui-kit/src/imui/control_chrome.rs` into a private owner module without
+      changing compact button/control label text roles, caption text color routing, pill badge
+      chrome, or existing `control_chrome::*` call paths.
+      Result: `control_chrome/text.rs` owns `control_text`, `fill_text`, `caption_text`, and
+      `pill`. The root `control_chrome.rs` keeps style constants, control palette, button/field
+      chrome, row/stack layout props, and test module wiring.
 - [x] Split IMUI input-text picker candidate visibility and keyboard state reconciliation out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into private owner modules without
       changing the public IMUI surface.
