@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 debug-draw media summary projection owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/media.rs`
+now owns image triangle mesh, image rect/region/rounded, image quad, and SVG rect summary
+assembly. `summary_projection.rs` keeps clip-stack tracking and non-media command projection.
+
 2026-05-27 begin-menu active-trigger open-policy owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger.rs`
 now owns active-trigger open-menu synchronization, post-trigger menubar reconciliation, and

@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Debug-Draw Media Summary Projection Owner-Split Evidence - 2026-05-27
+
+Claim verified: debug-draw image/SVG/media command summary projection moved behind a narrower
+private owner without changing command summary kind, image id stamping, point counts, mesh counts,
+triangle counts, channel stamping, or effective clip-stack tracking.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection.rs` keeps
+  `summary_with_clip_state(...)`, clip-stack mutation, non-media command projection, and delegates
+  image/SVG/media count assembly to a private owner.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/media.rs` owns
+  image triangle mesh, image rect/region/rounded, image quad, and SVG rect summary assembly.
+- `tools/gate_imui_workstream_source.py` now requires the media owner and rejects media
+  `DebugDrawCommandSummary::new(...)` construction from the root summary projection owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui debug_draw_controls::tests --no-fail-fast`:
+  pass; 38 tests, 699 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke
+  --no-fail-fast`: pass; 1 test, 0 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Begin-Menu Active-Trigger Open-Policy Owner-Split Evidence - 2026-05-27
 
 Claim verified: begin-menu menubar active-trigger open-policy moved behind a narrower private

@@ -584,6 +584,10 @@ Readiness order for the next locally testable review slices:
    2026-05-27 debug-draw summary owner split: `debug_draw_controls/summaries.rs` is now a thin
    re-export index; `summaries/command.rs` owns `DebugDrawCommandKind` and
    `DebugDrawCommandSummary`, while `summaries/list.rs` owns `DebugDrawListSummary` aggregation.
+   2026-05-27 debug-draw media summary projection owner split:
+   `debug_draw_controls/commands/summary_projection/media.rs` now owns image/SVG/media command
+   summary count and image-id assembly. `summary_projection.rs` keeps clip-stack tracking and
+   non-media command projection.
    2026-05-14 source-gate follow-up: the IMUI workstream source gate now carries a reusable
    opaque-output-struct check for sealed response/context/summary records, so public output fields
    cannot return by simply changing field names.
