@@ -28,6 +28,7 @@ use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
@@ -1502,8 +1503,8 @@ fn dropdown_menu_label_element<H: UiHost>(
     pad_x: Px,
     pad_x_inset: Px,
     pad_y: Px,
-    text_style: &TextStyle,
-    fg: fret_core::Color,
+    _text_style: &TextStyle,
+    _fg: fret_core::Color,
 ) -> AnyElement {
     let dir = crate::direction::use_direction(cx, None);
     let pad_left = if inset { pad_x_inset } else { pad_x };
@@ -1515,17 +1516,7 @@ fn dropdown_menu_label_element<H: UiHost>(
                 .into(),
             ..Default::default()
         },
-        {
-            let text_style = text_style.clone();
-            move |cx| {
-                vec![crate::menu_text::menu_section_label(
-                    cx,
-                    text,
-                    &text_style,
-                    fg,
-                )]
-            }
-        },
+        move |cx| vec![decl_text::text_menu_group_label(cx, text)],
     )
 }
 
@@ -5430,6 +5421,7 @@ mod tests {
 
         let text = find_text_element(&element, "Recently opened projects")
             .expect("expected dropdown menu label text");
+        let theme = Theme::global(&app);
         let ElementKind::Text(props) = &text.kind else {
             panic!("expected Text element for dropdown menu label");
         };
@@ -5448,10 +5440,11 @@ mod tests {
             .inherited_text_style
             .as_ref()
             .expect("dropdown menu label should inherit a text style");
-        assert_eq!(inherited.size, Some(Px(14.0)));
-        assert_eq!(inherited.line_height, Some(Px(20.0)));
         assert_eq!(inherited.weight, Some(FontWeight::MEDIUM));
-        assert_eq!(text.inherited_foreground, Some(foreground));
+        assert_eq!(
+            text.inherited_foreground,
+            Some(typography::muted_foreground_color(theme))
+        );
     }
 
     #[test]

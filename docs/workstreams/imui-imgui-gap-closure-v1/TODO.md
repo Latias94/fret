@@ -17,6 +17,16 @@ Last updated: 2026-05-26
 - [x] Run focused convergence gates and record the result in `EVIDENCE_AND_GATES.md`.
 - [x] Continue follow-up IMUI development only from `F:/SourceCodes/Rust/fret` on `main`.
 
+## Owner Split Follow-Ups - 2026-05-26
+
+- [x] Split IMUI button visual/layout/accessibility ownership out of
+      `ecosystem/fret-ui-kit/src/imui/button_controls.rs` into a private owner module without
+      changing the public IMUI surface.
+      Result: `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` now owns button variant
+      layout, a11y label construction, arrow labels/glyphs, and chrome/content assembly, while
+      `button_controls.rs` keeps pressable behavior, shortcut handling, action dispatch, and
+      response population.
+
 ## P0 - Source Baseline
 
 - [x] Create the dedicated `imui-imgui-gap-closure-v1` workstream.

@@ -467,6 +467,8 @@
     "ecosystem/fret-ui-kit/src/declarative/file_tree.rs",
     "ecosystem/fret-ui-kit/src/declarative/table.rs",
     "ecosystem/fret-ui-kit/src/imui/control_chrome.rs",
+    "ecosystem/fret-ui-kit/src/imui/button_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",

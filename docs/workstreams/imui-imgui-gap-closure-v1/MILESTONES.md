@@ -3,6 +3,23 @@
 Status: Active
 Last updated: 2026-05-26
 
+## M6 - Continuing IMUI Owner-Split Pressure
+
+Exit criteria:
+
+- Continue reducing large `fret-ui-kit::imui` implementation files after worktree convergence.
+- Keep public IMUI facade method names, options, responses, and behavior stable.
+- Move policy sub-owners behind private modules and freeze the split with source gates.
+- Run focused compile/test/source gates for each slice.
+
+2026-05-26 button visual owner-split result:
+`ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` now owns button variant layout,
+accessibility labels, arrow glyph/label mapping, and visual chrome/content assembly.
+`button_controls.rs` keeps immediate pressable orchestration, keyboard shortcut/context-menu
+handling, action dispatch, and response population. The public IMUI button APIs remain unchanged.
+The same verification pass repaired the existing DropdownMenuLabel source-policy drift by routing
+that shadcn label through the shared `text_menu_group_label(...)` role.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

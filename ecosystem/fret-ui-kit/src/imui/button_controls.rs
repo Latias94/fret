@@ -1,12 +1,14 @@
 //! Immediate-mode button-style pressable helpers.
 
+mod visual;
+
 use std::{any::Any, sync::Arc};
 
-use fret_core::{Corners, Edges, KeyCode, Px, SemanticsRole, Size};
+use fret_core::{KeyCode, Size};
 use fret_runtime::ActionId;
 use fret_ui::UiHost;
 use fret_ui::action::ActivateReason;
-use fret_ui::element::{AnyElement, ContainerProps, Length, PressableA11y, PressableProps};
+use fret_ui::element::PressableProps;
 
 use super::label_identity::parse_label_identity;
 use super::{
@@ -101,73 +103,6 @@ struct ButtonAction {
     payload: Option<Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>>,
 }
 
-fn arrow_symbol(direction: ButtonArrowDirection) -> Arc<str> {
-    Arc::from(match direction {
-        ButtonArrowDirection::Left => "<",
-        ButtonArrowDirection::Right => ">",
-        ButtonArrowDirection::Up => "^",
-        ButtonArrowDirection::Down => "v",
-    })
-}
-
-fn arrow_a11y_label(direction: ButtonArrowDirection) -> Arc<str> {
-    Arc::from(match direction {
-        ButtonArrowDirection::Left => "Left arrow button",
-        ButtonArrowDirection::Right => "Right arrow button",
-        ButtonArrowDirection::Up => "Up arrow button",
-        ButtonArrowDirection::Down => "Down arrow button",
-    })
-}
-
-fn button_a11y_label(
-    label: &Arc<str>,
-    options: &ButtonOptions,
-    variant: ButtonVariant,
-) -> Option<Arc<str>> {
-    options.a11y_label.clone().or_else(|| match variant {
-        ButtonVariant::Arrow(direction) => Some(arrow_a11y_label(direction)),
-        ButtonVariant::Invisible { .. } if label.is_empty() => None,
-        _ => Some(label.clone()),
-    })
-}
-
-fn apply_button_variant_layout(props: &mut PressableProps, variant: ButtonVariant) {
-    match variant {
-        ButtonVariant::Default => {
-            props.layout.size.min_height =
-                Some(Length::Px(super::control_chrome::BUTTON_MIN_HEIGHT));
-        }
-        ButtonVariant::Small => {
-            props.layout.size.min_height =
-                Some(Length::Px(super::control_chrome::SMALL_BUTTON_MIN_HEIGHT));
-        }
-        ButtonVariant::Arrow(_) => {
-            props.layout.size.width = Length::Px(super::control_chrome::ARROW_BUTTON_SIZE);
-            props.layout.size.height = Length::Px(super::control_chrome::ARROW_BUTTON_SIZE);
-        }
-        ButtonVariant::Invisible { size } => {
-            props.layout.size.width = Length::Px(size.width);
-            props.layout.size.height = Length::Px(size.height);
-        }
-    }
-}
-
-fn button_label_children<H: UiHost>(
-    cx: &mut fret_ui::ElementContext<'_, H>,
-    label: Arc<str>,
-    color: fret_core::Color,
-) -> Vec<AnyElement> {
-    vec![
-        cx.flex(super::control_chrome::centered_row_props(), move |cx| {
-            vec![super::control_chrome::control_text(
-                cx,
-                label.clone(),
-                color,
-            )]
-        }),
-    ]
-}
-
 fn button_impl<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
     label: Arc<str>,
@@ -200,13 +135,8 @@ fn button_impl_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
         let mut props = PressableProps::default();
         props.enabled = enabled;
         props.focusable = enabled && options.focusable;
-        apply_button_variant_layout(&mut props, variant);
-        props.a11y = PressableA11y {
-            role: Some(SemanticsRole::Button),
-            label: button_a11y_label(&label, &options, variant),
-            test_id: options.test_id.clone(),
-            ..Default::default()
-        };
+        visual::apply_button_variant_layout(&mut props, variant);
+        props.a11y = visual::button_a11y(&label, &options, variant);
         let activate_shortcut = options.activate_shortcut;
         let shortcut_repeat = options.shortcut_repeat;
 
@@ -303,43 +233,11 @@ fn button_impl_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
                 response,
             );
 
-            let (palette, chrome, visual_label, invisible) = match variant {
-                ButtonVariant::Default => {
-                    let (palette, chrome) =
-                        super::control_chrome::button_chrome(cx, enabled, state);
-                    (Some(palette), chrome, label.clone(), false)
-                }
-                ButtonVariant::Small => {
-                    let (palette, mut chrome) =
-                        super::control_chrome::button_chrome(cx, enabled, state);
-                    chrome.padding = Edges {
-                        left: Px(8.0),
-                        right: Px(8.0),
-                        top: Px(2.0),
-                        bottom: Px(2.0),
-                    }
-                    .into();
-                    chrome.corner_radii = Corners::all(super::control_chrome::CONTROL_RADIUS);
-                    (Some(palette), chrome, label.clone(), false)
-                }
-                ButtonVariant::Arrow(direction) => {
-                    let (palette, mut chrome) =
-                        super::control_chrome::button_chrome(cx, enabled, state);
-                    chrome.padding = Edges::all(Px(0.0)).into();
-                    (Some(palette), chrome, arrow_symbol(direction), false)
-                }
-                ButtonVariant::Invisible { .. } => {
-                    (None, ContainerProps::default(), Arc::from(""), true)
-                }
-            };
+            let (chrome, visual_content) =
+                visual::resolve_button_visual(cx, enabled, state, variant, label.clone())
+                    .into_parts();
 
-            (props, chrome, move |cx| {
-                if invisible {
-                    return Vec::<AnyElement>::new();
-                }
-                let palette = palette.expect("visible buttons should carry a palette");
-                button_label_children(cx, visual_label.clone(), palette.foreground)
-            })
+            (props, chrome, move |cx| visual_content.children(cx))
         })
     });
 

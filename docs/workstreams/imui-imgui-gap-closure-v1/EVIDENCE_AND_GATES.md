@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Button Visual Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI button visual/layout/accessibility ownership moved out of
+`button_controls.rs` without changing the public button facade or action/response behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` owns button variant layout,
+  `PressableA11y` construction, arrow glyph/label mapping, and button chrome/content assembly.
+- `ecosystem/fret-ui-kit/src/imui/button_controls.rs` keeps label identity scoping, enabled/action
+  gating, keyboard shortcut/context-menu handling, command dispatch, transient events, and
+  `ResponseExt` population.
+- `tools/gate_imui_workstream_source.py` now requires the split owner and rejects the old visual
+  helpers from returning to the root button behavior file.
+- Gate repair while proving this slice: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` now routes
+  `DropdownMenuLabel` text through `decl_text::text_menu_group_label(...)`, matching the existing
+  IMUI source-policy gate and the ContextMenu/Menubar label owner pattern.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass with pre-existing `fret-ui` warnings
+  for `unexpected_cfgs` on `unstable-retained-bridge` and `dead_code` on
+  `current_effective_opacity`.
+- `cargo fmt -p fret-ui-kit -p fret-ui-shadcn --check`: pass.
+- `cargo check -p fret-ui-shadcn --lib`: pass with the same pre-existing `fret-ui` warnings.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --no-fail-fast`:
+  pass; 1 test.
+- `cargo nextest run -p fret-ui-shadcn --lib
+  dropdown_menu_label_element_uses_shared_menu_group_text_role --no-fail-fast`: pass; 1 test
+  after compiling the large shadcn lib test binary.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\check_workstream_catalog.py`: pass; validated 445 dedicated directories and 47
+  standalone markdown files.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `git diff --check`: pass.
+
 ## Worktree Convergence Evidence - 2026-05-26
 
 Claim verified: the dirty `main` IMUI work and the dirty
