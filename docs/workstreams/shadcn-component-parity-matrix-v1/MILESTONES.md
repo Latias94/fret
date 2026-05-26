@@ -888,3 +888,31 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Radio Group `DIS`, `FOCUS-VIS`, `KEY`, `RTL`, `TEXT-MET`, and
   `PAINT` evidence; the component has no required state-depth gaps.
+
+## M37 - Promote Scroll Area
+
+Status: complete on 2026-05-26.
+
+`scroll-area.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Scroll Area docs path, new-york-v4 source, vertical/horizontal
+scroll-area upstream goldens, runtime/primitive scroll behavior gates, shadcn recipe tests,
+web-vs-Fret layout and scroll-metadata gates, Gallery docs-surface checks, diagnostics JSON, and a
+component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Scroll Area docs path, new-york-v4 recipe source,
+  scroll-area demo, horizontal scroll-area demo, select-scrollable composition reference, and
+  tracked upstream goldens.
+- The Scroll Area packet records the owner split: runtime owns scroll mechanics and offsets,
+  `fret-ui-kit` owns Radix-style visibility policy, `fret-ui-shadcn` owns wrapper/viewport/
+  scrollbar chrome and typed parts, and Gallery owns docs ordering plus Fret follow-ups.
+- The Gallery page now keeps the current upstream docs path through `Demo`, `Usage`, and
+  `Horizontal` before Fret-only follow-ups, matching the current upstream Scroll Area docs instead
+  of stale base/radix assumptions.
+- `scroll_area_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs
+  with zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 43 `regression_locked`, 1 `harness_hardening`, 10
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Scroll Area `HOV`, `FOCUS-VIS`, `DRAG`, `KEY`, `RTL`,
+  `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.

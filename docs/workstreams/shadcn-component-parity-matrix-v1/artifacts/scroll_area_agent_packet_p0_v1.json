@@ -1,0 +1,353 @@
+{
+  "schema_version": 1,
+  "component": "scroll-area",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual scroll-area docs-path harness seed v1",
+  "source_mapping": "crates/fret-ui Scroll/Scrollbar + ecosystem/fret-ui-kit/src/primitives/scroll_area.rs + ecosystem/fret-ui-shadcn/src/scroll_area.rs + ecosystem/fret-ui-shadcn/tests/{radix_web_primitives_state.rs,web_vs_fret_scroll.rs,web_vs_fret_layout/scroll.rs,fixtures/layout_scroll_cases_v1.json} + apps/fret-ui-gallery/src/ui/pages/scroll_area.rs + apps/fret-ui-gallery/src/ui/snippets/scroll_area/*.rs + apps/fret-ui-gallery/tests/{scroll_area_docs_surface.rs,ui_authoring_surface_default_app.rs} + tools/diag-scripts/ui-gallery/scroll-area/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/scroll_area_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Scroll Area component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/scroll-area -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Scroll Area wheel, drag, pointer-cancel, multipointer, content-growth, RTL, horizontal scroll, code-tab, nested-routing, and expand-at-bottom diagnostics parse cleanly."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail scroll_area",
+      "status": "pass",
+      "scope": "Shadcn Scroll Area recipe tests cover typed parts, compact builder lanes, viewport focus-visible ring paint/tweening, hover/auto/scroll visibility, touch pan, horizontal overflow, two-scrollbar corner rendering, explicit handles, and docs-card overflow behavior."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_scroll_geometry_matches_web_fixtures",
+      "status": "pass",
+      "scope": "Scroll Area web-vs-Fret layout gates cover docs-demo root size, max offsets, hover scrollbar/thumb bounds, thumb paint tokens, hover-out delay, and scrolled thumb bounds for vertical and horizontal demos."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_scroll --status-level fail",
+      "status": "pass",
+      "scope": "Scroll Area web-golden scroll metadata gates prove the tracked vertical and horizontal scroll snapshots expose scroll containers and scrolled scrollTop/scrollLeft values."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail radix_web_scroll_area_scroll_top_delta_matches_fret",
+      "status": "pass",
+      "scope": "Radix primitive state gate compares a scrollTop delta timeline with Fret scroll offset movement."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test scroll_area_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery docs-surface tests keep current shadcn docs ordering, caller-owned wrapper chrome, typed horizontal ScrollBar vocabulary, shared text roles, and audited diagnostics raw boundaries."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail scroll_area",
+      "status": "pass",
+      "scope": "Gallery authoring tests keep Scroll Area snippets on the default app surface, preserve typed docs sections, and isolate diagnostics-only raw seams."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.scroll-area.demo.light.vp1440x900",
+      "snapshot": "scroll-area-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.scroll-area.demo-hover.light.vp1440x900",
+      "snapshot": "scroll-area-demo.hover",
+      "theme": "light",
+      "mode": "hover",
+      "variant": "docs-demo-hover",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.scroll-area.demo-scrolled.light.vp1440x900",
+      "snapshot": "scroll-area-demo.scrolled",
+      "theme": "light",
+      "mode": "scrolled",
+      "variant": "docs-demo-scrolled",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.scroll-area.horizontal.light.vp1440x900",
+      "snapshot": "scroll-area-horizontal-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "horizontal-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.scroll-area.horizontal-scrolled.light.vp1440x900",
+      "snapshot": "scroll-area-horizontal-demo.scrolled",
+      "theme": "light",
+      "mode": "horizontal scrolled",
+      "variant": "horizontal-demo-scrolled",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": [
+    {
+      "id": "fret.scroll-area.runtime",
+      "layer": "runtime_mechanism",
+      "owner": "fret-ui",
+      "evidence_refs": [
+        "crates/fret-ui",
+        "ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs"
+      ]
+    },
+    {
+      "id": "fret.scroll-area.primitive",
+      "layer": "kit_primitive",
+      "owner": "fret-ui-kit",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/primitives/scroll_area.rs"
+      ]
+    },
+    {
+      "id": "fret.scroll-area.recipe",
+      "layer": "recipe",
+      "owner": "fret-ui-shadcn",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/scroll_area.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/scroll.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_scroll.rs",
+        "ecosystem/fret-ui-shadcn/tests/fixtures/layout_scroll_cases_v1.json"
+      ]
+    },
+    {
+      "id": "fret.scroll-area.gallery",
+      "layer": "app_demo",
+      "owner": "fret-ui-gallery",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/scroll_area.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/scroll_area/*.rs",
+        "apps/fret-ui-gallery/tests/scroll_area_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+      ]
+    },
+    {
+      "id": "fret.scroll-area.diagnostics",
+      "layer": "runner",
+      "owner": "diagnostics_surface",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/scroll-area/*.json",
+        "tools/diag-scripts/suites/ui-gallery-scroll-area/suite.json",
+        "tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json",
+        "tools/diag-scripts/suites/perf-ui-gallery-scroll-area/suite.json"
+      ]
+    }
+  ],
+  "summary": {
+    "status_counts": {
+      "regression_locked": 1
+    },
+    "covered_axes": [
+      "source_refs",
+      "upstream_dom_snapshot",
+      "fret_layout",
+      "fret_bundle_semantics",
+      "fret_text_paint",
+      "interaction_script"
+    ],
+    "state_depth": [
+      "hover",
+      "focus_visible",
+      "drag",
+      "keyboard",
+      "rtl",
+      "text_metrics",
+      "paint_token"
+    ],
+    "layout_sidecar_count": 13,
+    "bundle_schema2_count": 8,
+    "layout_test_id_count": 10,
+    "bundle_semantics_test_id_count": 8,
+    "measured_test_id_count": 10,
+    "upstream_dom_snapshot_count": 10,
+    "upstream_dom_target_count": 10,
+    "upstream_context_count": 5,
+    "upstream_dom_context_count": 10,
+    "upstream_live_fact_count": 8,
+    "upstream_semantics_fact_count": 2,
+    "upstream_interaction_fact_count": 5,
+    "fret_live_fact_count": 18,
+    "fret_semantics_fact_count": 6,
+    "fret_interaction_fact_count": 10,
+    "fret_text_paint_fact_count": 5,
+    "fret_text_paint_direct_fact_count": 3,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 5,
+    "fret_text_paint_row_count": 3,
+    "fret_text_paint_association_row_count": 2,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 5,
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0
+  },
+  "live_facts": {
+    "owner_split": [
+      "The runtime mechanism owns scroll viewport sizing, offsets, wheel/touch pan routing, scroll handle state, scrollbar drag, and hit testing.",
+      "The kit primitive owns Radix-shaped scrollbar visibility policy for auto, always, scroll, and hover modes plus delayed hide timing.",
+      "The shadcn recipe owns the ScrollArea/ScrollAreaRoot/ScrollAreaViewport/ScrollBar authoring surface, relative root wrapper, viewport focus-visible ring, scrollbar thickness/padding, rounded border-token thumb paint, horizontal scrollbar opt-in, and corner rendering.",
+      "Gallery owns the docs-path teaching order, caller-owned wrapper chrome, RTL follow-up, compact helper documentation, nested routing and drag diagnostics surfaces, and stable ui-gallery-scroll-area-* ids."
+    ],
+    "source_truth": [
+      "Current docs/source truth is the main-worktree repo-ref Scroll Area docs page plus the new-york-v4 ScrollArea/ScrollBar recipe, scroll-area-demo example, and scroll-area-horizontal-demo example.",
+      "The current upstream Scroll Area docs page defines Demo, Installation, Usage, and Examples/Horizontal Scrolling; RTL, API Reference, compact helper, nested routing, and diagnostics are Fret follow-ups.",
+      "select-scrollable is a related upstream composition reference for scrollable list behavior, not an additional Scroll Area docs section."
+    ],
+    "regression_gates": [
+      "web_vs_fret_layout scroll_area covers docs-demo root size, max offsets, hover scrollbar bounds, hover thumb background paint tokens, hover-out delay, and scrolled thumb bounds for vertical and horizontal variants.",
+      "web_vs_fret_scroll proves all tracked scroll-area upstream goldens expose scroll containers and that the scrolled vertical/horizontal snapshots contain scrollTop and scrollLeft movement.",
+      "scroll_area recipe tests cover viewport focus-visible ring paint/tweening, hover/auto/scroll visibility, touch pan, horizontal overflow, dual-scrollbar corner rendering, and explicit handle overflow.",
+      "radix_web_primitives_state keeps a Radix scrollTop delta aligned with Fret scroll movement.",
+      "Scroll Area diagnostics cover wheel scroll, wheel burst coalescing, torture scrolling, nested scroll routing, horizontal max-scroll screenshots, drag baseline, pointer cancel, multipointer underlay touch, content-growth click stability, RTL screenshots, and expand-at-bottom behavior."
+    ]
+  },
+  "parts": [
+    {
+      "part_id": "scroll_area_runtime_and_visibility_policy",
+      "status": "pass_known",
+      "owner": "runtime_and_kit_primitive",
+      "layer": "mechanism_policy",
+      "evidence_refs": [
+        "crates/fret-ui",
+        "ecosystem/fret-ui-kit/src/primitives/scroll_area.rs",
+        "ecosystem/fret-ui-shadcn/src/scroll_area.rs",
+        "ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs"
+      ],
+      "facts": [
+        "Fret keeps scroll offsets, viewport/content extents, touch-pan movement, and scrollbar drag in the runtime mechanism layer.",
+        "The kit primitive maps Radix scroll-area type outcomes to auto, always, scroll, and hover visibility with delayed hide timing.",
+        "The Radix timeline gate compares scrollTop movement with Fret content delta instead of comparing HTML tree structure."
+      ]
+    },
+    {
+      "part_id": "scroll_area_recipe_surface_and_chrome",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/scroll_area.rs"
+      ],
+      "facts": [
+        "ScrollArea::new([...]) remains the compact docs-path wrapper lane while ScrollAreaRoot/Viewport/ScrollBar keep the explicit typed parts lane for horizontal examples.",
+        "The recipe owns the source-aligned relative root wrapper, viewport focus-visible ring, transparent scrollbar border, 10px scrollbar thickness, p-px padding, rounded thumb, and bg-border token paint.",
+        "The viewport content wrapper and thumb implementation remain runtime-owned details, so no public Content or Thumb wrapper is promoted on the shadcn lane."
+      ]
+    },
+    {
+      "part_id": "scroll_area_web_golden_geometry_and_paint",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/tests/fixtures/layout_scroll_cases_v1.json",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/scroll.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_scroll.rs",
+        "goldens/shadcn-web/v4/new-york-v4/scroll-area-demo*.json",
+        "goldens/shadcn-web/v4/new-york-v4/scroll-area-horizontal-demo*.json"
+      ],
+      "facts": [
+        "The fixture-driven layout gate covers the vertical docs demo root size, max scroll offset, hover scrollbar bounds, thumb background in light/dark themes, hover-out delay, and scrolled thumb position.",
+        "The same fixture suite covers horizontal max scroll, hover bounds, light/dark thumb paint, hover-out delay, and scrolled thumb position for scroll-area-horizontal-demo.",
+        "The scroll metadata gate ensures every tracked upstream scroll-area golden exposes real scroll metrics and that scrolled snapshots carry scrollTop or scrollLeft movement."
+      ]
+    },
+    {
+      "part_id": "scroll_area_gallery_docs_surface",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/scroll_area.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/scroll_area/*.rs",
+        "apps/fret-ui-gallery/tests/scroll_area_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+      ],
+      "facts": [
+        "Gallery mirrors the current upstream docs path through Demo, Usage, and Horizontal before explicit Fret follow-ups.",
+        "The default snippets keep caller-owned fixed-size border wrapper chrome around the layout-only ScrollArea recipe and keep visible text routed through shared text roles.",
+        "The horizontal snippet intentionally uses ScrollAreaRoot, ScrollAreaViewport, and ScrollBar so the copyable code teaches the explicit scrollbar vocabulary from the upstream docs example."
+      ]
+    },
+    {
+      "part_id": "scroll_area_diagnostics_and_interactions",
+      "status": "pass_known",
+      "owner": "diagnostics_surface",
+      "layer": "runner",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/scroll-area/*.json",
+        "tools/diag-scripts/suites/ui-gallery-scroll-area/suite.json",
+        "tools/diag-scripts/suites/ui-gallery-rtl-smoke/suite.json",
+        "tools/diag-scripts/suites/perf-ui-gallery-scroll-area/suite.json"
+      ],
+      "facts": [
+        "Diagnostic scripts cover wheel scroll, wheel burst coalescing, wheel torture, nested scroll routing, horizontal max scroll screenshots, and code-tab toggling.",
+        "Drag diagnostics cover baseline thumb drag, pointer cancel release, multipointer underlay touch, and content growth click stability.",
+        "RTL diagnostics cover idle stability and screenshots, while expand-at-bottom gates pinned extents after content growth."
+      ]
+    },
+    {
+      "part_id": "scroll_area_packet_and_matrix_closure",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/scroll_area_agent_packet_p0_v1.json",
+        "tools/parity-discovery/shadcn_component_harness_matrix.py",
+        "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json"
+      ],
+      "facts": [
+        "The packet has zero repair, hardening, and gate queues.",
+        "The manifest target ties current source refs, upstream snapshots, Fret tests, diagnostics scripts, and the packet together.",
+        "The required Scroll Area state depth covers hover, focus-visible, drag, keyboard, RTL, text metrics, and paint token evidence."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Scroll Area docs-path slice with current main-worktree repo-ref source refs, scroll-area upstream goldens, runtime/primitive scroll tests, shadcn recipe tests, web-vs-Fret layout/scroll gates, Gallery docs-surface checks, diagnostics JSON, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "scroll-area.docs-path.desktop",
+        "component": "scroll-area",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/scroll_area_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

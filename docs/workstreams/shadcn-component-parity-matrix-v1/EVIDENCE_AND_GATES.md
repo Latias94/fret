@@ -1705,6 +1705,39 @@ screenshots.
   depth `DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
   `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
 
+2026-05-26 Scroll Area regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/scroll_area_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Scroll Area diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/scroll-area`.
+- `python -m json.tool tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json | Out-Null`:
+  PASS.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/WORKSTREAM.json | Out-Null`:
+  PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 ecosystem\fret-ui-shadcn\src\scroll_area.rs apps\fret-ui-gallery\src\ui\pages\scroll_area.rs apps\fret-ui-gallery\tests\scroll_area_docs_surface.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail scroll_area`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_scroll_geometry_matches_web_fixtures`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_scroll --status-level fail`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail radix_web_scroll_area_scroll_top_delta_matches_fret`:
+  PASS.
+- `cargo nextest run -p fret-ui-gallery --test scroll_area_docs_surface --status-level fail`:
+  PASS.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail scroll_area`:
+  PASS.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json | Out-Null`:
+  PASS.
+- Matrix summary: 43 `regression_locked`, 1 `harness_hardening`, 10 `inventory_only`, and 5
+  `not_in_harness`.
+- Scroll Area row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
+  depth `HOV, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
 2026-05-26 Kbd regression-lock validation:
 
 - `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json | Out-Null`:

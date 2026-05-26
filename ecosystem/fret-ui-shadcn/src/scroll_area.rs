@@ -456,6 +456,11 @@ impl ScrollAreaRoot {
                 let thumb = shadcn_scrollbar_thumb(&theme);
                 let thumb_hover = shadcn_scrollbar_thumb_hover(&theme);
                 let scrollbar_width = theme.metric_token("metric.scrollbar.width");
+                // In both-axis mode, current stack absolute placement resolves end-only overlay
+                // chrome against the outer edge. Offset by one track width so shadcn/Radix
+                // scrollbars and the corner stay inside the root hit/paint box.
+                let vertical_end_inset = if overflow_x { scrollbar_width } else { Px(0.0) };
+                let horizontal_end_inset = if overflow_y { scrollbar_width } else { Px(0.0) };
 
                 if wants_y
                     && let Some(spec) = scrollbars
@@ -467,7 +472,7 @@ impl ScrollAreaRoot {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
                                 top: Some(Px(0.0)).into(),
-                                right: Some(Px(0.0)).into(),
+                                right: Some(vertical_end_inset).into(),
                                 bottom: Some(if overflow_x { scrollbar_width } else { Px(0.0) })
                                     .into(),
                                 left: None.into(),
@@ -538,7 +543,7 @@ impl ScrollAreaRoot {
                                 top: None.into(),
                                 right: Some(if overflow_y { scrollbar_width } else { Px(0.0) })
                                     .into(),
-                                bottom: Some(Px(0.0)).into(),
+                                bottom: Some(horizontal_end_inset).into(),
                                 left: Some(Px(0.0)).into(),
                             },
                             size: SizeStyle {
@@ -600,8 +605,8 @@ impl ScrollAreaRoot {
                         LayoutStyle {
                             position: PositionStyle::Absolute,
                             inset: InsetStyle {
-                                right: Some(Px(0.0)).into(),
-                                bottom: Some(Px(0.0)).into(),
+                                right: Some(scrollbar_width).into(),
+                                bottom: Some(scrollbar_width).into(),
                                 ..Default::default()
                             },
                             size: SizeStyle {
@@ -1494,14 +1499,68 @@ mod tests {
         C: FnOnce(&mut ElementContext<'_, App>) -> I,
         I: IntoIterator<Item = AnyElement>,
     {
+        render_with_axis_and_layout(
+            ui,
+            app,
+            services,
+            window,
+            axis,
+            ty,
+            LayoutRefinement::default(),
+            content,
+        )
+    }
+
+    fn render_with_axis_and_layout<C, I>(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        axis: ScrollAxis,
+        ty: ScrollAreaType,
+        layout: LayoutRefinement,
+        content: C,
+    ) -> fret_core::NodeId
+    where
+        C: FnOnce(&mut ElementContext<'_, App>) -> I,
+        I: IntoIterator<Item = AnyElement>,
+    {
         let root =
             fret_ui::declarative::render_root(ui, app, services, window, bounds(), "sa", |cx| {
-                vec![
-                    ScrollArea::new(content(cx))
-                        .axis(axis)
-                        .type_(ty)
-                        .into_element(cx),
-                ]
+                let area = ScrollArea::new(content(cx))
+                    .axis(axis)
+                    .type_(ty)
+                    .refine_layout(layout);
+                vec![area.into_element(cx)]
+            });
+        ui.set_root(root);
+        ui.layout_all(app, services, bounds(), 1.0);
+        root
+    }
+
+    fn render_with_axis_layout_and_handle<C, I>(
+        ui: &mut UiTree<App>,
+        app: &mut App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        axis: ScrollAxis,
+        ty: ScrollAreaType,
+        layout: LayoutRefinement,
+        handle: ScrollHandle,
+        content: C,
+    ) -> fret_core::NodeId
+    where
+        C: FnOnce(&mut ElementContext<'_, App>) -> I,
+        I: IntoIterator<Item = AnyElement>,
+    {
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds(), "sa", |cx| {
+                let area = ScrollArea::new(content(cx))
+                    .axis(axis)
+                    .type_(ty)
+                    .refine_layout(layout)
+                    .scroll_handle(handle.clone());
+                vec![area.into_element(cx)]
             });
         ui.set_root(root);
         ui.layout_all(app, services, bounds(), 1.0);
@@ -1916,6 +1975,7 @@ mod tests {
         ui.set_window(window);
 
         let mut services = FakeServices;
+        let handle = ScrollHandle::default();
 
         let large = |cx: &mut ElementContext<'_, App>| {
             let mut layout = LayoutStyle::default();
@@ -1930,29 +1990,82 @@ mod tests {
             )]
         };
 
-        let _ = render_with_axis(
+        // Both-axis overflow needs a definite viewport height. Without caller-owned height
+        // constraints, ScrollArea can shrinkwrap vertically, matching the recipe's layout-only
+        // ownership model and producing horizontal-only overflow.
+        let _ = render_with_axis_layout_and_handle(
             &mut ui,
             &mut app,
             &mut services,
             window,
             ScrollAxis::Both,
             ScrollAreaType::Auto,
+            LayoutRefinement::default().size_full(),
+            handle.clone(),
             large,
         );
-        let root = render_with_axis(
+        let root = render_with_axis_layout_and_handle(
             &mut ui,
             &mut app,
             &mut services,
             window,
             ScrollAxis::Both,
             ScrollAreaType::Auto,
+            LayoutRefinement::default().size_full(),
+            handle.clone(),
             large,
+        );
+        assert!(
+            handle.max_offset().x.0 > 0.01 && handle.max_offset().y.0 > 0.01,
+            "expected both-axis overflow (viewport={:?} content={:?} max_offset={:?})",
+            handle.viewport_size(),
+            handle.content_size(),
+            handle.max_offset(),
         );
 
         // Auto type: both scrollbars should be interactive when overflowing in both axes.
         let hover_region = ui.children(root)[0];
         let stack = ui.children(hover_region)[0];
         let stack_bounds = ui.debug_node_bounds(stack).expect("stack bounds");
+        let stack_children = ui.children(stack);
+        assert_eq!(
+            stack_children.len(),
+            4,
+            "expected viewport, vertical scrollbar, horizontal scrollbar, and corner"
+        );
+        let vertical_bounds = ui
+            .debug_node_bounds(stack_children[1])
+            .expect("vertical scrollbar gate bounds");
+        let horizontal_bounds = ui
+            .debug_node_bounds(stack_children[2])
+            .expect("horizontal scrollbar gate bounds");
+        let corner_bounds = ui
+            .debug_node_bounds(stack_children[3])
+            .expect("corner gate bounds");
+        assert!(
+            vertical_bounds.origin.x.0
+                >= stack_bounds.origin.x.0 + stack_bounds.size.width.0 - 10.5
+                && vertical_bounds.origin.x.0 + vertical_bounds.size.width.0
+                    <= stack_bounds.origin.x.0 + stack_bounds.size.width.0 + 0.5,
+            "expected vertical scrollbar to sit inside the root trailing edge: stack={stack_bounds:?} vertical={vertical_bounds:?}"
+        );
+        assert!(
+            horizontal_bounds.origin.y.0
+                >= stack_bounds.origin.y.0 + stack_bounds.size.height.0 - 10.5
+                && horizontal_bounds.origin.y.0 + horizontal_bounds.size.height.0
+                    <= stack_bounds.origin.y.0 + stack_bounds.size.height.0 + 0.5,
+            "expected horizontal scrollbar to sit inside the root bottom edge: stack={stack_bounds:?} horizontal={horizontal_bounds:?}"
+        );
+        assert!(
+            corner_bounds.origin.x.0 >= stack_bounds.origin.x.0 + stack_bounds.size.width.0 - 10.5
+                && corner_bounds.origin.y.0
+                    >= stack_bounds.origin.y.0 + stack_bounds.size.height.0 - 10.5
+                && corner_bounds.origin.x.0 + corner_bounds.size.width.0
+                    <= stack_bounds.origin.x.0 + stack_bounds.size.width.0 + 0.5
+                && corner_bounds.origin.y.0 + corner_bounds.size.height.0
+                    <= stack_bounds.origin.y.0 + stack_bounds.size.height.0 + 0.5,
+            "expected corner to sit inside the root bottom trailing edge: stack={stack_bounds:?} corner={corner_bounds:?}"
+        );
         let baseline = ui
             .debug_hit_test(point_in_content(stack_bounds))
             .hit

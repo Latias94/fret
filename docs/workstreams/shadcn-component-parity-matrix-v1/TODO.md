@@ -125,3 +125,7 @@ date: 2026-05-26
       seed covering current shadcn docs/source refs, radio-group upstream goldens, primitive
       roving selection, recipe item chrome, invalid/disabled/focus-visible states, Gallery docs
       ordering, dropdown-menu radio composition, RTL follow-up, and text/paint evidence.
+- [x] SCPM-440: Promote Scroll Area from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, vertical/horizontal scroll-area upstream
+      goldens, runtime and primitive scroll behavior, recipe focus/visibility/drag/overflow
+      gates, Gallery docs ordering, RTL follow-up, and text/paint evidence.

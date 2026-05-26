@@ -1,7 +1,7 @@
 ---
 title: Shadcn Component Harness Matrix v1
 status: active
-date: 2026-05-26
+date: 2026-05-27
 ---
 
 # Shadcn Component Harness Matrix v1
@@ -39,35 +39,35 @@ State-depth legend:
 ```json
 {
   "axis_component_counts": {
-    "fret_bundle_semantics": 43,
-    "fret_layout": 43,
-    "fret_text_paint": 23,
-    "interaction_script": 43,
+    "fret_bundle_semantics": 44,
+    "fret_layout": 44,
+    "fret_text_paint": 24,
+    "interaction_script": 44,
     "responsive_viewport": 9,
-    "source_refs": 43,
-    "upstream_dom_snapshot": 43
+    "source_refs": 44,
+    "upstream_dom_snapshot": 44
   },
   "component_count": 59,
   "non_registry_surface_count": 5,
   "registry_component_count": 54,
   "state_depth_component_counts": {
     "disabled": 17,
-    "drag": 3,
-    "focus_visible": 14,
-    "hover": 12,
-    "keyboard": 26,
+    "drag": 4,
+    "focus_visible": 15,
+    "hover": 13,
+    "keyboard": 27,
     "mobile": 14,
     "open": 25,
-    "paint_token": 41,
+    "paint_token": 42,
     "pressed": 1,
-    "rtl": 23,
-    "text_metrics": 23
+    "rtl": 24,
+    "text_metrics": 24
   },
   "status_counts": {
     "harness_hardening": 1,
-    "inventory_only": 11,
+    "inventory_only": 10,
     "not_in_harness": 5,
-    "regression_locked": 42
+    "regression_locked": 43
   }
 }
 ```
@@ -117,7 +117,7 @@ State-depth legend:
 | progress | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | RTL, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | radio-group | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | resizable | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | DRAG, KEY, RTL, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
-| scroll-area | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
+| scroll-area | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV | HOV, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | state_depth_model_satisfied |
 | select | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV | OPEN, KEY, MOB, PAINT | ok | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |
 | separator | registry | Present | inventory_only | - | - | - | 0 | 0 | repair=0, hardening=0, gate=0 | add_upstream_source_refs |
 | sheet | registry | Present | regression_locked | SRC, UP-DOM, LAYOUT, SEM, BEHAV, RESP | DIS, HOV, FOCUS-VIS, OPEN, MOB, PAINT | KEY | 1 | 1 | repair=0, hardening=0, gate=0 | add_text_paint_or_paint_snapshot_gate |

@@ -65,6 +65,7 @@
       "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json | Out-Null",
       "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/label_agent_packet_p0_v1.json | Out-Null",
       "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/radio_group_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/scroll_area_agent_packet_p0_v1.json | Out-Null",
       "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/pagination_agent_packet_p0_v1.json | Out-Null",
       "python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-text-non-overlap.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-button-click-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-label-click-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-addon-after-control-tab-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json | Out-Null",
       "python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-rows-per-page-select-open-screenshot-zinc-light.json | Out-Null",
@@ -77,6 +78,7 @@
       "Get-ChildItem -Path tools/diag-scripts/ui-gallery/kbd -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
       "Get-ChildItem -Path tools/diag-scripts/ui-gallery/label -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
       "Get-ChildItem -Path tools/diag-scripts/ui-gallery/radio-group -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "Get-ChildItem -Path tools/diag-scripts/ui-gallery/scroll-area -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
       "python -m json.tool tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-initial-bundle.json | Out-Null",
       "python -m json.tool tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-keyboard-shift-arrow-nudges.json | Out-Null",
       "python -m json.tool tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-handle-line-screenshots-zinc-light-dark.json | Out-Null",
@@ -1033,6 +1035,38 @@
       "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail radio_group"
     },
     {
+      "name": "scroll-area-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/scroll_area_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "scroll-area-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/scroll-area -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "scroll-area-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail scroll_area"
+    },
+    {
+      "name": "scroll-area-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_scroll_geometry_matches_web_fixtures"
+    },
+    {
+      "name": "scroll-area-web-scroll-metadata",
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_scroll --status-level fail"
+    },
+    {
+      "name": "scroll-area-radix-scroll-delta",
+      "command": "cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail radix_web_scroll_area_scroll_top_delta_matches_fret"
+    },
+    {
+      "name": "scroll-area-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test scroll_area_docs_surface --status-level fail"
+    },
+    {
+      "name": "scroll-area-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail scroll_area"
+    },
+    {
       "name": "field-packet-json",
       "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/field_agent_packet_p0_v1.json | Out-Null"
     },
@@ -1267,6 +1301,7 @@
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/label_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/radio_group_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/scroll_area_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/pagination_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/date_picker_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/resizable_agent_packet_p0_v1.json",
@@ -1280,6 +1315,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Progress, badge, breadcrumb.docs-path.desktop-mobile, card.docs-path.desktop, checkbox.docs-path.desktop, collapsible.docs-path.desktop, command.docs-path.desktop-overlay, empty.docs-path.desktop, field.docs-path.desktop-responsive, form.docs-path.desktop, input-group.docs-path.desktop, item.docs-path.desktop, kbd.docs-path.desktop, label.docs-path.desktop, radio-group.docs-path.desktop, pagination.docs-path.desktop, button, accordion, alert, alert-dialog, aspect-ratio.docs-demo.desktop, avatar.docs-demo.desktop, date-picker.docs-family.desktop-mobile, and resizable.docs-path.desktop are promoted from inventory_only to regression_locked. Sidebar is promoted from inventory_only to harness_hardening with repair=0, hardening=1, and gate=1; the focus-visible ring, href polymorphism, wasm desktop open cookie persistence, SidebarRail directional cursor state, and action/badge peer size-state slices are covered, but do not treat Sidebar as regression_locked until the residual React API-shape / peer/group/data-* class-state matrix is closed or explicitly split. Continue by hardening that Sidebar lane or auditing the next inventory_only row with source refs, upstream snapshot/golden, Fret diagnostics evidence, behavior script, and packet checks. Current matrix totals are 42 regression_locked, 1 harness_hardening, 11 inventory_only, and 5 not_in_harness. Do not use HTML tree equality as proof; compare self-rendered outcomes."
+    "notes": "Progress, badge, breadcrumb.docs-path.desktop-mobile, card.docs-path.desktop, checkbox.docs-path.desktop, collapsible.docs-path.desktop, command.docs-path.desktop-overlay, empty.docs-path.desktop, field.docs-path.desktop-responsive, form.docs-path.desktop, input-group.docs-path.desktop, item.docs-path.desktop, kbd.docs-path.desktop, label.docs-path.desktop, radio-group.docs-path.desktop, scroll-area.docs-path.desktop, pagination.docs-path.desktop, button, accordion, alert, alert-dialog, aspect-ratio.docs-demo.desktop, avatar.docs-demo.desktop, date-picker.docs-family.desktop-mobile, and resizable.docs-path.desktop are promoted from inventory_only to regression_locked. Sidebar is promoted from inventory_only to harness_hardening with repair=0, hardening=1, and gate=1; the focus-visible ring, href polymorphism, wasm desktop open cookie persistence, SidebarRail directional cursor state, and action/badge peer size-state slices are covered, but do not treat Sidebar as regression_locked until the residual React API-shape / peer/group/data-* class-state matrix is closed or explicitly split. Continue by hardening that Sidebar lane or auditing the next inventory_only row with source refs, upstream snapshot/golden, Fret diagnostics evidence, behavior script, and packet checks. Current matrix totals are 43 regression_locked, 1 harness_hardening, 10 inventory_only, and 5 not_in_harness. Do not use HTML tree equality as proof; compare self-rendered outcomes."
   }
 }

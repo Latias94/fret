@@ -18,6 +18,10 @@ fn canonicalize_rust_fragment(fragment: &str) -> String {
     }
 }
 
+fn display_path_key(path: &std::path::Path) -> String {
+    path.display().to_string().replace('\\', "/")
+}
+
 fn assert_curated_default_app_paths(
     relative_paths: &[&str],
     expected_patterns: &[&str],
@@ -6271,25 +6275,28 @@ fn scroll_area_app_facing_snippet_lane_has_no_raw_boundaries() {
 #[test]
 fn scroll_area_diagnostics_lane_keeps_intentional_raw_boundaries() {
     let expected_raw_roots = BTreeSet::from([
-        manifest_path("src/ui/diagnostics/scroll_area/drag_baseline.rs")
-            .display()
-            .to_string(),
-        manifest_path("src/ui/diagnostics/scroll_area/expand_at_bottom.rs")
-            .display()
-            .to_string(),
+        display_path_key(&manifest_path(
+            "src/ui/diagnostics/scroll_area/drag_baseline.rs",
+        )),
+        display_path_key(&manifest_path(
+            "src/ui/diagnostics/scroll_area/expand_at_bottom.rs",
+        )),
     ]);
     let mut actual_raw_roots = BTreeSet::new();
 
     for path in rust_sources("src/ui/diagnostics/scroll_area") {
         let source = read_path(&path);
         let normalized = source.split_whitespace().collect::<String>();
-        let is_raw_render_root = normalized
-            .contains("pubfnrender<H:UiHost+'static>(cx:&mutElementContext<'_,H>)->AnyElement");
+        let is_raw_render_root = source.contains("Intentional diagnostics raw boundary:")
+            && normalized.starts_with("pubconstSOURCE")
+            && normalized.contains("pubfnrender<H:UiHost+'static>(")
+            && normalized.contains("cx:&mutElementContext<'_,H>")
+            && normalized.contains(")->AnyElement");
         if !is_raw_render_root {
             continue;
         }
 
-        actual_raw_roots.insert(path.display().to_string());
+        actual_raw_roots.insert(display_path_key(&path));
         assert!(
             source.contains("Intentional diagnostics raw boundary:"),
             "{} should explain why the diagnostics harness stays raw",
