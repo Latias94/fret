@@ -149,3 +149,9 @@ date: 2026-05-26
       covering current shadcn docs/source refs, toggle-* upstream goldens, recipe chrome and
       pressed/disabled/hover/focus-visible/keyboard behavior, Gallery docs ordering, split Small/
       Large examples, diagnostics JSON, RTL/Children/Label follow-ups, and text/paint evidence.
+- [x] SCPM-500: Promote Toggle Group from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, toggle-group-* upstream goldens, primitive
+      single/multiple selection and roving focus, recipe segmented chrome and spacing, disabled/
+      hover/focus-visible/pressed/keyboard behavior, Gallery docs ordering, split Single/Small/
+      Large examples, diagnostics JSON, Radix state proof, RTL/Children/Label follow-ups, and
+      text/paint evidence.

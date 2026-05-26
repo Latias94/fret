@@ -10218,19 +10218,6 @@ fn selected_button_group_snippet_helpers_prefer_into_ui_element_over_anyelement(
 }
 
 #[test]
-fn selected_toggle_group_snippet_helpers_prefer_into_ui_element_over_anyelement() {
-    assert_selected_generic_helpers_prefer_into_ui_element(
-        "src/ui/snippets/toggle_group/size.rs",
-        &[
-            "fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, size: shadcn::ToggleSize,) -> impl IntoUiElement<H> + use<H>",
-        ],
-        &[
-            "fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, size: shadcn::ToggleSize) -> AnyElement",
-        ],
-    );
-}
-
-#[test]
 fn toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -10246,7 +10233,6 @@ fn toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/toggle_group/outline.rs",
             "src/ui/snippets/toggle_group/rtl.rs",
             "src/ui/snippets/toggle_group/single.rs",
-            "src/ui/snippets/toggle_group/size.rs",
             "src/ui/snippets/toggle_group/small.rs",
             "src/ui/snippets/toggle_group/spacing.rs",
             "src/ui/snippets/toggle_group/usage.rs",
@@ -10273,7 +10259,6 @@ fn toggle_group_snippet_item_text_uses_button_label_role() {
         "src/ui/snippets/toggle_group/flex_1_items.rs",
         "src/ui/snippets/toggle_group/full_width_items.rs",
         "src/ui/snippets/toggle_group/label.rs",
-        "src/ui/snippets/toggle_group/outline.rs",
         "src/ui/snippets/toggle_group/rtl.rs",
         "src/ui/snippets/toggle_group/spacing.rs",
         "src/ui/snippets/toggle_group/usage.rs",
@@ -10299,35 +10284,51 @@ fn toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/toggle_group.rs",
         &[
-            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Spacing\", spacing)",
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Outline\", outline)",
-            "DocSection::build(cx, \"Size\", size)",
-            "DocSection::build(cx, \"Spacing\", spacing)",
-            "DocSection::build(cx, \"Vertical\", vertical)",
+            "DocSection::build(cx, \"Single\", single)",
+            "DocSection::build(cx, \"Small\", small)",
+            "DocSection::build(cx, \"Large\", large)",
             "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Demo (Fret)\", demo)",
+            "DocSection::build(cx, \"Vertical (Base/Radix)\", vertical)",
             "DocSection::build(cx, \"Disabled Item Action-State (Fret)\", disabled_item_action_state)",
-            "DocSection::build(cx, \"Custom\", custom)",
-            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Custom (Fret)\", custom)",
+            "DocSection::build(cx, \"RTL (Fret)\", rtl)",
             "DocSection::build(cx, \"Children (Fret)\", children)",
-            "DocSection::build(cx, \"Single (Fret)\", single)",
-            "DocSection::build(cx, \"Small (Fret)\", small)",
-            "DocSection::build(cx, \"Large (Fret)\", large)",
             "DocSection::build(cx, \"Label Association (Fret)\", label)",
             "DocSection::build(cx, \"Full Width Items (Fret)\", full_width_items)",
             "DocSection::build(cx, \"Flex-1 Items (Fret)\", stretch)",
         ],
         &[
+            "DocSection::build(cx, \"Size\", size)",
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Vertical\", vertical)",
+            "DocSection::build(cx, \"Custom\", custom)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Single (Fret)\", single)",
+            "DocSection::build(cx, \"Small (Fret)\", small)",
+            "DocSection::build(cx, \"Large (Fret)\", large)",
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Outline\", outline)",
             "DocSection::new(\"Size\", size)",
             "DocSection::new(\"Spacing\", spacing)",
-            "DocSection::new(\"Vertical\", vertical)",
+            "DocSection::new(\"Single\", single)",
+            "DocSection::new(\"Small\", small)",
+            "DocSection::new(\"Large\", large)",
             "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Demo (Fret)\", demo)",
+            "DocSection::new(\"Vertical\", vertical)",
+            "DocSection::new(\"Vertical (Base/Radix)\", vertical)",
             "DocSection::new(\"Disabled Item Action-State (Fret)\", disabled_item_action_state)",
             "DocSection::new(\"Custom\", custom)",
+            "DocSection::new(\"Custom (Fret)\", custom)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"RTL (Fret)\", rtl)",
             "DocSection::new(\"Children (Fret)\", children)",
             "DocSection::new(\"Single (Fret)\", single)",
             "DocSection::new(\"Small (Fret)\", small)",

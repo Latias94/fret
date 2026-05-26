@@ -1053,3 +1053,35 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Toggle `DIS`, `HOV`, `FOCUS-VIS`, `PRESS`, `KEY`, `RTL`,
   `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M43 - Promote Toggle Group
+
+Status: complete on 2026-05-27.
+
+`toggle-group.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Toggle Group docs path, new-york-v4 source/examples, base/radix
+references, toggle-group-* upstream goldens, primitive and recipe semantics/chrome tests,
+web-vs-Fret toggle and control-chrome gates, Radix primitive state proof, Gallery docs-surface
+checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Toggle Group docs path, new-york-v4 recipe/examples,
+  base/radix recipe and example references, the tracked toggle-group upstream goldens, and the
+  Radix click-state golden.
+- The Toggle Group packet records the owner split: `fret-ui-kit` owns single/multiple selection,
+  roving focus, disabled item skip, and keyboard navigation; `fret-ui-shadcn` owns segmented item
+  chrome, gap/spacing, item padding, size presets, disabled behavior, hover/focus-visible paint,
+  pressed-state tokens, text metrics, and paint token output; Gallery owns current docs ordering
+  plus Fret/base-radix follow-ups.
+- The Gallery page now follows current upstream docs through `Spacing`, `Usage`, `Outline`,
+  `Single`, `Small`, `Large`, `Disabled`, and `API Reference`, then appends `Demo (Fret)`,
+  `Vertical (Base/Radix)`, `Custom (Fret)`, `RTL (Fret)`, `Children (Fret)`,
+  `Label Association (Fret)`, `Disabled Item Action-State (Fret)`, `Full Width Items (Fret)`,
+  `Flex-1 Items (Fret)`, and `Notes`.
+- `toggle_group_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs
+  with zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 49 `regression_locked`, 1 `harness_hardening`, 4
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Toggle Group `DIS`, `HOV`, `FOCUS-VIS`, `PRESS`, `KEY`, `RTL`,
+  `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.

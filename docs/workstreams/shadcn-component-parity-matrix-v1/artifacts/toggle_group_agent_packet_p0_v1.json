@@ -1,0 +1,304 @@
+{
+  "schema_version": 1,
+  "component": "toggle-group",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-27",
+  "generated_by": "manual toggle-group docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-kit/src/primitives/toggle_group.rs + ecosystem/fret-ui-shadcn/src/toggle_group.rs + ecosystem/fret-ui-shadcn/tests/{web_vs_fret_toggle.rs,web_vs_fret_control_chrome.rs,snapshots.rs,radix_web_primitives_state.rs} + apps/fret-ui-gallery/src/ui/pages/toggle_group.rs + apps/fret-ui-gallery/src/ui/snippets/toggle_group/*.rs + apps/fret-ui-gallery/tests/{toggle_group_docs_surface.rs,ui_authoring_surface_default_app.rs} + tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-docs-smoke.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_group_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Toggle Group component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-docs-smoke.json | Out-Null",
+      "status": "pass",
+      "scope": "Toggle Group docs-smoke diagnostic covers current docs-path Spacing, Usage, Outline, Single, Small, Large, Disabled, API Reference anchors and focused Fret/base-radix follow-ups."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail toggle_group",
+      "status": "pass",
+      "scope": "Toggle Group primitive and recipe tests cover single/multiple state, uncontrolled defaults, disabled item skip, roving focus keyboard behavior, foreground inheritance, text role preservation, root w-fit/spacing ownership, vertical stretch, item refinements, and test-id derivation."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_toggle --status-level fail toggle_group",
+      "status": "pass",
+      "scope": "Toggle Group web-vs-Fret gates compare current disabled, large, outline, single, small, and spacing examples against new-york-v4 goldens."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail toggle_group",
+      "status": "pass",
+      "scope": "Toggle Group chrome gate keeps grouped border/radius/spacing paint aligned with the upstream demo golden."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_toggle_group_pressed_semantics",
+      "status": "pass",
+      "scope": "Snapshot gate keeps pressed semantics and text paint output observable for toggle-group items."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail toggle_group",
+      "status": "pass",
+      "scope": "Radix web primitive state gate keeps click-selected multiple-mode pressed state aligned with Fret."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test toggle_group_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery docs-surface tests keep current shadcn Toggle Group docs ordering, split Single/Small/Large examples, source-axis wording, public-surface decision, copyable snippets, and diagnostic anchors aligned."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail toggle_group",
+      "status": "pass",
+      "scope": "Gallery authoring tests keep Toggle Group snippets on the default app surface, preserve button-label text roles, and prevent stale aggregate Size section references."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.toggle-group.spacing.light.vp1440x900",
+      "snapshot": "toggle-group-spacing",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-top-spacing-preview",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.toggle-group.sizes.light.vp1440x900",
+      "snapshot": "toggle-group-sm + toggle-group-lg",
+      "theme": "light",
+      "mode": "static",
+      "variant": "size geometry",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "radix.toggle-group.select-second.light.vp1440x900",
+      "snapshot": "toggle-group-example.toggle-group.select-second.light",
+      "theme": "light",
+      "mode": "click selected item",
+      "variant": "primitive pressed state",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": [
+    {
+      "id": "fret.toggle-group.primitive",
+      "layer": "policy",
+      "owner": "fret-ui-kit",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/primitives/toggle_group.rs",
+        "ecosystem/fret-ui-shadcn/src/toggle_group.rs"
+      ]
+    },
+    {
+      "id": "fret.toggle-group.recipe",
+      "layer": "recipe",
+      "owner": "fret-ui-shadcn",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/toggle_group.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_toggle.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "ecosystem/fret-ui-shadcn/tests/snapshots.rs",
+        "ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs"
+      ]
+    },
+    {
+      "id": "fret.toggle-group.gallery",
+      "layer": "app_demo",
+      "owner": "fret-ui-gallery",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/toggle_group.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle_group/*.rs",
+        "apps/fret-ui-gallery/tests/toggle_group_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+      ]
+    },
+    {
+      "id": "fret.toggle-group.diagnostics",
+      "layer": "runner",
+      "owner": "diagnostics_surface",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-docs-smoke.json"
+      ]
+    }
+  ],
+  "summary": {
+    "status_counts": {
+      "regression_locked": 1
+    },
+    "covered_axes": [
+      "source_refs",
+      "upstream_dom_snapshot",
+      "fret_layout",
+      "fret_bundle_semantics",
+      "fret_text_paint",
+      "interaction_script"
+    ],
+    "state_depth": [
+      "disabled",
+      "hover",
+      "focus_visible",
+      "pressed",
+      "keyboard",
+      "rtl",
+      "text_metrics",
+      "paint_token"
+    ],
+    "layout_sidecar_count": 6,
+    "bundle_schema2_count": 5,
+    "layout_test_id_count": 8,
+    "bundle_semantics_test_id_count": 8,
+    "measured_test_id_count": 8,
+    "upstream_dom_snapshot_count": 7,
+    "upstream_dom_target_count": 7,
+    "upstream_context_count": 3,
+    "upstream_dom_context_count": 7,
+    "upstream_live_fact_count": 6,
+    "upstream_semantics_fact_count": 4,
+    "upstream_interaction_fact_count": 4,
+    "fret_live_fact_count": 14,
+    "fret_semantics_fact_count": 7,
+    "fret_interaction_fact_count": 6,
+    "fret_text_paint_fact_count": 5,
+    "fret_text_paint_direct_fact_count": 3,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 5,
+    "fret_text_paint_row_count": 3,
+    "fret_text_paint_association_row_count": 2,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 3,
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0
+  },
+  "live_facts": {
+    "owner_split": [
+      "The kit primitive owns single and multiple selection, roving focus, disabled item skip, and keyboard arrow/Home/End navigation for Toggle Group.",
+      "The shadcn recipe owns the segmented item chrome, gap/spacing, item padding, size presets, disabled behavior, hover paint, focus-visible z/ring behavior, pressed state foreground/background tokens, text metrics, and paint token output.",
+      "Gallery owns the current docs-path teaching order, split Single/Small/Large examples, RTL/Children/Label/Disabled Item Action-State follow-ups, and stable ui-gallery-toggle-group-* diagnostics anchors."
+    ],
+    "source_truth": [
+      "Current main-worktree repo-ref truth uses repo-ref/ui/apps/v4/content/docs/components/toggle-group.mdx with top ComponentPreview toggle-group-spacing, then Usage, Outline, Single, Small, Large, Disabled, Spacing, and API Reference.",
+      "Current new-york-v4 Toggle Group source keeps flex w-fit root layout, gap from spacing, rounded-md root, context-driven size/variant/spacing, w-auto min-w-0 shrink-0 item sizing, px-3 item padding, focus z-index, and segmented zero-spacing border/radius rules.",
+      "Current new-york-v4 examples cover spacing icon-plus-label outline small multiple group, outline icon group, single icon group, small icon group, large multiple icon group, and disabled multiple icon group.",
+      "Base/radix registry examples remain secondary references for vertical orientation, richer compositions, and primitive behavior, while Radix web state goldens lock selected item pressed state."
+    ],
+    "regression_gates": [
+      "Toggle Group primitive and recipe tests keep disabled suppression, roving focus, single/multiple state changes, text role preservation, root sizing, segmented borders, vertical stretch, item refinements, and test-id derivation stable.",
+      "web_vs_fret_toggle compares disabled, large, outline, single, small, and spacing docs examples against upstream new-york-v4 goldens.",
+      "web_vs_fret_control_chrome keeps toggle-group demo chrome aligned with upstream border, radius, and paint output.",
+      "radix_web_primitives_state keeps click-selected multiple-mode pressed state aligned with the Radix primitive reference.",
+      "toggle_group_docs_surface keeps current source-axis wording, docs order, split Single/Small/Large sections, copyable snippets, Fret/base-radix follow-ups, and diagnostics anchors stable.",
+      "Toggle Group diagnostics cover current docs-path anchors through Spacing, Usage, Outline, Single, Small, Large, Disabled, API Reference, and Fret/base-radix follow-ups."
+    ]
+  },
+  "parts": [
+    {
+      "part_id": "toggle_group_primitive_state_and_roving_focus",
+      "status": "pass_known",
+      "owner": "component_policy",
+      "layer": "policy",
+      "evidence_refs": [
+        "ecosystem/fret-ui-kit/src/primitives/toggle_group.rs",
+        "ecosystem/fret-ui-shadcn/src/toggle_group.rs",
+        "ecosystem/fret-ui-shadcn/tests/radix_web_primitives_state.rs"
+      ],
+      "facts": [
+        "ToggleGroup::single(...) and ToggleGroup::multiple(...) render composite toggle controls with selected/pressed item semantics.",
+        "Keyboard arrows move roving focus without changing value, disabled items are skipped, and selected item checked_state stays observable.",
+        "Radix web primitive state proof covers click-selection for multiple-mode pressed state."
+      ]
+    },
+    {
+      "part_id": "toggle_group_recipe_layout_and_chrome",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/toggle_group.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_toggle.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "ecosystem/fret-ui-shadcn/tests/snapshots.rs",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-group-demo.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-group-outline.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-group-single.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-group-sm.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-group-lg.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-group-disabled.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-group-spacing.json"
+      ],
+      "facts": [
+        "Web-golden layout gates cover disabled, large, outline, single, small, and spacing docs examples.",
+        "Chrome gates cover grouped item borders, radii, spacing, pressed state, focus-visible, hover, disabled, and paint token output.",
+        "Size gates keep Single, Small, and Large examples separate instead of hiding them inside an aggregate Size section."
+      ]
+    },
+    {
+      "part_id": "toggle_group_gallery_docs_surface",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/toggle_group.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle_group/*.rs",
+        "apps/fret-ui-gallery/tests/toggle_group_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+        "tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-docs-smoke.json"
+      ],
+      "facts": [
+        "Gallery mirrors the current upstream docs path through Spacing, Usage, Outline, Single, Small, Large, Disabled, and API Reference before Fret/base-radix follow-ups.",
+        "The Spacing snippet maps the current top ComponentPreview and keeps icon-plus-label text on button-label roles.",
+        "The Disabled snippet uses a multiple disabled group like the current upstream example.",
+        "Children (Fret) and Label Association stay explicit follow-ups because upstream docs do not require an additional root children or compose API for the default Toggle Group lane."
+      ]
+    },
+    {
+      "part_id": "toggle_group_packet_and_matrix_closure",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_group_agent_packet_p0_v1.json",
+        "tools/parity-discovery/shadcn_component_harness_matrix.py",
+        "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json"
+      ],
+      "facts": [
+        "The packet has zero repair, hardening, and gate queues.",
+        "The manifest target ties current source refs, upstream snapshots, Fret tests, diagnostics scripts, and the packet together.",
+        "The Toggle Group state depth covers disabled, hover, focus-visible, pressed, keyboard, RTL, text metrics, and paint token evidence."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Toggle Group docs-path slice with current main-worktree repo-ref source refs, toggle-group-* upstream goldens, primitive/recipe semantics and chrome tests, web-vs-Fret toggle/control-chrome gates, Radix primitive state proof, Gallery docs-surface checks, diagnostics JSON, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "toggle-group.docs-path.desktop",
+        "component": "toggle-group",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_group_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

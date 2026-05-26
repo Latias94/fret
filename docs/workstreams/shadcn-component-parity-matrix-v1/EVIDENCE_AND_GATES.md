@@ -2052,3 +2052,38 @@ screenshots.
 - Toggle row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
   `DIS, HOV, FOCUS-VIS, PRESS, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
   `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Toggle Group regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_group_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- `python -m json.tool tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-docs-smoke.json | Out-Null`:
+  PASS.
+- `python -m json.tool` checks for the coverage manifest, `WORKSTREAM.json`, and generated matrix
+  JSON: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail toggle_group`: PASS, 13 tests
+  passed and 1291 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_toggle --status-level fail toggle_group`:
+  PASS, 6 tests passed and 6 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail toggle_group`:
+  PASS, 1 test passed and 75 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_toggle_group_pressed_semantics`:
+  PASS, 1 test passed and 31 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail toggle_group`:
+  PASS, 1 test passed and 41 skipped.
+- `cargo nextest run -p fret-ui-gallery --test toggle_group_docs_surface --status-level fail`:
+  PASS, 3 tests passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail toggle_group`:
+  PASS, 4 tests passed and 373 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python tools/check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files indexed.
+- Matrix summary: 49 `regression_locked`, 1 `harness_hardening`, 4 `inventory_only`, and 5
+  `not_in_harness`.
+- Toggle Group row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
+  depth `DIS, HOV, FOCUS-VIS, PRESS, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.

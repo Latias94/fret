@@ -5,7 +5,7 @@ use fret::{AppComponentCx, UiChild};
 use fret_ui_shadcn::{facade as shadcn, prelude::*};
 
 pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
-    shadcn::ToggleGroup::single_uncontrolled(Option::<&'static str>::None)
+    shadcn::ToggleGroup::multiple_uncontrolled(std::iter::empty::<&'static str>())
         .disabled(true)
         .items([
             shadcn::ToggleGroupItem::icon("bold", IconId::new_static("lucide.bold"))
