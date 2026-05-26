@@ -504,6 +504,11 @@ Readiness order for the next locally testable review slices:
    2026-05-26 debug-draw options owner split: public debug draw options/style/vertex types now
    live in `debug_draw_controls/options.rs`. The root `debug_draw_controls.rs` re-exports them and
    keeps draw-list state plus helper orchestration.
+   2026-05-27 debug-draw options sub-owner split: `debug_draw_controls/options.rs` is now a thin
+   re-export index; `options/root.rs` owns root/interaction canvas options, `options/stroke.rs`
+   owns stroke style and path-style conversion, `options/round_corners.rs` owns rounded-corner
+   flags, `options/media.rs` owns image/svg option bags, and `options/vertex.rs` owns mesh
+   vertices.
    2026-05-14 editor drag-value follow-up: `DragValueCoreResponse` now keeps drag/hover/press/focus
    storage private and no longer exposes external default construction. `DragValueCore` still owns
    response construction, while editor controls read visual state through `dragging()`, `hovered()`,

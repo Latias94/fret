@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 debug-draw options sub-owner split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options.rs` is now a thin module/re-export
+index. Root canvas and interaction options live in `options/root.rs`, stroke style/path conversion
+lives in `options/stroke.rs`, rounded-corner flags live in `options/round_corners.rs`, image/svg
+option bags live in `options/media.rs`, and mesh vertices live in `options/vertex.rs`. The public
+debug draw API and root `debug_draw_controls` re-export surface remain unchanged.
+
 2026-05-26 button visual owner-split result:
 `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` now owns button variant layout,
 accessibility labels, arrow glyph/label mapping, and visual chrome/content assembly.

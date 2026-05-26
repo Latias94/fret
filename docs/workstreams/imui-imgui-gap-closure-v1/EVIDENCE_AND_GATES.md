@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Debug-Draw Options Sub-Owner Split Evidence - 2026-05-27
+
+Claim verified: public debug draw root/interaction options, stroke/path-style policy,
+rounded-corner flags, media option bags, and mesh vertex helpers moved behind private option
+sub-owners without changing public re-export names, draw-list command behavior, path-style
+conversion, image/svg options, or mesh vertex conversion.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options.rs` is now a thin module/re-export
+  index.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/root.rs` owns `DebugDrawOptions` and
+  `DebugDrawInteractionOptions`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/stroke.rs` owns
+  `DebugDrawStrokeStyle`, including dash/miter validation and crate-local `path_style()`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/round_corners.rs` owns
+  `DebugDrawRoundCorners` constants and bitwise composition.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/media.rs` owns image, image-quad,
+  image-mesh, and SVG option bags.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/vertex.rs` owns `DebugDrawVertex`
+  and crate-local scene vertex conversion.
+- `tools/gate_imui_workstream_source.py` now requires the option index/sub-owner shape and rejects
+  these public option/style/vertex type bodies from drifting back into the index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests
+  --no-fail-fast`: pass; 38 tests, 651 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke
+  --no-fail-fast`: pass; 1 test.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Control Chrome Layout Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI shared control chrome row/stack layout helper props moved into a private
