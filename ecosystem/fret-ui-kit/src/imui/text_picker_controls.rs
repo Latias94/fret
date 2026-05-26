@@ -11,9 +11,13 @@ use super::{
     UiWriterImUiFacadeExt,
 };
 
+mod candidates;
 mod keyboard;
 
-use keyboard::{InputTextPickerKeyboardState, install_picker_keyboard_handler};
+use candidates::resolve_text_picker_candidates;
+use keyboard::{
+    InputTextPickerKeyboardState, install_picker_keyboard_handler, reconcile_picker_keyboard_state,
+};
 
 pub(super) fn input_text_completion_model_with_options<
     H: UiHost,
@@ -72,14 +76,11 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         input_options.a11y_role = Some(SemanticsRole::ComboBox);
     }
 
-    let visible_candidates = visible_candidates(&current, candidates, &options);
-    let hide_for_exact_match = options.hide_when_exact_match
-        && candidates
-            .iter()
-            .any(|candidate| candidate.as_ref() == current.as_str());
+    let candidate_visibility = resolve_text_picker_candidates(&current, candidates, &options);
+    let visible_candidates = candidate_visibility.visible_candidates;
+    let hide_for_exact_match = candidate_visibility.hide_for_exact_match;
     let popup_open = ui.popup_open_model(id);
-    let picker_candidate_visible =
-        !visible_candidates.is_empty() && (options.open_when_empty || !current.is_empty());
+    let picker_candidate_visible = candidate_visibility.picker_candidate_visible;
     let input_enabled_by_scope =
         ui.with_cx_mut(|cx| options.input.enabled && !super::imui_is_disabled(cx));
     let keyboard_state = options.keyboard_navigation.then(|| {
@@ -103,30 +104,21 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         .as_ref()
         .and_then(|state| {
             ui.with_cx_mut(|cx| {
-                cx.app
-                    .models_mut()
-                    .update(state, |state| {
-                        let picked = state.picked.take();
-                        if !input_enabled_by_scope
-                            || visible_candidates.is_empty()
-                            || hide_for_exact_match
-                        {
-                            state.active_source_index = None;
-                            state.active_element = None;
-                        } else if let Some(active) = state.active_source_index
-                            && !visible_candidates
-                                .iter()
-                                .any(|(source_index, _)| *source_index == active)
-                        {
-                            state.active_source_index = None;
-                            state.active_element = None;
-                        } else if state.active_source_index.is_none() {
-                            state.active_element = None;
-                        }
-                        (state.active_source_index, picked, state.active_element)
-                    })
-                    .ok()
+                reconcile_picker_keyboard_state(
+                    cx,
+                    state,
+                    input_enabled_by_scope,
+                    &visible_candidates,
+                    hide_for_exact_match,
+                )
             })
+        })
+        .map(|snapshot| {
+            (
+                snapshot.active_source_index,
+                snapshot.pending_pick,
+                snapshot.active_element,
+            )
         })
         .unwrap_or((None, None, None));
     let picker_expanded = popup_is_open
@@ -299,18 +291,4 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         picked_index,
         picked,
     }
-}
-
-fn visible_candidates(
-    current: &str,
-    candidates: &[Arc<str>],
-    options: &InputTextPickerOptions,
-) -> Vec<(usize, Arc<str>)> {
-    candidates
-        .iter()
-        .enumerate()
-        .filter(|(_, candidate)| options.filter.matches(current, candidate.as_ref()))
-        .take(options.max_items)
-        .map(|(index, candidate)| (index, candidate.clone()))
-        .collect()
 }

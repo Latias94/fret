@@ -26,6 +26,13 @@ Last updated: 2026-05-26
       layout, a11y label construction, arrow labels/glyphs, and chrome/content assembly, while
       `button_controls.rs` keeps pressable behavior, shortcut handling, action dispatch, and
       response population.
+- [x] Split IMUI input-text picker candidate visibility and keyboard state reconciliation out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into private owner modules without
+      changing the public IMUI surface.
+      Result: `text_picker_controls/candidates.rs` owns filter/max-item/exact-match/open-empty
+      visibility decisions, and `text_picker_controls/keyboard.rs` owns active-source cleanup plus
+      pending keyboard pick extraction. The root file keeps input/popup composition and response
+      merging.
 
 ## P0 - Source Baseline
 

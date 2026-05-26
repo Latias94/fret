@@ -20,6 +20,14 @@ handling, action dispatch, and response population. The public IMUI button APIs 
 The same verification pass repaired the existing DropdownMenuLabel source-policy drift by routing
 that shadcn label through the shared `text_menu_group_label(...)` role.
 
+2026-05-26 text-picker owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/candidates.rs` now owns candidate filtering,
+`max_items`, exact-match hiding, and open-when-empty visibility decisions.
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard.rs` now also owns keyboard active
+source reconciliation and pending keyboard pick extraction. `text_picker_controls.rs` keeps the
+input/popup composition, selectable item rendering, command-free model updates, and response
+merging. The public input-text completion/history APIs remain unchanged.
+
 ## M5 - Worktree Convergence
 
 Exit criteria:

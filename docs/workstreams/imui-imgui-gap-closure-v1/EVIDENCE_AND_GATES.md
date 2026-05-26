@@ -3,6 +3,46 @@
 Status: Active
 Last updated: 2026-05-26
 
+## Text Picker Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI input-text picker candidate visibility and keyboard state reconciliation moved
+out of `text_picker_controls.rs` without changing the public completion/history picker surface.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/candidates.rs` owns candidate filtering,
+  `max_items`, exact-match hiding, and open-when-empty visibility decisions.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard.rs` now also owns active-source
+  cleanup and pending keyboard pick extraction through `reconcile_picker_keyboard_state(...)`.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` keeps input/popup composition,
+  selectable item rendering, model update-on-pick, and `InputTextPickerResponse` merging.
+- `tools/gate_imui_workstream_source.py` now requires the split owners and rejects candidate
+  filtering / keyboard reconciliation from drifting back into the root picker file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass with pre-existing `fret-ui` warnings
+  for `unexpected_cfgs` on `unstable-retained-bridge` and `dead_code` on
+  `current_effective_opacity`.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; validated 445 dedicated directories and 47
+  standalone markdown files.
+- `git diff --check`: pass.
+- `CARGO_TARGET_DIR=target-codex-text-picker cargo nextest run -p fret-imui models_text_picker
+  --no-fail-fast`: pass; 6 tests.
+
+Gate note:
+
+- The first shared-target `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`
+  attempt was interrupted after timeout, leaving an orphan `rustc`. A second shared-target attempt
+  hit MSVC `LNK1120` unresolved externals from the polluted incremental artifact. The same test set
+  passed from the isolated `target-codex-text-picker` target directory.
+
 ## Button Visual Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI button visual/layout/accessibility ownership moved out of
