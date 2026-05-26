@@ -1,0 +1,271 @@
+{
+  "schema_version": 1,
+  "component": "input",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual input docs-demo harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/input.rs + apps/fret-ui-gallery/src/ui/snippets/input/demo.rs + tools/parity-discovery/fixtures/input_parts_v1.json + tools/diag-scripts/ui-gallery/input/ui-gallery-input-demo-relation-action-state.json",
+  "validation_gates": [
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\shadcn-parity\\ui-gallery-shadcn-parity-m3-input-layout.json --dir target\\fret-diag-input-docs-demo-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "UI Gallery Input docs-demo and composed controls capture layout sidecars, screenshot evidence, schema2 bundle, AI packet, and share zip.",
+      "run_id": "1779702733713",
+      "ai_packet": "target/fret-diag-input-docs-demo-matrix/sessions/1779702729363-109672/1779702733713/ai.packet"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\input\\ui-gallery-input-demo-relation-action-state.json --dir target\\fret-diag-input-demo-relation-action-state-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Input docs-demo control exposes text_field role, enabled focus/set_value actions, click focus, value mutation, layout sidecar, schema2 bundle, AI packet, and share zip.",
+      "run_id": "1779703168200",
+      "ai_packet": "target/fret-diag-input-demo-relation-action-state-rerun/sessions/1779703160933-114172/1779703168200/ai.packet"
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib input_control_id_uses --status-level fail",
+      "status": "pass",
+      "scope": "Input::control_id keeps registry-backed labelled_by and described_by semantics on the concrete TextInput node."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.input.demo.light.vp1440x900",
+      "snapshot": "input-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "input-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.input.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-m3-input-layout.json",
+        "sidecar_path": "target/fret-diag-input-docs-demo-matrix/sessions/1779702729363-109672/1779702759151-ui-gallery-shadcn-parity-m3.input-demo.layout/layout.taffy.v1.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-demo-relation-action-state.json",
+        "sidecar_path": "target/fret-diag-input-demo-relation-action-state-rerun/sessions/1779703160933-114172/1779703181871-ui-gallery-input-demo-relation-action-state.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-m3-input-layout.json",
+        "bundle_path": "target/fret-diag-input-docs-demo-matrix/sessions/1779702729363-109672/1779702804635-ui-gallery-shadcn-parity-m3-input-layout/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-demo-relation-action-state.json",
+        "bundle_path": "target/fret-diag-input-demo-relation-action-state-rerun/sessions/1779703160933-114172/1779703181947-ui-gallery-input-demo-relation-action-state/bundle.schema2.json"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-m3-input-layout.json",
+        "ai_packet": "target/fret-diag-input-docs-demo-matrix/sessions/1779702729363-109672/1779702733713/ai.packet",
+        "share_zip": "target/fret-diag-input-docs-demo-matrix/sessions/1779702729363-109672/share/1779702733713.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/input/ui-gallery-input-demo-relation-action-state.json",
+        "ai_packet": "target/fret-diag-input-demo-relation-action-state-rerun/sessions/1779703160933-114172/1779703168200/ai.packet",
+        "share_zip": "target/fret-diag-input-demo-relation-action-state-rerun/sessions/1779703160933-114172/share/1779703168200.zip"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 5,
+    "status_counts": {
+      "pass_known": 5,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 2,
+      "gallery_composition": 1,
+      "mechanism_core": 0,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 2,
+      "app_demo": 1,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 5
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 1,
+      "component_fixture": 1,
+      "unit_test": 1,
+      "none": 2
+    },
+    "layout_sidecar_count": 2,
+    "bundle_schema2_count": 2,
+    "layout_test_id_count": 3,
+    "bundle_semantics_test_id_count": 1,
+    "measured_test_id_count": 313,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 1,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1,
+    "upstream_live_fact_count": 3,
+    "fret_live_fact_count": 8,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 5,
+    "fret_interaction_fact_count": 3,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/input.tsx + repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-demo.tsx + docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/input.rs + apps/fret-ui-gallery/src/ui/snippets/input/demo.rs + tools/diag-scripts/ui-gallery/input/ui-gallery-input-demo-relation-action-state.json",
+    "part_count": 5,
+    "upstream_dom_target_count": 1,
+    "fret_test_id_count": 313,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 5,
+    "fret_interaction_fact_count": 3,
+    "parts": [
+      {
+        "part_id": "input_demo_geometry",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/input_mismatch_report_v1.json",
+          "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json",
+          "target/fret-diag-input-docs-demo-matrix/sessions/1779702729363-109672/1779702759151-ui-gallery-shadcn-parity-m3.input-demo.layout/layout.taffy.v1.json"
+        ],
+        "facts": [
+          "Upstream Input source owns h-9 w-full min-w-0 rounded-md border px-3 py-1.",
+          "The existing parity report observes the Fret docs-demo control at 320x36 logical px.",
+          "The fresh Input layout diag rerun passed with run_id 1779702733713."
+        ]
+      },
+      {
+        "part_id": "input_demo_relation_action_state",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/input/ui-gallery-input-demo-relation-action-state.json",
+          "target/fret-diag-input-demo-relation-action-state-rerun/sessions/1779703160933-114172/1779703181947-ui-gallery-input-demo-relation-action-state/bundle.schema2.json"
+        ],
+        "facts": [
+          "The docs-demo control exports role=text_field with focus, set_value, and set_text_selection actions.",
+          "Clicking the docs-demo control focuses the concrete TextInput node.",
+          "Typing sk-test updates the diagnostics value to sk-test in the passing run."
+        ]
+      },
+      {
+        "part_id": "input_control_id_relation_contract",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/input.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib input_control_id_uses --status-level fail"
+        ],
+        "facts": [
+          "Input::control_id attaches labelled_by semantics from FieldLabel::for_control to the concrete TextInput node.",
+          "Input::control_id attaches described_by semantics from FieldDescription::for_control to the concrete TextInput node.",
+          "The focused unit filter passed 2 tests."
+        ]
+      },
+      {
+        "part_id": "input_demo_bundle_relation_observation",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/snippets/input/demo.rs",
+          "target/fret-diag-input-demo-relation-action-state-rerun/sessions/1779703160933-114172/1779703181947-ui-gallery-input-demo-relation-action-state/bundle.schema2.json"
+        ],
+        "facts": [
+          "The runtime bundle records ui-gallery-input-demo-control labelled_by the API Key text node.",
+          "The runtime bundle records ui-gallery-input-demo-control described_by the secure-storage description text node.",
+          "The API Key label node records a controls relation back to the docs-demo input control."
+        ]
+      },
+      {
+        "part_id": "input_upstream_dom_and_source_context",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/input.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-demo.tsx",
+          "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/input-demo.json"
+        ],
+        "facts": [
+          "The upstream DOM snapshot keeps the direct input-demo control at 36px height.",
+          "The upstream docs-demo remains a single Input control inside the docs example lane.",
+          "The Fret docs-demo maps the visible label and description through FieldLabel/FieldDescription with a shared control id."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Lock the Input docs-demo desktop slice with upstream DOM, Fret layout, TextInput semantics, value mutation, and control-id relation evidence.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "input.docs-demo.desktop",
+        "component": "input",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

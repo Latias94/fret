@@ -160,6 +160,11 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
     let content_top_to_item_mid =
         Px(inputs.content_border_top.0 + inputs.content_padding_top.0 + selected_item_mid_offset.0);
     let item_mid_to_content_bottom = Px(full_content_h.0 - content_top_to_item_mid.0);
+    let natural_items_height = Px((inputs.items_height.0
+        - inputs.viewport_padding_top.0
+        - inputs.viewport_padding_bottom.0)
+        .max(0.0));
+    let natural_height = Px(natural_items_height.0.min(max_height.0));
 
     let will_align_without_top_overflow = content_top_to_item_mid.0 <= top_edge_to_trigger_mid.0;
 
@@ -190,6 +195,7 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
             (content_top_to_item_mid.0 + clamped_trigger_mid_to_bottom_edge.0).min(max_height.0),
         );
         let height = Px(height.0.min(full_content_h.0));
+        let height = Px(height.0.max(natural_height.0));
         let height = Px(height.0.max(min_height.0));
 
         SelectItemAlignedOutputs {
@@ -226,6 +232,7 @@ pub fn select_item_aligned_position(inputs: SelectItemAlignedInputs) -> SelectIt
             (clamped_top_edge_to_trigger_mid.0 + item_mid_to_content_bottom.0).min(max_height.0),
         );
         let height = Px(height.0.min(full_content_h.0));
+        let height = Px(height.0.max(natural_height.0));
         let height = Px(height.0.max(min_height.0));
 
         let scroll_to =
@@ -335,5 +342,32 @@ mod tests {
 
         assert!(out.min_height.0 >= 32.0 * 5.0);
         assert!(out.height.0 >= out.min_height.0);
+    }
+
+    #[test]
+    fn vertical_keeps_natural_items_height_when_leading_label_forces_top_clamp() {
+        let out = select_item_aligned_position(SelectItemAlignedInputs {
+            direction: LayoutDirection::Ltr,
+            window: rect(0.0, 0.0, 1440.0, 900.0),
+            trigger: rect(0.0, 0.0, 180.0, 36.0),
+            content: rect(0.0, 42.0, 180.0, 198.0),
+            value_node: rect(13.0, 8.0, 130.0, 20.0),
+            selected_item_text: rect(13.0, 81.0, 135.0, 20.0),
+            selected_item: rect(5.0, 75.0, 170.0, 32.0),
+            viewport: rect(1.0, 43.0, 178.0, 196.0),
+            content_border_top: Px(1.0),
+            content_padding_top: Px(0.0),
+            content_border_bottom: Px(1.0),
+            content_padding_bottom: Px(0.0),
+            viewport_padding_top: Px(4.0),
+            viewport_padding_bottom: Px(4.0),
+            selected_item_is_first: false,
+            selected_item_is_last: false,
+            items_height: Px(196.0),
+        });
+
+        assert_eq!(out.top, Some(Px(0.0)));
+        assert_eq!(out.scroll_to_y, Some(Px(41.0)));
+        assert_eq!(out.height, Px(188.0));
     }
 }

@@ -1,0 +1,370 @@
+{
+  "schema_version": 1,
+  "component": "alert",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual alert docs-demo harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/alert.rs + apps/fret-ui-gallery/src/ui/pages/alert.rs + apps/fret-ui-gallery/src/ui/snippets/alert/*.rs + tools/diag-scripts/ui-gallery/alert/*.json",
+  "validation_gates": [
+    {
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\alert\\ui-gallery-alert-docs-smoke.json --dir target\\fret-diag-alert-docs-smoke-p0-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Alert docs smoke covers page navigation, docs-path demo rows, API Reference, rich-title follow-up, bundle, AI packet, and share zip evidence.",
+      "run_id": "1779713738257",
+      "ai_packet": "target/fret-diag-alert-docs-smoke-p0-v1/sessions/1779713726325-120260/1779713738257/ai.packet",
+      "share_zip": "target/fret-diag-alert-docs-smoke-p0-v1/sessions/1779713726325-120260/share/1779713738257.zip"
+    },
+    {
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\alert\\ui-gallery-alert-link-activation.json --dir target\\fret-diag-alert-link-activation-p0-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Alert interactive links expose link roles, labels, URL values, enabled focus/invoke actions, keyboard and pointer activation, layout sidecar, screenshots, bundle, AI packet, and share zip.",
+      "run_id": "1779713789729",
+      "ai_packet": "target/fret-diag-alert-link-activation-p0-v1/sessions/1779713779179-100372/1779713789729/ai.packet",
+      "share_zip": "target/fret-diag-alert-link-activation-p0-v1/sessions/1779713779179-100372/share/1779713789729.zip"
+    },
+    {
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\alert\\ui-gallery-alert-action-text-non-overlap.json --dir target\\fret-diag-alert-action-text-non-overlap-p0-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Alert action section proves current docs-aligned With Actions title/button and title/description/badge chip lanes remain non-overlapping with screenshot, bundle, AI packet, and share zip evidence.",
+      "run_id": "1779714219021",
+      "ai_packet": "target/fret-diag-alert-action-text-non-overlap-p0-v1/sessions/1779714198484-123520/1779714219021/ai.packet",
+      "share_zip": "target/fret-diag-alert-action-text-non-overlap-p0-v1/sessions/1779714198484-123520/share/1779714219021.zip"
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail alert",
+      "status": "pass",
+      "scope": "Alert recipe tests cover root role/chrome, title/description typography, icon currentColor, source-aligned grid tracks, action slot placement, builder paths, RTL, and destructive styling."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail alert::",
+      "status": "pass",
+      "scope": "Alert web-vs-Fret layout gate keeps the docs-demo alert root w-full behavior aligned to the web golden."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail alert",
+      "status": "pass",
+      "scope": "Alert web-vs-Fret chrome gates cover default alert border/radius/width, icon geometry/color, and destructive alert chrome."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test alert_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Alert gallery docs surface keeps upstream docs-path ordering, copyable demo/import surface, interactive-link follow-up, action section anchors, redirect stubs, and suite wiring stable."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.alert.demo.light.vp1440x900",
+      "snapshot": "alert-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.alert.destructive.light.vp1440x900",
+      "snapshot": "alert-destructive",
+      "theme": "light",
+      "mode": "static",
+      "variant": "destructive",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "alert-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.alert.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/alert-demo.json"
+      },
+      {
+        "snapshot": "alert-destructive",
+        "theme": "light",
+        "mode": "static",
+        "variant": "destructive",
+        "context_id": "upstream.alert.destructive.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/alert-destructive.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json",
+        "sidecar_path": "target/fret-diag-alert-link-activation-p0-v1/sessions/1779713779179-100372/1779713847844-ui-gallery-alert-link-activation.before-layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-docs-smoke.json",
+        "bundle_path": "target/fret-diag-alert-docs-smoke-p0-v1/sessions/1779713726325-120260/1779713738257/bundle.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json",
+        "bundle_path": "target/fret-diag-alert-link-activation-p0-v1/sessions/1779713779179-100372/1779713789729/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-action-text-non-overlap.json",
+        "bundle_path": "target/fret-diag-alert-action-text-non-overlap-p0-v1/sessions/1779714198484-123520/1779714219021/bundle.schema2.json"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-docs-smoke.json",
+        "ai_packet": "target/fret-diag-alert-docs-smoke-p0-v1/sessions/1779713726325-120260/1779713738257/ai.packet",
+        "share_zip": "target/fret-diag-alert-docs-smoke-p0-v1/sessions/1779713726325-120260/share/1779713738257.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json",
+        "ai_packet": "target/fret-diag-alert-link-activation-p0-v1/sessions/1779713779179-100372/1779713789729/ai.packet",
+        "share_zip": "target/fret-diag-alert-link-activation-p0-v1/sessions/1779713779179-100372/share/1779713789729.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-action-text-non-overlap.json",
+        "ai_packet": "target/fret-diag-alert-action-text-non-overlap-p0-v1/sessions/1779714198484-123520/1779714219021/ai.packet",
+        "share_zip": "target/fret-diag-alert-action-text-non-overlap-p0-v1/sessions/1779714198484-123520/share/1779714219021.zip"
+      }
+    ],
+    "fret_screenshots": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json",
+        "screenshot_path": "target/fret-diag-alert-link-activation-p0-v1/sessions/1779713779179-100372/screenshots/1779713853352-ui-gallery-alert-link-activation.before/window-4294967297-tick-11-frame-11.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json",
+        "screenshot_path": "target/fret-diag-alert-link-activation-p0-v1/sessions/1779713779179-100372/screenshots/1779713865624-ui-gallery-alert-link-activation.after/window-4294967297-tick-18-frame-18.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-action-text-non-overlap.json",
+        "screenshot_path": "target/fret-diag-alert-action-text-non-overlap-p0-v1/sessions/1779714198484-123520/screenshots/1779714363263-ui-gallery-alert-action-text-non-overlap/window-4294967297-tick-37-frame-37.png"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 7,
+    "status_counts": {
+      "pass_known": 7,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 3,
+      "gallery_composition": 1,
+      "mechanism_core": 0,
+      "diagnostics_surface": 3,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 3,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 3,
+      "app_demo": 1,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 7
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 3,
+      "component_fixture": 3,
+      "unit_test": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 3,
+    "layout_test_id_count": 10,
+    "bundle_semantics_test_id_count": 4,
+    "measured_test_id_count": 10,
+    "upstream_dom_snapshot_count": 2,
+    "upstream_dom_target_count": 2,
+    "upstream_context_count": 2,
+    "upstream_dom_context_count": 2,
+    "upstream_live_fact_count": 6,
+    "fret_live_fact_count": 15,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 6,
+    "fret_interaction_fact_count": 6,
+    "fret_text_paint_fact_count": 6,
+    "fret_text_paint_direct_fact_count": 6,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 6,
+    "fret_text_paint_row_count": 6,
+    "fret_text_label_row_count": 3
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/base/alert.mdx + repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert.tsx + goldens/shadcn-web/v4/new-york-v4/alert-demo.json + goldens/shadcn-web/v4/new-york-v4/alert-destructive.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/alert.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/alert.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs + apps/fret-ui-gallery/src/ui/pages/alert.rs + apps/fret-ui-gallery/src/ui/snippets/alert/*.rs + apps/fret-ui-gallery/tests/alert_docs_surface.rs + tools/diag-scripts/ui-gallery/alert/*.json",
+    "part_count": 7,
+    "upstream_dom_target_count": 2,
+    "fret_test_id_count": 10,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 6,
+    "fret_interaction_fact_count": 6,
+    "fret_text_paint_fact_count": 6,
+    "parts": [
+      {
+        "part_id": "alert_recipe_tests",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/alert.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail alert"
+        ],
+        "facts": [
+          "Alert recipe tests passed 68/68 for the focused filter.",
+          "The covered recipe surface includes role stamping, root chrome, title/description text behavior, icon currentColor, source-aligned grid tracks, action slot placement, builder paths, RTL, and destructive styling."
+        ]
+      },
+      {
+        "part_id": "alert_web_golden_layout",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/alert.rs",
+          "goldens/shadcn-web/v4/new-york-v4/alert-demo.json",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail alert::"
+        ],
+        "facts": [
+          "The Alert web-vs-Fret layout gate passed 1/1 for the focused alert filter.",
+          "The gate keeps the docs-demo alert root on the upstream w-full width behavior."
+        ]
+      },
+      {
+        "part_id": "alert_web_golden_chrome",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+          "goldens/shadcn-web/v4/new-york-v4/alert-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/alert-destructive.json",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail alert"
+        ],
+        "facts": [
+          "The Alert chrome gate passed 3/3 for default alert chrome, icon geometry/color, and destructive alert chrome.",
+          "The upstream contexts cover both default docs-demo and destructive variant snapshots."
+        ]
+      },
+      {
+        "part_id": "alert_docs_smoke_diag",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-docs-smoke.json",
+          "target/fret-diag-alert-docs-smoke-p0-v1/sessions/1779713726325-120260/1779713738257/bundle.json",
+          "target/fret-diag-alert-docs-smoke-p0-v1/sessions/1779713726325-120260/1779713738257/ai.packet",
+          "target/fret-diag-alert-docs-smoke-p0-v1/sessions/1779713726325-120260/share/1779713738257.zip"
+        ],
+        "facts": [
+          "The docs-smoke script proves the Alert page, component root, Usage section, three upstream-shaped Demo rows, API Reference, and rich-title follow-up anchors.",
+          "The passing run captured bundle, AI packet, and share zip evidence in run 1779713738257."
+        ]
+      },
+      {
+        "part_id": "alert_link_activation_diag",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-link-activation.json",
+          "target/fret-diag-alert-link-activation-p0-v1/sessions/1779713779179-100372/1779713847844-ui-gallery-alert-link-activation.before-layout/layout.taffy.v1.json",
+          "target/fret-diag-alert-link-activation-p0-v1/sessions/1779713779179-100372/1779713789729/bundle.schema2.json",
+          "target/fret-diag-alert-link-activation-p0-v1/sessions/1779713779179-100372/1779713789729/ai.packet",
+          "target/fret-diag-alert-link-activation-p0-v1/sessions/1779713779179-100372/share/1779713789729.zip"
+        ],
+        "facts": [
+          "The link activation script starts directly on Alert / Interactive Links and proves Billing and Support links expose role=link, labels, URL values, and enabled focus/invoke actions.",
+          "The run focuses Billing and activates it via Enter, clicks Support, verifies both status mutations, and captures layout sidecar, screenshots, schema2 bundle, AI packet, and share zip evidence."
+        ]
+      },
+      {
+        "part_id": "alert_action_non_overlap_diag",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-action-text-non-overlap.json",
+          "target/fret-diag-alert-action-text-non-overlap-p0-v1/sessions/1779714198484-123520/1779714219021/bundle.schema2.json",
+          "target/fret-diag-alert-action-text-non-overlap-p0-v1/sessions/1779714198484-123520/screenshots/1779714363263-ui-gallery-alert-action-text-non-overlap/window-4294967297-tick-37-frame-37.png",
+          "target/fret-diag-alert-action-text-non-overlap-p0-v1/sessions/1779714198484-123520/1779714219021/ai.packet",
+          "target/fret-diag-alert-action-text-non-overlap-p0-v1/sessions/1779714198484-123520/share/1779714219021.zip"
+        ],
+        "facts": [
+          "The action non-overlap script proves the docs-aligned With Actions title/button row and badge title/description/chip row are present and non-overlapping.",
+          "The stale 500px root-width threshold was calibrated to the current 448px docs card lane while preserving the non-overlap assertions.",
+          "The passing run captured screenshot, schema2 bundle, AI packet, and share zip evidence in run 1779714219021."
+        ]
+      },
+      {
+        "part_id": "alert_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/alert.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/alert/demo.rs",
+          "apps/fret-ui-gallery/tests/alert_docs_surface.rs",
+          "cargo nextest run -p fret-ui-gallery --test alert_docs_surface --status-level fail"
+        ],
+        "facts": [
+          "The docs-surface test keeps upstream docs-path sections before Fret Extras and keeps the action/link runtime script anchors wired.",
+          "The import-order assertion now matches the current rustfmt-compatible `use fret::{AppComponentCx, UiChild};` snippet surface."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Alert docs-demo desktop slice with upstream source/goldens, Fret recipe/layout/chrome gates, gallery docs-surface coverage, action/link runtime diagnostics, and text-paint evidence.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "alert.docs-demo.desktop",
+        "component": "alert",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/alert_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

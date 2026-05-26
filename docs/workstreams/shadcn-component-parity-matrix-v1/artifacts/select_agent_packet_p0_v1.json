@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "component": "select",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual select harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/select.rs + ecosystem/fret-ui-kit/src/primitives/select.rs + ecosystem/fret-ui-headless/src/select_item_aligned.rs",
+  "validation_gates": [
+    {
+      "command": "cargo nextest run -p fret-ui-kit --lib select_item_aligned_items_height_uses_larger_listbox_or_scroll_extent --status-level fail",
+      "status": "pass",
+      "scope": "Select policy primitive uses the largest of layout listbox, visual listbox, and scroll extent for item-aligned scrollHeight."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-headless --lib vertical_keeps_natural_items_height_when_leading_label_forces_top_clamp --status-level fail",
+      "status": "pass",
+      "scope": "Headless item-aligned solver preserves natural items height when leading labels force a top clamp."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout web_vs_fret_layout_select_scrollable_trigger_size --status-level fail",
+      "status": "pass",
+      "scope": "Select scrollable trigger sizing stays aligned with the shadcn web golden."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement web_vs_fret_select_cases_match_web_fixtures --status-level fail",
+      "status": "pass",
+      "scope": "Select overlay placement fixture cases, including open option metrics, scroll button height, viewport insets, listbox width, and constrained viewport cases."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome web_vs_fret_select_overlay_chrome_cases_match_web_fixtures --status-level fail",
+      "status": "pass",
+      "scope": "Select overlay chrome fixture cases after moving scroll buttons into normal flow."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\select\\ui-gallery-select-keyboard-commit-apple.json --dir target\\fret-diag-select-keyboard-commit-apple-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery",
+      "status": "pass",
+      "scope": "Keyboard Home/Enter commit, selected item state, dismiss, and trigger focus restore.",
+      "run_id": "1779693684615",
+      "ai_packet": "target/fret-diag-select-keyboard-commit-apple-rerun/sessions/1779693344610-50992/1779693684615/ai.packet"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\select\\ui-gallery-select-commit-and-label-update.json --dir target\\fret-diag-select-commit-label-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Pointer commit, selected-label update, controls/labelled_by relation edges, selected item reopening state, and trigger focus restore.",
+      "run_id": "1779693709143",
+      "ai_packet": "target/fret-diag-select-commit-label-rerun/sessions/1779693705643-102828/1779693709143/ai.packet"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.select_demo.light.open.vp1440x900",
+      "snapshot": "select-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "default",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "select-demo",
+        "theme": "light",
+        "mode": "open",
+        "variant": "default",
+        "context_id": "upstream.select_demo.light.open.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json",
+        "sidecar_path": "target/fret-diag/shadcn-select-demo-open-layout-after-scroll-padding-bin/sessions/1778437252984-132992/1778437258396-ui-gallery-select-demo-open.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-keyboard-commit-apple.json",
+        "bundle_path": "target/fret-diag-select-keyboard-commit-apple-rerun/sessions/1779693344610-50992/1779693692680-ui-gallery-select-keyboard-commit-apple/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json",
+        "bundle_path": "target/fret-diag-select-commit-label-rerun/sessions/1779693705643-102828/1779693715254-ui-gallery-select-commit-and-label-update/bundle.schema2.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 4,
+    "status_counts": {
+      "pass_known": 4,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 2,
+      "gallery_composition": 0,
+      "mechanism_core": 1,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 1,
+      "policy": 1,
+      "recipe": 2,
+      "app_demo": 0,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 4
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 2,
+      "component_fixture": 1,
+      "mechanism_harness": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 2,
+    "layout_test_id_count": 6,
+    "bundle_semantics_test_id_count": 7,
+    "measured_test_id_count": 171,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1,
+    "upstream_live_fact_count": 8,
+    "fret_live_fact_count": 12,
+    "upstream_semantics_fact_count": 4,
+    "upstream_interaction_fact_count": 2,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_label_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "goldens/shadcn-web/v4/new-york-v4/select-demo.open.json + docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/select-demo.open.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/select.rs + ecosystem/fret-ui-kit/src/primitives/select.rs + ecosystem/fret-ui-headless/src/select_item_aligned.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/select/fixtures.rs",
+    "part_count": 4,
+    "upstream_dom_target_count": 4,
+    "fret_test_id_count": 7,
+    "upstream_semantics_fact_count": 4,
+    "upstream_interaction_fact_count": 2,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 0,
+    "parts": [
+      {
+        "part_id": "select_trigger_size",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/select-demo.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/select.tsx",
+          "apps/fret-ui-gallery/src/ui/snippets/select/demo.rs",
+          "tools/diag-scripts/ui-gallery/select/ui-gallery-select-demo-open-layout.json",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/select.rs"
+        ]
+      },
+      {
+        "part_id": "select_open_item_aligned_geometry",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "evidence_refs": [
+          "ecosystem/fret-ui-headless/src/select_item_aligned.rs",
+          "ecosystem/fret-ui-kit/src/primitives/select.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/select/fixtures.rs",
+          "goldens/shadcn-web/v4/new-york-v4/select-demo.open.json"
+        ]
+      },
+      {
+        "part_id": "select_scroll_button_flow_and_viewport_padding",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/select.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/select/fixtures.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/select/fixtures.rs",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/select.tsx"
+        ]
+      },
+      {
+        "part_id": "select_keyboard_and_commit_behavior",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/select/ui-gallery-select-keyboard-commit-apple.json",
+          "tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update.json",
+          "target/fret-diag-select-keyboard-commit-apple-rerun/sessions/1779693344610-50992/1779693684615/ai.packet",
+          "target/fret-diag-select-commit-label-rerun/sessions/1779693705643-102828/1779693709143/ai.packet"
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Lock the Select open desktop slice after fixing item-aligned scrollHeight, Radix-style scroll button flow, and viewport bottom padding.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "select.open.desktop",
+        "component": "select",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/select_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

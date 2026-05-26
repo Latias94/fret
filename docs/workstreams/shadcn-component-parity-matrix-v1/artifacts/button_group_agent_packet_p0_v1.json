@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "component": "button-group",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual button group harness hardening closure v1",
+  "source_mapping": "docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json + tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json",
+  "validation_gates": [
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\button-group\\ui-gallery-button-group-text-label-control-action-state.json --dir target\\fret-diag-button-group-text-action-state-matrix-rerun --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "ButtonGroupText label/control action state: root and prefix/suffix roles, disabled text-label actions, text_field focus/set_value actions, controls/labelled_by relation edges, click-to-focus, value mutation, layout sidecar, screenshot, schema2 bundle, AI packet, and share zip.",
+      "run_id": "1779704800486",
+      "ai_packet": "target/fret-diag-button-group-text-action-state-matrix-rerun/sessions/1779704797359-103832/1779704800486/ai.packet",
+      "share_zip": "target/fret-diag-button-group-text-action-state-matrix-rerun/sessions/1779704797359-103832/share/1779704800486.zip"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.button_group.input_demo.light.vp1440x900",
+      "snapshot": "button-group-input",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    },
+    {
+      "id": "upstream.button_group.select_demo.light.vp1440x900",
+      "snapshot": "button-group-select",
+      "theme": "light",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "button-group-input",
+        "theme": "light",
+        "context_id": "upstream.button_group.input_demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json"
+      },
+      {
+        "snapshot": "button-group-select",
+        "theme": "light",
+        "context_id": "upstream.button_group.select_demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+        "sidecar_path": "target/fret-diag-component-parity-button-group-text-paint-v1/sessions/1779671244627-41048/1779671310863-ui-gallery-shadcn-parity-seed.button-group-input.layout/layout.taffy.v1.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+        "sidecar_path": "target/fret-diag-component-parity-button-group-text-paint-v1/sessions/1779671244627-41048/1779671327606-ui-gallery-shadcn-parity-seed.button-group-select.layout/layout.taffy.v1.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json",
+        "sidecar_path": "target/fret-diag-button-group-text-action-state-matrix-rerun/sessions/1779704797359-103832/1779704801252-ui-gallery-button-group-text-label-control-action-state.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+        "bundle_path": "target/fret-diag-component-parity-button-group-text-paint-v1/sessions/1779671244627-41048/1779671310863-ui-gallery-shadcn-parity-seed.button-group-input.layout/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/shadcn-parity/ui-gallery-shadcn-parity-seed-layout.json",
+        "bundle_path": "target/fret-diag-component-parity-button-group-text-paint-v1/sessions/1779671244627-41048/1779671327606-ui-gallery-shadcn-parity-seed.button-group-select.layout/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json",
+        "bundle_path": "target/fret-diag-button-group-text-action-state-matrix-rerun/sessions/1779704797359-103832/1779704801434-ui-gallery-button-group-text-label-control-action-state/bundle.schema2.json"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json",
+        "ai_packet": "target/fret-diag-button-group-text-action-state-matrix-rerun/sessions/1779704797359-103832/1779704800486/ai.packet",
+        "share_zip": "target/fret-diag-button-group-text-action-state-matrix-rerun/sessions/1779704797359-103832/share/1779704800486.zip"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 8,
+    "status_counts": {
+      "pass_known": 8,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 2,
+      "gallery_composition": 4,
+      "mechanism_core": 1,
+      "diagnostics_surface": 3,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 3,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 2,
+      "app_demo": 4,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 8
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 3,
+      "component_fixture": 6,
+      "mechanism_harness": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 5,
+    "bundle_schema2_count": 5,
+    "layout_test_id_count": 615,
+    "bundle_semantics_test_id_count": 615,
+    "measured_test_id_count": 615,
+    "upstream_dom_snapshot_count": 2,
+    "upstream_dom_target_count": 6,
+    "upstream_context_count": 2,
+    "upstream_dom_context_count": 2,
+    "upstream_live_fact_count": 6,
+    "fret_live_fact_count": 18,
+    "upstream_semantics_fact_count": 6,
+    "upstream_interaction_fact_count": 6,
+    "fret_semantics_fact_count": 20,
+    "fret_interaction_fact_count": 18,
+    "fret_text_paint_fact_count": 27,
+    "fret_text_paint_direct_fact_count": 6,
+    "fret_text_paint_associated_fact_count": 21,
+    "fret_text_label_fact_count": 68,
+    "fret_text_paint_bundle_entry_count": 160,
+    "fret_text_paint_row_count": 5532,
+    "fret_text_paint_association_row_count": 64026,
+    "fret_text_paint_unassociated_row_count": 320,
+    "fret_text_label_row_count": 10164
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/button-group.tsx + docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-input.json + docs/workstreams/shadcn-parity-discovery-harness-v1/artifacts/upstream-dom/button-group-select.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/button_group.rs + apps/fret-ui-gallery/src/ui/snippets/button_group/*.rs + tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json",
+    "part_count": 8,
+    "upstream_dom_target_count": 6,
+    "fret_test_id_count": 615,
+    "upstream_semantics_fact_count": 6,
+    "upstream_interaction_fact_count": 6,
+    "fret_semantics_fact_count": 20,
+    "fret_interaction_fact_count": 18,
+    "fret_text_paint_fact_count": 27,
+    "parts": [
+      {
+        "part_id": "button_group_pilot_layout_semantics_text_paint",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json",
+          "tools/parity-discovery/fixtures/button_group_parts_v1.json"
+        ],
+        "facts": [
+          "The pilot packet already proves ButtonGroup source refs, upstream DOM snapshots, Fret layout sidecars, bundle schema2 semantics, and text-paint evidence for input, dropdown, select, and text compositions.",
+          "The pilot queue entries are all pass_known, but the old packet still reported one hardening queue and nine gate queue items because it lacked a promoted behavior diag gate.",
+          "This superseding packet keeps those facts and closes the remaining hardening axis with a fresh runtime behavior script."
+        ]
+      },
+      {
+        "part_id": "button_group_text_label_control_action_state",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/button-group/ui-gallery-button-group-text-label-control-action-state.json",
+          "target/fret-diag-button-group-text-action-state-matrix-rerun/sessions/1779704797359-103832/1779704801434-ui-gallery-button-group-text-label-control-action-state/bundle.schema2.json",
+          "target/fret-diag-button-group-text-action-state-matrix-rerun/sessions/1779704797359-103832/1779704800486/ai.packet",
+          "target/fret-diag-button-group-text-action-state-matrix-rerun/sessions/1779704797359-103832/share/1779704800486.zip"
+        ],
+        "facts": [
+          "The script asserts ButtonGroupText root and prefix/suffix group/text roles without stealing text-field semantics.",
+          "The script asserts controls and labelled_by relation edges between ui-gallery-button-group-text-prefix-label and ui-gallery-button-group-text-control.",
+          "Clicking the prefix label focuses the input and typing docs updates the diagnostics value to docs in the passing run."
+        ]
+      },
+      {
+        "part_id": "button_group_text_runtime_bundle_observation",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "target/fret-diag-button-group-text-action-state-matrix-rerun/sessions/1779704797359-103832/1779704801434-ui-gallery-button-group-text-label-control-action-state/bundle.schema2.json"
+        ],
+        "facts": [
+          "The final bundle records ui-gallery-button-group-text-control as role=text_field with focus, set_value, and set_text_selection actions enabled.",
+          "The final bundle records ui-gallery-button-group-text-control as focused with value=docs.",
+          "The final bundle records ui-gallery-button-group-text-prefix-label as role=text with a controls edge to the input."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Supersede the Button Group pilot packet by closing the remaining hardening queue with behavior diagnostics while preserving upstream DOM, layout, semantics, and text-paint evidence.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "button-group.docs-demo.desktop",
+        "component": "button-group",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/button_group_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

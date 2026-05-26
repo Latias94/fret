@@ -165,7 +165,7 @@ $env:CARGO_BUILD_JOBS='1'; $env:RUSTFLAGS='-C debuginfo=0 -C codegen-units=1'; c
 ```
 
 This runs `ecosystem/fret-ui-shadcn/tests/fixtures/mechanism_layout_recipe_cases_v1.json`, including
-the new `responsive-drawer-bottom-sheet-uses-eighty-vh` and
+the new `responsive-drawer-bottom-sheet-caps-visible-lane` and
 `popover-command-shell-wraps-hover-region-max-height` cases. It proves both shell-sizing rules
 without launching UI Gallery.
 

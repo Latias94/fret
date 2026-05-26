@@ -1044,6 +1044,13 @@ mod tests {
         )
     }
 
+    fn bounds_with_width(width: f32) -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(width), Px(160.0)),
+        )
+    }
+
     #[derive(Default)]
     struct FakeServices;
 
@@ -1118,6 +1125,7 @@ mod tests {
     fn render_previous_next_snapshot(
         app: &mut App,
         dir: LayoutDirection,
+        bounds: Rect,
         render: impl FnOnce(&mut ElementContext<'_, App>) -> AnyElement,
     ) -> PreviousNextSnapshot {
         let window = AppWindowId::default();
@@ -1133,7 +1141,7 @@ mod tests {
             app,
             &mut services,
             window,
-            bounds(),
+            bounds,
             "pagination-previous-next-direction",
             move |cx| {
                 let element = crate::direction::with_direction_provider(cx, dir, render);
@@ -1306,6 +1314,27 @@ mod tests {
     }
 
     #[test]
+    fn pagination_link_uses_enter_only_keyboard_activation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            PaginationLink::new([cx.text("1")])
+                .action("pagination.page.1")
+                .into_element(cx)
+        });
+
+        let ElementKind::Pressable(props) = &el.kind else {
+            panic!("expected PaginationLink to build a Pressable element");
+        };
+        assert_eq!(
+            props.key_activation,
+            PressableKeyActivation::EnterOnly,
+            "expected PaginationLink keyboard activation to match link-like Enter activation"
+        );
+    }
+
+    #[test]
     fn pagination_ellipsis_is_hidden_in_semantics_tree() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1385,7 +1414,7 @@ mod tests {
         let cases = [
             (
                 "previous ltr",
-                render_previous_next_snapshot(&mut app, LayoutDirection::Ltr, |cx| {
+                render_previous_next_snapshot(&mut app, LayoutDirection::Ltr, bounds(), |cx| {
                     PaginationPrevious::new().text("Previous").into_element(cx)
                 }),
                 vec!["icon", "text"],
@@ -1394,7 +1423,7 @@ mod tests {
             ),
             (
                 "previous rtl",
-                render_previous_next_snapshot(&mut app, LayoutDirection::Rtl, |cx| {
+                render_previous_next_snapshot(&mut app, LayoutDirection::Rtl, bounds(), |cx| {
                     PaginationPrevious::new().text("Previous").into_element(cx)
                 }),
                 vec!["text", "icon"],
@@ -1403,7 +1432,7 @@ mod tests {
             ),
             (
                 "next ltr",
-                render_previous_next_snapshot(&mut app, LayoutDirection::Ltr, |cx| {
+                render_previous_next_snapshot(&mut app, LayoutDirection::Ltr, bounds(), |cx| {
                     PaginationNext::new().text("Next").into_element(cx)
                 }),
                 vec!["text", "icon"],
@@ -1412,7 +1441,7 @@ mod tests {
             ),
             (
                 "next rtl",
-                render_previous_next_snapshot(&mut app, LayoutDirection::Rtl, |cx| {
+                render_previous_next_snapshot(&mut app, LayoutDirection::Rtl, bounds(), |cx| {
                     PaginationNext::new().text("Next").into_element(cx)
                 }),
                 vec!["icon", "text"],
@@ -1426,5 +1455,29 @@ mod tests {
             assert_eq!(snapshot.text.as_deref(), Some(expected_text), "{name}");
             assert_eq!(snapshot.svg, expected_svg, "{name}");
         }
+    }
+
+    #[test]
+    fn pagination_previous_next_hide_responsive_text_below_sm() {
+        let mut app = App::new();
+        install_direction_test_icons(&mut app);
+
+        let previous = render_previous_next_snapshot(
+            &mut app,
+            LayoutDirection::Ltr,
+            bounds_with_width(375.0),
+            |cx| PaginationPrevious::new().text("Previous").into_element(cx),
+        );
+        let next = render_previous_next_snapshot(
+            &mut app,
+            LayoutDirection::Ltr,
+            bounds_with_width(375.0),
+            |cx| PaginationNext::new().text("Next").into_element(cx),
+        );
+
+        assert_eq!(previous.child_kinds, vec!["icon"]);
+        assert_eq!(previous.text, None);
+        assert_eq!(next.child_kinds, vec!["icon"]);
+        assert_eq!(next.text, None);
     }
 }

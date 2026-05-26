@@ -16,6 +16,10 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+#[path = "support/style_aware_services.rs"]
+mod style_aware_services;
+use style_aware_services::StyleAwareServices;
+
 fn is_false(v: &bool) -> bool {
     !*v
 }
@@ -622,8 +626,12 @@ impl fret_core::MaterialService for FakeServices {
     }
 }
 
-fn snapshot_for_root<I, F>(name: &str, bounds: Rect, build: F)
-where
+fn snapshot_for_root_with_services<I, F>(
+    name: &str,
+    bounds: Rect,
+    services: &mut dyn fret_core::UiServices,
+    build: F,
+) where
     F: FnOnce(&mut fret_ui::ElementContext<'_, App>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
@@ -631,25 +639,17 @@ where
     let mut app = App::new();
     let mut ui: UiTree<App> = UiTree::new();
     ui.set_window(window);
-    let mut services = FakeServices;
 
-    let root = fret_ui::declarative::render_root(
-        &mut ui,
-        &mut app,
-        &mut services,
-        window,
-        bounds,
-        name,
-        build,
-    );
+    let root =
+        fret_ui::declarative::render_root(&mut ui, &mut app, services, window, bounds, name, build);
     ui.set_root(root);
     ui.request_semantics_snapshot();
-    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    ui.layout_all(&mut app, services, bounds, 1.0);
 
     let semantics = ui.semantics_snapshot_arc().expect("semantics snapshot");
 
     let mut scene = Scene::default();
-    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    ui.paint_all(&mut app, services, bounds, &mut scene, 1.0);
 
     let mut semantics_nodes: Vec<SnapSemanticsNode> = semantics
         .nodes
@@ -711,6 +711,24 @@ where
             scene_ops,
         },
     );
+}
+
+fn snapshot_for_root<I, F>(name: &str, bounds: Rect, build: F)
+where
+    F: FnOnce(&mut fret_ui::ElementContext<'_, App>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
+    let mut services = FakeServices;
+    snapshot_for_root_with_services(name, bounds, &mut services, build);
+}
+
+fn snapshot_for_root_with_style_metrics<I, F>(name: &str, bounds: Rect, build: F)
+where
+    F: FnOnce(&mut fret_ui::ElementContext<'_, App>) -> I,
+    I: IntoIterator<Item = AnyElement>,
+{
+    let mut services = StyleAwareServices::default();
+    snapshot_for_root_with_services(name, bounds, &mut services, build);
 }
 
 #[test]
@@ -823,7 +841,7 @@ fn snapshot_badge_link_visited_semantics() {
         Point::new(Px(0.0), Px(0.0)),
         CoreSize::new(Px(320.0), Px(180.0)),
     );
-    snapshot_for_root("badge_link_visited_semantics", bounds, |cx| {
+    snapshot_for_root_with_style_metrics("badge_link_visited_semantics", bounds, |cx| {
         vec![
             shadcn::Badge::new("Docs")
                 .render(shadcn::BadgeRender::Link {

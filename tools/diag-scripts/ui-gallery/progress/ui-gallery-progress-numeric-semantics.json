@@ -82,6 +82,10 @@
         "eps": 0.0
       }
     },
+    {
+      "type": "capture_layout_sidecar",
+      "label": "ui-gallery-progress-numeric-semantics.layout"
+    },
     { "type": "capture_bundle", "label": "progress-numeric-semantics" }
   ]
 }

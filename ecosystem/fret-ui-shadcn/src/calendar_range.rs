@@ -593,7 +593,11 @@ impl CalendarRange {
                                     },
                                     direction: fret_core::Axis::Horizontal,
                                     gap: day_col_gap.into(),
-                                    padding: fret_core::Edges::all(Px(0.0)).into(),
+                                    padding: fret_core::Edges {
+                                        top: week_row_gap,
+                                        ..fret_core::Edges::all(Px(0.0))
+                                    }
+                                    .into(),
                                     justify: MainAlign::Start,
                                     align: fret_ui::element::CrossAlign::Start,
                                     wrap: true,
@@ -675,16 +679,21 @@ impl CalendarRange {
                                     }
                                 }));
 
+                                let week_count = (grid.len() / 7).max(1);
                                 grid.iter()
                                     .enumerate()
                                     .map(|(idx, day)| {
+                                        let week_idx = idx / 7;
+                                        let is_last_week = week_idx + 1 >= week_count;
+                                        let row_bottom_gap =
+                                            if is_last_week { Px(0.0) } else { week_row_gap };
                                         let is_hidden = hidden.get(idx).copied().unwrap_or(true);
                                         if is_hidden {
                                             return calendar_range_hidden_day_cell(
                                                 cx,
                                                 &theme_days_for_days,
                                                 day_size,
-                                                week_row_gap,
+                                                row_bottom_gap,
                                             );
                                         }
 
@@ -725,7 +734,7 @@ impl CalendarRange {
                                             is_disabled,
                                             focus_date.is_some_and(|d| d == day.date),
                                             day_size,
-                                            week_row_gap,
+                                            row_bottom_gap,
                                             &selected_model,
                                             required,
                                             min_days,
@@ -753,7 +762,11 @@ impl CalendarRange {
                                         },
                                         direction: fret_core::Axis::Vertical,
                                         gap: Px(0.0).into(),
-                                        padding: fret_core::Edges::all(Px(0.0)).into(),
+                                        padding: fret_core::Edges {
+                                            top: week_row_gap,
+                                            ..fret_core::Edges::all(Px(0.0))
+                                        }
+                                        .into(),
                                         justify: MainAlign::Start,
                                         align: fret_ui::element::CrossAlign::Start,
                                         wrap: false,
@@ -761,7 +774,9 @@ impl CalendarRange {
                                     move |cx| {
                                         week_numbers
                                             .iter()
-                                            .map(|n: &u32| {
+                                            .enumerate()
+                                            .map(|(idx, n): (usize, &u32)| {
+                                                let is_last_week = idx + 1 >= week_numbers.len();
                                                 let mut props =
                                                     TextProps::new(Arc::from(n.to_string()));
                                                 props.style =
@@ -776,10 +791,12 @@ impl CalendarRange {
                                                     let mut ls = LayoutStyle::default();
                                                     ls.size.width = Length::Px(day_size);
                                                     ls.size.height = Length::Px(day_size);
-                                                    ls.margin.bottom =
-                                                        fret_ui::element::MarginEdge::Px(
-                                                            week_row_gap,
-                                                        );
+                                                    if !is_last_week {
+                                                        ls.margin.bottom =
+                                                            fret_ui::element::MarginEdge::Px(
+                                                                week_row_gap,
+                                                            );
+                                                    }
                                                     ls
                                                 };
                                                 cx.text_props(props)
@@ -1127,7 +1144,11 @@ fn calendar_range_month_view<H: UiHost>(
             },
             direction: fret_core::Axis::Horizontal,
             gap: Px(0.0).into(),
-            padding: fret_core::Edges::all(Px(0.0)).into(),
+            padding: fret_core::Edges {
+                top: week_row_gap,
+                ..fret_core::Edges::all(Px(0.0))
+            }
+            .into(),
             justify: MainAlign::Start,
             align: fret_ui::element::CrossAlign::Start,
             wrap: true,
@@ -1205,16 +1226,20 @@ fn calendar_range_month_view<H: UiHost>(
             }
         }));
 
+        let week_count = (grid.len() / 7).max(1);
         grid.iter()
             .enumerate()
             .map(|(idx, day)| {
+                let week_idx = idx / 7;
+                let is_last_week = week_idx + 1 >= week_count;
+                let row_bottom_gap = if is_last_week { Px(0.0) } else { week_row_gap };
                 let is_hidden = hidden.get(idx).copied().unwrap_or(true);
                 if is_hidden {
                     return calendar_range_hidden_day_cell(
                         cx,
                         &theme_days_for_days,
                         day_size,
-                        week_row_gap,
+                        row_bottom_gap,
                     );
                 }
 
@@ -1254,7 +1279,7 @@ fn calendar_range_month_view<H: UiHost>(
                     is_disabled,
                     focus_date.is_some_and(|d| d == day.date),
                     day_size,
-                    week_row_gap,
+                    row_bottom_gap,
                     &selected_model,
                     required,
                     min_days,
@@ -1282,7 +1307,11 @@ fn calendar_range_month_view<H: UiHost>(
                 },
                 direction: fret_core::Axis::Vertical,
                 gap: Px(0.0).into(),
-                padding: fret_core::Edges::all(Px(0.0)).into(),
+                padding: fret_core::Edges {
+                    top: week_row_gap,
+                    ..fret_core::Edges::all(Px(0.0))
+                }
+                .into(),
                 justify: MainAlign::Start,
                 align: fret_ui::element::CrossAlign::Start,
                 wrap: false,
@@ -1290,7 +1319,9 @@ fn calendar_range_month_view<H: UiHost>(
             move |cx| {
                 week_numbers
                     .iter()
-                    .map(|n: &u32| {
+                    .enumerate()
+                    .map(|(idx, n): (usize, &u32)| {
+                        let is_last_week = idx + 1 >= week_numbers.len();
                         let mut props = TextProps::new(Arc::from(n.to_string()));
                         props.style = Some(grid_text_style_week_numbers.clone());
                         props.color = theme_days_for_week_numbers.color_by_key("muted-foreground");
@@ -1300,7 +1331,9 @@ fn calendar_range_month_view<H: UiHost>(
                         let mut layout = LayoutStyle::default();
                         layout.size.width = Length::Px(day_size);
                         layout.size.height = Length::Px(day_size);
-                        layout.margin.bottom = fret_ui::element::MarginEdge::Px(week_row_gap);
+                        if !is_last_week {
+                            layout.margin.bottom = fret_ui::element::MarginEdge::Px(week_row_gap);
+                        }
                         props.layout = layout;
                         cx.text_props(props)
                     })

@@ -1,0 +1,315 @@
+{
+  "schema_version": 1,
+  "component": "pagination",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual pagination docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/pagination.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/pagination.rs + apps/fret-ui-gallery/src/ui/pages/pagination.rs + apps/fret-ui-gallery/src/ui/snippets/pagination/*.rs + apps/fret-ui-gallery/tests/pagination_docs_surface.rs + tools/diag-scripts/ui-gallery/pagination/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-rows-per-page-select-open-screenshot-zinc-light.json | Out-Null",
+      "status": "pass",
+      "scope": "Pagination diagnostic scripts parse cleanly after replacing stale page-root waits with the real `ui-gallery-pagination` body test id and adding direct start-page defaults."
+    },
+    {
+      "command": "cargo fmt --package fret-ui-shadcn -- ecosystem/fret-ui-shadcn/src/pagination.rs",
+      "status": "pass",
+      "scope": "Pagination recipe source is rustfmt-formatted after adding the Enter-only keyboard activation invariant."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail pagination_previous_next_hide_responsive_text_below_sm pagination",
+      "status": "pass",
+      "scope": "Pagination recipe tests cover root width/label semantics, list/listitem semantics, active selected state, Enter-only keyboard activation, hidden ellipsis, focus-visible ring token, enabled/disabled visual chrome, RTL previous/next icon order, and the responsive below-sm text-hiding path."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail pagination",
+      "status": "pass",
+      "scope": "Pagination web-golden layout gate covers active link, inactive link, and ellipsis size against `pagination-demo`."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test pagination_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery docs-surface gates keep the source-axis notes, children-API decision, docs order after Installation, Routing / Next.js anchor, Custom Text / Changelog anchor, and Compact Builder follow-up visible."
+    },
+    {
+      "command": "cargo build -p fret-ui-gallery --bin fret-ui-gallery",
+      "status": "pass",
+      "scope": "Default UI Gallery binary contains the Pagination page and runtime diagnostics can launch it directly."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\pagination\\ui-gallery-pagination-docs-smoke.json --dir target\\fret-diag-pagination-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Pagination docs smoke proves the docs-path anchors render in the default catalog through the real `ui-gallery-pagination` body test id.",
+      "run_id": "1779751758894",
+      "ai_packet": "target/fret-diag-pagination-docs-smoke-matrix/sessions/1779751753395-145352/1779751758894/ai.packet",
+      "share_zip": "target/fret-diag-pagination-docs-smoke-matrix/sessions/1779751753395-145352/share/1779751758894.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\pagination\\ui-gallery-pagination-demo-action-selected-state.json --dir target\\fret-diag-pagination-demo-action-selected-state-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Pagination demo action-state gate proves region/link roles, active selected state, enabled invoke actions, command dispatch traces, and selected-state stability after clicks.",
+      "run_id": "1779751785989",
+      "ai_packet": "target/fret-diag-pagination-demo-action-selected-state-matrix/sessions/1779751781488-144380/1779751785989/ai.packet",
+      "share_zip": "target/fret-diag-pagination-demo-action-selected-state-matrix/sessions/1779751781488-144380/share/1779751785989.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\pagination\\ui-gallery-pagination-rows-per-page-select-open-screenshot-zinc-light.json --dir target\\fret-diag-pagination-rows-per-page-select-open-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Pagination rows-per-page Select screenshot gate proves the docs-path Select composition still opens in zinc/light and captures overlay paint/text evidence.",
+      "run_id": "1779751802751",
+      "ai_packet": "target/fret-diag-pagination-rows-per-page-select-open-matrix/sessions/1779751798753-118112/1779751802751/ai.packet",
+      "share_zip": "target/fret-diag-pagination-rows-per-page-select-open-matrix/sessions/1779751798753-118112/share/1779751802751.zip"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.pagination.demo.light.vp1440x900",
+      "snapshot": "pagination-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "pagination-demo",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/pagination-demo.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json",
+        "layout_path": "target/fret-diag-pagination-demo-action-selected-state-matrix/sessions/1779751781488-144380/1779751786864-ui-gallery-pagination-demo-action-selected-state.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-docs-smoke.json",
+        "bundle_path": "target/fret-diag-pagination-docs-smoke-matrix/sessions/1779751753395-145352/1779751771239-ui-gallery-pagination-docs-smoke/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json",
+        "bundle_path": "target/fret-diag-pagination-demo-action-selected-state-matrix/sessions/1779751781488-144380/1779751787037-ui-gallery-pagination-demo-action-selected-state/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-rows-per-page-select-open-screenshot-zinc-light.json",
+        "bundle_path": "target/fret-diag-pagination-rows-per-page-select-open-matrix/sessions/1779751798753-118112/1779751812444-ui-gallery-pagination-rows-per-page-select-open-zinc-light/bundle.schema2.json"
+      }
+    ],
+    "screenshots": [
+      {
+        "label": "docs-smoke",
+        "path": "target/fret-diag-pagination-docs-smoke-matrix/sessions/1779751753395-145352/screenshots/1779751771239-ui-gallery-pagination-docs-smoke/window-4294967297-tick-32-frame-32.png"
+      },
+      {
+        "label": "demo-action-selected-state",
+        "path": "target/fret-diag-pagination-demo-action-selected-state-matrix/sessions/1779751781488-144380/screenshots/1779751786900-ui-gallery-pagination-demo-action-selected-state/window-4294967297-tick-24-frame-24.png"
+      },
+      {
+        "label": "rows-per-page-select-open-zinc-light",
+        "path": "target/fret-diag-pagination-rows-per-page-select-open-matrix/sessions/1779751798753-118112/screenshots/1779751812182-ui-gallery-pagination-rows-per-page-select-open-zinc-light/window-4294967297-tick-76-frame-76.png"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 7,
+    "status_counts": {
+      "pass_known": 7,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 3,
+      "gallery_composition": 1,
+      "diagnostics_surface": 2,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 2,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 3,
+      "app_demo": 1,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 7
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 3,
+      "component_fixture": 1,
+      "unit_test": 2,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 3,
+    "layout_test_id_count": 0,
+    "bundle_semantics_test_id_count": 0,
+    "measured_test_id_count": 0,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 1,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1,
+    "upstream_live_fact_count": 4,
+    "upstream_semantics_fact_count": 3,
+    "upstream_interaction_fact_count": 1,
+    "fret_live_fact_count": 10,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 5,
+    "fret_text_paint_fact_count": 3,
+    "fret_text_paint_direct_fact_count": 2,
+    "fret_text_paint_associated_fact_count": 1,
+    "fret_text_paint_bundle_entry_count": 136,
+    "fret_text_paint_row_count": 3,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 3
+  },
+  "parts": [
+    {
+      "part_id": "pagination_upstream_demo_shape",
+      "status": "pass_known",
+      "owner": "upstream_reference",
+      "layer": "upstream",
+      "evidence_refs": [
+        "goldens/shadcn-web/v4/new-york-v4/pagination-demo.json",
+        "docs/audits/shadcn-pagination.md"
+      ],
+      "facts": [
+        "The upstream demo is a nav-like root with `aria-label=\"pagination\"`, a horizontal list, list items, link-like previous/number/next anchors, selected page chrome, an aria-hidden ellipsis, and responsive previous/next text.",
+        "No dedicated Radix/Base UI Pagination primitive is present in the pinned references; parity belongs to the shadcn recipe and Gallery teaching surface, while a future Navigation landmark role is a core semantics improvement."
+      ]
+    },
+    {
+      "part_id": "pagination_recipe_root_list_link_semantics",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/pagination.rs",
+        "cargo nextest run -p fret-ui-shadcn --lib --status-level fail pagination_link_uses_enter_only_keyboard_activation pagination"
+      ],
+      "facts": [
+        "Pagination owns recipe-root `w-full` centered layout and approximates upstream `<nav aria-label=\"pagination\">` with Region + `pagination` label until a dedicated Navigation landmark exists.",
+        "PaginationContent and PaginationItem stamp List/ListItem semantics, while PaginationLink stamps link role and selected state for active pages.",
+        "PaginationLink uses Enter-only keyboard activation for link-like behavior and disabled links render through shadcn disabled opacity.",
+        "Previous/Next hide their text below the Tailwind `sm` breakpoint, locking the responsive docs-path behavior without moving layout ownership into the mechanism layer."
+      ]
+    },
+    {
+      "part_id": "pagination_recipe_chrome_and_layout",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/pagination.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/pagination.rs",
+        "goldens/shadcn-web/v4/new-york-v4/pagination-demo.json"
+      ],
+      "facts": [
+        "PaginationLink active and inactive link sizes match the `pagination-demo` web golden.",
+        "PaginationEllipsis uses the upstream 36px box / 16px icon shape and is hidden from the semantics tree.",
+        "Previous/Next icons follow logical inline-start/inline-end direction under RTL while preserving the source-shaped physical text/icon order."
+      ]
+    },
+    {
+      "part_id": "pagination_gallery_docs_surface",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/pagination.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/pagination/*.rs",
+        "apps/fret-ui-gallery/tests/pagination_docs_surface.rs"
+      ],
+      "facts": [
+        "The Gallery page mirrors the docs path after Installation: Demo, Usage, Simple, Icons Only, Routing / Next.js, RTL, Custom Text / Changelog, then the Fret-only Compact Builder follow-up.",
+        "Usage teaches the upstream-shaped Pagination/PaginationContent/PaginationItem/PaginationLink parts lane, while Compact Builder keeps the Fret shorthand lane explicit.",
+        "Routing remains app-owned: examples keep link semantics but bind navigation with `.action(...)` instead of a DOM-only href swap."
+      ]
+    },
+    {
+      "part_id": "pagination_docs_smoke_and_root_id",
+      "status": "pass_known",
+      "owner": "diagnostics_surface",
+      "layer": "runner",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-docs-smoke.json",
+        "target/fret-diag-pagination-docs-smoke-matrix/sessions/1779751753395-145352/1779751771239-ui-gallery-pagination-docs-smoke/bundle.schema2.json"
+      ],
+      "facts": [
+        "Docs smoke starts directly on the Pagination page and waits for the real `ui-gallery-pagination` body test id.",
+        "The script proves Demo, Usage, Routing, and Custom Text anchors render in the default catalog."
+      ]
+    },
+    {
+      "part_id": "pagination_demo_action_selected_state",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json",
+        "target/fret-diag-pagination-demo-action-selected-state-matrix/sessions/1779751781488-144380/1779751786864-ui-gallery-pagination-demo-action-selected-state.layout/layout.taffy.v1.json",
+        "target/fret-diag-pagination-demo-action-selected-state-matrix/sessions/1779751781488-144380/1779751787037-ui-gallery-pagination-demo-action-selected-state/bundle.schema2.json"
+      ],
+      "facts": [
+        "Runtime semantics prove the demo root is a region, previous/page/next surfaces are links, page 2 is selected, adjacent page links are not selected, and all interactive links expose enabled invoke actions.",
+        "Clicking page 1 and page 2 dispatches the expected command traces through the Gallery driver and selected state remains stable afterward.",
+        "The layout sidecar and screenshot provide reviewable geometry and paint evidence for the numbered link row."
+      ]
+    },
+    {
+      "part_id": "pagination_rows_per_page_select_overlay",
+      "status": "pass_known",
+      "owner": "diagnostics_surface",
+      "layer": "runner",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-rows-per-page-select-open-screenshot-zinc-light.json",
+        "target/fret-diag-pagination-rows-per-page-select-open-matrix/sessions/1779751798753-118112/1779751812444-ui-gallery-pagination-rows-per-page-select-open-zinc-light/bundle.schema2.json",
+        "target/fret-diag-pagination-rows-per-page-select-open-matrix/sessions/1779751798753-118112/screenshots/1779751812182-ui-gallery-pagination-rows-per-page-select-open-zinc-light/window-4294967297-tick-76-frame-76.png"
+      ],
+      "facts": [
+        "The rows-per-page Select composition still opens from the Pagination docs surface in zinc/light.",
+        "The open overlay bundle contains a second hit-testable root with text/paint entries, proving the embedded Select path remains operable and reviewable."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Pagination docs-path slice with upstream demo golden, recipe semantics/layout/keyboard tests, Gallery docs-surface checks, action/selected runtime diagnostics, rows-per-page Select overlay proof, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "pagination.docs-path.desktop",
+        "component": "pagination",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/pagination_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

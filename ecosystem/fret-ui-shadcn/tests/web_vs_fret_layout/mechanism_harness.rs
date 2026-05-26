@@ -17,7 +17,7 @@ const RECIPE_CASES: &str = include_str!(concat!(
 #[serde(tag = "kind", rename_all = "snake_case")]
 enum RecipeScenario {
     ButtonGroupTextAddonsCenterWithInputControl,
-    ResponsiveDrawerBottomSheetUsesEightyVh,
+    ResponsiveDrawerBottomSheetCapsVisibleLane,
     PopoverCommandShellWrapsHoverRegionMaxHeight,
 }
 
@@ -43,9 +43,9 @@ fn observe_case(
     }
     if matches!(
         case.scenario,
-        RecipeScenario::ResponsiveDrawerBottomSheetUsesEightyVh
+        RecipeScenario::ResponsiveDrawerBottomSheetCapsVisibleLane
     ) {
-        return observe_responsive_drawer_bottom_sheet_uses_eighty_vh();
+        return observe_responsive_drawer_bottom_sheet_caps_visible_lane();
     }
 
     let bounds = match case.scenario {
@@ -53,7 +53,7 @@ fn observe_case(
             Point::new(Px(0.0), Px(0.0)),
             CoreSize::new(Px(360.0), Px(80.0)),
         ),
-        RecipeScenario::ResponsiveDrawerBottomSheetUsesEightyVh => unreachable!(),
+        RecipeScenario::ResponsiveDrawerBottomSheetCapsVisibleLane => unreachable!(),
         RecipeScenario::PopoverCommandShellWrapsHoverRegionMaxHeight => unreachable!(),
     };
     let (ui, snapshot, _root) = run_fret_root_with_ui(bounds, |cx| match case.scenario {
@@ -85,14 +85,14 @@ fn observe_case(
                 .test_id("mechanism-button-group-text"),
             ]
         }
-        RecipeScenario::ResponsiveDrawerBottomSheetUsesEightyVh => unreachable!(),
+        RecipeScenario::ResponsiveDrawerBottomSheetCapsVisibleLane => unreachable!(),
         RecipeScenario::PopoverCommandShellWrapsHoverRegionMaxHeight => unreachable!(),
     });
 
     Ok(observed_tree_from_ui(&ui, &snapshot, bounds))
 }
 
-fn observe_responsive_drawer_bottom_sheet_uses_eighty_vh()
+fn observe_responsive_drawer_bottom_sheet_caps_visible_lane()
 -> Result<ObservedTree, ScenarioObserveError> {
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),

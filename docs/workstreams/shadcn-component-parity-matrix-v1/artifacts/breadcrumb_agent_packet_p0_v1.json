@@ -1,0 +1,448 @@
+{
+  "schema_version": 1,
+  "component": "breadcrumb",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual breadcrumb docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/breadcrumb.rs + apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs + apps/fret-ui-gallery/src/ui/snippets/breadcrumb/*.rs + tools/diag-scripts/ui-gallery/breadcrumb/*.json",
+  "validation_gates": [
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail breadcrumb",
+      "status": "pass",
+      "scope": "Breadcrumb recipe tests cover Region/List/ListItem semantics, current-page disabled/read-only link semantics, hidden separator/ellipsis affordances, href value semantics, no OpenUrl fallback when a command/on_activate is supplied, hover color tweening, custom separator children, and list default text style inheritance."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail breadcrumb::",
+      "status": "pass",
+      "scope": "Breadcrumb web-vs-Fret layout checks match separator, link, ellipsis, dropdown trigger, demo toggle trigger, and responsive mobile truncation geometry against upstream golden snapshots."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail breadcrumb",
+      "status": "pass",
+      "scope": "Breadcrumb overlay placement fixture checks cover dropdown/demo/responsive open placement, small viewport placement, and responsive mobile drawer inset behavior."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test breadcrumb_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery docs-surface tests keep Breadcrumb runtime action-state anchors and canonical diag scripts wired for usage and dropdown link examples."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_import_policies breadcrumb --status-level fail",
+      "status": "pass",
+      "scope": "Gallery import-policy tests keep docs-path examples on the curated facade lane while advanced overlay/router/responsive examples reopen the explicit raw breadcrumb primitive escape hatch."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app breadcrumb_snippets_prefer_ui_cx_on_the_default_app_surface breadcrumb_page_uses_typed_doc_sections_for_app_facing_snippets breadcrumb_page_teaches_rtl_dot_separator_example_and_logical_default_separator breadcrumb_rtl_snippet_keeps_translated_upstream_shape remaining_app_facing_tail_snippets_prefer_ui_cx_on_the_default_app_surface remaining_app_facing_tail_pages_use_typed_doc_sections_for_app_facing_snippets selected_breadcrumb_snippet_helpers_prefer_into_ui_element_over_anyelement --status-level fail",
+      "status": "pass",
+      "scope": "Gallery app-facing tests keep Breadcrumb snippets on AppComponentCx/UiChild, typed DocSection::build sections, translated RTL dot-separator shape, responsive tail sections, and IntoUiElement helpers instead of AnyElement return drift."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-usage-home-command.json --dir target\\fret-diag-breadcrumb-usage-home-command-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Breadcrumb Usage link command gate proves link role, label, href value, focus/invoke actions, keyboard dispatch, pointer dispatch, and deterministic gallery command handling.",
+      "run_id": "1779742583382",
+      "ai_packet": "target/fret-diag-breadcrumb-usage-home-command-matrix/sessions/1779742579030-17012/1779742583382/ai.packet",
+      "share_zip": "target/fret-diag-breadcrumb-usage-home-command-matrix/sessions/1779742579030-17012/share/1779742583382.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-links-semantic-link.json --dir target\\fret-diag-breadcrumb-links-semantic-link-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Breadcrumb Dropdown semantic-link gate proves raw-primitives link role, label, href value, focus/invoke actions, keyboard dispatch, pointer dispatch, and dropdown trigger button semantics.",
+      "run_id": "1779742597550",
+      "ai_packet": "target/fret-diag-breadcrumb-links-semantic-link-matrix/sessions/1779742593822-142880/1779742597550/ai.packet",
+      "share_zip": "target/fret-diag-breadcrumb-links-semantic-link-matrix/sessions/1779742593822-142880/share/1779742597550.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json --dir target\\fret-diag-breadcrumb-demo-ellipsis-relation-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Breadcrumb Demo ellipsis relation/action gate proves collapsed trigger role/action/focus, open controls relation, menu item invoke actions, Escape close, focus restore, and relation cleanup.",
+      "run_id": "1779742614514",
+      "ai_packet": "target/fret-diag-breadcrumb-demo-ellipsis-relation-matrix/sessions/1779742610445-127688/1779742614514/ai.packet",
+      "share_zip": "target/fret-diag-breadcrumb-demo-ellipsis-relation-matrix/sessions/1779742610445-127688/share/1779742614514.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-custom-separator-single-line.json --dir target\\fret-diag-breadcrumb-custom-separator-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Breadcrumb custom separator gate proves single-line separator/dropdown bounds, missing glyph count, dropdown open/close, text paint bundle evidence, and screenshot evidence.",
+      "run_id": "1779742632727",
+      "ai_packet": "target/fret-diag-breadcrumb-custom-separator-matrix/sessions/1779742628332-142676/1779742632727/ai.packet",
+      "share_zip": "target/fret-diag-breadcrumb-custom-separator-matrix/sessions/1779742628332-142676/share/1779742632727.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-responsive-toggle.json --dir target\\fret-diag-breadcrumb-responsive-toggle-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Breadcrumb responsive gate proves desktop dropdown open/close and constrained viewport mobile drawer open/close behavior.",
+      "run_id": "1779742670160",
+      "ai_packet": "target/fret-diag-breadcrumb-responsive-toggle-matrix/sessions/1779742665412-136656/1779742670160/ai.packet",
+      "share_zip": "target/fret-diag-breadcrumb-responsive-toggle-matrix/sessions/1779742665412-136656/share/1779742670160.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\breadcrumb\\ui-gallery-breadcrumb-rtl-screenshot.json --dir target\\fret-diag-breadcrumb-rtl-screenshot-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Breadcrumb RTL screenshot gate captures translated RTL labels, dot separators, logical inline-end trigger icon placement, and end-aligned dropdown composition.",
+      "run_id": "1779742712899",
+      "ai_packet": "target/fret-diag-breadcrumb-rtl-screenshot-matrix/sessions/1779742708491-115540/1779742712899/ai.packet",
+      "share_zip": "target/fret-diag-breadcrumb-rtl-screenshot-matrix/sessions/1779742708491-115540/share/1779742712899.zip"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.breadcrumb.demo.light.vp1440x900",
+      "snapshot": "breadcrumb-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.breadcrumb.link.light.vp1440x900",
+      "snapshot": "breadcrumb-link",
+      "theme": "light",
+      "mode": "static",
+      "variant": "link",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.breadcrumb.responsive.mobile.vp375x812",
+      "snapshot": "breadcrumb-responsive.vp375x812",
+      "theme": "light",
+      "mode": "responsive",
+      "variant": "responsive-mobile",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 812
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "breadcrumb-demo",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/breadcrumb-demo.json"
+      },
+      {
+        "snapshot": "breadcrumb-link",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/breadcrumb-link.json"
+      },
+      {
+        "snapshot": "breadcrumb-ellipsis",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/breadcrumb-ellipsis.json"
+      },
+      {
+        "snapshot": "breadcrumb-dropdown",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/breadcrumb-dropdown.json"
+      },
+      {
+        "snapshot": "breadcrumb-responsive.vp375x812",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/breadcrumb-responsive.vp375x812.json"
+      },
+      {
+        "snapshot": "breadcrumb-separator",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/breadcrumb-separator.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json",
+        "sidecar_path": "target/fret-diag-breadcrumb-usage-home-command-matrix/sessions/1779742579030-17012/1779742584049-ui-gallery-breadcrumb-usage-home-command.before-layout/layout.taffy.v1.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-links-semantic-link.json",
+        "sidecar_path": "target/fret-diag-breadcrumb-links-semantic-link-matrix/sessions/1779742593822-142880/1779742598239-ui-gallery-breadcrumb-links-semantic-link.before-layout/layout.taffy.v1.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json",
+        "sidecar_path": "target/fret-diag-breadcrumb-demo-ellipsis-relation-matrix/sessions/1779742610445-127688/1779742615287-ui-gallery-breadcrumb-demo-ellipsis-open.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json",
+        "bundle_path": "target/fret-diag-breadcrumb-usage-home-command-matrix/sessions/1779742579030-17012/1779742584459-ui-gallery-breadcrumb-usage-home-command/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-links-semantic-link.json",
+        "bundle_path": "target/fret-diag-breadcrumb-links-semantic-link-matrix/sessions/1779742593822-142880/1779742598643-ui-gallery-breadcrumb-links-semantic-link/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json",
+        "bundle_path": "target/fret-diag-breadcrumb-demo-ellipsis-relation-matrix/sessions/1779742610445-127688/1779742615633-ui-gallery-breadcrumb-demo-ellipsis-relation-action-state/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-custom-separator-single-line.json",
+        "bundle_path": "target/fret-diag-breadcrumb-custom-separator-matrix/sessions/1779742628332-142676/1779742652270-ui-gallery-breadcrumb-custom-separator-single-line/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-responsive-toggle.json",
+        "bundle_path": "target/fret-diag-breadcrumb-responsive-toggle-matrix/sessions/1779742665412-136656/1779742695941-ui-gallery-breadcrumb-responsive-toggle/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-rtl-screenshot.json",
+        "bundle_path": "target/fret-diag-breadcrumb-rtl-screenshot-matrix/sessions/1779742708491-115540/1779742728631-ui-gallery-breadcrumb-rtl/bundle.schema2.json"
+      }
+    ],
+    "fret_screenshots": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json",
+        "screenshot_path": "target/fret-diag-breadcrumb-usage-home-command-matrix/sessions/1779742579030-17012/screenshots/1779742584081-ui-gallery-breadcrumb-usage-home-command.before/window-4294967297-tick-17-frame-17.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-links-semantic-link.json",
+        "screenshot_path": "target/fret-diag-breadcrumb-links-semantic-link-matrix/sessions/1779742593822-142880/screenshots/1779742598271-ui-gallery-breadcrumb-links-semantic-link.before/window-4294967297-tick-17-frame-17.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json",
+        "screenshot_path": "target/fret-diag-breadcrumb-demo-ellipsis-relation-matrix/sessions/1779742610445-127688/screenshots/1779742615346-ui-gallery-breadcrumb-demo-ellipsis-open-relation-action-state/window-4294967297-tick-21-frame-21.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-custom-separator-single-line.json",
+        "screenshot_path": "target/fret-diag-breadcrumb-custom-separator-matrix/sessions/1779742628332-142676/screenshots/1779742652270-ui-gallery-breadcrumb-custom-separator-single-line/window-4294967297-tick-51-frame-51.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-rtl-screenshot.json",
+        "screenshot_path": "target/fret-diag-breadcrumb-rtl-screenshot-matrix/sessions/1779742708491-115540/screenshots/1779742728631-ui-gallery-breadcrumb-rtl/window-4294967297-tick-62-frame-62.png"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 8,
+    "status_counts": {
+      "pass_known": 8,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 3,
+      "gallery_composition": 2,
+      "diagnostics_surface": 2,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 2,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 3,
+      "app_demo": 2,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 8
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 6,
+      "component_fixture": 2,
+      "unit_test": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 3,
+    "bundle_schema2_count": 6,
+    "layout_test_id_count": 18,
+    "bundle_semantics_test_id_count": 18,
+    "measured_test_id_count": 18,
+    "upstream_dom_snapshot_count": 6,
+    "upstream_dom_target_count": 6,
+    "upstream_context_count": 3,
+    "upstream_dom_context_count": 3,
+    "upstream_live_fact_count": 8,
+    "fret_live_fact_count": 24,
+    "upstream_semantics_fact_count": 2,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 10,
+    "fret_interaction_fact_count": 8,
+    "fret_text_paint_fact_count": 4,
+    "fret_text_paint_direct_fact_count": 4,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 4,
+    "fret_text_paint_row_count": 4,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/base/breadcrumb.mdx + repo-ref/ui/apps/v4/content/docs/components/radix/breadcrumb.mdx + repo-ref/ui/apps/v4/registry/new-york-v4/ui/breadcrumb.tsx + goldens/shadcn-web/v4/new-york-v4/breadcrumb-*.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/breadcrumb.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/breadcrumb.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/breadcrumb.rs + apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs + apps/fret-ui-gallery/src/ui/snippets/breadcrumb/*.rs + tools/diag-scripts/ui-gallery/breadcrumb/*.json",
+    "part_count": 8,
+    "upstream_dom_target_count": 6,
+    "fret_test_id_count": 18,
+    "upstream_semantics_fact_count": 2,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 10,
+    "fret_interaction_fact_count": 8,
+    "parts": [
+      {
+        "part_id": "breadcrumb_upstream_source_and_examples",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "docs/audits/shadcn-breadcrumb.md",
+          "repo-ref/ui/apps/v4/content/docs/components/base/breadcrumb.mdx",
+          "repo-ref/ui/apps/v4/content/docs/components/radix/breadcrumb.mdx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/breadcrumb.tsx",
+          "goldens/shadcn-web/v4/new-york-v4/breadcrumb-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/breadcrumb-link.json",
+          "goldens/shadcn-web/v4/new-york-v4/breadcrumb-responsive.vp375x812.json"
+        ],
+        "facts": [
+          "The upstream source owns breadcrumb nav/list/item/link/page/separator/ellipsis composition and presentation-only separator affordances.",
+          "Tracked web goldens cover demo, link, ellipsis, dropdown, separator, and responsive mobile truncation surfaces."
+        ]
+      },
+      {
+        "part_id": "breadcrumb_recipe_semantics_and_link_action",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/breadcrumb.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail breadcrumb"
+        ],
+        "facts": [
+          "Breadcrumb root emits Region with label breadcrumb and BreadcrumbList emits List semantics.",
+          "BreadcrumbItem emits ListItem semantics, BreadcrumbPage approximates the current page with disabled/read-only link semantics, and separators/ellipsis stay hidden from the semantics tree.",
+          "BreadcrumbLink keeps href value semantics and suppresses OpenUrl fallback when command/on_activate is supplied."
+        ]
+      },
+      {
+        "part_id": "breadcrumb_recipe_layout_and_text",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/breadcrumb.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/breadcrumb.rs",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail breadcrumb::"
+        ],
+        "facts": [
+          "Web-golden layout gates match separator, link, ellipsis, dropdown trigger, demo toggle trigger, and responsive mobile truncation geometry.",
+          "Recipe tests cover default list text style inheritance, hover color tweening, and custom separator children while preserving shared role-label text contracts."
+        ]
+      },
+      {
+        "part_id": "breadcrumb_overlay_and_responsive_policy",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/breadcrumb.rs",
+          "ecosystem/fret-ui-shadcn/tests/fixtures/overlay_placement_breadcrumb_cases_v1.json",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail breadcrumb",
+          "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-responsive-toggle.json"
+        ],
+        "facts": [
+          "Overlay placement fixtures cover breadcrumb dropdown/demo/responsive open placement and constrained viewport behavior.",
+          "Responsive diagnostics prove desktop dropdown open/close and mobile drawer open/close handoff."
+        ]
+      },
+      {
+        "part_id": "breadcrumb_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/breadcrumb/*.rs",
+          "apps/fret-ui-gallery/tests/breadcrumb_docs_surface.rs",
+          "apps/fret-ui-gallery/tests/ui_authoring_surface_import_policies.rs",
+          "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+        ],
+        "facts": [
+          "Docs-path examples stay on curated BreadcrumbRoot/BreadcrumbList/BreadcrumbItemPart aliases while advanced overlay/router/responsive examples explicitly reopen raw primitives.",
+          "The Gallery page uses typed DocSection::build sections and keeps app-facing snippets on AppComponentCx/UiChild.",
+          "The RTL preview documents and renders translated labels, dot separators, logical inline-end trigger icon placement, and end-aligned dropdown content."
+        ]
+      },
+      {
+        "part_id": "breadcrumb_usage_and_dropdown_action_state",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-usage-home-command.json",
+          "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-links-semantic-link.json",
+          "target/fret-diag-breadcrumb-usage-home-command-matrix/sessions/1779742579030-17012/1779742584459-ui-gallery-breadcrumb-usage-home-command/bundle.schema2.json",
+          "target/fret-diag-breadcrumb-links-semantic-link-matrix/sessions/1779742593822-142880/1779742598643-ui-gallery-breadcrumb-links-semantic-link/bundle.schema2.json"
+        ],
+        "facts": [
+          "Usage and Dropdown link diagnostics prove link role, label, href value, focus action, invoke action, keyboard dispatch, pointer dispatch, and deterministic command handling.",
+          "Dropdown semantic-link diagnostics also prove the dropdown trigger button role remains present alongside the link path."
+        ]
+      },
+      {
+        "part_id": "breadcrumb_ellipsis_relation_and_keyboard",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-relation-action-state.json",
+          "target/fret-diag-breadcrumb-demo-ellipsis-relation-matrix/sessions/1779742610445-127688/1779742615287-ui-gallery-breadcrumb-demo-ellipsis-open.layout/layout.taffy.v1.json",
+          "target/fret-diag-breadcrumb-demo-ellipsis-relation-matrix/sessions/1779742610445-127688/1779742615633-ui-gallery-breadcrumb-demo-ellipsis-relation-action-state/bundle.schema2.json",
+          "target/fret-diag-breadcrumb-demo-ellipsis-relation-matrix/sessions/1779742610445-127688/screenshots/1779742615346-ui-gallery-breadcrumb-demo-ellipsis-open-relation-action-state/window-4294967297-tick-21-frame-21.png"
+        ],
+        "facts": [
+          "The ellipsis trigger exposes button role, focus and invoke actions, and the menu item invoke actions while open.",
+          "The controls relation is empty when closed, points to the menu while open, and clears again after Escape.",
+          "Escape closes the menu and restores focus to the trigger."
+        ]
+      },
+      {
+        "part_id": "breadcrumb_runtime_text_paint_and_rtl",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-custom-separator-single-line.json",
+          "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-rtl-screenshot.json",
+          "target/fret-diag-breadcrumb-custom-separator-matrix/sessions/1779742628332-142676/1779742652270-ui-gallery-breadcrumb-custom-separator-single-line/bundle.schema2.json",
+          "target/fret-diag-breadcrumb-custom-separator-matrix/sessions/1779742628332-142676/screenshots/1779742652270-ui-gallery-breadcrumb-custom-separator-single-line/window-4294967297-tick-51-frame-51.png",
+          "target/fret-diag-breadcrumb-rtl-screenshot-matrix/sessions/1779742708491-115540/1779742728631-ui-gallery-breadcrumb-rtl/bundle.schema2.json",
+          "target/fret-diag-breadcrumb-rtl-screenshot-matrix/sessions/1779742708491-115540/screenshots/1779742728631-ui-gallery-breadcrumb-rtl/window-4294967297-tick-62-frame-62.png"
+        ],
+        "facts": [
+          "Custom separator diagnostics capture text-paint bundle evidence, single-line bounds, dropdown open/close, screenshot evidence, and zero missing glyphs.",
+          "RTL diagnostics capture translated labels, dot separators, logical inline-end icon placement, and end-aligned dropdown composition."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Breadcrumb docs-path slice with shadcn source refs, upstream web goldens, recipe semantics/layout tests, overlay placement fixtures, Gallery docs-surface authoring checks, link command diagnostics, ellipsis relation/action diagnostics, responsive dropdown/drawer behavior, text-paint screenshots, and RTL evidence.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "breadcrumb.docs-path.desktop-mobile",
+        "component": "breadcrumb",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/breadcrumb_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

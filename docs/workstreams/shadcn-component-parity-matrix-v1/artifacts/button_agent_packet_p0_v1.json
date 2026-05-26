@@ -1,0 +1,348 @@
+{
+  "schema_version": 1,
+  "component": "button",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual button docs-demo harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/button.rs + apps/fret-ui-gallery/src/ui/snippets/button/*.rs + tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json",
+  "validation_gates": [
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\button\\ui-gallery-button-link-render.json --dir target\\fret-diag-button-link-render-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Button semantic-link render runtime action state: page/section navigation, link role, label, focus/invoke actions, keyboard and pointer activation, layout sidecar, screenshot, schema2 bundle, AI packet, and share zip.",
+      "run_id": "1779711226806",
+      "ai_packet": "target/fret-diag-button-link-render-matrix/sessions/1779711222524-106552/1779711226806/ai.packet",
+      "share_zip": "target/fret-diag-button-link-render-matrix/sessions/1779711222524-106552/share/1779711226806.zip"
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail button",
+      "status": "pass",
+      "scope": "Button recipe tests cover variant/size chrome, state styling, action hooks, toggle helpers, child composition, link rendering, disabled behavior, and currentColor child propagation."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail button::",
+      "status": "pass",
+      "scope": "Button web-vs-Fret layout checks match upstream as-child/link geometry and keep link buttons non-zero in grid auto tracks with style-aware text metrics."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail button",
+      "status": "pass",
+      "scope": "Button web-vs-Fret chrome checks match upstream docs-demo, shadows, focus ring, icon, loading, rounded, with-icon, and size variants."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test button_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Button gallery docs surface keeps semantic-link snippet anchors, canonical redirect stub, and link action-state suite wiring stable."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.button.demo.light.vp1440x900",
+      "snapshot": "button-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.button.default.light.vp1440x900",
+      "snapshot": "button-default",
+      "theme": "light",
+      "mode": "static",
+      "variant": "default",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.button.outline.light.vp1440x900",
+      "snapshot": "button-outline",
+      "theme": "light",
+      "mode": "static",
+      "variant": "outline",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.button.link.light.vp1440x900",
+      "snapshot": "button-link",
+      "theme": "light",
+      "mode": "static",
+      "variant": "link",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.button.focus.light.vp1440x900",
+      "snapshot": "button-demo.focus",
+      "theme": "light",
+      "mode": "focus",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "button-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.button.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/button-demo.json"
+      },
+      {
+        "snapshot": "button-default",
+        "theme": "light",
+        "mode": "static",
+        "variant": "default",
+        "context_id": "upstream.button.default.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/button-default.json"
+      },
+      {
+        "snapshot": "button-link",
+        "theme": "light",
+        "mode": "static",
+        "variant": "link",
+        "context_id": "upstream.button.link.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/button-link.json"
+      },
+      {
+        "snapshot": "button-demo.focus",
+        "theme": "light",
+        "mode": "focus",
+        "variant": "docs-demo",
+        "context_id": "upstream.button.focus.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/button-demo.focus.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json",
+        "sidecar_path": "target/fret-diag-button-link-render-matrix/sessions/1779711222524-106552/1779711234066-ui-gallery-button-link-render.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json",
+        "bundle_path": "target/fret-diag-button-link-render-matrix/sessions/1779711222524-106552/1779711226806/bundle.schema2.json"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json",
+        "ai_packet": "target/fret-diag-button-link-render-matrix/sessions/1779711222524-106552/1779711226806/ai.packet",
+        "share_zip": "target/fret-diag-button-link-render-matrix/sessions/1779711222524-106552/share/1779711226806.zip"
+      }
+    ],
+    "fret_screenshots": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json",
+        "screenshot_path": "target/fret-diag-button-link-render-matrix/sessions/1779711222524-106552/screenshots/1779711234346-ui-gallery-button-link-render/window-4294967297-tick-21-frame-21.png"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 5,
+    "status_counts": {
+      "pass_known": 5,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 3,
+      "gallery_composition": 1,
+      "mechanism_core": 0,
+      "diagnostics_surface": 1,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 3,
+      "app_demo": 1,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 5
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 1,
+      "component_fixture": 3,
+      "unit_test": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 1,
+    "layout_test_id_count": 2,
+    "bundle_semantics_test_id_count": 1,
+    "measured_test_id_count": 1,
+    "upstream_dom_snapshot_count": 14,
+    "upstream_dom_target_count": 14,
+    "upstream_context_count": 5,
+    "upstream_dom_context_count": 5,
+    "upstream_live_fact_count": 14,
+    "fret_live_fact_count": 10,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 4,
+    "fret_semantics_fact_count": 5,
+    "fret_interaction_fact_count": 5,
+    "fret_text_paint_fact_count": 19,
+    "fret_text_paint_direct_fact_count": 19,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 19,
+    "fret_text_paint_row_count": 19,
+    "fret_text_label_row_count": 1
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/button.mdx + repo-ref/ui/apps/v4/registry/new-york-v4/ui/button.tsx + goldens/shadcn-web/v4/new-york-v4/button-*.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/button.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/button.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs + apps/fret-ui-gallery/src/ui/pages/button.rs + tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json",
+    "part_count": 5,
+    "upstream_dom_target_count": 14,
+    "fret_test_id_count": 3,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 4,
+    "fret_semantics_fact_count": 5,
+    "fret_interaction_fact_count": 5,
+    "fret_text_paint_fact_count": 19,
+    "parts": [
+      {
+        "part_id": "button_recipe_variants_and_actions",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/button.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail button"
+        ],
+        "facts": [
+          "Button recipe tests passed 95/95 for variant, size, disabled, focus, action hook, toggle, child composition, link render, and currentColor behavior.",
+          "No crates/fret-ui mechanism change was needed for the Button docs-demo promotion."
+        ]
+      },
+      {
+        "part_id": "button_web_golden_layout",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/button.rs",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail button::"
+        ],
+        "facts": [
+          "The Button layout gate passed 3/3 for as-child geometry, link geometry, and grid auto-track intrinsic width.",
+          "The layout proof uses style-aware text services for upstream comparable dimensions."
+        ]
+      },
+      {
+        "part_id": "button_web_golden_chrome",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail button"
+        ],
+        "facts": [
+          "The Button chrome gate passed 22/22 for docs-demo control chrome, shadows, focus ring, icon, loading, rounded, with-icon, and size variants.",
+          "The upstream contexts cover default, secondary, destructive, outline, ghost, link, focus, hover, pressed, disabled, icon, loading, size, and as-child snapshots."
+        ]
+      },
+      {
+        "part_id": "button_link_render_diag",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json",
+          "target/fret-diag-button-link-render-matrix/sessions/1779711222524-106552/1779711234066-ui-gallery-button-link-render.layout/layout.taffy.v1.json",
+          "target/fret-diag-button-link-render-matrix/sessions/1779711222524-106552/1779711226806/bundle.schema2.json",
+          "target/fret-diag-button-link-render-matrix/sessions/1779711222524-106552/1779711226806/ai.packet",
+          "target/fret-diag-button-link-render-matrix/sessions/1779711222524-106552/share/1779711226806.zip"
+        ],
+        "facts": [
+          "The link-render script starts on the Button page semantic-link section and asserts the ButtonRender::Link node has role=link and label Login.",
+          "The passing run proves focus and invoke actions, keyboard Enter dispatch, pointer click dispatch, app snapshot mutation, layout sidecar, screenshot, schema2 bundle, AI packet, and share zip evidence."
+        ]
+      },
+      {
+        "part_id": "button_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/button.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/button/link_render.rs",
+          "apps/fret-ui-gallery/tests/button_docs_surface.rs",
+          "cargo nextest run -p fret-ui-gallery --test button_docs_surface --status-level fail"
+        ],
+        "facts": [
+          "The docs surface test keeps the link-render snippet on ButtonRender::Link with stable ui-gallery-button-render-link and row anchors.",
+          "The same test keeps the canonical redirect stub and button link action-state suite wired to the promoted script."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Button docs-demo desktop slice with upstream source/golden, Fret recipe variant/chrome behavior, web-vs-Fret geometry/chrome, semantic-link runtime diagnostics, gallery docs surface, and text-paint evidence.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "button.docs-demo.desktop",
+        "component": "button",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/button_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

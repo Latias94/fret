@@ -1,0 +1,292 @@
+{
+  "schema_version": 1,
+  "component": "data-table",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual data table policy harness seed v1",
+  "source_mapping": "apps/fret-ui-gallery/src/ui/pages/data_table.rs + apps/fret-ui-gallery/src/ui/snippets/data_table/guide_demo.rs + ecosystem/fret-ui-shadcn/src/data_table.rs + tools/diag-scripts/suites/ui-gallery-data-table/suite.json",
+  "validation_gates": [
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag suite tools\\diag-scripts\\suites\\ui-gallery-data-table\\suite.json --dir target\\fret-diag-data-table-policy-matrix-rerun --session-auto --timeout-ms 900000 --ai-packet --reuse-launch --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Data Table docs-path policy suite covers default recipe smoke, pagination metadata, guide checkbox-only selection, guide row-actions menu stability, guide header screenshot/layout evidence, list-like pointer selection, and page smoke with reuse-launch hygiene.",
+      "session_id": "1779703988157-90264",
+      "run_ids": [
+        "1779703992401",
+        "1779703996269",
+        "1779703999235",
+        "1779704000564",
+        "1779704003325",
+        "1779704008087",
+        "1779704014202",
+        "1779704018154"
+      ],
+      "suite_summary": "target/fret-diag-data-table-policy-matrix-rerun/sessions/1779703988157-90264/suite.summary.json"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.data_table.demo.light.vp1440x900",
+      "snapshot": "data-table-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "data-table-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.data_table.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/data-table-demo.json"
+      }
+    ],
+    "fret_suite_summary": [
+      {
+        "suite": "tools/diag-scripts/suites/ui-gallery-data-table/suite.json",
+        "summary_path": "target/fret-diag-data-table-policy-matrix-rerun/sessions/1779703988157-90264/suite.summary.json",
+        "status": "passed",
+        "passed_scripts": 8,
+        "failed_scripts": 0
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-header-screenshot-zinc-light.json",
+        "sidecar_path": "target/fret-diag-data-table-policy-matrix-rerun/sessions/1779703988157-90264/1779704006789-ui-gallery-data-table-guide-header-zinc-light/layout.taffy.v1.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-row-actions-menu-stability.json",
+        "sidecar_path": "target/fret-diag-data-table-policy-matrix-rerun/sessions/1779703988157-90264/1779704010826-ui-gallery-data-table-guide-row-actions-menu-stability.before-click.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-demo-checkbox-only-selection.json",
+        "bundle_path": "target/fret-diag-data-table-policy-matrix-rerun/sessions/1779703988157-90264/1779704001571-ui-gallery-data-table-guide-demo-checkbox-only-selection/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-row-actions-menu-stability.json",
+        "bundle_path": "target/fret-diag-data-table-policy-matrix-rerun/sessions/1779703988157-90264/1779704012479-ui-gallery-data-table-guide-row-actions-menu-stability.stable15f/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-listlike-pointer-selection.json",
+        "bundle_path": "target/fret-diag-data-table-policy-matrix-rerun/sessions/1779703988157-90264/1779704017359-ui-gallery-data-table-listlike-pointer-selection/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-smoke.json",
+        "bundle_path": "target/fret-diag-data-table-policy-matrix-rerun/sessions/1779703988157-90264/1779704018717-ui-gallery-data-table-smoke/bundle.schema2.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 6,
+    "status_counts": {
+      "pass_known": 6,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "component_policy": 2,
+      "gallery_composition": 1,
+      "mechanism_core": 0,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 0,
+      "policy": 2,
+      "recipe": 1,
+      "app_demo": 1,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 6
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_suite_gate": 1,
+      "diag_script": 3,
+      "upstream_dom_snapshot": 1,
+      "none": 1
+    },
+    "layout_sidecar_count": 2,
+    "bundle_schema2_count": 4,
+    "layout_test_id_count": 4,
+    "bundle_semantics_test_id_count": 5,
+    "measured_test_id_count": 256,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 8,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1,
+    "upstream_live_fact_count": 8,
+    "fret_live_fact_count": 12,
+    "upstream_semantics_fact_count": 2,
+    "upstream_interaction_fact_count": 4,
+    "fret_semantics_fact_count": 6,
+    "fret_interaction_fact_count": 8,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/content/docs/components/data-table.mdx + F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/blocks/dashboard-01/components/data-table.tsx + F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/data-table-demo.json",
+    "fret_source": "apps/fret-ui-gallery/src/ui/pages/data_table.rs + apps/fret-ui-gallery/src/ui/snippets/data_table/guide_demo.rs + ecosystem/fret-ui-shadcn/src/data_table.rs + tools/diag-scripts/suites/ui-gallery-data-table/suite.json",
+    "part_count": 6,
+    "upstream_dom_target_count": 8,
+    "fret_test_id_count": 256,
+    "upstream_semantics_fact_count": 2,
+    "upstream_interaction_fact_count": 4,
+    "fret_semantics_fact_count": 6,
+    "fret_interaction_fact_count": 8,
+    "fret_text_paint_fact_count": 0,
+    "parts": [
+      {
+        "part_id": "data_table_upstream_dom_and_source_context",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/content/docs/components/data-table.mdx",
+          "F:/SourceCodes/Rust/fret/repo-ref/ui/apps/v4/registry/new-york-v4/blocks/dashboard-01/components/data-table.tsx",
+          "F:/SourceCodes/Rust/fret/goldens/shadcn-web/v4/new-york-v4/data-table-demo.json"
+        ],
+        "facts": [
+          "Upstream shadcn treats Data Table as a TanStack Table guide recipe rather than a single fixed component.",
+          "The upstream data-table-demo DOM snapshot covers the docs demo at 1440x900 with a filter input, View Columns trigger, rounded bordered table shell, row checkboxes, row actions, and pagination buttons.",
+          "The snapshot records table chrome and row policy geometry, including a 36px filter input, 36px View Columns trigger, 40px header row, and approximately 49px body rows."
+        ]
+      },
+      {
+        "part_id": "data_table_gallery_guide_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/data_table.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/data_table/guide_demo.rs"
+        ],
+        "facts": [
+          "The UI Gallery page intentionally maps the upstream guide into Default Recipe, Basic Table, Guide Demo, Reusable Components, and RTL sections.",
+          "Guide Demo compresses Row Actions, Pagination, Sorting, Filtering, Visibility, and Row Selection into one copyable Fret surface.",
+          "Stable page-scoped ui-gallery-data-table-* test ids are part of the page contract for diagnostics."
+        ]
+      },
+      {
+        "part_id": "data_table_policy_suite_gate",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/suites/ui-gallery-data-table/suite.json",
+          "target/fret-diag-data-table-policy-matrix-rerun/sessions/1779703988157-90264/suite.summary.json"
+        ],
+        "facts": [
+          "The Data Table suite rerun passed 8 scripts with status=passed and stage_counts.passed=8.",
+          "The suite summary reports no reason_code_counts, no blocking_reason_counts, and focus_mismatch_total=0.",
+          "Every row in the suite summary has lint error_issues=0 and warning_issues=0."
+        ]
+      },
+      {
+        "part_id": "data_table_checkbox_only_selection_policy",
+        "status": "pass_known",
+        "owner": "component_policy",
+        "layer": "policy",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-demo-checkbox-only-selection.json",
+          "target/fret-diag-data-table-policy-matrix-rerun/sessions/1779703988157-90264/1779704001571-ui-gallery-data-table-guide-demo-checkbox-only-selection/bundle.schema2.json"
+        ],
+        "facts": [
+          "Clicking the row name cell leaves ui-gallery-data-table-select-row-1 unchecked, matching the checkbox-only row-selection policy.",
+          "Clicking ui-gallery-data-table-select-row-1 checks the row checkbox.",
+          "The final schema2 slice records ui-gallery-data-table-select-row-1 as role=checkbox with checked=true and focus/invoke actions."
+        ]
+      },
+      {
+        "part_id": "data_table_listlike_pointer_selection_policy",
+        "status": "pass_known",
+        "owner": "component_policy",
+        "layer": "policy",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-listlike-pointer-selection.json",
+          "target/fret-diag-data-table-policy-matrix-rerun/sessions/1779703988157-90264/1779704017359-ui-gallery-data-table-listlike-pointer-selection/bundle.schema2.json"
+        ],
+        "facts": [
+          "The list-like selection script covers plain click, shift-click range selection, meta-click additive selection, and a final single-selection click.",
+          "The script uses scroll_into_view before pointer actions so the policy gate is not hidden by off-window hit-test failures.",
+          "The final schema2 slice records ui-gallery-data-table-listlike-row-2 as role=list_item with selected=true and focused=true."
+        ]
+      },
+      {
+        "part_id": "data_table_row_actions_overlay_stability",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/data_table.rs",
+          "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-row-actions-menu-stability.json",
+          "target/fret-diag-data-table-policy-matrix-rerun/sessions/1779703988157-90264/1779704010826-ui-gallery-data-table-guide-row-actions-menu-stability.before-click.layout/layout.taffy.v1.json",
+          "target/fret-diag-data-table-policy-matrix-rerun/sessions/1779703988157-90264/1779704012479-ui-gallery-data-table-guide-row-actions-menu-stability.stable15f/bundle.schema2.json"
+        ],
+        "facts": [
+          "The row-actions stability script opens the guide row actions menu and waits through the stable-frame checks.",
+          "The passing bundle exposes row action trigger and menu item test ids for edit, copy, and delete on the selected row.",
+          "A layout sidecar was captured before the click, keeping row-action geometry available for future drift triage."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Lock the Data Table docs-path policy desktop slice with upstream DOM snapshot evidence and fresh Fret diagnostics suite proof for selection, row actions, pagination, layout, semantics, and smoke behavior.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "data-table.policy.desktop",
+        "component": "data-table",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/data_table_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

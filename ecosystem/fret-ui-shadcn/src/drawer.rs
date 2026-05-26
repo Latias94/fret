@@ -48,8 +48,15 @@ type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 type OnSnapPointChange = Arc<dyn Fn(Option<usize>) + Send + Sync + 'static>;
 
 const DRAWER_MAX_HEIGHT_FRACTION: f32 = 0.8;
+const DRAWER_VERTICAL_EDGE_GAP_PX: Px = Px(96.0);
 const DRAWER_SIDE_PANEL_WIDTH_FRACTION: f32 = 0.75;
 const DRAWER_SIDE_PANEL_MAX_WIDTH_PX: Px = Px(384.0);
+
+fn drawer_vertical_max_height(window_height: Px) -> Px {
+    Px((window_height.0 * DRAWER_MAX_HEIGHT_FRACTION)
+        .min((window_height.0 - DRAWER_VERTICAL_EDGE_GAP_PX.0).max(0.0))
+        .max(0.0))
+}
 
 /// shadcn/ui `DrawerPortal` (v4).
 ///
@@ -348,10 +355,10 @@ fn drawer_drag_snap_height(drawer_height: Px, window_height: Px, side: DrawerSid
     //
     // When the content subtree's intrinsic height exceeds the sheet's max-height clamp, layout
     // bounds can report a taller value than what is actually visible. For Vaul-style snap points
-    // we want the *effective* drawer height, so clamp to the same max-height fraction used by the
-    // recipe (`max-h-[80vh]`).
+    // we want the *effective* drawer height, so clamp to the same visible-lane cap used by the
+    // recipe (`min(max-h-[80vh], viewport - edge gap)`).
     if matches!(side, DrawerSide::Top | DrawerSide::Bottom) {
-        let max_h = Px((window_height.0 * DRAWER_MAX_HEIGHT_FRACTION).max(0.0));
+        let max_h = drawer_vertical_max_height(window_height);
         return Px(drawer_height.0.min(max_h.0));
     }
     drawer_height
@@ -550,7 +557,7 @@ impl DrawerContent {
                 .unwrap_or(viewport_bounds)
                 .size
                 .height;
-        let max_height = Px((window_height.0 * DRAWER_MAX_HEIGHT_FRACTION).max(0.0));
+        let max_height = drawer_vertical_max_height(window_height);
 
         let base_layout = match side {
             DrawerSide::Left | DrawerSide::Right => LayoutRefinement::default()
@@ -1369,6 +1376,7 @@ impl Drawer {
             side: DrawerSide::Bottom,
             inner: Sheet::new(open)
                 .side(DrawerSide::Bottom)
+                .vertical_edge_gap_px(DRAWER_VERTICAL_EDGE_GAP_PX)
                 .vertical_auto_max_height_fraction(DRAWER_MAX_HEIGHT_FRACTION),
             drag_to_dismiss: true,
             snap_points: None,
@@ -1671,6 +1679,7 @@ impl Drawer {
 
         let mut inner = self
             .inner
+            .vertical_edge_gap_px(DRAWER_VERTICAL_EDGE_GAP_PX)
             .vertical_auto_max_height_fraction(DRAWER_MAX_HEIGHT_FRACTION);
         match side {
             DrawerSide::Left | DrawerSide::Right => {
@@ -3458,7 +3467,7 @@ mod tests {
     }
 
     #[test]
-    fn drawer_content_max_height_fraction_clamps_tall_content() {
+    fn drawer_content_max_height_clamps_tall_content_to_visible_vertical_lane() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -3509,11 +3518,10 @@ mod tests {
             content_id.get().expect("drawer content element id"),
         )
         .expect("drawer content bounds");
-        let viewport_h = bounds.size.height.0;
-        let expected = viewport_h * DRAWER_MAX_HEIGHT_FRACTION;
+        let expected = drawer_vertical_max_height(bounds.size.height).0;
         assert!(
             (content_bounds.size.height.0 - expected).abs() < 2.0,
-            "expected content max-height fraction clamp near {expected}px, got {content_bounds:?}"
+            "expected content max-height clamp near {expected}px, got {content_bounds:?}"
         );
     }
 

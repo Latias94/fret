@@ -1,0 +1,421 @@
+{
+  "schema_version": 1,
+  "component": "badge",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual badge docs-demo harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/badge.rs + apps/fret-ui-gallery/src/ui/snippets/badge/*.rs + tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json + tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-hover-screenshot-zinc-light.json",
+  "validation_gates": [
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\badge\\ui-gallery-badge-link-render.json --dir target\\fret-diag-badge-link-render-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Badge link render runtime action state: page/section navigation, link role, label, focus/invoke action exposure, focus assertion, Enter/click activation, layout sidecar, screenshot, schema2 bundle, AI packet, and share zip.",
+      "run_id": "1779708458584",
+      "ai_packet": "target/fret-diag-badge-link-render-matrix/sessions/1779708455471-63148/1779708458584/ai.packet",
+      "share_zip": "target/fret-diag-badge-link-render-matrix/sessions/1779708455471-63148/share/1779708458584.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\badge\\ui-gallery-badge-link-hover-screenshot-zinc-light.json --dir target\\fret-diag-badge-link-hover-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Badge link hover screenshot evidence: zinc/light preset, Badge page navigation, pre-hover and hovered screenshot/bundle captures, AI packet, and share zip.",
+      "run_id": "1779710381522",
+      "ai_packet": "target/fret-diag-badge-link-hover-matrix/sessions/1779710377099-107488/1779710381522/ai.packet",
+      "share_zip": "target/fret-diag-badge-link-hover-matrix/sessions/1779710377099-107488/share/1779710381522.zip"
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail badge",
+      "status": "pass",
+      "scope": "Badge recipe tests cover variant foreground inheritance, shared chip-label typography contracts, child icon/currentColor behavior, contrast, focus/hover transitions, link hover underline, and outline link hover foreground/background."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_badge_link_visited_semantics",
+      "status": "pass",
+      "scope": "Badge link visited semantics snapshot keeps role=Link, visited=true, label, scene paint, and style-aware text metrics stable."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail badge::",
+      "status": "pass",
+      "scope": "Badge web-vs-Fret layout checks match upstream default, secondary, destructive, and outline heights using style-aware text metrics."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail badge",
+      "status": "pass",
+      "scope": "Badge web-vs-Fret chrome checks match upstream default, secondary, destructive, and outline width, height, border, and radius."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test badge_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Badge gallery docs surface keeps link-render anchors, canonical script redirect, and link action-state suite wiring stable."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.badge.demo.light.vp1440x900",
+      "snapshot": "badge-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.badge.secondary.light.vp1440x900",
+      "snapshot": "badge-secondary",
+      "theme": "light",
+      "mode": "static",
+      "variant": "secondary",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.badge.destructive.light.vp1440x900",
+      "snapshot": "badge-destructive",
+      "theme": "light",
+      "mode": "static",
+      "variant": "destructive",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.badge.outline.light.vp1440x900",
+      "snapshot": "badge-outline",
+      "theme": "light",
+      "mode": "static",
+      "variant": "outline",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "badge-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.badge.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/badge-demo.json"
+      },
+      {
+        "snapshot": "badge-secondary",
+        "theme": "light",
+        "mode": "static",
+        "variant": "secondary",
+        "context_id": "upstream.badge.secondary.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/badge-secondary.json"
+      },
+      {
+        "snapshot": "badge-destructive",
+        "theme": "light",
+        "mode": "static",
+        "variant": "destructive",
+        "context_id": "upstream.badge.destructive.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/badge-destructive.json"
+      },
+      {
+        "snapshot": "badge-outline",
+        "theme": "light",
+        "mode": "static",
+        "variant": "outline",
+        "context_id": "upstream.badge.outline.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/badge-outline.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json",
+        "sidecar_path": "target/fret-diag-badge-link-render-matrix/sessions/1779708455471-63148/1779708460448-ui-gallery-badge-link-render.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json",
+        "bundle_path": "target/fret-diag-badge-link-render-matrix/sessions/1779708455471-63148/1779708458584/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-hover-screenshot-zinc-light.json",
+        "bundle_path": "target/fret-diag-badge-link-hover-matrix/sessions/1779710377099-107488/1779710381522/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-hover-screenshot-zinc-light.json",
+        "bundle_path": "target/fret-diag-badge-link-hover-matrix/sessions/1779710377099-107488/1779710413078-ui-gallery-badge-link-hover-before-zinc-light/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-hover-screenshot-zinc-light.json",
+        "bundle_path": "target/fret-diag-badge-link-hover-matrix/sessions/1779710377099-107488/1779710413925-ui-gallery-badge-link-hover-after-zinc-light/bundle.schema2.json"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json",
+        "ai_packet": "target/fret-diag-badge-link-render-matrix/sessions/1779708455471-63148/1779708458584/ai.packet",
+        "share_zip": "target/fret-diag-badge-link-render-matrix/sessions/1779708455471-63148/share/1779708458584.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-hover-screenshot-zinc-light.json",
+        "ai_packet": "target/fret-diag-badge-link-hover-matrix/sessions/1779710377099-107488/1779710381522/ai.packet",
+        "share_zip": "target/fret-diag-badge-link-hover-matrix/sessions/1779710377099-107488/share/1779710381522.zip"
+      }
+    ],
+    "fret_screenshots": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json",
+        "screenshot_path": "target/fret-diag-badge-link-render-matrix/sessions/1779708455471-63148/screenshots/1779708460551-ui-gallery-badge-link-render/window-4294967297-tick-40-frame-40.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-hover-screenshot-zinc-light.json",
+        "screenshot_path": "target/fret-diag-badge-link-hover-matrix/sessions/1779710377099-107488/screenshots/1779710412843-ui-gallery-badge-link-hover-before-zinc-light/window-4294967297-tick-90-frame-90.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-hover-screenshot-zinc-light.json",
+        "screenshot_path": "target/fret-diag-badge-link-hover-matrix/sessions/1779710377099-107488/screenshots/1779710413578-ui-gallery-badge-link-hover-after-zinc-light/window-4294967297-tick-112-frame-112.png"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 7,
+    "status_counts": {
+      "pass_known": 7,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 4,
+      "gallery_composition": 1,
+      "mechanism_core": 0,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 4,
+      "app_demo": 1,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 7
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 2,
+      "component_fixture": 3,
+      "unit_test": 2,
+      "none": 0
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 4,
+    "layout_test_id_count": 1,
+    "bundle_semantics_test_id_count": 1,
+    "measured_test_id_count": 1,
+    "upstream_dom_snapshot_count": 4,
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 4,
+    "upstream_dom_context_count": 4,
+    "upstream_live_fact_count": 8,
+    "fret_live_fact_count": 14,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 4,
+    "fret_interaction_fact_count": 5,
+    "fret_text_paint_fact_count": 6,
+    "fret_text_paint_direct_fact_count": 4,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 3,
+    "fret_text_paint_row_count": 6,
+    "fret_text_paint_association_row_count": 2,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 1
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/base/badge.mdx + repo-ref/ui/apps/v4/examples/base/ui/badge.tsx + goldens/shadcn-web/v4/new-york-v4/badge-demo.json + goldens/shadcn-web/v4/new-york-v4/badge-secondary.json + goldens/shadcn-web/v4/new-york-v4/badge-destructive.json + goldens/shadcn-web/v4/new-york-v4/badge-outline.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/badge.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/badge.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs + apps/fret-ui-gallery/src/ui/pages/badge.rs + tools/diag-scripts/ui-gallery/badge/*.json",
+    "part_count": 7,
+    "upstream_dom_target_count": 4,
+    "fret_test_id_count": 1,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 4,
+    "fret_interaction_fact_count": 5,
+    "fret_text_paint_fact_count": 6,
+    "parts": [
+      {
+        "part_id": "badge_upstream_source_and_variants",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "repo-ref/ui/apps/v4/content/docs/components/base/badge.mdx",
+          "repo-ref/ui/apps/v4/examples/base/ui/badge.tsx",
+          "goldens/shadcn-web/v4/new-york-v4/badge-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/badge-secondary.json",
+          "goldens/shadcn-web/v4/new-york-v4/badge-destructive.json",
+          "goldens/shadcn-web/v4/new-york-v4/badge-outline.json"
+        ],
+        "facts": [
+          "Upstream Badge owns inline-flex layout, rounded-full border, px-2 py-0.5, text-xs font-medium, w-fit, whitespace-nowrap, shrink-0, icon size-3, gap-1, focus-visible ring, overflow-hidden, and variant foreground/background classes.",
+          "The upstream docs path includes default, secondary, destructive, outline, icon/spinner, link, custom colors, and RTL examples.",
+          "The Fret-only count badges remain a gallery follow-up after the upstream docs path and are not required for this docs-demo regression lock."
+        ]
+      },
+      {
+        "part_id": "badge_recipe_variant_and_current_color",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/badge.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail badge"
+        ],
+        "facts": [
+          "Badge label, child text, icons, and spinners inherit the resolved variant foreground through the late-bound currentColor path.",
+          "The outline link hover test now observes inherited foreground instead of assuming a stamped Text.color, matching the recipe's currentColor ownership.",
+          "The tests cover focus ring tweening, link underline hover behavior, destructive contrast, shared chip-label role metadata, and child inline order."
+        ]
+      },
+      {
+        "part_id": "badge_web_golden_layout_and_chrome",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/badge.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail badge::",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail badge"
+        ],
+        "facts": [
+          "The layout test now uses style-aware text services, avoiding the FakeServices 10x10 text metric that previously collapsed the 22px upstream Badge height to 16px.",
+          "The layout gate matches default, secondary, destructive, and outline badge heights against the web golden.",
+          "The chrome gate matches width, height, border, and radius for the same upstream variant snapshots."
+        ]
+      },
+      {
+        "part_id": "badge_link_semantics_snapshot",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/snapshots.rs",
+          "ecosystem/fret-ui-shadcn/tests/snapshots/badge_link_visited_semantics.json",
+          "cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_badge_link_visited_semantics"
+        ],
+        "facts": [
+          "The Badge link snapshot now uses style-aware text metrics for this Badge case, so the stored 47px by 22px link chip reflects real text measurement instead of FakeServices width.",
+          "The snapshot keeps role=Link, label=Docs, visited=true, and scene paint stable.",
+          "No mechanism-layer change was needed; this was a recipe test measurement correction."
+        ]
+      },
+      {
+        "part_id": "badge_link_render_diag",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-render.json",
+          "target/fret-diag-badge-link-render-matrix/sessions/1779708455471-63148/1779708460448-ui-gallery-badge-link-render.layout/layout.taffy.v1.json",
+          "target/fret-diag-badge-link-render-matrix/sessions/1779708455471-63148/1779708458584/bundle.schema2.json",
+          "target/fret-diag-badge-link-render-matrix/sessions/1779708455471-63148/1779708458584/ai.packet",
+          "target/fret-diag-badge-link-render-matrix/sessions/1779708455471-63148/share/1779708458584.zip"
+        ],
+        "facts": [
+          "The script starts directly on the Badge page Link section and asserts ui-gallery-badge-link exists within the viewport.",
+          "The script proves role=link, label contains Open Link, focus and invoke actions are enabled, and the link can be focused and activated.",
+          "The passing run captures a layout sidecar, screenshot, schema2 bundle, AI packet, and share zip."
+        ]
+      },
+      {
+        "part_id": "badge_link_hover_diag",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/badge/ui-gallery-badge-link-hover-screenshot-zinc-light.json",
+          "target/fret-diag-badge-link-hover-matrix/sessions/1779710377099-107488/screenshots/1779710412843-ui-gallery-badge-link-hover-before-zinc-light/window-4294967297-tick-90-frame-90.png",
+          "target/fret-diag-badge-link-hover-matrix/sessions/1779710377099-107488/screenshots/1779710413578-ui-gallery-badge-link-hover-after-zinc-light/window-4294967297-tick-112-frame-112.png",
+          "target/fret-diag-badge-link-hover-matrix/sessions/1779710377099-107488/1779710381522/ai.packet"
+        ],
+        "facts": [
+          "The hover script forces the zinc/light preset, navigates to Badge, captures the link badge before hover, then moves the pointer to the link and captures the hovered state.",
+          "The run provides before/after screenshots and schema2 bundles for the Badge link hover surface.",
+          "The focused recipe tests separately assert outline/ghost hover foreground/background and link-variant underline behavior."
+        ]
+      },
+      {
+        "part_id": "badge_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/badge.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/badge/link.rs",
+          "apps/fret-ui-gallery/tests/badge_docs_surface.rs",
+          "cargo nextest run -p fret-ui-gallery --test badge_docs_surface --status-level fail"
+        ],
+        "facts": [
+          "The docs surface test keeps the link-render snippet on BadgeRender::Link with stable ui-gallery-badge-link and ui-gallery-badge-link-row anchors.",
+          "The same test keeps the canonical redirect stub and badge link action-state suite wired to the promoted script.",
+          "This remains gallery/docs parity work rather than a crates/fret-ui mechanism change."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Badge docs-demo desktop slice with upstream source/golden, Fret recipe currentColor/hover behavior, web-vs-Fret geometry/chrome, link semantics, gallery docs surface, and runtime diagnostics evidence.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "badge.docs-demo.desktop",
+        "component": "badge",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/badge_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

@@ -1,0 +1,281 @@
+{
+  "schema_version": 1,
+  "component": "dropdown-menu",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual dropdown menu submenu harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/dropdown_menu.rs + ecosystem/fret-ui-shadcn/src/menu_text.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_demo.rs + tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
+  "validation_gates": [
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib menu_section_label --status-level fail",
+      "status": "pass",
+      "scope": "Private menu text helper keeps shadcn menu section labels on text-sm/20 medium foreground styling instead of the muted text-xs group-label lane."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib dropdown_menu_label_element --status-level fail",
+      "status": "pass",
+      "scope": "DropdownMenuLabel renders with the section-label text refinement and keeps the single-line fill/shrink layout contract."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement dropdown_menu_demo::web_vs_fret_dropdown_menu_demo_cases_match_web_fixtures --status-level fail",
+      "status": "pass",
+      "scope": "Dropdown Menu web-golden placement fixture locks constrained root menu insets, row heights, scroll state, and submenu overlay geometry after fixing the 3.67px label-height drift."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\dropdown-menu\\ui-gallery-dropdown-menu-submenu-open-smoke.json --dir target\\fret-diag-dropdown-menu-submenu-after-label-fix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "UI Gallery submenu smoke locks runner-visible submenu targets, nested submenu placement traces, schema2 semantics bundle, AI packet, and share zip.",
+      "run_id": "1779701894555",
+      "ai_packet": "target/fret-diag-dropdown-menu-submenu-after-label-fix/sessions/1779701890303-113796/1779701894555/ai.packet"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.dropdown_menu.demo.submenu.mobile.vp375x240",
+      "snapshot": "dropdown-menu-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "submenu",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 240
+      },
+      "device_pixel_ratio": 2
+    },
+    {
+      "id": "upstream.dropdown_menu.demo.constrained.vp1440x320",
+      "snapshot": "dropdown-menu-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "constrained",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 320
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "dropdown-menu-demo",
+        "theme": "light",
+        "mode": "open",
+        "variant": "submenu",
+        "context_id": "upstream.dropdown_menu.demo.submenu.mobile.vp375x240",
+        "viewport": {
+          "width_px": 375,
+          "height_px": 240
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu.vp375x240.open.json"
+      },
+      {
+        "snapshot": "dropdown-menu-demo",
+        "theme": "light",
+        "mode": "open",
+        "variant": "constrained",
+        "context_id": "upstream.dropdown_menu.demo.constrained.vp1440x320",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 320
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.vp1440x320.open.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
+        "sidecar_path": "target/fret-diag-dropdown-menu-submenu-after-label-fix/sessions/1779701890303-113796/1779701921941-ui-gallery-dropdown-menu-submenu-open-smoke.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
+        "bundle_path": "target/fret-diag-dropdown-menu-submenu-after-label-fix/sessions/1779701890303-113796/1779701894555/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
+        "bundle_path": "target/fret-diag-dropdown-menu-submenu-after-label-fix/sessions/1779701890303-113796/1779701922217-ui-gallery-dropdown-menu-submenu-open-smoke/bundle.schema2.json"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
+        "ai_packet": "target/fret-diag-dropdown-menu-submenu-after-label-fix/sessions/1779701890303-113796/1779701894555/ai.packet",
+        "share_zip": "target/fret-diag-dropdown-menu-submenu-after-label-fix/sessions/1779701890303-113796/share/1779701894555.zip"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 4,
+    "status_counts": {
+      "pass_known": 4,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "gallery_composition": 0,
+      "mechanism_core": 1,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 1,
+      "app_demo": 0,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 4
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 1,
+      "web_golden_fixture": 1,
+      "unit_test": 1,
+      "none": 1
+    },
+    "layout_sidecar_count": 1,
+    "bundle_schema2_count": 2,
+    "layout_test_id_count": 3,
+    "bundle_semantics_test_id_count": 3,
+    "measured_test_id_count": 337,
+    "upstream_dom_snapshot_count": 2,
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 2,
+    "upstream_dom_context_count": 2,
+    "upstream_live_fact_count": 5,
+    "fret_live_fact_count": 7,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 5,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/registry/new-york-v4/ui/dropdown-menu.tsx + repo-ref/ui/apps/v4/registry/new-york-v4/examples/dropdown-menu-demo.tsx + goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo*.open.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/dropdown_menu.rs + ecosystem/fret-ui-shadcn/src/menu_text.rs + tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
+    "part_count": 4,
+    "upstream_dom_target_count": 4,
+    "fret_test_id_count": 337,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 5,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 0,
+    "parts": [
+      {
+        "part_id": "dropdown_menu_label_height_recipe",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/dropdown-menu.tsx",
+          "ecosystem/fret-ui-shadcn/src/dropdown_menu.rs",
+          "ecosystem/fret-ui-shadcn/src/menu_text.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/dropdown_menu_demo.rs"
+        ],
+        "facts": [
+          "Upstream DropdownMenuLabel owns px-2 py-1.5 text-sm font-medium, not the muted text-xs Select/Command group-label treatment.",
+          "Fret now renders DropdownMenuLabel through menu_section_label with text-sm/20 medium foreground styling.",
+          "The focused web-golden fixture now passes the vp1440x320 constrained top_to_first_item assertion that previously drifted by 3.67px."
+        ]
+      },
+      {
+        "part_id": "dropdown_menu_submenu_smoke_semantics",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
+          "target/fret-diag-dropdown-menu-submenu-after-label-fix/sessions/1779701890303-113796/1779701894555/bundle.schema2.json",
+          "target/fret-diag-dropdown-menu-submenu-after-label-fix/sessions/1779701890303-113796/1779701894555/ai.packet",
+          "target/fret-diag-dropdown-menu-submenu-after-label-fix/sessions/1779701890303-113796/share/1779701894555.zip"
+        ],
+        "facts": [
+          "The UI Gallery script opens the Dropdown Menu page, scrolls the submenu trigger fully into view, and opens nested submenu levels.",
+          "The bundle exposes runner-visible submenu targets ui-gallery-dropdown-menu-submenu-invite-users, ui-gallery-dropdown-menu-submenu-more-options, and ui-gallery-dropdown-menu-submenu-calendly.",
+          "The script passed after the label-height fix with run_id 1779701894555."
+        ]
+      },
+      {
+        "part_id": "dropdown_menu_submenu_placement_trace",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-submenu-open-smoke.json",
+          "target/fret-diag-dropdown-menu-submenu-after-label-fix/sessions/1779701890303-113796/script.result.json",
+          "target/fret-diag-dropdown-menu-submenu-after-label-fix/sessions/1779701890303-113796/1779701921941-ui-gallery-dropdown-menu-submenu-open-smoke.layout/layout.taffy.v1.json"
+        ],
+        "facts": [
+          "The placement trace records ui-gallery-dropdown-menu-submenu-invite-users on side=right with a 128x147px submenu.",
+          "The nested ui-gallery-dropdown-menu-submenu-more-options trace also resolves side=right with a 128x115px submenu.",
+          "The layout sidecar was captured from the same passing diag run."
+        ]
+      },
+      {
+        "part_id": "dropdown_menu_upstream_dom_and_source_context",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/dropdown-menu.tsx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/examples/dropdown-menu-demo.tsx",
+          "goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.vp1440x320.open.json",
+          "goldens/shadcn-web/v4/new-york-v4/dropdown-menu-demo.submenu.vp375x240.open.json"
+        ],
+        "facts": [
+          "The docs-path demo owns className=\"w-56\" on DropdownMenuContent.",
+          "DropdownMenuContent and DropdownMenuSubContent own the p-1 menu shell and submenu panel chrome.",
+          "The web-golden fixture compares Fret menu bounds and submenu placement against these upstream DOM snapshots."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Lock the Dropdown Menu submenu mobile slice after fixing label-height recipe drift and confirming submenu layout, semantics, and placement diagnostics.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "dropdown-menu.submenu.mobile",
+        "component": "dropdown-menu",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/dropdown_menu_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

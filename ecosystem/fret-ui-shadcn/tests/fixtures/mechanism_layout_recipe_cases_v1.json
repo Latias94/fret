@@ -51,8 +51,8 @@
       }
     },
     {
-      "id": "responsive-drawer-bottom-sheet-uses-eighty-vh",
-      "scenario": { "kind": "responsive_drawer_bottom_sheet_uses_eighty_vh" },
+      "id": "responsive-drawer-bottom-sheet-caps-visible-lane",
+      "scenario": { "kind": "responsive_drawer_bottom_sheet_caps_visible_lane" },
       "oracle": {
         "predicates": [
           {
@@ -68,7 +68,7 @@
             "target": { "kind": "test_id", "id": "mechanism-responsive-drawer-shell" },
             "metric": "height",
             "comparison": "eq",
-            "value_px": 192.0,
+            "value_px": 144.0,
             "eps_px": 2.0
           }
         ]

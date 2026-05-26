@@ -692,9 +692,10 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
     // as the viewport scrolls. Prefer layout bounds for scrolled descendants (they do not include
     // the scroll render transform) so wheel scrolling cannot cause the overlay to "chase" the
     // selected item and drift off-screen.
+    let listbox_visual = overlay::anchor_bounds_for_element(cx, inputs.listbox);
     let listbox = cx
         .last_bounds_for_element(inputs.listbox)
-        .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.listbox))?;
+        .or(listbox_visual)?;
     let mut content = cx
         .last_bounds_for_element(inputs.content_panel)
         .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.content_panel))?;
@@ -705,18 +706,12 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
     let selected_item_text = cx
         .last_bounds_for_element(inputs.selected_item_text)
         .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.selected_item_text))?;
-    // The headless solver expects `items_height` to match Radix `viewport.scrollHeight`.
-    //
-    // Prefer deriving this from the viewport height plus its max scroll offset when available,
-    // since scroll implementations may clip content element bounds in a way that makes "content
-    // height" appear equal to the viewport height for short lists.
-    let items_height = if let Some(max_y) = inputs.scroll_max_offset_y {
-        Px((viewport.size.height.0 + max_y.0).max(0.0))
-    } else {
-        // Fallback to content bounds: in many shadcn ports `inputs.listbox` points at the element
-        // that lays out the full listbox content (including viewport padding such as `p-1`).
-        listbox.size.height
-    };
+    let items_height = select_item_aligned_items_height(
+        viewport,
+        listbox,
+        listbox_visual,
+        inputs.scroll_max_offset_y,
+    );
 
     if let Some(probe_id) = inputs.content_width_probe
         && let Some(probe) = cx.last_bounds_for_element(probe_id)
@@ -733,7 +728,7 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
         content.size.width = Px(content.size.width.0.max(probed_width.0));
     }
 
-    Some(select_item_aligned_layout(SelectItemAlignedInputs {
+    let solver_inputs = SelectItemAlignedInputs {
         direction: inputs.direction,
         window: inputs.window,
         trigger: inputs.trigger,
@@ -751,7 +746,37 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
         selected_item_is_first: inputs.selected_item_is_first,
         selected_item_is_last: inputs.selected_item_is_last,
         items_height,
-    }))
+    };
+    Some(select_item_aligned_layout(solver_inputs))
+}
+
+fn select_item_aligned_items_height(
+    viewport: Rect,
+    listbox: Rect,
+    listbox_visual: Option<Rect>,
+    scroll_max_offset_y: Option<Px>,
+) -> Px {
+    // The headless solver expects `items_height` to match Radix `viewport.scrollHeight`.
+    //
+    // A scroll handle can legitimately report zero max offset for a short list while the item
+    // content still extends beyond the current viewport because Radix has mounted scroll arrows.
+    // Conversely, some Fret scroll layouts clip the listbox element to the viewport and only the
+    // handle knows the full scroll extent. Keep the larger source so neither case underreports.
+    let scroll_extent = scroll_max_offset_y
+        .map(|max_y| Px((viewport.size.height.0 + max_y.0).max(0.0)))
+        .unwrap_or(Px(0.0));
+
+    let visual_extent = listbox_visual
+        .map(|rect| rect.size.height)
+        .unwrap_or(Px(0.0));
+
+    Px(listbox
+        .size
+        .height
+        .0
+        .max(visual_extent.0)
+        .max(scroll_extent.0)
+        .max(0.0))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -2342,6 +2367,38 @@ mod tests {
         assert_eq!(got.rect, expected.rect);
         assert_eq!(got.side, expected.side);
         assert_eq!(got.outputs, expected.outputs);
+    }
+
+    #[test]
+    fn select_item_aligned_items_height_uses_larger_listbox_or_scroll_extent() {
+        let rect = |x: f32, y: f32, w: f32, h: f32| {
+            Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
+        };
+
+        let viewport = rect(10.0, 10.0, 180.0, 160.0);
+
+        let short_list_with_arrows = rect(10.0, -21.0, 180.0, 196.0);
+        assert_eq!(
+            select_item_aligned_items_height(viewport, short_list_with_arrows, None, Some(Px(0.0)),),
+            Px(196.0)
+        );
+
+        let clipped_listbox = rect(10.0, 10.0, 180.0, 160.0);
+        assert_eq!(
+            select_item_aligned_items_height(viewport, clipped_listbox, None, Some(Px(840.0))),
+            Px(1000.0)
+        );
+
+        let visual_listbox = rect(10.0, -21.0, 180.0, 196.0);
+        assert_eq!(
+            select_item_aligned_items_height(
+                viewport,
+                clipped_listbox,
+                Some(visual_listbox),
+                Some(Px(0.0)),
+            ),
+            Px(196.0)
+        );
     }
 
     struct PointerHost<'a> {

@@ -438,5 +438,5 @@ artifacts do not mix evidence generations.
 Current promoted lightweight mechanism cases live in
 `ecosystem/fret-ui-shadcn/tests/fixtures/mechanism_layout_recipe_cases_v1.json`:
 
-- `responsive-drawer-bottom-sheet-uses-eighty-vh`
+- `responsive-drawer-bottom-sheet-caps-visible-lane`
 - `popover-command-shell-wraps-hover-region-max-height`

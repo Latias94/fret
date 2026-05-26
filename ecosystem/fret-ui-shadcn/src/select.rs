@@ -446,31 +446,13 @@ where
                 ;
 
                 // In the DOM, wheel events scroll the nearest scrollable ancestor even if the
-                // pointer is over non-scrollable affordances (like Radix's scroll buttons).
-                //
-                // In our renderer the arrows are layered over the scroll viewport; wrap them in a
-                // wheel region bound to the same scroll handle so wheel scrolling continues to work
-                // even when the pointer is over the arrow strip.
+                // pointer is over non-scrollable affordances (like Radix's scroll buttons). Keep
+                // the buttons in normal flow like Radix, but bind wheel input to the same scroll
+                // handle so the arrow strips continue to scroll the viewport.
                 let pressable = cx.wheel_region(
                     WheelRegionProps {
                         layout: {
                             let mut layout = LayoutStyle::default();
-                            layout.position = PositionStyle::Absolute;
-                            layout.inset = if dir < 0.0 {
-                                InsetStyle {
-                                    top: Some(Px(0.0)).into(),
-                                    right: Some(Px(0.0)).into(),
-                                    bottom: None.into(),
-                                    left: Some(Px(0.0)).into(),
-                                }
-                            } else {
-                                InsetStyle {
-                                    top: None.into(),
-                                    right: Some(Px(0.0)).into(),
-                                    bottom: Some(Px(0.0)).into(),
-                                    left: Some(Px(0.0)).into(),
-                                }
-                            };
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Px(scroll_button_h);
                             layout
@@ -621,7 +603,6 @@ where
             }
 
             let mut out = Vec::with_capacity(3);
-            out.push(scroll);
             if has_scroll && allow_hover_scroll_arrows
                 && let Some(btn) = scroll_button(
                     cx,
@@ -632,6 +613,7 @@ where
                 ) {
                     out.push(btn);
                 }
+            out.push(scroll);
             if has_scroll && allow_hover_scroll_arrows
                 && let Some(btn) = scroll_button(
                     cx,
@@ -4426,13 +4408,37 @@ fn select_impl<H: UiHost>(
                                                                     &mut row_idx_cursor,
                                                                     &mut render_row,
                                                                 );
+                                                                out.push(cx.container(
+                                                                    ContainerProps {
+                                                                        layout: {
+                                                                            let mut layout =
+                                                                                LayoutStyle::default();
+                                                                            layout.size.width =
+                                                                                Length::Fill;
+                                                                            layout.size.height =
+                                                                                Length::Px(Px(4.0));
+                                                                            layout
+                                                                        },
+                                                                        padding:
+                                                                            Edges::all(Px(0.0))
+                                                                                .into(),
+                                                                        ..Default::default()
+                                                                    },
+                                                                    |_cx| Vec::new(),
+                                                                ));
 
                                                                 let listbox_content = cx.flex(
                                                                     FlexProps {
                                                                         layout: LayoutStyle::default(),
                                                                         direction: fret_core::Axis::Vertical,
                                                                         gap: Px(0.0).into(),
-                                                                        padding: Edges::all(Px(4.0)).into(),
+                                                                        padding: Edges {
+                                                                            top: Px(4.0),
+                                                                            right: Px(4.0),
+                                                                            bottom: Px(0.0),
+                                                                            left: Px(4.0),
+                                                                        }
+                                                                        .into(),
                                                                         justify: MainAlign::Start,
                                                                         align: CrossAlign::Stretch,
                                                                         wrap: false,

@@ -3190,6 +3190,7 @@ dependencies = [
  "serde_json",
  "slotmap",
  "time",
+ "web-sys",
 ]
 
 [[package]]

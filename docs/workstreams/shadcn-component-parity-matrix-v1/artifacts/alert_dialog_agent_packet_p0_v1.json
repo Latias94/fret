@@ -1,0 +1,444 @@
+{
+  "schema_version": 1,
+  "component": "alert-dialog",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual alert-dialog docs-demo harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/alert_dialog.rs + ecosystem/fret-ui-kit/src/primitives/alert_dialog.rs + apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs + apps/fret-ui-gallery/src/ui/snippets/alert_dialog/*.rs + tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-*.json + tools/diag-scripts/ui-gallery/alert-dialog/*.json",
+  "validation_gates": [
+    {
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\overlay\\ui-gallery-alert-dialog-docs-smoke.json --dir target\\fret-diag-alert-dialog-docs-smoke-p0-v1 --session-auto --pack --ai-packet --include-triage --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "AlertDialog docs smoke covers page navigation, docs-path sections, API Reference, extras, bundle, screenshot, AI packet, and share zip evidence.",
+      "run_id": "1779715657503",
+      "ai_packet": "target/fret-diag-alert-dialog-docs-smoke-p0-v1/sessions/1779715644498-122888/1779715657503/ai.packet",
+      "share_zip": "target/fret-diag-alert-dialog-docs-smoke-p0-v1/sessions/1779715644498-122888/share/1779715657503.zip"
+    },
+    {
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\alert-dialog\\ui-gallery-alert-dialog-demo-relation-action-state.json --dir target\\fret-diag-alert-dialog-demo-relation-action-state-p0-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "AlertDialog demo relation/action state covers trigger expanded state, controls relation, alertdialog labelled_by/described_by relations, modal barrier, least-destructive initial focus, cancel/action invoke actions, focus restore, screenshot, layout sidecar, bundle, AI packet, and share zip.",
+      "run_id": "1779715728977",
+      "ai_packet": "target/fret-diag-alert-dialog-demo-relation-action-state-p0-v1/sessions/1779715711905-127168/1779715728977/ai.packet",
+      "share_zip": "target/fret-diag-alert-dialog-demo-relation-action-state-p0-v1/sessions/1779715711905-127168/share/1779715728977.zip"
+    },
+    {
+      "command": "target\\dev-fast\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\overlay\\ui-gallery-alert-dialog-destructive-inline-link-activate.json --dir target\\fret-diag-alert-dialog-destructive-inline-link-p0-v1 --session-auto --pack --ai-packet --include-triage --include-screenshots --timeout-ms 420000 --launch -- target\\dev-fast\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "AlertDialog destructive example covers selectable description text, inline link role/value/action, click activation, before/after screenshots, layout sidecar, bundle, AI packet, and share zip.",
+      "run_id": "1779715860554",
+      "ai_packet": "target/fret-diag-alert-dialog-destructive-inline-link-p0-v1/sessions/1779715850304-42580/1779715860554/ai.packet",
+      "share_zip": "target/fret-diag-alert-dialog-destructive-inline-link-p0-v1/sessions/1779715850304-42580/share/1779715860554.zip"
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail alert_dialog",
+      "status": "pass",
+      "scope": "AlertDialog recipe and primitive tests cover part composition, scope-aware action/cancel buttons, modal policy, initial focus, focus restore, selectable description spans, responsive header/media grids, RTL, and open-change callbacks."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome --status-level fail alert_dialog",
+      "status": "pass",
+      "scope": "AlertDialog overlay chrome gate matches the shadcn web panel chrome fixture for the docs-demo alert dialog."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test alert_dialog_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "AlertDialog gallery docs surface keeps source-axis notes, docs-path section ordering, copyable children API snippets, canonical diag script anchors, and redirect stubs stable."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.alert_dialog.demo.light.vp1440x900",
+      "snapshot": "alert-dialog-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.alert_dialog.demo.open.light.vp1440x900",
+      "snapshot": "alert-dialog-demo",
+      "theme": "light",
+      "mode": "open",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.alert_dialog.demo.open.light.vp1440x240",
+      "snapshot": "alert-dialog-demo.vp1440x240",
+      "theme": "light",
+      "mode": "open",
+      "variant": "short-desktop",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 240
+      }
+    },
+    {
+      "id": "upstream.alert_dialog.demo.open.light.vp375x240",
+      "snapshot": "alert-dialog-demo.vp375x240",
+      "theme": "light",
+      "mode": "open",
+      "variant": "mobile",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 240
+      }
+    },
+    {
+      "id": "upstream.radix_alert_dialog.open_cancel.light",
+      "snapshot": "alert-dialog-example.alert-dialog.open-cancel.light",
+      "theme": "light",
+      "mode": "open-cancel",
+      "variant": "radix",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "alert-dialog-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.alert_dialog.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/alert-dialog-demo.json"
+      },
+      {
+        "snapshot": "alert-dialog-demo",
+        "theme": "light",
+        "mode": "open",
+        "variant": "docs-demo",
+        "context_id": "upstream.alert_dialog.demo.open.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/alert-dialog-demo.open.json"
+      },
+      {
+        "snapshot": "alert-dialog-demo.vp1440x240",
+        "theme": "light",
+        "mode": "open",
+        "variant": "short-desktop",
+        "context_id": "upstream.alert_dialog.demo.open.light.vp1440x240",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 240
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/alert-dialog-demo.vp1440x240.open.json"
+      },
+      {
+        "snapshot": "alert-dialog-demo.vp375x240",
+        "theme": "light",
+        "mode": "open",
+        "variant": "mobile",
+        "context_id": "upstream.alert_dialog.demo.open.light.vp375x240",
+        "viewport": {
+          "width_px": 375,
+          "height_px": 240
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/alert-dialog-demo.vp375x240.open.json"
+      },
+      {
+        "snapshot": "alert-dialog-example.alert-dialog.open-cancel.light",
+        "theme": "light",
+        "mode": "open-cancel",
+        "variant": "radix",
+        "context_id": "upstream.radix_alert_dialog.open_cancel.light",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/radix-web/v4/radix-vega/alert-dialog-example.alert-dialog.open-cancel.light.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-demo-relation-action-state.json",
+        "sidecar_path": "target/fret-diag-alert-dialog-demo-relation-action-state-p0-v1/sessions/1779715711905-127168/1779715835148-ui-gallery-alert-dialog-demo-open.layout/layout.taffy.v1.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json",
+        "sidecar_path": "target/fret-diag-alert-dialog-destructive-inline-link-p0-v1/sessions/1779715850304-42580/1779715876222-ui-gallery-alert-dialog-destructive-inline-link-activate.before-layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-docs-smoke.json",
+        "bundle_path": "target/fret-diag-alert-dialog-docs-smoke-p0-v1/sessions/1779715644498-122888/1779715657503/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-demo-relation-action-state.json",
+        "bundle_path": "target/fret-diag-alert-dialog-demo-relation-action-state-p0-v1/sessions/1779715711905-127168/1779715728977/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json",
+        "bundle_path": "target/fret-diag-alert-dialog-destructive-inline-link-p0-v1/sessions/1779715850304-42580/1779715860554/bundle.schema2.json"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-docs-smoke.json",
+        "ai_packet": "target/fret-diag-alert-dialog-docs-smoke-p0-v1/sessions/1779715644498-122888/1779715657503/ai.packet",
+        "share_zip": "target/fret-diag-alert-dialog-docs-smoke-p0-v1/sessions/1779715644498-122888/share/1779715657503.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-demo-relation-action-state.json",
+        "ai_packet": "target/fret-diag-alert-dialog-demo-relation-action-state-p0-v1/sessions/1779715711905-127168/1779715728977/ai.packet",
+        "share_zip": "target/fret-diag-alert-dialog-demo-relation-action-state-p0-v1/sessions/1779715711905-127168/share/1779715728977.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json",
+        "ai_packet": "target/fret-diag-alert-dialog-destructive-inline-link-p0-v1/sessions/1779715850304-42580/1779715860554/ai.packet",
+        "share_zip": "target/fret-diag-alert-dialog-destructive-inline-link-p0-v1/sessions/1779715850304-42580/share/1779715860554.zip"
+      }
+    ],
+    "fret_screenshots": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-demo-relation-action-state.json",
+        "screenshot_path": "target/fret-diag-alert-dialog-demo-relation-action-state-p0-v1/sessions/1779715711905-127168/screenshots/1779715835373-ui-gallery-alert-dialog-demo-open/window-4294967297-tick-13-frame-13.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json",
+        "screenshot_path": "target/fret-diag-alert-dialog-destructive-inline-link-p0-v1/sessions/1779715850304-42580/screenshots/1779715876607-ui-gallery-alert-dialog-destructive-inline-link-activate.before/window-4294967297-tick-19-frame-19.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json",
+        "screenshot_path": "target/fret-diag-alert-dialog-destructive-inline-link-p0-v1/sessions/1779715850304-42580/screenshots/1779715879267-ui-gallery-alert-dialog-destructive-inline-link-activate.after/window-4294967297-tick-29-frame-29.png"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 7,
+    "status_counts": {
+      "pass_known": 7,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 2,
+      "gallery_composition": 1,
+      "mechanism_core": 0,
+      "diagnostics_surface": 3,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 3,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 2,
+      "app_demo": 1,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 7
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 3,
+      "component_fixture": 1,
+      "unit_test": 1,
+      "docs_surface": 1,
+      "none": 1
+    },
+    "layout_sidecar_count": 2,
+    "bundle_schema2_count": 3,
+    "layout_test_id_count": 14,
+    "bundle_semantics_test_id_count": 8,
+    "measured_test_id_count": 14,
+    "upstream_dom_snapshot_count": 5,
+    "upstream_dom_target_count": 5,
+    "upstream_context_count": 5,
+    "upstream_dom_context_count": 5,
+    "upstream_live_fact_count": 8,
+    "fret_live_fact_count": 16,
+    "upstream_semantics_fact_count": 2,
+    "upstream_interaction_fact_count": 2,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 7,
+    "fret_text_paint_fact_count": 4,
+    "fret_text_paint_direct_fact_count": 4,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 4,
+    "fret_text_paint_row_count": 4,
+    "fret_text_label_row_count": 2
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/base/alert-dialog.mdx + repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx + repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx + goldens/shadcn-web/v4/new-york-v4/alert-dialog-demo*.json + goldens/radix-web/v4/radix-vega/alert-dialog-example.alert-dialog.open-cancel.light.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/alert_dialog.rs + ecosystem/fret-ui-kit/src/primitives/alert_dialog.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/alert_dialog.rs + apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs + apps/fret-ui-gallery/src/ui/snippets/alert_dialog/*.rs + apps/fret-ui-gallery/tests/alert_dialog_docs_surface.rs + tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-*.json + tools/diag-scripts/ui-gallery/alert-dialog/*.json",
+    "part_count": 7,
+    "upstream_dom_target_count": 5,
+    "fret_test_id_count": 14,
+    "upstream_semantics_fact_count": 2,
+    "upstream_interaction_fact_count": 2,
+    "fret_semantics_fact_count": 8,
+    "fret_interaction_fact_count": 7,
+    "fret_text_paint_fact_count": 4,
+    "parts": [
+      {
+        "part_id": "alert_dialog_recipe_and_policy_tests",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/alert_dialog.rs",
+          "ecosystem/fret-ui-kit/src/primitives/alert_dialog.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail alert_dialog"
+        ],
+        "facts": [
+          "AlertDialog focused recipe and primitive tests passed 37/37.",
+          "The covered surface includes part composition, scope-aware action/cancel buttons, modal policy, initial focus preference for Cancel, focus restore, selectable description spans, responsive header/media grids, RTL, and open-change callbacks."
+        ]
+      },
+      {
+        "part_id": "alert_dialog_overlay_chrome",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/alert_dialog.rs",
+          "ecosystem/fret-ui-shadcn/tests/fixtures/overlay_chrome_alert_dialog_cases_v1.json",
+          "goldens/shadcn-web/v4/new-york-v4/alert-dialog-demo.open.json",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome --status-level fail alert_dialog"
+        ],
+        "facts": [
+          "The focused AlertDialog overlay chrome gate passed 1/1.",
+          "The gate keeps the docs-demo panel chrome aligned to the shadcn web golden."
+        ]
+      },
+      {
+        "part_id": "alert_dialog_docs_smoke_diag",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-docs-smoke.json",
+          "target/fret-diag-alert-dialog-docs-smoke-p0-v1/sessions/1779715644498-122888/1779715657503/bundle.schema2.json",
+          "target/fret-diag-alert-dialog-docs-smoke-p0-v1/sessions/1779715644498-122888/1779715657503/ai.packet",
+          "target/fret-diag-alert-dialog-docs-smoke-p0-v1/sessions/1779715644498-122888/share/1779715657503.zip"
+        ],
+        "facts": [
+          "The docs smoke script proves the AlertDialog page, docs-path sections, API Reference, extras, screenshot, schema2 bundle, AI packet, and share zip evidence.",
+          "The passing run id is 1779715657503."
+        ]
+      },
+      {
+        "part_id": "alert_dialog_demo_relation_action_diag",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-demo-relation-action-state.json",
+          "target/fret-diag-alert-dialog-demo-relation-action-state-p0-v1/sessions/1779715711905-127168/1779715835148-ui-gallery-alert-dialog-demo-open.layout/layout.taffy.v1.json",
+          "target/fret-diag-alert-dialog-demo-relation-action-state-p0-v1/sessions/1779715711905-127168/1779715728977/bundle.schema2.json",
+          "target/fret-diag-alert-dialog-demo-relation-action-state-p0-v1/sessions/1779715711905-127168/1779715728977/ai.packet",
+          "target/fret-diag-alert-dialog-demo-relation-action-state-p0-v1/sessions/1779715711905-127168/share/1779715728977.zip"
+        ],
+        "facts": [
+          "The demo relation/action script proves expanded state, trigger controls relation, alertdialog role, labelled_by/described_by relations, modal barrier activation, least-destructive Cancel initial focus, cancel/action invoke actions, close, focus restore, and controls cleanup.",
+          "The run captured layout sidecar, screenshot, schema2 bundle, AI packet, and share zip evidence in run 1779715728977."
+        ]
+      },
+      {
+        "part_id": "alert_dialog_destructive_inline_link_diag",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-destructive-inline-link-activate.json",
+          "target/fret-diag-alert-dialog-destructive-inline-link-p0-v1/sessions/1779715850304-42580/1779715876222-ui-gallery-alert-dialog-destructive-inline-link-activate.before-layout/layout.taffy.v1.json",
+          "target/fret-diag-alert-dialog-destructive-inline-link-p0-v1/sessions/1779715850304-42580/1779715860554/bundle.schema2.json",
+          "target/fret-diag-alert-dialog-destructive-inline-link-p0-v1/sessions/1779715850304-42580/1779715860554/ai.packet",
+          "target/fret-diag-alert-dialog-destructive-inline-link-p0-v1/sessions/1779715850304-42580/share/1779715860554.zip"
+        ],
+        "facts": [
+          "The destructive inline-link script proves the selectable description text node, inline link role/value/action, click-selectable-text-span activation, before/after screenshots, and schema2 text_paint rows.",
+          "The passing run id is 1779715860554."
+        ]
+      },
+      {
+        "part_id": "alert_dialog_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/alert_dialog/usage.rs",
+          "apps/fret-ui-gallery/tests/alert_dialog_docs_surface.rs",
+          "cargo nextest run -p fret-ui-gallery --test alert_dialog_docs_surface --status-level fail"
+        ],
+        "facts": [
+          "The docs-surface test keeps source-axis notes, docs-path ordering, copyable children API snippets, runtime script anchors, and redirect stubs wired.",
+          "The import-order assertion now matches the current rustfmt-compatible `use fret::{AppComponentCx, UiChild};` snippet surface."
+        ]
+      },
+      {
+        "part_id": "alert_dialog_upstream_dom_and_source_context",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "repo-ref/ui/apps/v4/content/docs/components/base/alert-dialog.mdx",
+          "repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx",
+          "repo-ref/ui/apps/v4/registry/new-york-v4/ui/alert-dialog.tsx",
+          "goldens/shadcn-web/v4/new-york-v4/alert-dialog-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/alert-dialog-demo.open.json",
+          "goldens/shadcn-web/v4/new-york-v4/alert-dialog-demo.vp1440x240.open.json",
+          "goldens/shadcn-web/v4/new-york-v4/alert-dialog-demo.vp375x240.open.json",
+          "goldens/radix-web/v4/radix-vega/alert-dialog-example.alert-dialog.open-cancel.light.json"
+        ],
+        "facts": [
+          "Upstream shadcn provides source and docs references for the default AlertDialog wrapper surface.",
+          "The local web goldens cover static and open docs-demo geometry across desktop, short desktop, and mobile viewport contexts, while the Radix golden covers open-cancel primitive semantics."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the AlertDialog docs-demo desktop slice with upstream source/goldens, Fret recipe/chrome gates, gallery docs-surface coverage, relation/action diagnostics, destructive inline-link diagnostics, and text-paint evidence.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "alert-dialog.docs-demo.desktop",
+        "component": "alert-dialog",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/alert_dialog_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

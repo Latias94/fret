@@ -1,0 +1,270 @@
+{
+  "schema_version": 1,
+  "component": "combobox",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual combobox harness seed v1",
+  "source_mapping": "apps/fret-ui-gallery/src/driver/render_flow.rs + apps/fret-ui-gallery/src/ui/pages/combobox.rs + ecosystem/fret-ui-shadcn/src/combobox.rs",
+  "validation_gates": [
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --lib gallery_compact_shell_gives_mobile_component_story_full_window_width --status-level fail",
+      "status": "pass",
+      "scope": "Gallery compact-shell invariant: a 375x240 component story hides the fixed sidebar and keeps the responsive combobox trigger horizontally reachable."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\combobox\\ui-gallery-combobox-responsive-vp375x240-open.json --dir target\\fret-diag\\combobox-mobile-compact-shell --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery --release",
+      "status": "pass",
+      "scope": "Mobile effective 375x240 responsive combobox open path: trigger is scrollable into the window, opens, and captures schema2 layout/bundle evidence.",
+      "run_id": "1779695942551",
+      "ai_packet": "target/fret-diag/combobox-mobile-compact-shell/sessions/1779695498527-109032/1779695942551/ai.packet"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\combobox\\ui-gallery-combobox-responsive-open.json --dir target\\fret-diag\\combobox-desktop-compact-shell-regression --session-auto --pack --ai-packet --exit-after-run --timeout-ms 360000 --launch -- cargo run -p fret-ui-gallery --release",
+      "status": "pass",
+      "scope": "Desktop responsive combobox open path: overlay placement remains bottom/start, side offset stays 4px, content remains in-window, and the companion desktop path is not regressed by the compact shell fix.",
+      "run_id": "1779696069815",
+      "ai_packet": "target/fret-diag/combobox-desktop-compact-shell-regression/sessions/1779696065919-48032/1779696069815/ai.packet"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.combobox.responsive.mobile.vp375x240",
+      "snapshot": "combobox-responsive",
+      "theme": "light",
+      "mode": "open",
+      "variant": "vp375x240",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 240
+      },
+      "device_pixel_ratio": 2
+    },
+    {
+      "id": "upstream.combobox.responsive.desktop.vp1440x900",
+      "snapshot": "combobox-responsive",
+      "theme": "light",
+      "mode": "open",
+      "variant": "desktop",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "combobox-responsive",
+        "theme": "light",
+        "mode": "open",
+        "variant": "vp375x240",
+        "context_id": "upstream.combobox.responsive.mobile.vp375x240",
+        "viewport": {
+          "width_px": 375,
+          "height_px": 240
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json"
+      },
+      {
+        "snapshot": "combobox-responsive",
+        "theme": "light",
+        "mode": "open",
+        "variant": "desktop",
+        "context_id": "upstream.combobox.responsive.desktop.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-vp375x240-open.json",
+        "sidecar_path": "target/fret-diag/combobox-mobile-compact-shell/sessions/1779695498527-109032/1779695943549-ui-gallery-combobox-responsive-vp375x240-open.layout/layout.taffy.v1.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+        "sidecar_path": "target/fret-diag/combobox-desktop-compact-shell-regression/sessions/1779696065919-48032/1779696070441-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-vp375x240-open.json",
+        "bundle_path": "target/fret-diag/combobox-mobile-compact-shell/sessions/1779695498527-109032/1779695942551/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+        "bundle_path": "target/fret-diag/combobox-desktop-compact-shell-regression/sessions/1779696065919-48032/1779696069815/bundle.schema2.json"
+      }
+    ],
+    "fret_ai_packets": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-vp375x240-open.json",
+        "ai_packet": "target/fret-diag/combobox-mobile-compact-shell/sessions/1779695498527-109032/1779695942551/ai.packet",
+        "share_zip": "target/fret-diag/combobox-mobile-compact-shell/sessions/1779695498527-109032/share/1779695942551.zip"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+        "ai_packet": "target/fret-diag/combobox-desktop-compact-shell-regression/sessions/1779696065919-48032/1779696069815/ai.packet",
+        "share_zip": "target/fret-diag/combobox-desktop-compact-shell-regression/sessions/1779696065919-48032/share/1779696069815.zip"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 3,
+    "status_counts": {
+      "pass_known": 3,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 0,
+      "gallery_composition": 1,
+      "mechanism_core": 1,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 0,
+      "app_demo": 1,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 3
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 2,
+      "component_fixture": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 2,
+    "bundle_schema2_count": 2,
+    "layout_test_id_count": 4,
+    "bundle_semantics_test_id_count": 6,
+    "measured_test_id_count": 269,
+    "upstream_dom_snapshot_count": 2,
+    "upstream_dom_target_count": 4,
+    "upstream_context_count": 2,
+    "upstream_dom_context_count": 2,
+    "upstream_live_fact_count": 6,
+    "fret_live_fact_count": 8,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 4,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json + goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json + repo-ref/ui/apps/v4/registry/new-york-v4/examples/combobox-responsive.tsx",
+    "fret_source": "apps/fret-ui-gallery/src/driver/render_flow.rs + apps/fret-ui-gallery/src/ui/pages/combobox.rs + ecosystem/fret-ui-shadcn/src/combobox.rs",
+    "part_count": 3,
+    "upstream_dom_target_count": 4,
+    "fret_test_id_count": 269,
+    "upstream_semantics_fact_count": 0,
+    "upstream_interaction_fact_count": 0,
+    "fret_semantics_fact_count": 4,
+    "fret_interaction_fact_count": 4,
+    "fret_text_paint_fact_count": 0,
+    "parts": [
+      {
+        "part_id": "combobox_compact_gallery_shell_mobile_width",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/driver/render_flow.rs",
+          "cargo nextest run -p fret-ui-gallery --lib gallery_compact_shell_gives_mobile_component_story_full_window_width --status-level fail",
+          "target/fret-diag/combobox-mobile-compact-shell/sessions/1779695498527-109032/1779695942551/slice.ui-gallery-workspace-content.json",
+          "target/fret-diag/combobox-mobile-compact-shell/sessions/1779695498527-109032/1779695942551/slice.ui-gallery-combobox-responsive-trigger.json"
+        ],
+        "facts": [
+          "Mobile workspace content starts at x=0.0 and spans about 375px.",
+          "Mobile responsive trigger is within the 375px window at x=49.333336 with width=150."
+        ]
+      },
+      {
+        "part_id": "combobox_responsive_open_overlay_geometry",
+        "status": "pass_known",
+        "owner": "mechanism_core",
+        "layer": "mechanism",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-vp375x240-open.json",
+          "tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-responsive-open.json",
+          "target/fret-diag/combobox-mobile-compact-shell/sessions/1779695498527-109032/1779695943549-ui-gallery-combobox-responsive-vp375x240-open.layout/layout.taffy.v1.json",
+          "target/fret-diag/combobox-desktop-compact-shell-regression/sessions/1779696065919-48032/1779696070441-ui-gallery-combobox-responsive-open.layout/layout.taffy.v1.json",
+          "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.vp375x240.open.json",
+          "goldens/shadcn-web/v4/new-york-v4/combobox-responsive.open.json"
+        ]
+      },
+      {
+        "part_id": "combobox_diagnostics_schema2_and_behavior",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "target/fret-diag/combobox-mobile-compact-shell/sessions/1779695498527-109032/1779695942551/ai.packet",
+          "target/fret-diag/combobox-mobile-compact-shell/sessions/1779695498527-109032/share/1779695942551.zip",
+          "target/fret-diag/combobox-desktop-compact-shell-regression/sessions/1779696065919-48032/1779696069815/ai.packet",
+          "target/fret-diag/combobox-desktop-compact-shell-regression/sessions/1779696065919-48032/share/1779696069815.zip"
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Lock the Combobox responsive open mobile and desktop slices after fixing the UI Gallery compact-shell carrier width.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "combobox.open.mobile",
+        "component": "combobox",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/combobox_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      },
+      {
+        "id": "combobox.open.desktop",
+        "component": "combobox",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/combobox_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

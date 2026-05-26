@@ -1,0 +1,305 @@
+{
+  "schema_version": 1,
+  "component": "drawer",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-25",
+  "generated_by": "manual drawer harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/drawer.rs",
+  "validation_gates": [
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test drawer_layout_invariants --status-level fail",
+      "status": "pass",
+      "scope": "Drawer layout invariants, including min(80vh, viewport - 96px) bottom-sheet height."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout mechanism_harness::mechanism_harness_recipe_layout_cases_match_oracles --status-level fail",
+      "status": "pass",
+      "scope": "Mechanism fixture oracle for the 375x240 visible-lane cap."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement misc_overlays::fixtures::web_vs_fret_misc_overlays_drawer_cases_match_web_fixtures --status-level fail",
+      "status": "pass",
+      "scope": "Drawer-only overlay placement fixture cases."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome drawer::fixtures::web_vs_fret_drawer_overlay_chrome_cases_match_web_fixtures --status-level fail",
+      "status": "pass",
+      "scope": "Drawer overlay surface colors against the shadcn web golden."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.drawer.bottom_sheet_mobile.light.vp375x240",
+      "snapshot": "drawer-dialog",
+      "theme": "light",
+      "mode": "open",
+      "variant": "vp375x240",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 240
+      },
+      "device_pixel_ratio": 2
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "drawer-dialog",
+        "theme": "light",
+        "mode": "open",
+        "variant": "vp375x240",
+        "context_id": "upstream.drawer.bottom_sheet_mobile.light.vp375x240",
+        "viewport": {
+          "width_px": 375,
+          "height_px": 240
+        },
+        "device_pixel_ratio": 2.0,
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/drawer-dialog.vp375x240.open.json"
+      }
+    ],
+    "fret_layout_sidecar": [],
+    "fret_bundle_schema2": []
+  },
+  "summary": {
+    "part_count": 3,
+    "status_counts": {
+      "pass_known": 3,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "gallery_composition": 1,
+      "mechanism_core": 1,
+      "diagnostics_surface": 1,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "owner_status_counts": {
+      "component_recipe": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "gallery_composition": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism_core": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "diagnostics_surface": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream_reference": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 1,
+      "policy": 0,
+      "recipe": 1,
+      "app_demo": 0,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "layer_status_counts": {
+      "runner": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "mechanism": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "policy": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "recipe": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "app_demo": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "upstream": {
+        "pass_known": 1,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "unknown": {
+        "pass_known": 0,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      }
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 3
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 1,
+      "component_fixture": 1,
+      "mechanism_harness": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 0,
+    "bundle_schema2_count": 0,
+    "layout_test_id_count": 2,
+    "bundle_semantics_test_id_count": 2,
+    "measured_test_id_count": 2,
+    "upstream_dom_snapshot_count": 1,
+    "upstream_dom_target_count": 3,
+    "upstream_context_count": 1,
+    "upstream_dom_context_count": 1,
+    "upstream_live_fact_count": 3,
+    "fret_live_fact_count": 4,
+    "upstream_semantics_fact_count": 3,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 4,
+    "fret_interaction_fact_count": 1,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_label_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "goldens/shadcn-web/v4/new-york-v4/drawer-dialog.vp375x240.open.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/drawer.rs+ecosystem/fret-ui-shadcn/tests/drawer_layout_invariants.rs",
+    "part_count": 3,
+    "upstream_dom_target_count": 3,
+    "fret_test_id_count": 4,
+    "upstream_semantics_fact_count": 3,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 4,
+    "fret_interaction_fact_count": 1,
+    "fret_text_paint_fact_count": 0,
+    "fret_text_paint_direct_fact_count": 0,
+    "fret_text_paint_associated_fact_count": 0,
+    "fret_text_label_fact_count": 0,
+    "fret_text_paint_bundle_entry_count": 0,
+    "fret_text_paint_row_count": 0,
+    "fret_text_paint_association_row_count": 0,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 0,
+    "parts": [
+      {
+        "part_id": "drawer_vertical_visible_lane",
+        "upstream_dom_target_count": 1,
+        "fret_test_id_count": 2,
+        "upstream_semantics_fact_count": 1,
+        "upstream_interaction_fact_count": 1,
+        "fret_semantics_fact_count": 2,
+        "fret_interaction_fact_count": 1,
+        "fret_text_paint_fact_count": 0,
+        "fret_text_paint_direct_fact_count": 0,
+        "fret_text_paint_associated_fact_count": 0,
+        "fret_text_label_fact_count": 0,
+        "fret_text_paint_bundle_entry_count": 0,
+        "fret_text_paint_row_count": 0,
+        "fret_text_paint_association_row_count": 0,
+        "fret_text_paint_unassociated_row_count": 0,
+        "fret_text_label_row_count": 0
+      },
+      {
+        "part_id": "drawer_vertical_edge_gap_lane",
+        "upstream_dom_target_count": 1,
+        "fret_test_id_count": 1,
+        "upstream_semantics_fact_count": 1,
+        "upstream_interaction_fact_count": 0,
+        "fret_semantics_fact_count": 1,
+        "fret_interaction_fact_count": 0,
+        "fret_text_paint_fact_count": 0,
+        "fret_text_paint_direct_fact_count": 0,
+        "fret_text_paint_associated_fact_count": 0,
+        "fret_text_label_fact_count": 0,
+        "fret_text_paint_bundle_entry_count": 0,
+        "fret_text_paint_row_count": 0,
+        "fret_text_paint_association_row_count": 0,
+        "fret_text_paint_unassociated_row_count": 0,
+        "fret_text_label_row_count": 0
+      },
+      {
+        "part_id": "drawer_layout_invariants_lane",
+        "upstream_dom_target_count": 1,
+        "fret_test_id_count": 1,
+        "upstream_semantics_fact_count": 1,
+        "upstream_interaction_fact_count": 0,
+        "fret_semantics_fact_count": 1,
+        "fret_interaction_fact_count": 0,
+        "fret_text_paint_fact_count": 0,
+        "fret_text_paint_direct_fact_count": 0,
+        "fret_text_paint_associated_fact_count": 0,
+        "fret_text_label_fact_count": 0,
+        "fret_text_paint_bundle_entry_count": 0,
+        "fret_text_paint_row_count": 0,
+        "fret_text_paint_association_row_count": 0,
+        "fret_text_paint_unassociated_row_count": 0,
+        "fret_text_label_row_count": 0
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Lock the drawer bottom-sheet slice after fixing the vertical height clamp.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "reports": [
+      {
+        "id": "drawer.bottom_sheet.mobile",
+        "component": "drawer",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/drawer_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

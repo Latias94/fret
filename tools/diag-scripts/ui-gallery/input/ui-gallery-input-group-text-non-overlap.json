@@ -1,5 +1,14 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-input-group-text-non-overlap",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_START_PAGE": "input_group",
+      "FRET_UI_GALLERY_START_SECTION": "Text"
+    },
+    "tags": ["ui_gallery", "shadcn", "input_group", "text", "layout"]
+  },
   "steps": [
     { "type": "reset_diagnostics" },
     {
@@ -24,7 +33,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-input-group" }
+        "target": { "kind": "test_id", "id": "ui-gallery-input-group" }
       },
       "timeout_frames": 600
     },

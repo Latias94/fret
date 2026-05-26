@@ -331,8 +331,8 @@ The landed code changes are intentionally layer-local:
 - `ecosystem/fret-ui-shadcn/src/drawer.rs`: `DrawerContent` top/bottom max-height now follows the
   upstream `80vh` lane without the additional `DRAWER_EDGE_GAP_PX` clamp.
 - `ecosystem/fret-ui-shadcn/tests/fixtures/mechanism_layout_recipe_cases_v1.json`: the Drawer
-  `80vh` shell rule and the Popover command shell wrapping rule are promoted into the lightweight
-  recipe mechanism harness as `responsive-drawer-bottom-sheet-uses-eighty-vh` and
+  visible-lane shell cap and the Popover command shell wrapping rule are promoted into the lightweight
+  recipe mechanism harness as `responsive-drawer-bottom-sheet-caps-visible-lane` and
   `popover-command-shell-wraps-hover-region-max-height`, so they no longer depend on full UI Gallery
   diagnostics for first-line regression coverage.
 

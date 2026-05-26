@@ -1,0 +1,482 @@
+{
+  "schema_version": 1,
+  "component": "field",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual field docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/field.rs + ecosystem/fret-ui-shadcn/tests/{field_text_controls_auto_association.rs,field_select_auto_association.rs,field_responsive_orientation.rs,web_vs_fret_field.rs,web_vs_fret_layout/field.rs} + apps/fret-ui-gallery/src/ui/pages/field.rs + apps/fret-ui-gallery/src/ui/snippets/field/*.rs + tools/diag-scripts/ui-gallery/field/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-responsive-orientation-container-md.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-password-masked-screenshot.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/field/ui-gallery-field-radio-screenshot-zinc-dark.json | Out-Null; python -m json.tool ecosystem/fret-ui-shadcn/tests/fixtures/layout_field_cases_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Field diag scripts and layout fixture JSON parse cleanly for docs smoke, demo label/control relation action state, responsive container orientation, password masking screenshot, radio dark-theme screenshot, and the layout field fixture suite."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail field",
+      "status": "pass",
+      "scope": "Field recipe tests cover Field/FieldSet/FieldGroup layout, title/label intrinsic width, description text style, label/description/error registry association, group and alert semantics, label click focus/action forwarding, wrapped-label behavior, and responsive helper internals."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail field",
+      "status": "pass",
+      "scope": "Fixture-driven web-vs-Fret layout gate covers field-input, field-checkbox, field-switch, field-select, field-radio, field-textarea, field-group, field-fieldset, field-choice-card, field-slider track/thumb insets, field-demo separator height, and field-responsive orientation against upstream golden snapshots."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_field --status-level fail",
+      "status": "pass",
+      "scope": "Dedicated Field web-golden tests verify the targeted upstream field golden set exists and lock input label/control/description geometry."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test field_text_controls_auto_association --status-level fail",
+      "status": "pass",
+      "scope": "Field::build(...) association tests prove Input and Textarea inherit FieldLabel and FieldDescription relations and label clicks focus the registered text control."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test field_select_auto_association --test field_responsive_orientation --status-level fail",
+      "status": "pass",
+      "scope": "Select association test proves FieldLabel/FieldDescription inheritance and label-click open behavior for Select; responsive orientation test proves ContainerAdaptive follows the container md breakpoint instead of viewport width."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test field_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery docs-surface tests keep Field source-axis notes, upstream docs ordering, Field::new / Field::build / FieldLabel::wrap authoring decisions, explicit label/control demo wiring, responsive diag anchors, and the Responsive Layout section max-width needed to exercise the wide container state."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app field_snippets_prefer_ui_cx_on_the_default_app_surface field_page_uses_typed_doc_sections_for_app_facing_snippets field_page_usage_prefers_field_wrapper_family selected_field_and_form_snippets_prefer_field_wrapper_family --status-level fail",
+      "status": "pass",
+      "scope": "Gallery authoring-surface gates keep Field snippets on AppComponentCx/UiChild, typed DocSection::build sections, Field wrapper family usage, and the shared field/form wrapper-family teaching path."
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-docs-smoke.json --dir target\\fret-diag-field-docs-smoke-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Field docs smoke gate proves the page and primary docs-path sections render through API Reference plus the Fret-only composable-label follow-up.",
+      "run_id": "1779744141429",
+      "ai_packet": "target/fret-diag-field-docs-smoke-matrix/sessions/1779744136256-137524/1779744141429/ai.packet",
+      "share_zip": "target/fret-diag-field-docs-smoke-matrix/sessions/1779744136256-137524/share/1779744141429.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-demo-label-control-action-state.json --dir target\\fret-diag-field-demo-label-control-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Field demo label/control gate proves labels stay text nodes without control actions, text inputs expose focus/set_value actions, labels control and label concrete controls, label clicks focus/type text into the input, and the checkbox toggles through label-control forwarding.",
+      "run_id": "1779744160120",
+      "ai_packet": "target/fret-diag-field-demo-label-control-matrix/sessions/1779744156092-136580/1779744160120/ai.packet",
+      "share_zip": "target/fret-diag-field-demo-label-control-matrix/sessions/1779744156092-136580/share/1779744160120.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-responsive-orientation-container-md.json --dir target\\fret-diag-field-responsive-orientation-matrix-final --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Field responsive diag proves the gallery width toggle exposes both narrow vertical and wide horizontal ContainerAdaptive states. This gate also locks the Gallery DocSection max-width fix that makes the 900px wide example reachable inside the docs shell.",
+      "run_id": "1779744694069",
+      "ai_packet": "target/fret-diag-field-responsive-orientation-matrix-final/sessions/1779744689203-106924/1779744694069/ai.packet",
+      "share_zip": "target/fret-diag-field-responsive-orientation-matrix-final/sessions/1779744689203-106924/share/1779744694069.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-password-masked-screenshot.json --dir target\\fret-diag-field-password-masked-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Field password screenshot gate types into the password input, captures masked text paint, and preserves bundle evidence for the input field row.",
+      "run_id": "1779744729310",
+      "ai_packet": "target/fret-diag-field-password-masked-matrix/sessions/1779744724809-141776/1779744729310/ai.packet",
+      "share_zip": "target/fret-diag-field-password-masked-matrix/sessions/1779744724809-141776/share/1779744729310.zip"
+    },
+    {
+      "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\field\\ui-gallery-field-radio-screenshot-zinc-dark.json --dir target\\fret-diag-field-radio-zinc-dark-matrix --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- target\\debug\\fret-ui-gallery.exe",
+      "status": "pass",
+      "scope": "Field radio dark-theme screenshot gate switches to zinc/dark, scrolls the Radio section into view, and captures radio-group field paint/chrome evidence.",
+      "run_id": "1779744752471",
+      "ai_packet": "target/fret-diag-field-radio-zinc-dark-matrix/sessions/1779744747156-136308/1779744752471/ai.packet",
+      "share_zip": "target/fret-diag-field-radio-zinc-dark-matrix/sessions/1779744747156-136308/share/1779744752471.zip"
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.field.demo.light.vp1440x900",
+      "snapshot": "field-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.field.input.light.vp1440x900",
+      "snapshot": "field-input",
+      "theme": "light",
+      "mode": "static",
+      "variant": "input",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.field.group.light.vp1440x900",
+      "snapshot": "field-group",
+      "theme": "light",
+      "mode": "static",
+      "variant": "group",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.field.responsive.light.vp1440x900",
+      "snapshot": "field-responsive",
+      "theme": "light",
+      "mode": "responsive",
+      "variant": "responsive",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "field-demo",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/field-demo.json"
+      },
+      {
+        "snapshot": "field-input",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/field-input.json"
+      },
+      {
+        "snapshot": "field-textarea",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/field-textarea.json"
+      },
+      {
+        "snapshot": "field-select",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/field-select.json"
+      },
+      {
+        "snapshot": "field-slider",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/field-slider.json"
+      },
+      {
+        "snapshot": "field-fieldset",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/field-fieldset.json"
+      },
+      {
+        "snapshot": "field-checkbox",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/field-checkbox.json"
+      },
+      {
+        "snapshot": "field-radio",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/field-radio.json"
+      },
+      {
+        "snapshot": "field-switch",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/field-switch.json"
+      },
+      {
+        "snapshot": "field-choice-card",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/field-choice-card.json"
+      },
+      {
+        "snapshot": "field-group",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/field-group.json"
+      },
+      {
+        "snapshot": "field-responsive",
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/field-responsive.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json",
+        "sidecar_path": "target/fret-diag-field-demo-label-control-matrix/sessions/1779744156092-136580/1779744170740-ui-gallery-field-demo-label-control-action-state.layout/layout.taffy.v1.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-responsive-orientation-container-md.json",
+        "sidecar_path": "target/fret-diag-field-responsive-orientation-matrix-final/sessions/1779744689203-106924/1779744711178-ui-gallery-field-responsive-orientation-narrow.layout/layout.taffy.v1.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-responsive-orientation-container-md.json",
+        "sidecar_path": "target/fret-diag-field-responsive-orientation-matrix-final/sessions/1779744689203-106924/1779744712258-ui-gallery-field-responsive-orientation-wide.layout/layout.taffy.v1.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-docs-smoke.json",
+        "bundle_path": "target/fret-diag-field-docs-smoke-matrix/sessions/1779744136256-137524/1779744147653-ui-gallery-field-docs-smoke/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json",
+        "bundle_path": "target/fret-diag-field-demo-label-control-matrix/sessions/1779744156092-136580/1779744170945-ui-gallery-field-demo-label-control-action-state/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-responsive-orientation-container-md.json",
+        "bundle_path": "target/fret-diag-field-responsive-orientation-matrix-final/sessions/1779744689203-106924/1779744712612-ui-gallery-field-responsive-orientation-container-md/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-password-masked-screenshot.json",
+        "bundle_path": "target/fret-diag-field-password-masked-matrix/sessions/1779744724809-141776/1779744734911-ui-gallery-field-password-masked/bundle.schema2.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-radio-screenshot-zinc-dark.json",
+        "bundle_path": "target/fret-diag-field-radio-zinc-dark-matrix/sessions/1779744747156-136308/1779744760816-ui-gallery-field-radio-zinc-dark/bundle.schema2.json"
+      }
+    ],
+    "fret_screenshots": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json",
+        "screenshot_path": "target/fret-diag-field-demo-label-control-matrix/sessions/1779744156092-136580/screenshots/1779744170792-ui-gallery-field-demo-label-control-action-state/window-4294967297-tick-31-frame-31.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-responsive-orientation-container-md.json",
+        "screenshot_path": "target/fret-diag-field-responsive-orientation-matrix-final/sessions/1779744689203-106924/screenshots/1779744711344-ui-gallery-field-responsive-orientation-narrow/window-4294967297-tick-51-frame-51.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-responsive-orientation-container-md.json",
+        "screenshot_path": "target/fret-diag-field-responsive-orientation-matrix-final/sessions/1779744689203-106924/screenshots/1779744712373-ui-gallery-field-responsive-orientation-wide/window-4294967297-tick-71-frame-71.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-password-masked-screenshot.json",
+        "screenshot_path": "target/fret-diag-field-password-masked-matrix/sessions/1779744724809-141776/screenshots/1779744734742-ui-gallery-field-password-masked/window-4294967297-tick-16-frame-16.png"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/field/ui-gallery-field-radio-screenshot-zinc-dark.json",
+        "screenshot_path": "target/fret-diag-field-radio-zinc-dark-matrix/sessions/1779744747156-136308/screenshots/1779744760625-ui-gallery-field-radio-zinc-dark/window-4294967297-tick-55-frame-55.png"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 8,
+    "status_counts": {
+      "pass_known": 8,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 3,
+      "gallery_composition": 2,
+      "diagnostics_surface": 2,
+      "upstream_reference": 1,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "runner": 2,
+      "mechanism": 0,
+      "policy": 0,
+      "recipe": 3,
+      "app_demo": 2,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 8
+    },
+    "top_findings": [],
+    "promotion_target_counts": {
+      "diag_script": 5,
+      "component_fixture": 5,
+      "unit_test": 4,
+      "none": 0
+    },
+    "layout_sidecar_count": 3,
+    "bundle_schema2_count": 5,
+    "layout_test_id_count": 16,
+    "bundle_semantics_test_id_count": 16,
+    "measured_test_id_count": 16,
+    "upstream_dom_snapshot_count": 12,
+    "upstream_dom_target_count": 12,
+    "upstream_context_count": 4,
+    "upstream_dom_context_count": 4,
+    "upstream_live_fact_count": 8,
+    "upstream_semantics_fact_count": 3,
+    "upstream_interaction_fact_count": 1,
+    "fret_live_fact_count": 11,
+    "fret_semantics_fact_count": 12,
+    "fret_interaction_fact_count": 9,
+    "fret_text_paint_fact_count": 3,
+    "fret_text_paint_associated_fact_count": 1,
+    "fret_text_paint_direct_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 3,
+    "fret_text_paint_row_count": 3,
+    "fret_text_paint_association_row_count": 1,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 2
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/base/field.mdx + repo-ref/ui/apps/v4/content/docs/components/radix/field.mdx + repo-ref/ui/apps/v4/registry/bases/base/ui/field.tsx + repo-ref/ui/apps/v4/registry/bases/radix/ui/field.tsx + goldens/shadcn-web/v4/new-york-v4/field-*.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/field.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/field.rs + ecosystem/fret-ui-shadcn/tests/web_vs_fret_field.rs + ecosystem/fret-ui-shadcn/tests/field_*_association.rs + apps/fret-ui-gallery/src/ui/pages/field.rs + apps/fret-ui-gallery/src/ui/snippets/field/*.rs + tools/diag-scripts/ui-gallery/field/*.json",
+    "part_count": 8,
+    "upstream_dom_target_count": 12,
+    "fret_test_id_count": 16,
+    "upstream_semantics_fact_count": 3,
+    "upstream_interaction_fact_count": 1,
+    "fret_semantics_fact_count": 12,
+    "fret_interaction_fact_count": 9,
+    "parts": [
+      {
+        "part_id": "field_upstream_source_and_examples",
+        "status": "pass_known",
+        "owner": "upstream_reference",
+        "layer": "upstream",
+        "evidence_refs": [
+          "docs/audits/shadcn-field.md",
+          "repo-ref/ui/apps/v4/content/docs/components/base/field.mdx",
+          "repo-ref/ui/apps/v4/content/docs/components/radix/field.mdx",
+          "repo-ref/ui/apps/v4/registry/bases/base/ui/field.tsx",
+          "repo-ref/ui/apps/v4/registry/bases/radix/ui/field.tsx",
+          "goldens/shadcn-web/v4/new-york-v4/field-demo.json",
+          "goldens/shadcn-web/v4/new-york-v4/field-responsive.json"
+        ],
+        "facts": [
+          "The upstream Field family owns labels, descriptions, errors, fieldset/group composition, compact field groups, responsive orientation, and documented control examples.",
+          "Tracked web goldens cover the docs demo plus input, textarea, select, slider, fieldset, checkbox, radio, switch, choice-card, group, and responsive examples."
+        ]
+      },
+      {
+        "part_id": "field_recipe_layout_typography_and_grouping",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/field.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/field.rs",
+          "ecosystem/fret-ui-shadcn/tests/fixtures/layout_field_cases_v1.json",
+          "cargo nextest run -p fret-ui-shadcn --lib --status-level fail field",
+          "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail field"
+        ],
+        "facts": [
+          "FieldGroup gap, FieldSet legend spacing, compact radio/checkbox grouping, FieldDescription full-width wrapping, FieldLabel/FieldTitle intrinsic width, and description text metrics are locked by recipe and web-golden tests.",
+          "The fixture-driven layout suite covers thirteen Field-family geometry cases against upstream snapshots."
+        ]
+      },
+      {
+        "part_id": "field_control_association_semantics",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/field_text_controls_auto_association.rs",
+          "ecosystem/fret-ui-shadcn/tests/field_select_auto_association.rs",
+          "ecosystem/fret-ui-shadcn/src/field.rs"
+        ],
+        "facts": [
+          "Field::build(...) shares a field-local association context so Input, Textarea, and Select inherit FieldLabel and FieldDescription relations without explicit ids.",
+          "Label clicks focus text controls and open the Select trigger through registered control actions while preserving concrete control semantics."
+        ]
+      },
+      {
+        "part_id": "field_responsive_container_policy",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/field_responsive_orientation.rs",
+          "tools/diag-scripts/ui-gallery/field/ui-gallery-field-responsive-orientation-container-md.json",
+          "target/fret-diag-field-responsive-orientation-matrix-final/sessions/1779744689203-106924/1779744711178-ui-gallery-field-responsive-orientation-narrow.layout/layout.taffy.v1.json",
+          "target/fret-diag-field-responsive-orientation-matrix-final/sessions/1779744689203-106924/1779744712258-ui-gallery-field-responsive-orientation-wide.layout/layout.taffy.v1.json"
+        ],
+        "facts": [
+          "FieldOrientation::ContainerAdaptive follows the container md breakpoint, not the viewport width.",
+          "The Gallery Responsive Layout section now owns a 980px docs-shell max width so the example-local 900px wide state is reachable; the recipe still does not bake page width into Field defaults.",
+          "Runtime diagnostics prove narrow vertical layout and wide horizontal layout with non-overlapping content/input bounds."
+        ]
+      },
+      {
+        "part_id": "field_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/field.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/field/*.rs",
+          "apps/fret-ui-gallery/tests/field_docs_surface.rs",
+          "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+        ],
+        "facts": [
+          "The Gallery page keeps the upstream docs path through API Reference, then places the Fret-only Composable Children follow-up after the source-shaped sections.",
+          "Copyable snippets stay on AppComponentCx/UiChild, typed DocSection::build sections, Field::new / Field::build / FieldLabel::wrap lanes, and the shared Field wrapper family.",
+          "The page records the source-axis decision that Field drift is docs/public-surface and layout ownership work rather than a fret-ui mechanism bug."
+        ]
+      },
+      {
+        "part_id": "field_demo_label_control_action_state",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/field/ui-gallery-field-demo-label-control-action-state.json",
+          "target/fret-diag-field-demo-label-control-matrix/sessions/1779744156092-136580/1779744170740-ui-gallery-field-demo-label-control-action-state.layout/layout.taffy.v1.json",
+          "target/fret-diag-field-demo-label-control-matrix/sessions/1779744156092-136580/1779744170945-ui-gallery-field-demo-label-control-action-state/bundle.schema2.json"
+        ],
+        "facts": [
+          "The demo relation/action gate proves explicit labels control the name input, checkbox, and comments textarea.",
+          "Labels remain text semantics without focus/set_value actions, while the controls expose their concrete roles and actions.",
+          "Clicking labels focuses or toggles the registered controls, and typing through the focused name input updates the value."
+        ]
+      },
+      {
+        "part_id": "field_runtime_docs_and_responsive_diagnostics",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/field/ui-gallery-field-docs-smoke.json",
+          "tools/diag-scripts/ui-gallery/field/ui-gallery-field-responsive-orientation-container-md.json",
+          "target/fret-diag-field-docs-smoke-matrix/sessions/1779744136256-137524/1779744147653-ui-gallery-field-docs-smoke/bundle.schema2.json",
+          "target/fret-diag-field-responsive-orientation-matrix-final/sessions/1779744689203-106924/1779744712612-ui-gallery-field-responsive-orientation-container-md/bundle.schema2.json"
+        ],
+        "facts": [
+          "Docs smoke diagnostics prove the page and primary docs-path section anchors render through API Reference.",
+          "Responsive diagnostics prove the checked width switch state and both narrow and wide responsive geometry states."
+        ]
+      },
+      {
+        "part_id": "field_runtime_text_paint_and_theme",
+        "status": "pass_known",
+        "owner": "diagnostics_surface",
+        "layer": "runner",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/field/ui-gallery-field-password-masked-screenshot.json",
+          "tools/diag-scripts/ui-gallery/field/ui-gallery-field-radio-screenshot-zinc-dark.json",
+          "target/fret-diag-field-password-masked-matrix/sessions/1779744724809-141776/1779744734911-ui-gallery-field-password-masked/bundle.schema2.json",
+          "target/fret-diag-field-password-masked-matrix/sessions/1779744724809-141776/screenshots/1779744734742-ui-gallery-field-password-masked/window-4294967297-tick-16-frame-16.png",
+          "target/fret-diag-field-radio-zinc-dark-matrix/sessions/1779744747156-136308/1779744760816-ui-gallery-field-radio-zinc-dark/bundle.schema2.json",
+          "target/fret-diag-field-radio-zinc-dark-matrix/sessions/1779744747156-136308/screenshots/1779744760625-ui-gallery-field-radio-zinc-dark/window-4294967297-tick-55-frame-55.png"
+        ],
+        "facts": [
+          "Password diagnostics type into the password input and capture masked text-paint screenshot evidence.",
+          "Radio diagnostics switch to zinc/dark and capture dark-theme field/radio chrome and text paint evidence."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Field docs-path slice with shadcn source refs, upstream web goldens, recipe layout/association tests, responsive container-query proof, Gallery docs-surface authoring checks, label/control relation diagnostics, and text-paint screenshots.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "field.docs-path.desktop-responsive",
+        "component": "field",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/field_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

@@ -19,7 +19,8 @@ fn web_vs_fret_layout_badge_demo_heights() {
         CoreSize::new(Px(theme.viewport.w), Px(theme.viewport.h)),
     );
 
-    let (ui, snap, _root) = run_fret_root_with_ui(bounds, |cx| {
+    let mut services = StyleAwareServices::default();
+    let (ui, snap, _root) = run_fret_root_with_ui_and_services(bounds, &mut services, |cx| {
         let badge = shadcn::Badge::new("Badge").into_element(cx);
         let secondary = shadcn::Badge::new("Secondary")
             .variant(shadcn::BadgeVariant::Secondary)
@@ -129,7 +130,7 @@ fn web_vs_fret_layout_badge_demo_heights() {
 
 fn first_text_color(el: &AnyElement) -> Option<fret_core::Color> {
     match &el.kind {
-        fret_ui::element::ElementKind::Text(props) => props.color,
+        fret_ui::element::ElementKind::Text(props) => props.color.or(el.inherited_foreground),
         _ => el.children.iter().find_map(first_text_color),
     }
 }

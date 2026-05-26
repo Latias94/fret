@@ -20,6 +20,154 @@ COMPONENT_ALIASES = {
     "data-table/datagrid": "data-table",
 }
 
+STATE_DEPTH_AXES = {
+    "disabled": {
+        "label": "DIS",
+        "keywords": [
+            "disabled",
+            "aria-disabled",
+            "focusable-disabled",
+        ],
+    },
+    "hover": {
+        "label": "HOV",
+        "keywords": [
+            "hover",
+            "hovered",
+        ],
+    },
+    "focus_visible": {
+        "label": "FOCUS-VIS",
+        "keywords": [
+            "focus-visible",
+            "focus visible",
+            "focus ring",
+        ],
+    },
+    "pressed": {
+        "label": "PRESS",
+        "keywords": [
+            "pressed",
+        ],
+    },
+    "drag": {
+        "label": "DRAG",
+        "keywords": [
+            "drag",
+            "dragged",
+            "splitter",
+            "resize",
+            "resizing",
+        ],
+    },
+    "open": {
+        "label": "OPEN",
+        "keywords": [
+            ".open",
+            "_open",
+            "open-",
+            "open state",
+            "open mode",
+            "open snapshot",
+            "open story",
+            "open surface",
+            "open-change",
+            "opened",
+            "expanded state",
+            "expanded=true",
+        ],
+    },
+    "keyboard": {
+        "label": "KEY",
+        "keywords": [
+            "keyboard",
+            "enter",
+            "escape",
+            "arrow",
+            "home",
+        ],
+    },
+    "mobile": {
+        "label": "MOB",
+        "keywords": [
+            "mobile",
+            "vp375",
+            "375x",
+            "responsive",
+            "constrained viewport",
+        ],
+    },
+    "rtl": {
+        "label": "RTL",
+        "keywords": [
+            "rtl",
+            "right-to-left",
+        ],
+    },
+    "text_metrics": {
+        "label": "TEXT-MET",
+        "keywords": [
+            "text metrics",
+            "style-aware text",
+            "text measurement",
+            "text-paint",
+            "text paint",
+        ],
+    },
+    "paint_token": {
+        "label": "PAINT",
+        "keywords": [
+            "paint",
+            "token",
+            "chrome",
+            "foreground",
+            "background",
+            "border",
+            "radius",
+            "contrast",
+            "color",
+        ],
+    },
+}
+
+COMPONENT_STATE_DEPTH_REQUIREMENTS = {
+    "accordion": ["disabled", "open", "keyboard", "rtl", "text_metrics", "paint_token"],
+    "alert": ["keyboard", "rtl", "text_metrics", "paint_token"],
+    "alert-dialog": ["open", "keyboard", "mobile", "rtl", "text_metrics", "paint_token"],
+    "badge": ["hover", "focus_visible", "keyboard", "rtl", "text_metrics", "paint_token"],
+    "button": [
+        "disabled",
+        "hover",
+        "focus_visible",
+        "pressed",
+        "keyboard",
+        "text_metrics",
+        "paint_token",
+    ],
+    "button-group": ["disabled", "keyboard", "text_metrics", "paint_token"],
+    "calendar": ["hover", "focus_visible", "mobile", "text_metrics", "paint_token"],
+    "combobox": ["open", "keyboard", "mobile", "text_metrics", "paint_token"],
+    "context-menu": ["open", "keyboard", "paint_token"],
+    "data-table": ["keyboard", "rtl", "paint_token"],
+    "date-picker": ["open", "keyboard", "mobile", "paint_token"],
+    "dialog": ["open", "keyboard", "paint_token"],
+    "drawer": ["open", "mobile", "paint_token"],
+    "dropdown-menu": ["open", "keyboard", "mobile", "paint_token"],
+    "hover-card": ["hover", "open", "keyboard", "paint_token"],
+    "input": ["disabled", "focus_visible", "keyboard", "paint_token"],
+    "input-otp": ["disabled", "focus_visible", "keyboard", "paint_token"],
+    "menubar": ["disabled", "open", "keyboard", "paint_token"],
+    "navigation-menu": ["hover", "focus_visible", "open", "keyboard", "paint_token"],
+    "popover": ["open", "keyboard", "paint_token"],
+    "progress": ["rtl", "paint_token"],
+    "resizable": ["drag", "keyboard", "rtl", "paint_token"],
+    "select": ["open", "keyboard", "paint_token"],
+    "sheet": ["open", "keyboard", "mobile", "paint_token"],
+    "sidebar": ["hover", "focus_visible", "open", "keyboard", "mobile", "rtl", "paint_token"],
+    "table": ["hover", "paint_token"],
+    "tooltip": ["disabled", "hover", "focus_visible", "open", "keyboard", "paint_token"],
+}
+
 
 @dataclass(frozen=True)
 class MarkdownTable:
@@ -175,6 +323,39 @@ def _has_snapshot_ref(refs: list[str]) -> bool:
     )
 
 
+def _contains_any(text: str, keywords: list[str]) -> bool:
+    lowered = text.lower()
+    normalized = f" {lowered.replace('_', ' ').replace('-', ' ')} "
+    for keyword in keywords:
+        keyword = keyword.lower()
+        if any(separator in keyword for separator in [".", "_", "-"]):
+            if keyword in lowered:
+                return True
+            continue
+        pattern = r"(?<![a-z0-9])" + re.escape(keyword) + r"(?![a-z0-9])"
+        if re.search(pattern, normalized):
+            return True
+    return False
+
+
+def _collect_text(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        texts: list[str] = []
+        for child in value.values():
+            texts.extend(_collect_text(child))
+        return texts
+    if isinstance(value, list):
+        texts: list[str] = []
+        for child in value:
+            texts.extend(_collect_text(child))
+        return texts
+    return [str(value)]
+
+
 def _load_report_summary(path: str) -> dict[str, Any]:
     report_path = _repo_path(path)
     if not report_path.exists():
@@ -299,6 +480,91 @@ def _axis_coverage(
     }
 
 
+def _report_depth_texts(report: dict[str, Any]) -> list[str]:
+    texts: list[str] = []
+    output = str(report.get("output", ""))
+    if not output:
+        return texts
+    report_path = _repo_path(output)
+    if not report_path.exists():
+        return texts
+    try:
+        data = _read_json(report_path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return texts
+    for key in [
+        "upstream_contexts",
+        "evidence_contexts",
+        "validation_gates",
+        "live_facts",
+        "parts",
+        "source_mapping",
+    ]:
+        texts.extend(_collect_text(data.get(key)))
+    return texts
+
+
+def _state_depth_coverage(
+    targets: list[dict[str, Any]], reports: list[dict[str, Any]]
+) -> dict[str, bool]:
+    target_texts: list[str] = []
+    for target in targets:
+        target_texts.extend(
+            [
+                str(target.get("id", "")),
+                str(target.get("state", "")),
+                str(target.get("trigger", "")),
+                str(target.get("viewport_class", "")),
+                str(target.get("why", "")),
+            ]
+        )
+        target_texts.extend(
+            str(ref)
+            for ref in target.get("fret_refs", [])
+            if isinstance(ref, str)
+        )
+        target_texts.extend(
+            str(ref)
+            for ref in target.get("upstream_refs", [])
+            if isinstance(ref, str)
+        )
+
+    report_texts: list[str] = []
+    summaries = [report.get("summary", {}) for report in reports]
+    for report in reports:
+        report_texts.extend(
+            [
+                str(report.get("id", "")),
+                str(report.get("output", "")),
+            ]
+        )
+        report_texts.extend(_report_depth_texts(report))
+
+    all_text = "\n".join(target_texts + report_texts)
+    depth = {
+        axis: _contains_any(all_text, spec["keywords"])
+        for axis, spec in STATE_DEPTH_AXES.items()
+    }
+
+    if any(target.get("viewport_class") != "desktop_1440x900" for target in targets):
+        depth["mobile"] = True
+    if any(summary.get("fret_text_paint_row_count", 0) for summary in summaries):
+        depth["text_metrics"] = True
+        depth["paint_token"] = True
+    if any(summary.get("fret_text_paint_fact_count", 0) for summary in summaries):
+        depth["text_metrics"] = True
+        depth["paint_token"] = True
+    if any(summary.get("fret_interaction_fact_count", 0) for summary in summaries):
+        for report in reports:
+            if _script_refs(_collect_text(report.get("output", ""))):
+                depth["keyboard"] = depth["keyboard"] or _contains_any(
+                    all_text, STATE_DEPTH_AXES["keyboard"]["keywords"]
+                )
+                break
+
+    return depth
+
+
 def _status_for_component(
     inventory_row: dict[str, Any] | None,
     targets: list[dict[str, Any]],
@@ -319,7 +585,16 @@ def _status_for_component(
     return "not_in_harness"
 
 
-def _next_gap(status: str, axes: dict[str, bool]) -> str:
+def _state_depth_missing(component: str, state_depth: dict[str, bool]) -> list[str]:
+    required = COMPONENT_STATE_DEPTH_REQUIREMENTS.get(component, [])
+    return [axis for axis in required if not state_depth.get(axis)]
+
+
+def _next_gap(
+    status: str,
+    axes: dict[str, bool],
+    state_depth_missing: list[str],
+) -> str:
     if status == "repair_needed":
         return "repair_by_owner_layer"
     if not axes["source_refs"]:
@@ -336,7 +611,9 @@ def _next_gap(status: str, axes: dict[str, bool]) -> str:
         return "add_text_paint_or_paint_snapshot_gate"
     if status == "coverage_targeted":
         return "promote_target_to_suite_report"
-    return "expand_state_viewport_matrix"
+    if state_depth_missing:
+        return f"expand_{state_depth_missing[0]}_state_depth"
+    return "state_depth_model_satisfied"
 
 
 def build_matrix(
@@ -358,6 +635,7 @@ def build_matrix(
     components: list[dict[str, Any]] = []
     status_counts: dict[str, int] = defaultdict(int)
     axis_counts: dict[str, int] = defaultdict(int)
+    state_depth_counts: dict[str, int] = defaultdict(int)
     for component in component_names:
         targets = targets_by_component.get(component, [])
         reports = reports_by_component.get(component, [])
@@ -365,6 +643,11 @@ def build_matrix(
         for axis, covered in axes.items():
             if covered:
                 axis_counts[axis] += 1
+        state_depth = _state_depth_coverage(targets, reports)
+        for axis, covered in state_depth.items():
+            if covered:
+                state_depth_counts[axis] += 1
+        missing_depth = _state_depth_missing(component, state_depth)
         status = _status_for_component(inventory.get(component), targets, reports)
         status_counts[status] += 1
         components.append(
@@ -375,6 +658,9 @@ def build_matrix(
                 "likely_owner_layer": priorities.get(component, {}).get("likely_owner_layer", ""),
                 "harness_status": status,
                 "covered_axes": axes,
+                "state_depth": state_depth,
+                "required_state_depth": COMPONENT_STATE_DEPTH_REQUIREMENTS.get(component, []),
+                "missing_state_depth": missing_depth,
                 "coverage_target_count": len(targets),
                 "harness_report_count": len(reports),
                 "repair_queue_count": sum(
@@ -387,8 +673,22 @@ def build_matrix(
                     int(report.get("gate_queue_count", 0)) for report in reports
                 ),
                 "target_ids": [target.get("id") for target in targets],
+                "target_states": sorted(
+                    {
+                        str(target.get("state", "")).strip()
+                        for target in targets
+                        if str(target.get("state", "")).strip()
+                    }
+                ),
+                "target_viewport_classes": sorted(
+                    {
+                        str(target.get("viewport_class", "")).strip()
+                        for target in targets
+                        if str(target.get("viewport_class", "")).strip()
+                    }
+                ),
                 "report_ids": [report.get("id") for report in reports],
-                "next_gap": _next_gap(status, axes),
+                "next_gap": _next_gap(status, axes, missing_depth),
             }
         )
 
@@ -412,6 +712,8 @@ def build_matrix(
                 "interaction_script",
                 "responsive_viewport",
             ],
+            "state_depth_axes": list(STATE_DEPTH_AXES),
+            "component_state_depth_requirements": COMPONENT_STATE_DEPTH_REQUIREMENTS,
         },
         "summary": {
             "component_count": len(components),
@@ -423,6 +725,7 @@ def build_matrix(
             ),
             "status_counts": dict(sorted(status_counts.items())),
             "axis_component_counts": dict(sorted(axis_counts.items())),
+            "state_depth_component_counts": dict(sorted(state_depth_counts.items())),
         },
         "components": components,
     }
@@ -442,6 +745,26 @@ AXIS_LABELS = {
 def _axis_tokens(axes: dict[str, bool]) -> str:
     tokens = [label for axis, label in AXIS_LABELS.items() if axes.get(axis)]
     return ", ".join(tokens) if tokens else "-"
+
+
+def _state_depth_tokens(state_depth: dict[str, bool]) -> str:
+    tokens = [
+        str(spec["label"])
+        for axis, spec in STATE_DEPTH_AXES.items()
+        if state_depth.get(axis)
+    ]
+    return ", ".join(tokens) if tokens else "-"
+
+
+def _missing_state_depth_tokens(component: dict[str, Any]) -> str:
+    required = component.get("required_state_depth", [])
+    missing = component.get("missing_state_depth", [])
+    if not required:
+        return "-"
+    if not missing:
+        return "ok"
+    tokens = [str(STATE_DEPTH_AXES[axis]["label"]) for axis in missing]
+    return ", ".join(tokens)
 
 
 def write_markdown(matrix: dict[str, Any], output: Path) -> None:
@@ -468,6 +791,20 @@ def write_markdown(matrix: dict[str, Any], output: Path) -> None:
         "- `BEHAV`: interaction/behavior diag script exists.",
         "- `RESP`: responsive or non-desktop viewport coverage exists.",
         "",
+        "State-depth legend:",
+        "",
+        "- `DIS`: disabled / aria-disabled / focusable-disabled evidence.",
+        "- `HOV`: hover evidence.",
+        "- `FOCUS-VIS`: focus-visible or focus-ring evidence.",
+        "- `PRESS`: pressed-state evidence.",
+        "- `DRAG`: splitter drag or resize evidence.",
+        "- `OPEN`: open / expanded evidence.",
+        "- `KEY`: keyboard path evidence.",
+        "- `MOB`: mobile, constrained, or responsive viewport evidence.",
+        "- `RTL`: right-to-left evidence.",
+        "- `TEXT-MET`: text metrics or style-aware text measurement evidence.",
+        "- `PAINT`: paint, token, chrome, color, border, radius, or contrast evidence.",
+        "",
         "## Summary",
         "",
         "```json",
@@ -476,8 +813,8 @@ def write_markdown(matrix: dict[str, Any], output: Path) -> None:
         "",
         "## Component Matrix",
         "",
-        "| Component | Kind | Impl | Harness status | Axes | Targets | Reports | Queues | Next gap |",
-        "| --- | --- | --- | --- | --- | ---: | ---: | --- | --- |",
+        "| Component | Kind | Impl | Harness status | Axes | Depth | Missing depth | Targets | Reports | Queues | Next gap |",
+        "| --- | --- | --- | --- | --- | --- | --- | ---: | ---: | --- | --- |",
     ]
     for component in matrix["components"]:
         queues = (
@@ -486,12 +823,14 @@ def write_markdown(matrix: dict[str, Any], output: Path) -> None:
             f"gate={component['gate_queue_count']}"
         )
         lines.append(
-            "| {component} | {kind} | {impl} | {status} | {axes} | {targets} | {reports} | {queues} | {gap} |".format(
+            "| {component} | {kind} | {impl} | {status} | {axes} | {depth} | {missing_depth} | {targets} | {reports} | {queues} | {gap} |".format(
                 component=component["component"],
                 kind=component.get("inventory_kind", "-"),
                 impl=component.get("implementation_status", "-"),
                 status=component["harness_status"],
                 axes=_axis_tokens(component["covered_axes"]),
+                depth=_state_depth_tokens(component["state_depth"]),
+                missing_depth=_missing_state_depth_tokens(component),
                 targets=component["coverage_target_count"],
                 reports=component["harness_report_count"],
                 queues=queues,
@@ -504,6 +843,7 @@ def write_markdown(matrix: dict[str, Any], output: Path) -> None:
             "## Interpretation",
             "",
             "- `regression_locked` means the current suite report has no repair or hardening queue for that component slice. It does not mean every state, breakpoint, DPI, font metric, and interaction path is covered.",
+            "- `Depth` records state signals proven by manifest targets, component packets, validation gates, and Fret diagnostics summaries. `Missing depth` is filtered through component-specific applicability so irrelevant states are not treated as gaps.",
             "- `coverage_targeted` means a priority target exists in the manifest, but it is not yet represented as a current suite report.",
             "- `inventory_only` means the component exists in the shadcn inventory but does not yet have a harness seed.",
             "- The next automation step is to turn high-risk `inventory_only` and `coverage_targeted` rows into fixtures with upstream source refs, Fret `test_id`s, diag scripts, and packet checks.",
@@ -534,7 +874,31 @@ def main() -> int:
         "--extra-report",
         action="append",
         default=[
-            "docs/workstreams/component-parity-fact-harness-v1/artifacts/button_group_agent_packet_pilot_v1.json"
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/button_group_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/drawer_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/calendar_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/select_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/combobox_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/popover_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/dropdown_menu_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/data_table_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/date_picker_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/resizable_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sidebar_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/progress_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/badge_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/button_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/accordion_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/alert_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/alert_dialog_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/aspect_ratio_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/avatar_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/breadcrumb_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/field_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/form_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_group_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/pagination_agent_packet_p0_v1.json",
         ],
         help="Additional component agent packet report to fold into the matrix. May be repeated.",
     )

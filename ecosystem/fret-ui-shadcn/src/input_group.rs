@@ -961,7 +961,13 @@ impl InputGroup {
                                 Theme::global(&*cx.app).color_token("muted-foreground");
                             let row = cx.flex(
                                 FlexProps {
-                                    layout: LayoutStyle::default(),
+                                    layout: {
+                                        let theme = Theme::global(&*cx.app);
+                                        decl_style::layout_style(
+                                            theme,
+                                            LayoutRefinement::default().w_full().min_w_0(),
+                                        )
+                                    },
                                     direction: Axis::Horizontal,
                                     gap: gap.into(),
                                     padding: Edges {
@@ -1030,7 +1036,13 @@ impl InputGroup {
                                 Theme::global(&*cx.app).color_token("muted-foreground");
                             let row = cx.flex(
                                 FlexProps {
-                                    layout: LayoutStyle::default(),
+                                    layout: {
+                                        let theme = Theme::global(&*cx.app);
+                                        decl_style::layout_style(
+                                            theme,
+                                            LayoutRefinement::default().w_full().min_w_0(),
+                                        )
+                                    },
                                     direction: Axis::Horizontal,
                                     gap: gap.into(),
                                     padding: Edges {
@@ -2372,6 +2384,16 @@ mod tests {
             .any(|c| find_flex_with_text_and_order(c, text, order))
     }
 
+    fn find_flex_with_text<'a>(node: &'a AnyElement, text: &str) -> Option<&'a FlexProps> {
+        match &node.kind {
+            ElementKind::Flex(props) if find_text(node, text).is_some() => Some(props),
+            _ => node
+                .children
+                .iter()
+                .find_map(|c| find_flex_with_text(c, text)),
+        }
+    }
+
     fn find_container_with_test_id<'a>(
         node: &'a AnyElement,
         test_id: &str,
@@ -2565,6 +2587,35 @@ mod tests {
 
                 let props = find_text_input(&el).expect("expected text input in InputGroup");
                 assert_eq!(props.a11y_invalid, Some(fret_core::SemanticsInvalid::True));
+            },
+        );
+    }
+
+    #[test]
+    fn input_group_block_addon_rows_fill_width_for_auto_margins() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_block_addon_row_fill",
+            |cx| {
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let el = InputGroup::new(model)
+                    .textarea()
+                    .block_start([cx.text("script.js"), cx.text("Refresh")])
+                    .block_end([cx.text("Line 1, Column 1"), cx.text("Run")])
+                    .into_element(cx);
+
+                for text in ["script.js", "Line 1, Column 1"] {
+                    let props =
+                        find_flex_with_text(&el, text).expect("expected block addon row flex");
+                    assert_eq!(props.layout.size.width, Length::Fill);
+                    assert_eq!(props.layout.size.min_width, Some(Length::Px(Px(0.0))));
+                }
             },
         );
     }

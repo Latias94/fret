@@ -36,7 +36,7 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-pagination" }
+        "target": { "kind": "test_id", "id": "ui-gallery-pagination" }
       },
       "timeout_frames": 600
     },

@@ -28,7 +28,6 @@ use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::declarative::text as decl_text;
 use fret_ui_kit::overlay;
 use fret_ui_kit::primitives::dropdown_menu as menu;
 use fret_ui_kit::primitives::popper;
@@ -1503,6 +1502,8 @@ fn dropdown_menu_label_element<H: UiHost>(
     pad_x: Px,
     pad_x_inset: Px,
     pad_y: Px,
+    text_style: &TextStyle,
+    fg: fret_core::Color,
 ) -> AnyElement {
     let dir = crate::direction::use_direction(cx, None);
     let pad_left = if inset { pad_x_inset } else { pad_x };
@@ -1514,7 +1515,17 @@ fn dropdown_menu_label_element<H: UiHost>(
                 .into(),
             ..Default::default()
         },
-        move |cx| vec![decl_text::text_menu_group_label(cx, text)],
+        {
+            let text_style = text_style.clone();
+            move |cx| {
+                vec![crate::menu_text::menu_section_label(
+                    cx,
+                    text,
+                    &text_style,
+                    fg,
+                )]
+            }
+        },
     )
 }
 
@@ -1621,6 +1632,8 @@ fn render_dropdown_submenu_entries<H: UiHost>(
                     style.pad_x,
                     style.pad_x_inset,
                     style.pad_y,
+                    &style.text_style,
+                    style.fg,
                 ));
             }
             DropdownMenuEntry::Group(group) => {
@@ -4048,6 +4061,8 @@ impl DropdownMenu {
                                                             pad_x,
                                                             pad_x_inset,
                                                             pad_y,
+                                                            &text_style,
+                                                            fg,
                                                         ));
                                                     }
                                                     DropdownMenuEntry::Group(group) => {
@@ -5393,7 +5408,14 @@ mod tests {
             CoreSize::new(Px(240.0), Px(96.0)),
         );
 
+        let foreground = fret_core::Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        };
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let style = typography::fixed_line_box_style(FontId::ui(), Px(14.0), Px(20.0));
             dropdown_menu_label_element(
                 cx,
                 Arc::from("Recently opened projects"),
@@ -5401,6 +5423,8 @@ mod tests {
                 Px(8.0),
                 Px(32.0),
                 Px(6.0),
+                &style,
+                foreground,
             )
         });
 
@@ -5420,8 +5444,14 @@ mod tests {
         assert_eq!(props.layout.flex.shrink, 1.0);
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
-        assert!(text.inherited_text_style.is_some());
-        assert!(text.inherited_foreground.is_some());
+        let inherited = text
+            .inherited_text_style
+            .as_ref()
+            .expect("dropdown menu label should inherit a text style");
+        assert_eq!(inherited.size, Some(Px(14.0)));
+        assert_eq!(inherited.line_height, Some(Px(20.0)));
+        assert_eq!(inherited.weight, Some(FontWeight::MEDIUM));
+        assert_eq!(text.inherited_foreground, Some(foreground));
     }
 
     #[test]

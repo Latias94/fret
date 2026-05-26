@@ -11,7 +11,7 @@ enum SheetSideCase {
     Left,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum MiscOverlaysRecipe {
     TooltipDemoOverlayPlacement,
@@ -230,6 +230,22 @@ fn build_drawer_dialog_mobile_overlay(
 
 #[test]
 fn web_vs_fret_misc_overlays_cases_match_web_fixtures() {
+    run_misc_overlays_fixture_cases(|_| true);
+}
+
+#[test]
+fn web_vs_fret_misc_overlays_drawer_cases_match_web_fixtures() {
+    run_misc_overlays_fixture_cases(|case| {
+        matches!(
+            case.recipe,
+            MiscOverlaysRecipe::DrawerDemoOverlayInsets
+                | MiscOverlaysRecipe::DrawerDialogDesktopOverlayCenter
+                | MiscOverlaysRecipe::DrawerDialogMobileOverlayInsets
+        )
+    });
+}
+
+fn run_misc_overlays_fixture_cases(filter: impl Fn(&MiscOverlaysCase) -> bool) {
     let raw = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/tests/fixtures/overlay_placement_misc_overlays_cases_v1.json"
@@ -239,114 +255,124 @@ fn web_vs_fret_misc_overlays_cases_match_web_fixtures() {
     assert_eq!(suite.schema_version, 1);
     assert!(!suite.cases.is_empty());
 
-    for case in suite.cases {
-        eprintln!("misc-overlays case={}", case.id);
-        match case.recipe {
-            MiscOverlaysRecipe::TooltipDemoOverlayPlacement => {
-                assert_tooltip_demo_overlay_placement_matches(&case.web_name);
-            }
-            MiscOverlaysRecipe::HoverCardDemoOverlayPlacement => {
-                assert_hover_card_demo_overlay_placement_matches(&case.web_name);
-            }
-            MiscOverlaysRecipe::DialogDemoOverlayCenter => {
-                assert_centered_overlay_placement_matches(
-                    &case.web_name,
-                    "dialog",
-                    SemanticsRole::Dialog,
-                    build_dialog_demo_overlay,
-                );
-            }
-            MiscOverlaysRecipe::Sidebar13DialogOverlayCenter => {
-                assert_centered_overlay_placement_matches(
-                    &case.web_name,
-                    "dialog",
-                    SemanticsRole::Dialog,
-                    build_sidebar_13_dialog_overlay,
-                );
-            }
-            MiscOverlaysRecipe::CommandDialogOverlayCenter => {
-                assert_centered_overlay_placement_matches(
-                    &case.web_name,
-                    "dialog",
-                    SemanticsRole::Dialog,
-                    build_command_dialog_overlay,
-                );
-            }
-            MiscOverlaysRecipe::CommandDialogInputHeight => {
-                assert_command_dialog_input_height_matches(&case.web_name);
-            }
-            MiscOverlaysRecipe::CommandDialogListboxHeight => {
-                assert_command_dialog_listbox_height_matches(&case.web_name);
-            }
-            MiscOverlaysRecipe::CommandDialogListboxOptionHeight => {
-                assert_command_dialog_listbox_option_height_matches(&case.web_name);
-            }
-            MiscOverlaysRecipe::CommandDialogListboxOptionInsets => {
-                assert_command_dialog_listbox_option_insets_match(&case.web_name);
-            }
-            MiscOverlaysRecipe::AlertDialogDemoOverlayCenter => {
-                assert_centered_overlay_placement_matches(
-                    &case.web_name,
-                    "alertdialog",
-                    SemanticsRole::AlertDialog,
-                    build_alert_dialog_demo_overlay,
-                );
-            }
-            MiscOverlaysRecipe::SheetDemoOverlayInsets => {
-                assert_viewport_anchored_overlay_placement_matches(
-                    &case.web_name,
-                    "dialog",
-                    SemanticsRole::Dialog,
-                    build_sheet_demo_overlay,
-                );
-            }
-            MiscOverlaysRecipe::SheetSideOverlayInsets => {
-                let side = case.side.unwrap_or_else(|| {
-                    panic!(
-                        "missing side for recipe sheet_side_overlay_insets: {}",
-                        case.id
-                    )
-                });
-                let side = match side {
-                    SheetSideCase::Top => shadcn::SheetSide::Top,
-                    SheetSideCase::Right => shadcn::SheetSide::Right,
-                    SheetSideCase::Bottom => shadcn::SheetSide::Bottom,
-                    SheetSideCase::Left => shadcn::SheetSide::Left,
-                };
-                let build = move |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-                    build_sheet_side_overlay(cx, open, side)
-                };
-                assert_viewport_anchored_overlay_placement_matches(
-                    &case.web_name,
-                    "dialog",
-                    SemanticsRole::Dialog,
-                    build,
-                );
-            }
-            MiscOverlaysRecipe::DrawerDemoOverlayInsets => {
-                assert_viewport_anchored_overlay_placement_matches(
-                    &case.web_name,
-                    "dialog",
-                    SemanticsRole::Dialog,
-                    build_drawer_demo_overlay,
-                );
-            }
-            MiscOverlaysRecipe::DrawerDialogDesktopOverlayCenter => {
-                assert_centered_overlay_placement_matches(
-                    &case.web_name,
-                    "dialog",
-                    SemanticsRole::Dialog,
-                    build_drawer_dialog_desktop_overlay,
-                );
-            }
-            MiscOverlaysRecipe::DrawerDialogMobileOverlayInsets => {
-                assert_viewport_anchored_overlay_placement_matches(
-                    &case.web_name,
-                    "dialog",
-                    SemanticsRole::Dialog,
-                    build_drawer_dialog_mobile_overlay,
-                );
-            }
+    let mut matched = 0usize;
+    for case in suite.cases.into_iter().filter(filter) {
+        matched += 1;
+        assert_misc_overlay_case(case);
+    }
+    assert!(
+        matched > 0,
+        "expected at least one misc-overlays fixture case"
+    );
+}
+
+fn assert_misc_overlay_case(case: MiscOverlaysCase) {
+    eprintln!("misc-overlays case={}", case.id);
+    match case.recipe {
+        MiscOverlaysRecipe::TooltipDemoOverlayPlacement => {
+            assert_tooltip_demo_overlay_placement_matches(&case.web_name);
+        }
+        MiscOverlaysRecipe::HoverCardDemoOverlayPlacement => {
+            assert_hover_card_demo_overlay_placement_matches(&case.web_name);
+        }
+        MiscOverlaysRecipe::DialogDemoOverlayCenter => {
+            assert_centered_overlay_placement_matches(
+                &case.web_name,
+                "dialog",
+                SemanticsRole::Dialog,
+                build_dialog_demo_overlay,
+            );
+        }
+        MiscOverlaysRecipe::Sidebar13DialogOverlayCenter => {
+            assert_centered_overlay_placement_matches(
+                &case.web_name,
+                "dialog",
+                SemanticsRole::Dialog,
+                build_sidebar_13_dialog_overlay,
+            );
+        }
+        MiscOverlaysRecipe::CommandDialogOverlayCenter => {
+            assert_centered_overlay_placement_matches(
+                &case.web_name,
+                "dialog",
+                SemanticsRole::Dialog,
+                build_command_dialog_overlay,
+            );
+        }
+        MiscOverlaysRecipe::CommandDialogInputHeight => {
+            assert_command_dialog_input_height_matches(&case.web_name);
+        }
+        MiscOverlaysRecipe::CommandDialogListboxHeight => {
+            assert_command_dialog_listbox_height_matches(&case.web_name);
+        }
+        MiscOverlaysRecipe::CommandDialogListboxOptionHeight => {
+            assert_command_dialog_listbox_option_height_matches(&case.web_name);
+        }
+        MiscOverlaysRecipe::CommandDialogListboxOptionInsets => {
+            assert_command_dialog_listbox_option_insets_match(&case.web_name);
+        }
+        MiscOverlaysRecipe::AlertDialogDemoOverlayCenter => {
+            assert_centered_overlay_placement_matches(
+                &case.web_name,
+                "alertdialog",
+                SemanticsRole::AlertDialog,
+                build_alert_dialog_demo_overlay,
+            );
+        }
+        MiscOverlaysRecipe::SheetDemoOverlayInsets => {
+            assert_viewport_anchored_overlay_placement_matches(
+                &case.web_name,
+                "dialog",
+                SemanticsRole::Dialog,
+                build_sheet_demo_overlay,
+            );
+        }
+        MiscOverlaysRecipe::SheetSideOverlayInsets => {
+            let side = case.side.unwrap_or_else(|| {
+                panic!(
+                    "missing side for recipe sheet_side_overlay_insets: {}",
+                    case.id
+                )
+            });
+            let side = match side {
+                SheetSideCase::Top => shadcn::SheetSide::Top,
+                SheetSideCase::Right => shadcn::SheetSide::Right,
+                SheetSideCase::Bottom => shadcn::SheetSide::Bottom,
+                SheetSideCase::Left => shadcn::SheetSide::Left,
+            };
+            let build = move |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
+                build_sheet_side_overlay(cx, open, side)
+            };
+            assert_viewport_anchored_overlay_placement_matches(
+                &case.web_name,
+                "dialog",
+                SemanticsRole::Dialog,
+                build,
+            );
+        }
+        MiscOverlaysRecipe::DrawerDemoOverlayInsets => {
+            assert_viewport_anchored_overlay_placement_matches(
+                &case.web_name,
+                "dialog",
+                SemanticsRole::Dialog,
+                build_drawer_demo_overlay,
+            );
+        }
+        MiscOverlaysRecipe::DrawerDialogDesktopOverlayCenter => {
+            assert_centered_overlay_placement_matches(
+                &case.web_name,
+                "dialog",
+                SemanticsRole::Dialog,
+                build_drawer_dialog_desktop_overlay,
+            );
+        }
+        MiscOverlaysRecipe::DrawerDialogMobileOverlayInsets => {
+            assert_viewport_anchored_overlay_placement_matches(
+                &case.web_name,
+                "dialog",
+                SemanticsRole::Dialog,
+                build_drawer_dialog_mobile_overlay,
+            );
         }
     }
 }
