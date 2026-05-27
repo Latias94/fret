@@ -6,18 +6,18 @@ use fret_core::Color;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
-use super::TableColumnResizeResponse;
 use super::containers::build_imui_children_with_focus;
 use super::{
-    ImUiFacade, TableCellOptions, TableColumn, TableHeaderResponse, TableOptions, TableResponse,
-    TableRowOptions,
+    ImUiFacade, TableCellOptions, TableColumn, TableOptions, TableResponse, TableRowOptions,
 };
 
 mod body;
 mod cell;
 mod header;
+mod header_row;
 mod palette;
 mod render;
+mod row_groups;
 mod test_ids;
 
 struct BuiltTableRow {

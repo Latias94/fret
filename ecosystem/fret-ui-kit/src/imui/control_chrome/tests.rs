@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use fret_app::App;
-use fret_core::{AppWindowId, Point, Px, Rect};
-use fret_ui::element::{ElementKind, Length};
+use fret_core::{AppWindowId, Axis, Point, Px, Rect};
+use fret_ui::element::{CrossAlign, ElementKind, Length, MainAlign, SpacingLength};
 use fret_ui::elements;
 
-use super::{control_text, fill_text};
+use super::{centered_row_props, control_text, fill_row_props, fill_stack_props, fill_text};
 
 fn test_bounds() -> Rect {
     Rect::new(
@@ -67,4 +67,26 @@ fn imui_fill_text_is_single_line_and_shrinkable() {
     assert_eq!(props.overflow, fret_core::TextOverflow::Ellipsis);
     assert!(el.inherited_text_style.is_some());
     assert_eq!(el.inherited_foreground, Some(foreground));
+}
+
+#[test]
+fn imui_control_chrome_layout_props_keep_dense_defaults() {
+    let row = fill_row_props(MainAlign::SpaceBetween);
+    assert_eq!(row.direction, Axis::Horizontal);
+    assert_eq!(row.layout.size.width, Length::Fill);
+    assert_eq!(row.gap, SpacingLength::Px(super::ROW_GAP));
+    assert_eq!(row.justify, MainAlign::SpaceBetween);
+    assert_eq!(row.align, CrossAlign::Center);
+
+    let centered = centered_row_props();
+    assert_eq!(centered.direction, Axis::Horizontal);
+    assert_eq!(centered.gap, SpacingLength::Px(super::ROW_GAP));
+    assert_eq!(centered.justify, MainAlign::Center);
+    assert_eq!(centered.align, CrossAlign::Center);
+
+    let stack = fill_stack_props();
+    assert_eq!(stack.direction, Axis::Vertical);
+    assert_eq!(stack.layout.size.width, Length::Fill);
+    assert_eq!(stack.gap, SpacingLength::Px(super::STACK_GAP));
+    assert_eq!(stack.align, CrossAlign::Stretch);
 }

@@ -32,6 +32,11 @@
             "scope": "Sidebar badge peer size-state gate proves SidebarMenuBadge inherits the nearest SidebarMenuButton size from the same SidebarMenuItem context while explicit badge size overrides remain supported."
         },
         {
+            "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_badge_is_hit_test_transparent_like_shadcn_pointer_events_none sidebar_menu_action_and_badge_anchor_to_inline_end_in_rtl sidebar_menu_badge_uses_shared_compact_tabular_readout_role --status-level fail",
+            "status": "pass",
+            "scope": "Sidebar badge runtime class-state gate proves the shadcn pointer-events-none, RTL inline-end anchoring, and compact tabular text outcomes stay locked."
+        },
+        {
             "command": "cargo nextest run -p fret-ui-shadcn --lib sidebar_group_action_scopes_child_foreground sidebar_menu_action_inherits_active_peer_foreground sidebar_menu_badge_inherits_active_peer_foreground --status-level fail",
             "status": "pass",
             "scope": "Sidebar active peer foreground gate proves SidebarMenuAction and SidebarMenuBadge inherit same-item active SidebarMenuButton foreground, and SidebarGroupAction custom children inherit sidebar foreground."
@@ -207,8 +212,8 @@
   "summary": {
     "part_count": 14,
         "status_counts": {
-            "pass_known": 13,
-            "needs_hardening": 1,
+            "pass_known": 14,
+            "needs_hardening": 0,
             "mismatch": 0,
             "blocked": 0
         },
@@ -231,20 +236,20 @@
         "triage_level_counts": {
             "critical": 0,
             "high": 0,
-            "medium": 1,
+            "medium": 0,
             "low": 0,
-            "none": 13
+            "none": 14
         },
         "top_findings": [
-            "Sidebar has broad export and behavior coverage, and wasm desktop open cookie persistence plus SidebarRail directional cursor state are now implemented, but audit remains partial because full React API-shape parity and the residual peer/group/data-* class-state matrix are not fully aligned.",
-            "Existing sidebar goldens, focus-visible ring tests, rail side/state cursor tests, action/badge peer size-state tests, active peer foreground tests, and runtime diagnostics prove important slices, not complete class-state parity across all peer/group/data-* states.",
-            "The component should stay harness_hardening until those known hardening lanes are either implemented or explicitly split."
+            "Sidebar has broad export and behavior coverage, and wasm desktop open cookie persistence, SidebarRail directional cursor state, action/badge peer size-state, active peer foreground, collapsed visibility, RTL inline-end anchoring, and badge pointer-events-none runtime outcomes are now gated.",
+            "Existing sidebar goldens, focus-visible ring tests, rail side/state cursor tests, runtime diagnostics, and focused badge gates cover the Fret runtime class-state slices needed for the current docs-path harness.",
+            "Full React DOM/data-slot/class-name and API-shape one-to-one parity remains an audit portability note, not a matrix-blocking runtime hardening queue."
         ],
         "promotion_target_counts": {
             "diag_script": 5,
             "component_fixture": 3,
-            "unit_test": 9,
-            "hardening_followup": 1,
+            "unit_test": 10,
+            "hardening_followup": 0,
             "none": 0
         },
     "layout_sidecar_count": 3,
@@ -257,11 +262,11 @@
     "upstream_context_count": 3,
     "upstream_dom_context_count": 3,
     "upstream_live_fact_count": 6,
-        "fret_live_fact_count": 35,
+        "fret_live_fact_count": 36,
     "upstream_semantics_fact_count": 1,
     "upstream_interaction_fact_count": 2,
         "fret_semantics_fact_count": 11,
-        "fret_interaction_fact_count": 11,
+        "fret_interaction_fact_count": 12,
     "fret_text_paint_fact_count": 3,
     "fret_text_paint_direct_fact_count": 3,
     "fret_text_paint_associated_fact_count": 0,
@@ -297,7 +302,7 @@
         "facts": [
           "Sidebar has broad upstream docs/internal example coverage from sidebar-01 through sidebar-16.",
           "The tracked open context covers the AppSidebar dropdown-open path.",
-          "The audit marks exports complete but behavior/class-state parity still partial."
+          "The audit marks exports complete and keeps React DOM/API-shape one-to-one parity as a portability note."
         ]
       },
       {
@@ -502,43 +507,45 @@
         ]
       },
       {
-        "part_id": "sidebar_class_state_matrix_gap",
-        "status": "needs_hardening",
+        "part_id": "sidebar_runtime_class_state_matrix",
+        "status": "pass_known",
         "owner": "component_recipe",
         "layer": "recipe",
         "evidence_refs": [
-          "docs/audits/shadcn-sidebar.md"
+          "docs/audits/shadcn-sidebar.md",
+          "ecosystem/fret-ui-shadcn/src/sidebar.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_badge_is_hit_test_transparent_like_shadcn_pointer_events_none sidebar_menu_action_and_badge_anchor_to_inline_end_in_rtl sidebar_menu_badge_uses_shared_compact_tabular_readout_role --status-level fail"
         ],
         "facts": [
-          "Full peer/group/data-* class-state parity remains narrower than upstream, even though action/badge peer size-state, active peer foreground, and rail side/state cursor slices are now gated.",
-          "Existing web goldens, peer size-state tests, active peer foreground tests, rail cursor tests, and diagnostics prove important slices rather than the full class-state matrix.",
-          "Additional focused gates are needed before a regression_locked claim is defensible."
+          "SidebarMenuAction and SidebarMenuBadge peer size-state plus active peer foreground slices are gated for same-row closure-composition children.",
+          "SidebarMenuBadge now represents upstream pointer-events-none with a HitTestGate(false) while preserving absolute inline-end placement and text paint.",
+          "The remaining React DOM/data-slot/class-name one-to-one matrix is not a Fret runtime contract and is tracked as a non-blocking portability note."
         ]
       }
     ]
   },
   "agent_packet": {
     "schema_version": 1,
-    "status": "harness_hardening",
+    "status": "regression_locked",
     "suite_id": "shadcn-component-parity-matrix-v1",
-    "goal": "Promote Sidebar out of inventory-only by connecting source refs, upstream goldens, Fret layout/semantics/behavior diagnostics, and explicit hardening queues for known partial parity gaps.",
+    "goal": "Promote Sidebar to regression_locked by connecting source refs, upstream goldens, Fret layout/semantics/behavior diagnostics, and focused runtime class-state gates for the docs-path Sidebar slice.",
     "repair_queue_count": 0,
-    "hardening_queue_count": 1,
-    "gate_queue_count": 1,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
     "summary": {
       "repair_queue_count": 0,
-      "hardening_queue_count": 1,
-      "gate_queue_count": 1
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
     },
     "reports": [
       {
         "id": "sidebar.docs-path.desktop-mobile",
         "component": "sidebar",
         "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sidebar_agent_packet_p0_v1.json",
-        "status": "harness_hardening",
+        "status": "regression_locked",
         "repair_queue_count": 0,
-        "hardening_queue_count": 1,
-        "gate_queue_count": 1
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
       }
     ]
   }

@@ -1,4 +1,4 @@
-use super::combo_trigger_a11y_label;
+use super::trigger::combo_trigger_a11y_label;
 
 #[test]
 fn combo_trigger_a11y_label_formats_label_and_preview_inline() {

@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "component": "chart",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-27",
+  "generated_by": "manual audited-deferred packet v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/chart.rs + apps/fret-ui-gallery/src/ui/pages/chart.rs + tools/diag-scripts/ui-gallery/chart/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/chart_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Chart audited-deferred packet remains machine-readable."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/chart -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Existing Chart diagnostics scripts remain parseable as the deferred evidence set."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.chart.demo.light.vp1440x900",
+      "snapshot": "chart-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "chart-bar-default",
+        "theme": "light",
+        "mode": "static",
+        "variant": "bar-default",
+        "context_id": "upstream.chart.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/chart-bar-default.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-first-chart-screenshot-zinc-dark.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-demo-area-screenshot-zinc-dark.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-accessibility-layer-keyboard.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-tooltip-custom-parts-with-label.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 3,
+    "status_counts": {
+      "pass_known": 3,
+      "needs_hardening": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "gallery_composition": 1,
+      "policy": 1,
+      "mechanism_core": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "recipe": 1,
+      "app_demo": 1,
+      "policy": 1,
+      "mechanism": 0,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 3
+    },
+    "top_findings": [
+      "Chart is intentionally audited_deferred, not missing: recipe surface, tooltip/legend contracts, web-vs-Fret tooltip/chrome tests, hover gates, and accessibility-layer diagnostics already exist.",
+      "Broader chart-engine parity is the real deferred scope and should resume only when chart work becomes active priority.",
+      "No generic shadcn recipe API expansion is warranted from the current audit."
+    ],
+    "promotion_target_counts": {
+      "diag_script": 2,
+      "unit_test": 2,
+      "none": 0
+    },
+    "layout_sidecar_count": 2,
+    "bundle_schema2_count": 2,
+    "upstream_source_ref_count": 2,
+    "upstream_dom_snapshot_count": 1,
+    "interaction_script_count": 2,
+    "responsive_viewport_count": 1,
+    "fret_semantics_fact_count": 2,
+    "fret_interaction_fact_count": 2,
+    "fret_text_paint_fact_count": 1
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/radix/chart.mdx + repo-ref/ui/apps/v4/registry/new-york-v4/examples/chart-demo.tsx + goldens/shadcn-web/v4/new-york-v4/chart-*.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/chart.rs + apps/fret-ui-gallery/src/ui/pages/chart.rs + tools/diag-scripts/ui-gallery/chart/*.json",
+    "part_count": 3,
+    "parts": [
+      {
+        "part_id": "chart_recipe_surface",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "docs/audits/shadcn-chart.md",
+          "ecosystem/fret-ui-shadcn/src/chart.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_chart_tooltip.rs"
+        ],
+        "facts": [
+          "ChartConfig and ChartContainer cover the upstream config-map and container authoring model.",
+          "ChartTooltip/ChartTooltipContent and ChartLegend/ChartLegendContent cover the key shadcn recipe outcomes.",
+          "Tooltip shadow footprint and hover evidence have existing gates."
+        ]
+      },
+      {
+        "part_id": "chart_accessibility_layer",
+        "status": "pass_known",
+        "owner": "policy",
+        "layer": "policy",
+        "evidence_refs": [
+          "ecosystem/fret-chart/src/retained/canvas.rs",
+          "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-accessibility-layer-keyboard.json"
+        ],
+        "facts": [
+          "The Fret chart canvas exposes an opt-in accessibility layer.",
+          "Keyboard navigation drives engine hover state while focused.",
+          "Tooltip formatter output populates semantics value for the focused point."
+        ]
+      },
+      {
+        "part_id": "chart_defer_scope",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "docs/audits/shadcn-chart.md",
+          "apps/fret-ui-gallery/src/ui/pages/chart.rs",
+          "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-legend-colors.json"
+        ],
+        "facts": [
+          "The audit says the shadcn-facing chart recipe surface is audited enough to avoid blind widening.",
+          "Deferred work belongs to concrete chart-engine wiring or interactive regressions.",
+          "Chart remains lower priority than core app/editor surfaces."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "audited_deferred",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Record Chart as an intentionally deferred, already-audited surface rather than leaving it not_in_harness.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "chart.audited-deferred",
+        "component": "chart",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/chart_agent_packet_p0_v1.json",
+        "status": "audited_deferred",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

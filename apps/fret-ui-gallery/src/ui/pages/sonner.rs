@@ -34,8 +34,13 @@ pub(super) fn preview_sonner(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let position = snippets::position::render(cx);
     let examples = prose_block(
         cx,
+        ["The current upstream Examples group contains the Types preview."],
+    );
+    let changelog = prose_block(
+        cx,
         [
-            "The previews below mirror the upstream Examples group: Types, Description, and Position.",
+            "2025-10-13 Icons: the upstream wrapper now wires the Sonner status icons through Lucide.",
+            "Fret mirrors that through Toaster::new() installing the shadcn Lucide icon defaults.",
         ],
     );
     let api_reference = prose_block(
@@ -49,7 +54,7 @@ pub(super) fn preview_sonner(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let extras = snippets::extras::render(cx);
     let notes = doc_layout::notes_block([
         "Reference stack: shadcn Sonner docs, the default registry recipe, the demo/types examples, Radix Primitives Toast, and Base UI Toast.",
-        "Docs path stays `Demo`, `About`, `Usage`, `Examples`, `Types`, `Description`, `Position`, and `API Reference`, with `Mounting (Fret)` and `Extras` kept as Fret-only follow-ups.",
+        "Current docs path stays `Demo`, `About`, `Usage`, `Examples`, `Types`, and `Changelog` after skipping web-only installation prose; `Mounting (Fret)`, `Description (Fret)`, `Position (Fret)`, `API Reference (Fret)`, and `Extras (Fret)` are Fret follow-ups.",
         "The shadcn Sonner lane stays message-oriented today: a generic composable `children([...])` API is not warranted here, and this pass did not identify a missing `fret-ui` mechanism bug.",
     ]);
     let notes = DocSection::build(cx, "Notes", notes)
@@ -77,17 +82,21 @@ pub(super) fn preview_sonner(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .description("Default, status, and promise toast variants.")
         .test_id_prefix("ui-gallery-sonner-types")
         .code_rust_from_file_region(snippets::types::DOCS_SOURCE, "example");
-    let description = DocSection::build(cx, "Description", description)
-        .description("Toast with supporting copy, matching the docs example.")
+    let changelog = DocSection::build(cx, "Changelog", changelog)
+        .max_w(Px(980.0))
+        .no_shell()
+        .test_id_prefix("ui-gallery-sonner-changelog");
+    let description = DocSection::build(cx, "Description (Fret)", description)
+        .description("Toast with supporting copy on Fret's message-options lane.")
         .test_id_prefix("ui-gallery-sonner-description")
         .code_rust_from_file_region(snippets::description::DOCS_SOURCE, "example");
-    let position = DocSection::build(cx, "Position", position)
+    let position = DocSection::build(cx, "Position (Fret)", position)
         .description(
             "Use position to move the toast placement; the gallery keeps the toaster local so placements stay deterministic.",
         )
         .test_id_prefix("ui-gallery-sonner-position")
         .code_rust_from_file_region(snippets::position::DOCS_SOURCE, "example");
-    let api_reference = DocSection::build(cx, "API Reference", api_reference)
+    let api_reference = DocSection::build(cx, "API Reference (Fret)", api_reference)
         .max_w(Px(980.0))
         .no_shell()
         .test_id_prefix("ui-gallery-sonner-api-reference");
@@ -95,7 +104,7 @@ pub(super) fn preview_sonner(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .description("Mount a Toaster once per window. The usage snippets below inline this too, but this is the smallest focused install surface.")
         .test_id_prefix("ui-gallery-sonner-mounting")
         .code_rust_from_file_region(snippets::setup::DOCS_SOURCE, "example");
-    let extras = DocSection::build(cx, "Extras", extras)
+    let extras = DocSection::build(cx, "Extras (Fret)", extras)
         .description(
             "Fret-specific extras after docs parity examples: action/cancel + swipe-dismiss.",
         )
@@ -113,10 +122,11 @@ pub(super) fn preview_sonner(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
             usage,
             examples,
             types,
+            changelog,
+            setup,
             description,
             position,
             api_reference,
-            setup,
             extras,
             notes,
         ],

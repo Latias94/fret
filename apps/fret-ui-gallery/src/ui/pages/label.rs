@@ -41,7 +41,7 @@ pub(super) fn preview_label(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Label docs path first, then adds one Fret-only composable-content appendix for the inline children lane.",
+            "Preview mirrors the current shadcn Label docs path first: Demo and Usage. Label in Field, RTL, Composable Content, and API Reference are Fret follow-ups.",
         ),
         vec![demo, usage, label_in_field, rtl, children, api_reference],
     );

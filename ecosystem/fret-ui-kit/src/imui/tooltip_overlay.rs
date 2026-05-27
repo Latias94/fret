@@ -1,12 +1,8 @@
 use std::sync::Arc;
 
-use fret_core::{Edges, PointerType, Px, SemanticsRole};
+use fret_core::Px;
 use fret_ui::action::DismissReason;
-use fret_ui::element::{
-    ColumnProps, ContainerProps, InsetStyle, LayoutStyle, Length, Overflow, PositionStyle,
-    SemanticsDecoration, SpacingLength,
-};
-use fret_ui::{ElementContext, GlobalElementId, UiHost};
+use fret_ui::{GlobalElementId, UiHost};
 
 use super::{ImUiFacade, ResponseExt, TooltipOptions, UiWriterImUiFacadeExt};
 use crate::OverlayPresence;
@@ -15,60 +11,14 @@ use crate::declarative::scheduling;
 use crate::overlay;
 use crate::primitives::tooltip as radix_tooltip;
 
+mod panel;
 mod text;
+mod trigger;
+
+use panel::{TooltipPanelBuildOptions, tooltip_overlay_children};
+use trigger::install_pointer_move_open_gate_for;
 
 pub(super) use text::tooltip_text_with_options;
-
-fn install_pointer_move_open_gate_for<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    trigger: GlobalElementId,
-    models: radix_tooltip::TooltipTriggerEventModels,
-    pointer_in_transit_buffer: Px,
-    last_pointer: fret_runtime::Model<Option<fret_core::Point>>,
-) {
-    cx.pressable_add_on_pointer_move_for(
-        trigger,
-        Arc::new(move |host, action_cx, mv| {
-            if mv.pointer_type == PointerType::Touch {
-                return false;
-            }
-
-            let _ = host
-                .models_mut()
-                .update(&last_pointer, |value| *value = Some(mv.position));
-
-            let geometry = host
-                .models_mut()
-                .read(&models.pointer_transit_geometry, |value| *value)
-                .ok()
-                .flatten();
-            if let Some((anchor, floating)) = geometry
-                && radix_tooltip::tooltip_pointer_in_transit(
-                    mv.position,
-                    anchor,
-                    floating,
-                    pointer_in_transit_buffer,
-                )
-            {
-                return false;
-            }
-
-            let already = host
-                .models_mut()
-                .read(&models.has_pointer_move_opened, |value| *value)
-                .ok()
-                .unwrap_or(false);
-            if !already {
-                let _ = host
-                    .models_mut()
-                    .update(&models.has_pointer_move_opened, |value| *value = true);
-                host.request_redraw(action_cx.window);
-            }
-
-            false
-        }),
-    );
-}
 
 pub(super) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -168,87 +118,20 @@ pub(super) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Siz
             }
 
             let root_name = radix_tooltip::tooltip_root_name(tooltip_id);
-            let panel_test_id = options.test_id.clone();
-            let placement = options.placement;
-            let window_margin = options.window_margin;
-            let panel_id_model = panel_id.clone();
-            let mut build = Some(f);
-
-            let overlay_children = cx.with_root_name(root_name.as_str(), |cx| {
-                let Some(anchor) =
-                    overlay::anchor_bounds_for_element(cx, trigger_id).or(trigger.rect())
-                else {
-                    return Vec::new();
-                };
-
-                let outer = overlay::outer_bounds_with_window_margin_for_environment(
-                    cx,
-                    fret_ui::Invalidation::Layout,
-                    window_margin,
-                );
-                let layout = crate::primitives::popper::popper_content_layout_sized(
-                    outer, anchor, panel_size, placement,
-                );
-
-                vec![cx.named("fret-ui-kit.imui.tooltip.panel", |cx| {
-                    let current_panel_id = cx.root_id();
-                    let _ = cx
-                        .app
-                        .models_mut()
-                        .update(&panel_id_model, |value| *value = Some(current_panel_id));
-
-                    let mut panel_props = ContainerProps::default();
-                    let theme = fret_ui::Theme::global(&*cx.app);
-                    panel_props.layout = LayoutStyle {
-                        position: PositionStyle::Absolute,
-                        inset: InsetStyle {
-                            left: Some(layout.rect.origin.x).into(),
-                            top: Some(layout.rect.origin.y).into(),
-                            ..Default::default()
-                        },
-                        size: fret_ui::element::SizeStyle {
-                            width: Length::Auto,
-                            height: Length::Auto,
-                            ..Default::default()
-                        },
-                        overflow: Overflow::Visible,
-                        ..Default::default()
-                    };
-                    panel_props.padding = Edges::all(Px(4.0)).into();
-                    panel_props.background = Some(theme.color_token("popover"));
-                    panel_props.border = Edges::all(Px(1.0));
-                    panel_props.border_color = Some(theme.color_token("border"));
-                    panel_props.corner_radii =
-                        fret_core::Corners::all(super::control_chrome::PANEL_RADIUS);
-
-                    let mut panel = cx.container(panel_props, move |cx| {
-                        let mut column = ColumnProps::default();
-                        column.layout.size.width = Length::Auto;
-                        column.layout.size.height = Length::Auto;
-                        column.gap = SpacingLength::Px(Px(4.0));
-
-                        vec![cx.column(column, move |cx| {
-                            let mut out = Vec::new();
-                            let mut ui = ImUiFacade {
-                                cx,
-                                out: &mut out,
-                                build_focus: None,
-                            };
-                            if let Some(build) = build.take() {
-                                build(&mut ui);
-                            }
-                            out
-                        })]
-                    });
-
-                    let mut semantics = SemanticsDecoration::default().role(SemanticsRole::Tooltip);
-                    if let Some(test_id) = panel_test_id.as_ref() {
-                        semantics = semantics.test_id(test_id.clone());
-                    }
-                    panel = panel.attach_semantics(semantics);
-                    panel
-                })]
-            });
+            let overlay_children = tooltip_overlay_children(
+                cx,
+                root_name.as_str(),
+                TooltipPanelBuildOptions {
+                    trigger_id,
+                    trigger_rect: trigger.rect(),
+                    panel_size,
+                    placement: options.placement,
+                    window_margin: options.window_margin,
+                    panel_id_model: panel_id.clone(),
+                    panel_test_id: options.test_id.clone(),
+                },
+                f,
+            );
 
             let mut request = radix_tooltip::tooltip_request(
                 tooltip_id,

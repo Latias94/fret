@@ -733,7 +733,10 @@ mod tests {
 
     use fret_app::App;
     use fret_core::SemanticsInvalid;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size as CoreSize};
+    use fret_core::{
+        AppWindowId, Modifiers, MouseButton, MouseButtons, Point, PointerId, PointerType, Px, Rect,
+        Size as CoreSize,
+    };
     use fret_core::{
         PathCommand, Size as UiSize, SvgId, SvgService, TextBlobId, TextConstraints, TextMetrics,
         TextService,
@@ -1184,6 +1187,23 @@ mod tests {
         None
     }
 
+    fn textarea_control_and_resize_handle_nodes(
+        ui: &UiTree<App>,
+        root: fret_core::NodeId,
+    ) -> (fret_core::NodeId, fret_core::NodeId) {
+        let host = ui
+            .children(root)
+            .first()
+            .copied()
+            .expect("expected textarea host node");
+        let children = ui.children(host);
+        assert!(
+            children.len() >= 2,
+            "expected textarea host to contain TextArea plus resize handle, got {children:?}",
+        );
+        (children[0], children[1])
+    }
+
     #[test]
     fn textarea_required_builder_sets_textarea_required_semantics() {
         let mut app = App::new();
@@ -1238,5 +1258,177 @@ mod tests {
 
         let props = find_text_area_props(&el).expect("expected TextArea props");
         assert_eq!(props.a11y_invalid, Some(SemanticsInvalid::True));
+    }
+
+    #[test]
+    fn textarea_resize_handle_drags_height_and_keeps_min_height_floor() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices;
+
+        crate::shadcn_themes::apply_shadcn_new_york(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(220.0)),
+        );
+        let model = app.models_mut().insert(String::new());
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn fret_core::UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            model: Model<String>,
+        ) -> fret_core::NodeId {
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "textarea-resize-drag-height",
+                move |cx| {
+                    vec![
+                        Textarea::new(model)
+                            .a11y_label("Notes")
+                            .min_height(Px(64.0))
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            root
+        }
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+        );
+        let (text_area, handle) = textarea_control_and_resize_handle_nodes(&ui, root);
+        let initial = ui.debug_node_bounds(text_area).expect("textarea bounds");
+        let handle_bounds = ui.debug_node_bounds(handle).expect("handle bounds");
+        assert_eq!(initial.size.height, Px(64.0));
+
+        let down = Point::new(
+            Px(handle_bounds.origin.x.0 + handle_bounds.size.width.0 * 0.5),
+            Px(handle_bounds.origin.y.0 + handle_bounds.size.height.0 * 0.5),
+        );
+        let pointer = PointerId(42);
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: pointer,
+                position: down,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        assert!(
+            ui.captured_for(pointer).is_some(),
+            "textarea resize handle should capture the pointer during drag"
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: pointer,
+                position: Point::new(down.x, Px(down.y.0 + 32.0)),
+                buttons: MouseButtons {
+                    left: true,
+                    right: false,
+                    middle: false,
+                },
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        let changed = app.take_changed_models();
+        if !changed.is_empty() {
+            let _ = ui.propagate_model_changes(&mut app, &changed);
+        }
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+        );
+        let (text_area, _) = textarea_control_and_resize_handle_nodes(&ui, root);
+        let grown = ui
+            .debug_node_bounds(text_area)
+            .expect("grown textarea bounds");
+        assert_eq!(grown.size.height, Px(96.0));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+                pointer_id: pointer,
+                position: Point::new(down.x, Px(down.y.0 - 80.0)),
+                buttons: MouseButtons {
+                    left: true,
+                    right: false,
+                    middle: false,
+                },
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        let changed = app.take_changed_models();
+        if !changed.is_empty() {
+            let _ = ui.propagate_model_changes(&mut app, &changed);
+        }
+
+        let root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            model.clone(),
+        );
+        let (text_area, _) = textarea_control_and_resize_handle_nodes(&ui, root);
+        let clamped = ui
+            .debug_node_bounds(text_area)
+            .expect("clamped textarea bounds");
+        assert_eq!(clamped.size.height, Px(64.0));
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: pointer,
+                position: Point::new(down.x, Px(down.y.0 - 80.0)),
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                is_click: false,
+                click_count: 1,
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        assert!(
+            ui.captured_for(pointer).is_none(),
+            "textarea resize handle should release capture on pointer up"
+        );
     }
 }

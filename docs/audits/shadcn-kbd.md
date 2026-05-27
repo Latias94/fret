@@ -8,12 +8,12 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret's shadcn-aligned `Kbd` against the upstream shadcn/ui v4 base docs,
+This audit compares Fret's shadcn-aligned `Kbd` against the current upstream shadcn/ui v4 docs,
 registry examples, and the in-repo layout/docs gates.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/kbd.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/kbd.mdx`
 - Component implementation: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/kbd.tsx`
 - Example compositions: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/kbd-demo.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/kbd-group.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/kbd-button.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/kbd-tooltip.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/kbd-input-group.tsx`
 
@@ -42,16 +42,20 @@ registry examples, and the in-repo layout/docs gates.
 
 - Fixed: the gallery `Usage` section now uses a real snippet-backed single-key example (`Kbd::new("Ctrl")`) instead of an abbreviated page-local code string.
 - Fixed: the lead `Demo`, `Button`, `Tooltip`, and `Input Group` snippets now prefer the upstream textual/glyph lane (`⌘`, `⇧`, `⌥`, `⌃`, `⏎`) before falling back to Fret-only icon escape hatches.
-- Fixed: the page now exposes stable section-scoped `ui-gallery-kbd-*` ids for docs diagnostics (`Demo`, `Usage`, `Group`, `Button`, `Tooltip`, `Input Group`, `RTL`, `API Reference`), and the `ui-gallery-kbd-docs-smoke` diag gate now asserts those docs-path anchors end to end.
+- Fixed: the page now exposes stable section-scoped `ui-gallery-kbd-*` ids for docs diagnostics (`Demo`, `Usage`, `Group`, `Button`, `Tooltip`, `Input Group`, `API Reference`, `RTL`), and the `ui-gallery-kbd-docs-smoke` diag gate now asserts those docs-path anchors end to end.
 
 ### Gallery / docs parity
 
-- Pass: the gallery now mirrors the upstream docs path first: `Demo`, `Usage`, `Group`, `Button`, `Tooltip`, `Input Group`, `RTL`, and `API Reference`.
+- Pass: the gallery now mirrors the current upstream docs path first: `Demo`, `Usage`, `Group`, `Button`, `Tooltip`, `Input Group`, and `API Reference`.
+- Pass: the `RTL` section is explicitly retained after `API Reference` as a Fret-only follow-up because the current upstream Kbd docs do not define an RTL section.
 - Pass: the `Usage` section now matches the upstream single-key teaching lane, while grouped shortcuts stay in the dedicated `Group` example.
 - Pass: the `API Reference` section records the public surface plus the explicit `from_children([...])` escape hatch without promoting a broader generic children API.
 
 ## Validation
 
-- `cargo nextest run -p fret-ui-shadcn web_vs_fret_layout_kbd_heights_match_web_fixtures web_vs_fret_layout_kbd_tooltip_kbd_height_matches_web fret_layout_kbd_text_is_vertically_centered_ascii fret_layout_kbd_icon_only_height_matches_control_height fret_kbd_in_tooltip_content_overrides_bg_and_fg`
-- `cargo test -p fret-ui-gallery --test ui_authoring_surface_default_app`
-- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/kbd/ui-gallery-kbd-docs-smoke.json --dir target/fret-diag-kbd-codex --exit-after-run --launch -- cargo run -p fret-ui-gallery --release`
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail kbd`
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail kbd`
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_kbd --status-level fail`
+- `cargo nextest run -p fret-ui-shadcn --test fret_kbd_tooltip_slot --status-level fail fret_kbd_in_tooltip_content_overrides_bg_and_fg`
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail kbd`
+- `python -m json.tool tools/diag-scripts/ui-gallery/kbd/ui-gallery-kbd-docs-smoke.json | Out-Null`

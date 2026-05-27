@@ -2,12 +2,10 @@ use fret_core::DrawOrder;
 use fret_ui::canvas::CanvasPainter;
 
 use super::DebugDrawCommand;
-use super::geometry::{points_are_finite, rect_is_empty, rect_is_finite, uv_points_are_finite};
-use super::paint_helpers::{
-    corner_radii_are_visible, normalized_opacity, paint_image, paint_image_region,
-    rounded_rect_corner_radii, uv_rect_is_valid,
-};
+use super::geometry::rect_is_empty;
 use super::paint_shapes::paint_debug_draw_shape_command;
+
+mod media;
 
 pub(super) fn paint_debug_draw_commands(
     painter: &mut CanvasPainter<'_>,
@@ -35,122 +33,14 @@ pub(super) fn paint_debug_draw_commands(
                 painter.scene().push(fret_core::SceneOp::PopClip);
                 open_clip_depth -= 1;
             }
-            DebugDrawCommand::Image {
-                rect,
-                image,
-                options,
-            } => {
-                let opacity = normalized_opacity(options.opacity);
-                if opacity <= 0.0 || rect_is_empty(*rect) {
-                    continue;
-                }
-                paint_image(painter, order, *rect, *image, *options, opacity);
-            }
-            DebugDrawCommand::ImageRegion {
-                rect,
-                image,
-                uv,
-                options,
-            } => {
-                let opacity = normalized_opacity(options.opacity);
-                if opacity <= 0.0 || rect_is_empty(*rect) || !uv_rect_is_valid(*uv) {
-                    continue;
-                }
-                paint_image_region(painter, order, *rect, *image, *uv, *options, opacity);
-            }
-            DebugDrawCommand::ImageQuad {
-                image,
-                points,
-                uvs,
-                options,
-            } => {
-                let opacity = normalized_opacity(options.opacity);
-                if opacity <= 0.0
-                    || options.tint.a <= 0.0
-                    || !points_are_finite(points)
-                    || !uv_points_are_finite(uvs)
-                {
-                    continue;
-                }
-                painter.scene().push(fret_core::SceneOp::ImageQuad {
-                    order,
-                    points: *points,
-                    image: *image,
-                    uvs: *uvs,
-                    sampling: options.sampling,
-                    tint: options.tint,
-                    opacity,
-                });
-            }
-            DebugDrawCommand::ImageRounded {
-                rect,
-                image,
-                options,
-                rounding,
-                corners,
-            } => {
-                let opacity = normalized_opacity(options.opacity);
-                if opacity <= 0.0 || rect_is_empty(*rect) || !rect_is_finite(*rect) {
-                    continue;
-                }
-                let corner_radii = rounded_rect_corner_radii(*rect, *rounding, *corners);
-                if corner_radii_are_visible(corner_radii) {
-                    painter.scene().push(fret_core::SceneOp::PushClipRRect {
-                        rect: *rect,
-                        corner_radii,
-                    });
-                    paint_image(painter, order, *rect, *image, *options, opacity);
-                    painter.scene().push(fret_core::SceneOp::PopClip);
-                } else {
-                    paint_image(painter, order, *rect, *image, *options, opacity);
-                }
-            }
-            DebugDrawCommand::ImageRegionRounded {
-                rect,
-                image,
-                uv,
-                options,
-                rounding,
-                corners,
-            } => {
-                let opacity = normalized_opacity(options.opacity);
-                if opacity <= 0.0
-                    || rect_is_empty(*rect)
-                    || !rect_is_finite(*rect)
-                    || !uv_rect_is_valid(*uv)
-                {
-                    continue;
-                }
-                let corner_radii = rounded_rect_corner_radii(*rect, *rounding, *corners);
-                if corner_radii_are_visible(corner_radii) {
-                    painter.scene().push(fret_core::SceneOp::PushClipRRect {
-                        rect: *rect,
-                        corner_radii,
-                    });
-                    paint_image_region(painter, order, *rect, *image, *uv, *options, opacity);
-                    painter.scene().push(fret_core::SceneOp::PopClip);
-                } else {
-                    paint_image_region(painter, order, *rect, *image, *uv, *options, opacity);
-                }
-            }
-            DebugDrawCommand::SvgImage { rect, svg, options } => {
-                let opacity = normalized_opacity(options.opacity);
-                if opacity <= 0.0 || rect_is_empty(*rect) {
-                    continue;
-                }
-                painter.svg_image(key, order, *rect, svg, options.fit, opacity);
-            }
-            DebugDrawCommand::SvgMaskIcon {
-                rect,
-                svg,
-                color,
-                options,
-            } => {
-                let opacity = normalized_opacity(options.opacity);
-                if opacity <= 0.0 || color.a <= 0.0 || rect_is_empty(*rect) {
-                    continue;
-                }
-                painter.svg_mask_icon(key, order, *rect, svg, options.fit, *color, opacity);
+            DebugDrawCommand::Image { .. }
+            | DebugDrawCommand::ImageRegion { .. }
+            | DebugDrawCommand::ImageQuad { .. }
+            | DebugDrawCommand::ImageRounded { .. }
+            | DebugDrawCommand::ImageRegionRounded { .. }
+            | DebugDrawCommand::SvgImage { .. }
+            | DebugDrawCommand::SvgMaskIcon { .. } => {
+                media::paint_debug_draw_media_command(painter, key, order, command);
             }
             DebugDrawCommand::Line { .. }
             | DebugDrawCommand::Polyline { .. }

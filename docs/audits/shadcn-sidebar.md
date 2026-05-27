@@ -51,8 +51,10 @@ Date: 2026-02-08
 - Fret sidebar exports: `24`
 - Missing in Fret: `0`
 
-This means current sidebar parity is still a **partial surface alignment** despite broad golden-key
-coverage for `sidebar-*` pages.
+This means current sidebar parity is still a **partial React DOM/API-shape surface alignment** despite
+broad golden-key coverage for `sidebar-*` pages. The current Fret runtime docs-path harness is
+regression-locked for the gated layout, semantics, behavior, text/paint, and interaction-state
+slices listed below.
 
 ### Progress note (2026-02-08)
 
@@ -218,6 +220,17 @@ coverage for `sidebar-*` pages.
   peer/group/data-* state matrix; cookie persistence and the rail directional cursor slice are no
   longer blocking Sidebar gaps.
 
+### Update note (2026-05-27)
+
+- Hardened the remaining `SidebarMenuBadge` runtime class-state blocker from the upstream
+  `pointer-events-none` class by wrapping the badge paint surface in `HitTestGateProps {
+  hit_test: false }` while preserving absolute inline-end placement and visible text content.
+- The focused badge gate now covers pointer-events transparency, RTL inline-end anchoring, and the
+  compact tabular readout role together.
+- The broad React DOM/data-slot/class-name and full API-shape matrix remains documented as a
+  portability note for literal upstream ports, but it is no longer a matrix-blocking Fret runtime
+  hardening queue.
+
 ## Component-by-component audit (24/24)
 
 Status legend:
@@ -247,7 +260,7 @@ Status legend:
 | `SidebarMenuItem` | Menu item container (`li`-like semantics) | None (list item semantics) | Partial | Relative list-item semantics + hover/focus/open context are present, and same-row menu-button size/active state is exposed to `SidebarMenuAction` and `SidebarMenuBadge` in the closure-composition path; full group/peer class-state and `asChild` parity still missing | `fret-ui-shadcn` |
 | `SidebarMenuButton` | Core action row; active/size variants; collapsed tooltip | Tooltip trigger/content contract | Partial | Collapsed tooltip + `variant(default/outline)` + `href/on_navigate` + `as_child` API surface are now wired, `as_child` supports custom-child composition, default and `as_child` `href` paths now use `SemanticsRole::Link`, `href` paths populate semantics value, and `href` falls back to `Effect::OpenUrl` with `target`/`rel` when no `on_navigate` is provided; remaining gaps are full class-state parity (`peer/group/data-*`) and any future dedicated native anchor render target if the renderer grows one | `fret-ui-shadcn` |
 | `SidebarMenuAction` | Per-row action button | Button semantics | Partial | Size/top/collapsed surface + desktop hover-gated visibility exist, the closure-composition path now inherits `SidebarMenuButton` peer size and active foreground state while keeping explicit action size override, and both default/`as_child` paths use unified pressable semantics that preserve command/activate behavior while enabling mobile hit-area expansion; remaining gaps are pseudo-element/state-class parity and the broader peer/group state matrix | `fret-ui-shadcn` |
-| `SidebarMenuBadge` | Per-row badge slot | None (layout/styling wrapper) | Partial | First-pass absolute badge surface exists, the closure-composition path now inherits `SidebarMenuButton` peer size and active foreground state while keeping explicit size overrides, collapsed hide is wired, and compact tabular readout styling is gated; pointer-events and the broader class-state matrix remain incomplete | `fret-ui-shadcn` |
+| `SidebarMenuBadge` | Per-row badge slot | Hit-test transparency + layout/styling wrapper | Partial | First-pass absolute badge surface exists, the closure-composition path now inherits `SidebarMenuButton` peer size and active foreground state while keeping explicit size overrides, collapsed hide is wired, compact tabular readout styling is gated, and upstream `pointer-events-none` is represented by `HitTestGate(false)`; broader React DOM/data-slot/class-name parity remains a non-blocking portability note | `fret-ui-shadcn` |
 | `SidebarMenuSkeleton` | Loading skeleton row | None (layout/styling wrapper) | Partial | First-pass skeleton row surface exists; upstream random width strategy and icon/text slot data markers are simplified | `fret-ui-shadcn` |
 | `SidebarMenuSub` | Nested menu list wrapper | None (list semantics) | Partial | Nested sub-menu wrapper + list semantics exist; exact class transforms/spacing matrix still simplified | `fret-ui-shadcn` |
 | `SidebarMenuSubItem` | Nested menu item wrapper | None (list item semantics) | Partial | Nested sub-item wrapper + list-item semantics exist; peer/group class-state parity remains incomplete | `fret-ui-shadcn` |
@@ -278,23 +291,24 @@ Remaining impact/gap:
 - Keyboard shortcut is now present as a first pass (`Ctrl/Cmd+B -> sidebar.toggle`), and
   provider-level change callbacks (`on_open_change` / `on_open_mobile_change`) plus function-style
   setter ergonomics (`set_open_with` / `set_open_mobile_with`) are now available.
-  Cookie persistence is wired for the wasm desktop `open` path; full React API-shape parity is still
-  a hardening lane.
+  Cookie persistence is wired for the wasm desktop `open` path; full React API-shape parity remains
+  a portability note rather than a runtime hardening blocker.
 - Mobile `openMobile` sheet path is now surfaced in a first pass; remaining gaps are richer
   callback shape (`setOpen`/`setOpenMobile` parity) and broader API-shape semantics.
 
 ### 3) Behavioral parity gap (0 missing exports)
 
-- Core sidebar export surface is now complete, but several behaviors are still simplified compared
-  with upstream class-state contracts.
+- Core sidebar export surface is now complete. The runtime-relevant class-state slices needed by the
+  current Fret docs-path harness are gated; literal React DOM/data-slot/class-name parity is still
+  narrower than upstream.
 
 Impact:
 
-- Upstream examples can be ported with lower structural friction, but behavior-level adaptation is
-  still required in advanced cases.
+- Upstream examples can be ported with lower structural friction, but literal DOM/API ports may still
+  require per-app adaptation.
 - Existing `sidebar-*` goldens can pass while interaction/state parity remains partial. Targeted
   peer-size and active peer foreground slices are now gated for `SidebarMenuAction` and
-  `SidebarMenuBadge`, but the broader peer/group/data-* matrix is still not complete.
+  `SidebarMenuBadge`; badge hit-test transparency is also gated through `HitTestGate(false)`.
 
 ### 4) Semantics and polymorphism gaps
 
@@ -313,8 +327,9 @@ Impact:
 ## Test/gate status and blind spots
 
 - Existing sidebar-targeted gates validate menu-button heights and portal placement cases (`sidebar-13`), plus core provider choreography via scripted UI gallery gates (shortcut toggle, controlled open sync, and mobile sheet Escape focus restore).
-- This creates a breadth/depth mismatch: key coverage can be high while component parity remains
-  partial.
+- This creates a breadth/depth mismatch: key coverage can be high while literal React DOM/API-shape
+  parity remains partial. The current matrix treats that remaining literal-porting surface as
+  non-blocking for Fret runtime regression lock.
 
 ## Implementation plan (recommended)
 
@@ -325,8 +340,8 @@ Impact:
 5. `P1` Done (first pass): mobile sheet branch + provider shortcut/setter APIs landed.
 6. `P1` Done (first pass): `side/variant/collapsible` matrix and inset peer behavior are now
    wired with targeted invariant tests.
-7. `P2` Add targeted tests and `diag` scripts for focus-within/open-state choreography,
-   polymorphism paths, and responsive breakpoint parity.
+7. `P2` Continue adding targeted tests and `diag` scripts when new focus-within/open-state,
+   polymorphism, or responsive breakpoint gaps become runtime-observable.
 
 ## Archived/superseded notes
 

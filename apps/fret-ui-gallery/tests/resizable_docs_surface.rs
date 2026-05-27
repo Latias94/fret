@@ -124,7 +124,8 @@ fn resizable_snippets_stay_copyable_and_docs_aligned() {
         include_str!("../src/ui/snippets/resizable/multi_viewport_select.rs");
     let moving_cached_combobox =
         include_str!("../src/ui/snippets/resizable/moving_cached_combobox.rs");
-    let moving_cached_popover = include_str!("../src/ui/snippets/resizable/moving_cached_popover.rs");
+    let moving_cached_popover =
+        include_str!("../src/ui/snippets/resizable/moving_cached_popover.rs");
     let notes = include_str!("../src/ui/snippets/resizable/notes.rs");
 
     for needle in [

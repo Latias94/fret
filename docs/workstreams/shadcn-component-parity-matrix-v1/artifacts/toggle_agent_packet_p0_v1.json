@@ -1,0 +1,279 @@
+{
+  "schema_version": 1,
+  "component": "toggle",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-27",
+  "generated_by": "manual toggle docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/toggle.rs + ecosystem/fret-ui-shadcn/tests/{web_vs_fret_toggle.rs,web_vs_fret_control_chrome.rs} + apps/fret-ui-gallery/src/ui/pages/toggle.rs + apps/fret-ui-gallery/src/ui/snippets/toggle/*.rs + apps/fret-ui-gallery/tests/{toggle_docs_surface.rs,ui_authoring_surface_default_app.rs} + tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-docs-smoke.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Toggle component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-docs-smoke.json | Out-Null",
+      "status": "pass",
+      "scope": "Toggle docs-smoke diagnostic covers Demo, Usage, Outline, With Text, Small, Large, Disabled, RTL, Children, Label Association, and API Reference anchors."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail toggle",
+      "status": "pass",
+      "scope": "Toggle recipe tests cover disabled behavior, pressed state changes, hover paint, focus-visible ring treatment, keyboard Space and Enter activation, children foreground inheritance, and text/paint token output."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_toggle --status-level fail toggle_",
+      "status": "pass",
+      "scope": "Toggle web-vs-Fret gates compare the current upstream outline, with-text, small, large, disabled, and demo-adjacent docs examples against new-york-v4 goldens."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail toggle",
+      "status": "pass",
+      "scope": "Toggle chrome gates keep demo and focus-visible border/ring/chrome paint outcomes aligned with upstream goldens."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test toggle_docs_surface --status-level fail",
+      "status": "pass",
+      "scope": "Gallery docs-surface tests keep current shadcn Toggle docs ordering, split Small/Large sections, source-axis wording, public-surface decision, copyable snippets, and diagnostic anchors aligned."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail toggle",
+      "status": "pass",
+      "scope": "Gallery authoring tests keep Toggle snippets on the default app surface, preserve builder-preserving helper usage, and keep text-bearing examples on button-label roles."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.toggle.demo.light.vp1440x900",
+      "snapshot": "toggle-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.toggle.demo.focus.light.vp1440x900",
+      "snapshot": "toggle-demo.focus",
+      "theme": "light",
+      "mode": "focus-visible",
+      "variant": "docs-demo-focus-visible",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.toggle.sizes.light.vp1440x900",
+      "snapshot": "toggle-sm + toggle-lg",
+      "theme": "light",
+      "mode": "static",
+      "variant": "size geometry",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": [
+    {
+      "id": "fret.toggle.recipe",
+      "layer": "recipe",
+      "owner": "fret-ui-shadcn",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/toggle.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_toggle.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs"
+      ]
+    },
+    {
+      "id": "fret.toggle.gallery",
+      "layer": "app_demo",
+      "owner": "fret-ui-gallery",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/toggle.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle/*.rs",
+        "apps/fret-ui-gallery/tests/toggle_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+      ]
+    },
+    {
+      "id": "fret.toggle.diagnostics",
+      "layer": "runner",
+      "owner": "diagnostics_surface",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-docs-smoke.json"
+      ]
+    }
+  ],
+  "summary": {
+    "status_counts": {
+      "regression_locked": 1
+    },
+    "covered_axes": [
+      "source_refs",
+      "upstream_dom_snapshot",
+      "fret_layout",
+      "fret_bundle_semantics",
+      "fret_text_paint",
+      "interaction_script"
+    ],
+    "state_depth": [
+      "disabled",
+      "hover",
+      "focus_visible",
+      "pressed",
+      "keyboard",
+      "rtl",
+      "text_metrics",
+      "paint_token"
+    ],
+    "layout_sidecar_count": 6,
+    "bundle_schema2_count": 4,
+    "layout_test_id_count": 7,
+    "bundle_semantics_test_id_count": 7,
+    "measured_test_id_count": 7,
+    "upstream_dom_snapshot_count": 7,
+    "upstream_dom_target_count": 7,
+    "upstream_context_count": 3,
+    "upstream_dom_context_count": 7,
+    "upstream_live_fact_count": 6,
+    "upstream_semantics_fact_count": 3,
+    "upstream_interaction_fact_count": 4,
+    "fret_live_fact_count": 12,
+    "fret_semantics_fact_count": 6,
+    "fret_interaction_fact_count": 5,
+    "fret_text_paint_fact_count": 5,
+    "fret_text_paint_direct_fact_count": 3,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 5,
+    "fret_text_paint_row_count": 3,
+    "fret_text_paint_association_row_count": 2,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 3,
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0
+  },
+  "live_facts": {
+    "owner_split": [
+      "The Toggle recipe owns inline-flex button chrome, gap-2 content spacing, rounded-md radius, size presets, outline/default variants, disabled opacity and pointer suppression, hover paint, focus-visible border/ring paint, and pressed data-state=on foreground/background tokens.",
+      "The interaction layer already covers click pressed changes and keyboard Space/Enter activation; callers own surrounding toolbar layout, form label composition, and any example-local icon fill overrides.",
+      "Gallery owns the current docs-path teaching order, split Small/Large examples, RTL/Children/Label follow-ups, and stable ui-gallery-toggle-* diagnostics anchors."
+    ],
+    "source_truth": [
+      "Current main-worktree repo-ref truth uses repo-ref/ui/apps/v4/content/docs/components/toggle.mdx for Demo, Usage, Default, Outline, With Text, Small, Large, and Disabled; Gallery collapses the duplicate top ComponentPreview/Default into Demo.",
+      "Current new-york-v4 Toggle source keeps inline-flex layout, gap-2, rounded-md, disabled pointer/opacity, hover-muted paint, data-state=on accent paint, focus-visible border/ring, transition color/box-shadow, and size presets default h-9/min-w-9, sm h-8/min-w-8, and lg h-10/min-w-10.",
+      "Current new-york-v4 examples cover the bookmark outline small demo with text, outline italic icon, with-text italic content, small italic icon, large italic icon, and disabled underline icon.",
+      "Base/radix registry examples remain secondary references for button-relative size examples, icon/text combinations, and disabled composition; they do not require a new mechanism-layer primitive."
+    ],
+    "regression_gates": [
+      "Toggle recipe tests keep disabled suppression, hover styling, pressed/on state semantics, focus-visible ring treatment, keyboard Space/Enter activation, icon/text foreground inheritance, and text paint token usage stable.",
+      "web_vs_fret_toggle compares outline, with-text, small, large, disabled, and targeted demo markers against upstream new-york-v4 goldens.",
+      "web_vs_fret_control_chrome keeps toggle-demo and focus-visible chrome aligned with upstream border, background, foreground, and ring output.",
+      "toggle_docs_surface keeps current source-axis wording, docs order, split Small/Large sections, copyable snippets, Fret follow-ups, and diagnostics anchors stable.",
+      "Toggle diagnostics cover docs-path anchors through Demo, Usage, Outline, With Text, Small, Large, Disabled, RTL, Children, Label Association, and API Reference."
+    ]
+  },
+  "parts": [
+    {
+      "part_id": "toggle_recipe_state_and_chrome",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/toggle.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_toggle.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs"
+      ],
+      "facts": [
+        "Toggle::new(model) and Toggle::uncontrolled(false) render a pressable control with pressed/on state semantics and disabled behavior.",
+        "The recipe owns hover, focus-visible, pressed, disabled, variant, size, chrome, text metrics, and paint token output for the root button lane.",
+        "Keyboard activation through Space and Enter follows the same pressed state path as pointer activation."
+      ]
+    },
+    {
+      "part_id": "toggle_web_golden_layout_and_chrome",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_toggle.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-demo.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-demo.focus.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-outline.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-with-text.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-sm.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-lg.json",
+        "goldens/shadcn-web/v4/new-york-v4/toggle-disabled.json"
+      ],
+      "facts": [
+        "Web-golden layout gates cover outline, with-text, small, large, disabled, and demo docs examples.",
+        "Chrome gates cover default demo and focus-visible paint token output.",
+        "Size gates keep sm and lg icon-only examples separate instead of hiding them inside an aggregate Size section."
+      ]
+    },
+    {
+      "part_id": "toggle_gallery_docs_surface",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/toggle.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/toggle/*.rs",
+        "apps/fret-ui-gallery/tests/toggle_docs_surface.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+      ],
+      "facts": [
+        "Gallery mirrors the current upstream docs path through Demo, Usage, Outline, With Text, Small, Large, and Disabled before Fret/base-radix follow-ups.",
+        "The Small and Large snippets map the upstream icon-only size examples directly and therefore do not require button-label text roles.",
+        "Children (Fret) and Label Association stay explicit follow-ups because upstream docs do not require an additional asChild or compose API for the root Toggle lane.",
+        "Copyable snippets stay on the builder-preserving toggle_uncontrolled(cx, false, |cx| ...) and toggle(cx, model, |cx| ...) surface."
+      ]
+    },
+    {
+      "part_id": "toggle_packet_and_matrix_closure",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_agent_packet_p0_v1.json",
+        "tools/parity-discovery/shadcn_component_harness_matrix.py",
+        "tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json"
+      ],
+      "facts": [
+        "The packet has zero repair, hardening, and gate queues.",
+        "The manifest target ties current source refs, upstream snapshots, Fret tests, diagnostics scripts, and the packet together.",
+        "The Toggle state depth covers disabled, hover, focus-visible, pressed, keyboard, RTL, text metrics, and paint token evidence."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Toggle docs-path slice with current main-worktree repo-ref source refs, toggle-* upstream goldens, recipe semantics/chrome tests, web-vs-Fret toggle and control-chrome gates, Gallery docs-surface checks, diagnostics JSON, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "toggle.docs-path.desktop",
+        "component": "toggle",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

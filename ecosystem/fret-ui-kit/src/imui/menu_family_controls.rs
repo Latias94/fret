@@ -13,6 +13,7 @@ use super::{ImUiFacade, MenuBarOptions};
 use crate::primitives::menubar::trigger_row as menubar_trigger_row;
 
 mod menu;
+mod menu_state;
 mod submenu;
 mod submenu_state;
 mod trigger;

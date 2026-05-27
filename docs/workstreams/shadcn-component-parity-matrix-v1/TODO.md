@@ -101,3 +101,86 @@ date: 2026-05-26
       seed covering current shadcn docs/source refs, repository-list disclosure composition,
       controlled/uncontrolled open behavior, keyboard toggle, disabled trigger suppression,
       trigger/content semantics, RTL follow-up layout, and text/paint follow-ups.
+- [x] SCPM-380: Promote Command from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn docs/source refs, cmdk active-descendant/filtering behavior,
+      CommandDialog overlay chrome and placement/list metrics, disabled keyboard suppression,
+      shortcuts, RTL, and text/paint follow-ups.
+- [x] SCPM-390: Promote Empty from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn docs/source refs, empty-* upstream goldens, recipe chrome/text
+      metrics, responsive padding, Gallery action/link semantics, RTL follow-up, and text/paint
+      diagnostics.
+- [x] SCPM-400: Promote Item from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn docs/source refs, item-* upstream goldens, recipe slot/text/link
+      semantics, web layout gates, Gallery docs ordering, link action diagnostics, RTL follow-up,
+      and text/paint evidence.
+- [x] SCPM-410: Promote Kbd from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn docs/source refs, kbd-* upstream goldens, fixed keycap chrome,
+      grouped shortcut spacing, tooltip-slot paint inversion, RTL order, Gallery docs ordering,
+      and text/paint evidence.
+- [x] SCPM-420: Promote Label from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn docs/source refs, label upstream goldens, primitive association and
+      disabled opacity, click forwarding, inline children, Gallery docs ordering, RTL follow-up,
+      and text/paint evidence.
+- [x] SCPM-430: Promote Radio Group from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, radio-group upstream goldens, primitive
+      roving selection, recipe item chrome, invalid/disabled/focus-visible states, Gallery docs
+      ordering, dropdown-menu radio composition, RTL follow-up, and text/paint evidence.
+- [x] SCPM-440: Promote Scroll Area from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, vertical/horizontal scroll-area upstream
+      goldens, runtime and primitive scroll behavior, recipe focus/visibility/drag/overflow
+      gates, Gallery docs ordering, RTL follow-up, and text/paint evidence.
+- [x] SCPM-450: Promote Separator from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, separator-demo upstream golden, primitive and
+      recipe semantics, horizontal/vertical rule geometry and chrome, Gallery docs ordering,
+      decorative-hidden diagnostics, RTL follow-up, and text/paint evidence.
+- [x] SCPM-460: Promote Skeleton from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, skeleton-demo/card upstream goldens, recipe
+      leaf chrome and pulse behavior, reduced-motion safety, Gallery docs ordering, base/radix
+      example expansion, RTL follow-up, and text/paint evidence.
+- [x] SCPM-470: Promote Spinner from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, spinner-* upstream goldens, status semantics,
+      leaf chrome and spin behavior, disabled host controls, reduced-motion safety, Gallery docs
+      ordering, Color/Item examples, RTL/Extras follow-ups, and text/paint evidence.
+- [x] SCPM-480: Promote Textarea from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, textarea-* upstream goldens, leaf control
+      chrome and semantics, resize drag clamping, label association, Gallery docs ordering, base/
+      radix Field follow-up, diagnostics JSON, RTL, and text/paint evidence.
+- [x] SCPM-490: Promote Toggle from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn docs/source refs, toggle-* upstream goldens, recipe chrome and
+      pressed/disabled/hover/focus-visible/keyboard behavior, Gallery docs ordering, split Small/
+      Large examples, diagnostics JSON, RTL/Children/Label follow-ups, and text/paint evidence.
+- [x] SCPM-500: Promote Toggle Group from inventory-only to a regression-locked docs-path harness
+      seed covering current shadcn docs/source refs, toggle-group-* upstream goldens, primitive
+      single/multiple selection and roving focus, recipe segmented chrome and spacing, disabled/
+      hover/focus-visible/pressed/keyboard behavior, Gallery docs ordering, split Single/Small/
+      Large examples, diagnostics JSON, Radix state proof, RTL/Children/Label follow-ups, and
+      text/paint evidence.
+- [x] SCPM-510: Promote Slider from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn Demo/Usage source refs, slider-demo and field-slider upstream
+      goldens, recipe track/range/thumb chrome, thumb-level numeric semantics, pointer drag,
+      keyboard stepping, RTL, disabled/hover/focus-visible behavior, Gallery docs ordering,
+      Base/Radix follow-up examples, diagnostics JSON, Radix state proof, and text/paint evidence.
+- [x] SCPM-520: Promote Sonner from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn Demo/About/Usage/Examples/Types/Changelog source refs, Sonner
+      wrapper Lucide icon defaults, demo/types upstream open goldens, open toast placement/chrome,
+      constrained viewport behavior, hover pause, swipe dismiss, live-region semantics, Gallery
+      docs ordering, Fret follow-up sections, diagnostics JSON, and text/paint evidence.
+- [x] SCPM-530: Promote Switch from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn Demo/Usage source refs, switch-demo and Field/Form upstream goldens,
+      primitive and recipe semantics, click/Space toggle behavior, disabled/hover/focus-visible/
+      pressed/RTL/text/paint state depth, web-vs-Fret layout/chrome, Radix state proof, Gallery
+      docs ordering, diagnostics JSON, and matrix packet evidence.
+- [x] SCPM-540: Promote Tabs from inventory-only to a regression-locked docs-path harness seed
+      covering current shadcn Demo/Usage source refs, tabs-demo upstream golden, primitive and
+      recipe semantics, automatic/manual keyboard navigation, click selection, disabled/
+      focus-visible/open/RTL/text/paint state depth, web-vs-Fret layout/text paint, Radix state
+      proof, Gallery docs ordering, diagnostics JSON, and matrix packet evidence.
+- [x] SCPM-550: Promote Sidebar from harness_hardening to regression_locked by closing the
+      runtime-observable class-state blocker for `SidebarMenuBadge`: upstream
+      `pointer-events-none` now maps to `HitTestGate(false)` while preserving absolute inline-end
+      placement, compact tabular text paint, RTL anchoring, and the existing provider/mobile/
+      rail/menu/action diagnostics evidence.
+- [x] SCPM-560: Replace the final `not_in_harness` holes with explicit audit packets: Carousel,
+      Chart, and Native Select are `audited_deferred` with zero queues and concrete resume
+      conditions, while Toast and Typography are `audited_skipped` because they are a Sonner
+      compatibility alias and a docs/helper surface rather than standalone component contracts.

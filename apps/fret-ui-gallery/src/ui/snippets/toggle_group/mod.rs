@@ -18,7 +18,6 @@ pub mod large;
 pub mod outline;
 pub mod rtl;
 pub mod single;
-pub mod size;
 pub mod small;
 pub mod spacing;
 pub mod usage;

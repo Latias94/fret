@@ -19,15 +19,15 @@ pub(super) fn preview_scroll_area(
     let expand_at_bottom = diagnostics::expand_at_bottom::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "Reference stack: shadcn Scroll Area docs, Base UI docs, and the default registry chrome.",
+        "Reference stack: current shadcn Scroll Area docs/source, new-york-v4 registry chrome, and Radix primitive semantics.",
         "`ScrollArea::new([...])` is the default copyable wrapper lane for the docs surface. Because the Fret recipe stays layout-only, the upstream root chrome (`rounded-md border` and fixed size) maps to a caller-owned wrapper container around the scroll surface. `scroll_area(cx, |cx| [...])` remains the compact Fret-first shorthand instead of the primary teaching surface.",
         "`ScrollAreaRoot::new(ScrollAreaViewport::new([...])).scrollbar(ScrollBar::new().orientation(...))` already covers the shadcn/Radix mixed `ScrollArea` + `ScrollBar` examples without widening this family into an untyped arbitrary-children API.",
-        "Base UI's extra `Content` / `Thumb` parts are useful headless references, but Fret keeps the viewport content wrapper and thumb as runtime-owned implementation details; the public shadcn lane does not need separate promoted parts for them today.",
+        "Radix's internal viewport content wrapper and thumb remain mechanism/runtime details in Fret; the public shadcn lane does not need separate promoted parts for them today.",
         "No generic `children([...])` / `compose()` root API is warranted here because `ScrollArea::new([...])` already covers the upstream children-owned wrapper lane while `ScrollAreaRoot` / `ScrollAreaViewport` / `ScrollBar` keep the explicit parts path typed.",
         "No mechanism or default-style regression was identified in this pass. The remaining drift was the first-party docs/teaching surface.",
     ]);
     let notes = doc_layout::notes_block([
-        "Preview now mirrors the upstream shadcn/Base UI docs path first: `Demo`, `Usage`, `Horizontal`, `RTL`, and `API Reference`.",
+        "Preview now mirrors the current shadcn docs path first: `Demo`, `Usage`, and `Horizontal`. `RTL`, `API Reference`, and diagnostics remain explicit Fret follow-ups.",
         "The `Horizontal` snippet intentionally uses the explicit parts lane so the copyable code tab still teaches the `ScrollBar` vocabulary that appears in the upstream docs examples.",
         "`Compact helper` keeps the Fret-only `scroll_area(...)` shorthand discoverable without displacing the parity lane.",
         "ScrollArea is for custom scrollbars + consistent styling; use native scrolling when you do not need custom chrome.",
@@ -83,7 +83,7 @@ pub(super) fn preview_scroll_area(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the upstream shadcn/Base UI Scroll Area docs path first, then keeps the compact helper, nested routing, and diagnostics harnesses as explicit Fret follow-ups.",
+            "Preview mirrors the current shadcn Scroll Area docs path first: Demo, Usage, and Horizontal. RTL, API Reference, compact helper, nested routing, and diagnostics harnesses stay as explicit Fret follow-ups.",
         ),
         vec![
             demo,

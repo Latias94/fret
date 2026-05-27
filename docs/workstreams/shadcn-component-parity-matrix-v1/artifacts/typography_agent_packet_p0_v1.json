@@ -1,0 +1,219 @@
+{
+  "schema_version": 1,
+  "component": "typography",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-27",
+  "generated_by": "manual audited-skipped packet v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/typography.rs + apps/fret-ui-gallery/src/ui/pages/typography.rs + tools/diag-scripts/ui-gallery/typography/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/typography_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Typography audited-skipped packet remains machine-readable."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/typography -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Existing Typography diagnostics scripts remain parseable as the helper/docs evidence set."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.typography.demo.light.vp1440x900",
+      "snapshot": "typography-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.typography.demo.light.vp375x900",
+      "snapshot": "typography-demo.vp375x900",
+      "theme": "light",
+      "mode": "static",
+      "variant": "mobile-docs-demo",
+      "viewport": {
+        "width_px": 375,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "typography-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.typography.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/typography-demo.json"
+      },
+      {
+        "snapshot": "typography-demo.vp375x900",
+        "theme": "light",
+        "mode": "static",
+        "variant": "mobile-docs-demo",
+        "context_id": "upstream.typography.demo.light.vp375x900",
+        "viewport": {
+          "width_px": 375,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/typography-demo.vp375x900.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-docs-smoke.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-inline-code-tab-scroll-range.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-demo-story-bundle.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 3,
+    "status_counts": {
+      "pass_known": 3,
+      "needs_hardening": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "gallery_composition": 2,
+      "policy": 0,
+      "mechanism_core": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "recipe": 1,
+      "app_demo": 2,
+      "policy": 0,
+      "mechanism": 0,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 3
+    },
+    "top_findings": [
+      "Typography is intentionally audited_skipped as a registry component contract because upstream typography is a docs-only utility page.",
+      "Fret keeps typography helpers and gallery examples with diagnostics, but does not treat typography as strict prop-for-prop component parity.",
+      "Helper metrics, heading semantics, rich paragraph links, RTL logical edges, and docs smoke evidence are already audited."
+    ],
+    "promotion_target_counts": {
+      "diag_script": 3,
+      "unit_test": 2,
+      "none": 0
+    },
+    "layout_sidecar_count": 2,
+    "bundle_schema2_count": 2,
+    "upstream_source_ref_count": 1,
+    "upstream_dom_snapshot_count": 2,
+    "interaction_script_count": 2,
+    "responsive_viewport_count": 1,
+    "fret_semantics_fact_count": 2,
+    "fret_interaction_fact_count": 2,
+    "fret_text_paint_fact_count": 3
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/base/typography.mdx + goldens/shadcn-web/v4/new-york-v4/typography-*.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/typography.rs + apps/fret-ui-gallery/src/ui/pages/typography.rs + tools/diag-scripts/ui-gallery/typography/*.json",
+    "part_count": 3,
+    "parts": [
+      {
+        "part_id": "typography_helper_surface",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "docs/audits/shadcn-typography.md",
+          "ecosystem/fret-ui-shadcn/src/typography.rs",
+          "cargo nextest run -p fret-ui-shadcn --lib typography::tests::"
+        ],
+        "facts": [
+          "Typography helpers carry docs-aligned metrics/chrome for headings, paragraphs, blockquote, inline code, lead, large, small, and muted.",
+          "h1 through h4 publish heading semantics with levels 1-4.",
+          "p_rich plus inline_link covers the upstream inline-link sentence without generic block children."
+        ]
+      },
+      {
+        "part_id": "typography_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/typography.rs",
+          "tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-docs-smoke.json",
+          "tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-inline-code-tab-scroll-range.json"
+        ],
+        "facts": [
+          "The gallery mirrors the upstream typography page structure.",
+          "The page keeps Interactive Links and Notes as explicit Fret follow-ups.",
+          "Typography remains useful as copyable examples rather than a registry component baseline."
+        ]
+      },
+      {
+        "part_id": "typography_interactive_links",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-interactive-links-activation.json",
+          "cargo nextest run -p fret-ui --lib view_cache_preserves_selectable_text_interactive_span_bounds"
+        ],
+        "facts": [
+          "The narrow rich paragraph link lane is covered by helper-level and gallery diagnostics evidence.",
+          "SelectableText interactive span retention is covered in fret-ui.",
+          "Broader mixed inline composition remains intentionally deferred."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "audited_skipped",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Record Typography as a deliberately skipped docs/helper surface rather than leaving it not_in_harness.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "typography.audited-skipped",
+        "component": "typography",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/typography_agent_packet_p0_v1.json",
+        "status": "audited_skipped",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

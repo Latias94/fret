@@ -8,16 +8,15 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret's shadcn-aligned `Label` against the upstream shadcn/ui v4 base/radix
-docs, registry examples, and the current label layout/interaction gates.
+This audit compares Fret's shadcn-aligned `Label` against the current upstream shadcn/ui v4 docs,
+registry examples, and the current label layout/interaction gates.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/label.mdx`
-- Docs page (radix): `repo-ref/ui/apps/v4/content/docs/components/radix/label.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/label.mdx`
 - Component implementation: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/label.tsx`
 - Headless references: `repo-ref/ui/apps/v4/registry/bases/base/ui/label.tsx`, `repo-ref/ui/apps/v4/registry/bases/radix/ui/label.tsx`
-- Example compositions: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/label-demo.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-with-label.tsx`, `repo-ref/ui/apps/v4/examples/base/label-rtl.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/label-demo.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-with-label.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/textarea-with-label.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/input-group-label.tsx`
 - Existing layout gates: `goldens/shadcn-web/v4/new-york-v4/label-demo.json`
 
 ## Fret implementation
@@ -49,19 +48,18 @@ docs, registry examples, and the current label layout/interaction gates.
 
 ### Gallery / docs parity
 
-- Pass: the gallery now mirrors the upstream docs path first: checkbox `Demo`, `Usage`, `Label in Field`, `RTL`, and `API Reference`.
-- Pass: the gallery keeps the official docs path first, then adds a small Fret-only `Composable Content` appendix to document the inline children lane with a copyable snippet and a dedicated diag gate.
+- Pass: the gallery now mirrors the current upstream docs path first: checkbox `Demo` and `Usage`.
+- Pass: `Label in Field`, `RTL`, `Composable Content`, and `API Reference` are explicitly retained after the current upstream docs path as Fret follow-ups.
 - Pass: this work is still a narrow public-surface/recipe alignment plus existing primitive association fixes: disabled associated-label opacity and associated-label forwarding under ambient pressable shells.
 
 ## Validation
 
-- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
-- `cargo test -p fret-ui-kit label_for_disabled_control_uses_half_opacity -- --nocapture`
-- `cargo test -p fret-ui-kit label_for_control_click_invokes_registered_control_action_inside_ancestor_pressable -- --nocapture`
-- `cargo test -p fret-ui-shadcn label_children_surface_renders_inline_children_before_text -- --nocapture`
-- `cargo test -p fret-ui-shadcn label_children_for_control_keeps_control_registry_labelled_by_link -- --nocapture`
+- `cargo nextest run -p fret-ui-kit --lib --status-level fail label_for_disabled_control_uses_half_opacity label_for_control_click_invokes_registered_control_action_inside_ancestor_pressable`
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail label`
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail label_demo`
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_misc_targeted --status-level fail`
+- `cargo nextest run -p fret-ui-shadcn --test input_label_focus --test textarea_label_focus --status-level fail`
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail label`
 - Existing layout gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/basic.rs` (`web_vs_fret_layout_label_demo_geometry`)
 - Existing targeted marker gate: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_misc_targeted.rs`
-- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/label/ui-gallery-label-docs-smoke.json --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/label/ui-gallery-label-click-label-toggles-checkbox.json --launch -- cargo run -p fret-ui-gallery --release`
-- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/label/ui-gallery-label-children-click-label-toggles-checkbox.json --launch -- cargo run -p fret-ui-gallery --release`
+- `Get-ChildItem -Path tools/diag-scripts/ui-gallery/label -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }`

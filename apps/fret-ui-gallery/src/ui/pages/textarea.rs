@@ -7,6 +7,7 @@ use crate::ui::snippets::textarea as snippets;
 pub(super) fn preview_textarea(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
+    let with_label = snippets::with_label::render(cx);
     let label = snippets::label::render(cx);
     let disabled = snippets::disabled::render(cx);
     let field = snippets::field::render(cx);
@@ -19,16 +20,17 @@ pub(super) fn preview_textarea(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let api_reference = doc_layout::notes_block([
         "`Textarea::new(model)` is the Fret equivalent of the upstream `<Textarea />`; `placeholder(...)`, `disabled(...)`, `aria_invalid(...)`, `required(...)`, `min_height(...)`, and `rows(...)` cover the documented core surface.",
         "`Textarea` keeps control chrome, root `w-full min-w-0`, minimum height, and resize-handle behavior recipe-owned; surrounding width caps and form layout stay caller-owned.",
-        "`Field::build(...)` is the focused Fret lane for docs-path label/description association, while explicit `control_id(...)` plus `FieldLabel::for_control(...)` stays in the separate `Label Association` follow-up.",
+        "`Label::for_control(...)` plus `Textarea::control_id(...)` is the Fret equivalent of upstream `htmlFor` / `id` wiring in the `With Label` and `With Text` examples.",
+        "`Field::build(...)` stays as the focused Fret/base-radix follow-up lane for label/description association; explicit `control_id(...)` plus `FieldLabel::for_control(...)` remains the separate label-click-focus verification path.",
         "`Textarea::required(true)` keeps required semantics on the textarea control itself; any visible required marker stays caller-owned label composition.",
         "Use root `Textarea::required(true)` on the textarea and keep the visible required marker caller-owned in the label.",
-        "Reference stack: shadcn Textarea docs, the default registry recipe, and the related base/new-york examples.",
+        "Reference stack: current shadcn Textarea docs, the new-york-v4 registry recipe, tracked new-york examples, and base/radix examples for Field follow-ups.",
         "Neither Radix Primitives nor Base UI defines a dedicated Textarea primitive or compound children contract; they only treat `<textarea>` as a labelable/render target, so this pass did not identify a missing `fret-ui` mechanism bug.",
-        "No extra generic `compose()` / `asChild` / children API is needed here: upstream composition happens around the textarea via `Field` or simple stacked layout, and Fret already matches that leaf-control layering.",
+        "No extra generic `compose()` / `asChild` / children API is needed here: upstream composition happens around the textarea via Label, Field, or simple stacked layout, and Fret already matches that leaf-control layering.",
         "Placeholder text is shown when the model is empty, `rows(...)` raises the initial height without lowering the default 64px minimum, and the resize affordance is available unless the textarea is disabled.",
     ]);
     let notes = doc_layout::notes_block([
-        "This page mirrors the upstream Textarea docs path first: `Field` now stays on the `Message` + helper-text-before-control example, while `RTL` keeps the translated feedback-style four-row composition.",
+        "This page mirrors the current upstream Textarea docs path first: `Demo`, `Usage`, `Disabled`, `With Label`, `With Text`, and `With Button`; `API Reference`, `Invalid`, `Required`, `RTL`, `Field`, and `Label Association` are Fret/base-radix follow-ups.",
         "Reach for plain `Textarea` when you only need multi-line editing; compose around it with `Field` parts or stacked actions instead of widening the textarea surface itself.",
         "The most fragile outcomes here are resize-handle behavior, placeholder visibility, rows-driven initial height, and label/control wiring, so stable `ui-gallery-textarea-*` ids are part of the regression surface.",
     ]);
@@ -49,7 +51,7 @@ pub(super) fn preview_textarea(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-textarea-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let field = DocSection::build(cx, "Field", field)
-        .description("Field composition matching the upstream `Message` label + helper-text-before-control example.")
+        .description("Base/radix Field composition with `Message`, a six-row textarea, and description text after the control.")
         .test_id_prefix("ui-gallery-textarea-field")
         .code_rust_from_file_region(snippets::field::SOURCE, "example");
     let disabled = DocSection::build(cx, "Disabled", disabled)
@@ -64,7 +66,7 @@ pub(super) fn preview_textarea(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .description("Required state uses root `Textarea::required(true)` on the concrete control and caller-owned required marker composition in the label.")
         .test_id_prefix("ui-gallery-textarea-required")
         .code_rust_from_file_region(snippets::required::SOURCE, "example");
-    let button = DocSection::build(cx, "Button", button)
+    let button = DocSection::build(cx, "With Button", button)
         .description("Pair the textarea with a submit button in a stacked action layout.")
         .test_id_prefix("ui-gallery-textarea-button")
         .code_rust_from_file_region(snippets::button::SOURCE, "example");
@@ -73,9 +75,15 @@ pub(super) fn preview_textarea(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .test_id_prefix("ui-gallery-textarea-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
     let with_text = DocSection::build(cx, "With Text", with_text)
-        .description("A helper-text composition that stays as a Fret follow-up example.")
+        .description("Current upstream label, textarea, and support-team helper text composition.")
         .test_id_prefix("ui-gallery-textarea-with-text")
         .code_rust_from_file_region(snippets::with_text::SOURCE, "example");
+    let with_label = DocSection::build(cx, "With Label", with_label)
+        .description(
+            "Current upstream label and textarea composition with label/control association.",
+        )
+        .test_id_prefix("ui-gallery-textarea-with-label")
+        .code_rust_from_file_region(snippets::with_label::SOURCE, "example");
     let label = DocSection::build(cx, "Label Association", label)
         .description(
             "Use `FieldLabel::for_control` plus `Textarea::control_id` so label clicks focus the textarea and preserve labelled-by semantics.",
@@ -86,19 +94,20 @@ pub(super) fn preview_textarea(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the upstream Textarea docs path first after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Field`, `Disabled`, `Invalid`, `Required`, `Button`, `RTL`, and `API Reference`. `With Text` and `Label Association` stay as focused Fret follow-ups.",
+            "Preview mirrors the current upstream Textarea docs path first after collapsing the top `ComponentPreview` / `Default` duplicate into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Disabled`, `With Label`, `With Text`, and `With Button`. `API Reference`, `Invalid`, `Required`, `RTL`, `Field`, and `Label Association` stay as state-depth or Fret/base-radix follow-ups.",
         ),
         vec![
             demo,
             usage,
-            field,
             disabled,
+            with_label,
+            with_text,
+            button,
+            api_reference,
             invalid,
             required,
-            button,
             rtl,
-            api_reference,
-            with_text,
+            field,
             label,
             notes,
         ],

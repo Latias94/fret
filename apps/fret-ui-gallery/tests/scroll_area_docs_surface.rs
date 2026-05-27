@@ -18,13 +18,13 @@ fn scroll_area_page_documents_wrapper_mapping_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/scroll_area.rs");
 
     for needle in [
-        "Reference stack: shadcn Scroll Area docs, Base UI docs, and the default registry chrome.",
+        "Reference stack: current shadcn Scroll Area docs/source, new-york-v4 registry chrome, and Radix primitive semantics.",
         "`ScrollArea::new([...])` is the default copyable wrapper lane for the docs surface.",
         "Because the Fret recipe stays layout-only, the upstream root chrome (`rounded-md border` and fixed size) maps to a caller-owned wrapper container around the scroll surface.",
         "`ScrollAreaRoot::new(ScrollAreaViewport::new([...])).scrollbar(ScrollBar::new().orientation(...))` already covers the shadcn/Radix mixed `ScrollArea` + `ScrollBar` examples without widening this family into an untyped arbitrary-children API.",
-        "Base UI's extra `Content` / `Thumb` parts are useful headless references",
+        "Radix's internal viewport content wrapper and thumb remain mechanism/runtime details in Fret",
         "No generic `children([...])` / `compose()` root API is warranted here because `ScrollArea::new([...])` already covers the upstream children-owned wrapper lane while `ScrollAreaRoot` / `ScrollAreaViewport` / `ScrollBar` keep the explicit parts path typed.",
-        "Preview now mirrors the upstream shadcn/Base UI docs path first: `Demo`, `Usage`, `Horizontal`, `RTL`, and `API Reference`.",
+        "Preview now mirrors the current shadcn docs path first: `Demo`, `Usage`, and `Horizontal`. `RTL`, `API Reference`, and diagnostics remain explicit Fret follow-ups.",
     ] {
         assert!(
             source.contains(needle),

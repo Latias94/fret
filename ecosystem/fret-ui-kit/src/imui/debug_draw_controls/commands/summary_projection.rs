@@ -3,6 +3,8 @@ use fret_core::Rect;
 use super::super::summaries::{DebugDrawCommandKind, DebugDrawCommandSummary};
 use super::DebugDrawCommand;
 
+mod media;
+
 impl DebugDrawCommand {
     pub(in crate::imui::debug_draw_controls) fn summary_with_clip_state(
         &self,
@@ -104,15 +106,7 @@ impl DebugDrawCommand {
                 vertices,
                 indices,
                 ..
-            } => {
-                let mut summary =
-                    DebugDrawCommandSummary::new(DebugDrawCommandKind::ImageTriangleMesh);
-                summary.image = Some(*image);
-                summary.vertex_count = vertices.len();
-                summary.index_count = indices.len();
-                summary.triangle_count = indices.len() / 3;
-                summary
-            }
+            } => media::image_triangle_mesh_summary(*image, vertices.len(), indices.len()),
             DebugDrawCommand::Circle { .. } => {
                 DebugDrawCommandSummary::new(DebugDrawCommandKind::Circle)
             }
@@ -159,48 +153,23 @@ impl DebugDrawCommand {
                 DebugDrawCommandSummary::new(DebugDrawCommandKind::PopClipRect)
             }
             DebugDrawCommand::Image { image, .. } => {
-                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::Image);
-                summary.image = Some(*image);
-                summary.point_count = 4;
-                summary
+                media::image_rect_summary(DebugDrawCommandKind::Image, *image)
             }
             DebugDrawCommand::ImageRegion { image, .. } => {
-                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::ImageRegion);
-                summary.image = Some(*image);
-                summary.point_count = 4;
-                summary
+                media::image_rect_summary(DebugDrawCommandKind::ImageRegion, *image)
             }
-            DebugDrawCommand::ImageQuad { image, .. } => {
-                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::ImageQuad);
-                summary.image = Some(*image);
-                summary.point_count = 4;
-                summary.vertex_count = 4;
-                summary.index_count = 6;
-                summary.triangle_count = 2;
-                summary
-            }
+            DebugDrawCommand::ImageQuad { image, .. } => media::image_quad_summary(*image),
             DebugDrawCommand::ImageRounded { image, .. } => {
-                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::ImageRounded);
-                summary.image = Some(*image);
-                summary.point_count = 4;
-                summary
+                media::image_rect_summary(DebugDrawCommandKind::ImageRounded, *image)
             }
             DebugDrawCommand::ImageRegionRounded { image, .. } => {
-                let mut summary =
-                    DebugDrawCommandSummary::new(DebugDrawCommandKind::ImageRegionRounded);
-                summary.image = Some(*image);
-                summary.point_count = 4;
-                summary
+                media::image_rect_summary(DebugDrawCommandKind::ImageRegionRounded, *image)
             }
             DebugDrawCommand::SvgImage { .. } => {
-                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::SvgImage);
-                summary.point_count = 4;
-                summary
+                media::svg_rect_summary(DebugDrawCommandKind::SvgImage)
             }
             DebugDrawCommand::SvgMaskIcon { .. } => {
-                let mut summary = DebugDrawCommandSummary::new(DebugDrawCommandKind::SvgMaskIcon);
-                summary.point_count = 4;
-                summary
+                media::svg_rect_summary(DebugDrawCommandKind::SvgMaskIcon)
             }
             DebugDrawCommand::Text { .. } => {
                 DebugDrawCommandSummary::new(DebugDrawCommandKind::Text)

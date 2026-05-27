@@ -224,11 +224,12 @@ def _check_docs(failures: list[str]) -> None:
     _require_markers(
         Path("docs/workstreams/docking-multiwindow-imgui-parity/WORKSTREAM.json"),
         required=[
-            "\"updated\": \"2026-05-16\"",
+            "\"updated\": \"2026-05-26\"",
             "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
             "M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
             "M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md",
             "M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md",
+            "M20_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-26.md",
             "python tools/gate_docking_multiwindow_workstream_source.py",
             "python tools/diag_gate_docking_wayland_policy_skip.py",
             "python tools/diag_gate_docking_wayland_policy_skip.py --reuse-built",
@@ -256,6 +257,8 @@ def _check_docs(failures: list[str]) -> None:
             "M16_SOURCE_DRIFT_GUARD_2026-05-14.md",
             "Latest local Wayland policy-skip matrix:",
             "M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md",
+            "Latest local Wayland guard refresh:",
+            "M20_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-26.md",
         ],
         failures=failures,
     )
@@ -269,9 +272,11 @@ def _check_docs(failures: list[str]) -> None:
             "M17_LOCAL_WAYLAND_POLICY_SKIP_GATE_2026-05-15.md",
             "M18_LOCAL_WAYLAND_POLICY_SKIP_MATRIX_2026-05-16.md",
             "M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md",
+            "M20_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-26.md",
             "source drift guard now validates docking suite membership",
             "Local Wayland policy-skip gate now proves non-Wayland sidecars stop before script execution",
             "Local Wayland policy-skip matrix now covers each Wayland campaign admission predicate",
+            "2026-05-26 local Wayland guard refresh reran source/policy/capability/fallback gates",
             "Workstream gate commands now expose both the cold-start policy-skip path",
             "Wayland acceptance-open source guard now prevents local policy-skip evidence from being",
         ],
@@ -310,6 +315,32 @@ def _check_docs(failures: list[str]) -> None:
         required=[
             "Latest acceptance-open source guard:",
             "M19_WAYLAND_ACCEPTANCE_OPEN_GUARD_2026-05-17.md",
+            "Latest local Wayland guard refresh:",
+            "M20_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-26.md",
+        ],
+        failures=failures,
+    )
+    _require_markers(
+        Path("docs/workstreams/docking-multiwindow-imgui-parity/M20_LOCAL_WAYLAND_GUARD_REFRESH_2026-05-26.md"),
+        required=[
+            "Status: local guard refresh; no Wayland acceptance claim.",
+            "`DW-P1-linux-003` remains `[~]`",
+            "Manual Wayland compositor acceptance",
+            "remains open",
+            "python tools\\gate_docking_multiwindow_workstream_source.py",
+            "python tools\\gate_imui_workstream_source.py",
+            "cargo nextest run -p fret-launch --lib linux_windowing_capability_posture --no-fail-fast",
+            "python tools\\diag_gate_docking_wayland_policy_skip.py",
+            "cargo run -p fretboard-dev -- diag campaign validate tools/diag-campaigns/imui-p3-wayland-real-host.json --json",
+            "cargo nextest run -p fret-docking --lib request_float_degrades_to_in_window_when_window_hover_detection_is_none --no-fail-fast",
+            "does not close `DW-P1-linux-003`",
+            "The next true closure event remains a dated real Linux",
+            "Wayland compositor acceptance note produced from",
+        ],
+        forbidden=[
+            "Status: accepted",
+            "Status: closed",
+            "closes `DW-P1-linux-003`",
         ],
         failures=failures,
     )

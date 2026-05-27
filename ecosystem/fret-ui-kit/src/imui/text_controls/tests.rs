@@ -6,7 +6,9 @@ use fret_app::App;
 use fret_authoring::UiWriter;
 use fret_core::{AppWindowId, Corners, Edges, Px, Rect};
 use fret_ui::ElementContext;
-use fret_ui::element::{AnyElement, ElementKind};
+use fret_ui::element::{AnyElement, ElementKind, Length};
+
+use crate::imui::TextAreaOptions;
 
 struct TestWriter<'cx, 'a, H: UiHost> {
     cx: &'cx mut ElementContext<'a, H>,

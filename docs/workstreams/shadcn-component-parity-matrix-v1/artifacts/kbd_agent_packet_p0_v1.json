@@ -1,0 +1,275 @@
+{
+  "schema_version": 1,
+  "component": "kbd",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-26",
+  "generated_by": "manual kbd docs-path harness seed v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/kbd.rs + ecosystem/fret-ui-shadcn/tests/{web_vs_fret_kbd.rs,web_vs_fret_layout/kbd.rs,fret_kbd_tooltip_slot.rs} + apps/fret-ui-gallery/src/ui/pages/kbd.rs + apps/fret-ui-gallery/src/ui/snippets/kbd/*.rs + apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs + tools/diag-scripts/ui-gallery/kbd/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Kbd component packet parses as JSON and is included in the matrix default extra-report list."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/kbd -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Kbd docs smoke diagnostic parses cleanly and covers the stable Gallery docs anchors."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail kbd",
+      "status": "pass",
+      "scope": "Kbd recipe tests cover default height/min-width/padding/radius, text typography, tooltip-slot paint inversion, group spacing, RTL order, icon sizing, and zero vertical margin ownership."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail kbd",
+      "status": "pass",
+      "scope": "Kbd web-vs-Fret layout gates cover keycap height, tooltip button height, vertical text centering, and icon-only keycap height."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_kbd --status-level fail",
+      "status": "pass",
+      "scope": "Targeted Kbd web-golden smoke checks keep the tracked kbd-* new-york-v4 snapshots tied to upstream kbd recipe markers."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-shadcn --test fret_kbd_tooltip_slot --status-level fail fret_kbd_in_tooltip_content_overrides_bg_and_fg",
+      "status": "pass",
+      "scope": "Tooltip-slot paint gate keeps Kbd background alpha and foreground mapping aligned with the upstream nested tooltip-content selector."
+    },
+    {
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail kbd",
+      "status": "pass",
+      "scope": "Gallery authoring tests keep Kbd snippets on the default app surface, preserve typed docs sections, and assert the current upstream docs order before the Fret-only RTL follow-up."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.kbd.demo.light.vp1440x900",
+      "snapshot": "kbd-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.kbd.group.light.vp1440x900",
+      "snapshot": "kbd-group",
+      "theme": "light",
+      "mode": "static",
+      "variant": "group",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.kbd.tooltip.light.vp1440x900",
+      "snapshot": "kbd-tooltip",
+      "theme": "light",
+      "mode": "tooltip",
+      "variant": "tooltip",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    },
+    {
+      "id": "upstream.kbd.input-group.light.vp1440x900",
+      "snapshot": "kbd-input-group",
+      "theme": "light",
+      "mode": "static",
+      "variant": "input-group",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": [
+    {
+      "id": "fret.kbd.recipe",
+      "layer": "recipe",
+      "owner": "fret-ui-shadcn",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/kbd.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/kbd.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_kbd.rs",
+        "ecosystem/fret-ui-shadcn/tests/fret_kbd_tooltip_slot.rs"
+      ]
+    },
+    {
+      "id": "fret.kbd.gallery",
+      "layer": "app_demo",
+      "owner": "fret-ui-gallery",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/kbd.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/kbd/*.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs"
+      ]
+    },
+    {
+      "id": "fret.kbd.diagnostics",
+      "layer": "runner",
+      "owner": "diagnostics_surface",
+      "evidence_refs": [
+        "tools/diag-scripts/ui-gallery/kbd/ui-gallery-kbd-docs-smoke.json"
+      ]
+    }
+  ],
+  "summary": {
+    "status_counts": {
+      "regression_locked": 1
+    },
+    "covered_axes": [
+      "source_refs",
+      "upstream_dom_snapshot",
+      "fret_layout",
+      "fret_bundle_semantics",
+      "fret_text_paint",
+      "interaction_script"
+    ],
+    "state_depth": [
+      "keyboard",
+      "rtl",
+      "text_metrics",
+      "paint_token"
+    ],
+    "layout_sidecar_count": 3,
+    "bundle_schema2_count": 1,
+    "layout_test_id_count": 6,
+    "bundle_semantics_test_id_count": 4,
+    "measured_test_id_count": 6,
+    "upstream_dom_snapshot_count": 5,
+    "upstream_dom_target_count": 5,
+    "upstream_context_count": 4,
+    "upstream_dom_context_count": 5,
+    "upstream_live_fact_count": 5,
+    "upstream_semantics_fact_count": 1,
+    "upstream_interaction_fact_count": 1,
+    "fret_live_fact_count": 9,
+    "fret_semantics_fact_count": 4,
+    "fret_interaction_fact_count": 2,
+    "fret_text_paint_fact_count": 4,
+    "fret_text_paint_direct_fact_count": 2,
+    "fret_text_paint_associated_fact_count": 2,
+    "fret_text_paint_bundle_entry_count": 4,
+    "fret_text_paint_row_count": 2,
+    "fret_text_paint_association_row_count": 1,
+    "fret_text_paint_unassociated_row_count": 0,
+    "fret_text_label_row_count": 3,
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0
+  },
+  "live_facts": {
+    "owner_split": [
+      "The Kbd recipe owns fixed 20px keycap height, min-width, padding, radius, muted chrome, text metrics, tooltip-slot paint inversion, grouped shortcut spacing, and RTL child order.",
+      "Gallery owns button, tooltip, and input-group composition because upstream places Kbd inside those host components instead of adding host-specific Kbd variants.",
+      "Kbd::from_children([...]) stays an explicit icon/mixed-content escape hatch; the default teaching lane remains Kbd::new(text)."
+    ],
+    "source_truth": [
+      "Current docs/source truth is the main-worktree repo-ref new-york-v4 Kbd docs, recipe, and examples.",
+      "The Gallery page mirrors upstream docs through API Reference before adding the Fret-only RTL follow-up.",
+      "The upstream docs examples cover demo, usage, group, button, tooltip, and input-group composition without defining an RTL docs section."
+    ],
+    "regression_gates": [
+      "web_vs_fret_layout kbd covers keycap height, vertical text centering, tooltip button height, and icon-only keycap height.",
+      "fret_kbd_tooltip_slot covers tooltip-content background alpha and foreground token inversion.",
+      "ui_authoring_surface_default_app keeps Kbd snippets on the default app surface and locks the docs-order explanation.",
+      "ui-gallery-kbd-docs-smoke locks stable docs anchor ids for Demo, Usage, Group, Button, Tooltip, Input Group, API Reference, and RTL."
+    ]
+  },
+  "parts": [
+    {
+      "part_id": "kbd_keycap_recipe",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/kbd.rs",
+        "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/kbd.rs"
+      ],
+      "facts": [
+        "Kbd renders source-aligned inline-flex-style keycap geometry with fixed 20px height, minimum 20px width, gap-1, px-1, rounded-sm, and muted background/foreground tokens.",
+        "The text leaf uses the shared keycap text role with fixed 12px/16px metrics and medium weight so keyboard labels stay vertically centered.",
+        "The icon escape hatch uses the keycap text metric for 12px icon size without widening the default text-first authoring lane."
+      ]
+    },
+    {
+      "part_id": "kbd_group_and_direction",
+      "status": "pass_known",
+      "owner": "component_recipe",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/src/kbd.rs"
+      ],
+      "facts": [
+        "KbdGroup owns the source-aligned inline shortcut gap.",
+        "RTL direction reverses grouped key token order through the recipe direction provider.",
+        "Keyboard shortcut semantics are visual display tokens only; activation behavior stays on the composed Button, Tooltip trigger, or InputGroup host."
+      ]
+    },
+    {
+      "part_id": "kbd_tooltip_and_host_composition",
+      "status": "pass_known",
+      "owner": "component_recipe_and_gallery_composition",
+      "layer": "recipe",
+      "evidence_refs": [
+        "ecosystem/fret-ui-shadcn/tests/fret_kbd_tooltip_slot.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/kbd/button.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/kbd/tooltip.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/kbd/input_group.rs"
+      ],
+      "facts": [
+        "Tooltip-content scoped Kbd paint maps background alpha to the upstream nested tooltip-content selector and foreground to background.",
+        "Button, tooltip, and input-group examples remain caller-owned composition surfaces, matching upstream docs layering.",
+        "The Gallery snippets use textual/glyph Kbd tokens on the primary teaching lane before any icon-only escape hatch."
+      ]
+    },
+    {
+      "part_id": "kbd_gallery_docs_surface",
+      "status": "pass_known",
+      "owner": "gallery_composition",
+      "layer": "app_demo",
+      "evidence_refs": [
+        "apps/fret-ui-gallery/src/ui/pages/kbd.rs",
+        "apps/fret-ui-gallery/src/ui/snippets/kbd/*.rs",
+        "apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs",
+        "tools/diag-scripts/ui-gallery/kbd/ui-gallery-kbd-docs-smoke.json"
+      ],
+      "facts": [
+        "Gallery mirrors the current upstream docs path through Demo, Usage, Group, Button, Tooltip, Input Group, and API Reference.",
+        "RTL is kept after API Reference as a labeled Fret-only follow-up because the current upstream Kbd docs do not define an RTL section.",
+        "Stable section-scoped ui-gallery-kbd-* ids support docs smoke diagnostics and future text/paint screenshot gates."
+      ]
+    }
+  ],
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "regression_locked",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Promote the Kbd docs-path slice with current main-worktree repo-ref source refs, kbd-* web goldens, recipe chrome/text/RTL tests, web-vs-Fret layout gates, tooltip-slot paint proof, Gallery docs-surface checks, diagnostics JSON, and packet checks.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "kbd.docs-path.desktop",
+        "component": "kbd",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

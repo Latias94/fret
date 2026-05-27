@@ -9,10 +9,12 @@ pub(super) fn preview_spinner(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let usage = snippets::usage::render(cx);
     let customization = snippets::customization::render(cx);
     let sizes = snippets::sizes::render(cx);
+    let colors = snippets::colors::render(cx);
     let buttons = snippets::buttons::render(cx);
     let badges = snippets::badges::render(cx);
     let input_group = snippets::input_group::render(cx);
     let empty = snippets::empty::render(cx);
+    let item = snippets::item::render(cx);
     let rtl = snippets::rtl::render(cx);
     let extras = snippets::extras::render(cx);
 
@@ -20,12 +22,12 @@ pub(super) fn preview_spinner(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         "`Spinner::new()` mirrors the upstream leaf spinner with the default loader icon, intrinsic 16px box, and continuous spin.",
         "The default icon, current-color inheritance, size-4 box, and spin animation remain recipe-owned because the upstream component source defines those defaults on the spinner itself.",
         "Spinner now exposes status-style loading semantics (`role=status` equivalent with polite live-region behavior) instead of pretending to be a numeric progress bar.",
-        "Reference stack: shadcn Spinner docs, the default registry recipe, the demo/custom/size/button/badge/input-group/empty examples, and the RTL example.",
+        "Reference stack: current shadcn Spinner docs, the new-york-v4 recipe, and the demo/custom/size/color/button/badge/input-group/empty/item examples.",
         "Secondary shadcn recipe references: the base and radix registry variants plus their spinner examples all keep Spinner as a leaf `svg` recipe plus host-owned slot composition.",
         "Neither Radix Primitives nor Base UI defines a dedicated Spinner primitive, so this pass did not identify a missing `fret-ui` mechanism bug.",
         "`Button::leading_children(...)` / `trailing_children(...)` are the preferred Fret equivalent of the upstream `Spinner data-icon=\"inline-start|inline-end\"` composition story.",
         "Custom icon choice (`icon(...)`), explicit size (`refine_layout(...)`), and optional color (`color(...)`) remain caller-owned refinements; if your app wants a different default glyph, wrap `Spinner::new().icon(...)` in a local helper instead of widening the leaf API.",
-        "`speed(...)` stays a focused Fret follow-up and is documented under `Extras`, not the upstream docs path.",
+        "`RTL` and `Extras` stay focused Fret follow-ups after the current upstream docs path; `speed(...)` is documented under `Extras`, not the upstream docs path.",
         "Button, badge, and input-group spacing stay owned by those host recipes rather than the spinner itself.",
         "Spinner is a visual leaf primitive; Button/Badge/InputGroup already cover composition through host-owned slots, so no extra generic `compose()` or composable children API is needed here.",
     ]);
@@ -51,6 +53,10 @@ pub(super) fn preview_spinner(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .description("Use explicit layout refinements for size-3 / 4 / 6 / 8 variants.")
         .test_id_prefix("ui-gallery-spinner-size")
         .code_rust_from_file_region(snippets::sizes::SOURCE, "example");
+    let colors = DocSection::build(cx, "Color", colors)
+        .description("Use caller-owned color refinements to change the spinner color.")
+        .test_id_prefix("ui-gallery-spinner-color")
+        .code_rust_from_file_region(snippets::colors::SOURCE, "example");
     let buttons = DocSection::build(cx, "Button", buttons)
         .description("Disabled buttons with inline-start spinner content.")
         .test_id_prefix("ui-gallery-spinner-button")
@@ -67,6 +73,10 @@ pub(super) fn preview_spinner(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
         .description("Empty-state surface with a spinner media slot.")
         .test_id_prefix("ui-gallery-spinner-empty")
         .code_rust_from_file_region(snippets::empty::SOURCE, "example");
+    let item = DocSection::build(cx, "Item", item)
+        .description("Spinner inside item media with progress and actions.")
+        .test_id_prefix("ui-gallery-spinner-item")
+        .code_rust_from_file_region(snippets::item::SOURCE, "example");
     let rtl = DocSection::build(cx, "RTL", rtl)
         .description("Spinner item layout under an RTL direction provider.")
         .test_id_prefix("ui-gallery-spinner-rtl")
@@ -80,20 +90,22 @@ pub(super) fn preview_spinner(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Spinner docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Customization`, `Size`, `Button`, `Badge`, `Input Group`, `Empty`, `RTL`, then keeps Fret-only `Extras` and `API Reference` as focused follow-ups.",
+            "Preview mirrors the current shadcn Spinner docs path through `Demo`, `Usage`, `Customization`, `Size`, `Color`, `Button`, `Badge`, `Input Group`, `Empty`, `Item`, and `API Reference`, then keeps Fret-only `RTL` and `Extras` as focused follow-ups.",
         ),
         vec![
             demo,
             usage,
             customization,
             sizes,
+            colors,
             buttons,
             badges,
             input_group,
             empty,
+            item,
+            api_reference,
             rtl,
             extras,
-            api_reference,
         ],
     );
 

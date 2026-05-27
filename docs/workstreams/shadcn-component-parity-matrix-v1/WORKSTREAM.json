@@ -3,7 +3,7 @@
   "slug": "shadcn-component-parity-matrix-v1",
   "title": "Shadcn Component Parity Matrix v1",
   "status": "active",
-  "updated": "2026-05-26",
+  "updated": "2026-05-27",
   "scope_kind": "execution",
   "problem": "Fret's shadcn parity tracking still mixes human visual review with automated harness evidence. This lane records how far self-rendered component parity can be proven automatically across source refs, upstream DOM/CSS snapshots, Fret layout, semantics, text/paint, behavior scripts, responsive coverage, and repair queues.",
   "authoritative_docs": [
@@ -56,15 +56,47 @@
       "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/card_agent_packet_p0_v1.json | Out-Null",
       "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/checkbox_agent_packet_p0_v1.json | Out-Null",
       "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/collapsible_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/command_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/empty_agent_packet_p0_v1.json | Out-Null",
       "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/field_agent_packet_p0_v1.json | Out-Null",
       "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/form_agent_packet_p0_v1.json | Out-Null",
       "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_group_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/item_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/label_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/radio_group_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/scroll_area_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/separator_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/skeleton_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/spinner_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/textarea_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_group_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/slider_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sonner_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/switch_agent_packet_p0_v1.json | Out-Null",
+      "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/tabs_agent_packet_p0_v1.json | Out-Null",
       "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/pagination_agent_packet_p0_v1.json | Out-Null",
       "python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-text-non-overlap.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-button-click-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-label-click-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-addon-after-control-tab-focus.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input/ui-gallery-input-group-rtl-screenshot.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-dropdown-relation-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/input-group/ui-gallery-input-group-rtl-addon-order.json | Out-Null",
       "python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-demo-action-selected-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/pagination/ui-gallery-pagination-rows-per-page-select-open-screenshot-zinc-light.json | Out-Null",
       "python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-screenshot.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-compositions.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-description-no-early-wrap.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-content-button-hitbox-not-stretched.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-image-event-cover-screenshot.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/card/ui-gallery-card-meeting-notes-list-no-early-wrap.json | Out-Null",
       "python -m json.tool tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-disabled-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-required-disabled-group-action-state.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/checkbox/ui-gallery-checkbox-table-mixed-state-action.json | Out-Null; python -m json.tool tools/diag-scripts/suites/ui-gallery-checkbox-semantics/suite.json | Out-Null",
       "python -m json.tool tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-docs-smoke.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-basic-double-click-close.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-demo-repository-list-shows-items.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-rtl-open-scrolls-to-content.json | Out-Null; python -m json.tool tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-notes-bottom-screenshot.json | Out-Null",
+      "python -m json.tool tools/diag-scripts/suites/ui-gallery-command/suite.json | Out-Null; Get-ChildItem -Path tools/diag-scripts/ui-gallery/command -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "python -m json.tool tools/diag-scripts/suites/ui-gallery-empty-demo-action-state/suite.json | Out-Null; Get-ChildItem -Path tools/diag-scripts/ui-gallery/empty -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "python -m json.tool tools/diag-scripts/suites/ui-gallery-item-demo-action-state/suite.json | Out-Null; python -m json.tool tools/diag-scripts/suites/ui-gallery-item-link-action-state/suite.json | Out-Null; Get-ChildItem -Path tools/diag-scripts/ui-gallery/item -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "Get-ChildItem -Path tools/diag-scripts/ui-gallery/kbd -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "Get-ChildItem -Path tools/diag-scripts/ui-gallery/label -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "Get-ChildItem -Path tools/diag-scripts/ui-gallery/radio-group -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "Get-ChildItem -Path tools/diag-scripts/ui-gallery/scroll-area -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "Get-ChildItem -Path tools/diag-scripts/ui-gallery/separator -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "Get-ChildItem -Path tools/diag-scripts/ui-gallery/skeleton -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "Get-ChildItem -Path tools/diag-scripts/ui-gallery/spinner -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "Get-ChildItem -Path tools/diag-scripts/ui-gallery/textarea -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "Get-ChildItem -Path tools/diag-scripts/ui-gallery/toggle -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "Get-ChildItem -Path tools/diag-scripts/ui-gallery/slider -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "Get-ChildItem -Path tools/diag-scripts/ui-gallery/switch -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "Get-ChildItem -Path tools/diag-scripts/ui-gallery/tabs -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
       "python -m json.tool tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-initial-bundle.json | Out-Null",
       "python -m json.tool tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-keyboard-shift-arrow-nudges.json | Out-Null",
       "python -m json.tool tools/diag-scripts/ui-gallery/resizable/ui-gallery-resizable-handle-line-screenshots-zinc-light-dark.json | Out-Null",
@@ -853,6 +885,562 @@
       "command": "target\\debug\\fretboard-dev.exe diag run tools\\diag-scripts\\ui-gallery\\collapsible\\ui-gallery-collapsible-basic-double-click-close.json --dir target\\fret-diag-collapsible-basic-double-click-matrix-cargo --session-auto --pack --ai-packet --exit-after-run --timeout-ms 600000 --launch -- cargo run -p fret-ui-gallery --features gallery-dev"
     },
     {
+      "name": "command-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/command_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "command-diag-json",
+      "command": "python -m json.tool tools/diag-scripts/suites/ui-gallery-command/suite.json | Out-Null; Get-ChildItem -Path tools/diag-scripts/ui-gallery/command -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "command-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail command"
+    },
+    {
+      "name": "command-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_command_demo"
+    },
+    {
+      "name": "command-dialog-overlay-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome --status-level fail command_dialog"
+    },
+    {
+      "name": "command-dialog-overlay-placement",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail web_vs_fret_misc_overlays_command_dialog_cases_match_web_fixtures"
+    },
+    {
+      "name": "command-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test command_page_contract --test command_diag_surface --test ui_authoring_surface_default_app --status-level fail command"
+    },
+    {
+      "name": "empty-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/empty_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "empty-diag-json",
+      "command": "python -m json.tool tools/diag-scripts/suites/ui-gallery-empty-demo-action-state/suite.json | Out-Null; Get-ChildItem -Path tools/diag-scripts/ui-gallery/empty -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "empty-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail empty"
+    },
+    {
+      "name": "empty-responsive-padding",
+      "command": "cargo nextest run -p fret-ui-shadcn --test empty_responsive_padding --status-level fail"
+    },
+    {
+      "name": "empty-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail empty"
+    },
+    {
+      "name": "empty-web-golden-smoke",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_empty --status-level fail"
+    },
+    {
+      "name": "empty-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test empty_docs_surface --status-level fail"
+    },
+    {
+      "name": "empty-gallery-render-flow",
+      "command": "cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_empty_demo_keeps_upstream_action_row_and_link_separation"
+    },
+    {
+      "name": "item-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/item_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "item-diag-json",
+      "command": "python -m json.tool tools/diag-scripts/suites/ui-gallery-item-demo-action-state/suite.json | Out-Null; python -m json.tool tools/diag-scripts/suites/ui-gallery-item-link-action-state/suite.json | Out-Null; Get-ChildItem -Path tools/diag-scripts/ui-gallery/item -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "item-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail item"
+    },
+    {
+      "name": "item-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail item"
+    },
+    {
+      "name": "item-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test item_docs_surface --status-level fail"
+    },
+    {
+      "name": "kbd-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "kbd-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/kbd -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "kbd-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail kbd"
+    },
+    {
+      "name": "kbd-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail kbd"
+    },
+    {
+      "name": "kbd-web-golden-smoke",
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_kbd --status-level fail"
+    },
+    {
+      "name": "kbd-tooltip-slot-paint",
+      "command": "cargo nextest run -p fret-ui-shadcn --test fret_kbd_tooltip_slot --status-level fail fret_kbd_in_tooltip_content_overrides_bg_and_fg"
+    },
+    {
+      "name": "kbd-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail kbd"
+    },
+    {
+      "name": "label-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/label_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "label-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/label -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "label-kit-primitive-tests",
+      "command": "cargo nextest run -p fret-ui-kit --lib --status-level fail label_for_disabled_control_uses_half_opacity label_for_control_click_invokes_registered_control_action_inside_ancestor_pressable"
+    },
+    {
+      "name": "label-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail label"
+    },
+    {
+      "name": "label-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail label_demo"
+    },
+    {
+      "name": "label-web-golden-markers",
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_misc_targeted --status-level fail"
+    },
+    {
+      "name": "label-focus-integration",
+      "command": "cargo nextest run -p fret-ui-shadcn --test input_label_focus --test textarea_label_focus --status-level fail"
+    },
+    {
+      "name": "label-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail label"
+    },
+    {
+      "name": "radio-group-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/radio_group_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "radio-group-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/radio-group -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "radio-group-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail radio_group"
+    },
+    {
+      "name": "radio-group-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail radio_group"
+    },
+    {
+      "name": "radio-group-web-golden-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail radio_group_demo"
+    },
+    {
+      "name": "radio-group-dropdown-menu-composition",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail dropdown_menu_radio_group"
+    },
+    {
+      "name": "radio-group-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail radio_group"
+    },
+    {
+      "name": "scroll-area-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/scroll_area_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "scroll-area-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/scroll-area -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "scroll-area-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail scroll_area"
+    },
+    {
+      "name": "scroll-area-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_scroll_geometry_matches_web_fixtures"
+    },
+    {
+      "name": "scroll-area-web-scroll-metadata",
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_scroll --status-level fail"
+    },
+    {
+      "name": "scroll-area-radix-scroll-delta",
+      "command": "cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail radix_web_scroll_area_scroll_top_delta_matches_fret"
+    },
+    {
+      "name": "scroll-area-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test scroll_area_docs_surface --status-level fail"
+    },
+    {
+      "name": "scroll-area-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail scroll_area"
+    },
+    {
+      "name": "separator-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/separator_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "separator-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/separator -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "separator-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail separator"
+    },
+    {
+      "name": "separator-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail separator"
+    },
+    {
+      "name": "separator-web-golden-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail web_vs_fret_separator_demo_geometry_matches"
+    },
+    {
+      "name": "separator-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test separator_docs_surface --status-level fail"
+    },
+    {
+      "name": "skeleton-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/skeleton_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "skeleton-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/skeleton -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "skeleton-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail skeleton"
+    },
+    {
+      "name": "skeleton-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail skeleton"
+    },
+    {
+      "name": "skeleton-reduced-motion",
+      "command": "cargo nextest run -p fret-ui-shadcn --test reduced_motion_continuous_frames --status-level fail skeleton_respects_reduced_motion_and_does_not_request_frames"
+    },
+    {
+      "name": "skeleton-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test skeleton_docs_surface --status-level fail"
+    },
+    {
+      "name": "skeleton-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail skeleton"
+    },
+    {
+      "name": "spinner-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/spinner_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "spinner-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/spinner -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "spinner-accesskit-status-role",
+      "command": "cargo nextest run -p fret-a11y-accesskit --lib --status-level fail maps_extended_semantics_roles_to_accesskit_roles"
+    },
+    {
+      "name": "spinner-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail spinner"
+    },
+    {
+      "name": "spinner-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail spinner"
+    },
+    {
+      "name": "spinner-reduced-motion",
+      "command": "cargo nextest run -p fret-ui-shadcn --test reduced_motion_continuous_frames --status-level fail spinner_respects_reduced_motion_and_does_not_request_frames"
+    },
+    {
+      "name": "spinner-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test spinner_docs_surface --status-level fail"
+    },
+    {
+      "name": "spinner-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail spinner"
+    },
+    {
+      "name": "textarea-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/textarea_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "textarea-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/textarea -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "textarea-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail textarea"
+    },
+    {
+      "name": "textarea-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail textarea"
+    },
+    {
+      "name": "textarea-web-golden-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail textarea"
+    },
+    {
+      "name": "textarea-text-paint",
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_textarea --status-level fail"
+    },
+    {
+      "name": "textarea-label-focus",
+      "command": "cargo nextest run -p fret-ui-shadcn --test textarea_label_focus --status-level fail"
+    },
+    {
+      "name": "textarea-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test textarea_docs_surface --status-level fail"
+    },
+    {
+      "name": "textarea-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail textarea"
+    },
+    {
+      "name": "toggle-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "toggle-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/toggle -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "toggle-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail toggle"
+    },
+    {
+      "name": "toggle-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_toggle --status-level fail toggle_"
+    },
+    {
+      "name": "toggle-control-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail toggle"
+    },
+    {
+      "name": "toggle-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test toggle_docs_surface --status-level fail"
+    },
+    {
+      "name": "toggle-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail toggle"
+    },
+    {
+      "name": "toggle-group-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_group_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "toggle-group-diag-json",
+      "command": "python -m json.tool tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-docs-smoke.json | Out-Null"
+    },
+    {
+      "name": "toggle-group-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail toggle_group"
+    },
+    {
+      "name": "toggle-group-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_toggle --status-level fail toggle_group"
+    },
+    {
+      "name": "toggle-group-control-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail toggle_group"
+    },
+    {
+      "name": "toggle-group-snapshot",
+      "command": "cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_toggle_group_pressed_semantics"
+    },
+    {
+      "name": "toggle-group-radix-state",
+      "command": "cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail toggle_group"
+    },
+    {
+      "name": "toggle-group-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test toggle_group_docs_surface --status-level fail"
+    },
+    {
+      "name": "toggle-group-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail toggle_group"
+    },
+    {
+      "name": "slider-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/slider_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "slider-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/slider -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "slider-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail slider"
+    },
+    {
+      "name": "slider-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail slider"
+    },
+    {
+      "name": "slider-field-fixture-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_field_geometry_matches_web_fixtures"
+    },
+    {
+      "name": "slider-control-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail slider"
+    },
+    {
+      "name": "slider-snapshot",
+      "command": "cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_slider_numeric_semantics"
+    },
+    {
+      "name": "slider-radix-state",
+      "command": "cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail slider"
+    },
+    {
+      "name": "slider-gallery-vertical-layout",
+      "command": "cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_slider_vertical_examples_keep_upstream_recipe_min_height_floor"
+    },
+    {
+      "name": "slider-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test slider_docs_surface --status-level fail"
+    },
+    {
+      "name": "slider-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail slider"
+    },
+    {
+      "name": "sonner-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sonner_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "sonner-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/sonner -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "sonner-toast-policy-tests",
+      "command": "cargo nextest run -p fret-ui-kit --lib --status-level fail window_overlays::toast"
+    },
+    {
+      "name": "sonner-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail sonner"
+    },
+    {
+      "name": "sonner-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail sonner"
+    },
+    {
+      "name": "sonner-overlay-placement",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail sonner"
+    },
+    {
+      "name": "sonner-overlay-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome --status-level fail sonner"
+    },
+    {
+      "name": "sonner-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test sonner_docs_surface --status-level fail"
+    },
+    {
+      "name": "sonner-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail sonner"
+    },
+    {
+      "name": "switch-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/switch_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "switch-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/switch -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "switch-primitive-tests",
+      "command": "cargo nextest run -p fret-ui-kit --lib --status-level fail switch"
+    },
+    {
+      "name": "switch-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail switch"
+    },
+    {
+      "name": "switch-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail switch"
+    },
+    {
+      "name": "switch-field-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_field_geometry_matches_web_fixtures"
+    },
+    {
+      "name": "switch-form-rhf-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail form_rhf_switch"
+    },
+    {
+      "name": "switch-form-tanstack-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail form_tanstack_switch"
+    },
+    {
+      "name": "switch-web-golden-chrome",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail switch"
+    },
+    {
+      "name": "switch-radix-state",
+      "command": "cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail switch"
+    },
+    {
+      "name": "switch-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test switch_docs_surface --status-level fail"
+    },
+    {
+      "name": "switch-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail switch"
+    },
+    {
+      "name": "tabs-packet-json",
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/tabs_agent_packet_p0_v1.json | Out-Null"
+    },
+    {
+      "name": "tabs-diag-json",
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/tabs -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }"
+    },
+    {
+      "name": "tabs-primitive-tests",
+      "command": "cargo nextest run -p fret-ui-kit --lib --status-level fail tabs"
+    },
+    {
+      "name": "tabs-recipe-tests",
+      "command": "cargo nextest run -p fret-ui-shadcn --lib --status-level fail tabs"
+    },
+    {
+      "name": "tabs-keyboard-navigation",
+      "command": "cargo nextest run -p fret-ui-shadcn --test tabs_keyboard_navigation --status-level fail"
+    },
+    {
+      "name": "tabs-web-golden-layout",
+      "command": "cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail tabs"
+    },
+    {
+      "name": "tabs-web-golden-marker",
+      "command": "cargo nextest run -p fret-ui-shadcn --test web_vs_fret_misc_targeted --status-level fail shadcn_misc_goldens_are_targeted_gates"
+    },
+    {
+      "name": "tabs-snapshot",
+      "command": "cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_tabs_default"
+    },
+    {
+      "name": "tabs-radix-state",
+      "command": "cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail tabs"
+    },
+    {
+      "name": "tabs-docs-surface",
+      "command": "cargo nextest run -p fret-ui-gallery --test tabs_docs_surface --status-level fail"
+    },
+    {
+      "name": "tabs-gallery-authoring",
+      "command": "cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail tabs"
+    },
+    {
       "name": "field-packet-json",
       "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/field_agent_packet_p0_v1.json | Out-Null"
     },
@@ -1078,13 +1666,35 @@
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/card_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/checkbox_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/collapsible_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/command_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/empty_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/field_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/form_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_group_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/item_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/label_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/radio_group_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/scroll_area_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/separator_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/skeleton_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/spinner_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/textarea_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_group_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/slider_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sonner_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/switch_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/tabs_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/pagination_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/date_picker_agent_packet_p0_v1.json",
     "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/resizable_agent_packet_p0_v1.json",
-    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sidebar_agent_packet_p0_v1.json"
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sidebar_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/carousel_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/chart_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/native_select_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toast_agent_packet_p0_v1.json",
+    "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/typography_agent_packet_p0_v1.json"
   ],
   "upstream_refs": [
     "repo-ref/ui/apps/v4/registry/new-york-v4/ui",
@@ -1094,6 +1704,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Progress, badge, breadcrumb.docs-path.desktop-mobile, card.docs-path.desktop, checkbox.docs-path.desktop, collapsible.docs-path.desktop, field.docs-path.desktop-responsive, form.docs-path.desktop, input-group.docs-path.desktop, pagination.docs-path.desktop, button, accordion, alert, alert-dialog, aspect-ratio.docs-demo.desktop, avatar.docs-demo.desktop, date-picker.docs-family.desktop-mobile, and resizable.docs-path.desktop are promoted from inventory_only to regression_locked. Sidebar is promoted from inventory_only to harness_hardening with repair=0, hardening=1, and gate=1; the focus-visible ring, href polymorphism, wasm desktop open cookie persistence, SidebarRail directional cursor state, and action/badge peer size-state slices are covered, but do not treat Sidebar as regression_locked until the residual React API-shape / peer/group/data-* class-state matrix is closed or explicitly split. Continue by hardening that Sidebar lane or auditing the next inventory_only row with source refs, upstream snapshot/golden, Fret diagnostics evidence, behavior script, and packet checks. Current matrix totals are 36 regression_locked, 1 harness_hardening, 17 inventory_only, and 5 not_in_harness. Do not use HTML tree equality as proof; compare self-rendered outcomes."
+    "notes": "Progress, badge, breadcrumb.docs-path.desktop-mobile, card.docs-path.desktop, checkbox.docs-path.desktop, collapsible.docs-path.desktop, command.docs-path.desktop-overlay, empty.docs-path.desktop, field.docs-path.desktop-responsive, form.docs-path.desktop, input-group.docs-path.desktop, item.docs-path.desktop, kbd.docs-path.desktop, label.docs-path.desktop, radio-group.docs-path.desktop, scroll-area.docs-path.desktop, separator.docs-path.desktop, skeleton.docs-path.desktop, spinner.docs-path.desktop, textarea.docs-path.desktop, toggle.docs-path.desktop, toggle-group.docs-path.desktop, slider.docs-path.desktop, sonner.docs-path.desktop-mobile, switch.docs-path.desktop, tabs.docs-path.desktop, pagination.docs-path.desktop, button, accordion, alert, alert-dialog, aspect-ratio.docs-demo.desktop, avatar.docs-demo.desktop, date-picker.docs-family.desktop-mobile, resizable.docs-path.desktop, and sidebar.docs-path.desktop-mobile are promoted to regression_locked. Sidebar now has repair=0, hardening=0, and gate=0 after closing the runtime-observable SidebarMenuBadge pointer-events-none gap with HitTestGate(false), while preserving the focus-visible ring, href polymorphism, wasm desktop open cookie persistence, SidebarRail directional cursor state, action/badge peer size-state, active peer foreground, collapsed visibility, RTL anchoring, and compact text gates. Full React DOM/data-slot/class-name and API-shape one-to-one parity remains a non-blocking portability note. Carousel, Chart, and Native Select are audited_deferred with zero queues and explicit resume conditions; Toast and Typography are audited_skipped with zero queues because they are respectively a Sonner compatibility alias and a docs/helper surface rather than standalone component contracts. No implemented surface remains inventory_only, harness_hardening, or not_in_harness. Current matrix totals are 54 regression_locked, 3 audited_deferred, 2 audited_skipped, 0 harness_hardening, 0 inventory_only, and 0 not_in_harness. Do not use HTML tree equality as proof; compare self-rendered outcomes."
   }
 }

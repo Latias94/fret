@@ -13,11 +13,13 @@ pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<> {
         out.push_ui(cx, shadcn::FieldLabel::new("Message"));
         out.push_ui(
             cx,
-            shadcn::FieldDescription::new("Enter your message below."),
+            shadcn::Textarea::new(value)
+                .placeholder("Type your message here.")
+                .rows(6),
         );
         out.push_ui(
             cx,
-            shadcn::Textarea::new(value).placeholder("Type your message here."),
+            shadcn::FieldDescription::new("Type your message and press enter to send."),
         );
     })
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))

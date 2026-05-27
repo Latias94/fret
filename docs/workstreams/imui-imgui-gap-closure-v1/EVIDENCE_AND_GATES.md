@@ -1,7 +1,2039 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-26
+Last updated: 2026-05-27
+
+## Control Chrome Palette Owner-Split Evidence - 2026-05-27
+
+Claim verified: shared IMUI control palette/theme chrome moved behind a private owner without
+changing `control_chrome::button_chrome`, `field_chrome`, `ImUiControlPalette`, text/layout helper
+call paths, dense row/stack defaults, or button/combo/textarea/image-item smoke coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/control_chrome.rs` now keeps style constants, private module
+  wiring, and re-exports the chrome/layout/text owners.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome.rs` owns `ImUiControlPalette`, button
+  theme color resolution, field theme color resolution, and compact button/field container chrome.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/layout.rs` and
+  `ecosystem/fret-ui-kit/src/imui/control_chrome/text.rs` remain the row/stack layout and text/pill
+  owners.
+- `tools/gate_imui_workstream_source.py` now rejects palette/theme chrome from drifting back into
+  the root `control_chrome.rs` index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui imui_control_chrome --no-fail-fast`: pass; 1
+  test, 736 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test
+  imui_combo_smoke --test imui_textarea_smoke --test imui_image_item_smoke --no-fail-fast`: pass;
+  6 tests, 0 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Floating Options Owner-Split Evidence - 2026-05-27
+
+Claim verified: floating window options and floating area options/context moved behind separate
+private owners without changing public re-export paths, option field names/defaults, builder
+methods, `FloatingAreaContext` accessor-first shape, floating behavior tests, or title-bar chrome
+text-role coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_options.rs` is now a thin re-export index for the
+  area/window option owners.
+- `ecosystem/fret-ui-kit/src/imui/floating_options/window.rs` owns
+  `FloatingWindowResizeOptions`, `FloatingWindowOptions`, `WindowOptions`, default behavior flags,
+  resize defaults, and window option builder methods.
+- `ecosystem/fret-ui-kit/src/imui/floating_options/area.rs` owns `FloatingAreaOptions`,
+  `FloatingAreaContext`, area option defaults, and context accessors.
+- `tools/gate_imui_workstream_source.py` now follows the opaque `FloatingAreaContext` check to the
+  area owner and rejects the public option structs from drifting back into the root index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui
+  floating_window_close_glyph_uses_shared_chrome_glyph_text_role --no-fail-fast`: pass; 1 test,
+  736 skipped.
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass; 25 tests, 156 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Drag Response Source/Target Owner-Split Evidence - 2026-05-27
+
+Claim verified: drag-source and typed drop-target response records moved behind private owners
+without changing public re-export paths, accessor-first response shape, internal payload/position
+visibility, `ResponseExt` drag accessors, drag/drop smoke coverage, or retained `fret-imui`
+interaction-drag behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/drag.rs` now keeps the generic `DragResponse`
+  edge/motion record and re-exports the source/target response owners.
+- `ecosystem/fret-ui-kit/src/imui/response/drag/source.rs` owns `DragSourceResponse`, inactive/new
+  constructors, and source read accessors.
+- `ecosystem/fret-ui-kit/src/imui/response/drag/target.rs` owns `DropTargetResponse<T>`, empty
+  construction, delivered/preview payload reads, position reads, source id reads, and session reads.
+- `tools/gate_imui_workstream_source.py` now registers each opaque response owner separately and
+  rejects source/target response structs from drifting back into the root drag response owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_drag_drop_smoke --no-fail-fast`:
+  pass; 1 test, 0 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests, 0 skipped.
+- `cargo nextest run -p fret-imui interaction_drag --no-fail-fast`: pass; 8 tests, 173 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Combo Trigger Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: ComboBox trigger behavior moved behind a private owner without changing trigger
+props, ComboBox semantics, a11y label derivation, shortcut activation, context-menu request
+handling, pressable response population, popup behavior, or model/direct combo interaction tests.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs` now keeps trigger options, pressable
+  props, ComboBox a11y, chrome/pill visual assembly, and trigger a11y label derivation.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/behavior.rs` owns activate handling,
+  activate-shortcut handling, context-menu shortcut handling, transient clicked/context-menu events,
+  and `ResponseExt` population via shared pressable item behavior.
+- `tools/gate_imui_workstream_source.py` now requires the behavior owner and rejects activate/key
+  handlers plus `populate_pressable_item_response(...)` from the root trigger owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui combo_trigger --no-fail-fast`: pass; 2 tests,
+  735 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_combo_smoke --no-fail-fast`: pass;
+  2 tests, 0 skipped.
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast`: pass; 11 tests, 170 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Child-Region Resize Axis Owner-Split Evidence - 2026-05-27
+
+Claim verified: child-region resize axis geometry moved behind a private owner without changing
+resize handle keys, cursor selection, absolute handle layout, pointer-region drag wiring,
+response writes, or child-region resize option smoke coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/child_region/resize.rs` now keeps X/Y handle entry points,
+  enabled/min/max response writes, pointer-region drag lifecycle wiring, and drag edge merging.
+- `ecosystem/fret-ui-kit/src/imui/child_region/resize/axis.rs` owns X/Y handle width/height
+  constants, axis keys, resize cursors, and absolute handle layout.
+- `tools/gate_imui_workstream_source.py` now requires the axis owner and rejects layout constants,
+  `ChildRegionResizeAxis`, `CursorIcon`, `InsetStyle`, `Length::Px`, and `PositionStyle` from the
+  root resize owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui child_region_resize --no-fail-fast`: pass; 4
+  tests, 733 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke
+  --no-fail-fast`: pass; 3 tests, 0 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Child-Region Resize Response Owner-Split Evidence - 2026-05-27
+
+Claim verified: child-region X/Y resize response records moved behind a private owner without
+changing public re-export paths, aggregate `ChildRegionResponse` accessors, X/Y drag accessors,
+min/max clamping helpers, or existing resize option smoke coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/child_region.rs` now keeps aggregate
+  `ChildRegionResponse` storage, aggregate accessors, and re-exports the resize response types.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/child_region/resize.rs` owns
+  `ChildRegionResizeXResponse`, `ChildRegionResizeYResponse`, drag accessors, min/max accessors,
+  width/height clamping helpers, and the clamping unit tests.
+- `tools/gate_imui_workstream_source.py` now checks the aggregate response and resize response
+  owners separately, including opaque field checks for the moved resize records.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui child_region_resize --no-fail-fast`: pass; 4
+  tests, 733 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke
+  --no-fail-fast`: pass; 3 tests, 0 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Text-Picker Pick-Response Merge Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI input-text picker picked-response merge moved behind a private owner without
+changing model re-read timing, element-id change detection, `changed`/`edited`/
+`deactivated_after_edit` merge semantics, popup rendering, keyboard navigation, or final
+`InputTextPickerResponse` shape.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` now keeps input/popup orchestration and
+  delegates picked-response mutation to a private response owner.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/response.rs` owns selected-value re-read,
+  `model_value_changed_for(...)` lookup, and `ResponseExt` merge writes for picked candidates.
+- `tools/gate_imui_workstream_source.py` now requires the response owner and rejects direct
+  `model_value_changed_for(...)` and `input.merge_*` writes from the root text-picker owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass; 6 tests, 175
+  skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Text-Picker Open-Policy Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI input-text picker popup open policy moved behind a narrower private owner
+without changing popup snapshot reads, active-descendant wiring, open-on-focus behavior,
+empty/exact-match close behavior, candidate filtering, keyboard navigation, or picked-response
+merge semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` keeps completion/history entry points,
+  candidate resolution, keyboard reconciliation, input-root rendering, popup rendering, and final
+  `InputTextPickerResponse` assembly.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/open_policy.rs` owns popup open/panel-id
+  snapshot reads, expanded-state calculation, empty/exact-match popup close policy, and
+  open-on-focus anchoring.
+- `tools/gate_imui_workstream_source.py` now requires the open-policy owner and rejects direct
+  popup-store reads plus `open_popup_at` / `close_popup` calls from the root text-picker owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass; 6 tests, 175
+  skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Debug-Draw Media Summary Projection Owner-Split Evidence - 2026-05-27
+
+Claim verified: debug-draw image/SVG/media command summary projection moved behind a narrower
+private owner without changing command summary kind, image id stamping, point counts, mesh counts,
+triangle counts, channel stamping, or effective clip-stack tracking.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection.rs` keeps
+  `summary_with_clip_state(...)`, clip-stack mutation, non-media command projection, and delegates
+  image/SVG/media count assembly to a private owner.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/media.rs` owns
+  image triangle mesh, image rect/region/rounded, image quad, and SVG rect summary assembly.
+- `tools/gate_imui_workstream_source.py` now requires the media owner and rejects media
+  `DebugDrawCommandSummary::new(...)` construction from the root summary projection owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui debug_draw_controls::tests --no-fail-fast`:
+  pass; 38 tests, 699 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke
+  --no-fail-fast`: pass; 1 test, 0 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Begin-Menu Active-Trigger Open-Policy Owner-Split Evidence - 2026-05-27
+
+Claim verified: begin-menu menubar active-trigger open-policy moved behind a narrower private
+owner without changing trigger activation, top-level menu switching, popup close reconciliation,
+open-request resolution, or disabled-popup cleanup behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy.rs` now keeps
+  trigger-click toggling, open-request resolution, disabled-popup cleanup, and the private
+  active-trigger owner re-export.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy/active_trigger.rs`
+  owns active-trigger open-menu synchronization, post-trigger menubar reconciliation, and
+  `MenubarActiveTrigger` group-active writes.
+- `tools/gate_imui_workstream_source.py` now requires the active-trigger owner and rejects
+  `GlobalElementId`, `MenubarActiveTrigger`, and `policy.group_active` writes from the root
+  open-policy owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui menu_family_controls::tests
+  --no-fail-fast`: pass; 1 test, 736 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs popup_hover --no-fail-fast`: pass; 39
+  tests, 142 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Table-Column Primitive Option Owner-Split Evidence - 2026-05-27
+
+Claim verified: table-column primitive option types moved out of the `TableColumn` builder owner
+without changing public re-export paths, width constructors, resize defaults, sort direction,
+pinning helpers, column identity inference, visibility policy, or table composition behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs` keeps `TableColumn`
+  construction, identity inference, visibility/sort/resize/pin builder methods, accessor-first
+  seams, and `set_visible_for_policy(...)`.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table_column/primitives.rs` owns
+  `TableColumnWidth`, `TableColumnResizeOptions`, `TableSortDirection`, `TableColumnPin`, width
+  constructors, and default resize limits.
+- Existing callers still import the same names through `fret_ui_kit::imui` and
+  `options::collections::table_column` re-exports.
+- `tools/gate_imui_workstream_source.py` now requires the primitive owner and rejects primitive
+  type bodies from drifting back into the `TableColumn` builder owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  table_column_helpers_compile table_column_pinning_helpers_compile
+  table_resizable_column_api_compiles table_sortable_header_api_compiles --no-fail-fast`: pass; 4
+  tests, 5 skipped.
+- `cargo nextest run -p fret-imui
+  table_helper_pins_left_and_right_columns_while_center_columns_scroll
+  table_column_visibility_menu_item_updates_visibility_state --no-fail-fast`: pass; 2 tests, 179
+  skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Floating-Window Resize Drag-Apply Owner-Split Evidence - 2026-05-27
+
+Claim verified: floating-window resize delta application moved out of the resize state lifecycle
+owner without changing active resize snapshots, left/top origin updates, min/max size clamping,
+corner-handle resize behavior, collapsed reset policy, device-pixel snapping, or resize test ids.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` keeps `cx.state_for(...)`
+  lifecycle, collapsed/non-drag reset policy, device-pixel snapping, resize output assembly, and
+  handle test-id packaging.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state/drag_apply.rs` owns drag delta
+  calculation, min/max clamping, left/top origin reconciliation, all eight resize-handle branches,
+  and `last_resize_position` advancement.
+- `tools/gate_imui_workstream_source.py` now requires the drag-apply owner and rejects resize
+  geometry branches from drifting back into the lifecycle state owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating_window_resizes_when_dragging_corner_handle
+  floating_window_resizes_from_left_updates_origin_and_width --no-fail-fast`: pass; 2 tests, 179
+  skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Table-Column Visibility Snapshot Owner-Split Evidence - 2026-05-27
+
+Claim verified: runtime table-column visibility state no longer owns the persistence-friendly
+snapshot data shapes without changing public re-export paths, serde payload shape, empty-id
+filtering, duplicate restore policy, or runtime column visibility application.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state.rs` keeps runtime visibility
+  overrides, model mutation helpers, snapshot restore/apply orchestration, and
+  `TableColumn::set_visible_for_policy(...)` use.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/snapshot.rs` owns
+  `TableColumnVisibilitySnapshot`, `TableColumnVisibilityEntry`, serde derives, public data
+  fields, and snapshot/entry accessors.
+- Existing callers continue to import `TableColumnVisibilitySnapshot` and
+  `TableColumnVisibilityEntry` through `table_column_visibility::state` re-exports and the
+  root IMUI surface.
+- `tools/gate_imui_workstream_source.py` now requires the snapshot owner and rejects serde/data
+  shapes from drifting back into the runtime state owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_column_visibility::tests
+  --no-fail-fast`: pass; 7 tests, 682 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke
+  table_column_visibility_snapshot_api_compiles_and_roundtrips
+  table_column_visibility_snapshot_entries_are_public_data_shape
+  table_column_visibility_state_applies_runtime_visibility_by_column_id --no-fail-fast`: pass; 3
+  tests, 6 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Debug-Draw Paint Media Owner-Split Evidence - 2026-05-27
+
+Claim verified: debug draw image/SVG media painting moved out of the root paint dispatcher without
+changing clip-stack balancing, shape command dispatch, image opacity/UV sanitization, rounded-image
+clip behavior, SVG paint behavior, or debug-draw public authoring APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs` keeps clip-stack balancing and
+  command-class dispatch to media vs shape painters.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` owns image, image-region,
+  image-quad, rounded-image, rounded-image-region, SVG image, and SVG mask-icon painting.
+- `tools/gate_imui_workstream_source.py` now requires the media owner and rejects image/SVG paint
+  helpers from drifting back into root `paint.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke
+  --no-fail-fast`: pass; 1 test.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests
+  --no-fail-fast`: pass; 38 tests, 651 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Debug-Draw Path-Builder Shape-Method Owner-Split Evidence - 2026-05-27
+
+Claim verified: debug draw path-builder rect/Bezier/arc authoring methods moved out of the root
+path-builder owner without changing the public `ImUiDebugDrawPath` API, path sampling behavior,
+invalid-input handling, stroke/fill command recording, or path state accessors.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder.rs` keeps the path type,
+  point-list basics, stroke/fill command recording, and point-count/empty accessors.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods.rs` owns
+  `rect`, `rect_with_rounding`, quadratic/cubic Bezier sampling, arc/fast-arc sampling, and
+  elliptical-arc sampling.
+- `tools/gate_imui_workstream_source.py` now requires the shape-method owner and rejects sampling
+  helpers from drifting back into root `path_builder.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  debug_draw_controls::tests::path_builder --no-fail-fast`: pass; 12 tests, 677 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Table Header Label Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI table header label/sort helpers moved out of the header assembly owner without
+changing visible-label parsing, sortable/plain header wrapping, sort glyph text role, sortable a11y
+labels, resize handle placement, or header response aggregation.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` now keeps sortable/plain header-cell
+  assembly and resize-handle wrapping.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/labels.rs` owns visible-header label
+  parsing, column sortability reads, sort-indicator text, sortable a11y labels, header content
+  boxes, and header label text.
+- Existing callers continue to use the same `header::visible_header_label`,
+  `header::column_is_sortable`, `header::table_header_label_text`, and
+  `header::table_sort_indicator_text` surface through root re-exports.
+- `tools/gate_imui_workstream_source.py` now requires the labels owner and rejects label/sort/text
+  helpers from drifting back into the root header assembly owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui
+  table_header_label_uses_shared_table_cell_text_role
+  table_sort_indicator_uses_shared_chrome_glyph_text_role
+  hidden_table_columns_do_not_render_header_body_or_response
+  horizontal_scroll_option_wraps_unpinned_header_and_body_center_groups --no-fail-fast`: pass; 4
+  tests, 733 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Image-Item Visual Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI image-item visual/props helpers moved out of the interaction owner without
+changing image/image-button roles, focusability, pressable response population, item sizing,
+opacity sanitization, UV filtering, or smoke-test surface.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` keeps pressable behavior, context-menu
+  key handling, activation lifecycle, and `ResponseExt` population.
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls/visual.rs` owns image item chrome selection,
+  image props, size sanitization, opacity normalization, and UV validation.
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls/tests.rs` now targets the visual owner for
+  props/sanitizer coverage.
+- `tools/gate_imui_workstream_source.py` now requires the visual owner and rejects props/sanitizer
+  helpers from drifting back into the root interaction owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib image_item_controls::tests
+  --no-fail-fast`: pass; 2 tests, 687 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_image_item_smoke
+  --no-fail-fast`: pass; 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Begin Menu Open-Policy Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI begin-menu open-policy mutations moved out of the state index without changing
+menubar open-menu synchronization, active-trigger writes, trigger-click toggling,
+open-request resolution, disabled-popup cleanup, or menu/popup interaction behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs` is now a thin
+  capture/open-policy module index.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/open_policy.rs` owns
+  `sync_open_menu_for_active_trigger`, `reconcile_menubar_after_trigger`,
+  `toggle_menu_on_trigger_click`, `resolve_open_requested`,
+  `activate_menubar_trigger_if_requested`, and `close_disabled_popup_if_opened`.
+- `tools/gate_imui_workstream_source.py` now requires the open-policy owner and rejects open-policy
+  mutations from drifting back into the root state index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui menu_family_controls::tests
+  --no-fail-fast`: pass; 1 test, 736 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs popup_hover --no-fail-fast`: pass; 39
+  tests, 142 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Debug-Draw Summary Owner-Split Evidence - 2026-05-27
+
+Claim verified: debug draw command summary types and aggregate list summary ownership moved out of
+the shared summary file without changing public summary type names, accessor-first storage,
+command-kind classification, clip-stack metrics, or external smoke usage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries.rs` is now a thin module/re-export
+  index.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/command.rs` owns
+  `DebugDrawCommandKind` and `DebugDrawCommandSummary`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries/list.rs` owns
+  `DebugDrawListSummary` counters, final clip-depth update, and command classification.
+- `tools/gate_imui_workstream_source.py` now requires the summary index/sub-owner shape and moves
+  the opaque-summary checks to the concrete owner files.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib
+  debug_draw_controls::tests::draw_list::summaries --no-fail-fast`: pass; 4 tests, 685 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke
+  --no-fail-fast`: pass; 1 test.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
+## Facade Container Wrapper Owner-Split Evidence - 2026-05-27
+
+Claim verified: root `ImUiFacade` container wrapper methods moved into private flow, layout,
+collection, and menu/tab wrapper owners without changing method names, focus forwarding, list-box
+label normalization, table/virtual-list responses, or child-region/menu/tab composition behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers.rs` is now a thin module index.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/flow.rs` owns `items`,
+  `same_line`, `dummy`, `spacing`, and `indent` root wrappers.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/layout.rs` owns horizontal,
+  vertical, grid, scroll, and child-region root wrappers.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/collections.rs` owns list-box,
+  table, and virtual-list root wrappers.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_wrappers/menu_tabs.rs` owns menu-bar and
+  tab-bar root wrappers.
+- `tools/gate_imui_workstream_source.py` now requires the wrapper index/sub-owner shape and rejects
+  container behavior from drifting back into the root wrapper index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui composition::layout_collections --no-fail-fast`: pass; 28 tests,
+  153 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
+## Debug-Draw Options Sub-Owner Split Evidence - 2026-05-27
+
+Claim verified: public debug draw root/interaction options, stroke/path-style policy,
+rounded-corner flags, media option bags, and mesh vertex helpers moved behind private option
+sub-owners without changing public re-export names, draw-list command behavior, path-style
+conversion, image/svg options, or mesh vertex conversion.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options.rs` is now a thin module/re-export
+  index.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/root.rs` owns `DebugDrawOptions` and
+  `DebugDrawInteractionOptions`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/stroke.rs` owns
+  `DebugDrawStrokeStyle`, including dash/miter validation and crate-local `path_style()`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/round_corners.rs` owns
+  `DebugDrawRoundCorners` constants and bitwise composition.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/media.rs` owns image, image-quad,
+  image-mesh, and SVG option bags.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/options/vertex.rs` owns `DebugDrawVertex`
+  and crate-local scene vertex conversion.
+- `tools/gate_imui_workstream_source.py` now requires the option index/sub-owner shape and rejects
+  these public option/style/vertex type bodies from drifting back into the index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests
+  --no-fail-fast`: pass; 38 tests, 651 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke
+  --no-fail-fast`: pass; 1 test.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Control Chrome Layout Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI shared control chrome row/stack layout helper props moved into a private
+layout owner without changing row direction, fill-width behavior, gap tokens, justification,
+alignment, or existing `control_chrome::*_props` call paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/layout.rs` now owns `fill_row_props`,
+  `centered_row_props`, and `fill_stack_props`.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome.rs` now keeps style constants,
+  `ImUiControlPalette`, button/field chrome, text helper re-exports, and test module wiring.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/tests.rs` now covers row/stack layout helper
+  direction, width, gap, justification, and alignment defaults.
+- `tools/gate_imui_workstream_source.py` now requires the layout owner and rejects direct row/stack
+  layout helper bodies from drifting back into `control_chrome.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib control_chrome::tests
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Control Chrome Text Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI shared control text helpers, caption color routing, and pill badge chrome
+moved into a private control-chrome text owner without changing compact button/control label text
+roles, caption muted-foreground routing, pill badge chrome, or existing `control_chrome::*` call
+paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/text.rs` now owns `control_text`,
+  `fill_text`, `caption_text`, and `pill`.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome.rs` now keeps style constants,
+  `ImUiControlPalette`, button/field chrome, row/stack layout props, and test module wiring.
+- `tools/gate_imui_workstream_source.py` now requires the text owner and rejects direct text/pill
+  helper bodies from drifting back into `control_chrome.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib control_chrome::tests
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Floating Area Composition Owner-Split Evidence - 2026-05-27
+
+Claim verified: floating-area layer registration, drag snapshot application, state/test-id updates,
+IMUI facade content mounting, absolute area layout, no-input/pass-through gates, and
+`FloatingAreaResponse` assembly moved into a private area owner without changing floating-area
+position, dragging, test-id, no-inputs, pointer pass-through, layer ordering, or response
+semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs` now owns floating-area composition,
+  state reconciliation, interaction gates, and response assembly.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` now keeps drag-surface pointer-region
+  behavior, layer/kind/state re-exports, and module wiring.
+- `tools/gate_imui_workstream_source.py` now requires the area owner and rejects direct area
+  layout/state/gate construction from drifting back into `floating_surface.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Text Picker Input Root Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI input-text picker input option/test-id preparation, ComboBox semantics
+normalization, assistive semantics, root fill container construction, text input mounting, and
+input-focused keyboard handler installation moved into a private input-root owner without changing
+completion/history picker behavior, active-descendant wiring, popup lifecycle policy, picked
+response merging, or public facade APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/input.rs` now owns picker input preparation,
+  assistive semantics, root container construction, text input mounting, and input-focused keyboard
+  handler installation.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` now keeps candidate visibility,
+  popup-open state reads, keyboard-state snapshot reconciliation, popup lifecycle policy, popup
+  rendering delegation, and final `InputTextPickerResponse` merge.
+- `tools/gate_imui_workstream_source.py` now requires the input-root owner and rejects direct input
+  semantics/container/keyboard-handler construction from drifting back into the root picker file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Disclosure Header Row Visual Owner-Split Evidence - 2026-05-27
+
+Claim verified: disclosure header row container/flex assembly, indicator glyph mounting, label
+text mounting, row padding, border, and radius props moved out of the broader visual owner without
+changing collapsing-header/tree-node a11y, palette policy, indicator glyphs, label text roles,
+indentation, row chrome, or trigger behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header.rs` now owns header row
+  construction, including row container props, flex row layout, indicator glyph, label text, and
+  spacer assembly.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs` now keeps disclosure a11y,
+  content padding, and palette resolution.
+- `tools/gate_imui_workstream_source.py` now requires the header-row owner and rejects direct
+  container/flex/text row construction from drifting back into `disclosure_controls/visual.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls::tests
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_disclosure_smoke
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  interaction_shortcuts::disclosure_tree::tree_node_children_stack_vertically_inside_open_parents
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Popup Modal Layout Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI popup modal palette, centered panel geometry, layer/backdrop props, dialog
+semantics layout, and panel chrome construction moved into a private layout owner without changing
+modal open/keepalive policy, Escape or outside-press dismissal, barrier behavior, focus handoff,
+centered panel placement, test ids, or `OverlayRequest::modal` assembly.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layout.rs` now owns modal palette resolution,
+  centered panel layout, absolute layer and backdrop props, dialog semantics layout, and panel
+  chrome props.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal.rs` now keeps popup store reads, keepalive
+  generation, dismiss policy, focus tracking, IMUI facade content mounting, and overlay request
+  assembly.
+- `tools/gate_imui_workstream_source.py` now requires the layout owner and rejects direct dialog
+  semantics/chrome/layout construction from drifting back into `popup_overlay/modal.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui popup_hover::lifecycle_modal --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit modal_barrier_is_hidden_from_accessibility_tree_but_still_invokable
+  select_pointer_up_guard_barrier_is_hidden_from_accessibility_tree --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Pressable Item Response Owner-Split Evidence - 2026-05-27
+
+Claim verified: shared IMUI pressable item response population moved out of the hook-installation
+owner without changing button, checkbox/radio, selectable, combo, image item, or debug-draw
+pressable behavior; context-menu signals; pointer-click modifiers; drag response merging; hover
+query hooks; or `ResponseExt` population semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/item_behavior/response.rs` now owns transient signal reads,
+  context anchor/modifier reads, drag response merging, hover query hook installation, and final
+  pressable response population.
+- `ecosystem/fret-ui-kit/src/imui/item_behavior.rs` now keeps pressable hook installation,
+  active-item/long-press/lifecycle/context-menu models, pointer-up transient emission, and the
+  existing `item_behavior::populate_pressable_item_response(...)` re-exported call surface.
+- `tools/gate_imui_workstream_source.py` now requires the response owner and rejects `ResponseExt`
+  population, drag response merging, and hover response wiring from drifting back into
+  `item_behavior.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib button_controls::tests
+  boolean_controls::tests selectable_controls::tests debug_draw_controls::tests::element
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui interaction_press interaction_drag
+  interaction_shortcuts::command_metadata::button_command_dispatches_with_metadata_and_payload
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Table Row-Group Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI table pinned/scroll row-group mechanics moved out of the row/cell body owner
+without changing row semantics, cell wrapping, pinned left/right grouping, horizontal center-scroll
+wrapping, column gaps, or public table response behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` now owns pinned-cell splitting,
+  left/center/right row-group assembly, horizontal center-scroll wrapping, and the shared
+  horizontal flex primitive.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/body.rs` now keeps `PreparedTableCell`,
+  `TablePalette`, row semantics/background selection, and cell wrapping.
+- `tools/gate_imui_workstream_source.py` now requires the row-group owner and rejects pinned split,
+  horizontal scroll, and row-flex mechanics from drifting back into `body.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls::tests --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  composition::layout_collections::table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells
+  composition::layout_collections::table_helper_pins_left_and_right_columns_while_center_columns_scroll
+  composition::layout_collections::table_helper_skips_hidden_columns_in_header_and_body
+  label_identity::table_headers::table_resizable_header_reports_drag_response
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Table Header Row Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI table header row assembly moved out of the root render owner without changing
+header visibility, sortable/plain header behavior, resize response metadata, pinned/horizontal
+scroll wrapping, header test ids, or aggregate `TableResponse` headers.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header_row.rs` now owns the keyed header row,
+  visible-header-cell assembly, sortable/plain wrapper selection, resize response initialization,
+  `TableHeaderResponse` collection, and header row wrapping.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` now keeps table palette resolution,
+  visible-column filtering, horizontal-scroll/header-presence decisions, body row assembly, root
+  chrome, semantics, and final `TableResponse` assembly.
+- `tools/gate_imui_workstream_source.py` now requires the header-row owner and rejects header
+  label/sort/resize response assembly from drifting back into `render.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls::tests --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  composition::layout_collections::table_helper_keeps_header_and_body_columns_aligned_and_clips_long_cells
+  label_identity::table_headers::label_identity_table_headers_hide_suffixes_from_visible_labels
+  label_identity::table_headers::table_sortable_header_reports_app_owned_trigger_without_sorting_rows
+  label_identity::table_headers::table_resizable_header_reports_drag_response
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Begin Menu State Capture Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI begin-menu state capture/read helpers moved out of the menubar mutation owner
+without changing row/popup/was-open model identity, render-state recording, open-menu reads, or
+menubar open-policy behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state/capture.rs` now owns
+  `BeginMenuState`, `MenuRenderState`, row/popup/was-open model capture, row/open-menu reads, and
+  render-state recording.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs` now focuses on menubar
+  open-menu mutation, active-trigger synchronization, open-request resolution, and disabled-popup
+  cleanup.
+- `tools/gate_imui_workstream_source.py` now requires the capture owner and rejects model capture
+  and render-state recording from drifting back into `menu_state.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_family_controls::tests --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation
+  interaction_menu_tabs::submenu_shortcuts
+  interaction_shortcuts::command_metadata::menu_item_command_uses_command_metadata_shortcut_and_gating
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Begin Menu State Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI begin-menu state/open-policy behavior moved out of the flow owner without
+changing menubar trigger activation, popup open/close, active-trigger synchronization,
+disabled-popup cleanup, or `DisclosureResponse` open/toggled semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu_state.rs` now owns begin-menu state
+  capture, row/popup/was-open models, menubar open-menu synchronization, active trigger state
+  writes, open-request resolution, disabled-popup cleanup, and render-state recording.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs` now keeps begin-menu flow
+  orchestration, trigger mounting, popup mounting, and final `DisclosureResponse` assembly.
+- `tools/gate_imui_workstream_source.py` now requires the state owner and rejects local model
+  capture, menubar `open_menu` / `group_active` mutation, and row-open mutation from drifting back
+  into `menu.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_family_controls::tests --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation
+  interaction_menu_tabs::submenu_shortcuts
+  interaction_shortcuts::command_metadata::menu_item_command_uses_command_metadata_shortcut_and_gating
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Floating Window Resize Handle Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI floating-window resize handle layout and pointer behavior moved out of the
+handle stack owner without changing handle placement, cursors, pointer capture/release, runtime drag
+begin/update/cancel, activation handoff, or resize behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs` now owns handle
+  geometry and resize cursor selection for all eight resize handles.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/pointer.rs` now owns
+  pointer-region wiring, pointer capture/release, runtime drag begin/update/cancel, cursor updates,
+  and resize-handle activation handoff.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs` now only stacks the
+  body/blocker with the eight resize handles.
+- `tools/gate_imui_workstream_source.py` now rejects layout and pointer behavior from drifting back
+  into `handles.rs`, while also keeping layout and pointer owners separate from resize state.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating::window_options::floating_window_resizes_when_dragging_corner_handle
+  floating::window_options::floating_window_resizes_from_left_updates_origin_and_width
+  floating::window_options::floating_window_resizable_false_hides_resize_handles
+  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
+  floating::input_modes::floating_window_activate_on_click_can_be_disabled_for_resize_handles
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Floating Window Resize Snapshot Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI floating-window active resize snapshot discovery moved out of the resize state
+owner without changing resize handle enumeration, runtime drag matching, downstream resize
+calculation, or public facade behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/snapshot.rs` now owns active resize drag
+  discovery, resize-handle enumeration, runtime drag kind matching, and snapshot capture.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` now focuses on applying resize
+  deltas, min/max clamping, origin updates for left/top handles, collapse/non-drag reset,
+  device-pixel snapping, and resize output assembly.
+- `tools/gate_imui_workstream_source.py` now requires the snapshot owner and rejects runtime drag
+  lookup from drifting back into `floating_window_resize/state.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating::window_options::floating_window_resizes_when_dragging_corner_handle
+  floating::window_options::floating_window_resizes_from_left_updates_origin_and_width
+  floating::window_options::floating_window_resizable_false_hides_resize_handles
+  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
+  floating::input_modes::floating_window_activate_on_click_can_be_disabled_for_resize_handles
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Floating Window Resize State Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI floating-window resize snapshot/state calculation moved out of the root
+resize module without changing resize handles, left/right/corner resize behavior, collapse reset,
+device-pixel snapping, or resize test-id output.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/state.rs` now owns active resize snapshot
+  lookup, drag delta application, min/max size clamping, origin updates for left/top handles,
+  collapse reset, device-pixel snapping, and resize state/test-id output.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` is now a thin `handles`/`state` index
+  plus the shared `FloatingWindowResizeHandleTestIds` record.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs` remains the owner for resize
+  handle layout, pointer-region drag lifecycle wiring, cursor updates, and activation handoff.
+- `tools/gate_imui_workstream_source.py` now requires the state owner and rejects snapshot lookup,
+  resize drag calculation, and pixel snapping from drifting back into `floating_window_resize.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating::window_options::floating_window_resizes_when_dragging_corner_handle
+  floating::window_options::floating_window_resizes_from_left_updates_origin_and_width
+  floating::window_options::floating_window_resizable_false_hides_resize_handles
+  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
+  floating::input_modes::floating_window_activate_on_click_can_be_disabled_for_resize_handles
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Textarea Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI textarea element assembly moved out of the root text-controls owner without
+changing textarea facade routing, response semantics, select-all-on-focus behavior, submit/cancel
+command policy, compact chrome, or text style selection.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs` now owns textarea props assembly,
+  response/lifecycle population, select-all command emission, submit/cancel policy command
+  installation, and text-area chrome/text-style selection.
+- `ecosystem/fret-ui-kit/src/imui/text_controls.rs` keeps input-text assembly, shared text-model
+  changed detection, assistive semantics, input policy command installation, and the
+  `text_controls::textarea_model_with_options` re-export used by the facade.
+- `tools/gate_imui_workstream_source.py` now requires the textarea owner and rejects
+  `TextAreaProps`, text-area chrome/style selection, and textarea policy installation from drifting
+  back into `text_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui text_controls::tests --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui models_text_area --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Menu Item Keyboard Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI menu-item keyboard/navigation behavior moved out of the menu item
+interaction owner without changing popup menu roving focus, item-local shortcuts, menubar
+horizontal-arrow switching, command dispatch metadata, or response population.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard.rs` now owns item-local activate shortcut
+  handling, popup menu roving focus, menubar close-auto-focus suppression, and horizontal-arrow
+  menu switching.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` keeps enabled/action gating,
+  pressable props, activation dispatch, command dispatch metadata helper, and active-trigger
+  response population.
+- `tools/gate_imui_workstream_source.py` now requires the keyboard owner and rejects popup roving
+  focus, arrow-key handling, and menubar horizontal switching from drifting back into
+  `menu_controls/interaction.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation
+  interaction_menu_tabs::submenu_shortcuts
+  interaction_shortcuts::command_metadata::menu_item_command_uses_command_metadata_shortcut_and_gating
+  popup_hover::item_keyboard --no-fail-fast`: pass; 15 tests, 166 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Text Picker Popup Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI input-text picker popup item rendering and pick commit moved into a focused
+private owner without changing completion/history picker behavior, keyboard navigation, active
+descendant semantics, or response merge semantics.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/popup.rs` now owns
+  `InputTextPickerPopupInput`, `InputTextPickerPopupResult`, popup mounting, popup-scoped keyboard
+  handler installation, selectable candidate rows, active-element synchronization, click commit,
+  popup close, and picked-result reporting.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` keeps input composition, assistive
+  semantics, open/close policy, candidate/keyboard snapshots, and final `ResponseExt` merge after a
+  pick changes the model.
+- `tools/gate_imui_workstream_source.py` now requires the popup owner and rejects direct
+  `selectable_with_options(...)`, selectable option construction, and direct model/popup-open
+  updates from drifting back into root `text_picker_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass; 6 tests, 175 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Menu Item Interaction Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI menu-item interaction behavior moved into a focused private owner without
+changing menu item facade entry points, popup menu keyboard navigation, menubar horizontal-arrow
+switching, command dispatch metadata, or row visual structure.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` now owns
+  `MenuItemInteractionParts`, `MenuItemInteraction`, enabled/action gating, pressable props,
+  activation handlers, item-local shortcuts, popup roving-focus keyboard movement, menubar
+  horizontal-arrow switching, command dispatch source metadata, and active-trigger response
+  population.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/element.rs` keeps the menu row panel, indicator,
+  label, shortcut/submenu glyph visual assembly, and the custom `pressable_hook` insertion point
+  used by submenu helpers.
+- `tools/gate_imui_workstream_source.py` now requires the interaction owner and rejects
+  pressable/a11y props, active-trigger installation, keyboard handlers, menubar wiring, command
+  dispatch, and response population from drifting back into `menu_controls/element.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_controls::tests --no-fail-fast`:
+  pass; 4 tests, 684 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation
+  interaction_menu_tabs::submenu_shortcuts
+  interaction_shortcuts::command_metadata::menu_item_command_uses_command_metadata_shortcut_and_gating
+  popup_hover::item_keyboard --no-fail-fast`: pass; 15 tests, 166 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Button Behavior Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI button pressable/action behavior moved into a focused private owner without
+changing button facade entry points, label identity, command gating, shortcut behavior, or response
+accessors.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/button_controls/behavior.rs` now owns `ButtonAction`,
+  `button_pressable(...)`, command gating, pressable props, shortcut/context-menu handling, command
+  dispatch source metadata, payload forwarding, and button `ResponseExt` population.
+- `ecosystem/fret-ui-kit/src/imui/button_controls.rs` keeps public entry routing for default,
+  small, arrow, invisible, action, and payload-action buttons plus label identity scoping.
+- `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` remains the layout, a11y, and chrome
+  owner and is consumed by the behavior owner.
+- `tools/gate_imui_workstream_source.py` now requires the behavior owner and rejects pressable
+  props, control chrome pressable assembly, key handlers, action dispatch, and direct response
+  population from drifting back into root `button_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --no-fail-fast`:
+  pass; 1 test.
+- `cargo nextest run -p fret-imui interaction_shortcuts::button_shortcuts
+  interaction_shortcuts::command_metadata::button_command_uses_command_metadata_and_gating
+  interaction_press --no-fail-fast`: pass; 12 tests, 169 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Combo Trigger Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI combo trigger behavior and trigger chrome moved into a focused private owner
+without changing the public combo/combo-model facade, popup model wiring, or response accessors.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger.rs` now owns `ComboTriggerOptions`,
+  `combo_trigger(...)`, ComboBox semantics, shortcut activation, context-menu request handling,
+  pressable `ResponseExt` population, and open/menu trigger chrome.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls.rs` keeps label identity normalization, popup
+  model reads, trigger click-to-open/close, popup mounting, disabled close policy, and aggregate
+  `ComboResponse` open/toggled lifecycle flags.
+- `ecosystem/fret-ui-kit/src/imui/combo_controls/tests.rs` follows the a11y-label helper to the
+  new trigger owner.
+- `tools/gate_imui_workstream_source.py` now requires the new trigger owner and rejects
+  `PressableProps`, `PressableA11y`, `control_chrome_pressable_with_id_props`,
+  `pressable_on_activate`, `key_on_key_down_for`, and direct pressable response population from
+  drifting back into root `combo_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib combo_controls::tests
+  --no-fail-fast`: pass; 2 tests, 686 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_combo_smoke --no-fail-fast`:
+  pass; 2 tests.
+- `cargo nextest run -p fret-imui models_combo --no-fail-fast`: pass; 11 tests, 170 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Disclosure Trigger Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI disclosure trigger behavior and trigger-response population moved into a
+focused private owner without changing the public collapsing-header/tree-node facade, open model
+semantics, content mounting, or response accessors.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger.rs` now owns header pressable
+  construction, shortcut activation, context-menu key/right-click handling, double-click signaling,
+  hover-delay reads, enabled sanitization, and trigger `ResponseExt` population.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` keeps label identity normalization,
+  spec/open-model wiring, content mounting, and aggregate `DisclosureResponse` open/toggled state.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs` remains the option-to-spec owner,
+  while `visual.rs` remains the a11y/visual row owner.
+- `tools/gate_imui_workstream_source.py` now requires the split trigger owner and rejects
+  pressable/keyboard/context-menu/response-population bodies from drifting back into root
+  `disclosure_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls::tests
+  --no-fail-fast`: pass; 6 tests, 682 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::submenu_shortcuts --no-fail-fast`:
+  pass; 3 tests, 178 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation --no-fail-fast`: pass; 6
+  tests, 175 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- A broader combined `cargo nextest run -p fret-imui interaction_menu_tabs::submenu_shortcuts
+  interaction_menu_tabs::menu_activation --no-fail-fast` attempt timed out after 244 seconds while
+  its cargo/nextest process was still compiling. The process finished naturally afterward, and both
+  focused filters passed when rerun serially.
+
+## Popup Menu Policy/Panel Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI popup-menu policy state and popup panel composition moved into focused private
+owners without changing begin-popup facade entry points, menu/submenu behavior, focus handling, or
+overlay request dispatch.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/policy.rs` now owns `ImUiMenuNavState`,
+  `ImUiPopupMenuPolicyState`, and root submenu-policy synchronization.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` now owns popper placement, menu
+  semantics, nav-state installation, panel chrome, IMUI child mounting, and initial focus targets.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu.rs` keeps begin-popup orchestration, menubar
+  policy lookup, focus-outside dismissal preservation, close auto-focus suppression, and overlay
+  request dispatch.
+- `ecosystem/fret-ui-kit/tests/imui_perf_guard_smoke.rs` now follows the popper viewport source
+  anchor to `popup_overlay/menu/panel.rs`, where placement policy lives after the split.
+- `tools/gate_imui_workstream_source.py` now requires the split policy/panel owners and rejects
+  policy-state or panel-composition bodies from drifting back into root `popup_overlay/menu.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui popup_hover interaction_menu_tabs --no-fail-fast`: pass; 39
+  tests, 142 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_combo_smoke --no-fail-fast`:
+  pass; 2 tests.
+- `cargo nextest run -p fret-ui-kit --features imui
+  popup_menu_uses_environment_viewport_bounds_for_popper_outer_bounds --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- The first `popup_menu_uses_environment_viewport_bounds_for_popper_outer_bounds` run failed after
+  the code split because the source guard still read `popup_overlay/menu.rs`. The source anchor was
+  updated to `popup_overlay/menu/panel.rs`, and the focused test then passed.
+
+## Tab Family Items Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI tab-family item collection, selected-model normalization, tab-list semantics,
+trigger response aggregation, focus fallback, and selected-panel assembly moved into a focused
+private owner without changing the public tab-bar builder or response surface.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items.rs` now owns `BuiltTabItem`,
+  selected-tab normalization, tab-list semantics, trigger response aggregation, focus fallback, and
+  selected panel assembly.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls.rs` keeps the public `ImUiTabBar` builder,
+  `tab_item(...)` / `begin_tab_item(...)` collection API, and `tab_bar_element(...)` entrypoint.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/trigger.rs` remains the per-trigger owner for
+  activation, keyboard shortcut handling, a11y, and response population.
+- `tools/gate_imui_workstream_source.py` now requires the split tab item owner and rejects tab-list
+  semantics, panel assembly, and selection normalization from drifting back into root
+  `tab_family_controls.rs` or trigger-local code.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::tabs --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  composition::layout_collections::tab_bar_helper_arranges_tabs_horizontally_and_stamps_tab_semantics
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  composition::control_geometry::menu_and_tab_trigger_state_changes_keep_outer_bounds_stable
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- An earlier parallel tab nextest attempt timed out after 244 seconds while unrelated cargo jobs in
+  other worktrees were holding package/build locks. The focused tab gates passed when rerun
+  serially after source/doc updates.
+
+## Boolean Controls Behavior Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI checkbox/radio boolean-control behavior moved into focused private owners
+without changing the public checkbox/radio/switch facade surface, response semantics, shortcuts, or
+label-identity behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox.rs` now owns checkbox label identity,
+  model toggling, focused shortcut handling, context-menu request handling, and pressable response
+  population.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs` now owns radio label identity,
+  focused shortcut handling, context-menu request handling, click reporting, and pressable response
+  population.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` is now a module/re-export index beside the
+  existing `switch.rs` and `visual.rs` owners.
+- `tools/gate_imui_workstream_source.py` now requires the split checkbox/radio owners and rejects
+  checkbox/radio behavior from drifting back into root `boolean_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_controls --no-fail-fast`: pass; 6 tests, 175 skipped.
+- `cargo nextest run -p fret-imui composition::control_geometry --no-fail-fast`: pass; 4 tests,
+  177 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --no-fail-fast`:
+  pass; 1 test.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- The focused nextest runs waited on package-cache/build-directory locks, then completed
+  successfully in the same runs.
+
+## Menu Options Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI menu/popup/tab/tooltip option records moved into focused private owners
+without changing public option names, fields, defaults, or top-level re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/menus/popup.rs` now owns `PopupMenuOptions` and
+  `PopupModalOptions`, including popper placement, default sizes, modal/auto-focus, and
+  outside-press close defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/menu.rs` now owns `MenuBarOptions`,
+  `BeginMenuOptions`, `BeginSubmenuOptions`, and `MenuItemOptions`, including item-local shortcut
+  seams and submenu popup defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/tab.rs` now owns `TabBarOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/menus/tooltip.rs` now owns `TooltipOptions`, including
+  popper placement, estimated size, window margin, delay overrides, hoverable-content policy, and
+  test id.
+- `ecosystem/fret-ui-kit/src/imui/options/menus.rs` is now a module/re-export index, preserving
+  existing public paths through `imui::options` and the root `imui` facade exports.
+- `tools/gate_imui_workstream_source.py` now requires the split menu-option owners and forbids
+  popup/menu/tab/tooltip option bodies from drifting back into root `menus.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_tooltip_smoke --test
+  imui_combo_smoke --no-fail-fast`: pass; 3 tests.
+- `cargo nextest run -p fret-imui interaction_menu_tabs popup_hover --no-fail-fast`: pass; 39
+  tests, 142 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- The focused `fret-ui-kit` and `fret-imui` runs waited on package-cache/build-directory locks,
+  then completed successfully in the same runs.
+
+## Tooltip Overlay Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI tooltip pointer-open gating and panel composition moved into focused private
+owners without changing the public tooltip facade, hover/dismissal behavior, rich-content builder,
+or text-tooltip helper path.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/trigger.rs` now owns non-touch pointer-move open
+  gating, last-pointer model updates, pointer-transit buffer checks, and the redraw trigger for the
+  first pointer-move open.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/panel.rs` now owns concrete tooltip panel
+  placement, popover/border chrome, tooltip semantics/test id wiring, and rich-content column
+  facade assembly.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay.rs` keeps trigger id validation, tooltip event
+  model setup, interaction floating-bounds calculation, open/update scheduling, open-model sync,
+  dismiss request handling, hoverable-content tracking, and `request_tooltip(...)` orchestration.
+- `tools/gate_imui_workstream_source.py` now requires the split tooltip owners and rejects
+  pointer-transit internals, pointer-open state writes, panel chrome/composition, and tooltip
+  semantics from drifting back into the root tooltip orchestration file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_tooltip_smoke --no-fail-fast`:
+  pass; 1 test.
+- `cargo nextest run -p fret-ui-kit --features imui --lib tooltip_overlay::tests
+  --no-fail-fast`: pass; 3 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- An earlier shared-target `tooltip_overlay::tests` run timed out after 244 seconds while cargo was
+  waiting behind package/build locks. The same focused lib test passed when rerun serially.
+
+## Child-Region Resize Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI child-region resize handle and drag-response ownership moved into a focused
+private owner without changing the public child-region facade, response surface, scroll
+forwarding, framed chrome, or root/content test-id behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/child_region/resize.rs` now owns resize axis layout, handle
+  constants, pointer-region drag wiring, enabled/min/max response writes, and drag start/stop edge
+  reconciliation for both X and Y resize handles.
+- `ecosystem/fret-ui-kit/src/imui/child_region.rs` keeps child-region content building, scroll-area
+  configuration, framed chrome, viewport/content/root test-id routing, and resize stack assembly.
+- `tools/gate_imui_workstream_source.py` now requires the split resize owner and rejects resize
+  drag-state, handle constants, axis layout, and pointer-region drag wiring from drifting back into
+  the root child-region composition file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke
+  --no-fail-fast`: pass; 3 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- The focused `fret-ui-kit` build/test commands waited briefly on package-cache/build-directory
+  locks, then completed successfully in the same runs.
+
+## Selectable Keyboard Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI selectable keyboard policy moved into a focused private owner without changing
+selectable activation, popup close, context-menu request, popup arrow navigation, or public
+selectable APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard.rs` now owns selectable activation
+  shortcuts, popup close-on-activate updates, ContextMenu/Shift+F10 context-menu requests, and
+  inherited popup-menu arrow/Home/End focus navigation.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` keeps label identity normalization,
+  pressable/a11y assembly, pointer activation, response population, and visual row composition.
+- `tools/gate_imui_workstream_source.py` now requires `selectable_controls/keyboard.rs`, forbids
+  keyboard/nav internals from drifting back into the root selectable file, and keeps the existing
+  visual owner guard intact.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke
+  --no-fail-fast`: pass; 1 test.
+- `cargo nextest run -p fret-imui interaction_shortcuts_selectable interaction_drag_multi_select
+  models_combo --no-fail-fast`: pass; 11 tests, 170 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
+Gate note:
+
+- The focused `fret-imui` nextest run waited on package-cache/build-directory locks before
+  compiling; after the wait, the selected tests completed successfully in the same run.
+
+## Floating Surface Kinds/State Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI floating-surface drag-kind and state records moved into focused private owners
+without changing floating-area, floating-window, drag, resize, activation, collapse, or z-order
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/kinds.rs` now owns floating-area drag-kind ids,
+  floating-window resize-kind ids, resize-handle tags, and transient activation/collapse event
+  keys.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/state.rs` now owns
+  `FloatingWindowChromeResponse`, `FloatingAreaState`, and `FloatWindowState`, including all
+  floating-window test-id fields and resize/drag pointer state.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` keeps floating-area composition,
+  pointer-region drag-surface wiring, layer registration, and private re-exports only.
+- `tools/gate_imui_workstream_source.py` now requires the split floating-surface owner files and
+  forbids drag-kind constants, resize-kind functions, and floating state records from drifting back
+  into the root `floating_surface.rs` file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass; 25 tests, 156 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_perf_guard_smoke --no-fail-fast`:
+  pass; 5 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- The first parallel nextest attempt timed out after 4 minutes while cargo/rustc processes were
+  still waiting/running under package-cache and target-dir contention. After those processes exited
+  naturally, the same focused nextest gates passed when rerun serially.
+
+## Container Options Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI container/layout option records moved into focused private owners without
+changing public option names, fields, defaults, or top-level re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow.rs` now owns `HorizontalOptions`,
+  `ItemFlowOptions`, `SameLineOptions`, `DummyOptions`, `SpacingOptions`, `IndentOptions`,
+  `VerticalOptions`, `GridOptions`, and the private IMUI layout-token default helpers.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/scroll.rs` now owns `ScrollOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/list_box.rs` now owns `ListBoxOptions`,
+  keeping list-box policy as layout/scroll/diagnostics semantics only.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/child_region.rs` now owns
+  `ChildRegionChrome`, `ChildRegionOptions`, `ChildRegionResizeXOptions`, and
+  `ChildRegionResizeYOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers.rs` is now a module/re-export index,
+  preserving the existing public paths through `imui::options` and the root `imui` facade exports.
+- `tools/gate_imui_workstream_source.py` now requires the split container-option owners and
+  forbids flow, scroll, list-box, and child-region option bodies from drifting back into root
+  `containers.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_child_region_smoke --test
+  imui_virtual_list_smoke --no-fail-fast`: pass; 4 tests.
+- `cargo nextest run -p fret-imui composition --no-fail-fast`: pass; 37 tests, 144 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- The focused `fret-ui-kit` and `fret-imui` runs waited on package-cache/build-directory locks,
+  then completed successfully in the same runs.
+
+## Collection Options Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI collection option records moved into focused private owners without changing
+public table, table-column, row/cell, or virtual-list option names and defaults.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs` now owns
+  `TableColumnWidth`, `TableColumnResizeOptions`, `TableSortDirection`, `TableColumnPin`, and
+  `TableColumn`, including identity inference, visibility, sorting, resizing, and pin helpers.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table.rs` now owns `TableOptions`,
+  `TableRowOptions`, and `TableCellOptions`, including table debug formatting and default
+  row/column gap policy.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/virtual_list.rs` now owns
+  `VirtualListOptions`, including viewport, measurement, cache, gap, scroll-margin, known-height,
+  and handle defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/collections.rs` is now a 9-line module/re-export index,
+  preserving the existing public paths through `imui::options`, `imui::options::controls`, and the
+  root `imui` facade exports.
+- `tools/gate_imui_workstream_source.py` now points the dedicated table-column accessor-first gate
+  at the table-column owner and forbids table-column/table/virtual-list bodies from drifting back
+  into root `collections.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke --test
+  imui_virtual_list_smoke --no-fail-fast`: pass; 10 tests.
+- `cargo nextest run -p fret-imui composition --no-fail-fast`: pass; 37 tests, 144 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+## Text Options Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI text-control option records moved into focused private owners without changing
+public option names, fields, defaults, or top-level re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/filters.rs` now owns `InputTextFilters`,
+  named filter helpers, decimal/scientific character policy, and `InputTextCustomFilter`.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/input.rs` now owns `InputTextMode` and
+  `InputTextOptions`, including text-field semantics and command-policy defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/picker.rs` now owns
+  `InputTextPickerFilter` and `InputTextPickerOptions`, including default popup sizing and picker
+  behavior flags.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text/textarea.rs` now owns
+  `TextAreaSubmitKey` and `TextAreaOptions`, including multiline submit/cancel defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/controls/text.rs` is now a 9-line module/re-export index,
+  preserving the existing public paths through `imui::options`, `imui::options::controls`, and the
+  root `imui` facade exports.
+- `tools/gate_imui_workstream_source.py` now requires the split text-option owners and forbids
+  filter/input/picker/textarea bodies from drifting back into the root `text.rs` file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib text_controls::tests --no-fail-fast`:
+  pass; 3 tests, 685 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_textarea_smoke --no-fail-fast`:
+  pass; 1 test.
+- `cargo nextest run -p fret-imui models_text --no-fail-fast`: pass; 29 tests, 152 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- `cargo nextest run -p fret-ui-kit --features imui --lib text_controls::tests --no-fail-fast`
+  initially waited on a package-cache file lock, then completed successfully in the same run.
+
+## Widget Response Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI widget response records moved into focused private owners without changing
+public response type names, accessors, or composition behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/open.rs` now owns
+  `DisclosureResponse` and `ComboResponse`, including their sealed trigger/open/toggled storage and
+  read-only accessors.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/text_picker.rs` now owns
+  `InputTextPickerResponse` and its input/open/picked accessors.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/tabs.rs` now owns `TabBarResponse` and
+  `TabTriggerResponse`.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/table.rs` now owns `TableResponse`,
+  `TableHeaderResponse`, and `TableColumnResizeResponse`, including resize drag readout and width
+  clamp helpers.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets/virtual_list.rs` now owns
+  `VirtualListResponse`.
+- `ecosystem/fret-ui-kit/src/imui/response/widgets.rs` is now a 15-line module/re-export index
+  beside the existing child-region owner.
+- `tools/gate_imui_workstream_source.py` now requires the split widget-response owners and forbids
+  response bodies, `ResponseExt`, `DragResponse`, table sort policy, and virtual-list handle
+  storage from drifting back into the root `widgets.rs` file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests.
+- `cargo nextest run -p fret-imui composition --no-fail-fast`: pass; 37 tests, 144 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- `cargo nextest run -p fret-imui composition --no-fail-fast` initially waited on a package-cache
+  file lock, then completed successfully in the same run.
+
+## Container Methods Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI facade container-method dispatch moved into focused private owners without
+changing public facade method names or collection/layout behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/flow.rs` now owns item-flow,
+  same-line, dummy, spacing, and indent dispatch.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/layout.rs` now owns horizontal,
+  vertical, grid, scroll, and child-region dispatch.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/collections.rs` now owns
+  list-box, table, and virtual-list dispatch.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods/menu_tabs.rs` now owns menu-bar
+  and tab-bar dispatch.
+- `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods.rs` is now a 22-line re-export
+  index that keeps the existing `container_methods::...` call sites stable.
+- `tools/gate_imui_workstream_source.py` now requires the split owners and forbids collection,
+  layout, and layout-sugar bodies from drifting back into the root container-methods file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui composition --no-fail-fast`: pass; 37 tests, 144 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; 473 dedicated directories, 47 standalone
+  markdown files.
+- `git diff --check`: pass.
+
+## Slider Controls Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI slider semantics, pointer/key interaction, and visual track/value badge
+assembly moved into focused private owners without changing the public slider facade surface.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/a11y.rs` now owns slider semantics value,
+  numeric range, step, and jump decoration.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction.rs` now owns pointer down/move/up,
+  keyboard editing, model mutation, active-item state, and lifecycle edit signals.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/visual.rs` now owns track/fill geometry,
+  progress calculation, caption text, and value badge assembly.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls.rs` keeps label identity parsing, option
+  normalization, response population, and final element assembly.
+- `tools/gate_imui_workstream_source.py` now requires the slider sub-owners and forbids semantics,
+  pointer/key handler bodies, and visual `ContainerProps` assembly from drifting back into the root
+  slider file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit --check`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui slider --no-fail-fast`: pass; 2 tests, 179 skipped.
+- `cargo nextest run -p fret-imui composition --no-fail-fast`: pass; 37 tests, 144 skipped.
+- `cargo nextest run -p fret-imui label_identity --no-fail-fast`: pass; 7 tests, 174 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass; 473 dedicated directories, 47 standalone
+  markdown files.
+- `git diff --check`: pass.
+
+## Interaction Runtime Drag Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI drag runtime internals moved into focused private owners without changing
+pressable drag, pointer-region drag/resize, active-item, or long-press behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/active_item.rs` now owns active-item
+  mark/clear helpers.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/long_press_timer.rs` now owns long-press
+  timer arm/cancel for pressable drag.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/pointer_region.rs` now owns
+  pointer-region drag setup, thresholded movement, cancellation, pointer capture release, and
+  finish handling.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag/response.rs` now owns `DragResponse`
+  population, delta/total tracking, and drag transient reads.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/drag.rs` keeps drag-kind/threshold helpers
+  and the pressable drag move/down/up state machine.
+- `tools/gate_imui_workstream_source.py` now requires the drag sub-owners and forbids active-item,
+  pointer-region, long-press timer, and response bodies from drifting back into the root drag
+  runtime file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_drag --no-fail-fast`: pass; 8 tests, 173 skipped.
+- `cargo nextest run -p fret-imui interaction_press --no-fail-fast`: pass; 9 tests, 172 skipped.
+- `cargo nextest run -p fret-imui floating --no-fail-fast`: pass; 25 tests, 156 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+
+## Interaction Runtime Hover Owner-Split Evidence - 2026-05-26
+
+Claim verified: IMUI hover runtime internals moved into focused private owners without changing
+hovered-query, shared-delay, active-item block, or long-press behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/shared_delay.rs` now owns
+  window-scoped shared hover delay state, shared delay timers, clear timer handling, and shared
+  delay readout.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/timers.rs` now owns deterministic
+  per-element hover timer token derivation.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover/long_press.rs` now owns long-press
+  timer emission into the existing `KEY_LONG_PRESSED` transient.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` keeps the exported hover query
+  helpers, active-item block read, local delay state accumulation, hook installation, and response
+  readout.
+- `tools/gate_imui_workstream_source.py` now requires the hover sub-owners and forbids shared
+  delay/timer/long-press bodies from drifting back into the root hover runtime file.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass with pre-existing `fret-ui` warnings
+  for `unexpected_cfgs` on `unstable-retained-bridge` and `dead_code` on
+  `current_effective_opacity`.
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass; 21 tests, 160 skipped, with
+  the same pre-existing `fret-ui` warnings.
+- `cargo nextest run -p fret-imui interaction_press --no-fail-fast`: pass; 9 tests, 172 skipped,
+  with the same pre-existing `fret-ui` warnings.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests, with the same pre-existing `fret-ui` warnings.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
 
 ## Table Render Helper Owner-Split Evidence - 2026-05-26
 
@@ -722,7 +2754,6 @@ Gate notes:
   - `apps/fret-ui-gallery/src/ui/snippets/toggle/label.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/toggle/outline.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/toggle/rtl.rs`
-  - `apps/fret-ui-gallery/src/ui/snippets/toggle/size.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/toggle/usage.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/toggle/with_text.rs`
   - `apps/fret-ui-gallery/src/ui/snippets/button/children.rs`
@@ -4503,6 +6534,50 @@ cargo run -p fret-demo --bin docking_arbitration_demo
   passed.
 - `python tools\gate_imui_workstream_source.py` passed.
 - `git diff --check` passed.
+
+2026-05-27 IMUI multi-select state owner split:
+
+- Claim verified: `ImUiMultiSelectState` storage, ordered-selection normalization, anchor repair,
+  and crate-local selection mutation helpers moved from `multi_select.rs` into
+  `multi_select/state.rs` without changing the public collection helper API.
+- `ecosystem/fret-ui-kit/src/imui/multi_select.rs` now keeps model hook, selectable response wiring,
+  click-modifier policy, and response changed reporting.
+- `tools/gate_imui_workstream_source.py` now covers `multi_select/state.rs` in the opaque-struct
+  catalog and rejects the state body or selection normalization from drifting back into the root.
+- Focused gates passed:
+  `cargo fmt -p fret-ui-kit`,
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo nextest run -p fret-ui-kit --features imui --lib multi_select::tests --no-fail-fast`,
+  `cargo fmt -p fret-ui-kit --check --verbose`,
+  `python tools\gate_imui_workstream_source.py`,
+  `python tools\check_workstream_catalog.py`, and `git diff --check`.
+- A first `cargo nextest run -p fret-ui-kit --features imui --lib multi_select::tests
+  --no-fail-fast` attempt timed out after 124s while background Cargo/rustc processes kept running.
+  Those timeout remnants were stopped before rerunning the same filter with `TMP`/`TEMP` pointed at
+  `.fret/tmp`; the rerun passed 6/6 tests.
+
+2026-05-27 IMUI virtual-list runtime/row owner split:
+
+- Claim verified: runtime option projection and row mechanics moved out of
+  `virtual_list_controls.rs` without changing the facade virtual-list API or fixed/known/measured
+  row clipping semantics.
+- `virtual_list_controls/runtime.rs` now owns runtime option projection, measure-mode repair, and
+  viewport layout.
+- `virtual_list_controls/row.rs` now owns row packing, row test-id suffixing, row-height
+  resolution, striped row chrome, and fixed-height overflow clipping.
+- `virtual_list_controls.rs` keeps keyed list assembly, focus child mounting, render-range
+  tracking, scroll-handle ownership, and list-level semantics.
+- Focused gates passed:
+  `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`,
+  `python -m py_compile tools\gate_imui_workstream_source.py`,
+  `python tools\gate_imui_workstream_source.py`,
+  `git diff --check`,
+  `cargo fmt -p fret-ui-kit`,
+  `cargo check -p fret-ui-kit --features imui --lib`,
+  `cargo nextest run -p fret-ui-kit --features imui --lib virtual_list_controls::tests --no-fail-fast`,
+  `cargo fmt -p fret-ui-kit --check --verbose`, and `python tools\check_workstream_catalog.py`.
 
 2026-05-25 IMUI table render/body/header owner split:
 

@@ -2,22 +2,29 @@
 
 use std::sync::Arc;
 
-use fret_core::SemanticsRole;
 use fret_ui::UiHost;
-use fret_ui::element::{ContainerProps, Length};
 
-use super::{
-    InputTextPickerOptions, InputTextPickerResponse, ResponseExt, SelectableOptions,
-    UiWriterImUiFacadeExt,
-};
+use super::{InputTextPickerOptions, InputTextPickerResponse, UiWriterImUiFacadeExt};
 
 mod candidates;
+mod input;
 mod keyboard;
+mod open_policy;
+mod popup;
+mod response;
 
 use candidates::resolve_text_picker_candidates;
-use keyboard::{
-    InputTextPickerKeyboardState, install_picker_keyboard_handler, reconcile_picker_keyboard_state,
+use input::{
+    InputTextPickerInputRootRequest, prepare_text_picker_input_options,
+    render_text_picker_input_root,
 };
+use keyboard::{InputTextPickerKeyboardState, reconcile_picker_keyboard_state};
+use open_policy::{
+    TextPickerOpenPolicyInput, apply_text_picker_open_policy, read_text_picker_popup_snapshot,
+    text_picker_expanded,
+};
+use popup::{InputTextPickerPopupInput, render_text_picker_popup};
+use response::merge_text_picker_pick_response;
 
 pub(super) fn input_text_completion_model_with_options<
     H: UiHost,
@@ -62,19 +69,7 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
         .unwrap_or_default()
     });
 
-    let test_id = options
-        .test_id
-        .clone()
-        .or_else(|| options.input.test_id.clone());
-    let mut input_options = options.input.clone();
-    if input_options.test_id.is_none() {
-        input_options.test_id = test_id
-            .as_ref()
-            .map(|base| Arc::from(format!("{base}.input")));
-    }
-    if matches!(input_options.a11y_role, Some(SemanticsRole::TextField)) {
-        input_options.a11y_role = Some(SemanticsRole::ComboBox);
-    }
+    let prepared_input = prepare_text_picker_input_options(&options);
 
     let candidate_visibility = resolve_text_picker_candidates(&current, candidates, &options);
     let visible_candidates = candidate_visibility.visible_candidates;
@@ -91,15 +86,7 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
             )
         })
     });
-    let (popup_is_open, popup_panel_id) = ui.with_cx_mut(|cx| {
-        let open = cx
-            .read_model(&popup_open, fret_ui::Invalidation::Paint, |_app, value| {
-                *value
-            })
-            .unwrap_or(false);
-        let panel_id = super::with_popup_store_for_id(cx, id, |st, _app| st.panel_id);
-        (open, panel_id)
-    });
+    let popup_snapshot = read_text_picker_popup_snapshot(ui, id, &popup_open);
     let (active_source_index, pending_keyboard_pick, active_element) = keyboard_state
         .as_ref()
         .and_then(|state| {
@@ -121,169 +108,77 @@ fn input_text_picker_model_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> +
             )
         })
         .unwrap_or((None, None, None));
-    let picker_expanded = popup_is_open
-        && input_enabled_by_scope
-        && picker_candidate_visible
-        && !hide_for_exact_match;
-    let assistive_semantics = super::text_controls::InputTextAssistiveSemantics {
-        active_descendant: None,
-        active_descendant_element: picker_expanded
-            .then_some(active_element)
-            .flatten()
-            .map(|element| element.0),
-        controls_element: picker_expanded
-            .then_some(popup_panel_id)
-            .flatten()
-            .map(|element| element.0),
-        expanded: Some(picker_expanded),
-    };
-    let mut input = ResponseExt::default();
-    let root = ui.with_cx_mut(|cx| {
-        let input_element =
-            super::text_controls::input_text_model_element_with_options_and_semantics(
-                cx,
-                model.clone(),
-                input_options,
-                assistive_semantics,
-                &mut input,
-            );
-
-        let mut props = ContainerProps::default();
-        props.layout.size.width = Length::Fill;
-        props.layout.size.height = Length::Auto;
-        let root = cx.container(props, |_cx| vec![input_element]);
-        if input.enabled()
-            && options.keyboard_navigation
-            && input.focused()
-            && picker_candidate_visible
-            && !hide_for_exact_match
-            && let Some(state) = keyboard_state.clone()
-        {
-            install_picker_keyboard_handler(
-                cx,
-                root.id,
-                model.clone(),
-                popup_open.clone(),
-                state,
-                visible_candidates.clone(),
-                options.keyboard_repeat,
-            );
-        }
-        root
+    let picker_expanded = text_picker_expanded(
+        popup_snapshot.is_open,
+        input_enabled_by_scope,
+        picker_candidate_visible,
+        hide_for_exact_match,
+    );
+    let input_root = ui.with_cx_mut(|cx| {
+        render_text_picker_input_root(
+            cx,
+            InputTextPickerInputRootRequest {
+                model: model.clone(),
+                input_options: prepared_input.options,
+                popup_open: popup_open.clone(),
+                keyboard_state: keyboard_state.clone(),
+                visible_candidates: &visible_candidates,
+                keyboard_navigation: options.keyboard_navigation,
+                keyboard_repeat: options.keyboard_repeat,
+                picker_candidate_visible,
+                hide_for_exact_match,
+                picker_expanded,
+                active_element,
+                popup_panel_id: popup_snapshot.panel_id,
+            },
+        )
     });
-    ui.add(root);
+    let mut input = input_root.response;
+    ui.add(input_root.root);
     let enabled = input.enabled();
+    let input_focused = input.focused();
 
-    if enabled && (visible_candidates.is_empty() || hide_for_exact_match) {
-        ui.close_popup(id);
-    }
-    if enabled
-        && options.open_on_focus
-        && input.focused()
-        && picker_candidate_visible
-        && !hide_for_exact_match
-        && let Some(anchor) = input.rect()
-    {
-        ui.open_popup_at(id, anchor);
-    }
+    apply_text_picker_open_policy(
+        ui,
+        id,
+        TextPickerOpenPolicyInput {
+            enabled,
+            visible_candidates_empty: visible_candidates.is_empty(),
+            hide_for_exact_match,
+            open_on_focus: options.open_on_focus,
+            input_focused,
+            picker_candidate_visible,
+            anchor: input.rect(),
+        },
+    );
 
-    let mut picked_index = pending_keyboard_pick.as_ref().map(|pick| pick.source_index);
-    let mut picked = pending_keyboard_pick
-        .as_ref()
-        .map(|pick| pick.value.clone());
-    let item_test_id_base = test_id.clone();
-    let selected_value = current.clone();
-    let model_for_pick = model.clone();
-    let popup_open_for_items = popup_open.clone();
-    let keyboard_state_for_popup = keyboard_state.clone();
-    let visible_candidates_for_popup_key = visible_candidates.clone();
-    let popup_open_for_popup_key = popup_open.clone();
-    let model_for_popup_key = model.clone();
-    let install_popup_keyboard_handler = enabled
-        && options.keyboard_navigation
-        && input.focused()
-        && picker_candidate_visible
-        && !hide_for_exact_match;
-    let keyboard_repeat = options.keyboard_repeat;
-    let opened = ui.begin_popup_menu_with_options(id, input.id(), options.popup, |ui| {
-        if install_popup_keyboard_handler
-            && let Some(keyboard_state) = keyboard_state_for_popup.clone()
-        {
-            let cx = ui.cx_mut();
-            let key_owner = cx.root_id();
-            install_picker_keyboard_handler(
-                cx,
-                key_owner,
-                model_for_popup_key.clone(),
-                popup_open_for_popup_key.clone(),
-                keyboard_state,
-                visible_candidates_for_popup_key.clone(),
-                keyboard_repeat,
-            );
-        }
-        for (visible_index, (source_index, candidate)) in visible_candidates.iter().enumerate() {
-            let checked = selected_value.as_str() == candidate.as_ref();
-            let active = active_source_index == Some(*source_index);
-            let item_test_id = item_test_id_base
-                .as_ref()
-                .map(|base| Arc::from(format!("{base}.option.{visible_index}")));
-            let response = ui.selectable_with_options(
-                candidate.clone(),
-                SelectableOptions {
-                    selected: checked,
-                    highlighted: active,
-                    test_id: item_test_id,
-                    ..Default::default()
-                },
-            );
-            if active
-                && let (Some(state), Some(element)) =
-                    (keyboard_state_for_popup.as_ref(), response.id())
-            {
-                let _ = ui
-                    .cx_mut()
-                    .app
-                    .models_mut()
-                    .update(state, |state| state.active_element = Some(element));
-            }
-            if response.clicked() {
-                let next_value = candidate.to_string();
-                let _ = ui
-                    .cx_mut()
-                    .app
-                    .models_mut()
-                    .update(&model_for_pick, |value| *value = next_value.clone());
-                let _ = ui
-                    .cx_mut()
-                    .app
-                    .models_mut()
-                    .update(&popup_open_for_items, |open| *open = false);
-                if let Some(state) = keyboard_state_for_popup.as_ref() {
-                    let _ = ui.cx_mut().app.models_mut().update(state, |state| {
-                        state.active_source_index = Some(*source_index);
-                        state.active_element = response.id();
-                    });
-                }
-                picked_index = Some(*source_index);
-                picked = Some(candidate.clone());
-            }
-        }
-    });
+    let popup = render_text_picker_popup(
+        ui,
+        InputTextPickerPopupInput {
+            id,
+            trigger: input.id(),
+            popup: options.popup,
+            model: model.clone(),
+            popup_open: popup_open.clone(),
+            keyboard_state: keyboard_state.clone(),
+            visible_candidates: &visible_candidates,
+            selected_value: current.clone(),
+            active_source_index,
+            pending_keyboard_pick,
+            item_test_id_base: prepared_input.test_id.clone(),
+            install_keyboard_handler: enabled
+                && options.keyboard_navigation
+                && input_focused
+                && picker_candidate_visible
+                && !hide_for_exact_match,
+            keyboard_repeat: options.keyboard_repeat,
+        },
+    );
+    let opened = popup.opened;
+    let picked_index = popup.picked_index;
+    let picked = popup.picked;
 
-    if picked.is_some() {
-        let selected_now = ui.with_cx_mut(|cx| {
-            cx.read_model(model, fret_ui::Invalidation::Paint, |_app, value| {
-                value.clone()
-            })
-            .unwrap_or_default()
-        });
-        let picked_changed = input.id().is_some_and(|element_id| {
-            ui.with_cx_mut(|cx| super::model_value_changed_for(cx, element_id, selected_now))
-        });
-        input.merge_core_changed(picked_changed);
-        input.merge_edited(picked_changed);
-        input.merge_deactivated_after_edit(picked_changed);
-    }
+    merge_text_picker_pick_response(ui, model, &mut input, picked.is_some());
 
     InputTextPickerResponse {
         input,

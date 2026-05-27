@@ -27,7 +27,7 @@ pub(super) fn preview_item(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let examples = doc_layout::notes_block([
         "Gallery collapses the upstream top-of-page `ComponentPreview` into `Demo` and skips `Installation`, because the UI Gallery teaches live Rust surfaces rather than package-install steps.",
         "The upstream `Examples` group stays explicit here so `Icon`, `Avatar`, `Image`, `Group`, `Header`, `Link`, and `Dropdown` remain easy to compare one-to-one with the docs page.",
-        "`RTL` remains a separate top-level docs section after `Examples`, matching the upstream page structure instead of being folded into the example group.",
+        "`RTL` remains a separate Fret follow-up after `API Reference`, because the current upstream Item docs stop at `Dropdown` before the API surface.",
     ]);
 
     let api_reference = doc_layout::notes_block([
@@ -125,7 +125,7 @@ pub(super) fn preview_item(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Item docs path first after collapsing `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Item vs Field`, `Variant`, `Size`, `Examples`, the example set through `RTL`, and `API Reference`. After that, `Gallery` and `Link (render)` remain explicit Fret follow-ups.",
+            "Preview mirrors the shadcn Item docs path first after collapsing `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Item vs Field`, `Variant`, `Size`, `Examples`, the example set through `Dropdown`, and `API Reference`. After that, `RTL`, `Gallery`, and `Link (render)` remain explicit Fret follow-ups.",
         ),
         vec![
             demo,
@@ -141,8 +141,8 @@ pub(super) fn preview_item(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
             header,
             link,
             dropdown,
-            rtl,
             api_reference,
+            rtl,
             gallery,
             link_render,
         ],

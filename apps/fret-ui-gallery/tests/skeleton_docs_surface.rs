@@ -7,10 +7,12 @@ fn skeleton_page_documents_source_axes_and_leaf_api_decision() {
     let source = include_str!("../src/ui/pages/skeleton.rs");
 
     for needle in [
-        "Reference stack: shadcn Skeleton docs plus the default and base/radix registry recipes.",
+        "Reference stack: current shadcn Skeleton docs, the new-york-v4 recipe, and the base/radix registry examples.",
         "Neither Radix Primitives nor Base UI defines a dedicated Skeleton primitive",
         "no extra generic `compose()` or composable children API is needed here",
-        "Preview mirrors the shadcn Skeleton docs path after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`",
+        "Preview mirrors the current shadcn Skeleton docs path through `Demo`, `Usage`, and `Card`",
+        "`Avatar`, `Text`, `Form`, and `Table` come from the base/radix registry example surface",
+        "`RTL`, `API Reference`, and `Notes` are Fret follow-ups",
         "DocSection::build(cx, \"API Reference\", api_reference)",
         "DocSection::build(cx, \"Notes\", notes)",
     ] {
@@ -50,7 +52,7 @@ fn skeleton_snippets_stay_copyable_and_docs_aligned() {
     let card = include_str!("../src/ui/snippets/skeleton/card.rs");
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "shadcn::Skeleton::new()",
         ".refine_style(ChromeRefinement::default().rounded(Radius::Full))",
@@ -65,7 +67,7 @@ fn skeleton_snippets_stay_copyable_and_docs_aligned() {
     }
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         ".w_px(Px(48.0))",
         ".w_px(Px(250.0))",
         ".w_px(Px(200.0))",
@@ -78,7 +80,7 @@ fn skeleton_snippets_stay_copyable_and_docs_aligned() {
     }
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "shadcn::card(",
         "shadcn::card_header(",
         "shadcn::card_content(",

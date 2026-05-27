@@ -12,6 +12,8 @@ use super::label_identity::parse_label_identity;
 use super::{MenuItemOptions, ResponseExt, UiWriterImUiFacadeExt};
 
 mod element;
+mod interaction;
+mod keyboard;
 mod visual;
 
 pub(super) fn menu_item_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(

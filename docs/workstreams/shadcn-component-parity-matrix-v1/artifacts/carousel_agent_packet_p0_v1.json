@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "component": "carousel",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-27",
+  "generated_by": "manual audited-deferred packet v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/carousel.rs + apps/fret-ui-gallery/src/ui/pages/carousel.rs + tools/diag-scripts/ui-gallery/carousel/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/carousel_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Carousel audited-deferred packet remains machine-readable."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/carousel -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Existing Carousel diagnostics scripts remain parseable as the deferred evidence set."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.carousel.demo.light.vp1440x900",
+      "snapshot": "carousel-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "carousel-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.carousel.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/carousel-demo.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-basic-screenshot.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-swipe-and-buttons.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-controls-gate.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-part-surface-smoke.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-select-gate.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 3,
+    "status_counts": {
+      "pass_known": 3,
+      "needs_hardening": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 1,
+      "gallery_composition": 1,
+      "policy": 1,
+      "mechanism_core": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "recipe": 1,
+      "app_demo": 1,
+      "policy": 1,
+      "mechanism": 0,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 3
+    },
+    "top_findings": [
+      "Carousel is intentionally audited_deferred, not missing: the docs-path authoring surface, compact builder, parts lane, responsive sizing, spacing, orientation, plugins, events, RTL, and engine diagnostics are already documented.",
+      "No active shadcn-facing mechanism or public-surface drift is identified in the audit.",
+      "Resume this surface only when a concrete carousel engine, input, or layout regression becomes priority."
+    ],
+    "promotion_target_counts": {
+      "diag_script": 2,
+      "unit_test": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 3,
+    "bundle_schema2_count": 2,
+    "upstream_source_ref_count": 2,
+    "upstream_dom_snapshot_count": 1,
+    "interaction_script_count": 3,
+    "responsive_viewport_count": 1,
+    "fret_semantics_fact_count": 1,
+    "fret_interaction_fact_count": 3,
+    "fret_text_paint_fact_count": 1
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/radix/carousel.mdx + goldens/shadcn-web/v4/new-york-v4/carousel-*.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/carousel.rs + apps/fret-ui-gallery/src/ui/pages/carousel.rs + tools/diag-scripts/ui-gallery/carousel/*.json",
+    "part_count": 3,
+    "parts": [
+      {
+        "part_id": "carousel_authoring_surface",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "docs/audits/shadcn-carousel.md",
+          "ecosystem/fret-ui-shadcn/src/carousel.rs",
+          "apps/fret-ui-gallery/src/ui/snippets/carousel/usage.rs"
+        ],
+        "facts": [
+          "Carousel::new/items cover the compact Fret lane.",
+          "Carousel::into_element_parts plus typed parts cover the upstream-shaped docs lane.",
+          "The audit says no extra generic compose builder is needed for this component."
+        ]
+      },
+      {
+        "part_id": "carousel_runtime_depth",
+        "status": "pass_known",
+        "owner": "policy",
+        "layer": "policy",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/tests/carousel_a11y_semantics.rs",
+          "ecosystem/fret-ui-shadcn/tests/carousel_item_layout_breakpoints.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_carousel.rs",
+          "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-swipe-and-buttons.json",
+          "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-controls-gate.json"
+        ],
+        "facts": [
+          "Responsive item sizing, spacing, orientation, loop downgrade, pointer behavior, keyboard/a11y, and RTL have existing gates.",
+          "Diagnostics cover button invocation, swipe behavior, plugin/autoplay paths, events, and screenshots.",
+          "The surface remains deferred because it is not currently editor-critical."
+        ]
+      },
+      {
+        "part_id": "carousel_gallery_docs_surface",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "apps/fret-ui-gallery/src/ui/pages/carousel.rs",
+          "tools/diag-scripts/suites/ui-gallery-carousel-docs-parity/suite.json",
+          "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-doc-sections-non-overlap.json"
+        ],
+        "facts": [
+          "Gallery mirrors the upstream Carousel docs order before Fret follow-ups.",
+          "Usage teaches the upstream parts lane while Compact Builder keeps the Fret shorthand visible.",
+          "The dedicated Loop preview remains an explicit Fret follow-up."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "audited_deferred",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Record Carousel as an intentionally deferred, already-audited surface rather than leaving it not_in_harness.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "carousel.audited-deferred",
+        "component": "carousel",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/carousel_agent_packet_p0_v1.json",
+        "status": "audited_deferred",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}

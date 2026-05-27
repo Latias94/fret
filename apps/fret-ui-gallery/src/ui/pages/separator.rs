@@ -13,10 +13,10 @@ pub(super) fn preview_separator(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> 
     let rtl = snippets::rtl::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "Reference stack: shadcn base Separator docs, the base/radix registry recipe variants, Radix Primitives Separator, and Base UI Separator.",
+        "Reference stack: current shadcn Separator docs, the new-york-v4 recipe/demo, the base/radix registry recipe variants, Radix Primitives Separator, and Base UI Separator.",
         "`fret_ui_kit::primitives::separator::Separator` owns the mechanism layer: orientation, separator semantics, and decorative hiding. `fret_ui_shadcn::Separator` owns the recipe defaults (`shrink-0`, 1px rule chrome, and the vertical self-stretch mapping).",
         "`Separator::new()`, `Separator::orientation(...)`, and `Separator::decorative(...)` cover the public surface Fret needs for shadcn/Radix/Base UI parity. Fret keeps the Radix-aligned `.decorative(...)` knob on the shadcn lane even though the current Base UI docs axis does not surface that prop explicitly.",
-        "Vertical recipe parity maps upstream `data-vertical:self-stretch` to `align-self: stretch` plus auto cross-axis sizing, so surrounding row height remains caller-owned while the separator still stretches correctly in docs-style flex rows.",
+        "Vertical recipe parity follows the base/radix `data-vertical:self-stretch` axis by default and maps it to `align-self: stretch` plus auto cross-axis sizing; the current new-york-v4 `data-vertical:h-full` axis remains available through the explicit fill-height opt-out.",
         "No generic composable children / `compose()` / `asChild` surface is warranted here because separator is a leaf primitive. Base UI's `render` prop is a tag-swap seam, not a content-owned children API.",
     ]);
     let api_reference = DocSection::build(cx, "API Reference", api_reference)
@@ -45,7 +45,7 @@ pub(super) fn preview_separator(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> 
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the current shadcn Base Separator docs path first: Demo, Usage, Vertical, Menu, List, RTL, and API Reference. The API Reference also calls out the Radix/Base UI split behind `decorative(...)`.",
+            "Preview mirrors the current shadcn Separator docs and Base/Radix example path first: Demo, Usage, Vertical, Menu, List, RTL, and API Reference. The API Reference also calls out the Radix/Base UI split behind `decorative(...)`.",
         ),
         vec![demo, usage, vertical, menu, list, rtl, api_reference],
     );

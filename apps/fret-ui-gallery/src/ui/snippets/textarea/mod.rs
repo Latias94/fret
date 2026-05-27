@@ -7,4 +7,5 @@ pub mod label;
 pub mod required;
 pub mod rtl;
 pub mod usage;
+pub mod with_label;
 pub mod with_text;

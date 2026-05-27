@@ -117,3 +117,18 @@ fn item_link_render_diag_script_gates_action_state() {
         "item link action-state suite should reference the promoted script",
     );
 }
+
+#[test]
+fn item_page_keeps_upstream_docs_order_before_fret_follow_ups() {
+    let page = include_str!("../src/ui/pages/item.rs");
+
+    assert!(
+        page.contains("dropdown,\r\n            api_reference,\r\n            rtl,")
+            || page.contains("dropdown,\n            api_reference,\n            rtl,"),
+        "Item page should keep current upstream docs examples through Dropdown before API Reference and Fret-only RTL",
+    );
+    assert!(
+        page.contains("`RTL` remains a separate Fret follow-up after `API Reference`"),
+        "Item page should label RTL as a Fret follow-up because current upstream Item docs do not include an RTL example",
+    );
+}
