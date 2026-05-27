@@ -1,14 +1,11 @@
-use fret_core::DrawOrder;
+use fret_core::{DrawOrder, ImageId, Rect, UvRect};
 use fret_ui::canvas::CanvasPainter;
 
 use crate::imui::debug_draw_controls::DebugDrawCommand;
-use crate::imui::debug_draw_controls::geometry::{
-    points_are_finite, rect_is_empty, rect_is_finite, uv_points_are_finite,
-};
-use crate::imui::debug_draw_controls::paint_helpers::{
-    corner_radii_are_visible, normalized_opacity, paint_image, paint_image_region,
-    rounded_rect_corner_radii, uv_rect_is_valid,
-};
+
+mod raster;
+mod rounded;
+mod svg;
 
 pub(super) fn paint_debug_draw_media_command(
     painter: &mut CanvasPainter<'_>,
@@ -21,72 +18,28 @@ pub(super) fn paint_debug_draw_media_command(
             rect,
             image,
             options,
-        } => {
-            let opacity = normalized_opacity(options.opacity);
-            if opacity <= 0.0 || rect_is_empty(*rect) {
-                return;
-            }
-            paint_image(painter, order, *rect, *image, *options, opacity);
-        }
+        } => raster::paint_image_command(painter, order, *rect, *image, *options),
         DebugDrawCommand::ImageRegion {
             rect,
             image,
             uv,
             options,
-        } => {
-            let opacity = normalized_opacity(options.opacity);
-            if opacity <= 0.0 || rect_is_empty(*rect) || !uv_rect_is_valid(*uv) {
-                return;
-            }
-            paint_image_region(painter, order, *rect, *image, *uv, *options, opacity);
-        }
+        } => raster::paint_image_region_command(painter, order, *rect, *image, *uv, *options),
         DebugDrawCommand::ImageQuad {
             image,
             points,
             uvs,
             options,
-        } => {
-            let opacity = normalized_opacity(options.opacity);
-            if opacity <= 0.0
-                || options.tint.a <= 0.0
-                || !points_are_finite(points)
-                || !uv_points_are_finite(uvs)
-            {
-                return;
-            }
-            painter.scene().push(fret_core::SceneOp::ImageQuad {
-                order,
-                points: *points,
-                image: *image,
-                uvs: *uvs,
-                sampling: options.sampling,
-                tint: options.tint,
-                opacity,
-            });
-        }
+        } => raster::paint_image_quad_command(painter, order, *image, *points, *uvs, *options),
         DebugDrawCommand::ImageRounded {
             rect,
             image,
             options,
             rounding,
             corners,
-        } => {
-            let opacity = normalized_opacity(options.opacity);
-            if opacity <= 0.0 || rect_is_empty(*rect) || !rect_is_finite(*rect) {
-                return;
-            }
-            let corner_radii = rounded_rect_corner_radii(*rect, *rounding, *corners);
-            if corner_radii_are_visible(corner_radii) {
-                painter.scene().push(fret_core::SceneOp::PushClipRRect {
-                    rect: *rect,
-                    corner_radii,
-                });
-                paint_image(painter, order, *rect, *image, *options, opacity);
-                painter.scene().push(fret_core::SceneOp::PopClip);
-            } else {
-                paint_image(painter, order, *rect, *image, *options, opacity);
-            }
-        }
+        } => rounded::paint_image_rounded_command(
+            painter, order, *rect, *image, *options, *rounding, *corners,
+        ),
         DebugDrawCommand::ImageRegionRounded {
             rect,
             image,
@@ -94,46 +47,35 @@ pub(super) fn paint_debug_draw_media_command(
             options,
             rounding,
             corners,
-        } => {
-            let opacity = normalized_opacity(options.opacity);
-            if opacity <= 0.0
-                || rect_is_empty(*rect)
-                || !rect_is_finite(*rect)
-                || !uv_rect_is_valid(*uv)
-            {
-                return;
-            }
-            let corner_radii = rounded_rect_corner_radii(*rect, *rounding, *corners);
-            if corner_radii_are_visible(corner_radii) {
-                painter.scene().push(fret_core::SceneOp::PushClipRRect {
-                    rect: *rect,
-                    corner_radii,
-                });
-                paint_image_region(painter, order, *rect, *image, *uv, *options, opacity);
-                painter.scene().push(fret_core::SceneOp::PopClip);
-            } else {
-                paint_image_region(painter, order, *rect, *image, *uv, *options, opacity);
-            }
-        }
-        DebugDrawCommand::SvgImage { rect, svg, options } => {
-            let opacity = normalized_opacity(options.opacity);
-            if opacity <= 0.0 || rect_is_empty(*rect) {
-                return;
-            }
-            painter.svg_image(key, order, *rect, svg, options.fit, opacity);
-        }
+        } => rounded::paint_image_region_rounded_command(
+            painter, order, *rect, *image, *uv, *options, *rounding, *corners,
+        ),
+        DebugDrawCommand::SvgImage { rect, svg, options } => svg::paint_svg_image_command(
+            painter,
+            MediaPaintKey {
+                key,
+                order,
+                rect: *rect,
+            },
+            svg,
+            *options,
+        ),
         DebugDrawCommand::SvgMaskIcon {
             rect,
             svg,
             color,
             options,
-        } => {
-            let opacity = normalized_opacity(options.opacity);
-            if opacity <= 0.0 || color.a <= 0.0 || rect_is_empty(*rect) {
-                return;
-            }
-            painter.svg_mask_icon(key, order, *rect, svg, options.fit, *color, opacity);
-        }
+        } => svg::paint_svg_mask_icon_command(
+            painter,
+            MediaPaintKey {
+                key,
+                order,
+                rect: *rect,
+            },
+            svg,
+            *color,
+            *options,
+        ),
         DebugDrawCommand::Line { .. }
         | DebugDrawCommand::Polyline { .. }
         | DebugDrawCommand::ConvexPolyFilled { .. }
@@ -160,3 +102,13 @@ pub(super) fn paint_debug_draw_media_command(
         | DebugDrawCommand::Text { .. } => {}
     }
 }
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct MediaPaintKey {
+    pub(super) key: u64,
+    pub(super) order: DrawOrder,
+    pub(super) rect: Rect,
+}
+
+pub(super) type RasterImage = ImageId;
+pub(super) type RasterUvRect = UvRect;

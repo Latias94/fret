@@ -44,6 +44,14 @@ Last updated: 2026-05-27
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw media paint routing out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` into private raster,
+      rounded, and SVG owner modules without changing image/region/quad/SVG paint behavior, opacity
+      filtering, UV validation, rounded clip balancing, or media command no-op routing.
+      Result: `paint/media.rs` keeps `paint_debug_draw_media_command(...)` routing,
+      `paint/media/raster.rs` owns image/region/quad paint, `paint/media/rounded.rs` owns rounded
+      image/region paint and clip push/pop balancing, and `paint/media/svg.rs` owns SVG image/mask
+      icon paint.
 - [x] Split IMUI table row-group pinned-cell splitting, row flex layout, and horizontal-scroll
       wrapper helpers out of `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` into
       private owner modules without changing table row/header layout, pinned-column ordering,

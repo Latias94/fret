@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 debug-draw media paint owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` keeps
+`paint_debug_draw_media_command(...)` routing. `paint/media/raster.rs` owns image, image-region, and
+image-quad paint. `paint/media/rounded.rs` owns rounded image/region paint and clip balancing.
+`paint/media/svg.rs` owns SVG image and mask-icon paint.
+
 2026-05-27 table row-group owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` keeps
 `wrap_pinned_table_row_groups(...)` orchestration. `row_groups/split.rs` owns pinned-cell

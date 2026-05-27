@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Debug-Draw Media Paint Owner-Split Evidence - 2026-05-27
+
+Claim verified: debug-draw media paint routing moved into private raster, rounded, and SVG owners
+without changing image/region/quad/SVG paint behavior, opacity filtering, UV validation, rounded
+clip push/pop balancing, or no-op routing for non-media commands.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` keeps
+  `paint_debug_draw_media_command(...)` routing plus shared media paint key/type aliases.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/raster.rs` owns image,
+  image-region, and image-quad paint behavior.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/rounded.rs` owns rounded
+  image/region validation plus clip push/pop balancing.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media/svg.rs` owns SVG image and
+  mask-icon paint behavior.
+- `tools/gate_imui_workstream_source.py` now rejects paint bodies from the root media router and
+  requires each private media paint owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table Row-Group Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI table row-group pinned-cell splitting, row flex layout, and center horizontal
