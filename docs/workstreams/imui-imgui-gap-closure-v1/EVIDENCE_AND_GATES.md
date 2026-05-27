@@ -1,7 +1,36 @@
 # ImUi Dear ImGui Gap Closure v1 - Evidence & Gates
 
 Status: Active
-Last updated: 2026-05-27
+Last updated: 2026-05-28
+
+## Text-Picker Core Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI input-text picker core orchestration moved into a private owner without
+changing completion/history wrapper calls, candidate filtering, keyboard navigation, input root
+semantics, popup open policy, popup pick handling, or `InputTextPickerResponse`.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` is now a private module index and
+  re-export hub for the core picker and completion/history entry wrappers.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` owns model reads, candidate
+  visibility, keyboard snapshot reconciliation, input root mounting, open-policy application,
+  popup rendering, and pick response merging.
+- `tools/gate_imui_workstream_source.py` now rejects picker orchestration bodies from drifting back
+  into `text_picker_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
 
 ## Table Header-Cell Owner-Split Evidence - 2026-05-27
 

@@ -1,7 +1,7 @@
 # ImUi Dear ImGui Gap Closure v1 - Milestones
 
 Status: Active
-Last updated: 2026-05-27
+Last updated: 2026-05-28
 
 ## M6 - Continuing IMUI Owner-Split Pressure
 
@@ -11,6 +11,13 @@ Exit criteria:
 - Keep public IMUI facade method names, options, responses, and behavior stable.
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
+
+2026-05-28 text-picker core owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` now owns input-text picker
+orchestration: model reads, candidate visibility, keyboard snapshot reconciliation, input root
+mounting, open-policy application, popup rendering, and pick response merging.
+`text_picker_controls.rs` is now a private module index and re-export hub for the core picker and
+completion/history entry wrappers.
 
 2026-05-27 table header-cell owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/header/cell.rs` now owns header cell layout,
