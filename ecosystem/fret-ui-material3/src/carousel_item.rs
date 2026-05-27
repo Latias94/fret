@@ -25,6 +25,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interaction::pressable_interaction;
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::optional_chrome_part_test_id;
 use crate::tokens::carousel_item as carousel_item_tokens;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -171,10 +172,7 @@ impl CarouselItem {
         I: IntoIterator<Item = AnyElement>,
     {
         cx.scope(|cx| {
-            let chrome_test_id = self
-                .test_id
-                .as_ref()
-                .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+            let chrome_test_id = optional_chrome_part_test_id(self.test_id.as_ref());
             cx.pressable_with_id_props(|cx, st, pressable_id| {
                 let interactive = self.on_activate.is_some();
                 let enabled = interactive && !self.disabled;

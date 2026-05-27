@@ -1,6 +1,6 @@
 # Material 3 Component Alignment Sweep v1 - TODO
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-27
 
 Task IDs use `M3CAS-*`.
@@ -66,43 +66,43 @@ Task IDs use `M3CAS-*`.
 
 ## M5 - Choice Controls And Chips
 
-- [ ] M3CAS-080 [owner=codex] [deps=M3CAS-020,M3CAS-030] [scope=ecosystem/fret-ui-material3/src/checkbox.rs,ecosystem/fret-ui-material3/src/radio.rs,ecosystem/fret-ui-material3/src/slider.rs,ecosystem/fret-ui-material3/src/segmented_button.rs,ecosystem/fret-ui-material3/src/chip*.rs,ecosystem/fret-ui-material3/src/*chip.rs]
+- [x] M3CAS-080 [owner=codex] [deps=M3CAS-020,M3CAS-030] [scope=ecosystem/fret-ui-material3/src/checkbox.rs,ecosystem/fret-ui-material3/src/radio.rs,ecosystem/fret-ui-material3/src/slider.rs,ecosystem/fret-ui-material3/src/segmented_button.rs,ecosystem/fret-ui-material3/src/chip*.rs,ecosystem/fret-ui-material3/src/*chip.rs]
   Goal: Align choice controls and chips around state layer/ripple, selected indicators, group semantics, gesture handling, and minimum touch target policy.
   Validation: focused scene/semantics tests; fixed-timestep motion or pointer diag when needed.
-  Review: Shared state-layer/ripple defects should be fixed in Material interaction/foundation modules.
-  Evidence: choice-control packet report and extracted test-family files when stable.
-  Handoff: Do not refresh aggregate controls goldens until M3CAS-020 classifies the existing drift.
+  Review: DONE_WITH_KNOWN_FOLLOW_ONS. Existing Material indication/minimum target foundation remains the right owner; recipe code owns checked semantics, selected indicators, group roving, and chip trailing actions.
+  Evidence: `artifacts/material3_choice_controls_packet_v1.md`; `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface`; focused checkbox/radio/switch/icon/chip/segmented/slider gates.
+  Handoff: Slider internal canvas parts need named draw-region diagnostics before part selectors; continue with M3CAS-090 low-interaction/surface/data-display components.
 
 ## M6 - Surface, Data Display, And Low-Interaction Components
 
-- [ ] M3CAS-090 [owner=codex] [deps=M3CAS-020,M3CAS-030] [scope=ecosystem/fret-ui-material3/src/badge.rs,ecosystem/fret-ui-material3/src/card.rs,ecosystem/fret-ui-material3/src/carousel_item.rs,ecosystem/fret-ui-material3/src/divider.rs,ecosystem/fret-ui-material3/src/fab.rs,ecosystem/fret-ui-material3/src/list.rs,ecosystem/fret-ui-material3/src/progress_indicator.rs,ecosystem/fret-ui-material3/src/top_app_bar.rs,apps/fret-ui-gallery]
+- [x] M3CAS-090 [owner=codex] [deps=M3CAS-020,M3CAS-030] [scope=ecosystem/fret-ui-material3/src/badge.rs,ecosystem/fret-ui-material3/src/card.rs,ecosystem/fret-ui-material3/src/carousel_item.rs,ecosystem/fret-ui-material3/src/divider.rs,ecosystem/fret-ui-material3/src/fab.rs,ecosystem/fret-ui-material3/src/list.rs,ecosystem/fret-ui-material3/src/progress_indicator.rs,ecosystem/fret-ui-material3/src/top_app_bar.rs,apps/fret-ui-gallery]
   Goal: Audit low-interaction and surface/data-display components, adding gallery snippets or focused gates only where evidence is missing.
   Validation: matrix rows updated; focused goldens/scene tests or explicit low-risk closure notes.
-  Review: Avoid overbuilding packet fixtures for low-risk visual-only surfaces unless drift is found.
-  Evidence: low-interaction audit note and matrix updates.
-  Handoff: ProgressIndicator motion and TopAppBar scroll behavior may split into separate packets if they prove high-risk.
+  Review: DONE_WITH_KNOWN_FOLLOW_ONS. Badge got an explicit anchor-size contract for deterministic TopRight placement; Badge/Divider/ProgressIndicator stale goldens were refreshed; no new kit-policy or mechanism gap was found.
+  Evidence: `artifacts/material3_surface_data_display_packet_v1.md`; `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface`; targeted Badge/Divider/ProgressIndicator/FAB/List/TopAppBar/CarouselItem/controls headless golden gates.
+  Handoff: ProgressIndicator internal canvas draw regions and TopAppBar scroll diagnostics remain follow-ons only if future diagnostics need those surfaces.
 
 ## M7 - Foundation Consolidation And Test Modularization
 
-- [ ] M3CAS-100 [owner=codex] [deps=M3CAS-040,M3CAS-050,M3CAS-070,M3CAS-080] [scope=ecosystem/fret-ui-material3/src/foundation,ecosystem/fret-ui-material3/src/interaction,ecosystem/fret-ui-material3/tests]
+- [x] M3CAS-100 [owner=codex] [deps=M3CAS-040,M3CAS-050,M3CAS-070,M3CAS-080] [scope=ecosystem/fret-ui-material3/src/foundation,ecosystem/fret-ui-material3/src/interaction,ecosystem/fret-ui-material3/tests]
   Goal: Consolidate repeated Material foundation logic and remove stale recipe duplication proven by packet evidence.
   Validation: at least two consumer gates for each shared foundation refactor.
-  Review: Confirm no Material policy leaks into `crates/*`.
-  Evidence: foundation refactor notes and updated packet reports.
-  Handoff: If a mechanism defect is proven, split an ADR-backed mechanism workstream.
+  Review: DONE_WITH_KNOWN_FOLLOW_ONS. Dotted part-id generation moved into `foundation::test_id`; state-layer/ripple/minimum target helpers were audited but not wrapped further because component-local geometry/token inputs still differ.
+  Evidence: `artifacts/material3_foundation_consolidation_v1.md`; `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface`; `cargo nextest run -p fret-ui-material3 --test select_behavior`; `cargo nextest run -p fret-ui-material3 --test radio_alignment navigation_drawer_roving_skips_disabled_and_updates_model`.
+  Handoff: Broad navigation headless goldens still have unrelated stale geometry drift; handle that in a navigation packet/test split, not in selector helper cleanup.
 
-- [ ] M3CAS-110 [owner=codex] [deps=M3CAS-020,M3CAS-080,M3CAS-090] [scope=ecosystem/fret-ui-material3/tests]
+- [x] M3CAS-110 [owner=codex] [deps=M3CAS-020,M3CAS-080,M3CAS-090] [scope=ecosystem/fret-ui-material3/tests]
   Goal: Continue splitting `radio_alignment.rs` by stable component family after golden drift classification.
   Validation: each new test target passes; old target still compiles; no broad golden churn without proof.
-  Review: Test-support abstractions should remain component-neutral and reusable.
-  Evidence: new test targets and journal entries.
-  Handoff: Split only one family at a time.
+  Review: DONE_WITH_KNOWN_FOLLOW_ONS. TopAppBar semantics moved to a dedicated integration target without fixture overreach or broad golden churn.
+  Evidence: `artifacts/material3_test_modularization_v1.md`; `cargo nextest run -p fret-ui-material3 --test top_app_bar_alignment`; `cargo test -p fret-ui-material3 --test radio_alignment --no-run`.
+  Handoff: Future splits should move one stable golden family at a time after stale-golden status is known.
 
 ## M8 - Verification And Closeout
 
-- [ ] M3CAS-120 [owner=codex] [deps=M3CAS-040,M3CAS-050,M3CAS-060,M3CAS-070,M3CAS-080,M3CAS-090,M3CAS-100,M3CAS-110] [scope=docs/workstreams/material3-component-alignment-sweep-v1]
+- [x] M3CAS-120 [owner=codex] [deps=M3CAS-040,M3CAS-050,M3CAS-060,M3CAS-070,M3CAS-080,M3CAS-090,M3CAS-100,M3CAS-110] [scope=docs/workstreams/material3-component-alignment-sweep-v1]
   Goal: Verify the full sweep, close completed rows, and split any remaining component families into narrow follow-ons.
   Validation: refreshed suite report; matrix has no unclassified components; targeted Rust/diag/JSON/catalog gates pass.
-  Review: Run `review-workstream` and `verify-rust-workstream` before closeout.
-  Evidence: closeout audit.
-  Handoff: Do not leave broad "fix Material" work hidden in this lane.
+  Review: DONE_WITH_FOLLOW_ONS. The matrix has no unclassified rows; NavigationDrawer and ModalNavigationDrawer remain explicit narrow follow-ons rather than hidden broad work.
+  Evidence: `CLOSEOUT_AUDIT_2026-05-27.md`; `artifacts/material3_sweep_closeout_v1.md`.
+  Handoff: Start new narrow lanes for the follow-ons listed in the closeout audit; do not reopen this broad sweep for drawer visual packets, canvas draw-region diagnostics, picker accessibility depth, SearchView full behavior, rich tooltip interactivity, bottom-sheet chrome aliases, or further test splits.

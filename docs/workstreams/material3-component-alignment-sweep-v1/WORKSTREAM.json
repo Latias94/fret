@@ -2,11 +2,15 @@
   "schema_version": 1,
   "slug": "material3-component-alignment-sweep-v1",
   "title": "Material 3 Component Alignment Sweep v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-27",
-  "scope_kind": "execution",
-  "problem": "Apply the Material 3 parity harness loop across every fret-ui-material3 component, classify each finding by layer, and refactor shared foundation/policy only when component packet evidence supports it.",
+  "scope_kind": "closeout",
+  "problem": "Closed lane that applied the Material 3 parity harness loop across every fret-ui-material3 component, classified each finding by layer, refactored shared foundation/policy only when component packet evidence supported it, and split remaining work into narrow follow-ons.",
   "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/CLOSEOUT_AUDIT_2026-05-27.md"
+    },
     {
       "role": "design",
       "path": "docs/workstreams/material3-component-alignment-sweep-v1/DESIGN.md"
@@ -55,10 +59,32 @@
     {
       "name": "material3-crate-compile",
       "command": "cargo test -p fret-ui-material3 --lib --no-run"
+    },
+    {
+      "name": "material3-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface"
+    },
+    {
+      "name": "material3-top-app-bar-alignment",
+      "command": "cargo nextest run -p fret-ui-material3 --test top_app_bar_alignment"
+    },
+    {
+      "name": "material3-select-behavior",
+      "command": "cargo nextest run -p fret-ui-material3 --test select_behavior"
+    },
+    {
+      "name": "material3-crate-check-diagnostics-tests",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    },
+    {
+      "name": "material3-crate-clippy-diagnostics-tests-no-deps",
+      "command": "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings"
     }
   ],
   "evidence": [
+    "docs/workstreams/material3-component-alignment-sweep-v1/CLOSEOUT_AUDIT_2026-05-27.md",
     "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_sweep_closeout_v1.md",
     "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_coverage_inventory_v1.json",
     "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json",
     "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_test_id_contract_v1.md",
@@ -69,6 +95,10 @@
     "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md",
     "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
     "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_foundation_consolidation_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_test_modularization_v1.md",
     "tools/parity-discovery/suites/material3_parity_discovery_v1.json",
     "ecosystem/fret-ui-material3/src",
     "ecosystem/fret-ui-material3/tests",
@@ -82,8 +112,7 @@
     "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
   ],
   "continue_policy": {
-    "default_action": "run_next_task",
-    "next_task": "M3CAS-080",
-    "notes": "M3CAS-070 is complete with known overlay follow-ons. Continue with choice controls and chips, and only consolidate shared state-layer/ripple or group semantics after packet evidence proves duplication."
+    "default_action": "start_follow_on",
+    "notes": "This broad sweep lane is closed. Start a narrow follow-on for NavigationDrawer/ModalNavigationDrawer visual packet and stale navigation golden classification, named canvas draw-region diagnostics for ProgressIndicator or Slider, SearchView full behavior, picker accessibility depth, rich tooltip interactivity, bottom-sheet chrome aliases, or further one-family-at-a-time radio_alignment.rs splits."
   }
 }

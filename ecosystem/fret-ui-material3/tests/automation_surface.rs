@@ -197,6 +197,408 @@ fn material3_switch_exposes_stable_part_test_ids() {
 }
 
 #[test]
+fn material3_choice_controls_expose_stable_part_test_ids() {
+    use fret_icons::ids;
+    use fret_ui_material3::{
+        Checkbox, IconButton, IconToggleButton, RadioGroup, RadioGroupItem, RadioGroupOrientation,
+        RangeSlider, Slider,
+    };
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(720.0), Px(420.0)),
+    );
+
+    let checkbox_checked = app.models_mut().insert(true);
+    let radio_value = app.models_mut().insert(Some(Arc::<str>::from("alpha")));
+    let icon_toggle_checked = app.models_mut().insert(false);
+    let slider_value = app.models_mut().insert(0.4_f32);
+    let range_values = app.models_mut().insert([0.2_f32, 0.8_f32]);
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let checkbox_checked = checkbox_checked.clone();
+            let radio_value = radio_value.clone();
+            let icon_toggle_checked = icon_toggle_checked.clone();
+            let slider_value = slider_value.clone();
+            let range_values = range_values.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let mut props = fret_ui::element::FlexProps::default();
+                props.direction = fret_core::Axis::Vertical;
+                props.gap = fret_ui::element::SpacingLength::Px(Px(12.0));
+                props.layout.size.width = fret_ui::element::Length::Px(Px(560.0));
+                let controls = cx.flex(props, |cx| {
+                    vec![
+                        Checkbox::new(checkbox_checked)
+                            .a11y_label("Material checkbox")
+                            .test_id("m3-checkbox")
+                            .into_element(cx),
+                        RadioGroup::new(radio_value)
+                            .orientation(RadioGroupOrientation::Horizontal)
+                            .gap(Px(8.0))
+                            .a11y_label("Material radio group")
+                            .test_id("m3-radio-group")
+                            .items(vec![
+                                RadioGroupItem::new("alpha")
+                                    .a11y_label("Alpha")
+                                    .test_id("m3-radio-alpha"),
+                                RadioGroupItem::new("beta")
+                                    .a11y_label("Beta")
+                                    .test_id("m3-radio-beta"),
+                            ])
+                            .into_element(cx),
+                        IconButton::new(ids::ui::SEARCH)
+                            .a11y_label("Material icon button")
+                            .test_id("m3-icon-button")
+                            .into_element(cx),
+                        IconToggleButton::new(icon_toggle_checked, ids::ui::CHECK)
+                            .a11y_label("Material icon toggle")
+                            .test_id("m3-icon-toggle")
+                            .into_element(cx),
+                        Slider::new(slider_value)
+                            .range(0.0, 1.0)
+                            .a11y_label("Material slider")
+                            .test_id("m3-slider")
+                            .into_element(cx),
+                        RangeSlider::new(range_values)
+                            .range(0.0, 1.0)
+                            .a11y_label("Material range slider")
+                            .test_id("m3-range-slider")
+                            .into_element(cx),
+                    ]
+                });
+                vec![with_padding(cx, Px(32.0), controls)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    for id in [
+        "m3-checkbox",
+        "m3-checkbox.chrome",
+        "m3-radio-group",
+        "m3-radio-alpha",
+        "m3-radio-alpha.chrome",
+        "m3-radio-beta",
+        "m3-radio-beta.chrome",
+        "m3-icon-button",
+        "m3-icon-button.chrome",
+        "m3-icon-toggle",
+        "m3-icon-toggle.chrome",
+        "m3-slider",
+        "m3-slider.track",
+        "m3-slider.active-track",
+        "m3-slider.handle",
+        "m3-range-slider",
+        "m3-range-slider.start",
+        "m3-range-slider.start.handle",
+        "m3-range-slider.end",
+        "m3-range-slider.end.handle",
+        "m3-range-slider.track",
+        "m3-range-slider.active-track",
+    ] {
+        assert!(
+            live_test_id_exists(&ui, &app, window, id),
+            "expected live choice-control part test_id {id}"
+        );
+    }
+}
+
+#[test]
+fn material3_segmented_buttons_and_chips_expose_stable_part_test_ids() {
+    use fret_icons::ids;
+    use fret_ui_material3::{
+        AssistChip, ChipSet, ChipSetItem, FilterChip, InputChip, SegmentedButtonItem,
+        SegmentedButtonSet, SuggestionChip,
+    };
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(720.0), Px(360.0)),
+    );
+
+    let segmented_value = app.models_mut().insert(Arc::<str>::from("alpha"));
+    let filter_selected = app.models_mut().insert(true);
+    let input_selected = app.models_mut().insert(false);
+
+    let render = move |ui: &mut UiTree<TestHost>,
+                       app: &mut TestHost,
+                       services: &mut dyn UiServices| {
+        let segmented_value = segmented_value.clone();
+        let filter_selected = filter_selected.clone();
+        let input_selected = input_selected.clone();
+        fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+            let mut props = fret_ui::element::FlexProps::default();
+            props.direction = fret_core::Axis::Vertical;
+            props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
+            props.layout.size.width = fret_ui::element::Length::Px(Px(600.0));
+            let controls = cx.flex(props, |cx| {
+                let no_op =
+                    Arc::new(|_host: &mut dyn fret_ui::action::UiActionHost, _cx, _reason| {});
+                vec![
+                    SegmentedButtonSet::single(segmented_value)
+                        .a11y_label("Material segmented buttons")
+                        .test_id("m3-segmented")
+                        .items(vec![
+                            SegmentedButtonItem::new("alpha", "Alpha")
+                                .test_id("m3-segmented-alpha"),
+                            SegmentedButtonItem::new("beta", "Beta").test_id("m3-segmented-beta"),
+                        ])
+                        .into_element(cx),
+                    ChipSet::new(vec![
+                        ChipSetItem::from(
+                            AssistChip::new("Assist")
+                                .leading_icon(ids::ui::SEARCH)
+                                .test_id("m3-assist-chip"),
+                        ),
+                        ChipSetItem::from(
+                            SuggestionChip::new("Suggest")
+                                .leading_icon(ids::ui::SEARCH)
+                                .test_id("m3-suggestion-chip"),
+                        ),
+                        ChipSetItem::from(
+                            FilterChip::new(filter_selected, "Filter")
+                                .trailing_icon(ids::ui::CLOSE)
+                                .on_trailing_icon_activate(no_op.clone())
+                                .test_id("m3-filter-chip"),
+                        ),
+                        ChipSetItem::from(
+                            InputChip::new(input_selected, "Input")
+                                .leading_icon(ids::ui::SEARCH)
+                                .trailing_icon(ids::ui::CLOSE)
+                                .on_trailing_icon_activate(no_op.clone())
+                                .test_id("m3-input-chip"),
+                        ),
+                    ])
+                    .a11y_label("Material chip set")
+                    .test_id("m3-chip-set")
+                    .into_element(cx),
+                ]
+            });
+            vec![with_padding(cx, Px(32.0), controls)]
+        })
+    };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    for id in [
+        "m3-segmented",
+        "m3-segmented-alpha",
+        "m3-segmented-alpha.chrome",
+        "m3-segmented-beta",
+        "m3-segmented-beta.chrome",
+        "m3-chip-set",
+        "m3-assist-chip",
+        "m3-assist-chip.chrome",
+        "m3-suggestion-chip",
+        "m3-suggestion-chip.chrome",
+        "m3-filter-chip",
+        "m3-filter-chip.chrome",
+        "m3-filter-chip.trailing-icon",
+        "m3-input-chip",
+        "m3-input-chip.chrome",
+        "m3-input-chip.trailing-icon",
+    ] {
+        assert!(
+            live_test_id_exists(&ui, &app, window, id),
+            "expected live segmented/chip part test_id {id}"
+        );
+    }
+}
+
+#[test]
+fn material3_surface_data_display_expose_stable_part_test_ids() {
+    use fret_icons::ids;
+    use fret_ui::element::{ContainerProps, FlexProps, Length, SpacerProps};
+    use fret_ui_material3::{
+        Badge, BadgePlacement, Button, ButtonVariant, Card, CardVariant, CarouselItem,
+        CarouselItemVariant, CircularProgressIndicator, Divider, Fab, FabVariant,
+        LinearProgressIndicator, List, ListItem, TopAppBar, TopAppBarAction, TopAppBarVariant,
+    };
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(760.0), Px(760.0)),
+    );
+
+    let list_selected = app.models_mut().insert(Arc::<str>::from("beta"));
+    let progress = app.models_mut().insert(0.4_f32);
+    let no_op: fret_ui::action::OnActivate = Arc::new(|_host, _cx, _reason| {});
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let list_selected = list_selected.clone();
+            let progress = progress.clone();
+            let no_op = no_op.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let mut column = FlexProps::default();
+                column.direction = fret_core::Axis::Vertical;
+                column.gap = fret_ui::element::SpacingLength::Px(Px(14.0));
+                column.layout.size.width = Length::Px(Px(620.0));
+
+                let content = cx.flex(column, |cx| {
+                    let anchor = |cx: &mut fret_ui::elements::ElementContext<'_, TestHost>| {
+                        let mut props = ContainerProps::default();
+                        props.layout.size.width = Length::Px(Px(40.0));
+                        props.layout.size.height = Length::Px(Px(40.0));
+                        cx.container(props, |_cx| Vec::new())
+                    };
+
+                    let mut row = FlexProps::default();
+                    row.direction = fret_core::Axis::Horizontal;
+                    row.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
+                    row.align = fret_ui::element::CrossAlign::Center;
+
+                    vec![
+                        cx.flex(row, |cx| {
+                            vec![
+                                Badge::text("7")
+                                    .placement(BadgePlacement::TopRight)
+                                    .anchor_size(Px(40.0))
+                                    .a11y_label("Material badge")
+                                    .test_id("m3-badge")
+                                    .into_element(cx, |cx| vec![anchor(cx)]),
+                                Button::new("Button")
+                                    .variant(ButtonVariant::Filled)
+                                    .test_id("m3-button")
+                                    .into_element(cx),
+                                Fab::new(ids::ui::PLUS)
+                                    .variant(FabVariant::Primary)
+                                    .a11y_label("Material fab")
+                                    .test_id("m3-fab")
+                                    .into_element(cx),
+                            ]
+                        }),
+                        Card::new()
+                            .variant(CardVariant::Outlined)
+                            .on_activate(no_op.clone())
+                            .a11y_label("Material card")
+                            .test_id("m3-card")
+                            .into_element(cx, |cx| vec![cx.text("Card content")]),
+                        CarouselItem::new()
+                            .variant(CarouselItemVariant::WithOutline)
+                            .width(Px(420.0))
+                            .height(Px(72.0))
+                            .on_activate(no_op.clone())
+                            .a11y_label("Material carousel item")
+                            .test_id("m3-carousel")
+                            .into_element(cx, |cx| vec![cx.text("Carousel item")]),
+                        Divider::horizontal().test_id("m3-divider").into_element(cx),
+                        List::new(list_selected)
+                            .test_id("m3-list")
+                            .items(vec![
+                                ListItem::new("alpha", "Alpha")
+                                    .leading_icon(ids::ui::SEARCH)
+                                    .test_id("m3-list-alpha"),
+                                ListItem::new("beta", "Beta")
+                                    .trailing_icon(ids::ui::CHEVRON_RIGHT)
+                                    .test_id("m3-list-beta"),
+                            ])
+                            .into_element(cx),
+                        LinearProgressIndicator::new(progress.clone())
+                            .test_id("m3-linear-progress")
+                            .into_element(cx),
+                        cx.flex(row, |cx| {
+                            vec![
+                                CircularProgressIndicator::new(progress)
+                                    .test_id("m3-circular-progress")
+                                    .into_element(cx),
+                                cx.spacer(SpacerProps::default()),
+                            ]
+                        }),
+                        TopAppBar::new("Top App Bar")
+                            .variant(TopAppBarVariant::Small)
+                            .navigation_icon(
+                                TopAppBarAction::new(ids::ui::CHEVRON_RIGHT)
+                                    .a11y_label("Navigate")
+                                    .test_id("m3-top-app-bar-nav"),
+                            )
+                            .actions(vec![
+                                TopAppBarAction::new(ids::ui::SEARCH)
+                                    .a11y_label("Search")
+                                    .test_id("m3-top-app-bar-search"),
+                            ])
+                            .test_id("m3-top-app-bar")
+                            .into_element(cx),
+                    ]
+                });
+
+                vec![with_padding(cx, Px(32.0), content)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    for id in [
+        "m3-badge",
+        "m3-button",
+        "m3-button.chrome",
+        "m3-card",
+        "m3-card.chrome",
+        "m3-carousel",
+        "m3-carousel.chrome",
+        "m3-divider",
+        "m3-fab",
+        "m3-fab.chrome",
+        "m3-list",
+        "m3-list-alpha",
+        "m3-list-alpha.chrome",
+        "m3-list-beta",
+        "m3-list-beta.chrome",
+        "m3-linear-progress",
+        "m3-linear-progress.track",
+        "m3-linear-progress.active-track",
+        "m3-circular-progress",
+        "m3-top-app-bar",
+        "m3-top-app-bar-nav",
+        "m3-top-app-bar-nav.chrome",
+        "m3-top-app-bar-search",
+        "m3-top-app-bar-search.chrome",
+    ] {
+        assert!(
+            live_test_id_exists(&ui, &app, window, id),
+            "expected live surface/data-display part test_id {id}"
+        );
+    }
+}
+
+#[test]
 fn material3_tabs_exposes_stable_part_test_ids() {
     use fret_ui_material3::{TabItem, Tabs};
 
@@ -612,6 +1014,159 @@ fn material3_autocomplete_filled_exposes_active_indicator_part_test_id() {
         assert!(
             live_test_id_exists(&ui, &app, window, id),
             "expected live filled Autocomplete part test_id {id}"
+        );
+    }
+}
+
+#[test]
+fn material3_navigation_drawer_exposes_stable_part_test_ids() {
+    use fret_icons::ids;
+    use fret_ui_material3::{NavigationDrawer, NavigationDrawerItem};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(520.0), Px(360.0)),
+    );
+
+    let selected = app.models_mut().insert(Arc::<str>::from("search"));
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let drawer = NavigationDrawer::new(selected.clone())
+                    .a11y_label("Material navigation drawer")
+                    .test_id("m3-navigation-drawer")
+                    .items(vec![
+                        NavigationDrawerItem::new("search", "Search", ids::ui::SEARCH)
+                            .test_id("m3-drawer-search"),
+                        NavigationDrawerItem::new("settings", "Settings", ids::ui::SETTINGS)
+                            .test_id("m3-drawer-settings"),
+                    ])
+                    .into_element(cx);
+                vec![with_padding(cx, Px(32.0), drawer)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    for id in [
+        "m3-navigation-drawer",
+        "m3-drawer-search",
+        "m3-drawer-search.chrome",
+        "m3-drawer-settings",
+        "m3-drawer-settings.chrome",
+    ] {
+        assert!(
+            live_test_id_exists(&ui, &app, window, id),
+            "expected live NavigationDrawer part test_id {id}"
+        );
+    }
+}
+
+#[test]
+fn material3_modal_navigation_drawer_exposes_stable_part_test_ids() {
+    use fret_icons::ids;
+    use fret_ui_material3::{
+        Button, ButtonVariant, ModalNavigationDrawer, NavigationDrawer, NavigationDrawerItem,
+        NavigationDrawerVariant,
+    };
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(640.0), Px(420.0)),
+    );
+
+    let open = app.models_mut().insert(true);
+    let selected = app.models_mut().insert(Arc::<str>::from("search"));
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            let open = open.clone();
+            let selected = selected.clone();
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let drawer = ModalNavigationDrawer::new(open.clone())
+                    .open_duration_ms(Some(1))
+                    .close_duration_ms(Some(1))
+                    .test_id("m3-modal-navigation-drawer")
+                    .into_element(
+                        cx,
+                        |cx| {
+                            NavigationDrawer::new(selected.clone())
+                                .variant(NavigationDrawerVariant::Modal)
+                                .a11y_label("Material modal navigation drawer")
+                                .test_id("m3-modal-navigation-drawer-content")
+                                .items(vec![
+                                    NavigationDrawerItem::new("search", "Search", ids::ui::SEARCH)
+                                        .test_id("m3-modal-drawer-search"),
+                                    NavigationDrawerItem::new(
+                                        "settings",
+                                        "Settings",
+                                        ids::ui::SETTINGS,
+                                    )
+                                    .test_id("m3-modal-drawer-settings"),
+                                ])
+                                .into_element(cx)
+                        },
+                        |cx| {
+                            let underlay = Button::new("Underlay")
+                                .variant(ButtonVariant::Outlined)
+                                .test_id("m3-modal-navigation-drawer-underlay")
+                                .into_element(cx);
+                            with_padding(cx, Px(32.0), underlay)
+                        },
+                    );
+                vec![drawer]
+            })
+        };
+
+    for _ in 0..8 {
+        run_overlay_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            true,
+            |ui, app, services| render(ui, app, services),
+        );
+        if live_test_id_exists(&ui, &app, window, "m3-modal-navigation-drawer.panel") {
+            break;
+        }
+    }
+
+    for id in [
+        "m3-modal-navigation-drawer",
+        "m3-modal-navigation-drawer.scrim",
+        "m3-modal-navigation-drawer.scrim.chrome",
+        "m3-modal-navigation-drawer.panel",
+        "m3-modal-navigation-drawer-content",
+        "m3-modal-drawer-search",
+        "m3-modal-drawer-search.chrome",
+        "m3-modal-drawer-settings",
+        "m3-modal-drawer-settings.chrome",
+    ] {
+        assert!(
+            live_test_id_exists(&ui, &app, window, id),
+            "expected live ModalNavigationDrawer part test_id {id}"
         );
     }
 }

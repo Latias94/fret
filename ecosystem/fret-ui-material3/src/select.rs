@@ -45,6 +45,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::{chrome_part_test_id, part_test_id};
 use crate::interaction::state_layer::StateLayerAnimator;
 use crate::motion::ms_to_frames;
 use crate::tokens::dropdown_menu as dropdown_menu_tokens;
@@ -67,9 +68,9 @@ struct SelectPartTestIds {
 impl SelectPartTestIds {
     fn from_base(base: &Arc<str>) -> Self {
         Self {
-            chrome: Arc::from(format!("{base}.chrome")),
-            active_indicator: Arc::from(format!("{base}.active-indicator")),
-            trailing_icon: Arc::from(format!("{base}.trailing-icon")),
+            chrome: chrome_part_test_id(base),
+            active_indicator: part_test_id(base, "active-indicator"),
+            trailing_icon: part_test_id(base, "trailing-icon"),
         }
     }
 }
@@ -84,9 +85,9 @@ struct SelectItemPartTestIds {
 impl SelectItemPartTestIds {
     fn from_base(base: &Arc<str>) -> Self {
         Self {
-            chrome: Arc::from(format!("{base}.chrome")),
-            leading_icon: Arc::from(format!("{base}.leading-icon")),
-            trailing_icon: Arc::from(format!("{base}.trailing-icon")),
+            chrome: chrome_part_test_id(base),
+            leading_icon: part_test_id(base, "leading-icon"),
+            trailing_icon: part_test_id(base, "trailing-icon"),
         }
     }
 }

@@ -1,6 +1,6 @@
 # Material 3 Component Alignment Sweep v1 - Milestones
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-27
 
 ## M0 - Sweep Setup
@@ -80,6 +80,14 @@ Exit criteria:
 - State-layer/ripple/selected-indicator duplication is either consolidated or explicitly accepted.
 - Choice-control group semantics have focused proof where touched.
 
+Evidence:
+
+- `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md`
+- `ecosystem/fret-ui-material3/tests/automation_surface.rs`
+- `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
+- `goldens/material3-headless/v1/material3-segmented-button.*.json`
+- `goldens/material3-headless/v1/material3-slider.*.json`
+
 ## M6 - Surface, Data Display, And Low-Interaction Components
 
 Exit criteria:
@@ -89,6 +97,16 @@ Exit criteria:
   diagnostics.
 - ProgressIndicator and TopAppBar are split if their motion/scroll behavior proves high-risk.
 
+Evidence:
+
+- `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md`
+- `ecosystem/fret-ui-material3/src/badge.rs`
+- `ecosystem/fret-ui-material3/tests/automation_surface.rs`
+- `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
+- `goldens/material3-headless/v1/material3-badge.*.json`
+- `goldens/material3-headless/v1/material3-divider.*.json`
+- `goldens/material3-headless/v1/material3-progress-indicator.*.json`
+
 ## M7 - Foundation Consolidation And Test Modularization
 
 Exit criteria:
@@ -96,6 +114,14 @@ Exit criteria:
 - Shared foundation refactors have at least two consumer anchors.
 - Stale recipe duplication is removed or isolated behind follow-ons.
 - Further `radio_alignment.rs` splits happen after evidence is stable.
+
+Evidence:
+
+- `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_foundation_consolidation_v1.md`
+- `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_test_modularization_v1.md`
+- `ecosystem/fret-ui-material3/src/foundation/test_id.rs`
+- `ecosystem/fret-ui-material3/tests/automation_surface.rs`
+- `ecosystem/fret-ui-material3/tests/top_app_bar_alignment.rs`
 
 ## M8 - Verification And Closeout
 
@@ -105,3 +131,11 @@ Exit criteria:
 - Packet suite regeneration passes.
 - Targeted Rust/diag/JSON/workstream catalog gates pass.
 - Remaining work is split into narrow follow-ons.
+
+Evidence:
+
+- `docs/workstreams/material3-component-alignment-sweep-v1/CLOSEOUT_AUDIT_2026-05-27.md`
+- `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_sweep_closeout_v1.md`
+- `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
+- `ecosystem/fret-ui-material3/tests/automation_surface.rs`
+- `ecosystem/fret-ui-material3/tests/top_app_bar_alignment.rs`

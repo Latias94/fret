@@ -33,6 +33,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
+use crate::foundation::test_id::optional_chrome_part_test_id;
 use crate::tokens::list as list_tokens;
 
 #[derive(Debug, Clone)]
@@ -423,9 +424,7 @@ fn list_item<H: UiHost>(
             focus_ring_bounds: None,
         };
 
-        let chrome_test_id = test_id
-            .as_ref()
-            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+        let chrome_test_id = optional_chrome_part_test_id(test_id.as_ref());
 
         let pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();

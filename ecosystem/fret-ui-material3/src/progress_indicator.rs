@@ -4,11 +4,14 @@ use std::sync::Arc;
 
 use fret_core::{Color, Corners, DrawOrder, Edges, Px, Rect, Size, Transform2D};
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, CanvasProps, Length, SemanticsProps};
+use fret_ui::element::{AnyElement, CanvasProps, InsetEdge, Length, SemanticsProps, StackProps};
 use fret_ui::elements::ElementContext;
 use fret_ui::{Invalidation, UiHost};
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 
+use crate::foundation::test_id::{
+    absolute_region_layout, diagnostic_anchor, optional_part_test_id,
+};
 use crate::tokens::progress_indicator as progress_tokens;
 
 #[derive(Debug, Clone)]
@@ -155,6 +158,14 @@ impl LinearProgressIndicator {
                     progress_tokens::active_shape(theme),
                 )
             });
+
+        let track_test_id = optional_part_test_id(self.test_id.as_ref(), "track");
+        let active_track_test_id = if is_indeterminate {
+            None
+        } else {
+            optional_part_test_id(self.test_id.as_ref(), "active-track")
+        };
+        let root_test_id = self.test_id;
 
         let mut props = CanvasProps::default();
         props.layout.size.width = Length::Fill;
@@ -478,7 +489,44 @@ impl LinearProgressIndicator {
             paint_quad(p.scene(), DrawOrder(0), active, active_color, active_shape);
         });
 
-        let Some(test_id) = self.test_id else {
+        let content = if track_test_id.is_some() || active_track_test_id.is_some() {
+            let mut stack = StackProps::default();
+            stack.layout.size.width = Length::Fill;
+            stack.layout.size.height = Length::Px(h);
+
+            cx.stack_props(stack, move |cx| {
+                let mut children = vec![content];
+                if let Some(test_id) = track_test_id.clone() {
+                    children.push(diagnostic_anchor(
+                        cx,
+                        test_id,
+                        absolute_region_layout(
+                            InsetEdge::Px(Px(0.0)),
+                            InsetEdge::Px(Px((h.0 - track_thickness) * 0.5)),
+                            Length::Fill,
+                            Length::Px(Px(track_thickness)),
+                        ),
+                    ));
+                }
+                if let Some(test_id) = active_track_test_id.clone() {
+                    children.push(diagnostic_anchor(
+                        cx,
+                        test_id,
+                        absolute_region_layout(
+                            InsetEdge::Px(Px(0.0)),
+                            InsetEdge::Px(Px((h.0 - active_thickness) * 0.5)),
+                            Length::Fraction(progress),
+                            Length::Px(Px(active_thickness)),
+                        ),
+                    ));
+                }
+                children
+            })
+        } else {
+            content
+        };
+
+        let Some(test_id) = root_test_id else {
             return content;
         };
 

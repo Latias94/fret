@@ -33,7 +33,7 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::surface::material_surface_style;
-use crate::foundation::test_id::part_test_id;
+use crate::foundation::test_id::{optional_chrome_part_test_id, part_test_id};
 use crate::motion;
 use crate::tokens::dialog as dialog_tokens;
 
@@ -176,9 +176,7 @@ impl DialogAction {
             a11y_label,
             test_id,
         } = self;
-        let chrome_test_id = test_id
-            .as_ref()
-            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+        let chrome_test_id = optional_chrome_part_test_id(test_id.as_ref());
 
         cx.pressable_with_id_props(move |cx, st, pressable_id| {
             let action_enabled = action

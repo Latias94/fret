@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "slug": "material3-navigation-drawer-overlay-packet-v1",
+  "title": "Material 3 Navigation Drawer Overlay Packet v1",
+  "status": "closed",
+  "updated": "2026-05-27",
+  "scope_kind": "closeout",
+  "problem": "Closed lane that classified the Material 3 navigation headless golden drift, fixed NavigationDrawer selected-pill fill geometry, repaired the drawer chrome-fill diagnostic route, and closed the NavigationDrawer/ModalNavigationDrawer packet split from the component alignment sweep.",
+  "authoritative_docs": [
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/CLOSEOUT_AUDIT_2026-05-27.md"
+    },
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "The navigation headless golden suite is red at lane open and must be classified before golden refresh.",
+    "commands": [
+      "cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_navigation_suite_goldens_v1"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-navigation-drawer-overlay-packet-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "navigation-headless-golden-suite",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_navigation_suite_goldens_v1"
+    },
+    {
+      "name": "navigation-drawer-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_navigation_drawer_exposes_stable_part_test_ids"
+    },
+    {
+      "name": "modal-navigation-drawer-automation-surface",
+      "command": "cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_modal_navigation_drawer_exposes_stable_part_test_ids"
+    },
+    {
+      "name": "modal-navigation-drawer-focus",
+      "command": "cargo nextest run -p fret-ui-material3 --test radio_alignment modal_navigation_drawer_focus_is_contained_and_restored_across_schemes"
+    },
+    {
+      "name": "material3-crate-check-diagnostics-tests",
+      "command": "cargo check -p fret-ui-material3 --features diagnostics --tests"
+    },
+    {
+      "name": "material3-crate-clippy-diagnostics-tests-no-deps",
+      "command": "cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/material3-component-alignment-sweep-v1/CLOSEOUT_AUDIT_2026-05-27.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_sweep_closeout_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json",
+    "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/CLOSEOUT_AUDIT_2026-05-27.md",
+    "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/artifacts/navigation_golden_baseline_v1.md",
+    "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/artifacts/drawer_modal_packet_v1.md",
+    "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/artifacts/navigation_geometry_resolution_v1.md",
+    "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/artifacts/navigation_drawer_diag_v1.md",
+    "ecosystem/fret-ui-material3/src/navigation_drawer.rs",
+    "ecosystem/fret-ui-material3/src/modal_navigation_drawer.rs",
+    "ecosystem/fret-ui-material3/tests/automation_surface.rs",
+    "ecosystem/fret-ui-material3/tests/radio_alignment.rs",
+    "goldens/material3-headless/v1/material3-navigation.*.json"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md",
+    "docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md",
+    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
+  ],
+  "continue_policy": {
+    "default_action": "start_follow_on",
+    "notes": "This drawer/modal-drawer packet lane is closed. Start a narrow follow-on only for fresh modal drawer motion timing/interruption drift, a proven shared Material navigation foundation need, or a future gallery navigation diagnostic route change."
+  }
+}

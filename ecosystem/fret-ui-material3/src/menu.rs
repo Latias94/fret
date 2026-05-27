@@ -31,7 +31,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::surface::material_surface_style;
-use crate::foundation::test_id::part_test_id;
+use crate::foundation::test_id::{optional_chrome_part_test_id, part_test_id};
 use crate::tokens::menu as menu_tokens;
 
 #[derive(Debug, Clone, Default)]
@@ -469,10 +469,7 @@ fn material_menu_item<H: UiHost>(
     set_size: usize,
     initial_focus_id_out: Rc<std::cell::Cell<Option<GlobalElementId>>>,
 ) -> AnyElement {
-    let chrome_test_id = item
-        .test_id
-        .as_ref()
-        .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+    let chrome_test_id = optional_chrome_part_test_id(item.test_id.as_ref());
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !item.disabled;

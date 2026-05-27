@@ -1,24 +1,22 @@
 # Material 3 Component Alignment Sweep v1 - Handoff
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-27
 
 ## Current State
 
-The workstream is active. The previous Material 3 parity harness lane is closed and provides seed
-evidence for Button, Select, and Switch. M3CAS-020 through M3CAS-070 are complete.
+The workstream is closed. The previous Material 3 parity harness lane is also closed and provides
+seed evidence for Button, Select, and Switch. M3CAS-020 through M3CAS-120 are complete.
 
-## Active Task
+## Closeout Result
 
-- Task ID: M3CAS-080
-- Goal: align choice controls and chips around state layer/ripple, selected indicators, group
-  semantics, gesture handling, and minimum touch target policy.
-- Current progress: M3CAS-070 closed with known follow-ons. Menu, DropdownMenu, Dialog,
-  BottomSheet, Tooltip, and Snackbar now have packet-level selector/behavior classification.
-  `automation_surface` has 15 passing tests, and snackbar/menu-dialog/bottom-sheet headless
-  goldens were refreshed after stale drift was classified.
-- Reason: overlay/focus policy stayed in existing kit primitives; the next likely duplication risk
-  is state-layer/ripple and choice-control group semantics.
+- All 39 matrix rows are classified.
+- The matrix has no rows missing `selector_status`, `first_gate_kind`, or `layer_classification`.
+- ModalNavigationDrawer now exposes dotted root/scrim/scrim.chrome/panel part IDs and has
+  automation-surface proof.
+- NavigationDrawer and ModalNavigationDrawer are explicit follow-on rows for visual/overlay packet
+  evidence and stale navigation-golden classification.
+- The broad sweep should not be reopened for the remaining narrow follow-ons.
 
 ## Key Decisions
 
@@ -65,15 +63,34 @@ evidence for Button, Select, and Switch. M3CAS-020 through M3CAS-070 are complet
   behavior gates, refreshed snackbar/menu-dialog/bottom-sheet headless goldens, and recorded rich
   tooltip interactivity plus bottom-sheet chrome aliases as follow-ons. `automation_surface` now has
   15 passing tests.
+- M3CAS-080 added choice-control/chip selector coverage, confirmed shared state-layer/ripple and
+  minimum interactive sizing stay in Material foundation, classified group roving as recipe-owned
+  for now, and recorded slider internal canvas part selectors as a diagnostics follow-on.
+  `automation_surface` now has 17 passing tests.
+- M3CAS-090 added surface/data-display selector coverage, added `Badge::anchor_size` for
+  deterministic TopRight placement, refreshed Badge/Divider/ProgressIndicator headless goldens, and
+  classified Button/Card/CarouselItem/FAB/List/TopAppBar as low-risk recipe/foundation consumers.
+  `automation_surface` now has 18 passing tests.
+- M3CAS-100 consolidated dotted part-id generation into `foundation::test_id`, switched repeated
+  `.chrome` helper construction across Select/Switch/Dialog/Menu/List/CarouselItem/NavigationDrawer
+  and interactive-size helpers, and added NavigationDrawer selector proof. `automation_surface` now
+  has 19 passing tests.
+- M3CAS-110 split the low-coupling TopAppBar toolbar semantics smoke into
+  `ecosystem/fret-ui-material3/tests/top_app_bar_alignment.rs`; old `radio_alignment.rs` still
+  compiles.
+- M3CAS-120 closed the sweep, corrected ModalNavigationDrawer's legacy hyphenated scrim selector
+  into dotted part IDs, added ModalNavigationDrawer automation-surface proof, and split remaining
+  work into narrow follow-ons.
 
 ## Next Recommended Action
 
-Run M3CAS-080 with `run-workstream-task`:
+Start a new narrow follow-on only when there is fresh evidence for one of these scopes:
 
-1. Audit Checkbox, Radio, Slider, SegmentedButton, Chip, ChipSet, FilterChip, InputChip,
-   SuggestionChip, and IconButton around state layer/ripple, selected indicators, gestures, and
-   group semantics.
-2. Classify findings by `material_foundation`, `material_recipe`, `kit_policy`, `diagnostics`, and
-   `test_harness`.
-3. Consolidate shared Material foundation only when at least two component rows prove the same
-   duplication.
+1. NavigationDrawer and ModalNavigationDrawer visual/overlay packet plus stale navigation golden
+   classification.
+2. ProgressIndicator or Slider named canvas draw-region diagnostics.
+3. SearchView full state/back/full-screen behavior.
+4. Picker accessibility depth.
+5. Rich tooltip interactivity.
+6. BottomSheet chrome aliases.
+7. Further `radio_alignment.rs` family splits.

@@ -69,9 +69,17 @@ impl Badge {
         self
     }
 
-    pub fn navigation_anchor_size(mut self, size: Px) -> Self {
+    /// Sets the badge anchor box size used for deterministic placement.
+    ///
+    /// This is required when the anchor content is not enough to infer a stable relative box,
+    /// especially for `BadgePlacement::TopRight`.
+    pub fn anchor_size(mut self, size: Px) -> Self {
         self.anchor_size = Some(size);
         self
+    }
+
+    pub fn navigation_anchor_size(self, size: Px) -> Self {
+        self.anchor_size(size)
     }
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
@@ -107,6 +115,10 @@ impl Badge {
             let mut wrapper = ContainerProps::default();
             wrapper.layout.position = PositionStyle::Relative;
             wrapper.layout.overflow = fret_ui::element::Overflow::Visible;
+            if let Some(anchor_size) = self.anchor_size {
+                wrapper.layout.size.width = Length::Px(anchor_size);
+                wrapper.layout.size.height = Length::Px(anchor_size);
+            }
 
             let badge = badge_element(
                 cx,
@@ -180,7 +192,16 @@ fn badge_element<H: UiHost>(
     match placement {
         BadgePlacement::TopRight => {
             inset.top = Some(Px(0.0)).into();
-            inset.right = Some(Px(0.0)).into();
+            if let Some(anchor) = anchor_size {
+                let badge_width = if is_large {
+                    resolved.large_size
+                } else {
+                    resolved.dot_size
+                };
+                inset.left = Some(Px((anchor.0 - badge_width.0).max(0.0))).into();
+            } else {
+                inset.right = Some(Px(0.0)).into();
+            }
         }
         BadgePlacement::NavigationIcon => {
             let anchor = anchor_size.unwrap_or(Px(24.0));

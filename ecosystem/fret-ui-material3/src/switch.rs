@@ -34,6 +34,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::{centered_fill, enforce_minimum_interactive_size};
+use crate::foundation::test_id::{chrome_part_test_id, part_test_id};
 use crate::tokens::switch as switch_tokens;
 
 #[derive(Debug, Clone)]
@@ -48,11 +49,11 @@ struct SwitchPartTestIds {
 impl SwitchPartTestIds {
     fn from_base(base: &Arc<str>) -> Self {
         Self {
-            chrome: Arc::from(format!("{base}.chrome")),
-            track: Arc::from(format!("{base}.track")),
-            handle: Arc::from(format!("{base}.handle")),
-            icon_on: Arc::from(format!("{base}.icon-on")),
-            icon_off: Arc::from(format!("{base}.icon-off")),
+            chrome: chrome_part_test_id(base),
+            track: part_test_id(base, "track"),
+            handle: part_test_id(base, "handle"),
+            icon_on: part_test_id(base, "icon-on"),
+            icon_off: part_test_id(base, "icon-off"),
         }
     }
 }

@@ -1,6 +1,6 @@
 # Material 3 Component Alignment Sweep v1
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-27
 
 ## Why This Lane Exists

@@ -1,6 +1,6 @@
 # Material 3 Component Alignment Sweep v1 - Evidence And Gates
 
-Status: Active
+Status: Closed
 Last updated: 2026-05-27
 
 ## Smallest Current Repro
@@ -75,6 +75,10 @@ cargo run -p fretboard -- diag run <script.json> --env FRET_DIAG_FIXED_FRAME_DEL
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md`
 - `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md`
+- `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md`
+- `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md`
+- `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_foundation_consolidation_v1.md`
+- `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_test_modularization_v1.md`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_coverage_inventory_v1.json`
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_test_id_contract_v1.md`
@@ -208,6 +212,105 @@ cargo run -p fretboard -- diag run <script.json> --env FRET_DIAG_FIXED_FRAME_DEL
     follow-ons rather than hidden recipe fixes.
   - Note: `git diff --check` emitted only the existing CRLF warning for `radio_alignment.rs`.
   - Evidence note: `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md`
+- 2026-05-27: M3CAS-080 choice-control/chip selector and behavior packet.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment checkbox_pressed_scene_structure_is_stable`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment checkbox_tristate_semantics_and_toggle_outcomes`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment radio_selected_dot_is_centered_in_outline`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment radio_ripple_origin_tracks_pointer_down_position`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment switch_ripple_origin_tracks_pointer_down_position`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment switch_ripple_holds_for_minimum_press_duration_before_fade`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment icon_button_pressed_scene_structure_is_stable`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment chips_export_checked_state_for_selected_semantics`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment segmented_button_semantics_roles_match_compose_baseline`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment chip_set_roving_treats_trailing_action_focus_as_active_chip`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_segmented_button_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_slider_suite_goldens_v1`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - `python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/WORKSTREAM.json`
+  - `python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
+  - `python tools/check_workstream_catalog.py`
+  - Result: `automation_surface` has 17 passing tests and now covers Checkbox, RadioGroup/Radio,
+    IconButton, IconToggleButton, Slider, RangeSlider, SegmentedButtonSet, ChipSet, AssistChip,
+    SuggestionChip, FilterChip, and InputChip selectors.
+  - Layer result: shared state-layer/ripple and minimum interactive sizing remain in Material
+    foundation; checked semantics, selected indicators, group roving, and chip trailing actions are
+    recipe-owned for now. Slider internal canvas paint parts remain scene/golden-gated.
+  - Evidence note: `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md`
+- 2026-05-27: M3CAS-090 surface/data-display selector and golden packet.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_surface_data_display_expose_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_badge_suite_goldens_v1` initially failed on stale/ambiguous TopRight badge geometry.
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_divider_suite_goldens_v1` initially failed on stale zero-width horizontal divider goldens.
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_progress_indicator_suite_goldens_v1` initially failed on stale fixed-frame progress scene snapshots.
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_fab_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_list_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_top_app_bar_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_carousel_item_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_controls_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment top_app_bar_exposes_toolbar_semantics_role`
+  - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_badge_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS`
+  - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_divider_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS`
+  - `$env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_progress_indicator_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_badge_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_divider_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_progress_indicator_suite_goldens_v1`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface`
+  - Result: `automation_surface` has 18 passing tests and now covers Badge, Button, Card,
+    CarouselItem, Divider, FAB, List, LinearProgressIndicator, CircularProgressIndicator, and
+    TopAppBar selectors.
+  - Layer result: Badge anchoring is recipe-owned and now has an explicit `anchor_size` contract;
+    interactive surface state-layer/ripple/minimum sizing remains in Material foundation;
+    ProgressIndicator internal canvas paint parts remain golden-gated until named draw-region
+    diagnostics exist; no new kit-policy or mechanism gap was found.
+  - Evidence note: `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md`
+- 2026-05-27: M3CAS-100 foundation/test-id consolidation.
+  - `rg -n 'format!\\(\"\\{id\\}\\.chrome\"\\)|format!\\(\"\\{base\\}\\.chrome\"\\)|Arc::<str>::from\\(format!\\(\"\\{id\\}\\.chrome\"\\)\\)|Arc::from\\(format!\\(\"\\{base\\}\\.chrome\"\\)\\)' ecosystem/fret-ui-material3/src -g '*.rs'`
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment navigation_drawer_roving_skips_disabled_and_updates_model`
+  - `cargo nextest run -p fret-ui-material3 --test select_behavior`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: `foundation::test_id` now owns dotted chrome/part helper construction used by
+    Select, Switch, Dialog, Menu, List, CarouselItem, NavigationDrawer, and interactive-size
+    helpers. `automation_surface` has 19 passing tests and includes NavigationDrawer selector proof.
+  - Note: `cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_navigation_suite_goldens_v1`
+    still reports unrelated stale navigation geometry drift and was not used as a helper-refactor
+    proof gate.
+  - Layer result: no new state-layer/ripple/minimum-size abstraction was justified beyond existing
+    Material foundation helpers; no mechanism or kit-policy change was made.
+  - Evidence note: `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_foundation_consolidation_v1.md`
+- 2026-05-27: M3CAS-110 first `radio_alignment.rs` split.
+  - `cargo fmt --package fret-ui-material3`
+  - `cargo nextest run -p fret-ui-material3 --test top_app_bar_alignment`
+  - `cargo test -p fret-ui-material3 --test radio_alignment --no-run`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - Result: TopAppBar toolbar semantics moved to a dedicated integration target without broad golden
+    churn; the old `radio_alignment` target still compiles.
+  - Evidence note: `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_test_modularization_v1.md`
+- 2026-05-27: M3CAS-120 sweep closeout.
+  - `cargo fmt --package fret-ui-material3 -- --check`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_modal_navigation_drawer_exposes_stable_part_test_ids`
+  - `cargo nextest run -p fret-ui-material3 --test radio_alignment modal_navigation_drawer_focus_is_contained_and_restored_across_schemes`
+  - `cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface`
+  - `cargo nextest run -p fret-ui-material3 --test top_app_bar_alignment`
+  - `cargo nextest run -p fret-ui-material3 --test select_behavior`
+  - `cargo check -p fret-ui-material3 --features diagnostics --tests`
+  - `cargo clippy -p fret-ui-material3 --features diagnostics --tests --no-deps -- -D warnings`
+  - `python -m py_compile tools/parity-discovery/shadcn_parity_discovery.py`
+  - `python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/material3_parity_discovery_v1.json --suite-from-existing-reports --suite-output docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json`
+  - `python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/WORKSTREAM.json`
+  - `python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json`
+  - `python tools/check_workstream_catalog.py`
+  - `git diff --check -- docs/workstreams/material3-component-alignment-sweep-v1 ecosystem/fret-ui-material3/src ecosystem/fret-ui-material3/tests goldens/material3-headless/v1`
+  - Result: `automation_surface` has 20 passing tests including ModalNavigationDrawer root/scrim/scrim.chrome/panel selectors; TopAppBar has 1 passing split test; Select behavior has 8 passing tests; crate check and clippy pass; parity suite regeneration reports 4 reports, 16 parts, and 0 top findings.
+  - Matrix result: all 39 rows are classified, and no row is missing `selector_status`, `first_gate_kind`, or `layer_classification`.
+  - Diff check result: passed with only the known CRLF warning for `ecosystem/fret-ui-material3/tests/radio_alignment.rs`.
+  - Evidence notes: `docs/workstreams/material3-component-alignment-sweep-v1/CLOSEOUT_AUDIT_2026-05-27.md`; `docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_sweep_closeout_v1.md`
 
 ## Proof Note Template
 

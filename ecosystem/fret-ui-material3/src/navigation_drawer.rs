@@ -33,6 +33,7 @@ use crate::foundation::indication::{
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::optional_chrome_part_test_id;
 use crate::tokens::navigation_drawer as drawer_tokens;
 
 #[derive(Debug, Clone)]
@@ -226,6 +227,8 @@ impl NavigationDrawer {
             props.flex.gap = Px(0.0).into();
             props.flex.justify = MainAlign::Start;
             props.flex.align = CrossAlign::Stretch;
+            props.flex.layout.size.width = Length::Fill;
+            props.flex.layout.size.height = Length::Fill;
             props.flex.padding = Edges {
                 left: item_h_pad,
                 right: item_h_pad,
@@ -613,9 +616,7 @@ fn navigation_drawer_item<H: UiHost>(
                     move |_cx| content_children,
                 );
 
-                let chrome_test_id = test_id
-                    .as_ref()
-                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                let chrome_test_id = optional_chrome_part_test_id(test_id.as_ref());
                 let mut chrome = cx.container(
                     ContainerProps {
                         background: selected.then_some(selected_bg),
