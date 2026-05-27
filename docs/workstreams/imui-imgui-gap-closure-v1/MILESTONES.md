@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 P0/P2 canonical workbench status refresh result:
+`P0_CURRENT_SOURCE_AUDIT_2026-05-06.md` and `TODO.md` now name
+`cargo run -p fret-demo --bin imui_editor_workbench_demo` as the canonical product-facing editor
+workbench route. `imui_editor_proof_demo`, `workspace_shell_demo`, and docking demos remain
+supporting proof surfaces, while current workbench verification points at
+`imui_editor_workbench_golden_path_surface`.
+
 2026-05-27 debug-draw path-command family owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands.rs` is now a thin
 family router. `path_commands/linear.rs` owns line/polyline/polygon/rect/quad/triangle dispatch,

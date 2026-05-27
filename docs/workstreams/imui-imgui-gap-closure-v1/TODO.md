@@ -19,6 +19,14 @@ Last updated: 2026-05-27
 
 ## Current Gap Refresh - 2026-05-27
 
+- [x] Refresh `P0_CURRENT_SOURCE_AUDIT_2026-05-06.md` and the P2 TODO status so the active gap map
+      no longer treats `imui_editor_proof_demo` as the canonical editor-panel route after the
+      workbench lane closed.
+      Result: the active P0 read now names `cargo run -p fret-demo --bin
+      imui_editor_workbench_demo` as the canonical product-facing editor workbench route, keeps
+      `imui_editor_proof_demo`, `workspace_shell_demo`, and docking demos as supporting proof
+      surfaces, and points current workbench verification at
+      `imui_editor_workbench_golden_path_surface`.
 - [x] Refresh `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md` so the active gap map no longer treats
       ListBox, plot adapter, or style/theme preset picker as open candidate-only gaps after their
       closed proof lanes landed.
@@ -611,19 +619,20 @@ Last updated: 2026-05-27
 ## P2 - User-Usable Golden Path
 
 - [x] Pick the smallest runnable proof that should teach a complete editor panel.
-      Result: `apps/fret-examples/src/imui_editor_proof_demo.rs` plus the demo-local
-      `collection.rs` module is the selected proof surface; `cargo check -p fret-demo --bin
-      imui_editor_proof_demo` passes.
+      Current result: `apps/fret-examples/src/imui_editor_workbench_demo.rs` is the canonical
+      product-facing editor workbench route and mounts the editor-notes workflow directly.
+      `imui_editor_proof_demo` remains supporting collection-first proof evidence rather than the
+      route a new user should open first.
 - [x] Verify the proof includes state, command/action dispatch, editor controls, menu/popup, and
       diagnostic-friendly `test_id`s.
-      Result: the proof carries named demo state, explicit action handlers, popup/menu dispatch,
-      and stable `test_id` / `viewport_test_id` anchors; the collection source-guard tests now
-      pass under `cargo nextest run -p fret-examples --test ...`.
+      Current result: `imui_editor_workbench_golden_path_surface` proves the canonical route owns
+      the app shell, mounts a real editor workflow, surfaces the editor-owned style/theme preset
+      picker, is exported by `fret-examples`, and is advertised by `fret-demo`.
 - [x] Promote missing cookbook/docs references only after the proof runs and source gates pass.
-      Result: `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`, and
-      `docs/examples/README.md` now point from the focused IMUI cookbook lessons to
-      `cargo run -p fret-demo --bin imui_editor_proof_demo` as the heavier editor-panel proof,
-      without reclassifying it as a boring-ladder cookbook example.
+      Current result: `apps/fret-cookbook/README.md`, `apps/fret-cookbook/EXAMPLES.md`,
+      `docs/examples/README.md`, diagnostics first-open docs, and Demo/Metrics/Debug discovery now
+      point to `cargo run -p fret-demo --bin imui_editor_workbench_demo`, while the older proof
+      demos stay discoverable as supporting evidence.
 
 ## P3 - Dear ImGui-Class Follow-On Candidates
 

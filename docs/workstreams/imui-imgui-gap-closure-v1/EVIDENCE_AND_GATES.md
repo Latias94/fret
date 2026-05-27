@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-27
 
+## P0/P2 Canonical Workbench Current-Status Refresh Evidence - 2026-05-27
+
+Claim verified: the active gap map no longer treats `imui_editor_proof_demo` as the canonical
+editor-panel route after the golden-path workbench lane closed.
+
+Evidence:
+
+- `docs/workstreams/imui-imgui-gap-closure-v1/P0_CURRENT_SOURCE_AUDIT_2026-05-06.md` now names
+  `cargo run -p fret-demo --bin imui_editor_workbench_demo` as the canonical product-facing editor
+  workbench route.
+- `docs/workstreams/imui-imgui-gap-closure-v1/TODO.md` keeps `imui_editor_proof_demo`,
+  `workspace_shell_demo`, and docking demos as supporting proof surfaces.
+- `apps/fret-examples/tests/imui_editor_workbench_golden_path_surface.rs` verifies the workbench
+  route, direct editor workflow mounting, style/theme preset picker integration, export path,
+  `fret-demo` dispatch, docs promotion, and Demo/Metrics/Debug discovery.
+- `tools/gate_imui_workstream_source.py` now rejects the stale P0/P2 wording that said the default
+  editor-panel story was still fragmented.
+
+Focused gates:
+
+- `cargo check -p fret-demo --bin imui_editor_workbench_demo`: pass.
+- `cargo nextest run -p fret-examples --test imui_editor_workbench_golden_path_surface --no-fail-fast`:
+  pass; 2 tests.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Path-Command Family Owner-Split Evidence - 2026-05-27
 
 Claim verified: path-command dispatch is split by shape family without changing canvas keys, draw
