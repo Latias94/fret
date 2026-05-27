@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 table builder owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/builder.rs` now owns `ImUiTable` /
+`ImUiTableRow`, built row/cell records, row/cell test-id derivation, child `ImUiFacade`
+mounting, and `cell_text(...)` table-cell text routing. `table_controls.rs` keeps only module
+wiring, public table builder re-exports, `table_element(...)`, and final render dispatch.
+
 2026-05-27 input-text element owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_controls/input.rs` now owns input-text model element assembly,
 assistive semantics, response lifecycle population, select-all command emission, input filters,

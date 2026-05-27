@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Table Builder Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI table row/cell builder collection moved into a private owner without changing
+`table(...)` / `table_with_options(...)` facade calls, public `ImUiTable` / `ImUiTableRow` method
+names, row/cell test-id derivation, child `ImUiFacade` mounting, `cell_text(...)` text routing, or
+final table rendering.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls.rs` keeps module wiring, public table builder
+  re-exports, `table_element(...)`, and final render dispatch.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/builder.rs` owns `ImUiTable` / `ImUiTableRow`,
+  built row/cell records, row/cell test-id derivation, child `ImUiFacade` mounting, and
+  `cell_text(...)` table-cell text routing.
+- `tools/gate_imui_workstream_source.py` now rejects table builder row/cell collection bodies from
+  drifting back into root `table_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls::tests --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Input-Text Element Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI input-text element assembly moved into a private owner without changing

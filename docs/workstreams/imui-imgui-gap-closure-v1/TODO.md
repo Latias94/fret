@@ -680,6 +680,15 @@ Last updated: 2026-05-27
       hidden-column filtering, fallback empty-cell insertion, body cell wrapping, and body row
       wrapping. `render.rs` keeps palette, visible-column, scroll/header decisions, root chrome,
       semantics, and final `TableResponse` assembly.
+- [x] Split IMUI table builder row/cell collection out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls.rs` into a private builder owner without
+      changing `table(...)`/`table_with_options(...)` facade calls, public `ImUiTable` /
+      `ImUiTableRow` method names, row/cell test-id derivation, child `ImUiFacade` mounting,
+      `cell_text(...)` text routing, or final table rendering.
+      Result: `table_controls/builder.rs` owns `ImUiTable` / `ImUiTableRow`, built row/cell
+      records, row/cell test-id derivation, child `ImUiFacade` mounting, and `cell_text(...)`
+      table-cell text routing. `table_controls.rs` keeps module wiring, public table builder
+      re-exports, `table_element(...)`, and final render dispatch.
 - [x] Split IMUI table header label/sort helpers out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` into a private owner module without
       changing visible-label parsing, sortable/plain header wrapping, sort glyph text role,

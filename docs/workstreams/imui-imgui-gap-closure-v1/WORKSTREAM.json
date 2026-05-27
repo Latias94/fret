@@ -982,6 +982,7 @@
     "ecosystem/fret-imui/src/tests/interaction_shortcuts/mod.rs",
     "ecosystem/fret-imui/src/tests/label_identity/mod.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/builder.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/body.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/cell.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/header.rs",
