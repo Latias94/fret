@@ -33,6 +33,7 @@ goldens.
 | Time dial/input display modes | `material_recipe` | Existing staged time model, selector keyboard handling, dial pointer handling, and input auto-advance are recipe-owned. |
 | Stable automation selectors | `diagnostics` + `material_recipe` | Old hyphen/global ids were replaced with base-derived dotted part ids. |
 | Date selectable-date disabling | `material_recipe` | A DatePicker predicate now disables blocked day cells across docked and modal surfaces while preserving value-derived anchors. |
+| Date displayed-month live region | `material_recipe` | The month/year label now has docked/modal part ids and polite atomic live-region semantics. |
 | Time input invalid/error text | `material_recipe` | Editable invalid input stays staged, exposes invalid semantics, and switches supporting text without changing committed time. |
 | Headless picker golden drift | `test_harness` | The current scenes are stable. Previous picker goldens encoded stale stretched underlay/action-button geometry. |
 | Accessibility parity depth | `follow_on` | Richer calendar/time-grid semantics should be split from this selector/golden packet. |
@@ -43,8 +44,10 @@ DatePicker now derives stable ids from the supplied base:
 
 - `date_picker`
 - `date_picker.chrome`
+- `date_picker.docked.month-label`
 - `date_picker.docked.prev`
 - `date_picker.docked.next`
+- `date_picker.modal.month-label`
 - `date_picker.modal.prev`
 - `date_picker.modal.next`
 - `date_picker.cell.<row>.<col>`
@@ -62,6 +65,13 @@ DatePicker now also exposes recipe-level selectable-date policy:
 
 Predicate-blocked dates remain visible, expose disabled semantics through the row/column cell, keep
 their value-derived date anchor, and cannot update docked or dialog selection state.
+
+DatePicker now also exposes the displayed month/year label as a polite atomic live region:
+
+- `date_picker.docked.month-label`
+- `date_picker.modal.month-label`
+
+The label text updates when month navigation changes the displayed month.
 
 TimePicker now derives stable ids from the supplied base:
 
@@ -110,6 +120,7 @@ The UI gallery TimePicker chrome-fill diagnostic was updated to use these base-d
 - `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
 - `docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/artifacts/date_picker_day_cell_selectors_packet_v1.md`
 - `docs/workstreams/material3-date-picker-selectable-dates-packet-v1/artifacts/date_picker_selectable_dates_packet_v1.md`
+- `docs/workstreams/material3-date-picker-month-live-region-packet-v1/artifacts/date_picker_month_live_region_packet_v1.md`
 - `docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md`
 - `docs/workstreams/material3-time-picker-input-error-packet-v1/artifacts/time_picker_input_error_packet_v1.md`
 - `tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-time-picker-chrome-fill.json`
@@ -123,6 +134,7 @@ cargo fmt --package fret-ui-material3
 cargo check -p fret-ui-material3 --features diagnostics --tests
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_respects_selectable_dates
+cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_month_label_is_polite_live_region
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_clock_dial_drag_updates_time
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_selector_keyboard_arrows_step_time
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_replaces_and_auto_advances_hour
@@ -140,7 +152,7 @@ python tools/check_workstream_catalog.py
 
 ## Residual Risk
 
-- DatePicker still needs localized day/month labels and announcement surface.
+- DatePicker still needs localized day/month labels and richer date descriptions.
 - TimePicker still needs localized labels/strings and broader live-region announcements beyond the
   input supporting-text error state closed here.
 - These are accessibility depth follow-ons, not blockers for the current component/foundation

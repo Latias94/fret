@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use fret_core::{AppWindowId, Point, PointerId, Px, Rect, Size, UiServices};
+use fret_core::{AppWindowId, Point, PointerId, Px, Rect, SemanticsLive, Size, UiServices};
 use fret_runtime::{ModelHost, PlatformCapabilities};
 use fret_ui::UiTree;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
@@ -60,6 +60,33 @@ fn semantics_node_disabled(ui: &UiTree<TestHost>, test_id: &str) -> bool {
         .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"))
         .flags
         .disabled
+}
+
+fn semantics_node_label(ui: &UiTree<TestHost>, test_id: &str) -> String {
+    ui.semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(test_id))
+        })
+        .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"))
+        .label
+        .clone()
+        .unwrap_or_else(|| panic!("expected semantics label for test_id {test_id}"))
+}
+
+fn semantics_node_live(ui: &UiTree<TestHost>, test_id: &str) -> Option<(SemanticsLive, bool)> {
+    let node = ui
+        .semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(test_id))
+        })
+        .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"));
+    node.flags.live.map(|live| (live, node.flags.live_atomic))
 }
 
 #[test]
@@ -1430,6 +1457,7 @@ fn material3_date_picker_exposes_stable_part_test_ids() {
         for id in [
             "m3-date-picker",
             "m3-date-picker.chrome",
+            "m3-date-picker.docked.month-label",
             "m3-date-picker.docked.prev",
             "m3-date-picker.docked.next",
             "m3-date-picker.cell.0.0",
@@ -1504,6 +1532,7 @@ fn material3_date_picker_exposes_stable_part_test_ids() {
             "m3-date-picker-modal.scrim",
             "m3-date-picker-modal.scrim.chrome",
             "m3-date-picker-modal.panel",
+            "m3-date-picker-modal.modal.month-label",
             "m3-date-picker-modal.modal.prev",
             "m3-date-picker-modal.modal.next",
             "m3-date-picker-modal.cell.0.0",
@@ -1518,6 +1547,84 @@ fn material3_date_picker_exposes_stable_part_test_ids() {
             );
         }
     }
+}
+
+#[test]
+fn material3_date_picker_month_label_is_polite_live_region() {
+    use fret_ui_kit::headless::calendar::CalendarMonth;
+    use fret_ui_material3::{DatePickerVariant, DockedDatePicker};
+    use time::{Date, Month};
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(560.0), Px(420.0)),
+    );
+
+    let today = Date::from_calendar_date(2026, Month::January, 10).expect("valid date");
+    let month = app
+        .models_mut()
+        .insert(CalendarMonth::new(2026, Month::January));
+    let selected = app.models_mut().insert(None::<Date>);
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let picker = DockedDatePicker::new(month.clone(), selected.clone())
+                    .variant(DatePickerVariant::Docked)
+                    .today(Some(today))
+                    .test_id("m3-date-picker")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(32.0), picker)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        semantics_node_label(&ui, "m3-date-picker.docked.month-label"),
+        "January 2026",
+        "initial month label should be exposed to semantics"
+    );
+    assert_eq!(
+        semantics_node_live(&ui, "m3-date-picker.docked.month-label"),
+        Some((SemanticsLive::Polite, true)),
+        "month label should be a polite atomic live region"
+    );
+
+    click_semantics_test_id(
+        &mut ui,
+        &mut app,
+        &mut services,
+        "m3-date-picker.docked.next",
+        PointerId(50),
+    );
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        semantics_node_label(&ui, "m3-date-picker.docked.month-label"),
+        "February 2026",
+        "month navigation should update the live region label"
+    );
+    assert_eq!(
+        semantics_node_live(&ui, "m3-date-picker.docked.month-label"),
+        Some((SemanticsLive::Polite, true)),
+        "month label should remain live after navigation"
+    );
 }
 
 #[test]

@@ -8,12 +8,12 @@
 use std::sync::Arc;
 use std::sync::OnceLock;
 
-use fret_core::{Axis, Color, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{Axis, Color, Edges, Px, SemanticsLive, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::{DismissReason, DismissRequestCx, OnActivate, OnDismissRequest};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetEdge, LayoutStyle, Length, MainAlign,
-    Overflow, PressableA11y, PressableProps, TextProps,
+    Overflow, PressableA11y, PressableProps, SemanticsDecoration, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
@@ -915,13 +915,12 @@ fn month_nav_header<H: UiHost>(
         st.title.as_ref().expect("title").clone()
     });
 
-    let mut row = FlexProps::default();
-    row.direction = Axis::Horizontal;
-    row.justify = MainAlign::SpaceBetween;
-    row.align = CrossAlign::Center;
-    row.wrap = false;
-    row.layout.size.width = Length::Fill;
-    row.gap = Px(12.0).into();
+    let base_id = test_id.clone().unwrap_or_else(default_date_picker_test_id);
+    let tag = match token_variant {
+        DatePickerTokenVariant::Docked => "docked",
+        DatePickerTokenVariant::Modal => "modal",
+    };
+    let month_label_test_id = part_test_id(&base_id, &format!("{tag}.month-label"));
 
     let title_el = {
         let (style, color) = {
@@ -944,10 +943,21 @@ fn month_nav_header<H: UiHost>(
         props.align = fret_core::TextAlign::Center;
         props.wrap = TextWrap::None;
         props.overflow = TextOverflow::Ellipsis;
-        cx.text_props(props)
+        cx.text_props(props).a11y(
+            SemanticsDecoration::default()
+                .test_id(month_label_test_id)
+                .live(Some(SemanticsLive::Polite))
+                .live_atomic(true),
+        )
     };
 
-    let base_id = test_id.clone().unwrap_or_else(default_date_picker_test_id);
+    let mut row = FlexProps::default();
+    row.direction = Axis::Horizontal;
+    row.justify = MainAlign::SpaceBetween;
+    row.align = CrossAlign::Center;
+    row.wrap = false;
+    row.layout.size.width = Length::Fill;
+    row.gap = Px(12.0).into();
 
     let prev: OnActivate = {
         let month_model = month_model.clone();
@@ -966,11 +976,6 @@ fn month_nav_header<H: UiHost>(
                 .update(&month_model, |m| *m = m.next_month());
             host.request_redraw(action_cx.window);
         })
-    };
-
-    let tag = match token_variant {
-        DatePickerTokenVariant::Docked => "docked",
-        DatePickerTokenVariant::Modal => "modal",
     };
 
     let prev_test_id = part_test_id(&base_id, &format!("{tag}.prev"));

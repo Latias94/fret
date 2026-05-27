@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 486
+- Dedicated directories: 487
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2238,6 +2238,7 @@ Rule:
 - `docs/workstreams/material3-canvas-draw-region-diagnostics-v1/` — first 2026-05-28, latest 2026-05-28, 7 markdown docs (closed follow-on for Material3 ProgressIndicator/Slider canvas draw-region diagnostics, recipe-level rectangular anchors, and named SceneOp mechanism split; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-component-alignment-sweep-v1/` — first 2026-05-27, latest 2026-05-27, 6 markdown docs (closed Material 3 all-component alignment sweep with component matrix, packet waves, foundation-escalation rules, closeout audit, and narrow follow-ons; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 DatePicker value-derived day-cell selector aliases while preserving row/column selectors; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-date-picker-month-live-region-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 DatePicker displayed-month live-region semantics and month-label selectors; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-date-picker-selectable-dates-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 DatePicker selectable-date disabling across docked and modal picker surfaces; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-navigation-drawer-overlay-packet-v1/` — first 2026-05-27, latest 2026-05-27, 6 markdown docs (closed follow-on for NavigationDrawer/ModalNavigationDrawer golden drift classification, selected-pill geometry repair, overlay packet evidence, and repaired drawer diagnostic gate; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-navigation-drawer-selector-completion-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 NavigationDrawer root chrome and item icon/label/badge selector completion; includes `WORKSTREAM.json`)
