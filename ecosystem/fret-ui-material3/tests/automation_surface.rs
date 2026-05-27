@@ -2,12 +2,18 @@
 
 //! Stable automation-surface tests for Material 3 recipes.
 
-use std::sync::Arc;
+use std::{rc::Rc, sync::Arc};
 
 use fret_core::{
     AppWindowId, Point, PointerId, Px, Rect, SemanticsLive, SemanticsRole, Size, UiServices,
 };
-use fret_runtime::{ModelHost, PlatformCapabilities};
+use fret_runtime::{
+    ModelHost, PlatformCapabilities,
+    fret_i18n::{
+        I18nLookup, I18nLookupError, I18nService, LocaleId, LocalizedMessage, MessageArgValue,
+        MessageArgs, MessageKey,
+    },
+};
 use fret_ui::UiTree;
 use fret_ui_material3::tokens::v30::{DynamicVariant, SchemeMode};
 
@@ -114,6 +120,76 @@ fn semantics_node_selected(ui: &UiTree<TestHost>, test_id: &str) -> bool {
         .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"))
         .flags
         .selected
+}
+
+fn message_arg_u64(args: Option<&MessageArgs>, name: &str) -> u64 {
+    args.and_then(|args| {
+        args.iter().find_map(|(key, value)| {
+            (key == name).then_some(match value {
+                MessageArgValue::Unsigned(value) => *value,
+                MessageArgValue::Integer(value) => (*value).try_into().unwrap_or_default(),
+                MessageArgValue::Number(value) => *value as u64,
+                MessageArgValue::String(_) | MessageArgValue::Bool(_) => 0,
+            })
+        })
+    })
+    .unwrap_or_default()
+}
+
+struct TimePickerStringLookup;
+
+impl I18nLookup for TimePickerStringLookup {
+    fn format(
+        &self,
+        preferred_locales: &[LocaleId],
+        key: &MessageKey,
+        args: Option<&MessageArgs>,
+    ) -> Result<LocalizedMessage, I18nLookupError> {
+        let locale = preferred_locales
+            .first()
+            .cloned()
+            .unwrap_or_else(LocaleId::en_us);
+        let text = match key.as_str() {
+            "material3-time-picker-title" => "Localized select time".to_string(),
+            "material3-time-picker-dismiss" => "Localized dismiss".to_string(),
+            "material3-time-picker-cancel" => "Localized cancel".to_string(),
+            "material3-time-picker-confirm" => "Localized ok".to_string(),
+            "material3-time-picker-toggle-input" => "Localized text input mode".to_string(),
+            "material3-time-picker-toggle-dial" => "Localized clock mode".to_string(),
+            "material3-time-picker-hour-selection" => "Localized hour selector".to_string(),
+            "material3-time-picker-minute-selection" => "Localized minute selector".to_string(),
+            "material3-time-picker-hour-text-field" => "Localized hour input".to_string(),
+            "material3-time-picker-minute-text-field" => "Localized minute input".to_string(),
+            "material3-time-picker-period-toggle" => "Localized period toggle".to_string(),
+            "material3-time-picker-period-am" => "Localized AM".to_string(),
+            "material3-time-picker-period-pm" => "Localized PM".to_string(),
+            "material3-time-picker-hour" => "Localized hour supporting text".to_string(),
+            "material3-time-picker-minute" => "Localized minute supporting text".to_string(),
+            "material3-time-picker-hour-error-12h" => "Localized 12h hour error".to_string(),
+            "material3-time-picker-hour-error-24h" => "Localized 24h hour error".to_string(),
+            "material3-time-picker-minute-error" => "Localized minute error".to_string(),
+            "material3-time-picker-hour-value-12h" => {
+                format!("Localized 12h hour {}", message_arg_u64(args, "hour"))
+            }
+            "material3-time-picker-hour-value-24h" => {
+                format!("Localized 24h hour {}", message_arg_u64(args, "hour"))
+            }
+            "material3-time-picker-minute-value" => {
+                format!("Localized minute {}", message_arg_u64(args, "minute"))
+            }
+            _ => return Err(I18nLookupError::MissingKey { key: key.clone() }),
+        };
+
+        Ok(LocalizedMessage {
+            text,
+            locale,
+            fallback_depth: 0,
+        })
+    }
+}
+
+fn install_time_picker_string_lookup(app: &mut TestHost) {
+    app.set_global(I18nService::default().with_lookup(Rc::new(TimePickerStringLookup)));
 }
 
 fn semantics_node_live(ui: &UiTree<TestHost>, test_id: &str) -> Option<(SemanticsLive, bool)> {
@@ -2254,6 +2330,242 @@ fn material3_time_picker_uses_compose_aligned_accessibility_labels() {
             &ui,
             "m3-time-picker-input.input.period.pm"
         ));
+    }
+}
+
+#[test]
+fn material3_time_picker_uses_material_string_registry() {
+    use fret_ui_material3::{
+        Button, ButtonVariant, DockedTimePicker, TimePickerDialog, TimePickerDisplayMode,
+    };
+    use time::Time;
+
+    {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        install_time_picker_string_lookup(&mut app);
+        apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(560.0), Px(520.0)),
+        );
+
+        let time = app
+            .models_mut()
+            .insert(Time::from_hms(9, 41, 0).expect("valid time"));
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let picker = DockedTimePicker::new(time.clone())
+                        .display_mode(TimePickerDisplayMode::Dial)
+                        .test_id("m3-time-picker-i18n")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(32.0), picker)]
+                })
+            };
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-i18n.mode-toggle"),
+            "Localized text input mode"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-i18n.hour-selector"),
+            "Localized hour selector"
+        );
+        assert_eq!(
+            semantics_node_value(&ui, "m3-time-picker-i18n.hour-selector").as_deref(),
+            Some("Localized 12h hour 9")
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-i18n.minute-selector"),
+            "Localized minute selector"
+        );
+        assert_eq!(
+            semantics_node_value(&ui, "m3-time-picker-i18n.minute-selector").as_deref(),
+            Some("Localized minute 41")
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-i18n.clock-dial.hour.09"),
+            "Localized 12h hour 9"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-i18n.period"),
+            "Localized period toggle"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-i18n.period.am"),
+            "Localized AM"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-i18n.period.pm"),
+            "Localized PM"
+        );
+
+        click_semantics_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            "m3-time-picker-i18n.minute-selector",
+            PointerId(1),
+        );
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-i18n.clock-dial.minute.55"),
+            "Localized minute 55"
+        );
+    }
+
+    {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        install_time_picker_string_lookup(&mut app);
+        apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(560.0), Px(520.0)),
+        );
+
+        let time = app
+            .models_mut()
+            .insert(Time::from_hms(21, 5, 0).expect("valid time"));
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let picker = DockedTimePicker::new(time.clone())
+                        .display_mode(TimePickerDisplayMode::Input)
+                        .test_id("m3-time-picker-input-i18n")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(32.0), picker)]
+                })
+            };
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-input-i18n.mode-toggle"),
+            "Localized clock mode"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-input-i18n.input.hour"),
+            "Localized hour input"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-input-i18n.input.hour.supporting-text"),
+            "Localized hour supporting text"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-input-i18n.input.minute"),
+            "Localized minute input"
+        );
+        assert_eq!(
+            semantics_node_label(
+                &ui,
+                "m3-time-picker-input-i18n.input.minute.supporting-text"
+            ),
+            "Localized minute supporting text"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-input-i18n.input.period"),
+            "Localized period toggle"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-input-i18n.input.period.am"),
+            "Localized AM"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-input-i18n.input.period.pm"),
+            "Localized PM"
+        );
+    }
+
+    {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        install_time_picker_string_lookup(&mut app);
+        apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(720.0), Px(520.0)),
+        );
+
+        let open = app.models_mut().insert(true);
+        let time = app
+            .models_mut()
+            .insert(Time::from_hms(9, 41, 0).expect("valid time"));
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let dialog = TimePickerDialog::new(open.clone(), time.clone())
+                        .open_duration_ms(Some(1))
+                        .close_duration_ms(Some(1))
+                        .test_id("m3-time-picker-modal-i18n")
+                        .into_element(cx, |cx| {
+                            Button::new("Underlay")
+                                .variant(ButtonVariant::Outlined)
+                                .test_id("m3-time-picker-underlay-i18n")
+                                .into_element(cx)
+                        });
+                    vec![with_padding(cx, Px(32.0), dialog)]
+                })
+            };
+
+        for _ in 0..8 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                true,
+                |ui, app, services| render(ui, app, services),
+            );
+            if live_test_id_exists(&ui, &app, window, "m3-time-picker-modal-i18n.panel") {
+                break;
+            }
+        }
+
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-modal-i18n.scrim"),
+            "Localized dismiss"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-modal-i18n.actions.cancel"),
+            "Localized cancel"
+        );
+        assert_eq!(
+            semantics_node_label(&ui, "m3-time-picker-modal-i18n.actions.confirm"),
+            "Localized ok"
+        );
     }
 }
 

@@ -36,6 +36,7 @@ goldens.
 | Date displayed-month live region | `material_recipe` | The month/year label now has docked/modal part ids and polite atomic live-region semantics. |
 | Time input invalid/error text | `material_recipe` | Editable invalid input stays staged, exposes invalid semantics, and switches supporting text without changing committed time. |
 | Time selector accessibility labels | `material_recipe` | Hour/minute selectors now expose Compose-aligned radio-button semantics, spoken values, dial labels, and period-group labels. |
+| Time string registry | `material_foundation` + `material_recipe` | TimePicker labels, spoken values, input supporting/error text, scrim, and actions now route through Material string helpers over `I18nService` with English fallback. |
 | Headless picker golden drift | `test_harness` | The current scenes are stable. Previous picker goldens encoded stale stretched underlay/action-button geometry. |
 | Accessibility parity depth | `follow_on` | Richer calendar/time-grid semantics should be split from this selector/golden packet. |
 
@@ -119,20 +120,31 @@ TimePicker selector accessibility labels now align with Compose Material3:
 - Selector values and dial labels expose spoken labels such as `9 o'clock` and `41 minutes`.
 - Dial and input period controls have parent `Select AM or PM` group labels.
 
+TimePicker strings now route through a Material-owned registry bridge:
+
+- `foundation::strings` reads `I18nService` from the host and falls back to English Material
+  outcomes when the app has no backend or key.
+- TimePicker title, mode toggle, selector labels, spoken hour/minute values, input labels,
+  supporting/error text, period labels, scrim label, and action labels consume typed helpers.
+- Bootstrap defaults seed `en-US` and `zh-CN` Fluent resources for TimePicker keys.
+
 The UI gallery TimePicker chrome-fill diagnostic was updated to use these base-derived selectors.
 
 ## Evidence
 
 - `ecosystem/fret-ui-material3/src/date_picker.rs`
+- `ecosystem/fret-ui-material3/src/foundation/strings.rs`
 - `ecosystem/fret-ui-material3/src/time_picker.rs`
 - `ecosystem/fret-ui-material3/tests/automation_surface.rs`
 - `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
+- `ecosystem/fret-bootstrap/src/lib.rs`
 - `docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/artifacts/date_picker_day_cell_selectors_packet_v1.md`
 - `docs/workstreams/material3-date-picker-selectable-dates-packet-v1/artifacts/date_picker_selectable_dates_packet_v1.md`
 - `docs/workstreams/material3-date-picker-month-live-region-packet-v1/artifacts/date_picker_month_live_region_packet_v1.md`
 - `docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md`
 - `docs/workstreams/material3-time-picker-input-error-packet-v1/artifacts/time_picker_input_error_packet_v1.md`
 - `docs/workstreams/material3-time-picker-a11y-labels-packet-v1/artifacts/time_picker_a11y_labels_packet_v1.md`
+- `docs/workstreams/material3-time-picker-string-registry-packet-v1/artifacts/time_picker_string_registry_packet_v1.md`
 - `tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-time-picker-chrome-fill.json`
 - `goldens/material3-headless/v1/material3-date-picker.*.json`
 - `goldens/material3-headless/v1/material3-time-picker.*.json`
@@ -146,10 +158,12 @@ cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_respects_selectable_dates
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_month_label_is_polite_live_region
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_uses_compose_aligned_accessibility_labels
+cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_time_picker_uses_material_string_registry
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_clock_dial_drag_updates_time
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_selector_keyboard_arrows_step_time
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_replaces_and_auto_advances_hour
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_rejects_invalid_values_and_recovers
+cargo test -p fret-bootstrap --lib default_i18n_formats_material3_time_picker_strings
 $env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_date_picker_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS
 $env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_time_picker_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS
 cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_date_picker_suite_goldens_v1
@@ -164,7 +178,7 @@ python tools/check_workstream_catalog.py
 ## Residual Risk
 
 - DatePicker still needs localized day/month labels and richer date descriptions.
-- TimePicker still needs localized labels/strings via a Material string registry. Compose only
-  exposes `liveRegion = Polite` for input supporting text, which is already closed here.
+- TimePicker localized labels/strings are now routed through the Material string registry. Compose
+  only exposes `liveRegion = Polite` for input supporting text, which is already closed here.
 - These are accessibility depth follow-ons, not blockers for the current component/foundation
   classification. They should be split if M3CAS-070/M3CAS-080 shows a shared a11y primitive need.

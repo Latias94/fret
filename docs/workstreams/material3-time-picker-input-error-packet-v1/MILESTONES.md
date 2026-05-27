@@ -21,5 +21,6 @@ semantics and supporting error text with live-region semantics.
 
 Completed 2026-05-28.
 
-Outcome: Focused behavior and selector gates pass. Component matrix now points to this packet and
-leaves only localization/announcement depth as TimePicker follow-on work.
+Outcome: Focused behavior and selector gates pass. Component matrix now points to this packet; the
+later `material3-time-picker-string-registry-packet-v1` closes TimePicker localization registry
+wiring.

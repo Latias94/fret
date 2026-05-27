@@ -8,6 +8,8 @@ new `fret-ui` mechanism or a shared `fret-ui-kit` policy.
 
 Next recommended Material3 work:
 
-- Split a localization/string-registry packet for TimePicker and DatePicker labels.
+- TimePicker localization/string-registry work is closed by
+  `docs/workstreams/material3-time-picker-string-registry-packet-v1/`; DatePicker locale-aware date
+  descriptions remain a separate picker follow-on.
 - Keep tooltip interactive actions separate because that is a mechanism decision, not a Material
   recipe tweak.

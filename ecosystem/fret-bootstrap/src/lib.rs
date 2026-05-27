@@ -532,6 +532,28 @@ core-command-title-app-hide = Hide
 core-command-title-app-hide-others = Hide Others
 core-command-title-app-show-all = Show All
 core-command-title-app-quit = Quit
+
+material3-time-picker-title = Select time
+material3-time-picker-dismiss = Dismiss
+material3-time-picker-cancel = Cancel
+material3-time-picker-confirm = OK
+material3-time-picker-toggle-input = Switch to text input mode
+material3-time-picker-toggle-dial = Switch to clock mode
+material3-time-picker-hour-selection = Select hour
+material3-time-picker-minute-selection = Select minutes
+material3-time-picker-hour-text-field = for hour
+material3-time-picker-minute-text-field = for minutes
+material3-time-picker-period-toggle = Select AM or PM
+material3-time-picker-period-am = AM
+material3-time-picker-period-pm = PM
+material3-time-picker-hour = Hour
+material3-time-picker-minute = Minute
+material3-time-picker-hour-error-12h = Hour must be 1-12
+material3-time-picker-hour-error-24h = Hour must be 0-23
+material3-time-picker-minute-error = Minute must be 0-59
+material3-time-picker-hour-value-12h = { $hour } o'clock
+material3-time-picker-hour-value-24h = { $hour } hours
+material3-time-picker-minute-value = { $minute } minutes
 "#;
 
 const DEFAULT_I18N_FTL_ZH_CN: &str = r#"
@@ -549,6 +571,28 @@ core-command-title-app-hide = 隐藏
 core-command-title-app-hide-others = 隐藏其他应用
 core-command-title-app-show-all = 显示全部
 core-command-title-app-quit = 退出
+
+material3-time-picker-title = 选择时间
+material3-time-picker-dismiss = 关闭
+material3-time-picker-cancel = 取消
+material3-time-picker-confirm = 确定
+material3-time-picker-toggle-input = 切换到文本输入模式
+material3-time-picker-toggle-dial = 切换到时钟模式
+material3-time-picker-hour-selection = 选择小时
+material3-time-picker-minute-selection = 选择分钟
+material3-time-picker-hour-text-field = 输入小时
+material3-time-picker-minute-text-field = 输入分钟
+material3-time-picker-period-toggle = 选择上午或下午
+material3-time-picker-period-am = 上午
+material3-time-picker-period-pm = 下午
+material3-time-picker-hour = 小时
+material3-time-picker-minute = 分钟
+material3-time-picker-hour-error-12h = 小时必须介于 1 到 12
+material3-time-picker-hour-error-24h = 小时必须介于 0 到 23
+material3-time-picker-minute-error = 分钟必须介于 0 到 59
+material3-time-picker-hour-value-12h = { $hour } 点
+material3-time-picker-hour-value-24h = { $hour } 时
+material3-time-picker-minute-value = { $minute } 分钟
 "#;
 
 /// Builder wrapper around `fret_launch::WinitAppBuilder` with common bootstrapping conveniences.
@@ -2141,5 +2185,56 @@ mod text_interaction_defaults_tests {
             .copied()
             .expect("explicit settings should still be present");
         assert_eq!(settings, explicit);
+    }
+}
+
+#[cfg(test)]
+mod default_i18n_tests {
+    use fret_i18n::{MessageArgs, MessageKey};
+
+    use super::*;
+
+    #[test]
+    fn default_i18n_formats_material3_time_picker_strings() {
+        let lookup = default_i18n_lookup();
+        let args = MessageArgs::new()
+            .with("hour", 9_u64)
+            .with("minute", 41_u64);
+        let en_us = [LocaleId::parse("en-US").expect("hardcoded locale must parse")];
+        let zh_cn = [LocaleId::parse("zh-CN").expect("hardcoded locale must parse")];
+
+        assert_eq!(
+            lookup
+                .format(
+                    &en_us,
+                    &MessageKey::from("material3-time-picker-hour-value-12h"),
+                    Some(&args),
+                )
+                .expect("en-US Material3 time picker hour value must format")
+                .text,
+            "9 o'clock"
+        );
+        assert_eq!(
+            lookup
+                .format(
+                    &zh_cn,
+                    &MessageKey::from("material3-time-picker-minute-value"),
+                    Some(&args),
+                )
+                .expect("zh-CN Material3 time picker minute value must format")
+                .text,
+            "41 分钟"
+        );
+        assert_eq!(
+            lookup
+                .format(
+                    &zh_cn,
+                    &MessageKey::from("material3-time-picker-period-toggle"),
+                    None,
+                )
+                .expect("zh-CN Material3 period label must format")
+                .text,
+            "选择上午或下午"
+        );
     }
 }

@@ -24,6 +24,7 @@ pub mod interactive_size;
 pub mod layout_probe;
 pub mod motion_scheme;
 pub mod overlay_motion;
+pub mod strings;
 pub mod surface;
 pub mod test_id;
 pub mod token_resolver;

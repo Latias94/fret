@@ -21,5 +21,6 @@ Closed on 2026-05-28.
 Closed on 2026-05-28.
 
 - Focused automation test covers the semantics contract.
-- Matrix residual risk now points to localization/string registry work instead of a vague live-region
-  follow-on.
+- Matrix residual risk was narrowed to localization/string registry work instead of a vague
+  live-region follow-on; the registry work is closed by
+  `material3-time-picker-string-registry-packet-v1`.

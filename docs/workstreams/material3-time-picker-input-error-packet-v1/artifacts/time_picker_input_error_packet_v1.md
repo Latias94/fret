@@ -35,5 +35,5 @@ cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_
 
 ## Residual Risk
 
-Localized TimePicker strings remain an accessibility-depth follow-on. Compose only uses a polite
-live region for input supporting text, which this packet already covers.
+Localized TimePicker strings are closed by `material3-time-picker-string-registry-packet-v1`.
+Compose only uses a polite live region for input supporting text, which this packet already covers.

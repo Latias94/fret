@@ -69,6 +69,6 @@
   ],
   "continue_policy": {
     "default_action": "return_to_material3_sweep",
-    "notes": "Input error handling is closed. Selector spoken labels are closed by material3-time-picker-a11y-labels-packet-v1; TimePicker localization remains a split accessibility follow-on."
+    "notes": "Input error handling is closed. Selector spoken labels are closed by material3-time-picker-a11y-labels-packet-v1, and TimePicker localization is closed by material3-time-picker-string-registry-packet-v1."
   }
 }

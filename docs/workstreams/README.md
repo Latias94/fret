@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 488
+- Dedicated directories: 489
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2248,6 +2248,7 @@ Rule:
 - `docs/workstreams/material3-time-picker-a11y-labels-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 TimePicker Compose-aligned selector roles, spoken values, dial labels, and AM/PM period grouping; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 TimePicker value-derived clock dial label selectors and picker accessibility residual-risk split; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-time-picker-input-error-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 TimePicker invalid input error text, invalid semantics, and supporting-text live-region anchors; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-time-picker-string-registry-packet-v1/` — first 2026-05-28, latest 2026-05-28, 8 markdown docs (closed follow-on for Material3 TimePicker string registry wiring through `I18nService` plus bootstrap default resources; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-tooltip-rich-parts-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 RichTooltip title/supporting-text selectors, shared tooltip root/chrome wiring, and click-through mechanism boundary; includes `WORKSTREAM.json`)
 - `docs/workstreams/menu-surfaces-alignment-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/mobile-bringup-v1/` — first 2026-02-11, latest 2026-02-12, 4 markdown docs

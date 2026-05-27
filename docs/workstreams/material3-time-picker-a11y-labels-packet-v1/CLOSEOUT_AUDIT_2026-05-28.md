@@ -19,6 +19,7 @@
 
 ## Residual Risk
 
-TimePicker still needs a localization/string-registry layer for labels and errors. The previously
-vague "broader live-region" residual is not source-backed by Compose beyond supporting text, which
-was already covered in the input-error packet.
+TimePicker localization/string-registry work is now closed by
+`docs/workstreams/material3-time-picker-string-registry-packet-v1/`. The previously vague
+"broader live-region" residual is not source-backed by Compose beyond supporting text, which was
+already covered in the input-error packet.

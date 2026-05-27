@@ -30,5 +30,6 @@ exist: text semantics, live-region flags, pressable text-field roles, and `Seman
 
 ## Residual Risk
 
-Localization remains intentionally open. The English fallback strings match Compose Material3's
-English outcomes but are not yet routed through a Fret Material string registry.
+Localization was intentionally open in this packet and is now closed by
+`docs/workstreams/material3-time-picker-string-registry-packet-v1/`. The English fallback strings
+still match Compose Material3 outcomes when no app i18n backend is installed.

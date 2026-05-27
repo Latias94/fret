@@ -32,7 +32,7 @@ Task IDs use `M3TPIE-*`.
 - [x] M3TPIE-030 [owner=codex] [deps=M3TPIE-020] [scope=ecosystem/fret-ui-material3/tests,docs/workstreams/material3-component-alignment-sweep-v1]
   Goal: Prove invalid input, recovery, supporting-text selectors, and picker matrix updates.
   Validation: Focused `radio_alignment` and diagnostics automation tests.
-  Review: DONE. Input error handling is closed; remaining TimePicker follow-ons are localization
-  depth and broader announcements.
+  Review: DONE. Input error handling is closed; the later TimePicker localization follow-on is
+  closed by material3-time-picker-string-registry-packet-v1.
   Evidence: `CLOSEOUT_AUDIT_2026-05-28.md`.
   Handoff: Return to the broader Material3 alignment goal.

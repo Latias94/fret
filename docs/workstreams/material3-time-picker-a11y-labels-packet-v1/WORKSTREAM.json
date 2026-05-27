@@ -59,6 +59,6 @@
   ],
   "continue_policy": {
     "default_action": "return_to_material3_sweep",
-    "notes": "TimePicker accessibility labels are closed. Localization/string registry remains a separate follow-on."
+    "notes": "TimePicker accessibility labels are closed. The later localization/string registry follow-on is closed by material3-time-picker-string-registry-packet-v1."
   }
 }

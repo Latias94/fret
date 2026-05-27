@@ -31,5 +31,5 @@ Status: closed
 
 ## Residual Risk
 
-- Strings remain English literals in the recipe. A later localization/string-registry packet should
-  move Material labels and error strings behind the crate's i18n surface.
+- Strings were still English literals when this packet closed. That later localization/string
+  registry work is closed by `material3-time-picker-string-registry-packet-v1`.

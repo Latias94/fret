@@ -22,7 +22,8 @@ and select the next `known_follow_ons` component slice.
 
 ## Remaining TimePicker Follow-Ons
 
-- Localized TimePicker labels and error strings through a Material string registry.
+- Localized TimePicker labels and error strings are closed by
+  `docs/workstreams/material3-time-picker-string-registry-packet-v1/`.
 - Selector roles/spoken labels were closed by
   `docs/workstreams/material3-time-picker-a11y-labels-packet-v1/`.
 

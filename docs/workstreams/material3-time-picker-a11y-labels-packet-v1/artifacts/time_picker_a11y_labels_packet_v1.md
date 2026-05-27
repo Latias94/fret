@@ -25,4 +25,6 @@ TimePicker surfaces and asserts role, label, value, selected-state, and period-g
 
 ## Residual Risk
 
-Localized Material strings remain a follow-on.
+Localized TimePicker Material strings are closed by
+`material3-time-picker-string-registry-packet-v1`. DatePicker locale-aware date descriptions remain
+separate.

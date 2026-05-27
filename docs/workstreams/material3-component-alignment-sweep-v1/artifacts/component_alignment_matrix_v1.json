@@ -1050,11 +1050,11 @@
     {
       "id": "time_picker",
       "family": "field",
-      "status": "packet_done_a11y_labels_known_follow_ons",
+      "status": "packet_done_string_registry_aligned",
       "wave": "wave2_field_family",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "picker_after_field_foundation",
-      "first_gate_kind": "semantics_dialog_dial_value_ids_input_error_and_a11y_labels",
+      "first_gate_kind": "semantics_dialog_dial_value_ids_input_error_a11y_labels_and_string_registry",
       "selector_status": "picker_selector_ready",
       "stable_part_ids": [
         "time_picker",
@@ -1090,13 +1090,15 @@
         "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
         "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md",
         "docs/workstreams/material3-time-picker-input-error-packet-v1/artifacts/time_picker_input_error_packet_v1.md",
-        "docs/workstreams/material3-time-picker-a11y-labels-packet-v1/artifacts/time_picker_a11y_labels_packet_v1.md"
+        "docs/workstreams/material3-time-picker-a11y-labels-packet-v1/artifacts/time_picker_a11y_labels_packet_v1.md",
+        "docs/workstreams/material3-time-picker-string-registry-packet-v1/artifacts/time_picker_string_registry_packet_v1.md"
       ],
       "layer_classification": [
-        "material_recipe owns dial/input display modes, staged time draft, selector keyboard edits, invalid input state/error text, dial drag/click handling, picker part ids, value-derived dial label ids, Compose-aligned selector roles/spoken values, and period group labels",
+        "material_recipe owns dial/input display modes, staged time draft, selector keyboard edits, invalid input state/error text, dial drag/click handling, picker part ids, value-derived dial label ids, Compose-aligned selector roles/spoken values, period group labels, and TimePicker consumption of Material string helpers",
+        "material_foundation owns the Material string registry bridge over I18nService with English fallback",
         "kit_policy owns modal overlay request, scrim dismiss, focus trap, and focus restore through existing overlay/focus primitives",
         "diagnostics/test_harness owned stale modal underlay stretch goldens and old global selector drift",
-        "follow_on still covers localized labels/strings via a Material string registry"
+        "TimePicker localization registry wiring is closed; DatePicker locale-aware date descriptions remain a separate picker follow-on"
       ]
     },
     {
