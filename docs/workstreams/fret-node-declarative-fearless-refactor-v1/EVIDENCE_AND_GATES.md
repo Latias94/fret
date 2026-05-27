@@ -5,10 +5,10 @@ Last updated: 2026-05-27
 
 ## Current Focus
 
-FNDX-042 is the third concrete declarative overlay/add-on parity/conformance follow-up after the
-overlay/menu/toolbar policy-placement closure. It locks declarative portal text cancel focus-return:
-cancel commands for live portal nodes return focus to the graph surface and do not commit
-graph/store changes.
+FNDX-043 is the fourth concrete declarative overlay/add-on parity/conformance follow-up after the
+overlay/menu/toolbar policy-placement closure. It promotes an existing mounted rename overlay gate:
+Escape closes the declarative text-input overlay without a graph transaction and restores focus to
+the graph surface target.
 
 ## Targeted Iteration Gates
 
@@ -75,6 +75,13 @@ cargo nextest run -p fret-node declarative_portal_text_cancel_returns_focus_to_s
 
 This gate proves declarative portal text cancel commands are available for live portal nodes, return
 focus to the graph surface, and do not commit graph/store changes.
+
+```bash
+cargo nextest run -p fret-node rename_managed_host_escape_closes_without_transaction_and_restores_focus
+```
+
+This gate proves a mounted declarative rename overlay text-input subtree closes on Escape without a
+graph transaction and restores focus to the graph surface target.
 
 ## Package And Boundary Gates
 
@@ -178,5 +185,9 @@ closeout note must name those failures.
 - Review/package follow-up after FNDX-042:
   - `cargo nextest run -p fret-node`: passed; proves the full package test suite remains green with
     the new declarative portal text cancel focus-return gate.
+- FNDX-043:
+  - `cargo nextest run -p fret-node rename_managed_host_escape_closes_without_transaction_and_restores_focus`:
+    passed; proves a mounted declarative rename overlay text-input subtree closes on Escape without
+    a graph transaction and restores focus to the graph surface target.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

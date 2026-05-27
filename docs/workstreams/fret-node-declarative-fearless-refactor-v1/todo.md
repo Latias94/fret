@@ -160,6 +160,26 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `cargo nextest run -p fret-node declarative_portal_text_cancel_returns_focus_to_surface_without_graph_commit`: passed.
     - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed.
     - `cargo fmt --check`: passed.
+- [x] FNDX-043 Promote mounted declarative rename overlay dismissal/focus-return as a parity gate.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/overlays/rename_declarative.rs`
+    - `ecosystem/fret-node/src/ui/overlays/rename_command.rs`
+    - `ecosystem/fret-node/src/ui/overlays/rename_lifecycle.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node rename_managed_host_escape_closes_without_transaction_and_restores_focus`
+  - Exit note: a mounted declarative overlay subtree must be represented in the parity map, not
+    only diagnostics-only overlay command behavior.
+  - Landed behavior: the declarative rename overlay mounts a text-input subtree, handles Escape
+    through the overlay host, closes without a graph transaction, and restores focus to the graph
+    surface target.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/overlays/rename_declarative.rs`
+    - `ecosystem/fret-node/src/ui/overlays/rename_command.rs`
+    - `ecosystem/fret-node/src/ui/overlays/rename_lifecycle.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node rename_managed_host_escape_closes_without_transaction_and_restores_focus`: passed.
 
 ## M0 - Decision gates and internal seam map
 
