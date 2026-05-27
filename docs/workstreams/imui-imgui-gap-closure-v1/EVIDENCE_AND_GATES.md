@@ -3,6 +3,32 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Canonical Workbench Teaching-Doc Refresh Evidence - 2026-05-27
+
+Claim verified: first-party teaching docs no longer claim the canonical workbench delegates to the
+workspace shell owner after the route moved to direct editor-notes workflow mounting.
+
+Evidence:
+
+- `docs/examples/README.md`, `apps/fret-cookbook/README.md`, and
+  `apps/fret-cookbook/EXAMPLES.md` now describe `imui_editor_workbench_demo` as the canonical
+  editor route that mounts editor-notes directly.
+- The same docs keep `imui_editor_proof_demo` as the supporting dense panel / explicit stable
+  identity proof instead of restoring it as the canonical route.
+- `tools/gate_imui_facade_teaching_source.py` now requires the canonical workbench/supporting-proof
+  wording and the direct editor-notes workflow wording.
+
+Focused gates:
+
+- `cargo nextest run -p fret-examples --test imui_editor_workbench_golden_path_surface --no-fail-fast`:
+  pass; 2 tests.
+- `python -m py_compile tools\gate_imui_facade_teaching_source.py tools\gate_imui_workstream_source.py`:
+  pass.
+- `python tools\gate_imui_facade_teaching_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## P0/P2 Canonical Workbench Current-Status Refresh Evidence - 2026-05-27
 
 Claim verified: the active gap map no longer treats `imui_editor_proof_demo` as the canonical

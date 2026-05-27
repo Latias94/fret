@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 canonical workbench teaching-doc refresh result:
+`docs/examples/README.md`, `apps/fret-cookbook/README.md`, and
+`apps/fret-cookbook/EXAMPLES.md` now say `imui_editor_workbench_demo` mounts the editor-notes
+workflow directly. The same docs keep `imui_editor_proof_demo` as the supporting dense panel /
+explicit stable identity proof, and `tools/gate_imui_facade_teaching_source.py` freezes the
+current wording.
+
 2026-05-27 P0/P2 canonical workbench status refresh result:
 `P0_CURRENT_SOURCE_AUDIT_2026-05-06.md` and `TODO.md` now name
 `cargo run -p fret-demo --bin imui_editor_workbench_demo` as the canonical product-facing editor

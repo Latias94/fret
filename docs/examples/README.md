@@ -141,8 +141,8 @@ Immediate-mode sidecar (when you intentionally want the IMUI lane):
 - Product workbench:
   - `cargo run -p fret-demo --bin imui_editor_workbench_demo`
   - discover product proofs with `cargo run -p fretboard-dev -- list native-demos --all`
-  - `imui_editor_workbench_demo` is the canonical editor workbench route; it currently delegates to
-    the workspace shell owner while the older proof demos remain smaller supporting surfaces
+  - `imui_editor_workbench_demo` is the canonical editor workbench route; it mounts the
+    editor-notes workflow directly while the older proof demos remain smaller supporting surfaces
   - use it when you need the first-open editor-grade IMUI workbench path; drop to
     `imui_editor_proof_demo` only when you need the older dense panel proof directly
 - Reference/smoke:
@@ -186,7 +186,7 @@ Stable identity rule for the immediate-mode lane:
 - Rebuild rows each frame; do not treat element values as cloneable reusable UI.
 - `imui_action_basics` is still the right generic/default proof even though it does not need keyed
   identity yet; `imui_editor_controls_basics` is the editor-control first-contact proof, while
-  `imui_editor_workbench_demo` is the canonical product workbench route and
+  `imui_editor_workbench_demo` is the canonical product workbench route, while
   `imui_editor_proof_demo` remains the supporting dense panel proof where explicit stable identity
   is already visible.
 

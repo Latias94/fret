@@ -19,6 +19,14 @@ Last updated: 2026-05-27
 
 ## Current Gap Refresh - 2026-05-27
 
+- [x] Refresh the canonical workbench teaching docs so cookbook/examples no longer claim
+      `imui_editor_workbench_demo` delegates to the workspace shell owner after the route was moved
+      to direct editor-notes workflow mounting.
+      Result: `docs/examples/README.md`, `apps/fret-cookbook/README.md`, and
+      `apps/fret-cookbook/EXAMPLES.md` now describe the workbench as the canonical editor route
+      that mounts editor-notes directly, while `imui_editor_proof_demo` remains the supporting
+      dense panel / explicit stable identity proof. `tools/gate_imui_facade_teaching_source.py`
+      now freezes that wording.
 - [x] Refresh `P0_CURRENT_SOURCE_AUDIT_2026-05-06.md` and the P2 TODO status so the active gap map
       no longer treats `imui_editor_proof_demo` as the canonical editor-panel route after the
       workbench lane closed.

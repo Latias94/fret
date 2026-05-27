@@ -148,9 +148,9 @@ Example | Status | Feature | Run | Diag suite
 [`imui_editor_controls_basics.rs`](./examples/imui_editor_controls_basics.rs) | Lab | `cookbook-imui` | `cargo run -p fretboard-dev -- dev native --example imui_editor_controls_basics` | `cookbook-imui-editor-controls-basics`
 
 After these focused cookbook lessons, use `cargo run -p fret-demo --bin imui_editor_workbench_demo`
-as the canonical editor workbench route. It currently delegates to the workspace shell owner while
+as the canonical editor workbench route. It mounts the editor-notes workflow directly while
 `imui_editor_proof_demo`, `workspace_shell_demo`, and `docking_arbitration_demo` remain supporting
-proof surfaces for focused editor controls, shell behavior, and docking arbitration. These heavier
+proof surfaces for dense panel controls, shell behavior, and docking arbitration. These heavier
 routes live in `fret-demo`, so they are not listed as cookbook example rows. Use
 `cargo run -p fretboard-dev -- list native-demos --all` to discover them.
 
