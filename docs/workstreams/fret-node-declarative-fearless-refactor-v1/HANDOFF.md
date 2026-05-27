@@ -33,6 +33,7 @@ triplets or direct retained authoring.
     outcome under viewport portals/window-space overlays.
   - Fresh gates passed:
     `cargo nextest run -p fret-node declarative_portal_text_cancel_returns_focus_to_surface_without_graph_commit`,
+    `cargo nextest run -p fret-node`,
     `cargo check -p fret-node --features compat-retained-canvas --tests`, and
     `cargo fmt --check`.
   - Earlier closeout/package gates for FNDX-010 through FNDX-041 remain recorded in

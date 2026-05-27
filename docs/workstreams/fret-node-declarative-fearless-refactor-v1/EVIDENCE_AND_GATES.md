@@ -175,5 +175,8 @@ closeout note must name those failures.
   - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed; proves retained
     compatibility test targets still compile with the new portal focus-return gate.
   - `cargo fmt --check`: passed; proves formatting is clean after the new Rust test.
+- Review/package follow-up after FNDX-042:
+  - `cargo nextest run -p fret-node`: passed; proves the full package test suite remains green with
+    the new declarative portal text cancel focus-return gate.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.
