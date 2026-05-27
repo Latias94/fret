@@ -501,6 +501,7 @@
     "ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/combo_controls/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior.rs",

@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 disclosure layout owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs` now owns content container
+composition, body `ImUiFacade` construction, root column layout, and content/root test-id
+application. `disclosure_controls.rs` keeps label identity parsing, open-model reads, trigger
+mounting, and aggregate `DisclosureResponse` writes.
+
 2026-05-27 text-picker entry owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/entry.rs` now owns completion/history wrapper
 functions plus history filter/open normalization. `text_picker_controls.rs` keeps core picker

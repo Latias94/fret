@@ -279,6 +279,14 @@ Last updated: 2026-05-27
       context-menu anchor reporting, enabled sanitization, and trigger `ResponseExt` population.
       `trigger.rs` keeps pressable props, a11y, header visual mounting, collapsible trigger
       controls, and test-id application.
+- [x] Split IMUI disclosure content/root layout out of
+      `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private layout owner without
+      changing label identity parsing, open-model reads, trigger mounting, content body building,
+      content/root test IDs, open/toggled response population, or public disclosure facade calls.
+      Result: `disclosure_controls/layout.rs` owns content container composition, body `ImUiFacade`
+      construction, root column layout, and content/root test-id application. The root file keeps
+      label identity parsing, open-model reads, trigger mounting, and aggregate `DisclosureResponse`
+      writes.
 - [x] Split IMUI disclosure header-row visual construction out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs` into a private owner module
       without changing collapsing-header/tree-node a11y, palette policy, indicator glyphs, label

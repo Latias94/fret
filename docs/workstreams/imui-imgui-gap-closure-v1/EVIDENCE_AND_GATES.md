@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Disclosure Layout Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI disclosure content/root layout moved into a private owner without changing
+label identity parsing, open-model reads, trigger mounting, content body building, content/root
+test IDs, open/toggled response population, or public disclosure facade calls.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` keeps label identity parsing, open-model
+  reads, trigger mounting, and aggregate `DisclosureResponse` writes.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/layout.rs` owns content container
+  composition, body `ImUiFacade` construction, root column layout, and content/root test-id
+  application.
+- `tools/gate_imui_workstream_source.py` now rejects disclosure content/root layout bodies from
+  drifting back into root `disclosure_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls::tests
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Text Picker Entry Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI input-text picker completion/history entry wrappers moved into a private
