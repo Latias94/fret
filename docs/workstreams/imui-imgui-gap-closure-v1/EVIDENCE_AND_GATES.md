@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Drag Response Source/Target Owner-Split Evidence - 2026-05-27
+
+Claim verified: drag-source and typed drop-target response records moved behind private owners
+without changing public re-export paths, accessor-first response shape, internal payload/position
+visibility, `ResponseExt` drag accessors, drag/drop smoke coverage, or retained `fret-imui`
+interaction-drag behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/response/drag.rs` now keeps the generic `DragResponse`
+  edge/motion record and re-exports the source/target response owners.
+- `ecosystem/fret-ui-kit/src/imui/response/drag/source.rs` owns `DragSourceResponse`, inactive/new
+  constructors, and source read accessors.
+- `ecosystem/fret-ui-kit/src/imui/response/drag/target.rs` owns `DropTargetResponse<T>`, empty
+  construction, delivered/preview payload reads, position reads, source id reads, and session reads.
+- `tools/gate_imui_workstream_source.py` now registers each opaque response owner separately and
+  rejects source/target response structs from drifting back into the root drag response owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_drag_drop_smoke --no-fail-fast`:
+  pass; 1 test, 0 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_response_contract_smoke
+  --no-fail-fast`: pass; 2 tests, 0 skipped.
+- `cargo nextest run -p fret-imui interaction_drag --no-fail-fast`: pass; 8 tests, 173 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Combo Trigger Behavior Owner-Split Evidence - 2026-05-27
 
 Claim verified: ComboBox trigger behavior moved behind a private owner without changing trigger

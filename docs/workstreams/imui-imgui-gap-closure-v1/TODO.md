@@ -133,6 +133,15 @@ Last updated: 2026-05-27
       handling, context-menu shortcut handling, transient events, and `ResponseExt` population.
       `trigger.rs` keeps pressable props, ComboBox a11y, chrome/pill visual assembly, and a11y
       label derivation.
+- [x] Split IMUI drag source/target response records out of
+      `ecosystem/fret-ui-kit/src/imui/response/drag.rs` into private owner modules without
+      changing public re-export paths, accessor-first response shape, drag/drop smoke behavior,
+      or `ResponseExt` drag accessors.
+      Result: `response/drag/source.rs` owns `DragSourceResponse` storage, inactive/new
+      constructors, and source read accessors; `response/drag/target.rs` owns
+      `DropTargetResponse<T>` storage, empty construction, preview/delivered payload and position
+      accessors, source id reads, and session reads. The root `drag.rs` keeps generic
+      `DragResponse` edge/motion state and re-exports.
 - [x] Split IMUI boolean-control visual chrome out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls.rs` and its switch owner without changing
       the public checkbox/radio/switch surface.

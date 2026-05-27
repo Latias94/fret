@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 drag response source/target owner-split result:
+`ecosystem/fret-ui-kit/src/imui/response/drag/source.rs` now owns `DragSourceResponse` storage,
+inactive/new constructors, and source read accessors.
+`ecosystem/fret-ui-kit/src/imui/response/drag/target.rs` now owns `DropTargetResponse<T>` storage,
+empty construction, preview/delivered payload and position accessors, source id reads, and session
+reads. `response/drag.rs` keeps generic `DragResponse` edge/motion storage plus source/target
+re-exports.
+
 2026-05-27 combo trigger behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/combo_controls/trigger/behavior.rs` now owns activate handling,
 activate-shortcut handling, context-menu shortcut handling, transient events, and `ResponseExt`
