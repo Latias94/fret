@@ -188,6 +188,13 @@ layout, and text helpers.
 `FloatingAreaOptions`, `FloatingAreaContext`, area defaults, and context accessors. The opaque
 context source gate now follows the area owner.
 
+2026-05-27 floating drag-surface owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_surface/drag_surface.rs` now owns
+`floating_area_drag_surface_element(...)`, pointer-region wiring, double-click dispatch,
+activation event recording, pointer drag move/up handling, setup callback invocation, and IMUI child
+mounting. `floating_surface.rs` is now a module index/re-export hub for area, drag-surface, kinds,
+layer, and state owners.
+
 2026-05-27 drag response source/target owner-split result:
 `ecosystem/fret-ui-kit/src/imui/response/drag/source.rs` now owns `DragSourceResponse` storage,
 inactive/new constructors, and source read accessors.

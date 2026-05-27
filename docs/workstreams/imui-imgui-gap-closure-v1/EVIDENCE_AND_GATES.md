@@ -103,6 +103,40 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Floating Drag Surface Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI floating-area drag-surface behavior moved into a private owner without
+changing drag setup delegation, focusable key stub installation, double-click hooks, activation
+signals, drag threshold handling, or IMUI child mounting.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` is now a private floating-surface module
+  index and re-export hub for area, drag-surface, kinds, layer, and state owners.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/drag_surface.rs` owns
+  `floating_area_drag_surface_element(...)`, pointer-region wiring, double-click dispatch,
+  activation event recording, pointer drag move/up handling, setup callback invocation, and IMUI
+  child mounting into the drag surface.
+- `tools/gate_imui_workstream_source.py` now requires the drag-surface owner and rejects
+  pointer-region drag behavior from drifting back into `floating_surface.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui
+  floating::movement_z_order::floating_area_bring_to_front_updates_hit_test_order
+  floating::movement_z_order::floating_layer_bring_to_front_updates_hit_test_order
+  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
+  floating::input_modes::floating_window_activate_on_click_can_be_disabled_for_resize_handles
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Flow Options Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI flow/layout option records and token defaults moved into narrower private

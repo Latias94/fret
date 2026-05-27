@@ -440,6 +440,15 @@ Last updated: 2026-05-27
       state/test-id updates, facade content mounting, absolute area layout, interaction gates, and
       response assembly. The root `floating_surface.rs` keeps drag-surface pointer-region behavior,
       layer/kind/state re-exports, and module wiring.
+- [x] Split IMUI floating-area drag-surface behavior out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into a private owner module without
+      changing drag setup delegation, focusable key stub installation, double-click hooks,
+      activation signals, drag threshold handling, or IMUI child mounting.
+      Result: `floating_surface/drag_surface.rs` owns `floating_area_drag_surface_element(...)`,
+      pointer-region wiring, double-click dispatch, activation event recording, pointer drag
+      move/up handling, setup callback invocation, and IMUI child mounting. The root
+      `floating_surface.rs` is now a module index/re-export hub for area, drag-surface, kinds,
+      layer, and state owners.
 - [x] Split IMUI floating-window resize state/snapshot ownership out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs` into a private owner module
       without changing resize handles, left/right/top/bottom/corner resize behavior, collapse
