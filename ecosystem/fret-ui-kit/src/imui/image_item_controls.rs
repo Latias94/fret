@@ -1,13 +1,13 @@
 //! Immediate-mode response-bearing image item helpers.
 
-use fret_core::{ImageId, KeyCode, SemanticsRole, Size};
+use fret_core::{ImageId, SemanticsRole, Size};
 use fret_ui::UiHost;
-use fret_ui::action::ActivateReason;
 use fret_ui::element::{Length, PressableA11y, PressableKeyActivation, PressableProps};
 
 use super::{ImageItemOptions, ImageItemVariant, ResponseExt, UiWriterImUiFacadeExt};
 use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 
+mod behavior;
 mod visual;
 
 use visual::{image_item_chrome, image_props_for_item, sanitize_item_size};
@@ -58,59 +58,7 @@ fn image_item_with_options_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized
         };
 
         control_chrome_pressable_with_id_props(cx, move |cx, state, id| {
-            let behavior = super::item_behavior::install_pressable_item_behavior_with_options(
-                cx,
-                id,
-                super::item_behavior::PressableItemBehaviorOptions {
-                    report_pointer_click: true,
-                },
-            );
-            let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
-
-            cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
-                if reason == ActivateReason::Keyboard {
-                    super::mark_lifecycle_instant_if_inactive(
-                        host,
-                        acx,
-                        &lifecycle_model_for_activate,
-                        false,
-                    );
-                }
-                host.record_transient_event(acx, super::KEY_CLICKED);
-                host.notify(acx);
-            }));
-
-            if enabled {
-                cx.key_on_key_down_for(
-                    id,
-                    std::sync::Arc::new(move |host, acx, down| {
-                        let is_menu_key = down.key == KeyCode::ContextMenu;
-                        let is_shift_f10 = down.key == KeyCode::F10 && down.modifiers.shift;
-                        if !(is_menu_key || is_shift_f10) {
-                            return false;
-                        }
-
-                        host.record_transient_event(acx, super::KEY_CONTEXT_MENU_REQUESTED);
-                        host.notify(acx);
-                        true
-                    }),
-                );
-            }
-
-            let clicked = cx.take_transient_for(id, super::KEY_CLICKED);
-            super::item_behavior::populate_pressable_item_response(
-                cx,
-                id,
-                state,
-                &behavior,
-                super::item_behavior::PressableItemResponseInput {
-                    enabled,
-                    clicked,
-                    changed: false,
-                    lifecycle_edited: false,
-                },
-                response,
-            );
+            behavior::install_image_item_behavior(cx, id, state, enabled, response);
 
             let chrome = image_item_chrome(cx, enabled, state, variant);
             let image_props = image_props_for_item(

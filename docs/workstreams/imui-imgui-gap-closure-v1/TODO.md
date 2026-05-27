@@ -2082,6 +2082,15 @@ opening the slice.
       Result: `image_item_controls/visual.rs` owns chrome selection, image props, size
       sanitization, opacity normalization, and UV validation. `image_item_controls.rs` keeps
       pressable interaction wiring and `ResponseExt` population.
+- [x] Split IMUI image-item pressable behavior out of
+      `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` into a private owner module without
+      changing image/image-button roles, focusability, context-menu keyboard requests, activation
+      lifecycle marking, pointer-click reporting, click response population, item sizing, chrome, or
+      image props.
+      Result: `image_item_controls/behavior.rs` owns pressable behavior installation,
+      keyboard-activation lifecycle marking, context-menu key handling, transient clicked reads, and
+      `ResponseExt` population. `image_item_controls.rs` keeps a11y props, size props, key
+      activation policy for plain images, chrome mounting, and image visual assembly.
 - [x] Split the IMUI facade command-presentation default bodies out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` into the existing button/menu owner modules
       without changing the public IMUI facade trait surface.

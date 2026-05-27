@@ -1770,8 +1770,16 @@ unchanged.
 2026-05-27 image-item visual owner split result:
 `ecosystem/fret-ui-kit/src/imui/image_item_controls/visual.rs` now owns image item chrome
 selection, image props, size sanitization, opacity normalization, and UV validation.
-`image_item_controls.rs` keeps pressable behavior, context-menu key handling, activation lifecycle,
-and `ResponseExt` population.
+2026-05-27 follow-up: `image_item_controls.rs` now keeps a11y props, size props, key activation
+policy for plain images, chrome mounting, and image visual assembly, while
+`image_item_controls/behavior.rs` owns pressable behavior, context-menu key handling, activation
+lifecycle marking, pointer-click reporting, and `ResponseExt` population.
+
+2026-05-27 image-item behavior owner split result:
+`ecosystem/fret-ui-kit/src/imui/image_item_controls/behavior.rs` now owns pressable behavior
+installation, keyboard-activation lifecycle marking, context-menu key handling, transient clicked
+reads, and `ResponseExt` population. `image_item_controls.rs` keeps a11y props, size props, key
+activation policy for plain images, chrome mounting, and image visual assembly.
 
 2026-05-26 facade command-presentation owner split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/button_actions.rs` now owns the button command

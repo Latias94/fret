@@ -143,6 +143,38 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Image Item Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI image-item pressable behavior moved into a private owner without changing
+image/image-button roles, focusability, context-menu keyboard requests, activation lifecycle
+marking, pointer-click reporting, click response population, item sizing, chrome, or image props.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` keeps a11y props, size props, key
+  activation policy for plain images, chrome mounting, and image visual assembly.
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls/behavior.rs` owns pressable behavior
+  installation, keyboard-activation lifecycle marking, context-menu key handling, transient clicked
+  reads, and `ResponseExt` population.
+- `ecosystem/fret-imui/src/tests/models_controls/image_item.rs` covers image-button click and
+  Shift+F10 behavior at the thin `fret-imui` facade layer.
+- `tools/gate_imui_workstream_source.py` now requires the image-item behavior owner and rejects
+  pressable behavior bodies from drifting back into `image_item_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit -p fret-imui`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_image_item_smoke
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui models_controls::image_item --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Media Paint Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug-draw media paint routing moved into private raster, rounded, and SVG owners
@@ -1284,8 +1316,11 @@ opacity sanitization, UV filtering, or smoke-test surface.
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` keeps pressable behavior, context-menu
-  key handling, activation lifecycle, and `ResponseExt` population.
+- `ecosystem/fret-ui-kit/src/imui/image_item_controls.rs` originally kept pressable behavior,
+  context-menu key handling, activation lifecycle, and `ResponseExt` population after the visual
+  split. 2026-05-27 follow-up: `image_item_controls.rs` now keeps a11y props, size props, key
+  activation policy for plain images, chrome mounting, and image visual assembly while
+  `image_item_controls/behavior.rs` owns concrete pressable behavior.
 - `ecosystem/fret-ui-kit/src/imui/image_item_controls/visual.rs` owns image item chrome selection,
   image props, size sanitization, opacity normalization, and UV validation.
 - `ecosystem/fret-ui-kit/src/imui/image_item_controls/tests.rs` now targets the visual owner for
