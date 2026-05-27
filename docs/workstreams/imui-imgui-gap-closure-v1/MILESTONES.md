@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 debug-draw command payload owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` now owns the private
+`DebugDrawCommand` payload enum and all draw-list command variants. `debug_draw_controls/commands.rs`
+keeps summary projection wiring plus the parent-visible command re-export.
+
 2026-05-27 table builder owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/builder.rs` now owns `ImUiTable` /
 `ImUiTableRow`, built row/cell records, row/cell test-id derivation, child `ImUiFacade`

@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Debug-Draw Command Payload Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI debug-draw command payload variants moved into a private owner without
+changing command variant names, draw-list recording paths, summary projection, paint dispatch,
+public debug-draw summaries, or facade APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands.rs` keeps command module wiring,
+  summary projection installation, and the parent-visible `DebugDrawCommand` re-export.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` owns private
+  `DebugDrawCommand` payload variants.
+- `tools/gate_imui_workstream_source.py` now rejects command payload variants from drifting back
+  into `commands.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table Builder Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI table row/cell builder collection moved into a private owner without changing

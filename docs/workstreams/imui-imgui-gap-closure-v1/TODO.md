@@ -44,6 +44,13 @@ Last updated: 2026-05-27
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw command payload variants out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands.rs` into a private payload
+      owner without changing command variant names, draw-list recording paths, summary projection,
+      paint dispatch, public debug-draw summaries, or facade APIs.
+      Result: `debug_draw_controls/commands/types.rs` owns private `DebugDrawCommand` payload
+      variants. `commands.rs` keeps command module wiring, summary projection installation, and the
+      parent-visible `DebugDrawCommand` re-export.
 - [x] Split IMUI debug-draw media paint routing out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` into private raster,
       rounded, and SVG owner modules without changing image/region/quad/SVG paint behavior, opacity
