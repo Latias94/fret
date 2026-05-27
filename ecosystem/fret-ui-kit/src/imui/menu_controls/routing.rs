@@ -8,9 +8,8 @@ use fret_ui::elements::GlobalElementId;
 
 use crate::imui::{MenuItemOptions, ResponseExt, UiWriterImUiFacadeExt};
 
-use super::element;
-
 mod identity;
+mod mount;
 
 pub(in crate::imui) fn menu_item_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -148,7 +147,7 @@ where
         + for<'cx> Fn(&mut fret_ui::ElementContext<'cx, H>, PressableState, GlobalElementId, bool),
 {
     identity::with_menu_item_label_identity(ui, label, |ui, visible_label| {
-        menu_item_impl_with_pressable_hook_inner(
+        mount::mount_menu_item_with_pressable_hook(
             ui,
             visible_label,
             options,
@@ -158,36 +157,4 @@ where
             pressable_hook,
         )
     })
-}
-
-fn menu_item_impl_with_pressable_hook_inner<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized, F>(
-    ui: &mut W,
-    label: Arc<str>,
-    options: MenuItemOptions,
-    role: SemanticsRole,
-    checked: Option<bool>,
-    action: Option<ActionId>,
-    pressable_hook: F,
-) -> ResponseExt
-where
-    F: Clone
-        + for<'cx> Fn(&mut fret_ui::ElementContext<'cx, H>, PressableState, GlobalElementId, bool),
-{
-    let mut response = ResponseExt::default();
-
-    let element = ui.with_cx_mut(|cx| {
-        element::menu_item_element_with_pressable_hook_inner(
-            cx,
-            label,
-            options,
-            role,
-            checked,
-            action,
-            pressable_hook,
-            &mut response,
-        )
-    });
-
-    ui.add(element);
-    response
 }

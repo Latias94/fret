@@ -128,6 +128,15 @@ Last updated: 2026-05-27
       Result: `menu_controls/routing/identity.rs` owns `parse_label_identity(...)`, visible label
       extraction, and `menu-item-label` `push_id` scoping. `routing.rs` keeps menu item entry
       dispatch, semantic role selection, response assembly, and element insertion.
+- [x] Split IMUI menu-item final mounting and response assembly out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs` into a private owner module
+      without changing public menu item dispatch, semantic role/action selection, `##/###`
+      identity scoping, pressable-hook forwarding, final element insertion, or `ResponseExt`
+      assembly.
+      Result: `menu_controls/routing/mount.rs` owns menu-item element mounting,
+      `ResponseExt::default()` initialization, final `ui.add(...)`, and response return.
+      `routing.rs` keeps public dispatch, checkbox/radio/action role selection, noop-hook routing,
+      and label identity scoping.
 - [x] Split IMUI container child building, linear layout, scroll, and grid element composition out
       of `ecosystem/fret-ui-kit/src/imui/containers.rs` into private owner modules without
       changing horizontal/vertical/grid/scroll facade helpers, option forwarding, test-id

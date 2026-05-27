@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Menu-Item Routing Mount Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI menu-item final mounting and response assembly moved into a private routing
+owner without changing public menu item dispatch, semantic role/action selection, `##/###`
+identity scoping, pressable-hook forwarding, final element insertion, or `ResponseExt` assembly.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs` keeps public dispatch,
+  checkbox/radio/action role selection, noop-hook routing, and label identity scoping.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/mount.rs` owns
+  `element::menu_item_element_with_pressable_hook_inner(...)`, `ResponseExt::default()`, final
+  `ui.add(...)`, and response return.
+- `tools/gate_imui_workstream_source.py` now rejects direct menu-item element mounting or response
+  assembly from drifting back into `routing.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_controls::tests --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui label_identity popup_hover::item_pointer
+  interaction_menu_tabs::menu_activation::begin_menu_helper_toggles_popup_and_closes_after_command_activate
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table Body-Row Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI table body-row preparation moved into a private render owner without changing

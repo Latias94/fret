@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 menu-item routing mount owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/routing/mount.rs` now owns final menu-item element
+mounting, `ResponseExt::default()` initialization, final `ui.add(...)`, and response return.
+`menu_controls/routing.rs` keeps public dispatch, checkbox/radio/action role selection,
+noop-hook routing, and label identity scoping.
+
 2026-05-27 table body-row owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/render/body_rows.rs` now owns keyed body row
 assembly, hidden-column filtering, fallback empty-cell insertion, body cell wrapping, striped row
