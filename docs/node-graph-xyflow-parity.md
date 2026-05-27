@@ -902,6 +902,14 @@ canonical data flow and invalidation boundaries:
   - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
     (`declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled`)
 
+- [x] **Declarative portal text cancel focus return**
+  - XyFlow outcome: interactive overlay add-ons return keyboard focus to the graph surface after a
+    handled dismiss/cancel action instead of leaving focus stranded in the add-on subtree.
+  - Declarative surface: portal text editor cancel commands are available only for live portal
+    nodes, handle without graph commits, and restore focus to the node graph surface.
+  - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    (`declarative_portal_text_cancel_returns_focus_to_surface_without_graph_commit`)
+
 ---
 
 # 9) Keyboard Shortcuts, Commands, and Focus

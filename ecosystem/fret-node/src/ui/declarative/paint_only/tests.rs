@@ -77,8 +77,8 @@ use crate::ui::{
     NodeGraphNodeTypes, NodeGraphSurfaceBinding, PortalCommandOutcome, PortalNumberEditHandler,
     PortalNumberEditSpec, PortalNumberEditSubmit, PortalTextCommand, PortalTextEditHandler,
     PortalTextEditSpec, PortalTextEditSubmit, PortalTextStepMode, node_graph_surface,
-    node_graph_surface_with_portal_renderer, portal_step_text_command_with_mode,
-    portal_submit_text_command,
+    node_graph_surface_with_portal_renderer, portal_cancel_text_command,
+    portal_step_text_command_with_mode, portal_submit_text_command,
 };
 use serde_json::Value;
 
@@ -4422,6 +4422,102 @@ impl PortalTextEditSpec for DeclarativePortalTextMoveSpec {
         (node == self.node && text == "start" && delta == 1 && mode == PortalTextStepMode::Coarse)
             .then(|| "moved".to_string())
     }
+}
+
+#[test]
+fn declarative_portal_text_cancel_returns_focus_to_surface_without_graph_commit() {
+    let mut host = TestActionHostImpl::default();
+    let mut ui = fret_ui::UiTree::<TestActionHostImpl>::new();
+    let mut services = FakeUiServices;
+    let window = AppWindowId::default();
+    let bounds = test_node_graph_surface_bounds();
+    ui.set_window(window);
+    host.bounds = bounds;
+
+    let node = NodeId::from_u128(0x9348);
+    let original_pos = CanvasPoint { x: 10.0, y: 20.0 };
+    let mut graph = Graph::new(GraphId::from_u128(0x9349));
+    graph.nodes.insert(node, test_node(original_pos));
+
+    let binding = NodeGraphSurfaceBinding::new(
+        &mut host.models,
+        graph,
+        NodeGraphViewState {
+            draw_order: vec![node],
+            ..NodeGraphViewState::default()
+        },
+        default_editor_config(),
+    );
+    let handler = Rc::new(RefCell::new(PortalTextEditHandler::new(
+        "node-graph-surface-text-editor-cancel-command",
+        DeclarativePortalTextMoveSpec { node },
+    )));
+    let mut surface_element = None;
+
+    let root = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut host,
+        &mut services,
+        window,
+        bounds,
+        "node-graph-surface-text-editor-cancel-command",
+        |cx| {
+            let mut props = binding.surface_props();
+            props.portal_command_handler = Some(handler.clone());
+            let surface = node_graph_surface(cx, props);
+            surface_element = Some(surface.id);
+            vec![surface]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut host, &mut services, bounds, 1.0);
+
+    let surface_element = surface_element.expect("surface element should be captured");
+    let surface_node = ui
+        .live_attached_node_for_element(&mut host, surface_element)
+        .expect("surface element should resolve to a live node");
+    assert_ne!(ui.focus(), Some(surface_node));
+
+    let cancel = portal_cancel_text_command(node);
+    assert!(
+        ui.is_command_available(&mut host, &cancel),
+        "cancel must be available for a live declarative portal node"
+    );
+    assert!(ui.dispatch_command(&mut host, &mut services, &cancel));
+
+    assert_eq!(
+        ui.focus(),
+        Some(surface_node),
+        "handled portal cancel must restore focus to the graph surface"
+    );
+
+    let graph_pos = host
+        .models
+        .read(&binding.graph_model(), |graph| {
+            graph.nodes.get(&node).map(|node| node.pos)
+        })
+        .ok()
+        .flatten()
+        .expect("graph node pos");
+    assert_eq!(graph_pos, original_pos);
+
+    let store_pos = host
+        .models
+        .read(&binding.store_model(), |store| {
+            store.graph().nodes.get(&node).map(|node| node.pos)
+        })
+        .ok()
+        .flatten()
+        .expect("store node pos");
+    assert_eq!(store_pos, original_pos);
+
+    assert!(
+        !ui.is_command_available(
+            &mut host,
+            &portal_cancel_text_command(NodeId::from_u128(0x9350)),
+        ),
+        "cancel commands for missing portal nodes must not become available"
+    );
 }
 
 #[test]

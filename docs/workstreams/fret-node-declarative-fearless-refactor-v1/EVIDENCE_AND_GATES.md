@@ -161,5 +161,12 @@ closeout note must name those failures.
 - Review/package follow-up after FNDX-040/FNDX-041:
   - `cargo nextest run -p fret-node`: passed; proves the full package test suite remains green with
     the new declarative overlay input-transparency and motion-anchoring gates.
+- FNDX-042:
+  - `cargo nextest run -p fret-node declarative_portal_text_cancel_returns_focus_to_surface_without_graph_commit`:
+    passed; proves a declarative portal text add-on cancel command is available for live portal
+    nodes, returns focus to the graph surface, and does not commit graph/store changes.
+  - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed; proves retained
+    compatibility test targets still compile with the new portal focus-return gate.
+  - `cargo fmt --check`: passed; proves formatting is clean after the new Rust test.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

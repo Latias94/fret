@@ -135,6 +135,31 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `cargo nextest run -p fret-node declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled`: passed.
     - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed.
     - `cargo fmt --check`: passed.
+- [x] FNDX-042 Lock declarative portal text cancel focus-return behavior with a behavior gate.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/editors/portal_text.rs`
+    - `ecosystem/fret-node/src/ui/portal_commands.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node declarative_portal_text_cancel_returns_focus_to_surface_without_graph_commit`
+    - `cargo check -p fret-node --features compat-retained-canvas --tests`
+    - `cargo fmt --check`
+  - Exit note: a declarative portal text add-on cancel/handled command must return focus to the
+    node graph surface and must not commit graph changes, matching the overlay dismissal/focus
+    return outcome expected from editor-grade add-ons.
+  - Landed behavior: declarative portal text cancel commands are available only for live portal
+    nodes, handle through the declarative portal command route, restore `UiTree` focus to the graph
+    surface, and leave graph/store node position unchanged.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/editors/portal_text.rs`
+    - `ecosystem/fret-node/src/ui/portal_commands.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node declarative_portal_text_cancel_returns_focus_to_surface_without_graph_commit`: passed.
+    - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed.
+    - `cargo fmt --check`: passed.
 
 ## M0 - Decision gates and internal seam map
 
