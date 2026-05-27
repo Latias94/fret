@@ -910,9 +910,9 @@ canonical data flow and invalidation boundaries:
   - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
     (`declarative_portal_text_cancel_returns_focus_to_surface_without_graph_commit`)
 
-- [x] **Mounted declarative overlay dismissal focus return**
-  - XyFlow outcome: mounted add-on overlays such as rename/edit popovers close on cancel without
-    committing changes and return focus to the graph surface.
+- [x] **Mounted declarative rename overlay dismissal focus return**
+  - XyFlow outcome: a mounted rename/edit add-on overlay closes on cancel without committing
+    changes and returns focus to the graph surface.
   - Declarative surface: the rename overlay host mounts a real text-input subtree, handles Escape
     through the declarative overlay command/lifecycle route, closes without a transaction, and
     restores focus to the node graph surface target.

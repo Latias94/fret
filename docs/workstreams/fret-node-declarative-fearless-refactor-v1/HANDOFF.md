@@ -65,5 +65,5 @@ triplets or direct retained authoring.
 ## Next Recommended Action
 
 - Pick the next overlay parity behavior only if it has a concrete observable outcome and a narrow
-  gate. Good candidates are package follow-up after FNDX-043, or anchoring/focus parity for another
-  specific overlay under motion.
+  gate. Good candidates are anchoring/focus parity for another specific overlay under motion, or a
+  closeout review that decides whether these overlay/add-on parity gates are enough for this lane.

@@ -120,6 +120,9 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/hover_anchor.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
+- `ecosystem/fret-node/src/ui/overlays/rename_command.rs`
+- `ecosystem/fret-node/src/ui/overlays/rename_declarative.rs`
+- `ecosystem/fret-node/src/ui/overlays/rename_lifecycle.rs`
 - `ecosystem/fret-node/src/ui/canvas/state/state_overlay_policy.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/overlay.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`
