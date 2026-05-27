@@ -731,24 +731,27 @@
     {
       "id": "progress_indicator",
       "family": "data_display",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_canvas_rect_anchors_aligned",
       "wave": "wave5_surface_data_display",
       "default_owner_bias": "material_foundation",
       "packet_strategy": "motion_packet_if_touched",
       "first_gate_kind": "fixed_timestep_motion_diag",
-      "selector_status": "root_selector_ready_canvas_parts_golden_gated",
+      "selector_status": "root_selector_ready_with_rectangular_canvas_part_anchors",
       "stable_part_ids": [
         "linear_progress_indicator",
+        "linear_progress_indicator.track",
+        "linear_progress_indicator.active-track",
         "circular_progress_indicator"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_surface_data_display_packet_v1.md",
+        "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/artifacts/material3_canvas_draw_region_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe currently owns determinate/indeterminate linear and circular canvas paint plus root selectors",
+        "material_recipe now exposes truthful rectangular diagnostic anchors for linear track and active-track regions",
         "test_harness refreshed progress indicator fixed-frame headless goldens after classifying stale scene snapshots",
-        "diagnostics follow-on covers named canvas draw-region selectors before automation should depend on track/active segment internals",
-        "no mechanism gap found"
+        "mechanism follow-on only covers exact named SceneOp diagnostics for non-rectangular circular arcs or indeterminate segments if a concrete consumer appears"
       ]
     },
     {
@@ -879,26 +882,34 @@
     {
       "id": "slider",
       "family": "choice_control",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_canvas_rect_anchors_aligned",
       "wave": "wave4_choice_controls",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "input_motion_packet",
       "first_gate_kind": "pointer_semantics_motion",
-      "selector_status": "choice_selector_ready_with_canvas_part_gap",
+      "selector_status": "choice_selector_ready_with_rectangular_canvas_part_anchors",
       "stable_part_ids": [
         "slider",
+        "slider.track",
+        "slider.active-track",
+        "slider.handle",
         "range_slider",
         "range_slider.start",
-        "range_slider.end"
+        "range_slider.start.handle",
+        "range_slider.end",
+        "range_slider.end.handle",
+        "range_slider.track",
+        "range_slider.active-track"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_choice_controls_packet_v1.md",
+        "docs/workstreams/material3-canvas-draw-region-diagnostics-v1/artifacts/material3_canvas_draw_region_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns value/range state machines, keyboard and pointer updates, slider semantics, canvas track/handle rendering, and value indicator",
-        "diagnostics/test_harness owns scene/golden proof for internal canvas track/handle/state-layer paint operations",
-        "mechanism follow-on covers named canvas draw-region diagnostics before exposing internal slider part selectors",
-        "no Material foundation refactor was required in this packet"
+        "material_recipe now exposes truthful rectangular diagnostic anchors for track, active-track, and handle regions",
+        "diagnostics/test_harness owns scene/golden proof for remaining internal tick, stop-indicator, and state-layer paint operations",
+        "mechanism follow-on covers exact named SceneOp diagnostics only if automation needs non-rectangular or per-op draw-region naming"
       ]
     },
     {

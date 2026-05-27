@@ -38,8 +38,10 @@ Components audited:
 
 - Every low-interaction component exposes a stable root `test_id`; components with recipe-owned
   chrome expose a dotted `.chrome` child where the chrome is inspectable.
-- Pure canvas internals are not exposed as fake selectors. ProgressIndicator stays root-selector
-  plus fixed-frame scene/golden gated until named draw-region diagnostics exist.
+- Exact canvas operations are not exposed as fake selectors. Linear ProgressIndicator now has
+  truthful rectangular recipe anchors for `track` and `active-track`; circular arcs and
+  indeterminate segmented regions remain scene/golden gated until a generic named draw-region
+  mechanism is justified.
 - Shared state-layer, ripple, and minimum target behavior remain in Material foundation; visual
   surface composition stays in component recipes.
 - TopAppBar scroll behavior remains recipe-owned unless a gallery diagnostic proves broader policy
@@ -49,6 +51,8 @@ Components audited:
 ## Artifacts
 
 - `ecosystem/fret-ui-material3/src/badge.rs`
+- `ecosystem/fret-ui-material3/src/foundation/test_id.rs`
+- `ecosystem/fret-ui-material3/src/progress_indicator.rs`
 - `ecosystem/fret-ui-material3/tests/automation_surface.rs`
 - `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
 - `goldens/material3-headless/v1/material3-badge.*.json`
@@ -63,6 +67,8 @@ Components audited:
 - `material3_surface_data_display_expose_stable_part_test_ids` renders Badge, Button, Card,
   CarouselItem, Divider, FAB, List, LinearProgressIndicator, CircularProgressIndicator, and
   TopAppBar together and proves their stable automation targets are live.
+- LinearProgressIndicator exposes hidden diagnostic anchors for `linear_progress_indicator.track`
+  and `linear_progress_indicator.active-track` through absolute layout regions.
 - Existing headless suites continue to own the visual/motion evidence for Badge, Divider, FAB, List,
   ProgressIndicator, TopAppBar, CarouselItem, and the broad controls/card/button surface.
 
@@ -70,11 +76,11 @@ Components audited:
 
 - `material_recipe`: Badge anchoring and chrome; Button/Card/CarouselItem/FAB surface composition;
   Divider orientation/thickness; List item semantics and selected state; ProgressIndicator canvas
-  paint; TopAppBar variants/actions/scroll state.
+  paint and rectangular diagnostic anchors; TopAppBar variants/actions/scroll state.
 - `material_foundation`: existing state-layer/ripple/minimum target helpers used by interactive
   Button/Card/CarouselItem/FAB/List surfaces.
-- `diagnostics/test_harness`: stable selector proofs and refreshed Badge/Divider/ProgressIndicator
-  headless goldens.
+- `diagnostics/test_harness`: stable selector proofs, rectangular progress anchors, and refreshed
+  Badge/Divider/ProgressIndicator headless goldens.
 - `kit_policy`: no new shared policy was proven. List roving/selection and TopAppBar scroll behavior
   should move only if another design system proves reuse pressure.
 - `mechanism`: no `crates/*` change was needed.
@@ -94,8 +100,8 @@ Components audited:
 
 ## Residual Risk
 
-- ProgressIndicator track/active segment internals remain canvas paint operations, not queryable
-  automation parts.
+- ProgressIndicator circular arcs and indeterminate segments remain canvas paint operations, not
+  queryable automation parts.
 - TopAppBar scroll diagnostics are still proportional follow-ons if gallery behavior drifts.
 - Badge text TopRight placement uses the explicit anchor box and token large-size as the stable
   layout contract; text-measured edge alignment can be refined only if a real product surface needs

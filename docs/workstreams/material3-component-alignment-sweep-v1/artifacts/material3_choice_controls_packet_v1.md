@@ -33,7 +33,7 @@ The upstream axis used for this packet is:
 | `Checkbox` | `material_recipe`, `material_foundation`, `test_harness` | Recipe owns tri-state bool/optional model mapping and checkbox semantics. Existing `foundation::indication` and `foundation::interactive_size` own state layer/ripple and minimum target policy. New automation coverage proves root and `.chrome` selectors. |
 | `Radio` / `RadioGroup` | `material_recipe`, `material_foundation`, `kit_policy` | Recipe owns radio dot geometry, APG-style group semantics, roving/typeahead wiring, and item selectors. Existing Material indication owns ripple/state-layer behavior. Existing gates prove selected-dot centering and pointer-origin ripple. |
 | `Switch` | `material_recipe`, `material_foundation` | Existing seed packet remains valid. Switch owns track/handle/icon selectors and toggle animation; shared indication/minimum target policy remains in Material foundation. |
-| `Slider` / `RangeSlider` | `material_recipe`, `diagnostics` | Recipe owns value model, keyboard/pointer value updates, range thumb semantics, canvas track/handle rendering, and value indicator. Stable selectors are root and range thumb semantics; internal track/handle canvas parts stay scene/golden-gated rather than fake semantic selectors. |
+| `Slider` / `RangeSlider` | `material_recipe`, `diagnostics` | Recipe owns value model, keyboard/pointer value updates, range thumb semantics, canvas track/handle rendering, and value indicator. A follow-on now exposes truthful rectangular diagnostic anchors for track, active-track, and handle regions while leaving tick/stop/state-layer paint scene/golden-gated. |
 | `SegmentedButtonSet` | `material_recipe`, `kit_policy`, `test_harness` | Recipe owns single/multi selection, roles, checked state, per-segment chrome, and RTL-aware roving. Current `fret-ui` roving mechanism is sufficient; no new kit abstraction is proven by this packet. |
 | `AssistChip` / `SuggestionChip` | `material_recipe`, `material_foundation` | Recipe owns chip label/icon composition and chrome selectors; shared indication/minimum target policy covers state layer/ripple/touch target behavior. |
 | `FilterChip` / `InputChip` | `material_recipe`, `material_foundation`, `kit_policy` | Recipe owns selected semantics and trailing-action composition. Trailing actions expose `.trailing-icon` selectors and keyboard focus routing. Shared indication/minimum target policy remains Material foundation. |
@@ -56,9 +56,16 @@ Newly proven or confirmed selector contracts:
 - `switch.icon-on`
 - `switch.icon-off`
 - `slider`
+- `slider.track`
+- `slider.active-track`
+- `slider.handle`
 - `range_slider`
 - `range_slider.start`
+- `range_slider.start.handle`
 - `range_slider.end`
+- `range_slider.end.handle`
+- `range_slider.track`
+- `range_slider.active-track`
 - `segmented_button`
 - `segmented_button.item`
 - `segmented_button.item.chrome`
@@ -78,12 +85,15 @@ Newly proven or confirmed selector contracts:
 - `icon_toggle_button`
 - `icon_toggle_button.chrome`
 
-Intentionally not added in this packet:
+Still intentionally not added:
 
-- Slider internal canvas parts such as `slider.track`, `slider.handle`, and `slider.state-layer`.
+- Exact named `SceneOp` draw-region labels.
+- Slider internal non-rectangular or transient paint parts such as tick markers, stop indicators,
+  and state layers.
 
-Those are paint operations inside a single canvas. They are better protected by scene/golden tests
-until Fret has a general diagnostics mechanism for named canvas draw regions.
+Track, active-track, and handle regions are covered by the closed canvas draw-region follow-on as
+recipe-level rectangular diagnostic anchors. Remaining paint operations stay scene/golden gated
+until Fret has a concrete consumer for exact named canvas draw regions.
 
 ## Implementation Anchors
 
@@ -91,6 +101,7 @@ until Fret has a general diagnostics mechanism for named canvas draw regions.
 - `ecosystem/fret-ui-material3/src/radio.rs`
 - `ecosystem/fret-ui-material3/src/switch.rs`
 - `ecosystem/fret-ui-material3/src/slider.rs`
+- `ecosystem/fret-ui-material3/src/foundation/test_id.rs`
 - `ecosystem/fret-ui-material3/src/segmented_button.rs`
 - `ecosystem/fret-ui-material3/src/chip.rs`
 - `ecosystem/fret-ui-material3/src/suggestion_chip.rs`
@@ -126,8 +137,8 @@ cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless
 
 ## Follow-Ons
 
-- `M3CAS-080-F1`: Add diagnostics support for named canvas draw regions before exposing slider
-  internal track/handle/state-layer selectors.
+- `M3CAS-080-F1`: Add exact named `SceneOp` draw-region diagnostics only if a concrete consumer
+  needs slider tick, stop-indicator, state-layer, or per-op paint labels.
 - `M3CAS-080-F2`: Evaluate whether RadioGroup and ChipSet roving/typeahead should move to
   `fret-ui-kit` after another design-system consumer needs the same policy.
 - `M3CAS-080-F3`: Split broader chip visual parity if Assist/Suggestion/Filter/Input chip
