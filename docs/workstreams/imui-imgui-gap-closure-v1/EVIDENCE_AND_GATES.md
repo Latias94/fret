@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Interaction Lifecycle Response Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI interaction lifecycle response projection moved into a private owner without
+changing lifecycle activation/deactivation/edit mutation, transient consumption, active-state frame
+diffing, `ResponseExt` lifecycle signal setters/mergers, or public-in-IMUI APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle.rs` keeps pointer-down/up lifecycle
+  mutation, instant edit mutation, lifecycle edit mutation, and private re-exports for callers.
+- `ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle/response.rs` owns
+  transient-to-response population, active-state lifecycle frame diffing, edited-state stamping,
+  and activated/deactivated merge application.
+- `tools/gate_imui_workstream_source.py` now rejects lifecycle response projection from drifting
+  back into `lifecycle.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui lifecycle --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Tooltip Overlay Request Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI tooltip overlay request assembly moved into a private owner without changing

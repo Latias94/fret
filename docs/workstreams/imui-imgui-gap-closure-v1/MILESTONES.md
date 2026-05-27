@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 interaction lifecycle response owner-split result:
+`ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle/response.rs` now owns
+transient-to-response population, active-state lifecycle frame diffing, edited-state stamping, and
+activated/deactivated merge application. `interaction_runtime/lifecycle.rs` keeps pointer-down/up
+lifecycle mutation, instant edit mutation, lifecycle edit mutation, and private re-exports for
+callers.
+
 2026-05-28 tooltip overlay request owner-split result:
 `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/request.rs` now owns panel child construction,
 tooltip overlay request creation, trigger binding, dismiss close-request signaling, optional

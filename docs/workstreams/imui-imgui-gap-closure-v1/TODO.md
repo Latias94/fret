@@ -44,6 +44,15 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI interaction lifecycle response projection out of
+      `ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle.rs` into a private response
+      owner without changing lifecycle activation/deactivation/edit mutation, transient
+      consumption, active-state frame diffing, `ResponseExt` lifecycle signal setters/mergers, or
+      public-in-IMUI APIs.
+      Result: `interaction_runtime/lifecycle/response.rs` owns transient-to-response population,
+      active-state lifecycle frame diffing, edited-state stamping, and activated/deactivated merge
+      application. `interaction_runtime/lifecycle.rs` keeps pointer-down/up lifecycle mutation,
+      instant edit mutation, lifecycle edit mutation, and private re-exports for callers.
 - [x] Split IMUI tooltip overlay request assembly out of
       `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` into a private request owner
       without changing trigger-id validation, pointer-move open gating, hover/focus interaction
