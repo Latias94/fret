@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 debug-draw path-family owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs` is now a private path-family
+re-export hub. `paths/linear.rs` owns polyline, polygon fill, triangle, and quad path construction;
+`paths/round.rs` owns circle, ngon, and ellipse path construction; `paths/beziers.rs` owns
+quadratic and cubic bezier path construction.
+
 2026-05-27 debug-draw command payload owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/types.rs` now owns the private
 `DebugDrawCommand` payload enum and all draw-list command variants. `debug_draw_controls/commands.rs`

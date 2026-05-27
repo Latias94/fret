@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Debug-Draw Path-Family Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI debug-draw path construction moved into private shape-family owners without
+changing path helper names, validation behavior, sampling helpers, rect path construction, paint
+dispatch, or debug-draw tests.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs` is now a private path-family
+  re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/linear.rs` owns polyline, polygon fill,
+  triangle, and quad path construction.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/round.rs` owns circle, ngon, and
+  ellipse path construction.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths/beziers.rs` owns quadratic and cubic
+  bezier path construction.
+- `tools/gate_imui_workstream_source.py` now rejects linear, round, and bezier path construction
+  bodies from drifting back into `paths.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests::paths
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Command Payload Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI debug-draw command payload variants moved into a private owner without

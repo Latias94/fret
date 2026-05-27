@@ -44,6 +44,14 @@ Last updated: 2026-05-27
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw path construction by shape family out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs` into private linear, round,
+      and bezier owner modules without changing path helper names, validation behavior, sampling
+      helpers, rect path construction, paint dispatch, or debug-draw tests.
+      Result: `paths.rs` is now a private path-family re-export hub; `paths/linear.rs` owns
+      polyline, polygon fill, triangle, and quad path construction; `paths/round.rs` owns circle,
+      ngon, and ellipse path construction; `paths/beziers.rs` owns quadratic and cubic bezier path
+      construction.
 - [x] Split IMUI debug-draw command payload variants out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands.rs` into a private payload
       owner without changing command variant names, draw-list recording paths, summary projection,
