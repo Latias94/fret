@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI input-text picker keyboard handler out of
+      `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard.rs` into a private handler
+      owner without changing keyboard navigation enablement, repeat/IME/modifier gating, arrow
+      highlight movement, Enter pick handling, popup close, model writes, or picker response
+      projection.
+      Result: `text_picker_controls/keyboard/handler.rs` owns key-down capture plus Arrow/Enter
+      model writes. `text_picker_controls/keyboard.rs` keeps keyboard pick/state/snapshot storage
+      and reconciliation.
 - [x] Split IMUI menu item routing dispatch into private entry and core owners without changing
       menu item method names, checkbox/radio/action semantics roles, action forwarding,
       label-identity scoping, pressable hook injection, mount routing, response population, or

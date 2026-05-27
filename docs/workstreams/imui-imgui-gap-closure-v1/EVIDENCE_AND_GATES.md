@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Text-Picker Keyboard Handler Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI input-text picker keyboard handler moved into a private owner without
+changing keyboard navigation enablement, repeat/IME/modifier gating, arrow highlight movement,
+Enter pick handling, popup close, model writes, or picker response projection.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard.rs` keeps keyboard pick/state/
+  snapshot storage and reconciliation.
+- `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard/handler.rs` owns key-down capture,
+  Arrow/Enter navigation and pick handling, repeat/IME/modifier gating, model writes, and popup
+  close.
+- `tools/gate_imui_workstream_source.py` now rejects key-down handler bodies from drifting back
+  into `keyboard.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_text_picker --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Menu Routing Dispatch Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI menu item routing dispatch split into private entry and core owners without

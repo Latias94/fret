@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 text-picker keyboard handler owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard/handler.rs` now owns key-down capture,
+Arrow/Enter navigation and pick handling, repeat/IME/modifier gating, model writes, and popup close.
+`text_picker_controls/keyboard.rs` keeps keyboard pick/state/snapshot storage and reconciliation.
+Focused gates passed: `cargo fmt -p fret-ui-kit`, `cargo check -p fret-ui-kit --features imui --lib`,
+`cargo nextest run -p fret-imui models_text_picker --no-fail-fast`, source gate, catalog, and
+`git diff --check`.
+
 2026-05-28 menu routing dispatch owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch/entries.rs` now owns
 public-in-IMUI menu-item entry wrappers plus semantics/action selection.
