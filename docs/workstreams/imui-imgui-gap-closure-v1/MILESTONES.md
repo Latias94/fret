@@ -42,6 +42,12 @@ field chrome, radio indicator mounting, boolean label mounting, and fill-row vis
 image-quad paint. `paint/media/rounded.rs` owns rounded image/region paint and clip balancing.
 `paint/media/svg.rs` owns SVG image and mask-icon paint.
 
+2026-05-27 debug-draw element behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element/behavior.rs` now owns pressable
+behavior installation, keyboard activation lifecycle marking, clicked transient reads, and
+`ResponseExt` population. `element.rs` keeps canvas composition, fill-layout policy for interactive
+canvases, cache policy, clipping, test-id routing, and debug-draw command painting.
+
 2026-05-27 table row-group owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` keeps
 `wrap_pinned_table_row_groups(...)` orchestration. `row_groups/split.rs` owns pinned-cell

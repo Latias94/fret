@@ -613,8 +613,10 @@ Scope: keep `debug_draw_controls.rs` as the draw-list API and response/model hub
 final canvas/pressable element assembly into a narrower owner module.
 
 - `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs` now owns `debug_draw_element`,
-  pressable wrapping, fill-layout policy, canvas cache policy, clip-to-bounds dispatch, and
-  forwarding into `paint_debug_draw_commands`.
+  fill-layout policy, canvas cache policy, clip-to-bounds dispatch, and forwarding into
+  `paint_debug_draw_commands`.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element/behavior.rs` now owns pressable
+  wrapping, click response population, and keyboard activation lifecycle marking.
 - `debug_draw_controls.rs` still owns `DebugDrawOptions`, `DebugDrawResponse`,
   `ImUiDebugDrawList`, stroke/corner options, command recording, summary construction, and the
   facade entrypoint.

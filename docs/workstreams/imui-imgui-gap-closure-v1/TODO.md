@@ -52,6 +52,15 @@ Last updated: 2026-05-27
       `paint/media/raster.rs` owns image/region/quad paint, `paint/media/rounded.rs` owns rounded
       image/region paint and clip push/pop balancing, and `paint/media/svg.rs` owns SVG image/mask
       icon paint.
+- [x] Split IMUI debug-draw pressable element behavior out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs` into a private owner module
+      without changing noninteractive canvas output, pressable canvas wrapping, keyboard activation
+      lifecycle marking, pointer-click reporting, click response population, cache policy, clipping,
+      or paint routing.
+      Result: `debug_draw_controls/element/behavior.rs` owns pressable behavior installation,
+      keyboard activation lifecycle marking, clicked transient reads, and `ResponseExt` population.
+      `element.rs` keeps canvas composition, fill-layout policy for interactive canvases, cache
+      policy, clipping, test-id routing, and debug-draw command painting.
 - [x] Split IMUI table row-group pinned-cell splitting, row flex layout, and horizontal-scroll
       wrapper helpers out of `ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs` into
       private owner modules without changing table row/header layout, pinned-column ordering,

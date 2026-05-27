@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, CanvasCachePolicy, CanvasProps, LayoutStyle, Length, PressableA11y, PressableProps,
     SizeStyle,
@@ -10,6 +9,8 @@ use fret_ui::{ElementContext, UiHost};
 use super::commands::DebugDrawCommand;
 use super::paint::paint_debug_draw_commands;
 use super::{DebugDrawOptions, ResponseExt};
+
+mod behavior;
 
 pub(super) fn debug_draw_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -52,42 +53,7 @@ fn debug_draw_pressable_element<H: UiHost>(
 
     let clip_to_bounds = options.clip_to_bounds;
     cx.pressable_with_id(props, move |cx, state, id| {
-        let behavior = crate::imui::item_behavior::install_pressable_item_behavior_with_options(
-            cx,
-            id,
-            crate::imui::item_behavior::PressableItemBehaviorOptions {
-                report_pointer_click: true,
-            },
-        );
-        let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
-
-        cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
-            if reason == ActivateReason::Keyboard {
-                crate::imui::mark_lifecycle_instant_if_inactive(
-                    host,
-                    acx,
-                    &lifecycle_model_for_activate,
-                    false,
-                );
-            }
-            host.record_transient_event(acx, crate::imui::KEY_CLICKED);
-            host.notify(acx);
-        }));
-
-        let clicked = cx.take_transient_for(id, crate::imui::KEY_CLICKED);
-        crate::imui::item_behavior::populate_pressable_item_response(
-            cx,
-            id,
-            state,
-            &behavior,
-            crate::imui::item_behavior::PressableItemResponseInput {
-                enabled,
-                clicked,
-                changed: false,
-                lifecycle_edited: false,
-            },
-            response,
-        );
+        behavior::install_debug_draw_pressable_behavior(cx, id, state, enabled, response);
 
         vec![debug_draw_canvas_element(
             cx,

@@ -686,6 +686,8 @@
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear/rect_quad_triangle.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/meshes.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/round.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs",
+    "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/path_builder/shape_methods.rs",
     "ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint.rs",

@@ -245,6 +245,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Debug-Draw Element Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI debug-draw pressable element behavior moved into a private owner without
+changing noninteractive canvas output, pressable canvas wrapping, keyboard activation lifecycle
+marking, pointer-click reporting, click response population, cache policy, clipping, or paint
+routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element.rs` keeps canvas composition,
+  fill-layout policy for interactive canvases, cache policy, clipping, test-id routing, and
+  debug-draw command painting.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/element/behavior.rs` owns pressable behavior
+  installation, keyboard activation lifecycle marking, clicked transient reads, and `ResponseExt`
+  population.
+- `tools/gate_imui_workstream_source.py` now requires the debug-draw element behavior owner and
+  rejects pressable behavior bodies from drifting back into `element.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests::element
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Media Paint Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug-draw media paint routing moved into private raster, rounded, and SVG owners
