@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Button Behavior Action Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI button action payload storage and command dispatch moved into a private owner
+without changing button pressable behavior, shortcut activation, command gating, action payload
+forwarding, context-menu signaling, visual resolution, or `ResponseExt` population.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/button_controls/behavior.rs` keeps pressable props,
+  shortcut/context-menu handlers, enabled gating, lifecycle marking, response population, and visual
+  resolution.
+- `ecosystem/fret-ui-kit/src/imui/button_controls/behavior/action.rs` owns `ButtonAction`, action
+  payload storage, command dispatch source recording, pending payload recording, and final action
+  dispatch.
+- `tools/gate_imui_workstream_source.py` now rejects action dispatch bodies from drifting back into
+  `behavior.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui button_shortcuts --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui button_command_uses_command_metadata_and_gating --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Button Visual A11y/Variant Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI button visual a11y and variant layout/glyph policy moved into private owners

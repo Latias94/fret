@@ -44,6 +44,14 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI button action payload and command dispatch out of
+      `ecosystem/fret-ui-kit/src/imui/button_controls/behavior.rs` into a private action owner
+      without changing button pressable behavior, shortcut activation, command gating, action
+      payload forwarding, context-menu signaling, visual resolution, or `ResponseExt` population.
+      Result: `button_controls/behavior/action.rs` owns `ButtonAction`, payload storage, command
+      dispatch source recording, pending payload recording, and final action dispatch, while
+      `behavior.rs` keeps pressable props, shortcut/context-menu handlers, enabled gating,
+      lifecycle marking, response population, and visual resolution.
 - [x] Split IMUI button visual a11y and variant layout/glyph policy out of
       `ecosystem/fret-ui-kit/src/imui/button_controls/visual.rs` into private owner modules
       without changing public button APIs, button a11y labels, arrow a11y labels, arrow glyphs,

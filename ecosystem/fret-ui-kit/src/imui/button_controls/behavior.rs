@@ -1,7 +1,6 @@
-use std::{any::Any, sync::Arc};
+use std::sync::Arc;
 
 use fret_core::KeyCode;
-use fret_runtime::ActionId;
 use fret_ui::UiHost;
 use fret_ui::action::ActivateReason;
 use fret_ui::element::PressableProps;
@@ -11,11 +10,10 @@ use super::visual;
 use crate::command::ElementCommandGatingExt as _;
 use crate::declarative::chrome::control_chrome_pressable_with_id_props;
 
-#[derive(Clone)]
-pub(super) struct ButtonAction {
-    pub(super) action: ActionId,
-    pub(super) payload: Option<Arc<dyn Fn() -> Box<dyn Any + Send + Sync> + 'static>>,
-}
+mod action;
+
+pub(super) use action::ButtonAction;
+use action::dispatch_button_action;
 
 pub(super) fn button_pressable<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -128,19 +126,4 @@ pub(super) fn button_pressable<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
 
     ui.add(element);
     response
-}
-
-fn dispatch_button_action(
-    host: &mut dyn fret_ui::action::UiActionHost,
-    acx: fret_ui::action::ActionCx,
-    reason: ActivateReason,
-    action: Option<ButtonAction>,
-) {
-    if let Some(action) = action {
-        host.record_pending_command_dispatch_source(acx, &action.action, reason);
-        if let Some(payload) = action.payload.as_ref() {
-            host.record_pending_action_payload(acx, &action.action, payload());
-        }
-        host.dispatch_command(Some(acx.window), action.action);
-    }
 }

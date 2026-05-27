@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 button behavior action owner-split result:
+`ecosystem/fret-ui-kit/src/imui/button_controls/behavior/action.rs` now owns `ButtonAction`, action
+payload storage, command dispatch source recording, pending payload recording, and final action
+dispatch. `button_controls/behavior.rs` keeps pressable props, shortcut/context-menu handlers,
+enabled gating, lifecycle marking, response population, and visual resolution.
+
 2026-05-28 button visual a11y/variant owner-split result:
 `ecosystem/fret-ui-kit/src/imui/button_controls/visual/a11y.rs` now owns button `PressableA11y`
 construction, `SemanticsRole::Button`, custom label fallback, and arrow a11y labels.
