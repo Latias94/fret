@@ -4,14 +4,14 @@ use std::sync::Arc;
 
 use fret_core::Px;
 use fret_runtime::Model;
-use fret_ui::element::{AnyElement, ColumnProps, LayoutStyle, Length, RowProps, SpacingLength};
+use fret_ui::element::{AnyElement, ColumnProps, Length, SpacingLength};
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
+mod list;
+mod panel;
 mod selection;
 
-use super::trigger;
-use crate::imui::{TabBarOptions, TabBarResponse, TabTriggerResponse};
-use crate::primitives::tabs;
+use crate::imui::{TabBarOptions, TabBarResponse};
 
 pub(super) struct BuiltTabItem {
     pub(super) id: Arc<str>,
@@ -35,104 +35,18 @@ pub(super) fn render_tab_bar<H: UiHost>(
     let selected = selection::normalize_selected_tab(cx, &selected_model, &items);
     let selected_changed =
         super::super::model_value_changed_for(cx, cx.root_id(), selected.clone());
-    let set_size = items.len().min(u32::MAX as usize) as u32;
-    let mut selected_trigger_id = None;
-    let mut first_focusable = None;
-    let mut trigger_responses = Vec::with_capacity(items.len());
-
-    let triggers = items
-        .iter()
-        .enumerate()
-        .map(|(index, item)| {
-            let is_selected = selected.as_deref() == Some(item.id.as_ref());
-            let built = trigger::render_tab_trigger(
-                cx,
-                &selected_model,
-                item,
-                is_selected,
-                index.min(u32::MAX as usize - 1) as u32 + 1,
-                set_size,
-            );
-            if first_focusable.is_none() && item.enabled {
-                first_focusable = built.response.id();
-            }
-            if is_selected {
-                selected_trigger_id = built.response.id();
-            }
-            trigger_responses.push(TabTriggerResponse {
-                id: item.id.clone(),
-                selected: is_selected,
-                trigger: built.response,
-            });
-            built.element
-        })
-        .collect::<Vec<_>>();
+    let list = list::render_tab_list(cx, &selected_model, selected.as_deref(), &items, &options);
 
     if let Some(state) = build_focus.as_ref()
         && state.get().is_none()
     {
-        state.set(selected_trigger_id.or(first_focusable));
+        state.set(list.selected_trigger_id.or(list.first_focusable));
     }
 
-    let list_layout = LayoutStyle {
-        size: fret_ui::element::SizeStyle {
-            width: Length::Fill,
-            height: Length::Auto,
-            ..Default::default()
-        },
-        ..Default::default()
-    };
-    let list = cx.semantics(
-        {
-            let mut props =
-                tabs::tab_list_semantics_props(list_layout, tabs::TabsOrientation::Horizontal);
-            props.test_id = options.test_id.clone();
-            props
-        },
-        move |cx| {
-            let mut row = RowProps::default();
-            row.layout.size.width = Length::Fill;
-            row.layout.size.height = Length::Auto;
-            row.gap = SpacingLength::Px(Px(0.0));
-            vec![cx.row(row, move |cx| {
-                vec![
-                    crate::ui::h_flex(move |_cx| triggers)
-                        .gap_metric(options.gap)
-                        .justify(crate::Justify::Start)
-                        .items(crate::Items::Center)
-                        .no_wrap()
-                        .into_element(cx),
-                ]
-            })]
-        },
-    );
+    let panel =
+        panel::render_selected_tab_panel(cx, selected.clone(), list.selected_trigger_id, items);
 
-    let panel = selected.clone().and_then(|selected_id| {
-        items
-            .into_iter()
-            .find(|item| item.id.as_ref() == selected_id.as_ref())
-            .map(|item| {
-                let panel_layout = LayoutStyle {
-                    size: fret_ui::element::SizeStyle {
-                        width: Length::Fill,
-                        height: Length::Auto,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                };
-                cx.keyed(("tab-panel", item.id.clone()), |cx| {
-                    let mut semantics = tabs::tab_panel_semantics_props(
-                        panel_layout,
-                        Some(item.label),
-                        selected_trigger_id.map(|id| id.0),
-                    );
-                    semantics.test_id = item.panel_test_id;
-                    cx.semantics(semantics, move |_cx| item.panel_children)
-                })
-            })
-    });
-
-    let mut children = vec![list];
+    let mut children = vec![list.element];
     if let Some(panel) = panel {
         children.push(panel);
     }
@@ -146,7 +60,7 @@ pub(super) fn render_tab_bar<H: UiHost>(
         TabBarResponse {
             selected,
             selected_changed,
-            triggers: trigger_responses,
+            triggers: list.trigger_responses,
         },
     )
 }

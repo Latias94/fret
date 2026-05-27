@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Tab Item List/Panel Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI tab item list semantics and selected-panel rendering moved into private
+owners without changing selected-model normalization, trigger response collection, focus fallback
+behavior, tab-list semantics, tab-panel semantics, or public tab-bar APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items.rs` keeps `BuiltTabItem`,
+  selected-model normalization, build-focus propagation, final column assembly, and
+  `TabBarResponse` construction.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/list.rs` owns tab-list semantics,
+  trigger rendering, selected/first-focusable trigger tracking, and `TabTriggerResponse`
+  collection.
+- `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/panel.rs` owns selected tab-panel
+  semantics and panel child mounting.
+- `tools/gate_imui_workstream_source.py` now rejects tab-list and tab-panel rendering bodies from
+  drifting back into `items.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib tab_family_controls --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Text-Picker Core Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI input-text picker core orchestration moved into a private owner without

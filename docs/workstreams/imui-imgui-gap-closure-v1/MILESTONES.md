@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 tab item list/panel owner-split result:
+`ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/list.rs` now owns tab-list semantics,
+trigger rendering, selected/first-focusable trigger tracking, and `TabTriggerResponse`
+collection. `items/panel.rs` owns selected tab-panel semantics and panel child mounting.
+`items.rs` keeps `BuiltTabItem`, selected-model normalization, build-focus propagation, final
+column assembly, and `TabBarResponse` construction.
+
 2026-05-28 text-picker core owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/core.rs` now owns input-text picker
 orchestration: model reads, candidate visibility, keyboard snapshot reconciliation, input root

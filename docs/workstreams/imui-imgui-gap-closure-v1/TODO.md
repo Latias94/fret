@@ -44,6 +44,15 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI tab item list semantics and selected-panel rendering out of
+      `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items.rs` into private list and panel
+      owners without changing selected-model normalization, trigger response collection, focus
+      fallback behavior, tab-list semantics, tab-panel semantics, or public tab-bar APIs.
+      Result: `tab_family_controls/items/list.rs` owns tab-list semantics, trigger rendering,
+      selected/first-focusable trigger tracking, and `TabTriggerResponse` collection.
+      `items/panel.rs` owns selected tab-panel semantics and panel child mounting. `items.rs`
+      keeps `BuiltTabItem`, selected-model normalization, build-focus propagation, final column
+      assembly, and `TabBarResponse` construction.
 - [x] Split IMUI input-text picker core orchestration out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into a private core owner without
       changing completion/history wrapper calls, candidate filtering, keyboard navigation, input
