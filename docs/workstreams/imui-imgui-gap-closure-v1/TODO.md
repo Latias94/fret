@@ -38,15 +38,24 @@ Last updated: 2026-05-27
       changing compact button/control label text roles, caption text color routing, pill badge
       chrome, or existing `control_chrome::*` call paths.
       Result: `control_chrome/text.rs` owns `control_text`, `fill_text`, `caption_text`, and
-      `pill`. The root `control_chrome.rs` keeps style constants, control palette, button/field
-      chrome, row/stack layout props, and test module wiring.
+      `pill`. At this slice, the root `control_chrome.rs` kept style constants, control palette,
+      button/field chrome, row/stack layout props, and test module wiring; the later chrome owner
+      split below moved palette/button/field chrome out too.
 - [x] Split IMUI shared control chrome row/stack layout helpers out of
       `ecosystem/fret-ui-kit/src/imui/control_chrome.rs` into a private owner module without
       changing row direction, fill-width behavior, gap tokens, justification, or alignment for
       existing `control_chrome::*_props` call paths.
       Result: `control_chrome/layout.rs` owns `fill_row_props`, `centered_row_props`, and
-      `fill_stack_props`. The root `control_chrome.rs` keeps style constants, control palette,
-      button/field chrome, text helper re-exports, and test module wiring.
+      `fill_stack_props`. At this slice, the root `control_chrome.rs` kept style constants,
+      control palette, button/field chrome, text helper re-exports, and test module wiring; the
+      later chrome owner split below moved palette/button/field chrome out too.
+- [x] Split IMUI shared control palette/theme chrome out of
+      `ecosystem/fret-ui-kit/src/imui/control_chrome.rs` into a private owner module without
+      changing `control_chrome::button_chrome`, `field_chrome`, `ImUiControlPalette`, dense
+      button/field chrome defaults, row/stack layout helpers, or text/pill helpers.
+      Result: `control_chrome/chrome.rs` owns `ImUiControlPalette`, button theme color resolution,
+      field theme color resolution, and compact button/field container chrome. The root
+      `control_chrome.rs` now keeps style constants, owner module wiring, and private re-exports.
 - [x] Split IMUI input-text picker candidate visibility and keyboard state reconciliation out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into private owner modules without
       changing the public IMUI surface.

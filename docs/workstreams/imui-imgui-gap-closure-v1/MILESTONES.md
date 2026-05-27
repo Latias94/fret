@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 control chrome palette owner-split result:
+`ecosystem/fret-ui-kit/src/imui/control_chrome/chrome.rs` now owns `ImUiControlPalette`, button
+theme color resolution, field theme color resolution, and compact button/field container chrome.
+`control_chrome.rs` keeps style constants, owner module wiring, and private re-exports for chrome,
+layout, and text helpers.
+
 2026-05-27 floating options owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_options.rs` is now a thin re-export index.
 `floating_options/window.rs` owns `FloatingWindowResizeOptions`, `FloatingWindowOptions`,
@@ -136,15 +142,17 @@ action-button APIs remain unchanged.
 
 2026-05-27 control chrome text owner-split result:
 `ecosystem/fret-ui-kit/src/imui/control_chrome/text.rs` now owns compact control text helpers,
-caption color routing, and pill badge chrome. `control_chrome.rs` keeps style constants,
-`ImUiControlPalette`, button/field chrome, row/stack layout props, and test module wiring.
+caption color routing, and pill badge chrome. At this slice, `control_chrome.rs` still kept style
+constants, `ImUiControlPalette`, button/field chrome, row/stack layout props, and test module
+wiring; the later 2026-05-27 chrome owner split moved palette/button/field chrome out too.
 Existing `control_chrome::control_text`, `fill_text`, `caption_text`, and `pill` call paths remain
 unchanged through the private root re-export.
 
 2026-05-27 control chrome layout owner-split result:
 `ecosystem/fret-ui-kit/src/imui/control_chrome/layout.rs` now owns shared IMUI row/stack flex
-helper props. `control_chrome.rs` keeps style constants, `ImUiControlPalette`, button/field
-chrome, text helper re-exports, and test module wiring. Existing `fill_row_props`,
+helper props. At this slice, `control_chrome.rs` still kept style constants, `ImUiControlPalette`,
+button/field chrome, text helper re-exports, and test module wiring; the later 2026-05-27 chrome
+owner split moved palette/button/field chrome out too. Existing `fill_row_props`,
 `centered_row_props`, and `fill_stack_props` call paths keep row direction, fill-width behavior,
 gap tokens, justification, and alignment.
 

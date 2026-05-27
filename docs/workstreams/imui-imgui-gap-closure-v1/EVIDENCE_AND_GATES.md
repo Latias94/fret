@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Control Chrome Palette Owner-Split Evidence - 2026-05-27
+
+Claim verified: shared IMUI control palette/theme chrome moved behind a private owner without
+changing `control_chrome::button_chrome`, `field_chrome`, `ImUiControlPalette`, text/layout helper
+call paths, dense row/stack defaults, or button/combo/textarea/image-item smoke coverage.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/control_chrome.rs` now keeps style constants, private module
+  wiring, and re-exports the chrome/layout/text owners.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome.rs` owns `ImUiControlPalette`, button
+  theme color resolution, field theme color resolution, and compact button/field container chrome.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/layout.rs` and
+  `ecosystem/fret-ui-kit/src/imui/control_chrome/text.rs` remain the row/stack layout and text/pill
+  owners.
+- `tools/gate_imui_workstream_source.py` now rejects palette/theme chrome from drifting back into
+  the root `control_chrome.rs` index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo fmt -p fret-ui-kit --check --verbose`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui imui_control_chrome --no-fail-fast`: pass; 1
+  test, 736 skipped.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test
+  imui_combo_smoke --test imui_textarea_smoke --test imui_image_item_smoke --no-fail-fast`: pass;
+  6 tests, 0 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Floating Options Owner-Split Evidence - 2026-05-27
 
 Claim verified: floating window options and floating area options/context moved behind separate
