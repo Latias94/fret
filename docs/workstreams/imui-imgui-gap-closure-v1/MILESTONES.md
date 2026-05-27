@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 control chrome palette/button/field owner-split result:
+`ecosystem/fret-ui-kit/src/imui/control_chrome/chrome.rs` is now a private module index/re-export
+hub. `control_chrome/chrome/palette.rs` owns `ImUiControlPalette`,
+`control_chrome/chrome/button.rs` owns button theme resolution and compact button chrome props,
+and `control_chrome/chrome/field.rs` owns field theme resolution plus fill-width field chrome
+props.
+
 2026-05-27 container element owner-split result:
 `ecosystem/fret-ui-kit/src/imui/containers.rs` is now a private module index/re-export hub.
 `ecosystem/fret-ui-kit/src/imui/containers/children.rs` owns child `ImUiFacade` mounting with build

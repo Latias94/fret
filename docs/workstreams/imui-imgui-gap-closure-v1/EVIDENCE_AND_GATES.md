@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Control Chrome Palette/Button/Field Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI shared control chrome palette, button theme resolution, and field theme
+resolution moved into narrower private owners without changing `control_chrome::button_chrome`,
+`field_chrome`, `ImUiControlPalette`, dense button/field chrome defaults, theme token fallback
+order, or caller paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome.rs` is now a private module/re-export
+  index.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/palette.rs` owns
+  `ImUiControlPalette`.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/button.rs` owns button theme resolution
+  and compact button chrome props.
+- `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome/field.rs` owns field theme resolution and
+  fill-width field chrome props.
+- The source gate rejects theme resolution, palette records, or chrome prop bodies from drifting
+  back into `control_chrome/chrome.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib control_chrome::tests --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Container Element Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI child building, linear container composition, scroll container composition,

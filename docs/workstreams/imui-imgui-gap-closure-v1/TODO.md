@@ -182,6 +182,14 @@ Last updated: 2026-05-27
       Result: `control_chrome/chrome.rs` owns `ImUiControlPalette`, button theme color resolution,
       field theme color resolution, and compact button/field container chrome. The root
       `control_chrome.rs` now keeps style constants, owner module wiring, and private re-exports.
+- [x] Split IMUI shared control chrome palette, button, and field theme resolution out of
+      `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome.rs` into narrower private owners
+      without changing `control_chrome::button_chrome`, `field_chrome`, `ImUiControlPalette`,
+      dense button/field chrome defaults, theme token fallback order, or caller paths.
+      Result: `control_chrome/chrome/palette.rs` owns `ImUiControlPalette`,
+      `chrome/button.rs` owns button theme resolution and chrome props, `chrome/field.rs` owns
+      field theme resolution and chrome props, and `chrome.rs` is now a private module/re-export
+      index.
 - [x] Split IMUI input-text picker candidate visibility and keyboard state reconciliation out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls.rs` into private owner modules without
       changing the public IMUI surface.
