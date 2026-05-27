@@ -32,6 +32,7 @@ goldens.
 | Date month navigation and day grid | `material_recipe` | Existing staged month/selected-date model is recipe-owned and remains local to DatePicker. |
 | Time dial/input display modes | `material_recipe` | Existing staged time model, selector keyboard handling, dial pointer handling, and input auto-advance are recipe-owned. |
 | Stable automation selectors | `diagnostics` + `material_recipe` | Old hyphen/global ids were replaced with base-derived dotted part ids. |
+| Date selectable-date disabling | `material_recipe` | A DatePicker predicate now disables blocked day cells across docked and modal surfaces while preserving value-derived anchors. |
 | Headless picker golden drift | `test_harness` | The current scenes are stable. Previous picker goldens encoded stale stretched underlay/action-button geometry. |
 | Accessibility parity depth | `follow_on` | Richer calendar/time-grid semantics should be split from this selector/golden packet. |
 
@@ -52,6 +53,14 @@ DatePicker now derives stable ids from the supplied base:
 - `date_picker.panel`
 - `date_picker.actions.cancel`
 - `date_picker.actions.confirm`
+
+DatePicker now also exposes recipe-level selectable-date policy:
+
+- `DockedDatePicker::selectable_dates(|date| ...)`
+- `DatePickerDialog::selectable_dates(|date| ...)`
+
+Predicate-blocked dates remain visible, expose disabled semantics through the row/column cell, keep
+their value-derived date anchor, and cannot update docked or dialog selection state.
 
 TimePicker now derives stable ids from the supplied base:
 
@@ -89,6 +98,7 @@ The UI gallery TimePicker chrome-fill diagnostic was updated to use these base-d
 - `ecosystem/fret-ui-material3/tests/automation_surface.rs`
 - `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
 - `docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/artifacts/date_picker_day_cell_selectors_packet_v1.md`
+- `docs/workstreams/material3-date-picker-selectable-dates-packet-v1/artifacts/date_picker_selectable_dates_packet_v1.md`
 - `docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md`
 - `tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-time-picker-chrome-fill.json`
 - `goldens/material3-headless/v1/material3-date-picker.*.json`
@@ -100,6 +110,7 @@ The UI gallery TimePicker chrome-fill diagnostic was updated to use these base-d
 cargo fmt --package fret-ui-material3
 cargo check -p fret-ui-material3 --features diagnostics --tests
 cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface
+cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_surface material3_date_picker_respects_selectable_dates
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_clock_dial_drag_updates_time
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_selector_keyboard_arrows_step_time
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_replaces_and_auto_advances_hour
@@ -116,8 +127,7 @@ python tools/check_workstream_catalog.py
 
 ## Residual Risk
 
-- DatePicker does not yet expose a full Material `SelectableDates`/disabled-date policy or
-  localized day/month announcement surface.
+- DatePicker still needs localized day/month labels and announcement surface.
 - TimePicker does not yet expose invalid-input supporting/error text or richer live-region
   announcements.
 - These are accessibility depth follow-ons, not blockers for the current component/foundation

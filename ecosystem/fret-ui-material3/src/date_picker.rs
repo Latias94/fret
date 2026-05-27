@@ -50,6 +50,18 @@ fn date_picker_date_cell_test_id(base: &Arc<str>, date: Date) -> Arc<str> {
     ))
 }
 
+/// Date-level selection policy for Material date picker grids.
+///
+/// This mirrors Compose Material3's selectable-date outcome at Fret's recipe layer: disabled dates
+/// remain visible but cannot be activated.
+pub type DateSelectablePredicate = Arc<dyn Fn(Date) -> bool + 'static>;
+
+fn date_is_selectable(selectable_dates: Option<&DateSelectablePredicate>, date: Date) -> bool {
+    selectable_dates
+        .map(|predicate| predicate(date))
+        .unwrap_or(true)
+}
+
 fn cached_day_of_month_label(day: u8) -> Arc<str> {
     static TABLE: OnceLock<Vec<Arc<str>>> = OnceLock::new();
     let table = TABLE.get_or_init(|| {
@@ -98,6 +110,7 @@ pub struct DockedDatePicker {
     selected: Model<Option<Date>>,
     week_start: Weekday,
     today: Option<Date>,
+    selectable_dates: Option<DateSelectablePredicate>,
     test_id: Option<Arc<str>>,
 }
 
@@ -109,6 +122,7 @@ impl std::fmt::Debug for DockedDatePicker {
             .field("selected", &"<model>")
             .field("week_start", &self.week_start)
             .field("today", &self.today)
+            .field("selectable_dates", &self.selectable_dates.is_some())
             .field("test_id", &self.test_id)
             .finish()
     }
@@ -122,6 +136,7 @@ impl DockedDatePicker {
             selected,
             week_start: Weekday::Monday,
             today: None,
+            selectable_dates: None,
             test_id: None,
         }
     }
@@ -138,6 +153,11 @@ impl DockedDatePicker {
 
     pub fn today(mut self, today: Option<Date>) -> Self {
         self.today = today;
+        self
+    }
+
+    pub fn selectable_dates(mut self, predicate: impl Fn(Date) -> bool + 'static) -> Self {
+        self.selectable_dates = Some(Arc::new(predicate));
         self
     }
 
@@ -203,6 +223,7 @@ impl DockedDatePicker {
                 today,
                 selected_now,
                 self.selected.clone(),
+                self.selectable_dates.clone(),
                 self.test_id.clone(),
             );
 
@@ -235,6 +256,7 @@ pub struct DatePickerDialog {
     close_duration_ms: Option<u32>,
     easing_key: Option<Arc<str>>,
     on_dismiss_request: Option<OnDismissRequest>,
+    selectable_dates: Option<DateSelectablePredicate>,
     test_id: Option<Arc<str>>,
 }
 
@@ -250,6 +272,7 @@ impl std::fmt::Debug for DatePickerDialog {
             .field("close_duration_ms", &self.close_duration_ms)
             .field("easing_key", &self.easing_key)
             .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("selectable_dates", &self.selectable_dates.is_some())
             .field("test_id", &self.test_id)
             .finish()
     }
@@ -283,6 +306,7 @@ impl DatePickerDialog {
             close_duration_ms: None,
             easing_key: Some(Arc::<str>::from("md.sys.motion.easing.emphasized")),
             on_dismiss_request: None,
+            selectable_dates: None,
             test_id: None,
         }
     }
@@ -365,6 +389,11 @@ impl DatePickerDialog {
 
     pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
         self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
+    pub fn selectable_dates(mut self, predicate: impl Fn(Date) -> bool + 'static) -> Self {
+        self.selectable_dates = Some(Arc::new(predicate));
         self
     }
 
@@ -609,6 +638,7 @@ impl DatePickerDialog {
                                     panel_test_id.clone(),
                                     content_test_id.clone(),
                                     today,
+                                    self.selectable_dates.clone(),
                                     cancel.clone(),
                                     confirm.clone(),
                                 );
@@ -660,6 +690,7 @@ fn date_picker_modal_panel<H: UiHost>(
     test_id: Option<Arc<str>>,
     content_test_id: Option<Arc<str>>,
     today: Date,
+    selectable_dates: Option<DateSelectablePredicate>,
     on_cancel: OnActivate,
     on_confirm: OnActivate,
 ) -> AnyElement {
@@ -742,6 +773,7 @@ fn date_picker_modal_panel<H: UiHost>(
                     today,
                     selected_now,
                     selected.clone(),
+                    selectable_dates.clone(),
                     test_id_for_body.clone(),
                 ),
                 date_picker_actions(
@@ -811,6 +843,7 @@ fn date_picker_body<H: UiHost>(
     today: Date,
     selected_now: Option<Date>,
     selected_model: Model<Option<Date>>,
+    selectable_dates: Option<DateSelectablePredicate>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
     cx.flex(
@@ -846,6 +879,7 @@ fn date_picker_body<H: UiHost>(
                     today,
                     selected_now,
                     selected_model,
+                    selectable_dates,
                     test_id,
                 ),
             ]
@@ -1003,6 +1037,7 @@ fn dates_grid<H: UiHost>(
     today: Date,
     selected_now: Option<Date>,
     selected_model: Model<Option<Date>>,
+    selectable_dates: Option<DateSelectablePredicate>,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let days = month_grid(month, week_start);
@@ -1017,6 +1052,7 @@ fn dates_grid<H: UiHost>(
         today_outline_width,
         today_outline_color,
         outside_opacity,
+        disabled_opacity,
     ) = {
         let theme = Theme::global(&*cx.app);
         (
@@ -1030,6 +1066,9 @@ fn dates_grid<H: UiHost>(
             date_tokens::date_today_outline_width(theme, token_variant),
             date_tokens::date_today_outline_color(theme, token_variant),
             date_tokens::date_outside_month_opacity(theme, token_variant),
+            theme
+                .number_by_key("md.sys.state.disabled.state-layer-opacity")
+                .unwrap_or(0.38),
         )
     };
 
@@ -1060,6 +1099,7 @@ fn dates_grid<H: UiHost>(
             let label_style = label_style.clone();
             let cell_test_ids = cell_test_ids.clone();
             let base_id_for_row = base_id.clone();
+            let selectable_dates = selectable_dates.clone();
             let mut row = FlexProps::default();
             row.direction = Axis::Horizontal;
             row.justify = MainAlign::SpaceBetween;
@@ -1078,6 +1118,7 @@ fn dates_grid<H: UiHost>(
                         let in_month = day.in_month;
                         let is_today = date == today;
                         let is_selected = selected_now.is_some_and(|d| d == date);
+                        let is_selectable = date_is_selectable(selectable_dates.as_ref(), date);
 
                         let mut props = ContainerProps::default();
                         props.layout.size.width = Length::Px(cell_w);
@@ -1103,6 +1144,9 @@ fn dates_grid<H: UiHost>(
                         };
                         if !in_month && !is_selected {
                             label_color.a = (label_color.a * outside_opacity).clamp(0.0, 1.0);
+                        }
+                        if !is_selectable {
+                            label_color.a = (label_color.a * disabled_opacity).clamp(0.0, 1.0);
                         }
                         label_props.color = Some(label_color);
                         label_props.wrap = TextWrap::None;
@@ -1132,8 +1176,11 @@ fn dates_grid<H: UiHost>(
 
                         cx.pressable(
                             PressableProps {
+                                enabled: is_selectable,
+                                focusable: is_selectable,
                                 a11y: PressableA11y {
                                     test_id: Some(cell_test_id),
+                                    selected: is_selected,
                                     ..Default::default()
                                 },
                                 ..Default::default()
@@ -1295,6 +1342,7 @@ mod tests {
                     Some(Arc::<str>::from("m3-date-picker-modal")),
                     Some(Arc::<str>::from("m3-date-picker-modal")),
                     month,
+                    None,
                     noop.clone(),
                     noop.clone(),
                 )

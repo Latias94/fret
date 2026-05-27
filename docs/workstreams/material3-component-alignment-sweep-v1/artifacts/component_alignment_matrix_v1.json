@@ -325,11 +325,11 @@
     {
       "id": "date_picker",
       "family": "field",
-      "status": "packet_done_day_value_selectors_known_follow_ons",
+      "status": "packet_done_selectable_dates_known_follow_ons",
       "wave": "wave2_field_family",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "picker_after_field_foundation",
-      "first_gate_kind": "semantics_dialog_grid_value_ids",
+      "first_gate_kind": "semantics_dialog_grid_value_ids_and_selectable_dates",
       "selector_status": "picker_selector_ready",
       "stable_part_ids": [
         "date_picker",
@@ -348,13 +348,14 @@
       ],
       "packet_artifacts": [
         "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
-        "docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/artifacts/date_picker_day_cell_selectors_packet_v1.md"
+        "docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/artifacts/date_picker_day_cell_selectors_packet_v1.md",
+        "docs/workstreams/material3-date-picker-selectable-dates-packet-v1/artifacts/date_picker_selectable_dates_packet_v1.md"
       ],
       "layer_classification": [
-        "material_recipe owns month navigation, staged selected-date draft, day-grid selection, modal panel composition, picker part ids, and value-derived day-cell selector aliases",
+        "material_recipe owns month navigation, staged selected-date draft, selectable-date disabling, day-grid selection, modal panel composition, picker part ids, and value-derived day-cell selector aliases",
         "kit_policy owns modal overlay request, scrim dismiss, focus trap, and focus restore through existing overlay/focus primitives",
         "diagnostics/test_harness owned stale modal underlay/action stretch goldens and old hyphen selector drift",
-        "follow_on still covers selectable-date disabling, locale labels, and live-region announcements"
+        "follow_on still covers locale labels and live-region announcements"
       ]
     },
     {

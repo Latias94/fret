@@ -29,6 +29,39 @@ fn live_test_id_exists(
         .any(|m| ui.debug_node_visual_bounds(m.node).is_some())
 }
 
+fn click_semantics_test_id(
+    ui: &mut UiTree<TestHost>,
+    app: &mut TestHost,
+    services: &mut dyn UiServices,
+    test_id: &str,
+    pointer_id: PointerId,
+) {
+    let node = semantics_node_id_by_test_id(ui, test_id)
+        .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"));
+    let bounds = ui
+        .debug_node_visual_bounds(node)
+        .unwrap_or_else(|| panic!("expected visual bounds for test_id {test_id}"));
+    let click_at = Point::new(
+        Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+        Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(app, services, &pointer_down(pointer_id, click_at));
+    ui.dispatch_event(app, services, &pointer_up(pointer_id, click_at));
+}
+
+fn semantics_node_disabled(ui: &UiTree<TestHost>, test_id: &str) -> bool {
+    ui.semantics_snapshot()
+        .and_then(|snapshot| {
+            snapshot
+                .nodes
+                .iter()
+                .find(|node| node.test_id.as_deref() == Some(test_id))
+        })
+        .unwrap_or_else(|| panic!("expected semantics node for test_id {test_id}"))
+        .flags
+        .disabled
+}
+
 #[test]
 fn material3_select_exposes_stable_part_test_ids() {
     use fret_icons::ids;
@@ -1484,6 +1517,176 @@ fn material3_date_picker_exposes_stable_part_test_ids() {
                 "expected live DatePicker dialog part test_id {id}"
             );
         }
+    }
+}
+
+#[test]
+fn material3_date_picker_respects_selectable_dates() {
+    use fret_ui_kit::headless::calendar::CalendarMonth;
+    use fret_ui_material3::{
+        Button, ButtonVariant, DatePickerDialog, DatePickerVariant, DockedDatePicker,
+    };
+    use time::{Date, Month};
+
+    let today = Date::from_calendar_date(2026, Month::January, 10).expect("valid date");
+    let blocked_date = Date::from_calendar_date(2026, Month::January, 10).expect("valid date");
+    let allowed_date = Date::from_calendar_date(2026, Month::January, 15).expect("valid date");
+
+    {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(560.0), Px(420.0)),
+        );
+
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::January));
+        let selected = app.models_mut().insert(None::<Date>);
+        let selected_for_assert = selected.clone();
+        let render =
+            move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+                fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                    let picker = DockedDatePicker::new(month.clone(), selected.clone())
+                        .variant(DatePickerVariant::Docked)
+                        .today(Some(today))
+                        .selectable_dates(move |date| date != blocked_date)
+                        .test_id("m3-date-picker")
+                        .into_element(cx);
+                    vec![with_padding(cx, Px(32.0), picker)]
+                })
+            };
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert!(
+            semantics_node_disabled(&ui, "m3-date-picker.cell.1.5"),
+            "blocked Jan 10 cell should expose disabled semantics"
+        );
+        assert!(
+            live_test_id_exists(&ui, &app, window, "m3-date-picker.cell.2026-01-10"),
+            "blocked date should retain its value-level automation anchor"
+        );
+
+        click_semantics_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            "m3-date-picker.cell.1.5",
+            PointerId(30),
+        );
+        assert_eq!(
+            app.models().get_copied(&selected_for_assert).flatten(),
+            None,
+            "blocked date activation must not update the selected model"
+        );
+
+        click_semantics_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            "m3-date-picker.cell.2.3",
+            PointerId(31),
+        );
+        assert_eq!(
+            app.models().get_copied(&selected_for_assert).flatten(),
+            Some(allowed_date),
+            "allowed date activation should still update the selected model"
+        );
+    }
+
+    {
+        let mut app = TestHost::default();
+        app.set_global(PlatformCapabilities::default());
+        apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+        let window = AppWindowId::default();
+        let mut services = FakeUiServices;
+        let mut ui: UiTree<TestHost> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(720.0), Px(520.0)),
+        );
+
+        let open = app.models_mut().insert(true);
+        let month = app
+            .models_mut()
+            .insert(CalendarMonth::new(2026, Month::January));
+        let selected = app.models_mut().insert(None::<Date>);
+        let selected_for_assert = selected.clone();
+        let render = move |ui: &mut UiTree<TestHost>,
+                           app: &mut TestHost,
+                           services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let dialog = DatePickerDialog::new(open.clone(), month.clone(), selected.clone())
+                    .today(Some(today))
+                    .selectable_dates(move |date| date != blocked_date)
+                    .open_duration_ms(Some(1))
+                    .close_duration_ms(Some(1))
+                    .test_id("m3-date-picker-modal")
+                    .into_element(cx, |cx| {
+                        Button::new("Underlay")
+                            .variant(ButtonVariant::Outlined)
+                            .test_id("m3-date-picker-underlay")
+                            .into_element(cx)
+                    });
+                vec![with_padding(cx, Px(32.0), dialog)]
+            })
+        };
+
+        for _ in 0..8 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                true,
+                |ui, app, services| render(ui, app, services),
+            );
+            if live_test_id_exists(&ui, &app, window, "m3-date-picker-modal.panel") {
+                break;
+            }
+        }
+
+        assert!(
+            semantics_node_disabled(&ui, "m3-date-picker-modal.cell.1.5"),
+            "blocked modal Jan 10 cell should expose disabled semantics"
+        );
+
+        click_semantics_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            "m3-date-picker-modal.cell.1.5",
+            PointerId(40),
+        );
+        click_semantics_test_id(
+            &mut ui,
+            &mut app,
+            &mut services,
+            "m3-date-picker-modal.actions.confirm",
+            PointerId(41),
+        );
+
+        assert_eq!(
+            app.models().get_copied(&selected_for_assert).flatten(),
+            None,
+            "blocked modal date activation must not commit through OK"
+        );
     }
 }
 

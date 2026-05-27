@@ -63,7 +63,9 @@ pub use checkbox::{Checkbox, CheckboxStyle};
 pub use chip::{AssistChip, AssistChipStyle, AssistChipVariant};
 pub use chip_set::{ChipSet, ChipSetItem};
 pub use context::{MaterialDesignVariant, with_material_design_variant};
-pub use date_picker::{DatePickerDialog, DatePickerVariant, DockedDatePicker};
+pub use date_picker::{
+    DatePickerDialog, DatePickerVariant, DateSelectablePredicate, DockedDatePicker,
+};
 pub use dialog::{Dialog, DialogAction, DialogStyle};
 pub use divider::Divider;
 pub use dropdown_menu::{DropdownMenu, DropdownMenuAlign, DropdownMenuSide};
