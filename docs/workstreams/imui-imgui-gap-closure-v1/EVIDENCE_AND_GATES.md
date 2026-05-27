@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Tooltip Overlay Request Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI tooltip overlay request assembly moved into a private owner without changing
+trigger-id validation, pointer-move open gating, hover/focus interaction updates, panel layout,
+dismiss behavior, hoverable-content pointer tracking, overlay request semantics, or public-in-IMUI
+APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` keeps trigger-id validation,
+  event/open models, pointer-move open gate installation, hover/focus update gates, interaction
+  updates, panel-size/anchor projection, and open-state synchronization.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/request.rs` owns panel child construction,
+  tooltip overlay request creation, trigger binding, dismiss close-request signaling, optional
+  hoverable-content pointer tracker installation, and request submission.
+- `tools/gate_imui_workstream_source.py` now rejects tooltip request assembly from drifting back
+  into `runtime.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib tooltip_overlay::tests --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Floating Area Layout Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI floating area shell layout and hit-test gate selection moved into a private

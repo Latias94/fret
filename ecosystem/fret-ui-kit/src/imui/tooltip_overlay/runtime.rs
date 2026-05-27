@@ -1,17 +1,13 @@
-use std::sync::Arc;
-
 use fret_core::Px;
-use fret_ui::action::DismissReason;
 use fret_ui::{GlobalElementId, UiHost};
 
-use crate::OverlayPresence;
 use crate::declarative::ModelWatchExt;
 use crate::declarative::scheduling;
 use crate::imui::{ImUiFacade, ResponseExt, TooltipOptions, UiWriterImUiFacadeExt};
 use crate::overlay;
 use crate::primitives::tooltip as radix_tooltip;
 
-use super::panel::{TooltipPanelBuildOptions, tooltip_overlay_children};
+use super::request::{TooltipOverlayRequestModels, request_tooltip_overlay};
 use super::trigger::install_pointer_move_open_gate_for;
 
 pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
@@ -111,45 +107,22 @@ pub(in crate::imui) fn tooltip_with_options<H: UiHost, W: UiWriterImUiFacadeExt<
                 return false;
             }
 
-            let root_name = radix_tooltip::tooltip_root_name(tooltip_id);
-            let overlay_children = tooltip_overlay_children(
+            request_tooltip_overlay(
                 cx,
-                root_name.as_str(),
-                TooltipPanelBuildOptions {
-                    trigger_id,
-                    trigger_rect: trigger.rect(),
-                    panel_size,
-                    placement: options.placement,
-                    window_margin: options.window_margin,
-                    panel_id_model: panel_id.clone(),
-                    panel_test_id: options.test_id.clone(),
+                tooltip_id,
+                trigger_id,
+                trigger.rect(),
+                panel_size,
+                disable_hoverable_content,
+                &options,
+                TooltipOverlayRequestModels {
+                    open,
+                    panel_id,
+                    event_models,
+                    last_pointer,
                 },
                 f,
             );
-
-            let mut request = radix_tooltip::tooltip_request(
-                tooltip_id,
-                open.clone(),
-                OverlayPresence::instant(true),
-                overlay_children,
-            );
-            request.trigger = Some(trigger_id);
-            request.dismissible_on_dismiss_request = Some(Arc::new({
-                let close_requested = event_models.close_requested.clone();
-                move |host, action_cx, req| match req.reason {
-                    DismissReason::Escape | DismissReason::OutsidePress { .. } => {
-                        let _ = host
-                            .models_mut()
-                            .update(&close_requested, |value| *value = true);
-                        host.request_redraw(action_cx.window);
-                    }
-                    _ => req.prevent_default(),
-                }
-            }));
-            if !disable_hoverable_content {
-                radix_tooltip::tooltip_install_pointer_move_tracker(&mut request, last_pointer);
-            }
-            radix_tooltip::request_tooltip(cx, request);
 
             true
         })

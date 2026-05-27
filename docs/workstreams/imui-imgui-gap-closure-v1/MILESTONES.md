@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 tooltip overlay request owner-split result:
+`ecosystem/fret-ui-kit/src/imui/tooltip_overlay/request.rs` now owns panel child construction,
+tooltip overlay request creation, trigger binding, dismiss close-request signaling, optional
+hoverable-content pointer tracker installation, and request submission.
+`tooltip_overlay/runtime.rs` keeps trigger-id validation, event/open models, pointer-move open gate
+installation, hover/focus update gates, interaction updates, panel-size/anchor projection, and
+open-state synchronization.
+
 2026-05-28 floating area layout owner-split result:
 `ecosystem/fret-ui-kit/src/imui/floating_surface/area/layout.rs` now owns absolute area layout
 props, `interactivity_gate_props` selection for `no_inputs`, `hit_test_gate_props` selection for

@@ -44,6 +44,16 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI tooltip overlay request assembly out of
+      `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` into a private request owner
+      without changing trigger-id validation, pointer-move open gating, hover/focus interaction
+      updates, panel layout, dismiss behavior, hoverable-content pointer tracking, overlay request
+      semantics, or public-in-IMUI APIs.
+      Result: `tooltip_overlay/request.rs` owns panel child construction, tooltip overlay request
+      creation, trigger binding, dismiss close-request signaling, optional hoverable-content pointer
+      tracker installation, and request submission. `tooltip_overlay/runtime.rs` keeps trigger-id validation,
+      event/open models, pointer-move open gate installation, hover/focus update gates,
+      interaction updates, panel-size/anchor projection, and open-state synchronization.
 - [x] Split IMUI floating area shell layout and hit-test gate selection out of
       `ecosystem/fret-ui-kit/src/imui/floating_surface/area.rs` into a private layout owner without
       changing floating-area registration, drag position reconciliation, no-input behavior,
