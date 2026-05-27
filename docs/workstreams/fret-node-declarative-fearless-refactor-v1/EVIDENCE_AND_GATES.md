@@ -5,11 +5,10 @@ Last updated: 2026-05-27
 
 ## Current Focus
 
-FNDX-020 is the controlled-sync public-helper decision. Public sync should stay full-replace-first:
-`replace_document(...)` for whole-document resets, `replace_graph(...)` for graph-only authoritative
-sync, and explicit `GraphTransaction` values for reversible incremental edits. Diff-first
-`replace_*_with_diff` helpers remain deferred until a concrete editor-grade workload proves they are
-needed.
+FNDX-030 is the overlay/menu/toolbar policy-placement closure. This slice locks ownership rather
+than claiming full declarative parity: toolbar public policy belongs in `ui/overlays/toolbar_policy.rs`,
+menu/searcher retained lifecycle belongs behind named overlay seams, and default overlay policy
+modules remain retained-bridge-free.
 
 ## Targeted Iteration Gates
 
@@ -33,6 +32,21 @@ cargo nextest run -p fret-node controlled_graph_can_apply_store_changes_via_call
 
 This gate proves the controlled runtime path still supports app-owned graph state by applying store
 `NodeChange` / `EdgeChange` callbacks with `apply_*_changes`.
+
+```bash
+cargo nextest run -p fret-node --features compat-retained-canvas overlay_menu_toolbar_policy_ownership_stays_on_named_seams
+```
+
+This gate proves the FNDX-030 placement decision: toolbar public policy types stay on the toolbar
+policy seam, menu/searcher policy enums stay on the state overlay-policy seam, and retained
+menu/searcher lifecycle writes go through named overlay helpers.
+
+```bash
+cargo nextest run -p fret-node --features compat-retained-canvas overlay_policy_modules_compile_without_retained_canvas_compat default_overlay_policy_surfaces_stay_off_retained_bridge
+```
+
+This gate keeps the nearby overlay policy modules compiling outside the retained compatibility
+feature and verifies default overlay policy surfaces remain retained-bridge-free.
 
 ```bash
 cargo nextest run -p fret-node --no-default-features runtime
@@ -73,6 +87,11 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/runtime/tests.rs`
 - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
 - `ecosystem/fret-node/src/ui/controller_store_sync.rs`
+- `ecosystem/fret-node/src/ui/overlays/toolbar_policy.rs`
+- `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`
+- `ecosystem/fret-node/src/ui/canvas/state/state_overlay_policy.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/overlay.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/overlay.rs`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/README.md`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/design.md`
 - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/todo.md`
@@ -84,6 +103,12 @@ closeout note must name those failures.
 - `cargo fmt --check`: passed; proves the Rust formatting gate is clean after the new source-policy test.
 - Broader package/closeout gates were not rerun for FNDX-020 because this slice only changed docs,
   a source-policy test, and workstream notes; use the package/closeout gate list above before
+  accepting broader lane closure.
+- `cargo nextest run -p fret-node --features compat-retained-canvas overlay_menu_toolbar_policy_ownership_stays_on_named_seams`: passed; proves the FNDX-030 ownership gate for toolbar public policy, menu/searcher policy enums, and retained menu/searcher lifecycle seams.
+- `cargo nextest run -p fret-node --features compat-retained-canvas overlay_policy_modules_compile_without_retained_canvas_compat default_overlay_policy_surfaces_stay_off_retained_bridge`: passed; proves adjacent overlay policy gates still pass with the retained compatibility feature enabled.
+- `cargo fmt --check`: passed after the FNDX-030 source-policy test was formatted.
+- Broader package/closeout gates were not rerun for FNDX-030 because this slice only adds a
+  source-policy gate and workstream notes; use the package/closeout gate list above before
   accepting broader lane closure.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

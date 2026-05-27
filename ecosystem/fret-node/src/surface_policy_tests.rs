@@ -9,6 +9,11 @@ const UI_BINDING_QUERIES_RS: &str = include_str!("ui/binding_queries.rs");
 const UI_BINDING_STORE_SYNC_RS: &str = include_str!("ui/binding_store_sync.rs");
 const UI_BINDING_VIEWPORT_RS: &str = include_str!("ui/binding_viewport.rs");
 const UI_CANVAS_WIDGET_RS: &str = include_str!("ui/canvas/widget.rs");
+const UI_CANVAS_STATE_RS: &str = include_str!("ui/canvas/state.rs");
+const UI_CANVAS_STATE_OVERLAY_POLICY_RS: &str =
+    include_str!("ui/canvas/state/state_overlay_policy.rs");
+const UI_CANVAS_STATE_OVERLAY_SESSIONS_RS: &str =
+    include_str!("ui/canvas/state/state_overlay_sessions.rs");
 const UI_CANVAS_RS: &str = include_str!("ui/canvas/widget/widget_surface.rs");
 const UI_CANVAS_BUILDERS_RS: &str = include_str!("ui/canvas/widget/widget_surface/builders.rs");
 const UI_CANVAS_WIDGET_COMMIT_RS: &str = include_str!("ui/canvas/widget/commit/mod.rs");
@@ -40,6 +45,7 @@ const UI_OVERLAY_MINIMAP_INTERACTION_POLICY_RS: &str =
     include_str!("ui/overlays/minimap_interaction_policy.rs");
 const UI_OVERLAY_TOOLBAR_LAYOUT_POLICY_RS: &str =
     include_str!("ui/overlays/toolbar_layout_policy.rs");
+const UI_OVERLAY_TOOLBAR_POLICY_RS: &str = include_str!("ui/overlays/toolbar_policy.rs");
 const UI_OVERLAY_TOOLBARS_DECLARATIVE_RS: &str =
     include_str!("ui/overlays/toolbars_declarative.rs");
 const UI_OVERLAY_RENAME_DECLARATIVE_RS: &str = include_str!("ui/overlays/rename_declarative.rs");
@@ -548,6 +554,8 @@ const UI_CANVAS_WIDGET_CONTEXT_MENU_OPENING_GROUP_RS: &str =
     include_str!("ui/canvas/widget/context_menu/opening/group.rs");
 const UI_CANVAS_WIDGET_CONTEXT_MENU_UI_RS: &str =
     include_str!("ui/canvas/widget/context_menu/ui.rs");
+const UI_CANVAS_WIDGET_CONTEXT_MENU_UI_OVERLAY_RS: &str =
+    include_str!("ui/canvas/widget/context_menu/ui/overlay.rs");
 const UI_CANVAS_WIDGET_CONTEXT_MENU_UI_EVENT_RS: &str =
     include_str!("ui/canvas/widget/context_menu/ui/event.rs");
 const UI_CANVAS_WIDGET_CONTEXT_MENU_KEY_NAVIGATION_RS: &str =
@@ -583,6 +591,13 @@ const UI_CANVAS_WIDGET_SEARCHER_INPUT_QUERY_RS: &str =
     include_str!("ui/canvas/widget/searcher_input_query.rs");
 const UI_CANVAS_WIDGET_SEARCHER_ROW_ACTIVATION_RS: &str =
     include_str!("ui/canvas/widget/searcher_row_activation.rs");
+const UI_CANVAS_WIDGET_SEARCHER_ROW_ACTIVATION_ITEM_RS: &str =
+    include_str!("ui/canvas/widget/searcher_row_activation/item.rs");
+const UI_CANVAS_WIDGET_INSERT_CANDIDATES_MENU_RS: &str =
+    include_str!("ui/canvas/widget/insert_candidates/menu.rs");
+const UI_CANVAS_WIDGET_SEARCHER_PICKER_REQUEST_RS: &str =
+    include_str!("ui/canvas/widget/searcher_picker/request.rs");
+const UI_CANVAS_WIDGET_SEARCHER_ROWS_RS: &str = include_str!("ui/canvas/widget/searcher_rows.rs");
 const UI_CANVAS_WIDGET_SEARCHER_POINTER_RS: &str =
     include_str!("ui/canvas/widget/searcher_pointer.rs");
 const UI_CANVAS_WIDGET_SEARCHER_POINTER_MOVE_EVENT_RS: &str =
@@ -590,6 +605,8 @@ const UI_CANVAS_WIDGET_SEARCHER_POINTER_MOVE_EVENT_RS: &str =
 const UI_CANVAS_WIDGET_SEARCHER_POINTER_WHEEL_EVENT_RS: &str =
     include_str!("ui/canvas/widget/searcher_pointer/wheel_event.rs");
 const UI_CANVAS_WIDGET_SEARCHER_UI_RS: &str = include_str!("ui/canvas/widget/searcher_ui.rs");
+const UI_CANVAS_WIDGET_SEARCHER_UI_OVERLAY_RS: &str =
+    include_str!("ui/canvas/widget/searcher_ui/overlay.rs");
 const UI_CANVAS_WIDGET_SEARCHER_UI_EVENT_RS: &str =
     include_str!("ui/canvas/widget/searcher_ui/event.rs");
 const UI_CANVAS_WIDGET_TIMER_MOTION_SHARED_RS: &str =
@@ -650,6 +667,10 @@ fn binding_surface() -> String {
         UI_BINDING_VIEWPORT_RS,
     ]
     .join("\n")
+}
+
+fn source_without_tests(source: &str) -> &str {
+    source.split("#[cfg(test)]").next().unwrap_or(source)
 }
 
 fn struct_body<'a>(source: &'a str, name: &str) -> &'a str {
@@ -4858,6 +4879,143 @@ fn default_overlay_policy_surfaces_stay_off_retained_bridge() {
             && !UI_OVERLAY_RENAME_LIFECYCLE_RS.contains("Widget<"),
         "default rename lifecycle policy must not take a retained dependency"
     );
+}
+
+#[test]
+fn overlay_menu_toolbar_policy_ownership_stays_on_named_seams() {
+    assert!(UI_CANVAS_STATE_RS.contains("mod state_overlay_policy;"));
+    assert!(
+        UI_CANVAS_STATE_RS.contains(
+            "pub(crate) use state_overlay_policy::{ContextMenuTarget, SearcherRowsMode};"
+        )
+    );
+    assert!(UI_CANVAS_STATE_OVERLAY_POLICY_RS.contains("enum ContextMenuTarget"));
+    assert!(UI_CANVAS_STATE_OVERLAY_POLICY_RS.contains("enum SearcherRowsMode"));
+    assert!(
+        UI_CANVAS_STATE_OVERLAY_SESSIONS_RS
+            .contains("use super::state_overlay_policy::{ContextMenuTarget, SearcherRowsMode};")
+    );
+    assert!(
+        !source_without_tests(UI_CANVAS_STATE_OVERLAY_SESSIONS_RS)
+            .contains("enum ContextMenuTarget")
+    );
+    assert!(
+        !source_without_tests(UI_CANVAS_STATE_OVERLAY_SESSIONS_RS)
+            .contains("enum SearcherRowsMode")
+    );
+
+    assert!(UI_OVERLAYS_MOD_RS.contains("mod toolbar_policy;"));
+    assert!(UI_OVERLAYS_MOD_RS.contains("mod toolbar_layout_policy;"));
+    assert!(UI_OVERLAYS_MOD_RS.contains("mod toolbars_declarative;"));
+    for required in [
+        "pub enum NodeGraphToolbarVisibility",
+        "pub enum NodeGraphToolbarPosition",
+        "pub enum NodeGraphToolbarAlign",
+        "pub enum NodeGraphToolbarSize",
+        "resolve_node_toolbar_window_target",
+        "resolve_edge_toolbar_window_target",
+    ] {
+        assert!(
+            UI_OVERLAY_TOOLBAR_POLICY_RS.contains(required),
+            "toolbar public policy surface should stay in toolbar_policy.rs: {required}"
+        );
+    }
+    for forbidden in [
+        "pub enum NodeGraphToolbarVisibility",
+        "pub enum NodeGraphToolbarPosition",
+        "pub enum NodeGraphToolbarAlign",
+        "pub enum NodeGraphToolbarSize",
+        "fn resolve_node_toolbar_window_target",
+        "fn resolve_edge_toolbar_window_target",
+    ] {
+        assert!(
+            !source_without_tests(UI_OVERLAY_TOOLBARS_DECLARATIVE_RS).contains(forbidden),
+            "declarative toolbar composition should consume toolbar policy, not own it: {forbidden}"
+        );
+    }
+    assert!(
+        UI_OVERLAY_TOOLBARS_DECLARATIVE_RS.contains("use super::toolbar_policy::{"),
+        "declarative toolbar composition should import the policy seam"
+    );
+    assert!(
+        UI_OVERLAY_TOOLBARS_DECLARATIVE_RS.contains("use super::toolbar_layout_policy::{"),
+        "declarative toolbar composition should import the layout-policy seam"
+    );
+
+    assert!(
+        UI_CANVAS_WIDGET_CONTEXT_MENU_UI_OVERLAY_RS.contains("enum ContextMenuHoverEdgePolicy")
+    );
+    assert!(UI_CANVAS_WIDGET_CONTEXT_MENU_UI_RS.contains("mod overlay;"));
+    assert!(
+        UI_CANVAS_WIDGET_CONTEXT_MENU_UI_RS
+            .contains("pub(in crate::ui::canvas::widget) use overlay::ContextMenuHoverEdgePolicy;")
+    );
+    assert!(
+        UI_CANVAS_WIDGET_CONTEXT_MENU_UI_RS.contains(
+            "overlay::apply_context_menu_open_state(interaction, menu, hover_edge_policy);"
+        )
+    );
+    assert!(
+        UI_CANVAS_WIDGET_EDGE_INSERT_CONTEXT_MENU_RS
+            .contains("context_menu::apply_context_menu_open_state(")
+    );
+    assert!(
+        UI_CANVAS_WIDGET_EDGE_INSERT_CONTEXT_MENU_RS
+            .contains("context_menu::ContextMenuHoverEdgePolicy::Preserve")
+    );
+    assert!(
+        !source_without_tests(UI_CANVAS_WIDGET_EDGE_INSERT_CONTEXT_MENU_RS)
+            .contains("interaction.context_menu = Some"),
+        "edge-insert context menu reopening should use context_menu/ui/overlay.rs"
+    );
+
+    assert!(UI_CANVAS_WIDGET_SEARCHER_UI_RS.contains("mod overlay;"));
+    assert!(
+        UI_CANVAS_WIDGET_SEARCHER_UI_RS
+            .contains("overlay::install_searcher_overlay(self, searcher);")
+    );
+    assert!(UI_CANVAS_WIDGET_SEARCHER_UI_OVERLAY_RS.contains("fn apply_searcher_overlay_state("));
+    assert!(UI_CANVAS_WIDGET_SEARCHER_UI_OVERLAY_RS.contains("context_menu::clear_context_menu("));
+    assert!(UI_CANVAS_WIDGET_SEARCHER_PICKER_REQUEST_RS.contains("struct SearcherPickerRequest"));
+    assert!(UI_CANVAS_WIDGET_SEARCHER_PICKER_REQUEST_RS.contains("rows_mode: SearcherRowsMode"));
+    assert!(
+        UI_CANVAS_WIDGET_SEARCHER_ROW_ACTIVATION_RS.contains("searcher_ui::take_searcher_overlay")
+    );
+    assert!(
+        UI_CANVAS_WIDGET_SEARCHER_ROW_ACTIVATION_RS
+            .contains("searcher_ui::restore_searcher_overlay")
+    );
+    assert!(
+        UI_CANVAS_WIDGET_SEARCHER_ROW_ACTIVATION_ITEM_RS
+            .contains("build_insert_candidate_menu_item")
+    );
+    assert!(
+        UI_CANVAS_WIDGET_SEARCHER_ROW_ACTIVATION_ITEM_RS.contains("searcher_is_selectable_row")
+    );
+    assert!(
+        UI_CANVAS_WIDGET_INSERT_CANDIDATES_MENU_RS
+            .contains("NodeGraphContextMenuAction::InsertNodeCandidate")
+    );
+    assert!(UI_CANVAS_WIDGET_SEARCHER_ROWS_RS.contains("searcher_is_selectable_row"));
+
+    for (name, source) in [
+        (
+            "searcher row activation",
+            UI_CANVAS_WIDGET_SEARCHER_ROW_ACTIVATION_RS,
+        ),
+        (
+            "context menu command activation",
+            UI_CANVAS_WIDGET_CONTEXT_MENU_ACTIVATE_COMMAND_RS,
+        ),
+    ] {
+        assert!(
+            !source_without_tests(source).contains("interaction.searcher = None")
+                && !source_without_tests(source).contains("interaction.searcher.take()")
+                && !source_without_tests(source).contains("interaction.context_menu = None")
+                && !source_without_tests(source).contains("interaction.context_menu.take()"),
+            "{name} should use the named overlay lifecycle helpers"
+        );
+    }
 }
 
 #[test]

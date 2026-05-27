@@ -66,7 +66,7 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Fresh gates:
     - `cargo nextest run -p fret-node controlled_sync_public_surface_stays_full_replace_first_until_workload_proves_diff_helper`: passed.
     - `cargo nextest run -p fret-node controlled_graph_can_apply_store_changes_via_callbacks`: passed.
-- [ ] FNDX-030 Finish the remaining overlay/menu/toolbar policy placement decision with one narrow
+- [x] FNDX-030 Finish the remaining overlay/menu/toolbar policy placement decision with one narrow
       source-policy or conformance gate.
   - Scope:
     - `ecosystem/fret-node/src/ui/overlays/*`
@@ -74,6 +74,21 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `ecosystem/fret-node/src/surface_policy_tests.rs`
   - Validation:
     - focused `cargo nextest run -p fret-node --features compat-retained-canvas <policy-filter>`.
+  - Exit note: this slice closes the policy-placement decision as a source-policy boundary, not as
+    a claim that every overlay behavior has declarative parity. Toolbar public policy stays in
+    `ui/overlays/toolbar_policy.rs`, retained menu/searcher lifecycle stays behind named overlay
+    seams, and default overlay policy modules stay retained-bridge-free.
+  - Evidence:
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `ecosystem/fret-node/src/ui/overlays/toolbar_policy.rs`
+    - `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`
+    - `ecosystem/fret-node/src/ui/canvas/state/state_overlay_policy.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/overlay.rs`
+    - `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/overlay.rs`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node --features compat-retained-canvas overlay_menu_toolbar_policy_ownership_stays_on_named_seams`: passed.
+    - `cargo nextest run -p fret-node --features compat-retained-canvas overlay_policy_modules_compile_without_retained_canvas_compat default_overlay_policy_surfaces_stay_off_retained_bridge`: passed.
+    - `cargo fmt --check`: passed.
 
 ## M0 - Decision gates and internal seam map
 

@@ -13,29 +13,29 @@ older graph/view/controller triplets or direct retained authoring.
 
 ## Active Task
 
-- Task ID: FNDX-020
+- Task ID: FNDX-030
 - Owner: current Codex session
 - Files:
-  - `docs/node-graph-controlled-mode.md`
   - `ecosystem/fret-node/src/surface_policy_tests.rs`
-  - `ecosystem/fret-node/src/runtime/tests.rs`
-  - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
-  - `ecosystem/fret-node/src/ui/controller_store_sync.rs`
+  - `ecosystem/fret-node/src/ui/overlays/toolbar_policy.rs`
+  - `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`
+  - `ecosystem/fret-node/src/ui/canvas/state/state_overlay_policy.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/overlay.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/overlay.rs`
   - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/*`
 - Validation:
-  - `cargo nextest run -p fret-node controlled_sync_public_surface_stays_full_replace_first_until_workload_proves_diff_helper`
-  - `cargo nextest run -p fret-node controlled_graph_can_apply_store_changes_via_callbacks`
+  - `cargo nextest run -p fret-node --features compat-retained-canvas overlay_menu_toolbar_policy_ownership_stays_on_named_seams`
+  - `cargo nextest run -p fret-node --features compat-retained-canvas overlay_policy_modules_compile_without_retained_canvas_compat default_overlay_policy_surfaces_stay_off_retained_bridge`
+  - `cargo fmt --check`
 - Status: DONE
 - Review: use `review-workstream` before accepting broader lane closure.
 - Evidence:
-  - `docs/node-graph-controlled-mode.md` records the FNDX-020 decision: diff-first controlled sync
-    remains deferred behind full-document replacement, graph-only replacement, and explicit
-    transactions.
-  - `ecosystem/fret-node/src/surface_policy_tests.rs` locks the public binding/controller sync
-    surface against hidden `graph_diff` use or public `replace_*_with_diff` helpers.
-  - Runtime controlled callback coverage still proves app-owned graph state can mirror store
-    `NodeChange` / `EdgeChange` events through `apply_*_changes`.
-  - Both focused validation commands passed on 2026-05-27.
+  - `ecosystem/fret-node/src/surface_policy_tests.rs` locks the FNDX-030 ownership boundary:
+    toolbar public policy types stay in `toolbar_policy.rs`, menu/searcher policy enums stay in
+    `state_overlay_policy.rs`, and retained menu/searcher lifecycle writes route through named
+    overlay seams.
+  - Adjacent overlay policy gates still pass with `compat-retained-canvas` enabled.
+  - Formatting passed on 2026-05-27.
 
 ## Decisions Since Last Update
 
@@ -46,12 +46,15 @@ older graph/view/controller triplets or direct retained authoring.
   gate.
 - Keep diff-first controlled sync out of the public helper surface for now; require workload
   evidence before adding a `replace_*_with_diff` API.
+- Treat FNDX-030 as policy-placement closure, not a full declarative parity claim: remaining
+  overlay behavior parity should be split into future focused conformance tasks.
 
 ## Blockers
 
-- None for FNDX-020.
+- None for FNDX-030.
 
 ## Next Recommended Action
 
-- Start FNDX-030: finish the remaining overlay/menu/toolbar policy placement decision with one
-  narrow source-policy or conformance gate.
+- Decide whether to run `review-workstream` for the three completed FNDX tasks, or split the next
+  follow-up into a concrete declarative parity/conformance task instead of reopening policy
+  placement.
