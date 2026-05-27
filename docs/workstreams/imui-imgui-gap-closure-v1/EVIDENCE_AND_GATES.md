@@ -175,6 +175,40 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Selectable Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI selectable pressable behavior moved into a private owner without changing
+label identity, selectable a11y, pointer click reporting, keyboard activation lifecycle marking,
+popup close-on-activate behavior, shortcut/context-menu/nav delegation, response population, or row
+visual composition.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` keeps label identity,
+  `SelectableOptions` a11y wiring, selected/highlighted state reads, and row visual assembly.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/behavior.rs` owns pressable behavior
+  installation, activate-handler popup close/click signaling, keyboard owner delegation, transient
+  clicked reads, and `ResponseExt` population.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard.rs` continues to own shortcut
+  handling, context-menu requests, and popup menu arrow-key navigation.
+- `tools/gate_imui_workstream_source.py` now requires the selectable behavior owner and rejects
+  pressable behavior bodies from drifting back into `selectable_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_selectable_smoke
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui interaction_shortcuts::selectable_shortcuts
+  interaction_drag::multi_select models_combo --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Media Paint Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug-draw media paint routing moved into private raster, rounded, and SVG owners
@@ -2460,8 +2494,11 @@ Evidence:
 - `ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard.rs` now owns selectable activation
   shortcuts, popup close-on-activate updates, ContextMenu/Shift+F10 context-menu requests, and
   inherited popup-menu arrow/Home/End focus navigation.
-- `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` keeps label identity normalization,
-  pressable/a11y assembly, pointer activation, response population, and visual row composition.
+- `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` originally kept label identity
+  normalization, pressable/a11y assembly, pointer activation, response population, and visual row
+  composition after the keyboard split. 2026-05-27 follow-up: `selectable_controls.rs` now keeps
+  label identity, a11y wiring, selected/highlighted state reads, and row visual assembly while
+  `selectable_controls/behavior.rs` owns concrete pressable behavior.
 - `tools/gate_imui_workstream_source.py` now requires `selectable_controls/keyboard.rs`, forbids
   keyboard/nav internals from drifting back into the root selectable file, and keeps the existing
   visual owner guard intact.

@@ -468,6 +468,15 @@ Last updated: 2026-05-27
       Result: `selectable_controls/keyboard.rs` now owns shortcut handling, popup close-on-activate
       behavior, context-menu requests, and popup menu arrow-key navigation. The root file keeps
       label identity, pressable assembly, and row rendering.
+- [x] Split IMUI selectable pressable behavior out of
+      `ecosystem/fret-ui-kit/src/imui/selectable_controls.rs` into a private owner module without
+      changing label identity, selectable a11y, pointer click reporting, keyboard activation
+      lifecycle marking, popup close-on-activate behavior, shortcut/context-menu/nav delegation,
+      response population, or row visual composition.
+      Result: `selectable_controls/behavior.rs` owns pressable behavior installation,
+      activate-handler popup close/click signaling, keyboard owner delegation, transient clicked
+      reads, and `ResponseExt` population. `selectable_controls.rs` keeps label identity,
+      `SelectableOptions` a11y wiring, selected/highlighted state reads, and row visual assembly.
 - [x] Split IMUI child-region resize handle/drag ownership out of
       `ecosystem/fret-ui-kit/src/imui/child_region.rs` into a private owner module without
       changing the public child-region facade or response surface.

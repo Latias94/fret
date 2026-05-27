@@ -487,6 +487,12 @@ switching. `menu_controls/interaction.rs` keeps enabled/action gating, pressable
 dispatch, and response population. Public menu item, command menu item, submenu, and menubar
 keyboard behavior remain unchanged.
 
+2026-05-27 selectable behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/selectable_controls/behavior.rs` now owns pressable behavior
+installation, activate-handler popup close/click signaling, keyboard owner delegation, transient
+clicked reads, and `ResponseExt` population. `selectable_controls.rs` keeps label identity,
+`SelectableOptions` a11y wiring, selected/highlighted state reads, and row visual assembly.
+
 2026-05-26 textarea owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_controls/textarea.rs` now owns textarea props assembly,
 lifecycle/response population, select-all-on-focus command emission, submit/cancel command policy

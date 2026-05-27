@@ -533,6 +533,7 @@
     "ecosystem/fret-ui-kit/src/imui/multi_select.rs",
     "ecosystem/fret-ui-kit/src/imui/multi_select/state.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls.rs",
+    "ecosystem/fret-ui-kit/src/imui/selectable_controls/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/selectable_controls/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/separator_text_controls.rs",
