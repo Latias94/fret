@@ -44,6 +44,12 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI porting layout sugar into private scoped-layout and spacer owners without
+      changing `items`, `same_line`, `dummy`, `spacing`, `indent`, layout-token defaults,
+      explicit dummy sizing, indent composition, test-id stamping, or public-in-IMUI APIs.
+      Result: `layout_sugar/scoped.rs` owns item-flow, same-line, and indent container
+      composition. `layout_sugar/spacers.rs` owns dummy and spacing spacer construction.
+      `layout_sugar.rs` is now a private module/re-export index.
 - [x] Split IMUI input-text picker keyboard handler out of
       `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard.rs` into a private handler
       owner without changing keyboard navigation enablement, repeat/IME/modifier gating, arrow

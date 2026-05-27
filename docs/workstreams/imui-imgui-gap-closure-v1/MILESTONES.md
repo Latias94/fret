@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 layout sugar scoped/spacer owner-split result:
+`ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped.rs` now owns item-flow, same-line, and indent
+container composition. `ecosystem/fret-ui-kit/src/imui/layout_sugar/spacers.rs` owns dummy/spacing
+spacer construction and default IMUI spacing token projection. `layout_sugar.rs` is now a private
+module/re-export index.
+
 2026-05-28 text-picker keyboard handler owner-split result:
 `ecosystem/fret-ui-kit/src/imui/text_picker_controls/keyboard/handler.rs` now owns key-down capture,
 Arrow/Enter navigation and pick handling, repeat/IME/modifier gating, model writes, and popup close.

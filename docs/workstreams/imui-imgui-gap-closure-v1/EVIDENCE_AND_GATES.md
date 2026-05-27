@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Layout Sugar Scoped/Spacer Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI porting layout sugar split into private scoped-layout and spacer owners
+without changing `items`, `same_line`, `dummy`, `spacing`, `indent`, layout-token defaults,
+explicit dummy sizing, indent composition, test-id stamping, or public-in-IMUI APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/layout_sugar.rs` is now a private module/re-export index.
+- `ecosystem/fret-ui-kit/src/imui/layout_sugar/scoped.rs` owns item-flow, same-line, and indent
+  container composition.
+- `ecosystem/fret-ui-kit/src/imui/layout_sugar/spacers.rs` owns dummy/spacing spacer construction
+  and default IMUI spacing token projection.
+- `tools/gate_imui_workstream_source.py` now rejects scoped/spacer bodies from drifting back into
+  `layout_sugar.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui
+  porting_sugar_items_same_line_spacing_dummy_and_indent_use_imgui_style_layout_tokens
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Text-Picker Keyboard Handler Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI input-text picker keyboard handler moved into a private owner without
