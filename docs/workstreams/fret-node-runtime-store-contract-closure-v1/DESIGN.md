@@ -1,7 +1,7 @@
 # `fret-node` Runtime/Store Contract Closure (v1)
 
-Status: active planning
-Last updated: 2026-05-26
+Status: closed
+Last updated: 2026-05-27
 Scope: `ecosystem/fret-node`, with documentation touch points in `docs/`
 
 ## Problem
@@ -42,6 +42,14 @@ The target state is a `fret-node` architecture where:
   retained,
 - tests that guard public surface policy live in focused integration tests or audit helpers rather
   than the crate root.
+
+Closeout result on 2026-05-27:
+
+- The runtime/store correctness target is met for the scoped lane.
+- Long-lived `NodeGraphSurfaceBinding` mirrors are quarantined behind an explicit private mirror
+  owner.
+- Retained `NodeGraphCanvas` mirror cleanup remains a compatibility follow-on, not part of this
+  closed runtime/store contract lane.
 
 ## Architecture Direction
 
@@ -115,4 +123,3 @@ Primary documentation scope:
   incremental dispatch.
 - Highest migration risk: removing UI mirrors too early can regress retained compatibility tests.
 - Highest process risk: broad cleanup without focused gates will make review impossible.
-

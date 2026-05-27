@@ -1,7 +1,7 @@
 # `fret-node` Runtime/Store Contract Closure (v1) - Evidence And Gates
 
-Status: active
-Last updated: 2026-05-26
+Status: complete
+Last updated: 2026-05-27
 
 ## Baseline From Opening Audit
 
@@ -285,3 +285,39 @@ Evidence anchors:
 - `docs/node-graph-roadmap.md`
 - `ecosystem/fret-node/src/lib.rs`
 - `ecosystem/fret-node/src/surface_policy_tests.rs`
+
+### 2026-05-27 - FNRS-060 closeout verification completed
+
+Claim:
+
+- The scoped runtime/store contract closure lane is complete.
+- Remaining retained-canvas mirror cleanup is a follow-on compatibility lane, not an unresolved
+  blocker for this workstream.
+
+Fresh gates:
+
+- `cargo fmt --check`: passed.
+- `cargo fmt -p fret-node --check`: passed.
+- `cargo nextest run -p fret-node --no-default-features runtime`: passed, 46 tests.
+- `cargo check -p fret-node --no-default-features`: passed.
+- `cargo check -p fret-node --no-default-features --features headless`: passed.
+- `cargo check -p fret-node --features compat-retained-canvas`: passed.
+- `python3 tools/check_layering.py`: passed.
+
+Optional fresh package lint:
+
+- `cargo clippy -p fret-node --no-default-features --all-targets -- -D warnings`: passed.
+
+Previously observed broader-gate caveat:
+
+- `cargo clippy -p fret-node --features compat-retained-canvas --all-targets -- -D warnings`
+  previously failed before reaching `fret-node` on unrelated existing `fret-ui` lints in
+  `crates/fret-ui/src/tree/layout/clean_geometry.rs`. That broader compat clippy cleanup remains
+  outside this workstream.
+
+Evidence anchors:
+
+- `docs/workstreams/fret-node-runtime-store-contract-closure-v1/CLOSEOUT_AUDIT_2026-05-27.md`
+- `docs/workstreams/fret-node-runtime-store-contract-closure-v1/TODO.md`
+- `docs/workstreams/fret-node-runtime-store-contract-closure-v1/WORKSTREAM.json`
+- `docs/workstreams/fret-node-runtime-store-contract-closure-v1/HANDOFF.md`

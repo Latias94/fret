@@ -1,7 +1,7 @@
 # `fret-node` Runtime/Store Contract Closure (v1) - Milestones
 
-Status: active
-Last updated: 2026-05-26
+Status: complete
+Last updated: 2026-05-27
 
 ## Global Success Criteria
 
@@ -18,6 +18,7 @@ Last updated: 2026-05-26
 ## M0 - Workstream Opened And Baseline Captured
 
 Status target: documentation closure
+Closeout status: complete
 
 Done criteria:
 
@@ -35,6 +36,7 @@ Evidence anchors:
 ## M1 - Runtime Change Semantics Closed
 
 Status target: FNRS-010 complete
+Closeout status: complete
 
 Done criteria:
 
@@ -53,6 +55,7 @@ Evidence anchors:
 ## M2 - Lookup Cache Correctness Closed
 
 Status target: FNRS-020 complete
+Closeout status: complete
 
 Done criteria:
 
@@ -71,6 +74,7 @@ Evidence anchors:
 ## M3 - Store Dispatch Pipeline Hardened
 
 Status target: FNRS-030 complete
+Closeout status: complete
 
 Done criteria:
 
@@ -88,6 +92,7 @@ Evidence anchors:
 ## M4 - UI Mirror Cleanup Started Safely
 
 Status target: FNRS-040 complete
+Closeout status: complete
 
 Done criteria:
 
@@ -105,6 +110,7 @@ Evidence anchors:
 ## M5 - Feature And Documentation Contracts Aligned
 
 Status target: FNRS-050 complete
+Closeout status: complete
 
 Done criteria:
 
@@ -123,6 +129,7 @@ Evidence anchors:
 ## M6 - Closeout
 
 Status target: workstream complete or split follow-ons
+Closeout status: complete on 2026-05-27
 
 Done criteria:
 
@@ -131,3 +138,7 @@ Done criteria:
 - Remaining work is either out of scope or split into a follow-on workstream/task ledger.
 - Reviewer can verify the lane without relying on chat context.
 
+Closeout evidence:
+
+- Fresh gates are recorded in `EVIDENCE_AND_GATES.md`.
+- Follow-ons and residual risks are recorded in `CLOSEOUT_AUDIT_2026-05-27.md` and `HANDOFF.md`.

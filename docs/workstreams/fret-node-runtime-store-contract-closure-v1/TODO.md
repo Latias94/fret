@@ -1,7 +1,7 @@
 # `fret-node` Runtime/Store Contract Closure (v1) - TODO
 
-Status: active
-Last updated: 2026-05-26
+Status: complete
+Last updated: 2026-05-27
 
 Task IDs use `FNRS` for `fret-node runtime/store`.
 
@@ -9,8 +9,8 @@ Task IDs use `FNRS` for `fret-node runtime/store`.
 
 - [x] Runtime correctness lands before UI mirror deletion.
 - [x] Every task has a focused validation command before it is marked done.
-- [ ] Compatibility retained behavior remains covered while internals move toward store-first.
-- [ ] Feature-contract changes update docs and compile-matrix gates in the same slice.
+- [x] Compatibility retained behavior remains covered while internals move toward store-first.
+- [x] Feature-contract changes update docs and compile-matrix gates in the same slice.
 - [x] Workstream decisions stay in `DESIGN.md`, `MILESTONES.md`, or ADRs, not only in chat.
 
 ## FNRS-010 - Close `GraphOp` to `NodeGraphChanges` semantics
@@ -279,7 +279,7 @@ Completion notes:
 
 ## FNRS-060 - Closeout verification and follow-on split
 
-Status: blocked on all implementation slices
+Status: done
 Owner: planner/reviewer
 Dependencies: FNRS-010, FNRS-020, FNRS-030, FNRS-040, FNRS-050
 
@@ -310,3 +310,18 @@ Validation:
 - `cargo check -p fret-node --no-default-features --features headless`
 - `cargo check -p fret-node --features compat-retained-canvas`
 - `python3 tools/check_layering.py`
+
+Completion notes:
+
+- Closeout audit added in `CLOSEOUT_AUDIT_2026-05-27.md`.
+- Fresh closeout gates passed on 2026-05-27:
+  - `cargo fmt --check`: passed.
+  - `cargo fmt -p fret-node --check`: passed.
+  - `cargo nextest run -p fret-node --no-default-features runtime`: 46 passed.
+  - `cargo check -p fret-node --no-default-features`: passed.
+  - `cargo check -p fret-node --no-default-features --features headless`: passed.
+  - `cargo check -p fret-node --features compat-retained-canvas`: passed.
+  - `python3 tools/check_layering.py`: passed.
+  - `cargo clippy -p fret-node --no-default-features --all-targets -- -D warnings`: passed.
+- Remaining retained `NodeGraphCanvas` mirror cleanup is split as follow-on work because it has a
+  separate compatibility review surface from the runtime/store contract closure.

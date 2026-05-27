@@ -1,12 +1,12 @@
 # `fret-node` Runtime/Store Contract Closure (v1) - Handoff
 
-Status: active
-Last updated: 2026-05-26
+Status: closed
+Last updated: 2026-05-27
 
 ## Current State
 
-The workstream has been opened from the `fret-node` audit findings. `FNRS-010` through `FNRS-050`
-are complete.
+The workstream has been opened from the `fret-node` audit findings. `FNRS-010` through `FNRS-060`
+are complete and the lane is closed.
 
 Completed:
 
@@ -28,23 +28,24 @@ Completed:
   - `headless` is documented as a no-default build marker.
   - `fret-ui-kit` dependency reality is reflected in the roadmap.
   - large crate-root surface-policy scans live in `src/surface_policy_tests.rs`.
-- Fresh validation:
+- Fresh closeout validation:
+  - `cargo fmt --check`: passed.
   - `cargo fmt -p fret-node --check`: passed.
   - `cargo nextest run -p fret-node --no-default-features runtime`: passed, 46 tests.
-  - `cargo nextest run -p fret-node --features compat-retained-canvas binding_surface_covers_instance_style_sync_and_history_helpers new_binding_seeds_graph_view_and_store_models from_store_clones_initial_store_state_into_surface_models`: passed, 3 tests.
-  - `cargo nextest run -p fret-node --features compat-retained-canvas binding_surface_covers_instance_style_sync_and_history_helpers first_party_node_graph_demos_stay_declarative_only`: passed, 2 tests.
   - `cargo check -p fret-node --no-default-features`: passed.
   - `cargo check -p fret-node --no-default-features --features headless`: passed.
   - `cargo check -p fret-node --features compat-retained-canvas`: passed.
+  - `python3 tools/check_layering.py`: passed.
   - `cargo clippy -p fret-node --no-default-features --all-targets -- -D warnings`: passed.
-  - `cargo clippy -p fret-node --features compat-retained-canvas --all-targets -- -D warnings`
-    failed in unrelated `crates/fret-ui/src/tree/layout/clean_geometry.rs` lints before reaching
-    `fret-node`.
 
-Primary remaining finding:
+Follow-ons:
 
-Implementation slices are complete. The remaining task is closeout verification and deciding
-whether any retained-canvas mirror cleanup should split into a follow-on workstream.
+- Retained `NodeGraphCanvas` graph/view/editor-config mirror cleanup should be handled as a
+  separate compatibility workstream or task slice.
+- The broader compat clippy command
+  `cargo clippy -p fret-node --features compat-retained-canvas --all-targets -- -D warnings`
+  previously failed before reaching `fret-node` on unrelated existing `fret-ui` lints in
+  `crates/fret-ui/src/tree/layout/clean_geometry.rs`.
 
 ## Authoritative Docs
 
@@ -62,15 +63,8 @@ Related background:
 
 ## Next Task
 
-Run `FNRS-060 - Closeout verification and follow-on split`.
-
-Expected workflow:
-
-1. Use `verify-rust-workstream` for final closeout gates.
-2. Run the closeout gate set from `EVIDENCE_AND_GATES.md`.
-3. Record any skipped gate with reason.
-4. Add a closeout audit or split follow-on list.
-5. Mark `FNRS-060` complete and close the workstream if gates pass.
+No next task remains in this workstream. New work should start from a follow-on lane rather than
+reopening this one.
 
 ## Known Constraints
 
