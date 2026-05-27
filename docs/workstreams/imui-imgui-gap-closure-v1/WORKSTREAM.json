@@ -985,6 +985,7 @@
     "ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/palette.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/render.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/render/body_rows.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/row_groups.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/layout.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/scroll.rs",

@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 table body-row owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/render/body_rows.rs` now owns keyed body row
+assembly, hidden-column filtering, fallback empty-cell insertion, body cell wrapping, striped row
+selection, and body row wrapping. `table_controls/render.rs` keeps palette, visible-column,
+scroll/header decisions, root chrome, semantics, and final `TableResponse` assembly.
+
 2026-05-27 table-column visibility response owner-split result:
 `ecosystem/fret-ui-kit/src/imui/table_column_visibility/response.rs` now owns
 `TableColumnVisibilityMenuResponse`, `TableColumnVisibilityHeaderContextMenuResponse`, and

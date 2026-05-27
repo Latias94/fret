@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Table Body-Row Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI table body-row preparation moved into a private render owner without changing
+hidden-column filtering, fallback empty cells, default/explicit test-id precedence,
+striped/background selection, pinned/horizontal-scroll wrapping, or aggregate `TableResponse`
+headers.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` keeps palette resolution,
+  visible-column filtering for header/scroll decisions, header rendering, root chrome, semantics,
+  and final `TableResponse` assembly.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/render/body_rows.rs` owns keyed body row
+  assembly, cell iteration, hidden-column filtering, fallback empty-cell insertion, body cell
+  wrapping, and body row wrapping.
+- The source gate rejects direct body row preparation from drifting back into `render.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table-Column Visibility Response Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI table-column visibility response structs and accessors moved into a private

@@ -630,6 +630,15 @@ Last updated: 2026-05-27
       collection, and header row wrapping. `render.rs` keeps palette, visible-column, scroll, and
       header-presence decisions plus body rows, root chrome, semantics, and final response
       assembly.
+- [x] Split IMUI table body-row preparation out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` into a private owner module
+      without changing hidden-column filtering, fallback empty cells, default/explicit test-id
+      precedence, striped/background selection, pinned/horizontal-scroll wrapping, or aggregate
+      `TableResponse` headers.
+      Result: `table_controls/render/body_rows.rs` owns keyed body row assembly, cell iteration,
+      hidden-column filtering, fallback empty-cell insertion, body cell wrapping, and body row
+      wrapping. `render.rs` keeps palette, visible-column, scroll/header decisions, root chrome,
+      semantics, and final `TableResponse` assembly.
 - [x] Split IMUI table header label/sort helpers out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` into a private owner module without
       changing visible-label parsing, sortable/plain header wrapping, sort glyph text role,
