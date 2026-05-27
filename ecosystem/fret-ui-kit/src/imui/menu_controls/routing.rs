@@ -6,10 +6,11 @@ use fret_ui::UiHost;
 use fret_ui::element::PressableState;
 use fret_ui::elements::GlobalElementId;
 
-use crate::imui::label_identity::parse_label_identity;
 use crate::imui::{MenuItemOptions, ResponseExt, UiWriterImUiFacadeExt};
 
 use super::element;
+
+mod identity;
 
 pub(in crate::imui) fn menu_item_with_options<H: UiHost, W: UiWriterImUiFacadeExt<H> + ?Sized>(
     ui: &mut W,
@@ -146,10 +147,7 @@ where
     F: Clone
         + for<'cx> Fn(&mut fret_ui::ElementContext<'cx, H>, PressableState, GlobalElementId, bool),
 {
-    let parts = parse_label_identity(label.as_ref());
-    let identity = Arc::<str>::from(parts.identity);
-    let visible_label = Arc::<str>::from(parts.visible);
-    ui.push_id(("menu-item-label", identity), |ui| {
+    identity::with_menu_item_label_identity(ui, label, |ui, visible_label| {
         menu_item_impl_with_pressable_hook_inner(
             ui,
             visible_label,

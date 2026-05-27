@@ -760,6 +760,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Menu-Item Routing Identity Owner-Split Evidence - 2026-05-27
+
+Claim verified: menu item label identity scoping moved into a private owner without changing public
+menu item dispatch, `##/###` visible-label semantics, stable item-id scoping, response assembly, or
+final element insertion.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs` keeps public menu item entry dispatch,
+  checkbox/radio/action semantic role selection, `ResponseExt` assembly, and final element
+  insertion.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/identity.rs` owns
+  `parse_label_identity(...)`, visible label extraction, and `menu-item-label` `push_id` scoping.
+- `tools/gate_imui_workstream_source.py` now requires the routing identity owner and rejects
+  direct label parsing or menu-item identity `push_id` scoping from drifting back into
+  `routing.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_controls::tests --no-fail-fast`:
+  pass; 4 tests, 685 skipped.
+- `cargo nextest run -p fret-imui label_identity popup_hover::item_pointer
+  interaction_menu_tabs::menu_activation::begin_menu_helper_toggles_popup_and_closes_after_command_activate
+  --no-fail-fast`: pass; 13 tests, 173 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## P3 Component Catalog Current-Gap Refresh Evidence - 2026-05-27
 
 Claim verified: the active component-surface catalog no longer sends future work toward stale

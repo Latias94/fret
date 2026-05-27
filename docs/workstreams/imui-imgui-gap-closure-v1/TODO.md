@@ -121,6 +121,13 @@ Last updated: 2026-05-27
       selection, `##/###` label identity parsing, item-id scoping, response assembly, and final
       element insertion. The root file is now a thin module/re-export index beside the existing
       element, interaction, keyboard, visual, and tests owners.
+- [x] Split IMUI menu-item label identity scoping out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs` into a private owner module
+      without changing public menu item dispatch, `##/###` visible-label semantics, stable
+      item-id scoping, response assembly, or final element insertion.
+      Result: `menu_controls/routing/identity.rs` owns `parse_label_identity(...)`, visible label
+      extraction, and `menu-item-label` `push_id` scoping. `routing.rs` keeps menu item entry
+      dispatch, semantic role selection, response assembly, and element insertion.
 - [x] Split shared IMUI active-trigger keyboard, pointer, and response behavior out of
       `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` into private owner modules
       without changing active-item lifecycle, right-click context-menu signaling, keyboard

@@ -113,6 +113,13 @@ checkbox/radio/action semantic role selection, `##/###` label identity parsing, 
 response assembly, and final element insertion. `menu_controls.rs` is now a thin module/re-export
 index that wires routing, element, interaction, keyboard, visual, and tests owners.
 
+2026-05-27 menu-item routing identity owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/routing/identity.rs` now owns
+`parse_label_identity(...)`, visible label extraction, and `menu-item-label` `push_id` scoping.
+`menu_controls/routing.rs` keeps public menu item dispatch, semantic role selection, response
+assembly, and final element insertion. Public menu item labels and stable-id behavior remain
+unchanged.
+
 2026-05-27 P3 component catalog refresh result:
 `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md` no longer treats ListBox, plot adapter, or
 style/theme preset picker as open candidate-only gaps. The current map now records ListBox as a

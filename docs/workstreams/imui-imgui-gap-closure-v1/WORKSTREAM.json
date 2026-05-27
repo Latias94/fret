@@ -511,6 +511,7 @@
     "ecosystem/fret-ui-kit/src/imui/slider_controls/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls/routing/identity.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs",
