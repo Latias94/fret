@@ -5,10 +5,10 @@ Last updated: 2026-05-27
 
 ## Current Focus
 
-FNDX-030 is the overlay/menu/toolbar policy-placement closure. This slice locks ownership rather
-than claiming full declarative parity: toolbar public policy belongs in `ui/overlays/toolbar_policy.rs`,
-menu/searcher retained lifecycle belongs behind named overlay seams, and default overlay policy
-modules remain retained-bridge-free.
+FNDX-010, FNDX-020, and FNDX-030 are now verified with the closeout gate set for this workstream
+slice. The lane stays active because FNDX-030 only closed overlay/menu/toolbar policy placement; it
+did not claim full declarative overlay parity. The next slice should be a concrete declarative
+overlay parity/conformance task rather than another ownership-placement pass.
 
 ## Targeted Iteration Gates
 
@@ -119,5 +119,12 @@ closeout note must name those failures.
     gate.
   - `python3 tools/check_layering.py`: passed; proves the completed FNDX slices did not violate
     workspace layering policy.
+- Closeout verification for FNDX-010/FNDX-020/FNDX-030:
+  - `cargo fmt --check`: passed; proves the workspace formatting gate is clean after the FNDX
+    slices.
+  - `cargo nextest run -p fret-node`: passed; proves the package test suite remains green after the
+    public guide, controlled-mode policy, and overlay/menu/toolbar source-policy slices.
+  - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed; proves retained
+    compatibility test targets still compile after the overlay policy placement closure.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

@@ -29,6 +29,8 @@
     }
   ],
   "gates": [
+    "cargo fmt --check",
+    "cargo nextest run -p fret-node",
     "cargo nextest run -p fret-node public_node_graph_guides_teach_binding_first_surface",
     "cargo nextest run -p fret-node --no-default-features runtime",
     "cargo check -p fret-node --features compat-retained-canvas --tests",
@@ -45,6 +47,6 @@
   ],
   "continue_policy": {
     "default_action": "continue",
-    "notes": "Continue this lane while the public story remains declarative-first and controller/binding-first. Split a follow-on only when work no longer fits the retained-compatibility convergence target."
+    "notes": "Continue this lane while the public story remains declarative-first and controller/binding-first. FNDX-010/FNDX-020/FNDX-030 are closeout-verified; the next default task is FNDX-040, a concrete declarative overlay parity/conformance slice."
   }
 }

@@ -13,21 +13,12 @@ older graph/view/controller triplets or direct retained authoring.
 
 ## Active Task
 
-- Task ID: FNDX-030
-- Owner: current Codex session
-- Files:
-  - `ecosystem/fret-node/src/surface_policy_tests.rs`
-  - `ecosystem/fret-node/src/ui/overlays/toolbar_policy.rs`
-  - `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`
-  - `ecosystem/fret-node/src/ui/canvas/state/state_overlay_policy.rs`
-  - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/overlay.rs`
-  - `ecosystem/fret-node/src/ui/canvas/widget/searcher_ui/overlay.rs`
-  - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/*`
-- Validation:
-  - `cargo nextest run -p fret-node --features compat-retained-canvas overlay_menu_toolbar_policy_ownership_stays_on_named_seams`
-  - `cargo nextest run -p fret-node --features compat-retained-canvas overlay_policy_modules_compile_without_retained_canvas_compat default_overlay_policy_surfaces_stay_off_retained_bridge`
-  - `cargo fmt --check`
-- Status: DONE
+- Task ID: none currently in progress.
+- Last closed task: FNDX-030.
+- Next proposed task: FNDX-040, a concrete declarative overlay parity/conformance slice.
+- Status: FNDX-010, FNDX-020, and FNDX-030 are done and closeout-verified for their bounded
+  claims. The full workstream remains active because FNDX-030 intentionally closed ownership
+  placement, not full declarative overlay parity.
 - Review: use `review-workstream` before accepting broader lane closure.
 - Evidence:
   - `ecosystem/fret-node/src/surface_policy_tests.rs` locks the FNDX-030 ownership boundary:
@@ -39,7 +30,10 @@ older graph/view/controller triplets or direct retained authoring.
     `cargo check -p fret-node --no-default-features`,
     `cargo check -p fret-node --features compat-retained-canvas`, and
     `python3 tools/check_layering.py`.
-  - Formatting passed on 2026-05-27.
+  - Closeout gates passed on 2026-05-27:
+    `cargo fmt --check`,
+    `cargo nextest run -p fret-node`, and
+    `cargo check -p fret-node --features compat-retained-canvas --tests`.
 
 ## Decisions Since Last Update
 
@@ -52,6 +46,8 @@ older graph/view/controller triplets or direct retained authoring.
   evidence before adding a `replace_*_with_diff` API.
 - Treat FNDX-030 as policy-placement closure, not a full declarative parity claim: remaining
   overlay behavior parity should be split into future focused conformance tasks.
+- Keep this workstream active after closeout verification and split the next step as FNDX-040
+  instead of marking the whole lane complete.
 
 ## Blockers
 
@@ -59,7 +55,6 @@ older graph/view/controller triplets or direct retained authoring.
 
 ## Next Recommended Action
 
-- Either run the heavier closeout gates (`cargo nextest run -p fret-node` and
-  `cargo check -p fret-node --features compat-retained-canvas --tests`) before lane closeout, or
-  split the next follow-up into a concrete declarative overlay parity/conformance task instead of
-  reopening policy placement.
+- Start FNDX-040: choose one observable overlay behavior that matters to the XYFlow-style consumer
+  story (anchoring, input transparency, dismissal, focus return, or add-on placement), then add a
+  focused declarative behavior gate or paired declarative-vs-retained conformance gate.

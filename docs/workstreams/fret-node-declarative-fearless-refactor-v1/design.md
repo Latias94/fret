@@ -1,6 +1,6 @@
 # `fret-node` Fearless Refactor (v1) - Design Map
 
-Status: execution-oriented companion (last updated 2026-04-07)
+Status: execution-oriented companion (last updated 2026-05-27)
 Scope: `ecosystem/fret-node` only
 
 This file is the shortest possible answer to:
@@ -125,7 +125,7 @@ focused tests that still need queue transport while the retained stack is being 
 
 ## Next worktree order
 
-Status note (2026-04-03):
+Status note (2026-05-27):
 
 - Slice 1 is now landed for the current controller-facing viewport/XyFlow mapping.
 - Focused `controller.rs` + `binding.rs` gates now cover viewport read/projection,
@@ -437,9 +437,16 @@ Status note (2026-04-03):
   `ui/canvas/widget/menu_session.rs` seam for edge-insert picker fallback, background double-click
   zoom preflight, and detail/hover cursor gates, so those paths stop re-embedding direct
   `context_menu/searcher` slot checks inline.
-- The next narrow follow-up inside Slice 3 should keep focusing on the remaining overlay/menu
-  policy placement, not on reopening visible-subset portal hosting or the now-aligned
-  toolbar/controls/minimap/menu-session/searcher-picker policy ownership as unowned experiments.
+- FNDX-030 closes the overlay/menu/toolbar policy-placement decision with source-policy coverage:
+  toolbar public policy stays on `ui/overlays/toolbar_policy.rs`, menu/searcher session policy
+  stays on `ui/canvas/state/state_overlay_policy.rs`, and retained lifecycle writes route through
+  named overlay seams.
+- The closeout gate set for the FNDX consumer-surface slices now passes
+  (`cargo fmt --check`, `cargo nextest run -p fret-node`, and
+  `cargo check -p fret-node --features compat-retained-canvas --tests`).
+- The next narrow follow-up inside Slice 3 should choose one concrete declarative overlay behavior
+  parity gap and lock it with a behavior/conformance gate, not reopen the now-aligned policy
+  placement seams as unowned experiments.
 
 Why after callback/commit cleanup:
 

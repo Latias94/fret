@@ -505,6 +505,14 @@ Status target: behavior convergence milestone
 Bring the declarative path much closer to the retained engine on the behaviors that matter most for
 real editors.
 
+### Progress note (2026-05-27)
+
+- FNDX-030 closed the overlay/menu/toolbar policy-placement decision with source-policy coverage,
+  and the closeout gate set for the recent FNDX slices passed.
+- This milestone is not fully closed by that result: the next slice should prove one observable
+  declarative overlay behavior with a focused behavior/conformance gate instead of only moving
+  policy ownership seams.
+
 ### Progress note (2026-03-06)
 
 - Retained portal + rename overlay glue now has a controller-first path

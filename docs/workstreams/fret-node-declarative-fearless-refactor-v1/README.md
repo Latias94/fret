@@ -1,6 +1,6 @@
 # Workstream: `fret-node` Fearless Refactor (v1)
 
-Status: Reframed and active (last updated 2026-04-02)
+Status: Reframed and active (last updated 2026-05-27)
 Quick navigation:
 
 - `design.md` - current surface map + next worktree order
