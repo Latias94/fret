@@ -23,7 +23,9 @@ Observable outcomes for this packet:
   while preserving provider delay, safe-hover policy, and the pointer-transparent tooltip overlay
   boundary.
 - Snackbars pass stable root selectors into the kit toast layer instead of duplicating toast
-  viewport, action, close, and live-region behavior in Material recipes.
+  viewport, action, close, and live-region behavior in Material recipes. The follow-on
+  `material3-snackbar-parts-selector-packet-v1` added kit-level root-derived action/close
+  selectors for Material automation.
 
 ## Component Classification
 
@@ -34,7 +36,7 @@ Observable outcomes for this packet:
 | `Dialog` | `kit_policy`, `material_recipe`, `diagnostics` | Dialog now derives dotted `scrim`, `scrim.chrome`, `panel`, and `panel.chrome` selectors from the base id. The panel now reports `SemanticsRole::Dialog`; focus trap/restore remains kit overlay policy. |
 | `BottomSheet` | `kit_policy`, `material_recipe`, `material_foundation`, `test_harness` | Modal bottom sheet derives dotted `scrim`, `scrim.chrome`, `sheet`, `sheet.chrome`, and `sheet.drag-handle` selectors; docked bottom sheet derives `chrome` and `drag-handle`. The chrome aliases are hidden layout-only diagnostic anchors, so bottom-sheet headless goldens remain stable. |
 | `Tooltip` | `kit_policy`, `material_recipe`, `mechanism_follow_on` | Plain and rich tooltips accept `test_id` and expose `.chrome`. The follow-on `material3-tooltip-rich-parts-packet-v1` added rich `.title` and `.supporting-text` selectors and de-duplicated root/chrome semantics wiring. Provider delay/safe-hover stay in kit policy. Rich tooltip action interactivity remains a mechanism follow-on because tooltip overlays are currently click-through. |
-| `Snackbar` | `kit_policy`, `material_recipe`, `test_harness` | `Snackbar::test_id` forwards to `ToastRequest::test_id`, keeping toast viewport/action/close/live-region details in `fret-ui-kit`. Subpart selectors can be added in kit if a consumer needs them. |
+| `Snackbar` | `kit_policy`, `material_recipe`, `test_harness` | `Snackbar::test_id` forwards to `ToastRequest::test_id`, keeping toast viewport/action/close/live-region details in `fret-ui-kit`. The kit toast renderer now derives `.action` and `.close` selectors from the toast root id, with `.cancel` also available to shared toast consumers. |
 
 ## Stable Selector Surface
 
@@ -64,6 +66,8 @@ New or confirmed selector contracts:
 - `tooltip.title`
 - `tooltip.supporting-text`
 - `snackbar`
+- `snackbar.action`
+- `snackbar.close`
 
 Resolved by follow-on:
 
@@ -71,10 +75,13 @@ Resolved by follow-on:
 - `modal_bottom_sheet.sheet.chrome`
 - `tooltip.title`
 - `tooltip.supporting-text`
+- `snackbar.action`
+- `snackbar.close`
 
 The bottom-sheet aliases use Material3 hidden diagnostic anchors instead of visible or
 layout-participating markers. The rich tooltip aliases attach to the live title/supporting text
-nodes only when those nodes exist.
+nodes only when those nodes exist. Snackbar action/close aliases are derived in the shared toast
+kit renderer from `ToastRequest::test_id`, so Material does not duplicate toast composition policy.
 
 ## Implementation Anchors
 
@@ -125,8 +132,10 @@ cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless
 - `M3CAS-070-F2`: Decide whether rich tooltip actions should be interactive. If yes, split an
   ADR-backed overlay mechanism change because current tooltip overlays are intentionally
   click-through.
-- `M3CAS-070-F3`: Add kit-level toast action/close part selectors if Snackbar consumers need
-  subpart automation.
+- `M3CAS-070-F3`: Resolved by
+  `docs/workstreams/material3-snackbar-parts-selector-packet-v1/`; toast action/close/cancel
+  selectors are derived from the toast root id in `fret-ui-kit`, and Material Snackbar automation
+  proves root/action/close propagation.
 - `M3CAS-070-F4`: Resolved by
   `docs/workstreams/material3-tooltip-rich-parts-packet-v1/`; PlainTooltip and RichTooltip share
   root/chrome semantics wiring and RichTooltip exposes title/supporting-text parts.

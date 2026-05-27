@@ -38,6 +38,10 @@ struct ToastViewportPauseState {
     paused: bool,
 }
 
+fn toast_part_test_id(base: Option<&Arc<str>>, part: &str) -> Option<Arc<str>> {
+    base.map(|base| Arc::<str>::from(format!("{}.{}", base.as_ref(), part)))
+}
+
 fn toast_icon_from_override<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     fg: Color,
@@ -2656,6 +2660,12 @@ pub fn render<H: UiHost + 'static>(
                                                     .unwrap_or(rich_colors_default);
                                                 let invert = toast.invert || invert_default;
                                                 let test_id = toast.test_id.clone();
+                                                let close_test_id =
+                                                    toast_part_test_id(test_id.as_ref(), "close");
+                                                let action_test_id =
+                                                    toast_part_test_id(test_id.as_ref(), "action");
+                                                let cancel_test_id =
+                                                    toast_part_test_id(test_id.as_ref(), "cancel");
 
                                                 let (bg, fg, border_color, fg_muted, button_bg): (
                                                     Color,
@@ -2788,6 +2798,7 @@ pub fn render<H: UiHost + 'static>(
                                                                 label: Some(
                                                                     close_button_aria_label.clone(),
                                                                 ),
+                                                                test_id: close_test_id.clone(),
                                                                 ..Default::default()
                                                             },
                                                         },
@@ -2885,6 +2896,7 @@ pub fn render<H: UiHost + 'static>(
                                                                 a11y: fret_ui::element::PressableA11y {
                                                                     role: Some(SemanticsRole::Button),
                                                                     label: Some(label.clone()),
+                                                                    test_id: action_test_id.clone(),
                                                                     ..Default::default()
                                                                 },
                                                             },
@@ -2976,6 +2988,7 @@ pub fn render<H: UiHost + 'static>(
                                                                 a11y: fret_ui::element::PressableA11y {
                                                                     role: Some(SemanticsRole::Button),
                                                                     label: Some(label.clone()),
+                                                                    test_id: cancel_test_id.clone(),
                                                                     ..Default::default()
                                                                 },
                                                             },

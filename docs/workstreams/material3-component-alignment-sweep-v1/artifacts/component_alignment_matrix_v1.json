@@ -903,23 +903,26 @@
     {
       "id": "snackbar",
       "family": "overlay_feedback",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_action_close_parts_aligned",
       "wave": "wave3_overlay_feedback",
       "default_owner_bias": "material_recipe",
-      "packet_strategy": "feedback_packet",
-      "first_gate_kind": "semantics_live_region",
+      "packet_strategy": "feedback_packet_plus_kit_part_selectors",
+      "first_gate_kind": "semantics_live_region_and_part_selectors",
       "selector_status": "overlay_feedback_selector_ready",
       "stable_part_ids": [
-        "snackbar"
+        "snackbar",
+        "snackbar.action",
+        "snackbar.close"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+        "docs/workstreams/material3-snackbar-parts-selector-packet-v1/artifacts/snackbar_parts_selector_packet_v1.md"
       ],
       "layer_classification": [
         "material_recipe owns Snackbar request skinning and forwards stable root ids into ToastRequest",
-        "kit_policy owns toast viewport, dismissal, action routing, close affordance, and live-region behavior",
-        "test_harness covers snackbar command/dismiss behavior and refreshed headless goldens",
-        "follow_on can add kit-level action/close part ids if consumers need subpart automation"
+        "kit_policy owns toast viewport, dismissal, action routing, close/cancel affordances, live-region behavior, and root-derived toast subpart ids",
+        "test_harness covers snackbar command/dismiss behavior, refreshed headless goldens, and live root/action/close selectors",
+        "no new material_foundation or mechanism gap found"
       ]
     },
     {

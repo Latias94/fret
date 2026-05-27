@@ -2063,6 +2063,7 @@ fn material3_dialog_and_bottom_sheet_expose_stable_part_test_ids() {
 
 #[test]
 fn material3_tooltip_and_snackbar_expose_stable_part_test_ids() {
+    use fret_runtime::CommandId;
     use fret_ui::action::UiActionHostAdapter;
     use fret_ui_kit::ToastStore;
     use fret_ui_material3::{
@@ -2296,6 +2297,7 @@ fn material3_tooltip_and_snackbar_expose_stable_part_test_ids() {
                 window,
                 Snackbar::new("Saved")
                     .supporting_text("Synced")
+                    .action_id("Undo", CommandId::new("m3.snackbar.undo"))
                     .test_id("m3-snackbar"),
             );
         }
@@ -2318,9 +2320,11 @@ fn material3_tooltip_and_snackbar_expose_stable_part_test_ids() {
             |ui, app, services| render(ui, app, services),
         );
 
-        assert!(
-            live_test_id_exists(&ui, &app, window, "m3-snackbar"),
-            "expected live Snackbar toast root test_id m3-snackbar"
-        );
+        for id in ["m3-snackbar", "m3-snackbar.action", "m3-snackbar.close"] {
+            assert!(
+                live_test_id_exists(&ui, &app, window, id),
+                "expected live Snackbar toast part test_id {id}"
+            );
+        }
     }
 }

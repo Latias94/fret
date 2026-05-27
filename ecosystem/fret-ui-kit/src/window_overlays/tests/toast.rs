@@ -313,6 +313,75 @@ fn toast_action_and_cancel_labels_are_exposed_in_semantics_snapshot() {
 }
 
 #[test]
+fn toast_action_cancel_and_close_test_ids_derive_from_root_test_id() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices::default();
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        fret_core::Size::new(Px(480.0), Px(280.0)),
+    );
+
+    begin_frame(&mut app, window);
+    let base = fret_ui::declarative::render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "base",
+        |_cx| Vec::new(),
+    );
+    ui.set_root(base);
+
+    let store = toast_store(&mut app);
+    let _ = toast_action(
+        &mut UiActionHostAdapter { app: &mut app },
+        store.clone(),
+        window,
+        ToastRequest::new("Hello")
+            .duration(None)
+            .test_id("toast-with-parts")
+            .action(ToastAction::new("Undo", "toast.undo"))
+            .cancel(ToastAction::new("Cancel", "toast.cancel")),
+    );
+
+    begin_frame(&mut app, window);
+    let viewport_id = GlobalElementId(0xbeef);
+    request_toast_layer_for_window(
+        &mut app,
+        window,
+        ToastLayerRequest::new(viewport_id, store.clone()).style({
+            let mut style = ToastLayerStyle::default();
+            style.open_ticks = 0;
+            style.close_ticks = 0;
+            style.slide_distance = Px(0.0);
+            style
+        }),
+    );
+    render(&mut ui, &mut app, &mut services, window, bounds);
+
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+    let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+    let count_test_id = |test_id: &str| {
+        snap.nodes
+            .iter()
+            .filter(|n| n.test_id.as_deref() == Some(test_id))
+            .count()
+    };
+
+    assert_eq!(count_test_id("toast-with-parts"), 1);
+    assert_eq!(count_test_id("toast-with-parts.action"), 1);
+    assert_eq!(count_test_id("toast-with-parts.cancel"), 1);
+    assert_eq!(count_test_id("toast-with-parts.close"), 1);
+}
+
+#[test]
 fn toast_layers_scope_named_toasts_to_matching_toaster_id() {
     let window = AppWindowId::default();
     let mut app = App::new();
