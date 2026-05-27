@@ -1,7 +1,7 @@
 # P3 Component Surface Catalog - 2026-05-06
 
 Status: component surface audit; partially superseded by closed proof lanes
-Last updated: 2026-05-20
+Last updated: 2026-05-27
 
 Status note (2026-05-16): this catalog remains the current component-surface gap map, but the
 image-item and child-region manual-resize candidates below have since landed in narrow proof lanes:
@@ -29,6 +29,12 @@ Leaving the child-region size unconstrained on an axis now has focused compositi
 the AutoResizeY-equivalent layout posture and AutoResizeX-equivalent layout posture, so only always
 auto-resize behavior, clipping-return, and nav flattening remain candidates.
 
+Status note (2026-05-27): ListBox, plot adapter, and style/theme preset proof are no longer
+candidate-only gaps. The ListBox container proof landed in `fret-ui-kit::imui`, the optional plot
+adapter landed behind `fret-plot/imui`, and the style/theme preset picker landed in
+`fret-ui-editor` plus the canonical editor workbench. Keep plot sugar and arbitrary runtime-global
+style editing deferred unless a new proof-led lane shows repeated product pressure.
+
 ## Decision
 
 Do not open a broad "finish all Dear ImGui widgets" lane. The current IMUI component surface is
@@ -55,6 +61,7 @@ Keep the owner split:
 | Input text / textarea | `input_text_model`, picker/history/completion helpers, `textarea_model`, input filters, undo command policy | Covered for current needs; mutable-buffer callback grammar remains intentionally absent |
 | Slider / drag value | `slider_f32_model` in kit, richer typed `Slider` / `DragValue` adapters in editor | Covered through split kit/editor ownership; generic numeric breadth belongs in editor controls first |
 | Combo / selectable / multi-select | `combo`, `combo_model`, `selectable`, `multi_selectable`, `SelectableOptions::highlighted`, `ImUiMultiSelectState` | Covered for current examples; full app collection helper and broader selectable flag mirrors remain candidate-only |
+| List boxes | `list_box`, `list_box_with_options`, `ListBoxOptions`, list-box semantics over hosted children | Covered as a Dear ImGui `BeginListBox`-style container proof; selection, filtering, and app collection behavior stay caller-owned |
 | Tree / disclosure | `collapsing_header`, `tree_node`, explicit `TreeNodeOptions::level` | Covered with Fret-native explicit identity/depth; do not copy implicit indent/ID stacks |
 | Child windows / scrolling | `child_region`, `scroll`, `virtual_list`, `ChildRegionResize{X,Y}Options` | Covered for keyed scrollable panes, unconstrained-axis auto-size layout, and manual axis resize; more specific Dear ImGui child behavior such as always auto-resize, clipping-return, and nav flattening stays behavior-specific candidate work |
 | In-window floating windows / overlay areas | `floating_layer`, `floating_area`, `window`, `window_with_options`, `FloatingWindowOptions` | Covered for in-window drag, z-order hit-testing, focus/input policy, close, resize, and collapse; OS-window tear-out / multi-viewport parity stays in docking/runner lanes |
@@ -62,36 +69,45 @@ Keep the owner split:
 | Tooltips | `tooltip_text`, `tooltip`, `TooltipOptions` | Covered enough for current response-driven usage |
 | Tabs | `tab_bar`, `ImUiTabBar`, `tab_item`, response reporting | Covered for current shell/editor proofs |
 | Tables | `table`, `ImUiTable`, `TableColumn`, `TableColumn::hidden`, `TableColumn::with_visible`, `TableColumn::pinned_left`, `TableColumn::pinned_right`, `ImUiTableColumnVisibilityState`, `TableColumnVisibilitySnapshot`, `table_column_visibility_menu_item`, `table_column_visibility_menu_items`, `table_column_visibility_header_context_menu`, `TableOptions::striped`, `TableOptions::horizontal_scroll`, `TableRowOptions::background`, `TableCellOptions::background`, sort/resize/header responses, virtual-list support | Covered for basic/sort/resize/striped-row, static column visibility, runtime hideable-column helper proof, caller-owned visibility snapshot/restore, header visibility-menu composition, column pinning/freeze-pane seam, explicit horizontal-scroll seam, and explicit row/cell background proof paths; remaining advanced table flags should be split by proof |
+| Data plotting adapter | `fret-plot` optional `imui` feature with thin `UiWriter` adapters over declarative plot panels | Covered as an opt-in ecosystem adapter; no `fret-imui` or `fret-ui-kit::imui` plot dependency, and root `fret::imui` plot sugar stays deferred |
 | Drag and drop | response-driven `drag_source` / `drop_target` with typed payloads | Covered with Fret-native response style; do not copy begin/end mutable payload grammar |
 | Draw list / images | `debug_draw`, `ImUiDebugDrawList`, paths, channels, mesh, image/SVG variants | Strong local coverage; keep feature growth in debug-draw follow-ons |
 | Color edit / picker | `fret-ui-editor::ColorEdit` through `fret::imui::editor::color_edit` | Covered as editor-control policy, not generic kit vocabulary |
 | Property editor | `PropertyGroup`, `PropertyGrid`, `InspectorPanel`, vector/transform controls via editor adapters | Covered through editor composites |
+| Style/theme preset picker | `fret-ui-editor::imui::editor_theme_preset_picker`, editor theme preset metadata, reversible preset install/reapply | Covered as editor-owned theme tooling and canonical workbench affordance; no generic runtime `ImGuiStyle` clone or mutable style stack |
 
-## Candidate-Only Gaps
+## Closed / Narrowed Former Candidate Areas
 
-These are real Dear ImGui-class areas, but current source evidence does not justify immediate
-public helper widening:
+These Dear ImGui-class areas were earlier candidates, but current source evidence has since closed
+or narrowed them:
 
 1. **ListBox as a named widget**
-   - Dear ImGui treats list boxes as a thin child-window/selectable convenience.
-   - Fret already has `child_region`, `selectable`, `multi_selectable`, and `virtual_list`.
-   - Open only if two proof surfaces repeat the same list-box chrome/selection setup.
+   - Closed as a kit-owned container proof through `list_box`, `list_box_with_options`, and
+     `ListBoxOptions`.
+   - The proof deliberately stops at hosted list-box semantics; selection/filtering/collection
+     command packages remain caller-owned until repeated product pressure proves a shared helper.
 2. **PlotLines / PlotHistogram**
-   - Fret has plot/chart ecosystem directions outside IMUI.
-   - Start with an app or cookbook proof using existing plot/chart crates before adding an IMUI
-     wrapper.
+   - Narrowed to an optional `fret-plot/imui` adapter over existing declarative plot panels.
+   - Root `fret::imui` plot sugar and canonical-workbench plot adoption remain deferred until
+     repeated authoring friction appears.
 3. **Style editor / style selector**
-   - Dear ImGui exposes these as built-in tools.
-   - Fret should use theme/editor tooling and diagnostics/devtools lanes; do not freeze a generic
-     style editor API from this audit.
-4. **Advanced table flags**
+   - Closed as editor-owned preset/theme tooling through `fret-ui-editor`, not as a generic
+     `fret-ui-kit::imui` or runtime-global style editor.
+   - Do not copy Dear ImGui's `GetStyle`, `PushStyleVar`, or mutable global style stack.
+
+## Remaining Candidate-Only Gaps
+
+These are still real Dear ImGui-class areas, but current source evidence does not justify immediate
+public helper widening:
+
+1. **Advanced table flags**
    - Sorting, resize handles, alternating row backgrounds, explicit per-row/per-cell background
      override targets, a narrow runtime hideable-column helper, caller-owned visibility
      snapshot/restore, default header visibility-menu wiring, and column pinning/freeze-pane seam
      already have proof.
    - The old public `TableColumn` field-bag API shape is closed; do not reopen it as a follow-on
      unless a new public construction failure appears.
-5. **Child-region flag mirrors beyond manual resize**
+2. **Child-region flag mirrors beyond manual resize**
    - `ResizeY` and `ResizeX` now have closed proof lanes.
    - Basic AutoResizeY-equivalent and AutoResizeX-equivalent layout is covered by the
      unconstrained-axis child-region composition gates.
@@ -103,6 +119,13 @@ public helper widening:
 - `ecosystem/fret-ui-kit/src/imui.rs` owns the large policy-heavy re-export surface: options,
   response types, debug draw, floating/window helpers, virtual-list types, tables, tabs, and
   multi-select state.
+- `ecosystem/fret-ui-kit/src/imui/list_box_controls.rs` owns the ListBox container proof while
+  `ListBoxOptions` stays limited to layout, scroll, and diagnostics semantics.
+- `ecosystem/fret-plot/src/imui.rs` owns the optional plot IMUI adapter; `fret-imui` and
+  `fret-ui-kit::imui` still have no plot dependency.
+- `ecosystem/fret-ui-editor/src/controls/editor_theme_preset_picker.rs` and
+  `ecosystem/fret-ui-editor/src/imui.rs` own the style/theme preset picker proof, with the
+  canonical workbench exposing that affordance through editor-owned adapters.
 - `ecosystem/fret-ui-kit/src/imui/facade_writer.rs` remains the public immediate authoring hub for
   the trait, text, popups, drag/drop, windows, and debug draw; the inherent `ImUiFacade` wrappers
   for button/actions, menu items, selection/combo, disclosure, text/value/boolean models, and
@@ -146,8 +169,6 @@ Open a component-specific follow-on only when the proposal can name:
 
 Suggested follow-on names:
 
-- `imui-list-box-proof-v1`
-- `imui-plot-adapter-proof-v1`
 - `imui-child-region-auto-resize-specific-v1`
 - `imui-child-region-visibility-return-v1`
 

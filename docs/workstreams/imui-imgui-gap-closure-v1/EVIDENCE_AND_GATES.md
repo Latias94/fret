@@ -3,6 +3,31 @@
 Status: Active
 Last updated: 2026-05-27
 
+## P3 Component Catalog Current-Gap Refresh Evidence - 2026-05-27
+
+Claim verified: the active component-surface catalog no longer sends future work toward stale
+ListBox, plot adapter, or style/theme preset candidate lanes after those proof lanes landed.
+
+Evidence:
+
+- `docs/workstreams/imui-imgui-gap-closure-v1/P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md` now
+  records ListBox as a kit-owned container proof through `list_box`, `list_box_with_options`, and
+  `ListBoxOptions`.
+- The same catalog records plot parity as an optional `fret-plot/imui` adapter over declarative
+  plot panels, keeping `fret-imui` and `fret-ui-kit::imui` free of plot dependencies.
+- The same catalog records style/theme parity as editor-owned preset tooling through
+  `fret-ui-editor::imui::editor_theme_preset_picker` and the canonical workbench, not as a runtime
+  mutable style stack.
+- `tools/gate_imui_workstream_source.py` now rejects the stale ListBox/plot/style candidate-only
+  wording from returning.
+
+Focused gates:
+
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Active-Trigger Behavior Owner-Split Evidence - 2026-05-27
 
 Claim verified: shared active-trigger keyboard, pointer, and response behavior moved into focused

@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 P3 component catalog refresh result:
+`P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md` no longer treats ListBox, plot adapter, or
+style/theme preset picker as open candidate-only gaps. The current map now records ListBox as a
+kit-owned container proof, plot as an optional `fret-plot/imui` adapter, and style/theme editing as
+editor-owned preset tooling surfaced through the canonical workbench.
+
 2026-05-27 active-trigger behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/keyboard.rs` now owns ContextMenu and
 Shift+F10 request handling. `active_trigger_behavior/pointer.rs` owns primary active-item pointer

@@ -17,6 +17,15 @@ Last updated: 2026-05-27
 - [x] Run focused convergence gates and record the result in `EVIDENCE_AND_GATES.md`.
 - [x] Continue follow-up IMUI development only from `F:/SourceCodes/Rust/fret` on `main`.
 
+## Current Gap Refresh - 2026-05-27
+
+- [x] Refresh `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md` so the active gap map no longer treats
+      ListBox, plot adapter, or style/theme preset picker as open candidate-only gaps after their
+      closed proof lanes landed.
+      Result: the catalog now records ListBox as a kit-owned container proof, plot as an opt-in
+      `fret-plot/imui` adapter, and style/theme editing as editor-owned preset tooling exposed by
+      the canonical workbench.
+
 ## Owner Split Follow-Ups - 2026-05-26
 
 - [x] Split shared IMUI active-trigger keyboard, pointer, and response behavior out of
