@@ -35,6 +35,10 @@ older graph/view/controller triplets or direct retained authoring.
     `state_overlay_policy.rs`, and retained menu/searcher lifecycle writes route through named
     overlay seams.
   - Adjacent overlay policy gates still pass with `compat-retained-canvas` enabled.
+  - Review/verify follow-up passed the package/boundary gates:
+    `cargo check -p fret-node --no-default-features`,
+    `cargo check -p fret-node --features compat-retained-canvas`, and
+    `python3 tools/check_layering.py`.
   - Formatting passed on 2026-05-27.
 
 ## Decisions Since Last Update
@@ -55,6 +59,7 @@ older graph/view/controller triplets or direct retained authoring.
 
 ## Next Recommended Action
 
-- Decide whether to run `review-workstream` for the three completed FNDX tasks, or split the next
-  follow-up into a concrete declarative parity/conformance task instead of reopening policy
-  placement.
+- Either run the heavier closeout gates (`cargo nextest run -p fret-node` and
+  `cargo check -p fret-node --features compat-retained-canvas --tests`) before lane closeout, or
+  split the next follow-up into a concrete declarative overlay parity/conformance task instead of
+  reopening policy placement.

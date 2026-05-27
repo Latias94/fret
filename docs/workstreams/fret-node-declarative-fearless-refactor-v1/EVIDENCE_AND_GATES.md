@@ -110,5 +110,14 @@ closeout note must name those failures.
 - Broader package/closeout gates were not rerun for FNDX-030 because this slice only adds a
   source-policy gate and workstream notes; use the package/closeout gate list above before
   accepting broader lane closure.
+- Review/verify follow-up for FNDX-010/FNDX-020/FNDX-030:
+  - `cargo check -p fret-node --no-default-features`: passed; proves the headless/runtime-facing
+    package still compiles without default features after the public guide and controlled-mode
+    policy updates.
+  - `cargo check -p fret-node --features compat-retained-canvas`: passed; proves the retained
+    compatibility package surface still compiles after the overlay/menu/toolbar policy ownership
+    gate.
+  - `python3 tools/check_layering.py`: passed; proves the completed FNDX slices did not violate
+    workspace layering policy.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.
