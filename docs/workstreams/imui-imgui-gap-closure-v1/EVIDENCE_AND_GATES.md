@@ -1485,6 +1485,44 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Table-Column Visibility Menu Identity Owner-Split Evidence - 2026-05-27
+
+Claim verified: table-column visibility menu identity helpers moved into a private owner without
+changing stable column-id filtering, visible-label filtering, generated test-id suffixes, menu item
+state updates, or table header context-menu behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu.rs` keeps header context-menu
+  composition, menu item/group rendering, visibility model updates, and response population.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu/identity.rs` owns stable menu
+  column id extraction, visible menu label parsing via label identity, and slug-like test-id suffix
+  generation.
+- `tools/gate_imui_workstream_source.py` now requires the identity owner and rejects identity,
+  visible-label parsing, and slug-generation bodies from drifting back into the menu composition
+  owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_column_visibility::tests
+  --no-fail-fast`: pass on retry; first run timed out before reporting a test failure, retry
+  reported 7 passed and 682 skipped.
+- `cargo nextest run -p fret-imui
+  composition::layout_collections::table_column_visibility_menu_item_updates_visibility_state
+  composition::layout_collections::table_column_visibility_menu_items_update_shared_visibility_state_and_filter_columns
+  composition::layout_collections::table_column_visibility_header_context_menu_opens_and_updates_state
+  composition::layout_collections::table_column_visibility_header_context_menu_opens_from_plain_header
+  --no-fail-fast`: pass on retry; first run timed out before reporting a test failure, retry
+  reported 4 passed and 182 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Paint Media Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug draw image/SVG media painting moved out of the root paint dispatcher without

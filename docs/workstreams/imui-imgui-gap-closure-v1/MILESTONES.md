@@ -270,6 +270,12 @@ and snapshot/entry accessors. `state.rs` keeps runtime override storage, mutatio
 restore/apply orchestration, and column visibility policy application. The root IMUI re-export
 surface and serde payload shape remain unchanged.
 
+2026-05-27 table-column visibility menu identity owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu/identity.rs` now owns stable menu
+column id extraction, visible menu label parsing, and generated test-id suffix slugs. `menu.rs`
+keeps header context-menu composition, menu item/group rendering, model updates, and response
+population. Public table-column visibility helpers and test-id behavior remain unchanged.
+
 2026-05-27 debug-draw summary owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/summaries.rs` is now a thin re-export index.
 `summaries/command.rs` owns `DebugDrawCommandKind` plus per-command summary storage/accessors, and

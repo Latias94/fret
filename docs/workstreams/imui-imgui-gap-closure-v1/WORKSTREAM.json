@@ -983,6 +983,7 @@
     "ecosystem/fret-ui-kit/src/imui/table_controls/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu/identity.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/state.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/state/snapshot.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility/tests.rs",

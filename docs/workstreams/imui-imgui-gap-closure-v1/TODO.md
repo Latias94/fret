@@ -409,6 +409,13 @@ Last updated: 2026-05-27
       fields, and snapshot/entry accessors. `state.rs` keeps runtime override storage, mutation
       helpers, snapshot restore/apply orchestration, and `TableColumn` visibility policy
       application.
+- [x] Split IMUI table-column visibility menu identity helpers out of
+      `ecosystem/fret-ui-kit/src/imui/table_column_visibility/menu.rs` into a private owner module
+      without changing stable column-id filtering, visible-label filtering, generated test-id
+      suffixes, menu item state updates, or table header context-menu behavior.
+      Result: `table_column_visibility/menu/identity.rs` owns stable menu column id extraction,
+      visible menu label parsing, and slug-like test-id suffix generation. `menu.rs` keeps header
+      context-menu composition, menu item/group rendering, model updates, and response population.
 - [x] Split IMUI container/layout option types out of
       `ecosystem/fret-ui-kit/src/imui/options/containers.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.
