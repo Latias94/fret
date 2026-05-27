@@ -366,8 +366,9 @@ Last updated: 2026-05-27
       changing the public tooltip facade or hover/dismissal behavior.
       Result: `tooltip_overlay/trigger.rs` now owns pointer-move open gating and pointer-transit
       checks, `tooltip_overlay/panel.rs` owns concrete panel placement, chrome, semantics, and
-      content column assembly, and the root file keeps tooltip lifecycle, interaction bounds,
-      update, dismissal, and request orchestration.
+      content column assembly, `tooltip_overlay/runtime.rs` owns tooltip lifecycle, interaction
+      bounds, update, dismissal, and request orchestration, and the root file is now a thin module
+      index.
 - [x] Split IMUI menu/popup/tab/tooltip option types out of
       `ecosystem/fret-ui-kit/src/imui/options/menus.rs` into private owner modules without
       changing option type names, fields, defaults, or re-export paths.

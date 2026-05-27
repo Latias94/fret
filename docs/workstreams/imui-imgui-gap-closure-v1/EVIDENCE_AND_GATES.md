@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Tooltip Runtime Owner-Split Evidence - 2026-05-27
+
+Claim verified: tooltip lifecycle/update/request orchestration moved out of the tooltip overlay
+root into a private runtime owner without changing the public tooltip facade, text-tooltip helper,
+pointer-open gating, panel composition, dismissal behavior, or hoverable-content tracking.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` now owns trigger-id validation,
+  tooltip event model setup, interaction bounds calculation, open/update scheduling, open-model
+  sync, dismiss request handling, hoverable-content tracking, and `request_tooltip(...)`
+  orchestration.
+- `ecosystem/fret-ui-kit/src/imui/tooltip_overlay.rs` is now a thin module index that wires the
+  runtime, trigger, panel, text, and tests owners.
+- `tools/gate_imui_workstream_source.py` now requires the runtime owner and rejects runtime,
+  trigger, panel, and text body responsibilities from drifting back into the root tooltip module.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_tooltip_smoke --no-fail-fast`:
+  pass; 1 test.
+- `cargo nextest run -p fret-ui-kit --features imui --lib tooltip_overlay::tests
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Slider Pointer/Keyboard Interaction Owner-Split Evidence - 2026-05-27
 
 Claim verified: slider pointer and keyboard interaction moved out of the slider interaction entry

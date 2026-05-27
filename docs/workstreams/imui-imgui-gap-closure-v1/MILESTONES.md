@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 tooltip runtime owner-split result:
+`ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` now owns trigger-id validation,
+tooltip event model setup, interaction bounds calculation, open/update scheduling, open-model sync,
+dismiss request handling, hoverable-content tracking, and `request_tooltip(...)` orchestration.
+`tooltip_overlay.rs` is now a thin module index that wires the runtime, trigger, panel, text, and
+tests owners without carrying tooltip policy code.
+
 2026-05-27 slider pointer/keyboard interaction owner-split result:
 `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer.rs` now owns pointer
 down/move/up capture, active-item set/clear, pointer value projection, pointer model mutation, and
