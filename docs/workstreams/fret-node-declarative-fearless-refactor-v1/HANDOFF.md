@@ -31,7 +31,8 @@ triplets or direct retained authoring.
   - `docs/node-graph-xyflow-parity.md` now records mounted declarative overlay dismissal/focus
     return under viewport portals/window-space overlays.
   - Fresh gates passed:
-    `cargo nextest run -p fret-node rename_managed_host_escape_closes_without_transaction_and_restores_focus`.
+    `cargo nextest run -p fret-node rename_managed_host_escape_closes_without_transaction_and_restores_focus`,
+    `cargo nextest run -p fret-node`.
   - Earlier closeout/package gates for FNDX-010 through FNDX-042 remain recorded in
     `EVIDENCE_AND_GATES.md`.
 

@@ -189,5 +189,8 @@ closeout note must name those failures.
   - `cargo nextest run -p fret-node rename_managed_host_escape_closes_without_transaction_and_restores_focus`:
     passed; proves a mounted declarative rename overlay text-input subtree closes on Escape without
     a graph transaction and restores focus to the graph surface target.
+- Review/package follow-up after FNDX-043:
+  - `cargo nextest run -p fret-node`: passed; proves the full package test suite remains green with
+    the mounted declarative rename overlay dismissal/focus-return parity gate.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.
