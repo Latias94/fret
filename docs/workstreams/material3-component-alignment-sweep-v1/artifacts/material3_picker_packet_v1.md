@@ -33,6 +33,7 @@ goldens.
 | Time dial/input display modes | `material_recipe` | Existing staged time model, selector keyboard handling, dial pointer handling, and input auto-advance are recipe-owned. |
 | Stable automation selectors | `diagnostics` + `material_recipe` | Old hyphen/global ids were replaced with base-derived dotted part ids. |
 | Date selectable-date disabling | `material_recipe` | A DatePicker predicate now disables blocked day cells across docked and modal surfaces while preserving value-derived anchors. |
+| Time input invalid/error text | `material_recipe` | Editable invalid input stays staged, exposes invalid semantics, and switches supporting text without changing committed time. |
 | Headless picker golden drift | `test_harness` | The current scenes are stable. Previous picker goldens encoded stale stretched underlay/action-button geometry. |
 | Accessibility parity depth | `follow_on` | Richer calendar/time-grid semantics should be split from this selector/golden packet. |
 
@@ -79,8 +80,10 @@ TimePicker now derives stable ids from the supplied base:
 - `time_picker.period.pm`
 - `time_picker.input.hour`
 - `time_picker.input.hour.chrome`
+- `time_picker.input.hour.supporting-text`
 - `time_picker.input.minute`
 - `time_picker.input.minute.chrome`
+- `time_picker.input.minute.supporting-text`
 - `time_picker.input.period.am`
 - `time_picker.input.period.pm`
 - `time_picker.scrim`
@@ -88,6 +91,14 @@ TimePicker now derives stable ids from the supplied base:
 - `time_picker.panel`
 - `time_picker.actions.cancel`
 - `time_picker.actions.confirm`
+
+TimePicker input mode now keeps editable invalid state separate from the committed `Time`:
+
+- Invalid hour/minute input remains visible instead of clamping into the committed model.
+- Invalid fields expose `SemanticsInvalid::True`.
+- Supporting text switches between `Hour` / `Minute` and the Material error strings
+  `Hour must be 0-23`, `Hour must be 1-12`, or `Minute must be 0-59`.
+- Supporting text parts are polite atomic live regions.
 
 The UI gallery TimePicker chrome-fill diagnostic was updated to use these base-derived selectors.
 
@@ -100,6 +111,7 @@ The UI gallery TimePicker chrome-fill diagnostic was updated to use these base-d
 - `docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/artifacts/date_picker_day_cell_selectors_packet_v1.md`
 - `docs/workstreams/material3-date-picker-selectable-dates-packet-v1/artifacts/date_picker_selectable_dates_packet_v1.md`
 - `docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md`
+- `docs/workstreams/material3-time-picker-input-error-packet-v1/artifacts/time_picker_input_error_packet_v1.md`
 - `tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-time-picker-chrome-fill.json`
 - `goldens/material3-headless/v1/material3-date-picker.*.json`
 - `goldens/material3-headless/v1/material3-time-picker.*.json`
@@ -114,6 +126,7 @@ cargo nextest run -p fret-ui-material3 --features diagnostics --test automation_
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_clock_dial_drag_updates_time
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_selector_keyboard_arrows_step_time
 cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_replaces_and_auto_advances_hour
+cargo nextest run -p fret-ui-material3 --test radio_alignment time_picker_time_input_rejects_invalid_values_and_recovers
 $env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_date_picker_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS
 $env:FRET_UPDATE_GOLDENS='1'; cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_time_picker_suite_goldens_v1; Remove-Item Env:FRET_UPDATE_GOLDENS
 cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless_date_picker_suite_goldens_v1
@@ -128,7 +141,7 @@ python tools/check_workstream_catalog.py
 ## Residual Risk
 
 - DatePicker still needs localized day/month labels and announcement surface.
-- TimePicker does not yet expose invalid-input supporting/error text or richer live-region
-  announcements.
+- TimePicker still needs localized labels/strings and broader live-region announcements beyond the
+  input supporting-text error state closed here.
 - These are accessibility depth follow-ons, not blockers for the current component/foundation
   classification. They should be split if M3CAS-070/M3CAS-080 shows a shared a11y primitive need.

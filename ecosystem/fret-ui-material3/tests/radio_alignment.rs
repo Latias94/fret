@@ -5,7 +5,7 @@ use std::{
 
 use fret_core::{
     AppWindowId, DrawOrder, Edges, Event, KeyCode, Modifiers, NodeId, Point, PointerId, Px, Rect,
-    Scene, SceneOp, Size, Transform2D, UiServices,
+    Scene, SceneOp, SemanticsInvalid, SemanticsLive, Size, Transform2D, UiServices,
 };
 use fret_runtime::{Effect, Model, ModelHost, PlatformCapabilities};
 use fret_ui::element::{AnyElement, ContainerProps};
@@ -28,8 +28,43 @@ use support::goldens::{
     snapshot_material3_scene_at_frame_v1, write_or_assert_material3_suite_v1,
 };
 use support::host::{FakeUiServices, TestHost};
-use support::layout::{find_first_bounds_with_size, paint_alpha, with_padding};
+use support::layout::{
+    find_first_bounds_with_size, paint_alpha, semantics_node_id_by_test_id, with_padding,
+};
 use support::theme::{apply_material_theme, apply_material_theme_rtl};
+
+fn semantics_invalid_by_test_id(ui: &UiTree<TestHost>, test_id: &str) -> Option<SemanticsInvalid> {
+    ui.semantics_snapshot().and_then(|snapshot| {
+        snapshot
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some(test_id))
+            .and_then(|node| node.flags.invalid)
+    })
+}
+
+fn semantics_label_by_test_id(ui: &UiTree<TestHost>, test_id: &str) -> Option<String> {
+    ui.semantics_snapshot().and_then(|snapshot| {
+        snapshot
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some(test_id))
+            .and_then(|node| node.label.clone())
+    })
+}
+
+fn semantics_live_by_test_id(
+    ui: &UiTree<TestHost>,
+    test_id: &str,
+) -> Option<(SemanticsLive, bool)> {
+    ui.semantics_snapshot().and_then(|snapshot| {
+        snapshot
+            .nodes
+            .iter()
+            .find(|node| node.test_id.as_deref() == Some(test_id))
+            .and_then(|node| node.flags.live.map(|live| (live, node.flags.live_atomic)))
+    })
+}
 #[test]
 fn text_input_text_input_event_updates_model() {
     use fret_ui::element::TextInputProps;
@@ -1970,6 +2005,140 @@ fn time_picker_time_input_replaces_and_auto_advances_hour() {
         ui.focus(),
         Some(minute_node),
         "expected entering a two-digit hour to auto-advance focus to minutes",
+    );
+}
+
+#[test]
+fn time_picker_time_input_rejects_invalid_values_and_recovers() {
+    use fret_ui_material3::{DockedTimePicker, TimePickerDisplayMode};
+    use time::Time;
+
+    let mut app = TestHost::default();
+    app.set_global(PlatformCapabilities::default());
+    apply_material_theme(&mut app, SchemeMode::Light, DynamicVariant::TonalSpot);
+
+    let window = AppWindowId::default();
+    let mut services = FakeUiServices;
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(520.0), Px(420.0)),
+    );
+
+    let selected_time = Time::from_hms(9, 41, 0).expect("valid time");
+    let time = app.models_mut().insert(selected_time);
+    let time_for_render = time.clone();
+
+    let render =
+        move |ui: &mut UiTree<TestHost>, app: &mut TestHost, services: &mut dyn UiServices| {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "root", |cx| {
+                let picker = DockedTimePicker::new(time_for_render.clone())
+                    .is_24h(true)
+                    .display_mode(TimePickerDisplayMode::Input)
+                    .test_id("time-picker-docked-input")
+                    .into_element(cx);
+                vec![with_padding(cx, Px(24.0), picker)]
+            })
+        };
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let hour_node = semantics_node_id_by_test_id(&ui, "time-picker-docked-input.input.hour")
+        .expect("expected time input hour field in semantics snapshot");
+    ui.set_focus(Some(hour_node));
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Digit2));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Digit2));
+    ui.dispatch_event(&mut app, &mut services, &Event::TextInput("2".to_string()));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        app.models().get_cloned(&time).expect("time model exists"),
+        Time::from_hms(2, 41, 0).expect("valid time"),
+        "first valid hour digit should still update the committed time",
+    );
+    assert_eq!(
+        semantics_invalid_by_test_id(&ui, "time-picker-docked-input.input.hour"),
+        None,
+        "single valid hour digit should not expose invalid semantics",
+    );
+
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Digit7));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Digit7));
+    ui.dispatch_event(&mut app, &mut services, &Event::TextInput("7".to_string()));
+
+    for token in drain_zero_delay_timer_tokens(&mut app, window) {
+        ui.dispatch_event(&mut app, &mut services, &Event::Timer { token });
+    }
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        app.models().get_cloned(&time).expect("time model exists"),
+        Time::from_hms(2, 41, 0).expect("valid time"),
+        "invalid 24h hour input must not clamp or overwrite the committed time",
+    );
+    assert_eq!(
+        semantics_invalid_by_test_id(&ui, "time-picker-docked-input.input.hour"),
+        Some(SemanticsInvalid::True),
+        "invalid hour input should expose aria-invalid semantics",
+    );
+    assert_eq!(
+        semantics_label_by_test_id(&ui, "time-picker-docked-input.input.hour.supporting-text"),
+        Some(String::from("Hour must be 0-23")),
+        "invalid hour input should expose Material supporting error text",
+    );
+    assert_eq!(
+        semantics_live_by_test_id(&ui, "time-picker-docked-input.input.hour.supporting-text"),
+        Some((SemanticsLive::Polite, true)),
+        "supporting error text should be a polite atomic live region",
+    );
+
+    let hour_node = semantics_node_id_by_test_id(&ui, "time-picker-docked-input.input.hour")
+        .expect("expected time input hour field after invalid input");
+    ui.set_focus(Some(hour_node));
+    for _ in 0..2 {
+        ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Backspace));
+        ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Backspace));
+    }
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Digit1));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Digit1));
+    ui.dispatch_event(&mut app, &mut services, &Event::TextInput("1".to_string()));
+    ui.dispatch_event(&mut app, &mut services, &key_down(KeyCode::Digit2));
+    ui.dispatch_event(&mut app, &mut services, &key_up(KeyCode::Digit2));
+    ui.dispatch_event(&mut app, &mut services, &Event::TextInput("2".to_string()));
+
+    let root = render(&mut ui, &mut app, &mut services);
+    ui.set_root(root);
+    ui.request_semantics_snapshot();
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    assert_eq!(
+        app.models().get_cloned(&time).expect("time model exists"),
+        Time::from_hms(12, 41, 0).expect("valid time"),
+        "recovered valid hour input should update the committed time",
+    );
+    assert_eq!(
+        semantics_invalid_by_test_id(&ui, "time-picker-docked-input.input.hour"),
+        None,
+        "valid recovery should clear invalid semantics",
+    );
+    assert_eq!(
+        semantics_label_by_test_id(&ui, "time-picker-docked-input.input.hour.supporting-text"),
+        Some(String::from("Hour")),
+        "valid recovery should restore supporting text",
     );
 }
 

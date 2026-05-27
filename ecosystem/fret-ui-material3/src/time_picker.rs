@@ -11,8 +11,8 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 
 use fret_core::{
-    Axis, Color, Corners, CursorIcon, Edges, KeyCode, MouseButton, Px, SemanticsRole, TextOverflow,
-    TextWrap,
+    Axis, Color, Corners, CursorIcon, Edges, KeyCode, MouseButton, Px, SemanticsInvalid,
+    SemanticsLive, SemanticsRole, TextOverflow, TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::Model;
@@ -22,7 +22,8 @@ use fret_ui::action::{
 };
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, HoverRegionProps, LayoutStyle, Length,
-    MainAlign, Overflow, PointerRegionProps, PressableA11y, PressableProps, TextProps,
+    MainAlign, Overflow, PointerRegionProps, PressableA11y, PressableProps, SemanticsDecoration,
+    TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
@@ -1027,10 +1028,20 @@ fn time_picker_time_input<H: UiHost>(
         is_24h,
     );
 
+    let hour_raw = cx
+        .get_model_cloned(&input_hour, Invalidation::Layout)
+        .unwrap_or_default();
+    let hour_valid = time_input_field_is_valid(TimeInputFieldKind::Hour, &hour_raw, is_24h);
+    let minute_raw = cx
+        .get_model_cloned(&input_minute, Invalidation::Layout)
+        .unwrap_or_default();
+    let minute_valid = time_input_field_is_valid(TimeInputFieldKind::Minute, &minute_raw, is_24h);
+
     let hour_column = time_input_field_column(
         cx,
         Arc::<str>::from("Hour"),
-        Arc::<str>::from("Hour"),
+        time_input_supporting_text(TimeInputFieldKind::Hour, is_24h, hour_valid),
+        !hour_valid,
         TimeInputFieldKind::Hour,
         time_now,
         time_model.clone(),
@@ -1043,7 +1054,8 @@ fn time_picker_time_input<H: UiHost>(
     let minute_column = time_input_field_column(
         cx,
         Arc::<str>::from("Minute"),
-        Arc::<str>::from("Minute"),
+        time_input_supporting_text(TimeInputFieldKind::Minute, is_24h, minute_valid),
+        !minute_valid,
         TimeInputFieldKind::Minute,
         time_now,
         time_model.clone(),
@@ -1091,6 +1103,7 @@ fn time_input_field_column<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     a11y_label: Arc<str>,
     supporting_text: Arc<str>,
+    is_error: bool,
     kind: TimeInputFieldKind,
     time_now: Time,
     time_model: Model<Time>,
@@ -1109,13 +1122,14 @@ fn time_input_field_column<H: UiHost>(
         model,
         test_id.clone(),
         is_24h,
+        is_error,
     );
 
     let (supporting_style, supporting_color) = {
         let theme = Theme::global(&*cx.app);
         (
             time_input_tokens::time_input_field_supporting_text_style(theme),
-            time_input_tokens::time_input_field_supporting_text_color(theme),
+            time_input_tokens::time_input_field_supporting_text_color(theme, is_error),
         )
     };
     let mut supporting = TextProps::new(supporting_text);
@@ -1123,7 +1137,12 @@ fn time_input_field_column<H: UiHost>(
     supporting.color = Some(supporting_color);
     supporting.wrap = TextWrap::None;
     supporting.overflow = TextOverflow::Clip;
-    let supporting = cx.text_props(supporting);
+    let supporting = cx.text_props(supporting).a11y(
+        SemanticsDecoration::default()
+            .test_id(part_test_id(&test_id, "supporting-text"))
+            .live(Some(SemanticsLive::Polite))
+            .live_atomic(true),
+    );
 
     let mut col = FlexProps::default();
     col.direction = Axis::Vertical;
@@ -1144,6 +1163,7 @@ fn time_input_field<H: UiHost>(
     model: Model<String>,
     test_id: Arc<str>,
     is_24h: bool,
+    is_error: bool,
 ) -> AnyElement {
     let (width, height, corner_radii, focus_ring) = {
         let theme = Theme::global(&*cx.app);
@@ -1274,7 +1294,9 @@ fn time_input_field<H: UiHost>(
             let (label_color, label_style) = {
                 let theme = Theme::global(&*cx.app);
                 (
-                    time_input_tokens::time_input_field_label_color(theme, focused, hovered),
+                    time_input_tokens::time_input_field_label_color(
+                        theme, focused, hovered, is_error,
+                    ),
                     time_input_tokens::time_input_field_label_text_style(theme),
                 )
             };
@@ -1308,6 +1330,7 @@ fn time_input_field<H: UiHost>(
                     role: Some(SemanticsRole::TextField),
                     label: Some(a11y_label.clone()),
                     test_id: Some(test_id.clone()),
+                    invalid: is_error.then_some(SemanticsInvalid::True),
                     ..Default::default()
                 },
                 layout: {
@@ -1333,14 +1356,14 @@ fn time_input_field<H: UiHost>(
         container.corner_radii = corner_radii;
         container.background = Some({
             let theme = Theme::global(&*cx.app);
-            time_input_tokens::time_input_field_container_color(theme, focused)
+            time_input_tokens::time_input_field_container_color(theme, focused, is_error)
         });
         if focused {
             let (w, c) = {
                 let theme = Theme::global(&*cx.app);
                 (
                     time_input_tokens::time_input_field_focus_outline_width(theme),
-                    time_input_tokens::time_input_field_focus_outline_color(theme),
+                    time_input_tokens::time_input_field_focus_outline_color(theme, is_error),
                 )
             };
             container.border = Edges::all(w);
@@ -1383,6 +1406,27 @@ fn time_input_field<H: UiHost>(
 enum TimeInputFieldKind {
     Hour,
     Minute,
+}
+
+fn time_input_field_is_valid(kind: TimeInputFieldKind, raw: &str, is_24h: bool) -> bool {
+    let raw = sanitize_time_input_digits(raw);
+    match parse_u8(&raw) {
+        Some(value) => match kind {
+            TimeInputFieldKind::Hour => time_input_hour_value_is_valid(value, is_24h),
+            TimeInputFieldKind::Minute => time_input_minute_value_is_valid(value),
+        },
+        None => true,
+    }
+}
+
+fn time_input_supporting_text(kind: TimeInputFieldKind, is_24h: bool, is_valid: bool) -> Arc<str> {
+    match (kind, is_24h, is_valid) {
+        (TimeInputFieldKind::Hour, _, true) => Arc::<str>::from("Hour"),
+        (TimeInputFieldKind::Minute, _, true) => Arc::<str>::from("Minute"),
+        (TimeInputFieldKind::Hour, true, false) => Arc::<str>::from("Hour must be 0-23"),
+        (TimeInputFieldKind::Hour, false, false) => Arc::<str>::from("Hour must be 1-12"),
+        (TimeInputFieldKind::Minute, _, false) => Arc::<str>::from("Minute must be 0-59"),
+    }
 }
 
 #[derive(Default)]
@@ -2645,23 +2689,45 @@ fn apply_time_input_models<H: UiHost>(
         return;
     }
 
-    let next_minute = minute_val.map(|m| m.min(59)).unwrap_or(time_now.minute());
+    let next_minute = minute_val.and_then(|m| time_input_minute_value_is_valid(m).then_some(m));
 
-    let next_hour = if is_24h {
-        hour_val.map(|h| h.min(23)).unwrap_or(time_now.hour())
-    } else {
-        let period = current_period(time_now);
-        let hour12 = hour_val.map(|h| if h == 0 { 12 } else { h.clamp(1, 12) });
-        match hour12 {
-            Some(hour12) => hour12_to_24(hour12, period),
-            None => time_now.hour(),
+    let next_hour = hour_val.and_then(|h| {
+        if !time_input_hour_value_is_valid(h, is_24h) {
+            return None;
         }
-    };
+        if is_24h {
+            Some(h)
+        } else {
+            let period = current_period(time_now);
+            Some(hour12_to_24(h, period))
+        }
+    });
 
-    let next = Time::from_hms(next_hour, next_minute, time_now.second()).unwrap_or(time_now);
+    if next_hour.is_none() && next_minute.is_none() {
+        return;
+    }
+
+    let next = Time::from_hms(
+        next_hour.unwrap_or(time_now.hour()),
+        next_minute.unwrap_or(time_now.minute()),
+        time_now.second(),
+    )
+    .unwrap_or(time_now);
     if next != time_now {
         let _ = cx.app.models_mut().update(&time_model, |t| *t = next);
     }
+}
+
+fn time_input_hour_value_is_valid(value: u8, is_24h: bool) -> bool {
+    if is_24h {
+        value <= 23
+    } else {
+        (1..=12).contains(&value)
+    }
+}
+
+fn time_input_minute_value_is_valid(value: u8) -> bool {
+    value <= 59
 }
 
 fn sanitize_time_input_digits(raw: &str) -> String {

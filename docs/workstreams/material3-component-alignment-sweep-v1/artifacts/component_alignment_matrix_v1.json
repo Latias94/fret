@@ -1036,11 +1036,11 @@
     {
       "id": "time_picker",
       "family": "field",
-      "status": "packet_done_dial_ids_known_follow_ons",
+      "status": "packet_done_input_error_known_follow_ons",
       "wave": "wave2_field_family",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "picker_after_field_foundation",
-      "first_gate_kind": "semantics_dialog_dial_value_ids",
+      "first_gate_kind": "semantics_dialog_dial_value_ids_and_input_error",
       "selector_status": "picker_selector_ready",
       "stable_part_ids": [
         "time_picker",
@@ -1058,8 +1058,10 @@
         "time_picker.period.pm",
         "time_picker.input.hour",
         "time_picker.input.hour.chrome",
+        "time_picker.input.hour.supporting-text",
         "time_picker.input.minute",
         "time_picker.input.minute.chrome",
+        "time_picker.input.minute.supporting-text",
         "time_picker.input.period.am",
         "time_picker.input.period.pm",
         "time_picker.scrim",
@@ -1070,13 +1072,14 @@
       ],
       "packet_artifacts": [
         "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
-        "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md"
+        "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md",
+        "docs/workstreams/material3-time-picker-input-error-packet-v1/artifacts/time_picker_input_error_packet_v1.md"
       ],
       "layer_classification": [
-        "material_recipe owns dial/input display modes, staged time draft, selector keyboard edits, dial drag/click handling, picker part ids, and value-derived dial label ids",
+        "material_recipe owns dial/input display modes, staged time draft, selector keyboard edits, invalid input state/error text, dial drag/click handling, picker part ids, and value-derived dial label ids",
         "kit_policy owns modal overlay request, scrim dismiss, focus trap, and focus restore through existing overlay/focus primitives",
         "diagnostics/test_harness owned stale modal underlay stretch goldens and old global selector drift",
-        "follow_on still covers invalid input error text, live region announcements, and richer 24h/localized labels"
+        "follow_on still covers localized labels/strings and broader live region announcements"
       ]
     },
     {

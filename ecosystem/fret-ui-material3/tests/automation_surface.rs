@@ -1850,8 +1850,10 @@ fn material3_time_picker_exposes_stable_part_test_ids() {
             "m3-time-picker-input.mode-toggle",
             "m3-time-picker-input.input.hour",
             "m3-time-picker-input.input.hour.chrome",
+            "m3-time-picker-input.input.hour.supporting-text",
             "m3-time-picker-input.input.minute",
             "m3-time-picker-input.input.minute.chrome",
+            "m3-time-picker-input.input.minute.supporting-text",
             "m3-time-picker-input.input.period.am",
             "m3-time-picker-input.input.period.pm",
         ] {
