@@ -284,6 +284,16 @@ Last updated: 2026-05-27
       radio label identity, shortcut/context-menu handling, click response, and response
       population. The root `boolean_controls.rs` file is now a thin module/re-export index beside
       the existing switch and visual owners.
+- [x] Split IMUI checkbox pressable behavior out of
+      `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox.rs` into a private owner module
+      without changing label identity, checkbox a11y, model toggling, shortcut gating,
+      context-menu keyboard requests, changed response population, field chrome, or visual row
+      layout.
+      Result: `boolean_controls/checkbox/behavior.rs` owns pressable behavior installation,
+      activate handler model toggling, shortcut model toggling, context-menu key handling,
+      transient changed reads, and `ResponseExt` population. `checkbox.rs` keeps label identity,
+      `CheckboxOptions` a11y wiring, field chrome, checkbox indicator mounting, boolean label
+      mounting, and fill-row visual assembly.
 - [x] Split IMUI switch pressable behavior out of
       `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs` into a private owner module
       without changing label identity, switch a11y, model toggling, shortcut gating, active-trigger

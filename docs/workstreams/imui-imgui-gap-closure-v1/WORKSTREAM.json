@@ -480,6 +480,7 @@
     "ecosystem/fret-ui-kit/src/imui/control_chrome/text.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox.rs",
+    "ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs",
     "ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior.rs",

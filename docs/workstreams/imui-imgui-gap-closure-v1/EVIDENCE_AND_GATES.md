@@ -72,6 +72,40 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Checkbox Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI checkbox pressable behavior moved into a private owner without changing label
+identity, checkbox a11y, model toggling, shortcut gating, context-menu keyboard requests, changed
+response population, field chrome, or visual row layout.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox.rs` keeps label identity,
+  `CheckboxOptions` a11y wiring, field chrome, checkbox indicator mounting, boolean label mounting,
+  and fill-row visual assembly.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox/behavior.rs` owns pressable behavior
+  installation, activate/shortcut model toggling, context-menu key handling, transient changed
+  reads, and `ResponseExt` population.
+- `tools/gate_imui_workstream_source.py` now requires the checkbox behavior owner and rejects
+  pressable behavior bodies from drifting back into `checkbox.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_adapter_seam_smoke --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-imui models_controls::checkbox
+  interaction_shortcuts::disclosure_tree::checkbox_activate_shortcut_preserves_shift_f10_context_menu_request
+  interaction_press::lifecycle::checkbox_lifecycle_reports_edit_and_deactivated_after_edit
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Media Paint Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug-draw media paint routing moved into private raster, rounded, and SVG owners
@@ -2189,9 +2223,11 @@ label-identity behavior.
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox.rs` now owns checkbox label identity,
-  model toggling, focused shortcut handling, context-menu request handling, and pressable response
-  population.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/checkbox.rs` originally owned checkbox label
+  identity, model toggling, focused shortcut handling, context-menu request handling, and pressable
+  response population after the root boolean-controls split. 2026-05-27 follow-up:
+  `checkbox.rs` now keeps label/a11y/chrome/visual assembly while `checkbox/behavior.rs` owns the
+  concrete pressable behavior.
 - `ecosystem/fret-ui-kit/src/imui/boolean_controls/radio.rs` now owns radio label identity,
   focused shortcut handling, context-menu request handling, click reporting, and pressable response
   population.
