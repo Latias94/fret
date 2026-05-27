@@ -2058,6 +2058,13 @@ opening the slice.
       Result: `floating_window_title_bar_props.rs` now owns the title-row layout, drag-surface
       layout, and close-button accessibility/size props, while `floating_window_title_bar.rs`
       keeps title-bar behavior orchestration and text-role helpers.
+- [x] Split the floating-window title-bar double-click / Escape / close-button behavior out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` into a private behavior owner
+      without changing the public IMUI surface.
+      Result: `floating_window_title_bar/behavior.rs` now owns double-click collapse event
+      recording, title-bar Escape close key behavior, close-button activation wiring, and model
+      update/notify calls. `floating_window_title_bar.rs` keeps row composition, title text-role
+      selection, close-button prop selection, and close-glyph text construction.
 - [x] Split the floating-window content scroll/container layout construction out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_content.rs::floating_window_content_element(...)`
       into private helpers without changing the public IMUI surface.

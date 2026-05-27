@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use fret_authoring::UiWriter as _;
-use fret_core::KeyCode;
 use fret_runtime::Model;
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
-use fret_ui::action::UiActionHostExt as _;
 use fret_ui::element::AnyElement;
+
+mod behavior;
 
 pub(super) fn floating_window_title_bar_row<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -27,17 +27,7 @@ pub(super) fn floating_window_title_bar_row<H: UiHost>(
     let can_close = can_interact && options.closable && open_for_key.is_some();
     let can_collapse = can_interact && options.collapsible;
     let can_move = can_interact && options.movable;
-    let on_left_double_click: Option<super::OnFloatingAreaLeftDoubleClick> = if can_collapse {
-        Some(Arc::new(
-            move |host: &mut dyn fret_ui::action::UiPointerActionHost,
-                  acx: fret_ui::action::ActionCx| {
-                host.record_transient_event(acx, super::KEY_FLOAT_WINDOW_TOGGLE_COLLAPSED);
-                host.notify(acx);
-            },
-        ))
-    } else {
-        None
-    };
+    let on_left_double_click = behavior::title_bar_double_click_toggle_handler(can_collapse);
 
     let drag_surface = super::floating_area_drag_surface_element(
         cx,
@@ -50,22 +40,7 @@ pub(super) fn floating_window_title_bar_row<H: UiHost>(
         can_move,
         options.activate_on_click,
         move |cx, region_id| {
-            cx.key_clear_on_key_down_for(region_id);
-            if can_close && let Some(open) = open_for_key.clone() {
-                cx.key_on_key_down_for(
-                    region_id,
-                    Arc::new(move |host, acx, down| {
-                        if down.key != KeyCode::Escape || down.repeat {
-                            return false;
-                        }
-                        let _ = host.update_model(&open, |v: &mut bool| {
-                            *v = false;
-                        });
-                        host.notify(acx);
-                        true
-                    }),
-                );
-            }
+            behavior::install_title_bar_key_behavior(cx, region_id, can_close, open_for_key);
         },
         move |ui| {
             let element = ui.with_cx_mut(|cx| {
@@ -90,15 +65,7 @@ pub(super) fn floating_window_title_bar_row<H: UiHost>(
             let props = super::floating_window_title_bar_props::title_bar_close_button_props(
                 close_button_test_id.clone(),
             );
-            cx.pressable(props, move |cx, _state| {
-                cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
-                    let _ = host.update_model(&open, |v: &mut bool| {
-                        *v = false;
-                    });
-                    host.notify(acx);
-                }));
-                vec![floating_window_close_glyph_text(cx)]
-            })
+            behavior::title_bar_close_button(cx, props, open)
         });
 
     cx.row(row, move |_cx| {

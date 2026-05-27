@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Floating Title-Bar Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI floating-window title-bar behavior moved into a private owner without changing
+title text roles, drag-surface wiring, double-click collapse signaling, Escape close behavior,
+close-button activation, or close-glyph rendering.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` keeps title-bar row composition,
+  title text-role selection, close-button prop selection, and close-glyph text construction.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar/behavior.rs` owns double-click
+  collapse event recording, title-bar Escape close key behavior, close-button activation wiring,
+  and model update/notify calls.
+- `tools/gate_imui_workstream_source.py` now requires the title-bar behavior owner and rejects
+  inline title-bar key/press behavior bodies from drifting back into `floating_window_title_bar.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib imui::floating_window_title_bar::tests
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  floating::movement_z_order::floating_window_close_button_sets_open_false
+  floating::window_options::floating_window_closable_false_hides_close_button_and_escape_does_not_close
+  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Flow Options Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI flow/layout option records and token defaults moved into narrower private

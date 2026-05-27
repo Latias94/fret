@@ -1740,6 +1740,12 @@ helper now only composes the prepared title row, content, blocker, and resize st
 drag-surface layout, and close-button accessibility/size props. `floating_window_title_bar.rs`
 keeps keyboard/click behavior orchestration plus the close-glyph text-role helper.
 
+2026-05-27 title-bar behavior owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_title_bar/behavior.rs` now owns double-click
+collapse event recording, title-bar Escape close key behavior, close-button activation wiring, and
+model update/notify calls. `floating_window_title_bar.rs` now keeps row composition, title text-role
+selection, close-button prop selection, and close-glyph text construction.
+
 2026-05-24 content props helper result: `ecosystem/fret-ui-kit/src/imui/floating_window_content_props.rs`
 now owns content surface layout, scroll layout, and container props. `floating_window_content.rs`
 keeps the pointer/focus orchestration and consumes the prepared content owner outputs.

@@ -3888,18 +3888,22 @@ code. `git diff --check` reported only the pre-existing line-ending warnings for
 ## IMUI floating-window title-bar test owner split - 2026-05-25
 
 Scope: keep `floating_window_title_bar.rs` focused on title-bar row assembly, drag/collapse/close
-interaction wiring, and close-glyph text construction while moving the local close-glyph text-role
-test into a dedicated test owner.
+interaction delegation, and close-glyph text construction while moving the local close-glyph
+text-role test into a dedicated test owner.
 
 - `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs` still owns
   `floating_window_title_bar_row(...)` and `floating_window_close_glyph_text(...)`.
+- 2026-05-27 follow-up: `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar/behavior.rs`
+  now owns title-bar double-click collapse signaling, Escape close behavior, and close-button
+  activation wiring, while the root title-bar file delegates those behaviors.
 - `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar/tests.rs` now owns the close-glyph
   shared chrome-glyph text-role test.
-- `floating_window_title_bar.rs` is now a 112-line implementation file with only
-  `#[cfg(test)] mod tests;` for the local test module; `floating_window_title_bar/tests.rs` is a
-  27-line test owner.
+- `floating_window_title_bar.rs` remains the title-bar assembly owner with only `mod behavior;` and
+  `#[cfg(test)] mod tests;` child modules; `floating_window_title_bar/tests.rs` remains the local
+  close-glyph test owner.
 - The source gate now rejects the local close-glyph test body from returning to
-  `floating_window_title_bar.rs`, while checking the split test owner directly.
+  `floating_window_title_bar.rs`, checks the split test owner directly, and rejects inline
+  title-bar key/press behavior bodies from returning to the root title-bar file.
 
 Focused gates:
 
