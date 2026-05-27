@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 facade support slider math owner-split result:
+`ecosystem/fret-ui-kit/src/imui/facade_support/slider_math.rs` now owns
+`slider_step_or_default`, `slider_normalize_range`, `slider_clamp_and_snap`, and
+`slider_value_from_pointer`. `facade_support.rs` keeps writer bridge support, transient keys,
+runtime frame prep, device-pixel snapping, point arithmetic, and model-change detection.
+
 2026-05-28 drag source hook owner-split result:
 `ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks.rs` now owns enabled/cross-window policy,
 pointer-down cross-window promotion, pointer-move active payload publication, and pointer-up

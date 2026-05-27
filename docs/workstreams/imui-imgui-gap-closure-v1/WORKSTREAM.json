@@ -584,6 +584,8 @@
     "ecosystem/fret-ui-kit/src/imui/drag_drop/store/target_payloads.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/target.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/tests.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_support.rs",
+    "ecosystem/fret-ui-kit/src/imui/facade_support/slider_math.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/core_state.rs",
     "ecosystem/fret-ui-kit/src/imui/response/hover/flags.rs",

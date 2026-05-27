@@ -3,6 +3,33 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Facade Support Slider Math Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI slider math helpers moved into a private owner without changing slider range
+normalization, step fallback, clamp/snap behavior, pointer-to-value mapping, slider a11y value
+projection, slider pointer/keyboard interaction, or public-in-IMUI APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/facade_support.rs` keeps writer bridge support, transient keys,
+  runtime frame prep, device-pixel snapping, point arithmetic, and model-change detection.
+- `ecosystem/fret-ui-kit/src/imui/facade_support/slider_math.rs` owns `slider_step_or_default`,
+  `slider_normalize_range`, `slider_clamp_and_snap`, and `slider_value_from_pointer`.
+- `tools/gate_imui_workstream_source.py` now rejects slider math bodies from drifting back into
+  `facade_support.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui slider_lifecycle --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Drag Source Hook Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI drag source hook installation moved into a private owner without changing

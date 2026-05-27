@@ -44,6 +44,15 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI slider math helpers out of
+      `ecosystem/fret-ui-kit/src/imui/facade_support.rs` into a private slider-math owner without
+      changing slider range normalization, step fallback, clamp/snap behavior, pointer-to-value
+      mapping, slider a11y value projection, slider pointer/keyboard interaction, or public-in-IMUI
+      APIs.
+      Result: `facade_support/slider_math.rs` owns `slider_step_or_default`,
+      `slider_normalize_range`, `slider_clamp_and_snap`, and `slider_value_from_pointer`.
+      `facade_support.rs` keeps writer bridge support, transient keys, runtime frame prep,
+      device-pixel snapping, point arithmetic, and model-change detection.
 - [x] Split IMUI drag source hook installation out of
       `ecosystem/fret-ui-kit/src/imui/drag_drop/source.rs` into a private hooks owner without
       changing drag source trigger-id validation, payload boxing, store pruning, drag kind
