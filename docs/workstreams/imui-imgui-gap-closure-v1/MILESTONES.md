@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 table-column visibility response owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_column_visibility/response.rs` now owns
+`TableColumnVisibilityMenuResponse`, `TableColumnVisibilityHeaderContextMenuResponse`, and
+`TableColumnVisibilityMenuItemResponse` plus their public accessors. The root
+`table_column_visibility.rs` keeps options, state re-exports, public helper forwarding, and tests.
+
 2026-05-27 control chrome palette/button/field owner-split result:
 `ecosystem/fret-ui-kit/src/imui/control_chrome/chrome.rs` is now a private module index/re-export
 hub. `control_chrome/chrome/palette.rs` owns `ImUiControlPalette`,

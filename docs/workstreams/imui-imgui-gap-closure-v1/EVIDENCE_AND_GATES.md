@@ -3,6 +3,35 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Table-Column Visibility Response Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI table-column visibility response structs and accessors moved into a private
+response owner without changing public response type names, accessors, changed/clicked semantics,
+opaque fields, menu item construction, or header context-menu response aggregation.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs` keeps options, state re-exports,
+  public helper forwarding, and tests.
+- `ecosystem/fret-ui-kit/src/imui/table_column_visibility/response.rs` owns
+  `TableColumnVisibilityMenuResponse`, `TableColumnVisibilityHeaderContextMenuResponse`, and
+  `TableColumnVisibilityMenuItemResponse` plus their public accessors.
+- `tools/gate_imui_workstream_source.py` now requires the response owner split and keeps the
+  response structs in the opaque-struct catalog.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_column_visibility::tests
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Control Chrome Palette/Button/Field Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI shared control chrome palette, button theme resolution, and field theme
