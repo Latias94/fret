@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Drag Source Hook Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI drag source hook installation moved into a private owner without changing
+drag source trigger-id validation, payload boxing, store pruning, drag kind selection,
+cross-window drag promotion, active payload publication, pointer-up delivery, or
+`DragSourceResponse` population.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/source.rs` keeps trigger validation, payload boxing,
+  store model lifecycle/pruning, drag-kind selection, hook owner dispatch, and source response
+  projection.
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks.rs` owns enabled/cross-window policy,
+  pointer-down cross-window promotion, pointer-move active payload publication, and pointer-up
+  delivery insertion.
+- `tools/gate_imui_workstream_source.py` now rejects drag source hook bodies from drifting back
+  into `source.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_drag_drop_smoke --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Interaction Lifecycle Response Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI interaction lifecycle response projection moved into a private owner without

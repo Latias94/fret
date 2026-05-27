@@ -576,6 +576,7 @@
     "ecosystem/fret-ui-kit/src/imui/text_picker_controls/response.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/source.rs",
+    "ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/store.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/store/lifecycle.rs",
     "ecosystem/fret-ui-kit/src/imui/drag_drop/store/source_response.rs",

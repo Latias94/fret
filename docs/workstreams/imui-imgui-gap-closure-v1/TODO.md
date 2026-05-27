@@ -44,6 +44,15 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI drag source hook installation out of
+      `ecosystem/fret-ui-kit/src/imui/drag_drop/source.rs` into a private hooks owner without
+      changing drag source trigger-id validation, payload boxing, store pruning, drag kind
+      selection, cross-window drag promotion, active payload publication, pointer-up delivery, or
+      `DragSourceResponse` population.
+      Result: `drag_drop/source/hooks.rs` owns enabled/cross-window policy, pointer-down
+      cross-window promotion, pointer-move active payload publication, and pointer-up delivery
+      insertion. `drag_drop/source.rs` keeps trigger validation, payload boxing, store model
+      lifecycle/pruning, drag-kind selection, hook owner dispatch, and source response projection.
 - [x] Split IMUI interaction lifecycle response projection out of
       `ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle.rs` into a private response
       owner without changing lifecycle activation/deactivation/edit mutation, transient

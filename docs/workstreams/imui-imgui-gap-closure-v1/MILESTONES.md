@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 drag source hook owner-split result:
+`ecosystem/fret-ui-kit/src/imui/drag_drop/source/hooks.rs` now owns enabled/cross-window policy,
+pointer-down cross-window promotion, pointer-move active payload publication, and pointer-up
+delivery insertion. `drag_drop/source.rs` keeps trigger validation, payload boxing, store model
+lifecycle/pruning, drag-kind selection, hook owner dispatch, and source response projection.
+
 2026-05-28 interaction lifecycle response owner-split result:
 `ecosystem/fret-ui-kit/src/imui/interaction_runtime/lifecycle/response.rs` now owns
 transient-to-response population, active-state lifecycle frame diffing, edited-state stamping, and
