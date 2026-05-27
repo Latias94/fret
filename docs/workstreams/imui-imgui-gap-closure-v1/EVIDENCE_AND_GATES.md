@@ -1343,6 +1343,41 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Begin-Submenu Trigger/Open-Policy Owner-Split Evidence - 2026-05-27
+
+Claim verified: begin-submenu trigger wiring and open-policy reconciliation moved into narrower
+private owners without changing submenu trigger geometry hints, hover/shortcut behavior, sibling
+switching, popup open/close anchoring, or `DisclosureResponse` open/toggled reporting.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu.rs` keeps public
+  `begin_submenu_with_options(...)` orchestration, popup policy/model reads, popup menu mounting,
+  disabled-popup cleanup, was-open recording, and `DisclosureResponse` assembly.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/trigger.rs` owns submenu menu-item
+  trigger assembly, submenu flag/expanded semantics, shortcut forwarding, and
+  `sub_trigger::wire(...)` geometry hints.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/open_policy.rs` owns clicked-trigger
+  submenu-state reconciliation, stale-open cleanup, selected submenu reads, and popup open/close
+  anchoring.
+- `tools/gate_imui_workstream_source.py` now requires the submenu trigger/open-policy owners and
+  rejects submenu menu-item trigger wiring, geometry hints, submenu-state mutations, and popup
+  open/close anchoring from drifting back into `submenu.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::submenu_shortcuts
+  interaction_menu_tabs::submenu_hover popup_hover::item_keyboard
+  interaction_menu_tabs::menu_activation --no-fail-fast`: pass; 20 tests, 166 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table-Column Primitive Option Owner-Split Evidence - 2026-05-27
 
 Claim verified: table-column primitive option types moved out of the `TableColumn` builder owner

@@ -242,6 +242,15 @@ now owns active-trigger open-menu synchronization, post-trigger menubar reconcil
 `MenubarActiveTrigger` group-active writes. `open_policy.rs` keeps trigger-click toggling,
 open-request resolution, disabled-popup cleanup, and the private owner re-export.
 
+2026-05-27 begin-submenu trigger/open-policy owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/trigger.rs` now owns submenu
+menu-item trigger assembly, submenu expanded semantics, shortcut forwarding, and
+`sub_trigger::wire(...)` geometry hints.
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/submenu/open_policy.rs` owns clicked-trigger
+submenu-state reconciliation, stale-open cleanup, and popup open/close anchoring. `submenu.rs`
+keeps public begin-submenu orchestration, state reads, popup mounting, and `DisclosureResponse`
+assembly.
+
 2026-05-27 table-column primitive option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/collections/table_column/primitives.rs` now owns
 `TableColumnWidth`, `TableColumnResizeOptions`, `TableSortDirection`, `TableColumnPin`, width
