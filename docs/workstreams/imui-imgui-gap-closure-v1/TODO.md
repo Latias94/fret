@@ -44,6 +44,13 @@ Last updated: 2026-05-27
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI table-column construction, identity/accessor, visibility, sort, resize, and pin
+      methods out of `ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs` into
+      private owner modules without changing public `TableColumn` type names, method names, chained
+      builder behavior, stable-id inference, or table composition behavior.
+      Result: `table_column.rs` keeps the `TableColumn` storage shape and primitive re-exports;
+      `table_column/construction.rs`, `identity.rs`, `visibility.rs`, `sorting.rs`, `resize.rs`,
+      and `pinning.rs` now own the corresponding impl method families.
 - [x] Split IMUI drag/drop store state, lifecycle, source-response query, and target-payload query
       out of `ecosystem/fret-ui-kit/src/imui/drag_drop/store.rs` into private owner modules without
       changing `drag_source_with_options(...)`, `drop_target_with_options(...)`, payload lifetime,

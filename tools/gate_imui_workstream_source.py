@@ -289,21 +289,40 @@ def check_table_column_accessors(failures: list[str]) -> None:
                     f"{path.as_posix()} TableColumn: field must stay private/accessor-first: {field}"
                 )
 
-    for marker in (
-        "pub fn header(&self) -> Option<&str>",
-        "pub(crate) fn header_arc(&self) -> Option<Arc<str>>",
-        "pub fn id(&self) -> Option<&str>",
-        "pub(crate) fn id_arc(&self) -> Option<Arc<str>>",
-        "pub fn width(&self) -> TableColumnWidth",
-        "pub fn visible(&self) -> bool",
-        "pub(crate) fn set_visible_for_policy(&mut self, visible: bool)",
-        "pub fn is_sortable(&self) -> bool",
-        "pub fn sort_direction(&self) -> Option<TableSortDirection>",
-        "pub fn resize_options(&self) -> Option<TableColumnResizeOptions>",
-        "pub fn pin(&self) -> TableColumnPin",
+    accessor_sources = {
+        "identity": read_source(
+            Path("ecosystem/fret-ui-kit/src/imui/options/collections/table_column/identity.rs")
+        ),
+        "visibility": read_source(
+            Path("ecosystem/fret-ui-kit/src/imui/options/collections/table_column/visibility.rs")
+        ),
+        "sorting": read_source(
+            Path("ecosystem/fret-ui-kit/src/imui/options/collections/table_column/sorting.rs")
+        ),
+        "resize": read_source(
+            Path("ecosystem/fret-ui-kit/src/imui/options/collections/table_column/resize.rs")
+        ),
+        "pinning": read_source(
+            Path("ecosystem/fret-ui-kit/src/imui/options/collections/table_column/pinning.rs")
+        ),
+    }
+    for owner, marker in (
+        ("identity", "pub fn header(&self) -> Option<&str>"),
+        ("identity", "pub(crate) fn header_arc(&self) -> Option<Arc<str>>"),
+        ("identity", "pub fn id(&self) -> Option<&str>"),
+        ("identity", "pub(crate) fn id_arc(&self) -> Option<Arc<str>>"),
+        ("identity", "pub fn width(&self) -> super::TableColumnWidth"),
+        ("visibility", "pub fn visible(&self) -> bool"),
+        ("visibility", "pub(crate) fn set_visible_for_policy(&mut self, visible: bool)"),
+        ("sorting", "pub fn is_sortable(&self) -> bool"),
+        ("sorting", "pub fn sort_direction(&self) -> Option<TableSortDirection>"),
+        ("resize", "pub fn resize_options(&self) -> Option<TableColumnResizeOptions>"),
+        ("pinning", "pub fn pin(&self) -> TableColumnPin"),
     ):
-        if marker not in source:
-            failures.append(f"{path.as_posix()}: missing TableColumn accessor seam {marker}")
+        if marker not in accessor_sources[owner]:
+            failures.append(
+                f"{path.as_posix()}: missing TableColumn {owner} accessor seam {marker}"
+            )
 
 
 def main() -> None:
@@ -5194,39 +5213,38 @@ def main() -> None:
         SourceCheck(
             Path("ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs"),
             required=[
+                "mod construction;",
+                "mod identity;",
+                "mod pinning;",
                 "mod primitives;",
+                "mod resize;",
+                "mod sorting;",
+                "mod visibility;",
                 "pub use primitives::{",
                 "TableColumnPin, TableColumnResizeOptions, TableColumnWidth, TableSortDirection",
-                "use super::super::super::label_identity::parse_label_identity;",
                 "pub struct TableColumn",
                 "visible: bool",
-                "visible: true",
-                "pub fn hidden(mut self) -> Self",
-                "pub fn with_visible(mut self, visible: bool) -> Self",
-                "pub fn header(&self) -> Option<&str>",
-                "pub fn id(&self) -> Option<&str>",
-                "pub fn width(&self) -> TableColumnWidth",
-                "pub fn visible(&self) -> bool",
-                "pub fn is_sortable(&self) -> bool",
-                "pub fn sort_direction(&self) -> Option<TableSortDirection>",
-                "pub fn resize_options(&self) -> Option<TableColumnResizeOptions>",
-                "pub fn pin(&self) -> TableColumnPin",
-                "pub(crate) fn set_visible_for_policy",
-                "pub(crate) fn header_arc(&self) -> Option<Arc<str>>",
-                "pub(crate) fn id_arc(&self) -> Option<Arc<str>>",
-                "self.visible = false;",
-                "self.visible = visible;",
                 "pin: TableColumnPin",
-                "pub fn pinned_left(mut self) -> Self",
-                "pub fn pinned_right(mut self) -> Self",
-                "pub fn with_pin(mut self, pin: TableColumnPin) -> Self",
-                "fn inferred_column_id(header: &str) -> Option<Arc<str>>",
             ],
             forbidden=[
                 "pub enum TableColumnWidth",
                 "pub struct TableColumnResizeOptions",
                 "pub enum TableSortDirection",
                 "pub enum TableColumnPin",
+                "impl TableColumn",
+                "parse_label_identity",
+                "visible: true",
+                "pub fn hidden",
+                "pub fn with_visible",
+                "pub fn header",
+                "pub fn id",
+                "pub fn width",
+                "pub fn visible",
+                "pub fn is_sortable",
+                "pub fn sort_direction",
+                "pub fn resize_options",
+                "pub fn pin",
+                "fn inferred_column_id",
                 "pub header: Option<Arc<str>>",
                 "pub id: Option<Arc<str>>",
                 "pub width: TableColumnWidth",
@@ -5241,6 +5259,142 @@ def main() -> None:
                 "pub struct VirtualListOptions",
                 "ScrollHandle",
                 "VirtualListMeasureMode",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path(
+                "ecosystem/fret-ui-kit/src/imui/options/collections/table_column/construction.rs"
+            ),
+            required=[
+                "use fret_core::Px;",
+                "use super::identity::inferred_column_id;",
+                "impl TableColumn",
+                "pub fn px(header: impl Into<Arc<str>>, width: Px) -> Self",
+                "id: inferred_column_id(header.as_ref())",
+                "width: TableColumnWidth::Px(width)",
+                "pub fn fill(header: impl Into<Arc<str>>) -> Self",
+                "width: TableColumnWidth::Fill(1.0)",
+                "pub fn weighted(header: impl Into<Arc<str>>, weight: f32) -> Self",
+                "width: TableColumnWidth::Fill(weight)",
+                "pub fn unlabeled(width: TableColumnWidth) -> Self",
+                "visible: true",
+                "pin: TableColumnPin::None",
+            ],
+            forbidden=[
+                "pub enum TableColumnWidth",
+                "parse_label_identity",
+                "pub fn hidden",
+                "pub fn sortable",
+                "pub fn resizable",
+                "pub fn pinned_left",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/options/collections/table_column/identity.rs"),
+            required=[
+                "use super::super::super::super::label_identity::parse_label_identity;",
+                "pub fn with_id(mut self, id: impl Into<Arc<str>>) -> Self",
+                "self.id = Some(id.into());",
+                "pub fn header(&self) -> Option<&str>",
+                "self.header.as_deref()",
+                "pub(crate) fn header_arc(&self) -> Option<Arc<str>>",
+                "pub fn id(&self) -> Option<&str>",
+                "self.id.as_deref()",
+                "pub(crate) fn id_arc(&self) -> Option<Arc<str>>",
+                "pub fn width(&self) -> super::TableColumnWidth",
+                "pub(in crate::imui::options::collections::table_column) fn inferred_column_id",
+                "parse_label_identity(header).identity",
+            ],
+            forbidden=[
+                "pub fn px",
+                "pub fn hidden",
+                "pub fn sortable",
+                "pub fn resizable",
+                "pub fn pinned_left",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/options/collections/table_column/visibility.rs"),
+            required=[
+                "pub fn visible(&self) -> bool",
+                "self.visible",
+                "pub fn hidden(mut self) -> Self",
+                "self.visible = false;",
+                "pub fn with_visible(mut self, visible: bool) -> Self",
+                "self.visible = visible;",
+                "pub(crate) fn set_visible_for_policy(&mut self, visible: bool)",
+            ],
+            forbidden=[
+                "parse_label_identity",
+                "pub fn px",
+                "pub fn sortable",
+                "pub fn resizable",
+                "pub fn pinned_left",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/options/collections/table_column/sorting.rs"),
+            required=[
+                "pub fn is_sortable(&self) -> bool",
+                "self.sortable || self.sort_direction.is_some()",
+                "pub fn sortable(mut self) -> Self",
+                "self.sortable = true;",
+                "pub fn sort_direction(&self) -> Option<TableSortDirection>",
+                "pub fn sorted(mut self, direction: TableSortDirection) -> Self",
+                "self.sort_direction = Some(direction);",
+                "pub fn with_sort_direction(mut self, direction: Option<TableSortDirection>) -> Self",
+            ],
+            forbidden=[
+                "parse_label_identity",
+                "pub fn px",
+                "pub fn hidden",
+                "pub fn resizable",
+                "pub fn pinned_left",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/options/collections/table_column/resize.rs"),
+            required=[
+                "use fret_core::Px;",
+                "pub fn resizable(mut self) -> Self",
+                "self.resize = Some(TableColumnResizeOptions::default());",
+                "pub fn resize_options(&self) -> Option<TableColumnResizeOptions>",
+                "pub fn resizable_with_limits(mut self, min_width: Option<Px>, max_width: Option<Px>) -> Self",
+                "TableColumnResizeOptions {",
+                "min_width,",
+                "max_width,",
+            ],
+            forbidden=[
+                "parse_label_identity",
+                "pub fn px",
+                "pub fn hidden",
+                "pub fn sortable",
+                "pub fn pinned_left",
+                "fret_imui",
+            ],
+        ),
+        SourceCheck(
+            Path("ecosystem/fret-ui-kit/src/imui/options/collections/table_column/pinning.rs"),
+            required=[
+                "pub fn pin(&self) -> TableColumnPin",
+                "self.pin",
+                "pub fn pinned_left(mut self) -> Self",
+                "self.pin = TableColumnPin::Left;",
+                "pub fn pinned_right(mut self) -> Self",
+                "self.pin = TableColumnPin::Right;",
+                "pub fn with_pin(mut self, pin: TableColumnPin) -> Self",
+            ],
+            forbidden=[
+                "parse_label_identity",
+                "pub fn px",
+                "pub fn hidden",
+                "pub fn sortable",
+                "pub fn resizable",
                 "fret_imui",
             ],
         ),

@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 table-column method-family owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs` keeps the public
+`TableColumn` storage shape and primitive re-exports.
+`table_column/construction.rs`, `identity.rs`, `visibility.rs`, `sorting.rs`, `resize.rs`, and
+`pinning.rs` now own the corresponding `TableColumn` impl method families without changing method
+names or chainability.
+
 2026-05-27 drag/drop store owner-split result:
 `ecosystem/fret-ui-kit/src/imui/drag_drop/store.rs` is now a private re-export index.
 `drag_drop/store/state.rs` owns the shared drag/drop model and active/delivered payload records.

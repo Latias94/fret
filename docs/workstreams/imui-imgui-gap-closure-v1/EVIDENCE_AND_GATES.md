@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Table-Column Method-Family Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI `TableColumn` construction, identity/accessor, visibility, sort, resize, and
+pin helper methods moved into private owner modules without changing public type names, method
+names, chainable builder behavior, stable-id inference, primitive re-exports, or table composition
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs` keeps the `TableColumn`
+  storage shape and primitive re-exports.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table_column/construction.rs` owns
+  `px(...)`, `fill(...)`, `weighted(...)`, and `unlabeled(...)`.
+- `ecosystem/fret-ui-kit/src/imui/options/collections/table_column/identity.rs` owns explicit ids,
+  header/id accessors, width access, and stable-id inference from label identity.
+- `visibility.rs`, `sorting.rs`, `resize.rs`, and `pinning.rs` own the corresponding method
+  families.
+- `tools/gate_imui_workstream_source.py` now rejects method bodies from the root `table_column.rs`
+  storage owner and requires each method family in its private owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_table_smoke table_column --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_column --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Drag/Drop Store Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI drag/drop store state, lifecycle cleanup, source response projection, and
