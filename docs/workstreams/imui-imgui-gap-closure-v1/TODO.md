@@ -28,6 +28,14 @@ Last updated: 2026-05-27
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw path-shape paint dispatch out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes.rs` into a private owner
+      module without changing command order, canvas keys, stroke/fill geometry, mesh painting,
+      text painting, or media no-op routing.
+      Result: `debug_draw_controls/paint_shapes/path_commands.rs` owns line/polyline/polygon,
+      rect-outline, quad, triangle, circle, ngon, ellipse, and bezier command dispatch into the
+      path paint owners. `paint_shapes.rs` keeps draw-order/key setup plus non-path command routing
+      for filled rects, meshes, text, and ignored media/clip commands.
 - [x] Split IMUI menu-item entry routing and label identity scoping out of
       `ecosystem/fret-ui-kit/src/imui/menu_controls.rs` into a private owner module without
       changing public menu-item, checkbox, radio, action, or submenu pressable-hook call paths.

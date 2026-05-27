@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Debug-Draw Path-Shape Dispatch Owner-Split Evidence - 2026-05-27
+
+Claim verified: path-shape paint dispatch moved out of the root debug-draw paint-shapes module
+without changing command order, canvas keys, stroke/fill geometry, mesh painting, text painting, or
+media no-op routing.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands.rs` now owns
+  line/polyline/polygon, rect-outline, quad, triangle, circle, ngon, ellipse, and bezier dispatch
+  into the existing path paint owners.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes.rs` keeps draw-order/key setup,
+  filled rect routing, mesh routing, text routing, and ignored media/clip command routing.
+- `tools/gate_imui_workstream_source.py` now requires the path-command dispatch owner and rejects
+  path paint dispatch from drifting back into `paint_shapes.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls --no-fail-fast`:
+  pass; 38 tests.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass; 1 test.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Menu-Item Routing Owner-Split Evidence - 2026-05-27
 
 Claim verified: menu item entry routing and label identity scoping moved out of the root menu

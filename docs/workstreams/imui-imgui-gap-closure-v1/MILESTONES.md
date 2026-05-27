@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 debug-draw path-shape dispatch owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint_shapes/path_commands.rs` now owns
+line/polyline/polygon, rect-outline, quad, triangle, circle, ngon, ellipse, and bezier dispatch into
+the path paint owners. `paint_shapes.rs` keeps draw-order/key setup, filled rect routing, mesh
+routing, text routing, and ignored media/clip command routing.
+
 2026-05-27 menu-item routing owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs` now owns menu item entry dispatch,
 checkbox/radio/action semantic role selection, `##/###` label identity parsing, item-id scoping,
