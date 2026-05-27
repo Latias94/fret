@@ -214,6 +214,16 @@ Last updated: 2026-05-27
       `slider_controls/interaction.rs` owns pointer/key model editing and lifecycle signals, and
       `slider_controls/visual.rs` owns track/fill/value badge assembly. The root slider file keeps
       label identity, option normalization, response population, and final element assembly.
+- [x] Split IMUI slider pointer and keyboard interaction out of
+      `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction.rs` into private owner modules
+      without changing pointer capture, active-item state, pointer model editing, keyboard
+      step/page/home/end semantics, lifecycle edit signals, or changed response behavior.
+      Result: `slider_controls/interaction/pointer.rs` owns pointer down/move/up capture,
+      active-item set/clear, pointer value projection, pointer model mutation, and pointer
+      lifecycle edit signals. `slider_controls/interaction/keyboard.rs` owns enabled keyboard
+      gating, arrow/page/home/end value edits, snapping, and keyboard lifecycle edit signals.
+      `interaction.rs` now keeps handler clearing, active/lifecycle model lookup, shared range
+      input, and owner dispatch.
 - [x] Split IMUI facade container-method dispatch out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer/container_methods.rs` into private owner modules
       without changing facade method names.

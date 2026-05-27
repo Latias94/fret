@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 slider pointer/keyboard interaction owner-split result:
+`ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer.rs` now owns pointer
+down/move/up capture, active-item set/clear, pointer value projection, pointer model mutation, and
+pointer lifecycle edit signals. `slider_controls/interaction/keyboard.rs` owns enabled keyboard
+gating, arrow/page/home/end value edits, snapping, and keyboard lifecycle edit signals.
+`interaction.rs` keeps handler clearing, active/lifecycle model lookup, shared range input, and
+owner dispatch.
+
 2026-05-27 begin-menu trigger behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior.rs` now owns active-trigger
 behavior installation, keyboard activation lifecycle marking, activate shortcut handling, menubar

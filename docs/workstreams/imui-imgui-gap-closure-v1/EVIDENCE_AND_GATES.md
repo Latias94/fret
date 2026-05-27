@@ -3,6 +3,41 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Slider Pointer/Keyboard Interaction Owner-Split Evidence - 2026-05-27
+
+Claim verified: slider pointer and keyboard interaction moved out of the slider interaction entry
+owner into private pointer/key owners without changing pointer capture, active-item state, pointer
+model editing, keyboard step/page/home/end semantics, lifecycle edit signals, or changed response
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/pointer.rs` now owns pointer
+  down/move/up capture, active-item set/clear, pointer value projection, pointer model mutation,
+  and pointer lifecycle edit signals.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction/keyboard.rs` now owns enabled
+  keyboard gating, arrow/page/home/end value edits, snapping, and keyboard lifecycle edit signals.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction.rs` keeps handler clearing,
+  active/lifecycle model lookup, shared range input, and owner dispatch.
+- `tools/gate_imui_workstream_source.py` now rejects pointer/key handler bodies from drifting back
+  into `interaction.rs`, rejects keyboard behavior from the pointer owner, and rejects pointer
+  capture behavior from the keyboard owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_controls::slider --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  composition::control_geometry::menu_and_tab_trigger_state_changes_keep_outer_bounds_stable
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Begin-Menu Trigger Behavior Owner-Split Evidence - 2026-05-27
 
 Claim verified: begin-menu trigger behavior moved out of the trigger shell into a private behavior
@@ -2068,8 +2103,10 @@ Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/slider_controls/a11y.rs` now owns slider semantics value,
   numeric range, step, and jump decoration.
-- `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction.rs` now owns pointer down/move/up,
-  keyboard editing, model mutation, active-item state, and lifecycle edit signals.
+- `ecosystem/fret-ui-kit/src/imui/slider_controls/interaction.rs` now owns interaction handler
+  clearing, active/lifecycle model lookup, and pointer/keyboard owner dispatch. Pointer and
+  keyboard behavior were split deeper into `interaction/pointer.rs` and `interaction/keyboard.rs`
+  on 2026-05-27.
 - `ecosystem/fret-ui-kit/src/imui/slider_controls/visual.rs` now owns track/fill geometry,
   progress calculation, caption text, and value badge assembly.
 - `ecosystem/fret-ui-kit/src/imui/slider_controls.rs` keeps label identity parsing, option
