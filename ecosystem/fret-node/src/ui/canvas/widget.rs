@@ -120,7 +120,6 @@ mod command_selection;
 mod command_ui;
 mod command_view;
 mod commit;
-mod commit_legacy;
 mod context_menu;
 mod cursor;
 mod cursor_cx;

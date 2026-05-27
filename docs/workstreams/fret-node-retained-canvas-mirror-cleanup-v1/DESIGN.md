@@ -1,6 +1,6 @@
 # `fret-node` Retained Canvas Mirror Cleanup (v1)
 
-Status: active
+Status: closed
 Last updated: 2026-05-27
 
 ## Why This Lane Exists
@@ -39,6 +39,15 @@ When this lane closes:
 - store-backed retained canvas sync keeps compatibility behavior while making drift risk visible,
 - source-policy coverage prevents reintroducing top-level retained mirror fields,
 - retained compatibility gates prove the cleanup did not regress existing retained canvas behavior.
+
+Closeout result on 2026-05-27:
+
+- Retained canvas external graph/view/editor-config models are quarantined behind
+  `NodeGraphCanvasMirrors`.
+- The unused duplicate `commit_legacy` retained transaction pipeline has been deleted.
+- The current `commit` pipeline remains the single retained transaction path.
+- No further follow-on is required for this scoped lane; deeper public retained compatibility
+  removal belongs to a separate retained-surface exit effort.
 
 ## In Scope
 

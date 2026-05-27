@@ -11,6 +11,7 @@ const UI_BINDING_VIEWPORT_RS: &str = include_str!("ui/binding_viewport.rs");
 const UI_CANVAS_WIDGET_RS: &str = include_str!("ui/canvas/widget.rs");
 const UI_CANVAS_RS: &str = include_str!("ui/canvas/widget/widget_surface.rs");
 const UI_CANVAS_BUILDERS_RS: &str = include_str!("ui/canvas/widget/widget_surface/builders.rs");
+const UI_CANVAS_WIDGET_COMMIT_RS: &str = include_str!("ui/canvas/widget/commit/mod.rs");
 const UI_CONTROLLER_RS: &str = include_str!("ui/controller.rs");
 const UI_CONTROLLER_UPDATES_RS: &str = include_str!("ui/controller_updates.rs");
 const UI_CONTROLLER_VIEWPORT_RS: &str = include_str!("ui/controller_viewport.rs");
@@ -740,6 +741,16 @@ fn retained_canvas_mirror_owner_quarantines_external_models() {
     assert!(!canvas.contains("\n    graph: Model<Graph>,"));
     assert!(!canvas.contains("\n    view_state: Model<NodeGraphViewState>,"));
     assert!(!canvas.contains("\n    editor_config_model: Option<Model<NodeGraphEditorConfig>>,"));
+}
+
+#[test]
+fn retained_canvas_commit_pipeline_has_no_legacy_mirror_writer() {
+    assert!(!UI_CANVAS_WIDGET_RS.contains("mod commit_legacy;"));
+    assert!(!UI_CANVAS_WIDGET_RS.contains("commit_ops_legacy"));
+    assert!(!UI_CANVAS_WIDGET_RS.contains("commit_transaction_legacy"));
+    assert!(!UI_CANVAS_WIDGET_RS.contains("apply_transaction_result_legacy"));
+    assert!(UI_CANVAS_WIDGET_COMMIT_RS.contains("mod apply;"));
+    assert!(UI_CANVAS_WIDGET_COMMIT_RS.contains("mod commit;"));
 }
 
 #[test]

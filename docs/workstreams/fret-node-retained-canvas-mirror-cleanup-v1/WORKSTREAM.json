@@ -2,7 +2,7 @@
   "schema_version": 1,
   "slug": "fret-node-retained-canvas-mirror-cleanup-v1",
   "title": "fret-node Retained Canvas Mirror Cleanup v1",
-  "status": "active",
+  "status": "closed",
   "updated": "2026-05-27",
   "scope_kind": "execution",
   "follow_on_of": "fret-node-runtime-store-contract-closure-v1",
@@ -27,9 +27,13 @@
     {
       "role": "next",
       "path": "docs/workstreams/fret-node-retained-canvas-mirror-cleanup-v1/HANDOFF.md"
+    },
+    {
+      "role": "closeout",
+      "path": "docs/workstreams/fret-node-retained-canvas-mirror-cleanup-v1/CLOSEOUT_AUDIT_2026-05-27.md"
     }
   ],
-  "current_task": "NCM-030",
+  "current_task": null,
   "gates": [
     {
       "name": "retained-mirror-owner-policy",
@@ -53,6 +57,7 @@
     "docs/workstreams/fret-node-runtime-store-contract-closure-v1/UI_MIRROR_INVENTORY_2026-05-26.md",
     "ecosystem/fret-node/src/ui/canvas/widget.rs",
     "ecosystem/fret-node/src/ui/canvas/widget/widget_surface/construct.rs",
+    "ecosystem/fret-node/src/ui/canvas/widget/commit",
     "ecosystem/fret-node/src/surface_policy_tests.rs"
   ],
   "adr_refs": [
@@ -60,7 +65,7 @@
     "docs/adr/0128-canvas-widgets-and-interactive-surfaces.md"
   ],
   "continue_policy": {
-    "default_action": "continue",
-    "notes": "Continue with NCM-030. Do not reopen fret-node-runtime-store-contract-closure-v1; split a new follow-on if retained canvas deletion changes public compatibility behavior."
+    "default_action": "closed",
+    "notes": "Do not reopen this lane. Broader public retained-surface removal should use a separate retained-surface exit lane."
   }
 }

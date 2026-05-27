@@ -1,6 +1,6 @@
 # `fret-node` Retained Canvas Mirror Cleanup (v1) - Evidence And Gates
 
-Status: active
+Status: complete
 Last updated: 2026-05-27
 
 ## Baseline
@@ -90,4 +90,64 @@ Evidence anchors:
 - `ecosystem/fret-node/src/ui/canvas/widget.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/widget_surface/construct.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/view_state/sync.rs`
+- `ecosystem/fret-node/src/surface_policy_tests.rs`
+
+### 2026-05-27 - NCM-030 completed
+
+Audit result:
+
+- `commit_legacy` was an unused duplicate retained transaction pipeline.
+- It repeated the same store-backed dispatch/sync and fallback mirror write path as the current
+  `commit` module.
+- No call sites referenced `commit_ops_legacy`, `commit_transaction_legacy`, or
+  `apply_transaction_result_legacy`.
+
+Changes:
+
+- Removed `mod commit_legacy` from retained canvas widget registration.
+- Deleted `ui/canvas/widget/commit_legacy/*`.
+- Added `retained_canvas_commit_pipeline_has_no_legacy_mirror_writer` source-policy coverage.
+
+Red/green evidence:
+
+- Initial `cargo nextest run -p fret-node --features compat-retained-canvas retained_canvas_commit_pipeline_has_no_legacy_mirror_writer`:
+  failed because `mod commit_legacy;` still existed.
+- Final `cargo nextest run -p fret-node --features compat-retained-canvas retained_canvas_commit_pipeline_has_no_legacy_mirror_writer retained_canvas_mirror_owner`:
+  passed, 2 tests.
+
+Fresh gates:
+
+- `cargo fmt -p fret-node --check`: passed.
+- `cargo check -p fret-node --features compat-retained-canvas`: passed.
+- `cargo check -p fret-node --no-default-features`: passed.
+- `cargo nextest run -p fret-node --no-default-features runtime`: passed, 46 tests.
+
+Evidence anchors:
+
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/commit/`
+- `ecosystem/fret-node/src/surface_policy_tests.rs`
+
+### 2026-05-27 - NCM-040 closeout completed
+
+Claim:
+
+- The scoped retained canvas mirror cleanup lane is complete.
+- Retained canvas mirrors are quarantined and the duplicate legacy retained commit writer is gone.
+- No required follow-on remains inside this lane's scope.
+
+Fresh closeout gates:
+
+- `cargo fmt --check`: passed.
+- `cargo nextest run -p fret-node --features compat-retained-canvas retained_canvas_commit_pipeline_has_no_legacy_mirror_writer retained_canvas_mirror_owner`:
+  passed, 2 tests.
+- `cargo check -p fret-node --features compat-retained-canvas`: passed.
+- `cargo check -p fret-node --no-default-features`: passed.
+- `python3 tools/check_layering.py`: passed.
+
+Evidence anchors:
+
+- `docs/workstreams/fret-node-retained-canvas-mirror-cleanup-v1/CLOSEOUT_AUDIT_2026-05-27.md`
+- `ecosystem/fret-node/src/ui/canvas/widget.rs`
+- `ecosystem/fret-node/src/ui/canvas/widget/commit/`
 - `ecosystem/fret-node/src/surface_policy_tests.rs`

@@ -1,6 +1,6 @@
 # `fret-node` Retained Canvas Mirror Cleanup (v1) - Milestones
 
-Status: active
+Status: complete
 Last updated: 2026-05-27
 
 ## Global Success Criteria
@@ -14,6 +14,7 @@ Last updated: 2026-05-27
 ## M0 - Scope And Evidence Freeze
 
 Status target: NCM-010 complete
+Current status: complete
 
 Done criteria:
 
@@ -24,6 +25,7 @@ Done criteria:
 ## M1 - Retained Canvas Mirror Owner
 
 Status target: NCM-020 complete
+Current status: complete
 
 Done criteria:
 
@@ -36,6 +38,7 @@ Done criteria:
 ## M2 - Store-First Retained Sync Audit
 
 Status target: NCM-030 complete or split
+Current status: complete
 
 Done criteria:
 
@@ -47,9 +50,15 @@ Done criteria:
 ## M3 - Closeout
 
 Status target: workstream complete or split follow-on
+Current status: complete
 
 Done criteria:
 
 - Fresh closeout gates are recorded.
 - Remaining retained work is not left only in chat.
 - `WORKSTREAM.json` and `HANDOFF.md` identify the next action or mark the lane closed.
+
+Closeout evidence:
+
+- `CLOSEOUT_AUDIT_2026-05-27.md`
+- `EVIDENCE_AND_GATES.md`
