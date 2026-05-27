@@ -2071,6 +2071,14 @@ opening the slice.
       Result: `floating_window_content_props.rs` now owns the content surface layout, scroll
       layout, and container props, while `floating_window_content.rs` keeps the pointer/focus
       orchestration and consumes the prepared owner outputs.
+- [x] Split the floating-window content pointer/focus/activation behavior out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_content.rs` into a private behavior owner
+      without changing the public IMUI surface.
+      Result: `floating_window_content/behavior.rs` now owns content-surface pointer-region
+      wrapping, focusable key stub installation, background-click focus requests,
+      activate-on-click event recording, and float-layer bring-to-front delegation.
+      `floating_window_content.rs` keeps content scroll/container composition and IMUI child
+      mounting.
 - [x] Split IMUI table render/body/header ownership out of
       `ecosystem/fret-ui-kit/src/imui/table_controls.rs` into private owner modules without
       changing the public IMUI surface.

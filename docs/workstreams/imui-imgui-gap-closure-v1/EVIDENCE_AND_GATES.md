@@ -37,6 +37,38 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Floating Content Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI floating-window content-surface behavior moved into a private owner without
+changing content scrolling, content container padding, background-click focus behavior,
+activate-on-click z-order behavior, or input-disabled bypass behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_content.rs` keeps content scroll/container
+  composition and IMUI child mounting.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_content/behavior.rs` owns content-surface
+  pointer-region wrapping, focusable key stub installation, background-click focus requests,
+  activate-on-click event recording, and float-layer bring-to-front delegation.
+- `tools/gate_imui_workstream_source.py` now requires the content behavior owner and rejects
+  inline content pointer/focus/activation behavior bodies from drifting back into
+  `floating_window_content.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui
+  floating::input_modes::floating_window_activate_on_click_can_be_disabled_for_content
+  floating::input_modes::floating_window_focus_on_click_can_be_independent_from_z_order_activation
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Flow Options Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI flow/layout option records and token defaults moved into narrower private

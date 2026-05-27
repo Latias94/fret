@@ -1750,6 +1750,12 @@ selection, close-button prop selection, and close-glyph text construction.
 now owns content surface layout, scroll layout, and container props. `floating_window_content.rs`
 keeps the pointer/focus orchestration and consumes the prepared content owner outputs.
 
+2026-05-27 content behavior owner split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_content/behavior.rs` now owns content-surface
+pointer-region wrapping, focusable key stub installation, background-click focus requests,
+activate-on-click event recording, and float-layer bring-to-front delegation.
+`floating_window_content.rs` now keeps content scroll/container composition and IMUI child mounting.
+
 2026-05-25 table render/body/header owner split result:
 `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` now owns table assembly, test-id suffixing,
 palette resolution, and shared cell helpers. `table_controls/body.rs` owns prepared cells, pinned row
