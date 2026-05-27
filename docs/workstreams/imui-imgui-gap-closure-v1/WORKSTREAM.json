@@ -1005,6 +1005,7 @@
     "ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/layout.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/scroll.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/row_groups/split.rs",
+    "ecosystem/fret-ui-kit/src/imui/table_controls/header/cell.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/test_ids.rs",
     "ecosystem/fret-ui-kit/src/imui/table_controls/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/table_column_visibility.rs",

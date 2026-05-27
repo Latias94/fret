@@ -3,6 +3,34 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Table Header-Cell Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI table header cell layout and resize wrapping moved into a private owner
+without changing sortable/plain header behavior, resize handle wiring, header test IDs, table
+layout, or `TableHeaderResponse` collection.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` keeps sortable/plain header trigger
+  orchestration and `BuiltHeaderCell` response assembly.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/cell.rs` owns header cell layout,
+  resize-handle attachment, resize test-id suffixing, and header content flex wrapping.
+- `tools/gate_imui_workstream_source.py` now rejects header cell layout and resize wrapping bodies
+  from drifting back into `header.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls::tests --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Path-Family Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI debug-draw path construction moved into private shape-family owners without

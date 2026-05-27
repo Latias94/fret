@@ -44,6 +44,13 @@ Last updated: 2026-05-27
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI table header cell layout/resize wrapping out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls/header.rs` into a private cell owner without
+      changing sortable/plain header behavior, resize handle wiring, header test IDs, table layout,
+      or `TableHeaderResponse` collection.
+      Result: `table_controls/header/cell.rs` owns header cell layout, resize-handle attachment,
+      resize test-id suffixing, and header content flex wrapping. `header.rs` keeps sortable/plain
+      header trigger orchestration and `BuiltHeaderCell` response assembly.
 - [x] Split IMUI debug-draw path construction by shape family out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs` into private linear, round,
       and bezier owner modules without changing path helper names, validation behavior, sampling

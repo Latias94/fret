@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 table header-cell owner-split result:
+`ecosystem/fret-ui-kit/src/imui/table_controls/header/cell.rs` now owns header cell layout,
+resize-handle attachment, resize test-id suffixing, and header content flex wrapping.
+`table_controls/header.rs` keeps sortable/plain header trigger orchestration and `BuiltHeaderCell`
+response assembly.
+
 2026-05-27 debug-draw path-family owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paths.rs` is now a private path-family
 re-export hub. `paths/linear.rs` owns polyline, polygon fill, triangle, and quad path construction;
