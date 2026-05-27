@@ -12,6 +12,14 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 active-trigger behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/keyboard.rs` now owns ContextMenu and
+Shift+F10 request handling. `active_trigger_behavior/pointer.rs` owns primary active-item pointer
+lifecycle, focus request policy, and secondary-click anchor signaling.
+`active_trigger_behavior/response.rs` owns context-menu response fields, hover query hookup, and
+shared pressable response population. `active_trigger_behavior.rs` keeps handler clearing, model
+lookup, option/input structs, and owner dispatch.
+
 2026-05-27 tooltip runtime owner-split result:
 `ecosystem/fret-ui-kit/src/imui/tooltip_overlay/runtime.rs` now owns trigger-id validation,
 tooltip event model setup, interaction bounds calculation, open/update scheduling, open-model sync,

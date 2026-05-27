@@ -3,6 +3,45 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Active-Trigger Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: shared active-trigger keyboard, pointer, and response behavior moved into focused
+private owners without changing active-item lifecycle, context-menu keyboard requests, secondary
+click anchor signaling, hover response population, or the shared active-trigger call path used by
+menus, tabs, switches, and table headers.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/keyboard.rs` now owns ContextMenu and
+  Shift+F10 request handling.
+- `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/pointer.rs` now owns primary active-item
+  pointer lifecycle, focus request policy, and secondary-click context-menu anchor signaling.
+- `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior/response.rs` now owns secondary-click and
+  context-menu response fields, hover query hookup, and shared pressable response population.
+- `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` keeps handler clearing, model lookup,
+  option/input structs, and owner dispatch.
+- `tools/gate_imui_workstream_source.py` now requires the active-trigger sub-owners and rejects
+  keyboard, pointer, and response bodies from drifting back into the root active-trigger module.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_controls::switch --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::tabs --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
+Gate note:
+
+- An initial `models_controls::switch` run timed out after 184 seconds without test failure output;
+  the same focused nextest command passed immediately on rerun.
+
 ## Tooltip Runtime Owner-Split Evidence - 2026-05-27
 
 Claim verified: tooltip lifecycle/update/request orchestration moved out of the tooltip overlay

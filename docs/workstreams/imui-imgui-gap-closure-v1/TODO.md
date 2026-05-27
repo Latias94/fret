@@ -19,6 +19,15 @@ Last updated: 2026-05-27
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split shared IMUI active-trigger keyboard, pointer, and response behavior out of
+      `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` into private owner modules
+      without changing active-item lifecycle, right-click context-menu signaling, keyboard
+      context-menu requests, or shared `ResponseExt` population.
+      Result: `active_trigger_behavior/keyboard.rs` owns ContextMenu/Shift+F10 request handling,
+      `active_trigger_behavior/pointer.rs` owns primary active-item pointer lifecycle and
+      secondary-click anchor signaling, `active_trigger_behavior/response.rs` owns context-menu
+      response fields plus shared pressable response population, and the root file keeps handler
+      clearing, model lookup, options/input structs, and owner dispatch.
 - [x] Split IMUI button visual/layout/accessibility ownership out of
       `ecosystem/fret-ui-kit/src/imui/button_controls.rs` into a private owner module without
       changing the public IMUI surface.
