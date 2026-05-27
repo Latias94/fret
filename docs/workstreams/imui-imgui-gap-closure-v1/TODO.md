@@ -182,6 +182,16 @@ Last updated: 2026-05-27
       radio label identity, shortcut/context-menu handling, click response, and response
       population. The root `boolean_controls.rs` file is now a thin module/re-export index beside
       the existing switch and visual owners.
+- [x] Split IMUI switch pressable behavior out of
+      `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs` into a private owner module
+      without changing label identity, switch a11y, model toggling, shortcut gating, active-trigger
+      lifecycle semantics, changed/clicked response population, field chrome, or visual row
+      layout.
+      Result: `boolean_controls/switch/behavior.rs` owns active-trigger behavior installation,
+      activate handler model toggling, shortcut model toggling, lifecycle edit marking, transient
+      changed/clicked reads, and `ResponseExt` population. `switch.rs` keeps label identity,
+      `SwitchOptions` a11y wiring, field chrome, switch state badge mounting, boolean label
+      mounting, and fill-row visual assembly.
 - [x] Split IMUI interaction-runtime hover internals out of
       `ecosystem/fret-ui-kit/src/imui/interaction_runtime/hover.rs` into private owner modules
       without changing hovered-query, shared-delay, active-item block, or long-press behavior.

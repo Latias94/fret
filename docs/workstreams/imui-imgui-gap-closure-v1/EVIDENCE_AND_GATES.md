@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Switch Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: switch pressable behavior moved out of the switch visual/model shell into a private
+behavior owner without changing label identity, switch a11y, model toggling, shortcut gating,
+active-trigger lifecycle semantics, changed/clicked response population, field chrome, or visual row
+layout.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior.rs` now owns active-trigger
+  behavior installation, activate handler model toggling, shortcut model toggling, lifecycle edit
+  marking, transient changed/clicked reads, and `ResponseExt` population.
+- `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch.rs` keeps label identity,
+  `SwitchOptions` a11y wiring, field chrome, switch state badge mounting, boolean label mounting,
+  and fill-row visual assembly.
+- `tools/gate_imui_workstream_source.py` now rejects active-trigger/model-toggle/response
+  population code from drifting back into `switch.rs` and rejects switch a11y/visual assembly from
+  drifting into the behavior owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui models_controls::switch --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  composition::control_geometry::menu_and_tab_trigger_state_changes_keep_outer_bounds_stable
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Disclosure Trigger Behavior Owner-Split Evidence - 2026-05-27
 
 Claim verified: disclosure trigger pressable behavior and trigger-response population moved out of
