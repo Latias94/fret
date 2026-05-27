@@ -93,6 +93,19 @@
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-spinner-color-content" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.05-color" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-spinner-button-content" },
       "delta_y": -120.0,
       "require_fully_within_container": true,
@@ -101,7 +114,7 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.05-button" },
+    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.06-button" },
 
     {
       "type": "scroll_into_view",
@@ -114,7 +127,7 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.06-badge" },
+    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.07-badge" },
 
     {
       "type": "scroll_into_view",
@@ -127,7 +140,7 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.07-input-group" },
+    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.08-input-group" },
 
     {
       "type": "scroll_into_view",
@@ -140,12 +153,12 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.08-empty" },
+    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.09-empty" },
 
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-spinner-rtl-content" },
+      "target": { "kind": "test_id", "id": "ui-gallery-spinner-item-content" },
       "delta_y": -120.0,
       "require_fully_within_container": true,
       "require_fully_within_window": true,
@@ -153,20 +166,7 @@
       "timeout_frames": 600
     },
     { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.09-rtl" },
-
-    {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-spinner-extras-content" },
-      "delta_y": -120.0,
-      "require_fully_within_container": true,
-      "require_fully_within_window": true,
-      "padding_px": 16.0,
-      "timeout_frames": 600
-    },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.10-extras" },
+    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.10-item" },
 
     {
       "type": "scroll_into_view",
@@ -180,6 +180,32 @@
     },
     { "type": "wait_frames", "n": 2 },
     { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.11-api-reference" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-spinner-rtl-content" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.12-rtl" },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-spinner-extras-content" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_screenshot", "label": "ui-gallery-spinner-docs.13-extras" },
     { "type": "capture_bundle", "label": "ui-gallery-spinner-docs" }
   ]
 }

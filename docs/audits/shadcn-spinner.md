@@ -8,21 +8,44 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret's shadcn-aligned `Spinner` against the upstream shadcn/ui v4 Radix docs,
-new-york spinner source, example compositions, and the existing spinner unit/layout gates.
+This audit compares Fret's shadcn-aligned `Spinner` against the current upstream shadcn/ui v4 docs,
+new-york-v4 spinner source, example compositions, and the existing spinner unit/layout gates.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/radix/spinner.mdx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/spinner.mdx`
 - Component implementation: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/spinner.tsx`
-- Example compositions: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-demo.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-custom.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-size.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-button.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-badge.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-input-group.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-empty.tsx`, `repo-ref/ui/apps/v4/examples/base/spinner-rtl.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-demo.tsx`,
+  `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-custom.tsx`,
+  `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-size.tsx`,
+  `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-color.tsx`,
+  `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-button.tsx`,
+  `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-badge.tsx`,
+  `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-input-group.tsx`,
+  `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-empty.tsx`,
+  `repo-ref/ui/apps/v4/registry/new-york-v4/examples/spinner-item.tsx`
+- Web goldens: `goldens/shadcn-web/v4/new-york-v4/spinner-basic.json`,
+  `goldens/shadcn-web/v4/new-york-v4/spinner-demo.json`,
+  `goldens/shadcn-web/v4/new-york-v4/spinner-custom.json`,
+  `goldens/shadcn-web/v4/new-york-v4/spinner-size.json`,
+  `goldens/shadcn-web/v4/new-york-v4/spinner-color.json`,
+  `goldens/shadcn-web/v4/new-york-v4/spinner-button.json`,
+  `goldens/shadcn-web/v4/new-york-v4/spinner-badge.json`,
+  `goldens/shadcn-web/v4/new-york-v4/spinner-input-group.json`,
+  `goldens/shadcn-web/v4/new-york-v4/spinner-empty.json`,
+  `goldens/shadcn-web/v4/new-york-v4/spinner-item.json`
 - Secondary headless refs: `repo-ref/ui/apps/v4/registry/bases/radix/ui/spinner.tsx`, `repo-ref/ui/apps/v4/registry/bases/base/ui/spinner.tsx`, `repo-ref/ui/apps/v4/registry/bases/radix/examples/spinner-example.tsx`, `repo-ref/ui/apps/v4/registry/bases/base/examples/spinner-example.tsx`
-- Existing gates: `ecosystem/fret-ui-shadcn/src/spinner.rs`, `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/spinner.rs`
+- Existing gates: `ecosystem/fret-ui-shadcn/src/spinner.rs`,
+  `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/spinner.rs`,
+  `ecosystem/fret-ui-shadcn/tests/reduced_motion_continuous_frames.rs`
 
 ## Fret implementation
 
 - Component code: `ecosystem/fret-ui-shadcn/src/spinner.rs`
 - Gallery page: `apps/fret-ui-gallery/src/ui/pages/spinner.rs`
+- Gallery tests: `apps/fret-ui-gallery/tests/spinner_docs_surface.rs`,
+  `apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`
+- Diagnostics: `tools/diag-scripts/ui-gallery/spinner/*.json`
 
 ## Audit checklist
 
@@ -49,21 +72,29 @@ new-york spinner source, example compositions, and the existing spinner unit/lay
 
 ### Gallery / docs parity
 
-- Pass: the gallery now mirrors the upstream Spinner docs path first: `Demo`, `Usage`, `Customization`, `Size`, `Button`, `Badge`, `Input Group`, `Empty`, and `RTL`.
-- Pass: `Extras` and `API Reference` remain explicit Fret follow-ups after the upstream path because they document Fret-only refinements and ownership notes.
+- Pass: the gallery now mirrors the current upstream Spinner docs path first: `Demo`, `Usage`,
+  `Customization`, `Size`, `Color`, `Button`, `Badge`, `Input Group`, `Empty`, `Item`, and
+  `API Reference`.
+- Pass: `RTL` and `Extras` remain explicit Fret follow-ups after the upstream path because they
+  document direction safety, Fret-only refinements, and ownership notes.
 - Pass: the `Customization` preview now stays on the single customized spinner lane, matching the upstream docs more closely instead of teaching a before/after comparison row.
 - Pass: the `RTL` preview now uses Arabic copy, which keeps the example closer to the upstream RTL docs surface instead of only flipping layout direction around English text.
-- Pass: the page now records the source-axis decision inline (`repo-ref/ui` docs/source/examples, the `registry/bases/{radix,base}` leaf wrappers, and the explicit lack of `repo-ref/primitives` / `repo-ref/base-ui` spinner primitives) so future audits do not have to rediscover why this is a leaf recipe surface.
-- Pass: UI Gallery docs-surface regression protection now includes `apps/fret-ui-gallery/tests/spinner_docs_surface.rs` plus `tools/diag-scripts/ui-gallery/spinner/ui-gallery-spinner-docs-screenshots.json`.
+- Pass: the page now records the source-axis decision inline (`repo-ref/ui` docs/source/examples,
+  the `registry/bases/{radix,base}` leaf wrappers, and the explicit lack of `repo-ref/primitives` /
+  `repo-ref/base-ui` spinner primitives) so future audits do not have to rediscover why this is a
+  leaf recipe surface.
+- Pass: UI Gallery docs-surface regression protection now includes
+  `apps/fret-ui-gallery/tests/spinner_docs_surface.rs` plus
+  `tools/diag-scripts/ui-gallery/spinner/ui-gallery-spinner-docs-screenshots.json`.
 - Pass: this work is docs/public-surface parity, not a mechanism-layer fix.
 
 ## Validation
 
-- `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-a11y-accesskit maps_extended_semantics_roles_to_accesskit_roles`
-- `CARGO_TARGET_DIR=target-codex-avatar cargo check -p fret-ui-gallery --message-format short`
-- `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-shadcn --lib spinner`
-- `CARGO_TARGET_DIR=target-codex-avatar cargo test -p fret-ui-gallery --test spinner_docs_surface`
-- `cargo nextest run -p fret-ui-gallery spinner_`
-- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/spinner/ui-gallery-spinner-docs-screenshots.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
-- `python3 tools/check_diag_scripts_registry.py --write`
-- Existing geometry gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/spinner.rs`
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/spinner_agent_packet_p0_v1.json | Out-Null`
+- `Get-ChildItem -Path tools/diag-scripts/ui-gallery/spinner -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }`
+- `cargo nextest run -p fret-a11y-accesskit --lib --status-level fail maps_extended_semantics_roles_to_accesskit_roles`
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail spinner`
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail spinner`
+- `cargo nextest run -p fret-ui-shadcn --test reduced_motion_continuous_frames --status-level fail spinner_respects_reduced_motion_and_does_not_request_frames`
+- `cargo nextest run -p fret-ui-gallery --test spinner_docs_surface --status-level fail`
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail spinner`

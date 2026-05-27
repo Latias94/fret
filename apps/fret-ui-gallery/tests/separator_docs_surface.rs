@@ -7,12 +7,14 @@ fn separator_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/separator.rs");
 
     for needle in [
-        "Reference stack: shadcn base Separator docs, the base/radix registry recipe variants, Radix Primitives Separator, and Base UI Separator.",
+        "Reference stack: current shadcn Separator docs, the new-york-v4 recipe/demo, the base/radix registry recipe variants, Radix Primitives Separator, and Base UI Separator.",
         "`fret_ui_kit::primitives::separator::Separator` owns the mechanism layer",
         "`Separator::new()`, `Separator::orientation(...)`, and `Separator::decorative(...)` cover the public surface Fret needs",
         "Fret keeps the Radix-aligned `.decorative(...)` knob on the shadcn lane",
+        "Vertical recipe parity follows the base/radix `data-vertical:self-stretch` axis by default",
+        "the current new-york-v4 `data-vertical:h-full` axis remains available through the explicit fill-height opt-out",
         "No generic composable children / `compose()` / `asChild` surface is warranted here because separator is a leaf primitive.",
-        "Preview mirrors the current shadcn Base Separator docs path first: Demo, Usage, Vertical, Menu, List, RTL, and API Reference.",
+        "Preview mirrors the current shadcn Separator docs and Base/Radix example path first: Demo, Usage, Vertical, Menu, List, RTL, and API Reference.",
     ] {
         assert!(
             source.contains(needle),
@@ -42,7 +44,7 @@ fn separator_snippets_stay_docs_aligned_and_copyable() {
     let rtl = include_str!("../src/ui/snippets/separator/rtl.rs");
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         "\"shadcn/ui\"",
         "\"The Foundation for your Design System\"",
@@ -76,7 +78,7 @@ fn separator_snippets_stay_docs_aligned_and_copyable() {
 
     for needle in [
         "use fret_ui::Invalidation;",
-        "use fret_ui_kit::declarative::viewport_queries;",
+        "declarative::{text as decl_text, viewport_queries}",
         "let is_md = viewport_queries::viewport_width_at_least(",
         "viewport_queries::tailwind::MD",
         "\"Settings\"",

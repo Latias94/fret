@@ -6,7 +6,7 @@
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
       "Navigates to the Slider page via the left nav search.",
-      "Captures the docs-path sections first (`Demo` through `API Reference`) so docs-surface parity stays reviewable."
+      "Captures current docs-path sections (`Demo`, `Usage`) plus Base/Radix and Fret follow-ups through `API Reference` so docs-surface parity stays reviewable."
     ]
   },
   "steps": [

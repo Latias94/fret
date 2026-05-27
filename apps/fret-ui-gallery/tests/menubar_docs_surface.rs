@@ -163,7 +163,8 @@ fn menubar_keyboard_nav_diag_script_gates_focus_return_and_escape_contract() {
     }
 
     assert!(
-        suite.contains("tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-keyboard-nav.json"),
+        suite
+            .contains("tools/diag-scripts/ui-gallery/menubar/ui-gallery-menubar-keyboard-nav.json"),
         "menubar keyboard-nav suite should reference the promoted script"
     );
 }

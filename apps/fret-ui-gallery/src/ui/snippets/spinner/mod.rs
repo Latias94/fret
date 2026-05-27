@@ -2,11 +2,13 @@
 
 pub mod badges;
 pub mod buttons;
+pub mod colors;
 pub mod customization;
 pub mod demo;
 pub mod empty;
 pub mod extras;
 pub mod input_group;
+pub mod item;
 pub mod rtl;
 pub mod sizes;
 pub mod usage;

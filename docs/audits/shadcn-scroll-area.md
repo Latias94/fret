@@ -1,4 +1,4 @@
-# shadcn/ui v4 Audit — Scroll Area
+# shadcn/ui v4 Audit - Scroll Area
 
 
 ## Upstream references (non-normative)
@@ -9,16 +9,16 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret's shadcn-aligned `ScrollArea` surface against the upstream shadcn/ui v4
-docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
+This audit compares Fret's shadcn-aligned `ScrollArea` surface against the current upstream
+shadcn/ui v4 docs page, the `new-york-v4` registry source/examples, the tracked scroll-area web
+goldens, and the existing Scroll Area gates.
 
 ## Upstream references (source of truth)
 
-- Docs page (Radix): `repo-ref/ui/apps/v4/content/docs/components/radix/scroll-area.mdx`
-- Docs page (Base UI): `repo-ref/ui/apps/v4/content/docs/components/base/scroll-area.mdx`
-- Registry implementation (new-york): `repo-ref/ui/apps/v4/registry/new-york-v4/ui/scroll-area.tsx`
-- Registry demo: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/scroll-area-demo.tsx`
-- Registry horizontal demo: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/scroll-area-horizontal-demo.tsx`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/scroll-area.mdx`
+- Component implementation: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/scroll-area.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/scroll-area-demo.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/scroll-area-horizontal-demo.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/select-scrollable.tsx`
+- Upstream goldens: `goldens/shadcn-web/v4/new-york-v4/scroll-area-demo*.json`, `goldens/shadcn-web/v4/new-york-v4/scroll-area-horizontal-demo*.json`
 - Underlying primitive: Radix `@radix-ui/react-scroll-area`
 
 ## Fret implementation
@@ -63,18 +63,27 @@ docs and the `new-york-v4` registry implementation in `repo-ref/ui`.
   semantics node inside a focus-ring container (`decl_style::focus_ring`). This keeps the viewport
   input-transparent so touch-pan scrolling still targets the `Scroll` mechanism.
 
-### Docs / teaching surface
+### Gallery / docs parity
 
-- Pass: The UI Gallery page can now mirror the upstream docs flow first (`Demo`, `Usage`,
-  `Horizontal`, `RTL`, `API Reference`) before introducing Fret-only follow-ups.
+- Pass: The UI Gallery page mirrors the current upstream docs path first: `Demo`, `Usage`, and
+  `Horizontal`.
+- Pass: `RTL`, `API Reference`, `Compact helper`, `Nested scroll routing`, and diagnostics stay
+  explicit Fret follow-ups instead of pretending to be current upstream Scroll Area headings.
 - Pass: The copyable docs lane teaches `ScrollArea::new(...)` instead of promoting the
   Fret-specific `scroll_area(...)` helper as the primary shadcn-aligned surface.
 - Pass: The `Horizontal` docs example can stay copyable while exposing the `ScrollBar`
   vocabulary via the explicit typed parts lane.
-- Note: Base UI's additional `Content` / `Thumb` headless parts remain informative references, but
-  they do not need promoted shadcn-lane public wrappers in Fret today because the runtime owns the
-  viewport content wrapper and thumb implementation details.
+- Pass: Gallery source-policy tests keep visible text on shared roles, snippets on the default app
+  surface, and diagnostics raw boundaries isolated to audited harness roots.
+- Note: Radix's viewport content wrapper and thumb remain mechanism/runtime details in Fret; they
+  do not need promoted public shadcn wrappers today.
 
 ## Validation
 
-- `cargo test -p fret-ui-shadcn --lib scroll_area`
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail scroll_area`
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_scroll_geometry_matches_web_fixtures`
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_scroll --status-level fail`
+- `cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail radix_web_scroll_area_scroll_top_delta_matches_fret`
+- `cargo nextest run -p fret-ui-gallery --test scroll_area_docs_surface --status-level fail`
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail scroll_area`
+- `Get-ChildItem -Path tools/diag-scripts/ui-gallery/scroll-area -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }`

@@ -726,3 +726,529 @@ Completed criteria:
   `inventory_only`, and 5 `not_in_harness` components.
 - State-depth coverage now records Collapsible `DIS`, `OPEN`, `KEY`, `RTL`, `TEXT-MET`, and
   `PAINT` evidence; the component has no required state-depth gaps.
+
+## M31 - Promote Command
+
+Status: complete on 2026-05-26.
+
+`command.docs-path.desktop-overlay` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Command docs path, new-york-v4 source, `command-demo` and
+`command-dialog` upstream goldens, recipe active-descendant/filtering tests, CommandDialog overlay
+chrome and placement/list-metrics gates, Gallery docs-surface checks, diagnostics JSON checks, and a
+component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Command docs path, new-york-v4 recipe source, command
+  demo/dialog examples, cmdk reference, and tracked command upstream goldens.
+- The Command packet records the owner split: `fret-ui-shadcn` owns root/list/item chrome,
+  cmdk-style active descendant, filtering/scoring, non-shrinking scroll-list rows, dialog
+  `h-12`/`py-3`/group spacing overrides, and palette test-id seams; Gallery owns docs-path teaching
+  order, width caps, screenshots, RTL, and Fret-only behavior demos.
+- The CommandDialog list metrics gate exposed real row-height and group-inset drift; rows now keep
+  44px option geometry under constrained scroll viewports and group spacing matches the web golden.
+- `command_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 37 `regression_locked`, 1 `harness_hardening`, 16
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Command `DIS`, `FOCUS-VIS`, `OPEN`, `KEY`, `RTL`, `TEXT-MET`,
+  and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M32 - Promote Empty
+
+Status: complete on 2026-05-26.
+
+`empty.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after connecting
+the current shadcn Empty docs path, new-york-v4 source, empty demo/background/outline/icon/avatar
+upstream goldens, recipe typography and responsive-padding tests, web-vs-Fret layout gates, Gallery
+docs-surface checks, action-state diagnostics, text/paint scripts, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Empty docs path, new-york-v4 recipe source, demo/outline/
+  background/avatar/avatar-group/input-group/icon examples, and tracked empty upstream goldens.
+- The Empty packet records the owner split: `fret-ui-shadcn` owns root dashed chrome,
+  responsive `p-6 md:p-12` container padding, media icon variant, title/description text styling,
+  and slot composition; Gallery owns preview height, background paint, action/link wiring,
+  input-group width, docs teaching order, RTL follow-up composition, and runtime diagnostics.
+- The Gallery page now keeps the upstream docs path through `API Reference` before the Fret-only
+  RTL follow-up, matching the current upstream Empty docs instead of stale base-path assumptions.
+- `empty_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 38 `regression_locked`, 1 `harness_hardening`, 15
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Empty `KEY`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
+  component has no required state-depth gaps.
+
+## M33 - Promote Item
+
+Status: complete on 2026-05-26.
+
+`item.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after connecting
+the current shadcn Item docs path, new-york-v4 source, item demo/variant/size/icon/avatar/image/
+group/header/link/dropdown upstream goldens, recipe slot/text/link tests, web-vs-Fret layout gates,
+Gallery docs-surface checks, action-state diagnostics, text/paint scripts, and a component-matrix
+packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Item docs path, new-york-v4 recipe source, demo/variant/
+  size/icon/avatar/image/group/header/link/dropdown examples, and tracked item upstream goldens.
+- The Item packet records the owner split: `fret-ui-shadcn` owns item chrome, variants, size
+  presets, media sizing/alignment, title/description text styling, action/header/footer slots,
+  link-render semantics, hover/focus chrome, and item-group list semantics; Gallery owns page width,
+  example grouping, dropdown composition, RTL follow-up composition, deterministic examples, and
+  runtime diagnostics.
+- The Gallery page now keeps the upstream docs path through `API Reference` before the Fret-only
+  RTL/Gallery/Link-render follow-ups, matching the current upstream Item docs instead of stale
+  base-path assumptions.
+- `item_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 39 `regression_locked`, 1 `harness_hardening`, 14
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Item `HOV`, `FOCUS-VIS`, `OPEN`, `KEY`, `RTL`, `TEXT-MET`, and
+  `PAINT` evidence; the component has no required state-depth gaps.
+
+## M34 - Promote Kbd
+
+Status: complete on 2026-05-26.
+
+`kbd.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after connecting
+the current shadcn Kbd docs path, new-york-v4 source, kbd demo/group/button/tooltip/input-group
+upstream goldens, recipe chrome/text/RTL tests, web-vs-Fret layout gates, tooltip-slot paint proof,
+Gallery docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Kbd docs path, new-york-v4 recipe source, demo/group/
+  button/tooltip/input-group examples, and tracked kbd upstream goldens.
+- The Kbd packet records the owner split: `fret-ui-shadcn` owns fixed keycap chrome, text metrics,
+  grouped shortcut spacing, tooltip-slot color inversion, and RTL order; Gallery owns button,
+  tooltip, input-group composition, docs teaching order, and stable diagnostics anchors.
+- The Gallery page now keeps the upstream docs path through `API Reference` before the Fret-only
+  `RTL` follow-up, matching the current upstream Kbd docs instead of stale base-path assumptions.
+- `kbd_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 40 `regression_locked`, 1 `harness_hardening`, 13
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Kbd `KEY`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
+  component has no required state-depth gaps.
+
+## M35 - Promote Label
+
+Status: complete on 2026-05-26.
+
+`label.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after connecting
+the current shadcn Label docs path, new-york-v4 source, label/input/textarea/input-group upstream
+goldens, primitive association tests, shadcn recipe tests, web-vs-Fret layout and source-marker
+gates, Gallery docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Label docs path, new-york-v4 recipe source, label demo,
+  related input/textarea/input-group label examples, base/radix recipe references, and tracked
+  upstream goldens.
+- The Label packet records the owner split: `fret-ui-kit` owns label/control registration, disabled
+  opacity, and click forwarding; `fret-ui-shadcn` owns the flex row, gap, foreground scoping, and
+  inline children lane; Gallery owns Field/RTL/Composable Content/API follow-ups.
+- The Gallery page now keeps the upstream docs path through `Demo` and `Usage` before Fret-only
+  follow-ups, matching the current upstream Label docs instead of stale base/radix assumptions.
+- `label_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 41 `regression_locked`, 1 `harness_hardening`, 12
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Label `DIS`, `KEY`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
+  component has no required state-depth gaps.
+
+## M36 - Promote Radio Group
+
+Status: complete on 2026-05-26.
+
+`radio-group.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Radio Group docs path, new-york-v4 source, radio-group/field/form/
+dropdown-menu radio upstream goldens, primitive roving-selection tests, shadcn recipe tests,
+web-vs-Fret layout/chrome/focus/overlay gates, Gallery docs-surface checks, diagnostics JSON, and
+a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Radio Group docs path, new-york-v4 recipe source,
+  radio-group demo, Field/Form radio compositions, dropdown-menu radio-group composition, and
+  tracked upstream goldens.
+- The Radio Group packet records the owner split: `fret-ui-kit` owns roving radio selection,
+  keyboard behavior, required semantics, and label-control focus routing; `fret-ui-shadcn` owns
+  root gap, item chrome, indicator centering, invalid/disabled/focus-visible states, choice-card
+  variant, and typed parts row composition; Gallery owns docs ordering and Fret follow-ups.
+- The Gallery page now keeps the current upstream docs path through `Demo` and `Usage` before
+  Fret-only follow-ups, matching the current upstream Radio Group docs instead of stale base-path
+  assumptions.
+- `radio_group_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs
+  with zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 42 `regression_locked`, 1 `harness_hardening`, 11
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Radio Group `DIS`, `FOCUS-VIS`, `KEY`, `RTL`, `TEXT-MET`, and
+  `PAINT` evidence; the component has no required state-depth gaps.
+
+## M37 - Promote Scroll Area
+
+Status: complete on 2026-05-26.
+
+`scroll-area.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Scroll Area docs path, new-york-v4 source, vertical/horizontal
+scroll-area upstream goldens, runtime/primitive scroll behavior gates, shadcn recipe tests,
+web-vs-Fret layout and scroll-metadata gates, Gallery docs-surface checks, diagnostics JSON, and a
+component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Scroll Area docs path, new-york-v4 recipe source,
+  scroll-area demo, horizontal scroll-area demo, select-scrollable composition reference, and
+  tracked upstream goldens.
+- The Scroll Area packet records the owner split: runtime owns scroll mechanics and offsets,
+  `fret-ui-kit` owns Radix-style visibility policy, `fret-ui-shadcn` owns wrapper/viewport/
+  scrollbar chrome and typed parts, and Gallery owns docs ordering plus Fret follow-ups.
+- The Gallery page now keeps the current upstream docs path through `Demo`, `Usage`, and
+  `Horizontal` before Fret-only follow-ups, matching the current upstream Scroll Area docs instead
+  of stale base/radix assumptions.
+- `scroll_area_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs
+  with zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 43 `regression_locked`, 1 `harness_hardening`, 10
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Scroll Area `HOV`, `FOCUS-VIS`, `DRAG`, `KEY`, `RTL`,
+  `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M38 - Promote Separator
+
+Status: complete on 2026-05-27.
+
+`separator.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Separator docs path, new-york-v4 source, base/radix recipe sources,
+separator-demo upstream golden, primitive/recipe semantics tests, web-vs-Fret layout and chrome
+gates, Gallery docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Separator docs path, new-york-v4 recipe/demo, base/radix
+  recipe/example references, Radix/Base UI primitive references, and the tracked separator-demo
+  upstream golden.
+- The Separator packet records the owner split: `fret-ui-kit` owns orientation plus semantic and
+  decorative behavior; `fret-ui-shadcn` owns decorative-by-default visual rule chrome, shrink-0,
+  horizontal h-px/w-full, vertical w-px, and the Base/Radix self-stretch mapping; Gallery owns docs
+  ordering, responsive menu/list/RTL examples, and stable diagnostics anchors.
+- The Gallery page now states the source-axis split explicitly: current new-york-v4 uses
+  `data-vertical:h-full`, while base/radix use `data-vertical:self-stretch`; Fret defaults to the
+  stretch lane for auto-height flex rows and preserves an explicit fill-height opt-out.
+- `separator_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs
+  with zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 44 `regression_locked`, 1 `harness_hardening`, 9
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Separator `MOB`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
+  component has no required state-depth gaps.
+
+## M39 - Promote Skeleton
+
+Status: complete on 2026-05-27.
+
+`skeleton.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Skeleton docs path, new-york-v4 source, skeleton-demo/card upstream
+goldens, recipe layout/pulse tests, reduced-motion proof, targeted upstream marker checks, Gallery
+docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Skeleton docs path, new-york-v4 recipe/demo/card
+  references, base/radix recipe/example expansion, and the tracked skeleton-demo/card upstream
+  goldens.
+- The Skeleton packet records the owner split: `fret-ui-shadcn` owns the visual leaf chrome,
+  pulse animation, and reduced-motion behavior; callers own placeholder size and shape; Gallery
+  owns the current docs ordering, base/radix example expansion, RTL follow-up, and stable
+  diagnostics anchors.
+- The Gallery page now states the source-axis split explicitly: current shadcn docs cover `Demo`,
+  `Usage`, and `Card`, while `Avatar`, `Text`, `Form`, and `Table` come from base/radix registry
+  examples and `RTL` / `API Reference` / `Notes` are Fret follow-ups.
+- `skeleton_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs
+  with zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 45 `regression_locked`, 1 `harness_hardening`, 8
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Skeleton `RTL`, `TEXT-MET`, and `PAINT` evidence; the component
+  has no required state-depth gaps.
+
+## M40 - Promote Spinner
+
+Status: complete on 2026-05-27.
+
+`spinner.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Spinner docs path, new-york-v4 source, spinner-* upstream goldens,
+recipe status/motion tests, reduced-motion proof, web-vs-Fret host-composition gates, Gallery
+docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Spinner docs path, new-york-v4 recipe/examples,
+  base/radix leaf recipe references, and the tracked spinner upstream goldens.
+- The Spinner packet records the owner split: `fret-ui-shadcn` owns the visual status leaf,
+  current-color, size-4, and spin behavior; host recipes own Button/Badge/InputGroup/Empty/Item
+  composition; Gallery owns current docs ordering plus RTL/Extras follow-ups.
+- The Gallery page now follows current upstream docs through `Demo`, `Usage`, `Customization`,
+  `Size`, `Color`, `Button`, `Badge`, `Input Group`, `Empty`, `Item`, and `API Reference`, then
+  appends Fret-only `RTL` and `Extras`.
+- `spinner_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 46 `regression_locked`, 1 `harness_hardening`, 7
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Spinner `DIS`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the
+  component has no required state-depth gaps.
+
+## M41 - Promote Textarea
+
+Status: complete on 2026-05-27.
+
+`textarea.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Textarea docs path, new-york-v4 source/examples, base/radix Field
+examples, textarea-* upstream goldens, recipe semantics/resize tests, web-vs-Fret layout, chrome,
+text-paint, and label-focus gates, Gallery docs-surface checks, diagnostics JSON, and a
+component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Textarea docs path, new-york-v4 recipe/examples,
+  base/radix recipe and Field example references, and the tracked textarea upstream goldens.
+- The Textarea packet records the owner split: `fret-ui-shadcn` owns the leaf text control chrome,
+  min-h-16, full-width/min-width behavior, placeholder/caret/focus/invalid paint, required/invalid
+  semantics, and resize affordance; Label/Field and callers own surrounding composition; Gallery
+  owns current docs ordering plus Fret/base-radix follow-ups.
+- The Gallery page now follows current upstream docs through `Demo`, `Usage`, `Disabled`,
+  `With Label`, `With Text`, and `With Button`, then appends `API Reference`, `Invalid`,
+  `Required`, `RTL`, `Field`, `Label Association`, and `Notes`.
+- `textarea_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs
+  with zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 47 `regression_locked`, 1 `harness_hardening`, 6
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Textarea `DIS`, `FOCUS-VIS`, `DRAG`, `KEY`, `RTL`,
+  `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M42 - Promote Toggle
+
+Status: complete on 2026-05-27.
+
+`toggle.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Toggle docs path, new-york-v4 source/examples, base/radix references,
+toggle-* upstream goldens, recipe semantics/chrome tests, web-vs-Fret toggle and control-chrome
+gates, Gallery docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Toggle docs path, new-york-v4 recipe/examples,
+  base/radix recipe and example references, and the tracked toggle upstream goldens.
+- The Toggle packet records the owner split: `fret-ui-shadcn` owns root button chrome, size
+  presets, default/outline variants, disabled behavior, hover/focus-visible paint, keyboard
+  activation, pressed-state tokens, and child foreground inheritance; callers own toolbar placement
+  and explicit label association; Gallery owns current docs ordering plus Fret/base-radix follow-ups.
+- The Gallery page now follows current upstream docs through `Demo`, `Usage`, `Outline`,
+  `With Text`, `Small`, `Large`, and `Disabled`, then appends `RTL`, `Children (Fret)`,
+  `Label Association`, and `API Reference`.
+- `toggle_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 48 `regression_locked`, 1 `harness_hardening`, 5
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Toggle `DIS`, `HOV`, `FOCUS-VIS`, `PRESS`, `KEY`, `RTL`,
+  `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M43 - Promote Toggle Group
+
+Status: complete on 2026-05-27.
+
+`toggle-group.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Toggle Group docs path, new-york-v4 source/examples, base/radix
+references, toggle-group-* upstream goldens, primitive and recipe semantics/chrome tests,
+web-vs-Fret toggle and control-chrome gates, Radix primitive state proof, Gallery docs-surface
+checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Toggle Group docs path, new-york-v4 recipe/examples,
+  base/radix recipe and example references, the tracked toggle-group upstream goldens, and the
+  Radix click-state golden.
+- The Toggle Group packet records the owner split: `fret-ui-kit` owns single/multiple selection,
+  roving focus, disabled item skip, and keyboard navigation; `fret-ui-shadcn` owns segmented item
+  chrome, gap/spacing, item padding, size presets, disabled behavior, hover/focus-visible paint,
+  pressed-state tokens, text metrics, and paint token output; Gallery owns current docs ordering
+  plus Fret/base-radix follow-ups.
+- The Gallery page now follows current upstream docs through `Spacing`, `Usage`, `Outline`,
+  `Single`, `Small`, `Large`, `Disabled`, and `API Reference`, then appends `Demo (Fret)`,
+  `Vertical (Base/Radix)`, `Custom (Fret)`, `RTL (Fret)`, `Children (Fret)`,
+  `Label Association (Fret)`, `Disabled Item Action-State (Fret)`, `Full Width Items (Fret)`,
+  `Flex-1 Items (Fret)`, and `Notes`.
+- `toggle_group_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs
+  with zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 49 `regression_locked`, 1 `harness_hardening`, 4
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Toggle Group `DIS`, `HOV`, `FOCUS-VIS`, `PRESS`, `KEY`, `RTL`,
+  `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M44 - Promote Slider
+
+Status: complete on 2026-05-27.
+
+`slider.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Slider docs path, new-york-v4 source/demo, Base/Radix richer examples,
+slider-demo and field-slider upstream goldens, primitive and recipe semantics/chrome tests,
+web-vs-Fret layout/control-chrome gates, Radix primitive state proof, Gallery docs-surface checks,
+diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Slider docs path, new-york-v4 recipe/demo, Base/Radix
+  recipe and example references, the tracked slider-demo and field-slider upstream goldens, and the
+  Radix ArrowRight golden.
+- The Slider packet records the owner split: `fret-ui-kit` owns numeric semantics, value mapping,
+  pointer drag, keyboard stepping, RTL direction rules, and control association; `fret-ui-shadcn`
+  owns root/track/range/thumb chrome, disabled/hover/focus-visible paint, vertical min-h-44 floor,
+  text metrics, paint token output, and derived test-id prefixes; Gallery owns current docs ordering
+  plus Base/Radix and Fret follow-ups.
+- The Gallery page now follows current upstream docs through `Demo` and `Usage`, then appends
+  `Range (Base/Radix)`, `Multiple Thumbs (Base/Radix)`, `Vertical (Base/Radix)`,
+  `Controlled (Base/Radix)`, `Disabled (Base/Radix)`, `RTL (Fret)`, `API Reference (Fret)`,
+  `Label Association (Fret)`, `Extras (Fret)`, and `Notes`.
+- `slider_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 50 `regression_locked`, 1 `harness_hardening`, 3
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Slider `DIS`, `HOV`, `FOCUS-VIS`, `DRAG`, `KEY`, `RTL`,
+  `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M45 - Promote Sonner
+
+Status: complete on 2026-05-27.
+
+`sonner.docs-path.desktop-mobile` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Sonner docs path, new-york-v4 wrapper/demo/types examples,
+sonner-demo and sonner-types upstream open goldens, toast policy tests, Sonner recipe tests,
+web-vs-Fret layout/overlay placement/overlay chrome gates, Gallery docs-surface checks,
+diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Sonner docs path, new-york-v4 wrapper/demo/types
+  examples, Radix/Base Toast references, tracked sonner-demo and sonner-types upstream goldens,
+  and constrained open viewport variants.
+- The Sonner packet records the owner split: `fret-ui-kit` owns the toast store, lifecycle,
+  timers, stacking, swipe mechanics, live-region semantics, text metrics, and generic toast
+  rendering; `fret-ui-shadcn` owns Toaster defaults, Lucide icon overrides, message helpers,
+  status variants, width/offset/gap defaults, and test-id derivation; Gallery owns current docs
+  ordering plus Fret follow-ups.
+- The Gallery page now follows current upstream docs through `Demo`, `About`, `Usage`,
+  `Examples`, `Types`, and `Changelog`, then appends `Mounting (Fret)`,
+  `Description (Fret)`, `Position (Fret)`, `API Reference (Fret)`, `Extras (Fret)`, and
+  `Notes`.
+- `sonner_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 51 `regression_locked`, 1 `harness_hardening`, 2
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Sonner `HOV`, `DRAG`, `OPEN`, `MOB`, `TEXT-MET`, and `PAINT`
+  evidence; the component has no required state-depth gaps.
+
+## M46 - Promote Switch
+
+Status: complete on 2026-05-27.
+
+`switch.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after
+connecting the current shadcn Switch docs path, new-york-v4 recipe/demo, secondary Field/Form and
+Base/Radix registry examples, switch-demo/field/form upstream goldens, primitive and recipe
+semantics/chrome tests, web-vs-Fret layout/control-chrome gates, Radix primitive state proof,
+Gallery docs-surface checks, diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Switch docs path, new-york-v4 recipe/demo, secondary
+  Field/Form registry examples, secondary Base/Radix registry examples, the tracked switch-demo,
+  switch-demo.focus, field-switch, form-rhf-switch, and form-tanstack-switch upstream goldens, and
+  the Radix click-state golden.
+- The Switch packet records the owner split: `fret-ui-kit` owns role/checked a11y metadata and
+  checked-state selection; `fret-ui-shadcn` owns leaf track/thumb chrome, default and small sizes,
+  checked/unchecked paint, disabled opacity, hover/active/focus-visible paint, required/invalid/
+  read-only semantics, command gating, label/control registration, Space-key activation, text
+  metrics, paint token output, and test-id derivation; Gallery owns current docs ordering plus
+  registry/Base/Radix/Fret follow-ups.
+- The Gallery page now follows current upstream docs through `Demo` and `Usage`, then labels
+  `Description (Registry)`, `Choice Card (Fret)`, `Disabled (Base/Radix)`, `Read Only (Fret)`,
+  `Command Gate (Fret)`, `Invalid (Registry)`, `Size (Base/Radix)`, `RTL (Fret)`,
+  `Label Association (Fret)`, `Style Override (Fret)`, and `API Reference (Fret)` explicitly.
+- `switch_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 52 `regression_locked`, 1 `harness_hardening`, 1
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Switch `DIS`, `HOV`, `FOCUS-VIS`, `PRESS`, `KEY`, `RTL`,
+  `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M47 - Promote Tabs
+
+Status: complete on 2026-05-27.
+
+`tabs.docs-path.desktop` is promoted from `inventory_only` to `regression_locked` after connecting
+the current shadcn Tabs docs path, new-york-v4 recipe/demo, secondary Base/Radix registry examples,
+the tabs-demo upstream golden, primitive and recipe semantics/chrome tests, APG keyboard gates,
+web-vs-Fret layout/text-paint gates, Radix primitive state proof, Gallery docs-surface checks,
+diagnostics JSON, and a component-matrix packet.
+
+Completed criteria:
+
+- The manifest records the current shadcn Tabs docs path, new-york-v4 recipe/demo, secondary
+  Base/Radix registry examples, the tracked tabs-demo upstream golden, and the Radix click-state
+  golden.
+- The Tabs packet records the owner split: `fret-ui-kit` owns value selection, orientation
+  semantics, pointer-down policy, tab/list/content roles, and force-mount visibility;
+  `fret-ui-shadcn` owns root/list/trigger/content chrome, selected/disabled/focus-visible paint,
+  variants, callbacks, content presence, text metrics, paint token output, and test-id derivation;
+  Gallery owns current docs ordering plus Base/Radix and Fret follow-ups.
+- The Gallery page now follows current upstream docs through `Demo` and `Usage`, then labels
+  `Line (Base/Radix)`, `Vertical (Base/Radix)`, `Disabled (Base/Radix)`,
+  `Icons (Base/Radix)`, `List (Base/Radix)`, `RTL (Fret)`, `API Reference (Fret)`,
+  `Composable Parts (Fret)`, `Vertical Line (Fret)`, `Extras (Fret)`, and `Notes` explicitly.
+- `tabs_agent_packet_p0_v1.json` is included in the matrix generator default packet inputs with
+  zero repair, hardening, and gate queue counts.
+- The regenerated matrix reports 53 `regression_locked`, 1 `harness_hardening`, 0
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage now records Tabs `DIS`, `FOCUS-VIS`, `OPEN`, `KEY`, `RTL`, `TEXT-MET`, and
+  `PAINT` evidence; the component has no required state-depth gaps.
+
+## M48 - Regression-Lock Sidebar
+
+Status: complete on 2026-05-27.
+
+`sidebar.docs-path.desktop-mobile` is promoted from `harness_hardening` to `regression_locked` after
+closing the remaining runtime-observable Sidebar class-state blocker for `SidebarMenuBadge`.
+
+Completed criteria:
+
+- `SidebarMenuBadge` now represents the upstream `pointer-events-none` class with a
+  `HitTestGate(false)` wrapper while preserving absolute inline-end placement and badge text paint.
+- The focused badge gate covers hit-test transparency, RTL inline-end anchoring, and compact
+  tabular readout styling together with the existing action/badge peer-size and active peer
+  foreground gates.
+- The Sidebar packet now reports zero repair, hardening, and gate queues. Full React
+  DOM/data-slot/class-name and API-shape one-to-one parity remains an audit portability note rather
+  than a matrix-blocking Fret runtime queue.
+- The regenerated matrix reports 54 `regression_locked`, 0 `harness_hardening`, 0
+  `inventory_only`, and 5 `not_in_harness` components.
+- State-depth coverage continues to record Sidebar `HOV`, `FOCUS-VIS`, `DRAG`, `OPEN`, `KEY`,
+  `MOB`, `RTL`, `TEXT-MET`, and `PAINT` evidence; the component has no required state-depth gaps.
+
+## M49 - Close Final Matrix Holes
+
+Status: complete on 2026-05-27.
+
+The final five `not_in_harness` rows are replaced with explicit machine-readable audit packets.
+
+Completed criteria:
+
+- Carousel, Chart, and Native Select now report `audited_deferred` with zero repair, hardening, and
+  gate queues. Their packets preserve existing source refs, audits, diagnostics, and the concrete
+  condition for resuming work.
+- Toast and Typography now report `audited_skipped` with zero repair, hardening, and gate queues.
+  Toast is a Sonner compatibility alias, and Typography is a docs/helper surface rather than a
+  standalone registry component contract.
+- The matrix generator understands `audited_deferred` and `audited_skipped`, so these packets do not
+  get misclassified as `regression_locked`.
+- The regenerated matrix reports 54 `regression_locked`, 3 `audited_deferred`, 2
+  `audited_skipped`, and no `harness_hardening`, `inventory_only`, or `not_in_harness` rows.

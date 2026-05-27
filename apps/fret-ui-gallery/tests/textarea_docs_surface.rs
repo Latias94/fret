@@ -7,11 +7,11 @@ fn textarea_page_documents_source_axes_and_leaf_children_api_decision() {
     let source = include_str!("../src/ui/pages/textarea.rs");
 
     for needle in [
-        "Reference stack: shadcn Textarea docs, the default registry recipe, and the related base/new-york examples.",
+        "Reference stack: current shadcn Textarea docs, the new-york-v4 registry recipe, tracked new-york examples, and base/radix examples for Field follow-ups.",
         "Neither Radix Primitives nor Base UI defines a dedicated Textarea primitive or compound children contract",
         "did not identify a missing `fret-ui` mechanism bug",
         "No extra generic `compose()` / `asChild` / children API is needed here",
-        "Preview mirrors the upstream Textarea docs path first after collapsing the top `ComponentPreview` into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Field`, `Disabled`, `Invalid`, `Required`, `Button`, `RTL`, and `API Reference`.",
+        "Preview mirrors the current upstream Textarea docs path first after collapsing the top `ComponentPreview` / `Default` duplicate into `Demo` and skipping `Installation`: `Demo`, `Usage`, `Disabled`, `With Label`, `With Text`, and `With Button`.",
     ] {
         assert!(
             source.contains(needle),
@@ -25,14 +25,15 @@ fn textarea_page_documents_source_axes_and_leaf_children_api_decision() {
         vec![
             demo,
             usage,
-            field,
             disabled,
+            with_label,
+            with_text,
+            button,
+            api_reference,
             invalid,
             required,
-            button,
             rtl,
-            api_reference,
-            with_text,
+            field,
             label,
             notes,
         ]
@@ -47,6 +48,7 @@ fn textarea_page_documents_source_axes_and_leaf_children_api_decision() {
 #[test]
 fn textarea_snippets_keep_the_docs_path_examples_and_leaf_surface() {
     let field = include_str!("../src/ui/snippets/textarea/field.rs");
+    let with_label = include_str!("../src/ui/snippets/textarea/with_label.rs");
     let rtl = include_str!("../src/ui/snippets/textarea/rtl.rs");
     let usage = include_str!("../src/ui/snippets/textarea/usage.rs");
     let follow_ups = [
@@ -59,31 +61,32 @@ fn textarea_snippets_keep_the_docs_path_examples_and_leaf_surface() {
 
     for needle in [
         "shadcn::FieldLabel::new(\"Message\")",
-        "shadcn::FieldDescription::new(\"Enter your message below.\")",
+        "shadcn::FieldDescription::new(\"Type your message and press enter to send.\")",
         ".placeholder(\"Type your message here.\")",
+        ".rows(6)",
         ".test_id(\"ui-gallery-textarea-field\")",
     ] {
         assert!(
             field.contains(needle),
-            "textarea field snippet should mirror the upstream field example; missing `{needle}`",
+            "textarea field snippet should mirror the base/radix Field follow-up example; missing `{needle}`",
         );
     }
     let label_ix = field
         .find("shadcn::FieldLabel::new(\"Message\")")
         .expect("field label");
     let description_ix = field
-        .find("shadcn::FieldDescription::new(\"Enter your message below.\")")
+        .find("shadcn::FieldDescription::new(\"Type your message and press enter to send.\")")
         .expect("field description");
     let textarea_ix = field
-        .find("shadcn::Textarea::new(value).placeholder(\"Type your message here.\")")
+        .find("shadcn::Textarea::new(value)")
         .expect("field textarea");
     assert!(
-        label_ix < description_ix && description_ix < textarea_ix,
-        "textarea field snippet should keep the upstream label -> description -> control order",
+        label_ix < textarea_ix && textarea_ix < description_ix,
+        "textarea field snippet should keep the base/radix label -> control -> description order",
     );
     assert!(
-        !field.contains(".rows("),
-        "textarea field snippet should stay on the upstream default-height example rather than the RTL rows(4) variant",
+        !field.contains(".rows(4)"),
+        "textarea field snippet should not reuse the RTL four-row variant",
     );
     assert!(
         !field.contains("Feedback"),
@@ -103,6 +106,19 @@ fn textarea_snippets_keep_the_docs_path_examples_and_leaf_surface() {
     }
 
     for needle in [
+        "shadcn::Label::new(\"Your message\")",
+        ".for_control(id.clone())",
+        "shadcn::Textarea::new(value)",
+        ".control_id(id)",
+        ".test_id(\"ui-gallery-textarea-with-label\")",
+    ] {
+        assert!(
+            with_label.contains(needle),
+            "textarea With Label snippet should mirror the current upstream label example; missing `{needle}`",
+        );
+    }
+
+    for needle in [
         "use fret::{AppComponentCx, UiChild};",
         "shadcn::Textarea::new(value)",
         ".a11y_label(\"Message\")",
@@ -114,7 +130,7 @@ fn textarea_snippets_keep_the_docs_path_examples_and_leaf_surface() {
         );
     }
 
-    let combined = [field, rtl, usage, &follow_ups].join("\n");
+    let combined = [field, with_label, rtl, usage, &follow_ups].join("\n");
     assert!(
         !combined.contains(".children(["),
         "textarea snippets should not widen the leaf control into a generic children API",
@@ -140,14 +156,15 @@ fn textarea_diag_scripts_cover_docs_path_and_label_follow_up() {
 
     for needle in [
         "\"ui-gallery-textarea-demo\"",
+        "\"ui-gallery-textarea-with-label\"",
+        "\"ui-gallery-textarea-with-text\"",
+        "\"ui-gallery-textarea-button\"",
+        "\"ui-gallery-textarea-api-reference-content\"",
         "\"ui-gallery-textarea-field\"",
         "\"ui-gallery-textarea-disabled\"",
         "\"ui-gallery-textarea-invalid\"",
         "\"ui-gallery-textarea-required\"",
-        "\"ui-gallery-textarea-button\"",
         "\"ui-gallery-textarea-rtl\"",
-        "\"ui-gallery-textarea-api-reference-content\"",
-        "\"ui-gallery-textarea-with-text\"",
         "\"ui-gallery-textarea-label-content\"",
         "\"ui-gallery-textarea-docs-screenshot\"",
     ] {

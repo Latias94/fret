@@ -1608,8 +1608,8 @@ Update on 2026-03-13 (page/docs teaching drift cleanup):
   `src/ui/snippets/button_group/api_reference.rs`
   now exports `basic_button_group(...)`, `button_group_with_separator(...)`, and
   `button_group_with_text(...) -> impl IntoUiElement<H> + use<H>`;
-  `src/ui/snippets/toggle_group/size.rs`
-  now uses `group(...) -> impl IntoUiElement<H> + use<H>`;
+  `src/ui/snippets/toggle_group/{single,small,large}.rs`
+  now keep the current split size examples off raw landed returns;
   `src/ui/snippets/drawer/demo.rs`
   now uses `goal_adjust_button(...)` and `goal_chart(...) -> impl IntoUiElement<H> + use<H>`;
   `src/ui/snippets/drawer/{responsive_dialog,sides,scrollable_content}.rs`

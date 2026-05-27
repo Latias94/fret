@@ -795,16 +795,33 @@ The harness-hardening seed covers:
 - interaction diagnostics: provider shortcut toggle, controlled open sync, mobile sheet Escape
   focus restore, mobile controlled/shortcut paths, menu-button chrome fill, and AppSidebar
   dropdown relation/action state are represented by existing scripts and packet evidence.
-- explicit hardening queues: wasm desktop `open` cookie persistence is now implemented and tested,
-  but the audit still records full React API-shape and the residual peer/group/data-* class-state
-  matrix as incomplete, so the matrix must not claim `regression_locked` yet.
+- explicit hardening queues at seed time: wasm desktop `open` cookie persistence was implemented and
+  tested, but the audit still recorded full React API-shape and residual peer/group/data-* class-state
+  parity as incomplete, so the seed did not claim `regression_locked`.
 
-The matrix row now carries `SRC`, `UP-DOM`, `LAYOUT`, `SEM`, `TEXT`, `BEHAV`, and `RESP`; its current
-state-depth signals are `HOV`, `FOCUS-VIS`, `OPEN`, `KEY`, `MOB`, `RTL`, `TEXT-MET`, and `PAINT`,
-with `Missing depth = ok` and `Next gap = state_depth_model_satisfied`. Queue counts are now
-`repair=0`, `hardening=1`, and `gate=1`. The next machine-actionable gap is to close or split the
-remaining React API-shape / peer/group/data-* class-state hardening lane before promoting Sidebar to
-`regression_locked`.
+At seed time the matrix row carried `SRC`, `UP-DOM`, `LAYOUT`, `SEM`, `TEXT`, `BEHAV`, and `RESP`;
+state-depth signals were `HOV`, `FOCUS-VIS`, `OPEN`, `KEY`, `MOB`, `RTL`, `TEXT-MET`, and `PAINT`,
+with `Missing depth = ok` and `Next gap = state_depth_model_satisfied`. Seed queue counts were
+`repair=0`, `hardening=1`, and `gate=1`; the closure below removes that remaining runtime
+hardening queue.
+
+### Sidebar Regression-Lock Closure
+
+`sidebar.docs-path.desktop-mobile` is now promoted from `harness_hardening` to `regression_locked`.
+The closure keeps the prior provider/mobile/rail/menu evidence and adds the last runtime-observable
+badge class-state gate:
+
+- upstream truth: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/sidebar.tsx`
+  defines `SidebarMenuBadge` with `pointer-events-none`, absolute inline-end placement, active-peer
+  foreground, and tabular text styling.
+- recipe closure: `SidebarMenuBadge` now wraps the badge paint surface in `HitTestGate(false)`, so
+  the badge is transparent to hit-testing while its layout, text, and paint remain present.
+- focused gate: `sidebar_menu_badge_is_hit_test_transparent_like_shadcn_pointer_events_none`,
+  `sidebar_menu_action_and_badge_anchor_to_inline_end_in_rtl`, and
+  `sidebar_menu_badge_uses_shared_compact_tabular_readout_role` pass together.
+- packet closure: `sidebar_agent_packet_p0_v1.json` now has `repair=0`, `hardening=0`, and `gate=0`.
+  Full React DOM/data-slot/class-name and API-shape one-to-one parity remains a non-blocking
+  portability note instead of a Fret runtime hardening queue.
 
 ## Interpretation
 
@@ -1627,6 +1644,246 @@ screenshots.
 - `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
   regenerated JSON/Markdown artifacts.
 
+2026-05-26 Label regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/label_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Label diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/label`.
+- `python -m json.tool tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json | Out-Null`:
+  PASS.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/WORKSTREAM.json | Out-Null`:
+  PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\pages\label.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-kit --lib --status-level fail label_for_disabled_control_uses_half_opacity label_for_control_click_invokes_registered_control_action_inside_ancestor_pressable`:
+  PASS, 2 tests passed and 578 skipped after an initial compile timeout was allowed to finish
+  naturally before a visible rerun.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail label`: PASS, 72 tests passed and
+  1231 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail label_demo`:
+  PASS, 1 test passed and 150 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_misc_targeted --status-level fail`:
+  PASS, 1 test passed.
+- `cargo nextest run -p fret-ui-shadcn --test input_label_focus --test textarea_label_focus --status-level fail`:
+  PASS, 3 tests passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail label`:
+  PASS, 15 tests passed and 363 skipped after an initial compile timeout was allowed to finish
+  naturally before a visible rerun.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json | Out-Null`:
+  PASS.
+- Matrix summary: 41 `regression_locked`, 1 `harness_hardening`, 12 `inventory_only`, and 5
+  `not_in_harness`.
+- Label row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `DIS, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+- `python tools/check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files indexed.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.
+
+2026-05-26 Radio Group regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/radio_group_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Radio Group diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/radio-group`.
+- `python -m json.tool tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json | Out-Null`:
+  PASS.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/WORKSTREAM.json | Out-Null`:
+  PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 ecosystem\fret-ui-shadcn\src\dropdown_menu.rs apps\fret-ui-gallery\src\ui\pages\radio_group.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail radio_group`: PASS, 20 tests
+  passed and 1283 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail radio_group`:
+  PASS, 1 test passed and 150 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail radio_group_demo`:
+  PASS, 2 tests passed and 74 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail dropdown_menu_radio_group`:
+  PASS, 1 test passed and 34 skipped after fixing DropdownMenuLabel to use the source-aligned
+  `text-sm font-medium` popover-foreground section-label role instead of the stale muted
+  `text-xs` group-label role; the previous `top_to_first_item` drift was 3.6667px.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail dropdown_menu_label_element_uses_source_aligned_section_text_role`:
+  PASS, 1 test passed and 1302 skipped.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail radio_group`:
+  PASS, 7 tests passed and 371 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json | Out-Null`:
+  PASS.
+- Matrix summary: 42 `regression_locked`, 1 `harness_hardening`, 11 `inventory_only`, and 5
+  `not_in_harness`.
+- Radio Group row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
+  depth `DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-26 Scroll Area regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/scroll_area_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Scroll Area diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/scroll-area`.
+- `python -m json.tool tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json | Out-Null`:
+  PASS.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/WORKSTREAM.json | Out-Null`:
+  PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 ecosystem\fret-ui-shadcn\src\scroll_area.rs apps\fret-ui-gallery\src\ui\pages\scroll_area.rs apps\fret-ui-gallery\tests\scroll_area_docs_surface.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail scroll_area`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_scroll_geometry_matches_web_fixtures`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_scroll --status-level fail`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail radix_web_scroll_area_scroll_top_delta_matches_fret`:
+  PASS.
+- `cargo nextest run -p fret-ui-gallery --test scroll_area_docs_surface --status-level fail`:
+  PASS.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail scroll_area`:
+  PASS.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json | Out-Null`:
+  PASS.
+- Matrix summary: 43 `regression_locked`, 1 `harness_hardening`, 10 `inventory_only`, and 5
+  `not_in_harness`.
+- Scroll Area row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
+  depth `HOV, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Separator regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/separator_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Separator diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/separator`.
+- `python -m json.tool tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json | Out-Null`:
+  PASS.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/WORKSTREAM.json | Out-Null`:
+  PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\pages\separator.rs apps\fret-ui-gallery\tests\separator_docs_surface.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail separator`: PASS, 19 tests
+  passed and 1284 skipped.
+- `cargo nextest run -p fret-ui-gallery --test separator_docs_surface --status-level fail`: PASS,
+  3 tests passed after an initial parallel run timed out while waiting on cargo package-cache/build
+  locks.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail separator`:
+  PASS, 3 tests passed and 148 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail web_vs_fret_separator_demo_geometry_matches`:
+  PASS, 1 test passed and 75 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json | Out-Null`:
+  PASS.
+- `python tools/check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files indexed.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.
+- Matrix summary: 44 `regression_locked`, 1 `harness_hardening`, 9 `inventory_only`, and 5
+  `not_in_harness`.
+- Separator row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
+  depth `MOB, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-26 Kbd regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Kbd diagnostic JSON scripts: PASS for all JSON scripts under `tools/diag-scripts/ui-gallery/kbd`.
+- `python -m json.tool tools/parity-discovery/manifests/shadcn_parity_coverage_v2.json | Out-Null`:
+  PASS.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/WORKSTREAM.json | Out-Null`:
+  PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 --check apps\fret-ui-gallery\src\ui\pages\kbd.rs apps\fret-ui-gallery\tests\ui_authoring_surface_default_app.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail kbd`: PASS, 8 tests passed and
+  1295 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail kbd`:
+  PASS, 4 tests passed and 147 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_kbd --status-level fail`: PASS, 1 test
+  passed.
+- `cargo nextest run -p fret-ui-shadcn --test fret_kbd_tooltip_slot --status-level fail fret_kbd_in_tooltip_content_overrides_bg_and_fg`:
+  PASS, 1 test passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail kbd`:
+  PASS, 4 tests passed and 373 skipped after an initial compile timeout was allowed to finish
+  naturally before a visible rerun.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/shadcn_component_harness_matrix_v1.json | Out-Null`:
+  PASS.
+- Matrix summary: 40 `regression_locked`, 1 `harness_hardening`, 13 `inventory_only`, and 5
+  `not_in_harness`.
+- Kbd row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0, hardening=0, gate=0`,
+  `Next gap = state_depth_model_satisfied`.
+- `python tools/check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files indexed.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.
+
+2026-05-26 Empty regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/empty_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Empty diagnostic JSON scripts: PASS for the demo action-state suite manifest plus all JSON
+  scripts under `tools/diag-scripts/ui-gallery/empty`.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail empty`: PASS, 12 tests passed and
+  1291 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test empty_responsive_padding --status-level fail`: PASS,
+  1 test passed.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail empty`:
+  PASS, 6 tests passed and 145 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_empty --status-level fail`:
+  PASS, 1 test passed.
+- `cargo nextest run -p fret-ui-gallery --test empty_docs_surface --status-level fail`: PASS, 3
+  tests passed.
+- `cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_empty_demo_keeps_upstream_action_row_and_link_separation`:
+  PASS, 1 test passed and 111 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool` checks for the Empty packet, generated matrix JSON, `WORKSTREAM.json`, the
+  coverage manifest, and promoted Empty diagnostic scripts: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `python tools/check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files indexed.
+- Matrix summary: 38 `regression_locked`, 1 `harness_hardening`, 15 `inventory_only`, and 5
+  `not_in_harness`.
+- Empty row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `DRAG, KEY, MOB, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0, hardening=0,
+  gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-26 Item regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/item_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Item diagnostic JSON scripts: PASS for the demo action-state suite, link action-state suite, and
+  all JSON scripts under `tools/diag-scripts/ui-gallery/item`.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail item`: PASS, 113 tests passed and
+  1190 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail item`:
+  PASS, 13 tests passed and 138 skipped.
+- `cargo nextest run -p fret-ui-gallery --test item_docs_surface --status-level fail`: PASS, 5 tests
+  passed.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool` checks for the Item packet, generated matrix JSON, `WORKSTREAM.json`, the
+  coverage manifest, and promoted Item diagnostic scripts: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `python tools/check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files indexed.
+- Matrix summary: 39 `regression_locked`, 1 `harness_hardening`, 14 `inventory_only`, and 5
+  `not_in_harness`.
+- Item row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `HOV, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0,
+  hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
 2026-05-26 Collapsible regression-lock validation:
 
 - `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/collapsible_agent_packet_p0_v1.json | Out-Null`:
@@ -1670,3 +1927,378 @@ screenshots.
   PASS.
 - `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
   regenerated JSON/Markdown artifacts.
+
+2026-05-26 Command regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/command_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Command diagnostic JSON scripts: PASS for the command suite manifest plus all JSON scripts under
+  `tools/diag-scripts/ui-gallery/command`.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail command`: PASS, 75 tests passed
+  and 1228 skipped. Existing `fret-ui` warnings remained: unexpected cfg
+  `unstable-retained-bridge` and unused `current_effective_opacity`.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_command_demo`:
+  PASS, 1 test passed and 150 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome --status-level fail command_dialog`:
+  PASS, 1 test passed and 22 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail web_vs_fret_misc_overlays_command_dialog_cases_match_web_fixtures`:
+  PASS, 1 test passed and 34 skipped. This dedicated Command gate avoids the unrelated full
+  misc-overlays tooltip failure while still covering dialog centering, input/listbox heights,
+  option heights, option insets, and tight viewport variants.
+- `cargo nextest run -p fret-ui-gallery --test command_page_contract --test command_diag_surface --test ui_authoring_surface_default_app --status-level fail command`:
+  PASS, 14 tests passed and 370 skipped.
+- `rustfmt --edition 2024 --check ecosystem/fret-ui-shadcn/src/command.rs ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement.rs ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_placement/misc_overlays/fixtures.rs ecosystem/fret-ui-shadcn/tests/web_vs_fret_overlay_chrome/command_dialog.rs`:
+  PASS.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool` checks for the generated matrix JSON, `WORKSTREAM.json`, the Command packet,
+  the coverage manifest, and promoted Command diagnostic scripts: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `python tools/check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files indexed.
+- Matrix summary: 37 `regression_locked`, 1 `harness_hardening`, 16 `inventory_only`, and 5
+  `not_in_harness`.
+- Command row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0,
+  hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.
+
+2026-05-27 Skeleton regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/skeleton_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Skeleton diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/skeleton`.
+- `python -m json.tool` checks for the coverage manifest and `WORKSTREAM.json`: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail skeleton`: PASS, 5 tests passed
+  and 1298 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail skeleton`:
+  PASS, 2 tests passed and 149 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test reduced_motion_continuous_frames --status-level fail skeleton_respects_reduced_motion_and_does_not_request_frames`:
+  PASS, 1 test passed and 1 skipped after waiting on cargo locks.
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_misc_targeted --status-level fail shadcn_misc_goldens_are_targeted_gates`:
+  PASS, 1 test passed.
+- `cargo nextest run -p fret-ui-gallery --test skeleton_docs_surface --status-level fail`: PASS, 3
+  tests passed after waiting on cargo locks.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail skeleton`:
+  PASS, 3 tests passed and 375 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- Matrix summary: 45 `regression_locked`, 1 `harness_hardening`, 8 `inventory_only`, and 5
+  `not_in_harness`.
+- Skeleton row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
+  depth `RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0, hardening=0, gate=0`,
+  `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Spinner regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/spinner_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Spinner diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/spinner`.
+- `python -m json.tool` checks for the coverage manifest and `WORKSTREAM.json`: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail spinner`: PASS, 3 tests passed
+  and 1300 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail spinner`:
+  PASS, 13 tests passed and 138 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test reduced_motion_continuous_frames --status-level fail spinner_respects_reduced_motion_and_does_not_request_frames`:
+  PASS, 1 test passed and 1 skipped after waiting on cargo locks.
+- `cargo nextest run -p fret-a11y-accesskit --lib --status-level fail maps_extended_semantics_roles_to_accesskit_roles`:
+  PASS, 1 test passed and 22 skipped.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail spinner`:
+  PASS, 3 tests passed and 375 skipped after waiting on cargo locks.
+- `cargo nextest run -p fret-ui-gallery --test spinner_docs_surface --status-level fail`: PASS, 3
+  tests passed after correcting rustfmt-stable snippet assertions for the new Color section.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- Matrix summary: 46 `regression_locked`, 1 `harness_hardening`, 7 `inventory_only`, and 5
+  `not_in_harness`.
+- Spinner row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `DIS, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues `repair=0, hardening=0, gate=0`,
+  `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Textarea regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/textarea_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Textarea diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/textarea`.
+- `python -m json.tool` checks for the coverage manifest and `WORKSTREAM.json`: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail textarea`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail textarea`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail textarea`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_textarea --status-level fail`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --test textarea_label_focus --status-level fail`: PASS.
+- `cargo nextest run -p fret-ui-gallery --test textarea_docs_surface --status-level fail`: PASS.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail textarea`:
+  PASS.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- Matrix summary: 47 `regression_locked`, 1 `harness_hardening`, 6 `inventory_only`, and 5
+  `not_in_harness`.
+- Textarea row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
+  depth `DIS, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Toggle regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Toggle diagnostic JSON script: PASS for
+  `tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-docs-smoke.json`.
+- `python -m json.tool` checks for the coverage manifest and `WORKSTREAM.json`: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail toggle`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_toggle --status-level fail toggle_`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail toggle`:
+  PASS.
+- `cargo nextest run -p fret-ui-gallery --test toggle_docs_surface --status-level fail`: PASS.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail toggle`:
+  PASS.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- Matrix summary: 48 `regression_locked`, 1 `harness_hardening`, 5 `inventory_only`, and 5
+  `not_in_harness`.
+- Toggle row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `DIS, HOV, FOCUS-VIS, PRESS, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Toggle Group regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_group_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- `python -m json.tool tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-docs-smoke.json | Out-Null`:
+  PASS.
+- `python -m json.tool` checks for the coverage manifest, `WORKSTREAM.json`, and generated matrix
+  JSON: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail toggle_group`: PASS, 13 tests
+  passed and 1291 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_toggle --status-level fail toggle_group`:
+  PASS, 6 tests passed and 6 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail toggle_group`:
+  PASS, 1 test passed and 75 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_toggle_group_pressed_semantics`:
+  PASS, 1 test passed and 31 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail toggle_group`:
+  PASS, 1 test passed and 41 skipped.
+- `cargo nextest run -p fret-ui-gallery --test toggle_group_docs_surface --status-level fail`:
+  PASS, 3 tests passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail toggle_group`:
+  PASS, 4 tests passed and 373 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python tools/check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files indexed.
+- Matrix summary: 49 `regression_locked`, 1 `harness_hardening`, 4 `inventory_only`, and 5
+  `not_in_harness`.
+- Toggle Group row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`,
+  depth `DIS, HOV, FOCUS-VIS, PRESS, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.
+
+2026-05-27 Slider regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/slider_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Slider diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/slider`.
+- `python -m json.tool` checks for the coverage manifest and generated matrix JSON: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail slider`: PASS, 18 tests passed
+  and 1286 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail slider`:
+  PASS, 1 test passed and 150 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_field_geometry_matches_web_fixtures`:
+  PASS, 1 test passed and 150 skipped. This fixture runner includes the `field-slider` track
+  geometry and thumb inset cases.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail slider`:
+  PASS, 1 test passed and 75 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_slider_numeric_semantics`:
+  PASS, 1 test passed and 31 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail slider`:
+  PASS, 1 test passed and 41 skipped.
+- `cargo nextest run -p fret-ui-gallery --test slider_docs_surface --status-level fail`: PASS, 5
+  tests passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail slider`:
+  PASS, 5 tests passed and 372 skipped.
+- `cargo nextest run -p fret-ui-gallery --lib --status-level fail gallery_slider_vertical_examples_keep_upstream_recipe_min_height_floor`:
+  PASS, 1 test passed and 111 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- Matrix summary: 50 `regression_locked`, 1 `harness_hardening`, 3 `inventory_only`, and 5
+  `not_in_harness`.
+- Slider row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `DIS, HOV, FOCUS-VIS, DRAG, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Sonner regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sonner_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Sonner diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/sonner`.
+- `python -m json.tool` checks for the coverage manifest, generated matrix JSON, and
+  `WORKSTREAM.json`: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/pages/sonner.rs apps/fret-ui-gallery/tests/sonner_docs_surface.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-kit --lib --status-level fail window_overlays::toast`: PASS, 15
+  tests passed and 565 skipped.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail sonner`: PASS, 7 tests passed
+  and 1297 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail sonner`:
+  PASS, 2 tests passed and 149 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_placement --status-level fail sonner`:
+  PASS, 1 test passed and 34 skipped.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_overlay_chrome --status-level fail sonner`:
+  PASS, 2 tests passed and 21 skipped.
+- `cargo nextest run -p fret-ui-gallery --test sonner_docs_surface --status-level fail`: PASS, 3
+  tests passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail sonner`:
+  PASS, 3 tests passed and 374 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python tools/check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files indexed.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.
+- Matrix summary: 51 `regression_locked`, 1 `harness_hardening`, 2 `inventory_only`, and 5
+  `not_in_harness`.
+- Sonner row spot check: `regression_locked`, axes
+  `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP`, depth
+  `HOV, DRAG, OPEN, MOB, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Switch regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/switch_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Switch diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/switch`.
+- `python -m json.tool` checks for the coverage manifest, generated matrix JSON, and
+  `WORKSTREAM.json`: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/pages/switch.rs apps/fret-ui-gallery/tests/switch_docs_surface.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs ecosystem/fret-ui-shadcn/src/switch.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-kit --lib --status-level fail switch`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail switch`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail switch`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail web_vs_fret_layout_field_geometry_matches_web_fixtures`:
+  PASS. This fixture runner includes the `field-switch` geometry case.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail form_rhf_switch`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail form_tanstack_switch`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail switch`:
+  PASS.
+- `cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail switch`:
+  PASS.
+- `cargo nextest run -p fret-ui-gallery --test switch_docs_surface --status-level fail`: PASS.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail switch`:
+  PASS.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python tools/check_workstream_catalog.py`: PASS.
+- `git diff --check`: PASS for whitespace; Git reported only CRLF-to-LF normalization warnings for
+  regenerated JSON/Markdown artifacts.
+- Matrix summary: 52 `regression_locked`, 1 `harness_hardening`, 1 `inventory_only`, and 5
+  `not_in_harness`.
+- Switch row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `DIS, HOV, FOCUS-VIS, PRESS, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Tabs regression-lock validation:
+
+- `python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/tabs_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- Tabs diagnostic JSON scripts: PASS for all JSON scripts under
+  `tools/diag-scripts/ui-gallery/tabs`.
+- `python -m json.tool` checks for the coverage manifest, generated matrix JSON, and
+  `WORKSTREAM.json`: PASS.
+- `python -m py_compile tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS.
+- `rustfmt --edition 2024 --check apps/fret-ui-gallery/src/ui/pages/tabs.rs apps/fret-ui-gallery/src/ui/snippets/tabs/rtl.rs apps/fret-ui-gallery/tests/tabs_docs_surface.rs apps/fret-ui-gallery/tests/ui_authoring_surface_default_app.rs`:
+  PASS.
+- `cargo nextest run -p fret-ui-kit --lib --status-level fail tabs`: PASS, 6 tests passed and 574
+  skipped.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail tabs`: PASS, 36 tests passed and
+  1269 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test tabs_keyboard_navigation --status-level fail`: PASS,
+  2 tests passed.
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_layout --status-level fail tabs`:
+  PASS, 6 tests passed and 145 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_misc_targeted --status-level fail shadcn_misc_goldens_are_targeted_gates`:
+  PASS, 1 test passed.
+- `cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_tabs_default`:
+  PASS, 1 test passed and 31 skipped.
+- `cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail tabs`:
+  PASS, 1 test passed and 41 skipped.
+- `cargo nextest run -p fret-ui-gallery --test tabs_docs_surface --status-level fail`: PASS, 3
+  tests passed.
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail tabs`:
+  PASS, 13 tests passed and 364 skipped.
+- `python tools/parity-discovery/shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python tools/check_workstream_catalog.py`: PASS.
+- `git diff --check`: PASS; Git reported only CRLF-to-LF normalization warnings for generated
+  matrix/manifest files.
+- Matrix summary: 53 `regression_locked`, 1 `harness_hardening`, 0 `inventory_only`, and 5
+  `not_in_harness`.
+- Tabs row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV`, depth
+  `DIS, FOCUS-VIS, OPEN, KEY, RTL, TEXT-MET, PAINT`, `Missing depth = ok`, queues
+  `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 Sidebar regression-lock validation:
+
+- `rustfmt --edition 2024 --check ecosystem\fret-ui-shadcn\src\sidebar.rs`: PASS.
+- `cargo nextest run -p fret-ui-shadcn --lib sidebar_menu_badge_is_hit_test_transparent_like_shadcn_pointer_events_none sidebar_menu_action_and_badge_anchor_to_inline_end_in_rtl sidebar_menu_badge_uses_shared_compact_tabular_readout_role --status-level fail`:
+  PASS, 3 tests passed and 1303 skipped.
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail sidebar`: PASS, 83 tests passed
+  and 1223 skipped.
+- `python -m json.tool docs\workstreams\shadcn-component-parity-matrix-v1\artifacts\sidebar_agent_packet_p0_v1.json | Out-Null`:
+  PASS.
+- `python -m json.tool tools\parity-discovery\manifests\shadcn_parity_coverage_v2.json | Out-Null`:
+  PASS.
+- `python -m json.tool docs\workstreams\shadcn-component-parity-matrix-v1\WORKSTREAM.json | Out-Null`:
+  PASS.
+- `python tools\parity-discovery\shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- `python -m json.tool docs\workstreams\shadcn-component-parity-matrix-v1\artifacts\shadcn_component_harness_matrix_v1.json | Out-Null`:
+  PASS.
+- Matrix summary: 54 `regression_locked`, 0 `harness_hardening`, 0 `inventory_only`, and 5
+  `not_in_harness`.
+- Sidebar row spot check: `regression_locked`, axes `SRC, UP-DOM, LAYOUT, SEM, TEXT, BEHAV, RESP`,
+  depth `HOV, FOCUS-VIS, DRAG, OPEN, KEY, MOB, RTL, TEXT-MET, PAINT`, `Missing depth = ok`,
+  queues `repair=0, hardening=0, gate=0`, `Next gap = state_depth_model_satisfied`.
+
+2026-05-27 final audited-deferred/skipped closure validation:
+
+- `python -m py_compile tools\parity-discovery\shadcn_component_harness_matrix.py`: PASS.
+- Packet JSON validation for `carousel_agent_packet_p0_v1.json`, `chart_agent_packet_p0_v1.json`,
+  `native_select_agent_packet_p0_v1.json`, `toast_agent_packet_p0_v1.json`, and
+  `typography_agent_packet_p0_v1.json`: PASS.
+- Existing diagnostics JSON validation for Carousel, Chart, Native Select, Toast, and Typography
+  evidence folders: PASS.
+- `python tools\parity-discovery\shadcn_component_harness_matrix.py`: PASS, generated the matrix
+  for 59 components.
+- Matrix summary: 54 `regression_locked`, 3 `audited_deferred`, 2 `audited_skipped`, 0
+  `harness_hardening`, 0 `inventory_only`, and 0 `not_in_harness`.
+- Closure row spot checks:
+  - Carousel: `audited_deferred`, `Next gap = resume_when_priority_changes`.
+  - Chart: `audited_deferred`, `Next gap = resume_when_priority_changes`.
+  - Native Select: `audited_deferred`, `Next gap = resume_when_priority_changes`.
+  - Toast: `audited_skipped`, `Next gap = no_component_contract_target`.
+  - Typography: `audited_skipped`, `Next gap = no_component_contract_target`.
+- `python tools\check_workstream_catalog.py`: PASS, 473 dedicated directories and 47 standalone
+  markdown files.
+- `git diff --check`: PASS; Git reported only CRLF-to-LF normalization warnings for generated
+  matrix/workstream files.

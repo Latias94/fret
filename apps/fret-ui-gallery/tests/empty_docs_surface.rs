@@ -55,3 +55,19 @@ fn empty_diag_script_gates_demo_action_state() {
         "empty Demo action-state suite should reference the promoted script",
     );
 }
+
+#[test]
+fn empty_page_keeps_upstream_docs_order_before_rtl_follow_up() {
+    let page = include_str!("../src/ui/pages/empty.rs");
+
+    assert!(
+        page.contains(
+            "vec![demo, usage, outline, background, avatar, avatar_group, input_group, api_reference, rtl]"
+        ),
+        "Empty page should keep the upstream docs path through API Reference before the Fret-only RTL follow-up",
+    );
+    assert!(
+        page.contains("`RTL` remains an explicit Fret follow-up."),
+        "Empty page should label RTL as a Fret follow-up because current upstream Empty docs do not include an RTL example",
+    );
+}

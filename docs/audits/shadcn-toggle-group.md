@@ -8,15 +8,17 @@ Upstream sources:
 - shadcn/ui: https://github.com/shadcn-ui/ui
 
 See `docs/repo-ref.md` for the optional local snapshot policy and pinned SHAs.
-This audit compares Fret's shadcn-aligned `ToggleGroup` against the upstream shadcn/ui v4 base docs,
-base examples, and the current gallery/docs surface.
+This audit compares Fret's shadcn-aligned `ToggleGroup` against the current shadcn/ui v4
+new-york-v4 docs path, recipe source, Radix/Base UI semantics references, and the current
+gallery/docs surface.
 
 ## Upstream references (source of truth)
 
-- Docs page: `repo-ref/ui/apps/v4/content/docs/components/base/toggle-group.mdx`
-- Component implementation: `repo-ref/ui/apps/v4/examples/base/ui/toggle-group.tsx`
-- Example compositions: `repo-ref/ui/apps/v4/examples/base/toggle-group-demo.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-outline.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-sizes.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-spacing.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-vertical.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-disabled.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-font-weight-selector.tsx`, `repo-ref/ui/apps/v4/examples/base/toggle-group-rtl.tsx`
-- Underlying primitives: Base UI `@base-ui/react/toggle-group` + `@base-ui/react/toggle`
+- Docs page: `repo-ref/ui/apps/v4/content/docs/components/toggle-group.mdx`
+- Component implementation: `repo-ref/ui/apps/v4/registry/new-york-v4/ui/toggle-group.tsx`
+- Example compositions: `repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-group-spacing.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-group-outline.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-group-single.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-group-sm.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-group-lg.tsx`, `repo-ref/ui/apps/v4/registry/new-york-v4/examples/toggle-group-disabled.tsx`
+- Tracked upstream goldens: `goldens/shadcn-web/v4/new-york-v4/toggle-group-demo.json`, `goldens/shadcn-web/v4/new-york-v4/toggle-group-outline.json`, `goldens/shadcn-web/v4/new-york-v4/toggle-group-single.json`, `goldens/shadcn-web/v4/new-york-v4/toggle-group-sm.json`, `goldens/shadcn-web/v4/new-york-v4/toggle-group-lg.json`, `goldens/shadcn-web/v4/new-york-v4/toggle-group-disabled.json`, and `goldens/shadcn-web/v4/new-york-v4/toggle-group-spacing.json`
+- Underlying primitives: Radix `@radix-ui/react-toggle-group`, Base UI `@base-ui/react/toggle-group`, and Fret `fret_ui_kit::primitives::toggle_group`
 
 ## Fret implementation
 
@@ -49,15 +51,19 @@ base examples, and the current gallery/docs surface.
 
 - Pass: Selection semantics, roving focus, segmented borders, and pressed-state chrome remain recipe-owned.
 - Pass: Item-root custom layout/chrome (`w/h`, radius) and surrounding width/flex negotiation remain caller-owned.
-- Pass: The gallery now mirrors the upstream base Toggle Group docs path first with source-aligned defaults and content: `Demo`, `Usage`, `Outline`, `Size`, `Spacing`, `Vertical`, `Disabled`, `Custom`, `RTL`, and `API Reference`.
-- Pass: The docs-path snippets no longer drift on the demo selection state, outline labels, size rows, spacing content, or disabled styling.
-- Pass: `Children (Fret)`, `Single`, `Small`, `Large`, `Label Association`, `Full Width Items`, and `Flex-1 Items` remain explicit Fret follow-ups after the upstream path.
+- Pass: The gallery now mirrors the current shadcn Toggle Group docs path first with source-aligned defaults and content: `Spacing`, `Usage`, `Outline`, `Single`, `Small`, `Large`, `Disabled`, and `API Reference`.
+- Pass: The docs-path snippets no longer drift on the top spacing preview, outline icon set, split single/small/large examples, or disabled multiple-group styling.
+- Pass: `Demo (Fret)`, `Vertical (Base/Radix)`, `Custom (Fret)`, `RTL (Fret)`, `Children (Fret)`, `Label Association (Fret)`, `Disabled Item Action-State (Fret)`, `Full Width Items (Fret)`, and `Flex-1 Items (Fret)` remain explicit Fret/base-radix follow-ups after the upstream path.
 - Pass: `Children (Fret)` now teaches the helper-based composable-children lane without displacing the simpler docs-path `.items([...])` story.
 - Pass: This work is docs/public-surface parity, not a mechanism-layer fix.
 
 ## Validation
 
-- `cargo nextest run -p fret-ui-gallery toggle_group_`
-- `cargo nextest run -p fret-ui-shadcn toggle_group`
-- `cargo run -p fretboard-dev -- diag run tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-docs-smoke.json --session-auto --launch -- cargo run -p fret-ui-gallery --release`
-- Existing chrome/layout gates: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_control_chrome.rs` (`web_vs_fret_toggle_group_demo_chrome_matches`) and `ecosystem/fret-ui-shadcn/tests/web_vs_fret_toggle.rs` (`toggle-group-*` height cases)
+- `cargo nextest run -p fret-ui-shadcn --lib --status-level fail toggle_group`
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_toggle --status-level fail toggle_group`
+- `cargo nextest run -p fret-ui-shadcn --features web-goldens --test web_vs_fret_control_chrome --status-level fail toggle_group`
+- `cargo nextest run -p fret-ui-shadcn --test snapshots --status-level fail snapshot_toggle_group_pressed_semantics`
+- `cargo nextest run -p fret-ui-shadcn --test radix_web_primitives_state --status-level fail toggle_group`
+- `cargo nextest run -p fret-ui-gallery --test toggle_group_docs_surface --status-level fail`
+- `cargo nextest run -p fret-ui-gallery --test ui_authoring_surface_default_app --status-level fail toggle_group`
+- Diagnostic smoke anchor: `tools/diag-scripts/ui-gallery/toggle/ui-gallery-toggle-group-docs-smoke.json`

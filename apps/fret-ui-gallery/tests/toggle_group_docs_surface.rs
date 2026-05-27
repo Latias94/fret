@@ -7,20 +7,20 @@ fn toggle_group_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/toggle_group.rs");
 
     for needle in [
-        "Reference stack for this page: shadcn Toggle Group docs, the default registry recipe, Radix Primitives Toggle Group, and Base UI Toggle Group.",
-        "The upstream docs-path examples come from the default shadcn demo/outline/sm/lg/spacing set plus the vertical, font-weight-selector, and RTL examples.",
-        "toggle-group-demo.tsx",
+        "Reference stack for this page: current shadcn Toggle Group docs, the `new-york-v4` registry recipe, Radix Primitives Toggle Group, and Base UI Toggle Group.",
+        "Current upstream docs path: top `ComponentPreview` uses `toggle-group-spacing`, then `Usage`, `Outline`, `Single`, `Small`, `Large`, `Disabled`, `Spacing`, and `API Reference`; this gallery keeps one `Spacing` section for that repeated preview/example.",
+        "toggle-group.tsx",
+        "toggle-group-spacing.tsx",
         "toggle-group-outline.tsx",
+        "toggle-group-single.tsx",
         "toggle-group-sm.tsx",
         "toggle-group-lg.tsx",
-        "toggle-group-spacing.tsx",
-        "toggle-group-vertical.tsx",
-        "toggle-group-font-weight-selector.tsx",
-        "toggle-group-rtl.tsx",
+        "toggle-group-disabled.tsx",
+        "`Demo`, `Vertical`, `Custom`, and `RTL` are explicit Fret/base-radix follow-ups rather than current new-york-v4 docs-path sections.",
         "`fret_ui_kit::primitives::toggle_group` already covers the mechanism lane",
         "No extra root `children([...])` or generic `compose()` API is warranted on the default lane because the helper family already covers composable item assembly without widening the recipe contract.",
-        "Preview now mirrors the upstream Toggle Group docs path first: `Demo`, `Usage`, `Outline`, `Size`, `Spacing`, `Vertical`, `Disabled`, `Custom`, `RTL`, and `API Reference`.",
-        "Focused Fret follow-ups stay afterward: `Children (Fret)`, `Single (Fret)`, `Small (Fret)`, `Large (Fret)`, `Label Association (Fret)`, `Full Width Items (Fret)`, `Flex-1 Items (Fret)`, and `Notes`.",
+        "Preview now mirrors the current Toggle Group docs path first: `Spacing`, `Usage`, `Outline`, `Single`, `Small`, `Large`, `Disabled`, and `API Reference`.",
+        "Focused follow-ups stay afterward: `Demo (Fret)`, `Vertical (Base/Radix)`, `Custom (Fret)`, `RTL (Fret)`, `Children (Fret)`, `Label Association (Fret)`, `Disabled Item Action-State (Fret)`, `Full Width Items (Fret)`, `Flex-1 Items (Fret)`, and `Notes`.",
     ] {
         assert!(
             source.contains(needle),
@@ -32,21 +32,21 @@ fn toggle_group_page_documents_source_axes_and_children_api_decision() {
     let ordered_sections = normalize_ws(
         r#"
         vec![
-            demo,
+            spacing,
             usage,
             outline,
-            size,
-            spacing,
-            vertical,
-            disabled,
-            custom,
-            rtl,
-            api_reference,
-            children,
             single,
             small,
             large,
+            disabled,
+            api_reference,
+            demo,
+            vertical,
+            custom,
+            rtl,
+            children,
             label,
+            disabled_item_action_state,
             full_width_items,
             stretch,
             notes,
@@ -57,20 +57,29 @@ fn toggle_group_page_documents_source_axes_and_children_api_decision() {
         normalized.contains(&ordered_sections),
         "toggle_group page should keep the docs-path sections before the Fret follow-ups",
     );
+
+    assert!(
+        !source.contains("DocSection::build(cx, \"Size\", size)"),
+        "toggle_group page should not keep the old aggregate Size docs section after splitting current upstream Single/Small/Large examples",
+    );
 }
 
 #[test]
 fn toggle_group_snippets_stay_copyable_and_upstream_example_aligned() {
     let demo = include_str!("../src/ui/snippets/toggle_group/demo.rs");
     let usage = include_str!("../src/ui/snippets/toggle_group/usage.rs");
-    let size = include_str!("../src/ui/snippets/toggle_group/size.rs");
+    let outline = include_str!("../src/ui/snippets/toggle_group/outline.rs");
     let spacing = include_str!("../src/ui/snippets/toggle_group/spacing.rs");
+    let single = include_str!("../src/ui/snippets/toggle_group/single.rs");
+    let small = include_str!("../src/ui/snippets/toggle_group/small.rs");
+    let large = include_str!("../src/ui/snippets/toggle_group/large.rs");
+    let disabled = include_str!("../src/ui/snippets/toggle_group/disabled.rs");
     let rtl = include_str!("../src/ui/snippets/toggle_group/rtl.rs");
     let children = include_str!("../src/ui/snippets/toggle_group/children.rs");
     let label = include_str!("../src/ui/snippets/toggle_group/label.rs");
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "use fret_ui_shadcn::{facade as shadcn, prelude::*};",
         ".variant(shadcn::ToggleVariant::Outline)",
         "ToggleGroup::multiple_uncontrolled(std::iter::empty::<&'static str>())",
@@ -87,9 +96,9 @@ fn toggle_group_snippets_stay_copyable_and_upstream_example_aligned() {
 
     for needle in [
         "ToggleGroup::single_uncontrolled(Option::<&'static str>::None)",
-        "ToggleGroupItem::new(\"a\", [cx.text(\"A\")])",
-        "ToggleGroupItem::new(\"b\", [cx.text(\"B\")])",
-        "ToggleGroupItem::new(\"c\", [cx.text(\"C\")])",
+        "ToggleGroupItem::new(\"a\", [decl_text::text_button_label(cx, \"A\")])",
+        "ToggleGroupItem::new(\"b\", [decl_text::text_button_label(cx, \"B\")])",
+        "ToggleGroupItem::new(\"c\", [decl_text::text_button_label(cx, \"C\")])",
         ".test_id(\"ui-gallery-toggle-group-usage\")",
     ] {
         assert!(
@@ -99,15 +108,16 @@ fn toggle_group_snippets_stay_copyable_and_upstream_example_aligned() {
     }
 
     for needle in [
-        ".size(shadcn::ToggleSize::Sm)",
-        ".size(shadcn::ToggleSize::Lg)",
-        "ToggleGroup::single_uncontrolled(Option::<&'static str>::None)",
+        ".variant(shadcn::ToggleVariant::Outline)",
         "ToggleGroup::multiple_uncontrolled(std::iter::empty::<&'static str>())",
-        ".test_id(\"ui-gallery-toggle-group-size\")",
+        "IconId::new_static(\"lucide.bold\")",
+        "IconId::new_static(\"lucide.italic\")",
+        "IconId::new_static(\"lucide.underline\")",
+        ".test_id(\"ui-gallery-toggle-group-outline\")",
     ] {
         assert!(
-            size.contains(needle),
-            "toggle_group size snippet should keep the upstream small/large icon-only lane; missing `{needle}`",
+            outline.contains(needle),
+            "toggle_group outline snippet should mirror the current upstream multiple icon-only outline example; missing `{needle}`",
         );
     }
 
@@ -123,6 +133,51 @@ fn toggle_group_snippets_stay_copyable_and_upstream_example_aligned() {
         assert!(
             spacing.contains(needle),
             "toggle_group spacing snippet should keep the upstream icon-plus-label lane; missing `{needle}`",
+        );
+    }
+
+    for (source, size_marker, test_id, label) in [
+        (
+            single,
+            "ToggleGroup::single_uncontrolled(Option::<&'static str>::None)",
+            ".test_id(\"ui-gallery-toggle-group-single\")",
+            "Single",
+        ),
+        (
+            small,
+            ".size(shadcn::ToggleSize::Sm)",
+            ".test_id(\"ui-gallery-toggle-group-small\")",
+            "Small",
+        ),
+        (
+            large,
+            ".size(shadcn::ToggleSize::Lg)",
+            ".test_id(\"ui-gallery-toggle-group-large\")",
+            "Large",
+        ),
+    ] {
+        for needle in [
+            size_marker,
+            "IconId::new_static(\"lucide.bold\")",
+            "IconId::new_static(\"lucide.italic\")",
+            "IconId::new_static(\"lucide.underline\")",
+            test_id,
+        ] {
+            assert!(
+                source.contains(needle),
+                "toggle_group {label} snippet should mirror the current upstream example; missing `{needle}`",
+            );
+        }
+    }
+
+    for needle in [
+        "ToggleGroup::multiple_uncontrolled(std::iter::empty::<&'static str>())",
+        ".disabled(true)",
+        ".test_id(\"ui-gallery-toggle-group-disabled\")",
+    ] {
+        assert!(
+            disabled.contains(needle),
+            "toggle_group disabled snippet should match the current upstream multiple disabled example; missing `{needle}`",
         );
     }
 
@@ -173,8 +228,10 @@ fn toggle_group_docs_diag_script_covers_docs_path_and_follow_ups() {
         "\"ui-gallery-toggle-group-demo-content\"",
         "\"ui-gallery-toggle-group-usage-content\"",
         "\"ui-gallery-toggle-group-outline-content\"",
-        "\"ui-gallery-toggle-group-size-content\"",
         "\"ui-gallery-toggle-group-spacing-content\"",
+        "\"ui-gallery-toggle-group-single-content\"",
+        "\"ui-gallery-toggle-group-small-content\"",
+        "\"ui-gallery-toggle-group-large-content\"",
         "\"ui-gallery-toggle-group-vertical-content\"",
         "\"ui-gallery-toggle-group-disabled-content\"",
         "\"ui-gallery-toggle-group-custom-content\"",
@@ -182,10 +239,8 @@ fn toggle_group_docs_diag_script_covers_docs_path_and_follow_ups() {
         "\"ui-gallery-toggle-group-api-reference-title\"",
         "\"ui-gallery-toggle-group-api-reference-content\"",
         "\"ui-gallery-toggle-group-children-content\"",
-        "\"ui-gallery-toggle-group-single-content\"",
-        "\"ui-gallery-toggle-group-small-content\"",
-        "\"ui-gallery-toggle-group-large-content\"",
         "\"ui-gallery-toggle-group-label-content\"",
+        "\"ui-gallery-toggle-group-disabled-item-action-state-content\"",
         "\"ui-gallery-toggle-group-full-width-items-content\"",
         "\"ui-gallery-toggle-group-stretch-content\"",
         "\"ui-gallery-toggle-group-notes-content\"",
@@ -196,4 +251,9 @@ fn toggle_group_docs_diag_script_covers_docs_path_and_follow_ups() {
             "toggle_group docs diag script should cover the docs path and focused Fret follow-ups; missing `{needle}`",
         );
     }
+
+    assert!(
+        !script.contains("\"ui-gallery-toggle-group-size-content\""),
+        "toggle_group docs diag script should target current upstream Single/Small/Large sections instead of the old aggregate Size section",
+    );
 }

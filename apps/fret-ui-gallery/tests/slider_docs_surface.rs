@@ -7,15 +7,15 @@ fn slider_page_documents_source_axes_and_children_api_decision() {
     let source = include_str!("../src/ui/pages/slider.rs");
 
     for needle in [
-        "Reference stack: shadcn Slider docs on the Radix lane plus the matching Base UI docs.",
-        "Example axis: shadcn slider demo, range, multiple-thumbs, vertical, controlled, disabled, and RTL examples.",
+        "Reference stack: current shadcn Slider docs and new-york-v4 source, with Base/Radix registry examples as secondary references.",
+        "Example axis: current shadcn slider demo and usage first; Base/Radix examples supply range, multiple-thumbs, vertical, controlled, and disabled follow-ups.",
         "Recipe axis: the default shadcn registry slider plus the base and radix registry variants.",
-        "The upstream docs surface intentionally splits the top-of-page preview (`[75]`) from the `Usage` code block (`[33]`), so this page mirrors those two lanes instead of normalizing them to one demo value.",
+        "The current upstream docs surface intentionally splits the top-of-page preview (`[50]`, `w-[60%]`) from the `Usage` code block (`[33]`), so this page mirrors those two lanes instead of normalizing them to one demo value.",
         "Default first-party teaching should prefer `slider(model)`, while `new_controllable(...)` stays as the builder-preserving bridge for the upstream `defaultValue` lane and element-owned state.",
         "generic composable children / `compose()` API",
         "Base UI's `Slider.Root/Label/Value/Control/Track/Indicator/Thumb` family is a useful headless reference, but it belongs to a future `fret-ui-kit`-level surface rather than the `fret-ui-shadcn::Slider` recipe.",
         "Vertical sliders keep the upstream `min-h-44` floor; examples can still pass an explicit height to bound the docs lane, but values below the floor clamp upward unless the caller asks for something taller.",
-        "Preview now mirrors the upstream shadcn/Base UI slider docs path first: `Demo`, `Usage`, `Range`, `Multiple Thumbs`, `Vertical`, `Controlled`, `Disabled`, `RTL`, and `API Reference`.",
+        "Preview mirrors the current shadcn Slider docs path first: `Demo` and `Usage`.",
     ] {
         assert!(
             source.contains(needle),
@@ -44,7 +44,7 @@ fn slider_page_documents_source_axes_and_children_api_decision() {
     );
     assert!(
         normalized.contains(&ordered_sections),
-        "slider page should keep the docs-path sections before the Fret-only follow-ups",
+        "slider page should keep the current docs-path sections before Base/Radix and Fret follow-ups",
     );
 }
 
@@ -57,15 +57,19 @@ fn slider_snippets_stay_copyable_and_upstream_example_aligned() {
     let vertical = include_str!("../src/ui/snippets/slider/vertical.rs");
     let controlled = include_str!("../src/ui/snippets/slider/controlled.rs");
 
-    for needle in ["vec![75.0]", ".a11y_label(\"Slider\")"] {
+    for needle in ["vec![50.0]", ".w_percent(60.0)", ".a11y_label(\"Slider\")"] {
         assert!(
             demo.contains(needle),
             "slider demo snippet should mirror the upstream preview lane; missing `{needle}`",
         );
     }
+    assert!(
+        !demo.contains("vec![75.0]"),
+        "slider demo snippet should not keep the stale upstream preview value"
+    );
 
     for needle in [
-        "use fret::{UiChild, AppComponentCx};",
+        "use fret::{AppComponentCx, UiChild};",
         "use fret_ui_shadcn::facade as shadcn;",
         "let values = cx.local_model_keyed(\"ui-gallery-slider-usage-values\", || vec![33.0]);",
         "shadcn::slider(values)",
@@ -80,14 +84,14 @@ fn slider_snippets_stay_copyable_and_upstream_example_aligned() {
     for needle in ["vec![25.0, 50.0]", ".step(5.0)"] {
         assert!(
             range.contains(needle),
-            "slider range snippet should keep the upstream `[25, 50]` / `step(5)` example; missing `{needle}`",
+            "slider range snippet should keep the Base/Radix `[25, 50]` / `step(5)` example; missing `{needle}`",
         );
     }
 
     for needle in ["vec![10.0, 20.0, 70.0]", ".step(10.0)"] {
         assert!(
             multiple.contains(needle),
-            "slider multiple-thumbs snippet should keep the upstream `[10, 20, 70]` / `step(10)` example; missing `{needle}`",
+            "slider multiple-thumbs snippet should keep the Base/Radix `[10, 20, 70]` / `step(10)` example; missing `{needle}`",
         );
     }
 
@@ -142,7 +146,7 @@ fn slider_docs_diag_script_covers_docs_path_sections() {
     ] {
         assert!(
             script.contains(needle),
-            "slider docs diag script should cover the docs-path sections; missing `{needle}`",
+            "slider docs diag script should cover current docs-path and follow-up sections; missing `{needle}`",
         );
     }
 }
@@ -199,7 +203,7 @@ fn slider_vertical_snippet_and_page_keep_example_height_and_recipe_floor_split()
         "slider page should keep the recipe-owned vertical floor note",
     );
     assert!(
-        page.contains("the example still passes `h-40` in the call site"),
-        "slider page should keep the explicit example-height vs recipe-floor split",
+        page.contains("Base/Radix two-slider vertical example"),
+        "slider page should keep the Base/Radix example-height vs recipe-floor split",
     );
 }

@@ -18,6 +18,10 @@ fn canonicalize_rust_fragment(fragment: &str) -> String {
     }
 }
 
+fn display_path_key(path: &std::path::Path) -> String {
+    path.display().to_string().replace('\\', "/")
+}
+
 fn assert_curated_default_app_paths(
     relative_paths: &[&str],
     expected_patterns: &[&str],
@@ -2148,7 +2152,7 @@ fn input_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Align / block-end\", align_block_end)",
             "DocSection::build(cx, \"Icon\", icon)",
             "DocSection::build(cx, \"Text\", text)",
-            "DocSection::build(cx, \"Button\", button)",
+            "DocSection::build(cx, \"With Button\", button)",
             "DocSection::build(cx, \"Kbd\", kbd)",
             "DocSection::build(cx, \"Dropdown\", dropdown)",
             "DocSection::build(cx, \"Spinner\", spinner)",
@@ -2169,7 +2173,7 @@ fn input_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Align / block-end\", align_block_end)",
             "DocSection::new(\"Icon\", icon)",
             "DocSection::new(\"Text\", text)",
-            "DocSection::new(\"Button\", button)",
+            "DocSection::new(\"With Button\", button)",
             "DocSection::new(\"Kbd\", kbd)",
             "DocSection::new(\"Dropdown\", dropdown)",
             "DocSection::new(\"Spinner\", spinner)",
@@ -2485,6 +2489,7 @@ fn textarea_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/textarea/required.rs",
             "src/ui/snippets/textarea/rtl.rs",
             "src/ui/snippets/textarea/usage.rs",
+            "src/ui/snippets/textarea/with_label.rs",
             "src/ui/snippets/textarea/with_text.rs",
         ],
         &[
@@ -2507,25 +2512,29 @@ fn textarea_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
-            "DocSection::build(cx, \"Field\", field)",
             "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"With Label\", with_label)",
+            "DocSection::build(cx, \"With Text\", with_text)",
+            "DocSection::build(cx, \"With Button\", button)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
             "DocSection::build(cx, \"Invalid\", invalid)",
             "DocSection::build(cx, \"Required\", required)",
-            "DocSection::build(cx, \"Button\", button)",
             "DocSection::build(cx, \"RTL\", rtl)",
-            "DocSection::build(cx, \"With Text\", with_text)",
+            "DocSection::build(cx, \"Field\", field)",
             "DocSection::build(cx, \"Label Association\", label)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
-            "DocSection::new(\"Field\", field)",
             "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"With Label\", with_label)",
+            "DocSection::new(\"With Text\", with_text)",
+            "DocSection::new(\"With Button\", button)",
+            "DocSection::new(\"API Reference\", api_reference)",
             "DocSection::new(\"Invalid\", invalid)",
             "DocSection::new(\"Required\", required)",
-            "DocSection::new(\"Button\", button)",
             "DocSection::new(\"RTL\", rtl)",
-            "DocSection::new(\"With Text\", with_text)",
+            "DocSection::new(\"Field\", field)",
             "DocSection::new(\"Label Association\", label)",
         ],
     );
@@ -3389,17 +3398,19 @@ fn spinner_snippets_prefer_ui_cx_on_the_default_app_surface() {
         &[
             "src/ui/snippets/spinner/badges.rs",
             "src/ui/snippets/spinner/buttons.rs",
+            "src/ui/snippets/spinner/colors.rs",
             "src/ui/snippets/spinner/customization.rs",
             "src/ui/snippets/spinner/demo.rs",
             "src/ui/snippets/spinner/empty.rs",
             "src/ui/snippets/spinner/extras.rs",
             "src/ui/snippets/spinner/input_group.rs",
+            "src/ui/snippets/spinner/item.rs",
             "src/ui/snippets/spinner/rtl.rs",
             "src/ui/snippets/spinner/sizes.rs",
             "src/ui/snippets/spinner/usage.rs",
         ],
         &[
-            "use fret::{UiChild, AppComponentCx};",
+            "use fret::{AppComponentCx, UiChild};",
             "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
@@ -3420,24 +3431,26 @@ fn spinner_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Customization\", customization)",
             "DocSection::build(cx, \"Size\", sizes)",
+            "DocSection::build(cx, \"Color\", colors)",
             "DocSection::build(cx, \"Button\", buttons)",
             "DocSection::build(cx, \"Badge\", badges)",
             "DocSection::build(cx, \"Input Group\", input_group)",
             "DocSection::build(cx, \"Empty\", empty)",
-            "DocSection::build(cx, \"RTL\", rtl)",
-            "DocSection::build(cx, \"Extras\", extras)",
+            "DocSection::build(cx, \"Item\", item)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Customization\", customization)",
             "DocSection::new(\"Size\", sizes)",
+            "DocSection::new(\"Color\", colors)",
             "DocSection::new(\"Button\", buttons)",
             "DocSection::new(\"Badge\", badges)",
             "DocSection::new(\"Input Group\", input_group)",
             "DocSection::new(\"Empty\", empty)",
-            "DocSection::new(\"RTL\", rtl)",
-            "DocSection::new(\"Extras\", extras)",
+            "DocSection::new(\"Item\", item)",
+            "DocSection::new(\"API Reference\", api_reference)",
         ],
     );
 }
@@ -4581,7 +4594,7 @@ fn skeleton_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/skeleton/usage.rs",
         ],
         &[
-            "use fret::{UiChild, AppComponentCx};",
+            "use fret::{AppComponentCx, UiChild};",
             "pub fn render(cx: &mut AppComponentCx<'_>) -> impl UiChild + use<>",
         ],
         "app-facing snippet surface",
@@ -4825,6 +4838,7 @@ fn label_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Label in Field\", label_in_field)",
             "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Composable Content\", children)",
             "DocSection::build(cx, \"API Reference\", api_reference)",
         ],
         &[
@@ -4832,7 +4846,23 @@ fn label_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Label in Field\", label_in_field)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"Composable Content\", children)",
         ],
+    );
+}
+
+#[test]
+fn label_page_records_current_docs_path_before_fret_followups() {
+    let page = read("src/ui/pages/label.rs");
+    assert!(
+        page.contains(
+            "Preview mirrors the current shadcn Label docs path first: Demo and Usage. Label in Field, RTL, Composable Content, and API Reference are Fret follow-ups."
+        ),
+        "src/ui/pages/label.rs should keep the current shadcn docs path separate from Fret follow-ups"
+    );
+    assert!(
+        page.contains("vec![demo, usage, label_in_field, rtl, children, api_reference]"),
+        "src/ui/pages/label.rs should render Demo and Usage before Fret follow-up sections"
     );
 }
 
@@ -4891,9 +4921,19 @@ fn kbd_page_records_docs_path_and_narrow_children_surface() {
     let page = read("src/ui/pages/kbd.rs");
     assert!(
         page.contains(
-            "Preview mirrors the shadcn Kbd docs path first: Demo, Usage, Group, Button, Tooltip, Input Group, RTL, and API Reference."
+            "Preview mirrors the current shadcn Kbd docs path first: Demo, Usage, Group, Button, Tooltip, Input Group, and API Reference. RTL is a Fret-only follow-up."
         ),
-        "src/ui/pages/kbd.rs should keep the shadcn docs-path ordering explicit on the first-party gallery page"
+        "src/ui/pages/kbd.rs should keep the current shadcn docs-path ordering explicit on the first-party gallery page"
+    );
+    let api_reference_index = page.find("api_reference, rtl").expect(
+        "src/ui/pages/kbd.rs should render API Reference before the Fret-only RTL follow-up",
+    );
+    let rtl_follow_up_index = page
+        .find("RTL is a Fret-only follow-up")
+        .expect("src/ui/pages/kbd.rs should label RTL as a Fret-only follow-up");
+    assert!(
+        api_reference_index > rtl_follow_up_index,
+        "src/ui/pages/kbd.rs should explain the Fret-only RTL follow-up before rendering it after API Reference"
     );
     assert!(
         page.contains(
@@ -5015,11 +5055,12 @@ fn sonner_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Examples\", examples)",
             "DocSection::build(cx, \"Types\", types)",
-            "DocSection::build(cx, \"Description\", description)",
-            "DocSection::build(cx, \"Position\", position)",
-            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Changelog\", changelog)",
             "DocSection::build(cx, \"Mounting (Fret)\", setup)",
-            "DocSection::build(cx, \"Extras\", extras)",
+            "DocSection::build(cx, \"Description (Fret)\", description)",
+            "DocSection::build(cx, \"Position (Fret)\", position)",
+            "DocSection::build(cx, \"API Reference (Fret)\", api_reference)",
+            "DocSection::build(cx, \"Extras (Fret)\", extras)",
             "DocSection::build(cx, \"Notes\", notes)",
             "let toaster = snippets::local_toaster(cx).into_element(cx);",
         ],
@@ -5028,9 +5069,10 @@ fn sonner_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Types\", types)",
-            "DocSection::new(\"Description\", description)",
-            "DocSection::new(\"Position\", position)",
-            "DocSection::new(\"Extras\", extras)",
+            "DocSection::new(\"Changelog\", changelog)",
+            "DocSection::new(\"Description (Fret)\", description)",
+            "DocSection::new(\"Position (Fret)\", position)",
+            "DocSection::new(\"Extras (Fret)\", extras)",
             "preview_sonner(cx, last_action, sonner_position)",
         ],
     );
@@ -6244,25 +6286,28 @@ fn scroll_area_app_facing_snippet_lane_has_no_raw_boundaries() {
 #[test]
 fn scroll_area_diagnostics_lane_keeps_intentional_raw_boundaries() {
     let expected_raw_roots = BTreeSet::from([
-        manifest_path("src/ui/diagnostics/scroll_area/drag_baseline.rs")
-            .display()
-            .to_string(),
-        manifest_path("src/ui/diagnostics/scroll_area/expand_at_bottom.rs")
-            .display()
-            .to_string(),
+        display_path_key(&manifest_path(
+            "src/ui/diagnostics/scroll_area/drag_baseline.rs",
+        )),
+        display_path_key(&manifest_path(
+            "src/ui/diagnostics/scroll_area/expand_at_bottom.rs",
+        )),
     ]);
     let mut actual_raw_roots = BTreeSet::new();
 
     for path in rust_sources("src/ui/diagnostics/scroll_area") {
         let source = read_path(&path);
         let normalized = source.split_whitespace().collect::<String>();
-        let is_raw_render_root = normalized
-            .contains("pubfnrender<H:UiHost+'static>(cx:&mutElementContext<'_,H>)->AnyElement");
+        let is_raw_render_root = source.contains("Intentional diagnostics raw boundary:")
+            && normalized.starts_with("pubconstSOURCE")
+            && normalized.contains("pubfnrender<H:UiHost+'static>(")
+            && normalized.contains("cx:&mutElementContext<'_,H>")
+            && normalized.contains(")->AnyElement");
         if !is_raw_render_root {
             continue;
         }
 
-        actual_raw_roots.insert(path.display().to_string());
+        actual_raw_roots.insert(display_path_key(&path));
         assert!(
             source.contains("Intentional diagnostics raw boundary:"),
             "{} should explain why the diagnostics harness stays raw",
@@ -6773,31 +6818,31 @@ fn tabs_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
-            "DocSection::build(cx, \"Line\", line)",
-            "DocSection::build(cx, \"Vertical\", vertical)",
-            "DocSection::build(cx, \"Disabled\", disabled)",
-            "DocSection::build(cx, \"Icons\", icons)",
-            "DocSection::build(cx, \"RTL\", rtl)",
-            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Line (Base/Radix)\", line)",
+            "DocSection::build(cx, \"Vertical (Base/Radix)\", vertical)",
+            "DocSection::build(cx, \"Disabled (Base/Radix)\", disabled)",
+            "DocSection::build(cx, \"Icons (Base/Radix)\", icons)",
+            "DocSection::build(cx, \"RTL (Fret)\", rtl)",
+            "DocSection::build(cx, \"API Reference (Fret)\", api_reference)",
             "DocSection::build(cx, \"Composable Parts (Fret)\", parts)",
-            "DocSection::build(cx, \"List\", list)",
-            "DocSection::build(cx, \"Vertical (Line)\", vertical_line)",
-            "DocSection::build(cx, \"Extras\", extras)",
+            "DocSection::build(cx, \"List (Base/Radix)\", list)",
+            "DocSection::build(cx, \"Vertical Line (Fret)\", vertical_line)",
+            "DocSection::build(cx, \"Extras (Fret)\", extras)",
             "DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
-            "DocSection::new(\"Line\", line)",
-            "DocSection::new(\"Vertical\", vertical)",
-            "DocSection::new(\"Disabled\", disabled)",
-            "DocSection::new(\"Icons\", icons)",
-            "DocSection::new(\"RTL\", rtl)",
-            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Line (Base/Radix)\", line)",
+            "DocSection::new(\"Vertical (Base/Radix)\", vertical)",
+            "DocSection::new(\"Disabled (Base/Radix)\", disabled)",
+            "DocSection::new(\"Icons (Base/Radix)\", icons)",
+            "DocSection::new(\"RTL (Fret)\", rtl)",
+            "DocSection::new(\"API Reference (Fret)\", api_reference)",
             "DocSection::new(\"Composable Parts (Fret)\", parts)",
-            "DocSection::new(\"List\", list)",
-            "DocSection::new(\"Vertical (Line)\", vertical_line)",
-            "DocSection::new(\"Extras\", extras)",
+            "DocSection::new(\"List (Base/Radix)\", list)",
+            "DocSection::new(\"Vertical Line (Fret)\", vertical_line)",
+            "DocSection::new(\"Extras (Fret)\", extras)",
             "DocSection::new(\"Notes\", notes)",
         ],
     );
@@ -6810,7 +6855,7 @@ fn tabs_page_uses_typed_notes_blocks_for_api_reference_and_notes() {
         &[
             "let api_reference = doc_layout::notes_block([",
             "let notes = doc_layout::notes_block([",
-            "let api_reference = DocSection::build(cx, \"API Reference\", api_reference)",
+            "let api_reference = DocSection::build(cx, \"API Reference (Fret)\", api_reference)",
             "let notes = DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
@@ -6865,7 +6910,7 @@ fn tabs_page_teaches_rtl_activation_direction_and_fuller_example_shape() {
 
     assert!(
         tabs_page.contains(
-            "RTL parity for logical previous/next movement, flipped `activation_direction` metadata, and the fuller upstream card example."
+            "Fret RTL parity for logical previous/next movement, flipped `activation_direction` metadata, and the fuller registry-style card example."
         ),
         "src/ui/pages/tabs.rs should describe the RTL section as more than a keynav-only gate"
     );
@@ -6877,7 +6922,7 @@ fn tabs_page_teaches_rtl_activation_direction_and_fuller_example_shape() {
     );
     assert!(
         tabs_page.contains(
-            "The `RTL` section now uses a fuller upstream-style four-tab card example instead of a gallery-only two-tab keynav gate"
+            "The `RTL (Fret)` section now uses a fuller registry-style four-tab card example instead of a gallery-only two-tab keynav gate"
         ),
         "src/ui/pages/tabs.rs should record that the RTL snippet stays close to the upstream card shape"
     );
@@ -6914,9 +6959,9 @@ fn tabs_icons_snippet_uses_trigger_children_for_upstream_icon_composition() {
         &[
             ".trigger_children([",
             "icon::icon(cx, IconId::new_static(\"lucide.app-window\"))",
-            "cx.text(\"Preview\")",
+            "decl_text::text_button_label(cx, \"Preview\")",
             "icon::icon(cx, IconId::new_static(\"lucide.code\"))",
-            "cx.text(\"Code\")",
+            "decl_text::text_button_label(cx, \"Code\")",
         ],
     );
 
@@ -6933,7 +6978,7 @@ fn tabs_page_records_docs_shape_and_trigger_children_alignment() {
 
     assert!(
         tabs_page.contains(
-            "`Line`, `Vertical`, and `Disabled` now keep the same text/value shape as the upstream docs examples, while `Icons` demonstrates icon + label trigger composition through `TabsItem::trigger_children(...)` without leaving the default builder lane."
+            "`Line (Base/Radix)`, `Vertical (Base/Radix)`, and `Disabled (Base/Radix)` keep the same text/value shape as Base/Radix registry examples, while `Icons (Base/Radix)` demonstrates icon + label trigger composition through `TabsItem::trigger_children(...)` without leaving the default builder lane."
         ),
         "src/ui/pages/tabs.rs should record the docs-path shape alignment and trigger-children lane"
     );
@@ -10175,19 +10220,6 @@ fn selected_button_group_snippet_helpers_prefer_into_ui_element_over_anyelement(
 }
 
 #[test]
-fn selected_toggle_group_snippet_helpers_prefer_into_ui_element_over_anyelement() {
-    assert_selected_generic_helpers_prefer_into_ui_element(
-        "src/ui/snippets/toggle_group/size.rs",
-        &[
-            "fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, size: shadcn::ToggleSize,) -> impl IntoUiElement<H> + use<H>",
-        ],
-        &[
-            "fn group<H: UiHost>(cx: &mut ElementContext<'_, H>, size: shadcn::ToggleSize) -> AnyElement",
-        ],
-    );
-}
-
-#[test]
 fn toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
     assert_curated_default_app_paths(
         &[
@@ -10203,7 +10235,6 @@ fn toggle_group_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/toggle_group/outline.rs",
             "src/ui/snippets/toggle_group/rtl.rs",
             "src/ui/snippets/toggle_group/single.rs",
-            "src/ui/snippets/toggle_group/size.rs",
             "src/ui/snippets/toggle_group/small.rs",
             "src/ui/snippets/toggle_group/spacing.rs",
             "src/ui/snippets/toggle_group/usage.rs",
@@ -10230,7 +10261,6 @@ fn toggle_group_snippet_item_text_uses_button_label_role() {
         "src/ui/snippets/toggle_group/flex_1_items.rs",
         "src/ui/snippets/toggle_group/full_width_items.rs",
         "src/ui/snippets/toggle_group/label.rs",
-        "src/ui/snippets/toggle_group/outline.rs",
         "src/ui/snippets/toggle_group/rtl.rs",
         "src/ui/snippets/toggle_group/spacing.rs",
         "src/ui/snippets/toggle_group/usage.rs",
@@ -10256,35 +10286,51 @@ fn toggle_group_page_uses_typed_doc_sections_for_app_facing_snippets() {
     assert_selected_generic_helpers_prefer_into_ui_element(
         "src/ui/pages/toggle_group.rs",
         &[
-            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Spacing\", spacing)",
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Outline\", outline)",
-            "DocSection::build(cx, \"Size\", size)",
-            "DocSection::build(cx, \"Spacing\", spacing)",
-            "DocSection::build(cx, \"Vertical\", vertical)",
+            "DocSection::build(cx, \"Single\", single)",
+            "DocSection::build(cx, \"Small\", small)",
+            "DocSection::build(cx, \"Large\", large)",
             "DocSection::build(cx, \"Disabled\", disabled)",
+            "DocSection::build(cx, \"API Reference\", api_reference)",
+            "DocSection::build(cx, \"Demo (Fret)\", demo)",
+            "DocSection::build(cx, \"Vertical (Base/Radix)\", vertical)",
             "DocSection::build(cx, \"Disabled Item Action-State (Fret)\", disabled_item_action_state)",
-            "DocSection::build(cx, \"Custom\", custom)",
-            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Custom (Fret)\", custom)",
+            "DocSection::build(cx, \"RTL (Fret)\", rtl)",
             "DocSection::build(cx, \"Children (Fret)\", children)",
-            "DocSection::build(cx, \"Single (Fret)\", single)",
-            "DocSection::build(cx, \"Small (Fret)\", small)",
-            "DocSection::build(cx, \"Large (Fret)\", large)",
             "DocSection::build(cx, \"Label Association (Fret)\", label)",
             "DocSection::build(cx, \"Full Width Items (Fret)\", full_width_items)",
             "DocSection::build(cx, \"Flex-1 Items (Fret)\", stretch)",
         ],
         &[
+            "DocSection::build(cx, \"Size\", size)",
+            "DocSection::build(cx, \"Demo\", demo)",
+            "DocSection::build(cx, \"Vertical\", vertical)",
+            "DocSection::build(cx, \"Custom\", custom)",
+            "DocSection::build(cx, \"RTL\", rtl)",
+            "DocSection::build(cx, \"Single (Fret)\", single)",
+            "DocSection::build(cx, \"Small (Fret)\", small)",
+            "DocSection::build(cx, \"Large (Fret)\", large)",
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Outline\", outline)",
             "DocSection::new(\"Size\", size)",
             "DocSection::new(\"Spacing\", spacing)",
-            "DocSection::new(\"Vertical\", vertical)",
+            "DocSection::new(\"Single\", single)",
+            "DocSection::new(\"Small\", small)",
+            "DocSection::new(\"Large\", large)",
             "DocSection::new(\"Disabled\", disabled)",
+            "DocSection::new(\"API Reference\", api_reference)",
+            "DocSection::new(\"Demo (Fret)\", demo)",
+            "DocSection::new(\"Vertical\", vertical)",
+            "DocSection::new(\"Vertical (Base/Radix)\", vertical)",
             "DocSection::new(\"Disabled Item Action-State (Fret)\", disabled_item_action_state)",
             "DocSection::new(\"Custom\", custom)",
+            "DocSection::new(\"Custom (Fret)\", custom)",
             "DocSection::new(\"RTL\", rtl)",
+            "DocSection::new(\"RTL (Fret)\", rtl)",
             "DocSection::new(\"Children (Fret)\", children)",
             "DocSection::new(\"Single (Fret)\", single)",
             "DocSection::new(\"Small (Fret)\", small)",
@@ -10358,26 +10404,28 @@ fn switch_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
-            "DocSection::build(cx, \"Description\", description)",
-            "DocSection::build(cx, \"Choice Card\", choice_card)",
-            "DocSection::build(cx, \"Disabled\", disabled)",
-            "DocSection::build(cx, \"Invalid\", invalid)",
-            "DocSection::build(cx, \"Size\", sizes)",
-            "DocSection::build(cx, \"RTL\", rtl)",
-            "DocSection::build(cx, \"Label Association\", label)",
-            "DocSection::build(cx, \"Style Override\", style_override)",
+            "DocSection::build(cx, \"Description (Registry)\", description)",
+            "DocSection::build(cx, \"Choice Card (Fret)\", choice_card)",
+            "DocSection::build(cx, \"Disabled (Base/Radix)\", disabled)",
+            "DocSection::build(cx, \"Invalid (Registry)\", invalid)",
+            "DocSection::build(cx, \"Size (Base/Radix)\", sizes)",
+            "DocSection::build(cx, \"RTL (Fret)\", rtl)",
+            "DocSection::build(cx, \"Label Association (Fret)\", label)",
+            "DocSection::build(cx, \"Style Override (Fret)\", style_override)",
+            "DocSection::build(cx, \"API Reference (Fret)\", api_reference)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
-            "DocSection::new(\"Description\", description)",
-            "DocSection::new(\"Choice Card\", choice_card)",
-            "DocSection::new(\"Disabled\", disabled)",
-            "DocSection::new(\"Invalid\", invalid)",
-            "DocSection::new(\"Size\", sizes)",
-            "DocSection::new(\"RTL\", rtl)",
-            "DocSection::new(\"Label Association\", label)",
-            "DocSection::new(\"Style Override\", style_override)",
+            "DocSection::new(\"Description (Registry)\", description)",
+            "DocSection::new(\"Choice Card (Fret)\", choice_card)",
+            "DocSection::new(\"Disabled (Base/Radix)\", disabled)",
+            "DocSection::new(\"Invalid (Registry)\", invalid)",
+            "DocSection::new(\"Size (Base/Radix)\", sizes)",
+            "DocSection::new(\"RTL (Fret)\", rtl)",
+            "DocSection::new(\"Label Association (Fret)\", label)",
+            "DocSection::new(\"Style Override (Fret)\", style_override)",
+            "DocSection::new(\"API Reference (Fret)\", api_reference)",
         ],
     );
 }
@@ -10610,9 +10658,10 @@ fn toggle_app_facing_snippets_prefer_ui_cx_on_the_default_app_surface() {
             "src/ui/snippets/toggle/demo.rs",
             "src/ui/snippets/toggle/disabled.rs",
             "src/ui/snippets/toggle/label.rs",
+            "src/ui/snippets/toggle/large.rs",
             "src/ui/snippets/toggle/outline.rs",
             "src/ui/snippets/toggle/rtl.rs",
-            "src/ui/snippets/toggle/size.rs",
+            "src/ui/snippets/toggle/small.rs",
             "src/ui/snippets/toggle/usage.rs",
             "src/ui/snippets/toggle/with_text.rs",
         ],
@@ -10634,9 +10683,10 @@ fn selected_toggle_snippets_prefer_builder_preserving_helpers() {
     for relative_path in [
         "src/ui/snippets/toggle/demo.rs",
         "src/ui/snippets/toggle/disabled.rs",
+        "src/ui/snippets/toggle/large.rs",
         "src/ui/snippets/toggle/outline.rs",
         "src/ui/snippets/toggle/rtl.rs",
-        "src/ui/snippets/toggle/size.rs",
+        "src/ui/snippets/toggle/small.rs",
         "src/ui/snippets/toggle/usage.rs",
         "src/ui/snippets/toggle/with_text.rs",
     ] {
@@ -10663,7 +10713,6 @@ fn toggle_snippet_item_text_uses_button_label_role() {
         "src/ui/snippets/toggle/label.rs",
         "src/ui/snippets/toggle/outline.rs",
         "src/ui/snippets/toggle/rtl.rs",
-        "src/ui/snippets/toggle/size.rs",
         "src/ui/snippets/toggle/usage.rs",
         "src/ui/snippets/toggle/with_text.rs",
     ] {
@@ -10710,7 +10759,8 @@ fn toggle_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::build(cx, \"Usage\", usage)",
             "DocSection::build(cx, \"Outline\", outline)",
             "DocSection::build(cx, \"With Text\", with_text)",
-            "DocSection::build(cx, \"Size\", size)",
+            "DocSection::build(cx, \"Small\", small)",
+            "DocSection::build(cx, \"Large\", large)",
             "DocSection::build(cx, \"Disabled\", disabled)",
             "DocSection::build(cx, \"RTL\", rtl)",
             "DocSection::build(cx, \"Children (Fret)\", children)",
@@ -10722,7 +10772,8 @@ fn toggle_page_uses_typed_doc_sections_for_app_facing_snippets() {
             "DocSection::new(\"Usage\", usage)",
             "DocSection::new(\"Outline\", outline)",
             "DocSection::new(\"With Text\", with_text)",
-            "DocSection::new(\"Size\", size)",
+            "DocSection::new(\"Small\", small)",
+            "DocSection::new(\"Large\", large)",
             "DocSection::new(\"Disabled\", disabled)",
             "DocSection::new(\"RTL\", rtl)",
             "DocSection::new(\"Children (Fret)\", children)",
@@ -10738,19 +10789,19 @@ fn switch_page_teaches_rtl_as_logical_layout_not_extra_physical_alignment() {
 
     assert!(
         switch_page.contains(
-            "The `RTL` preview keeps the translated upstream one-row example shape. `DirectionProvider(Rtl)` is sufficient here: `FieldContent` stays on the logical text side and `Switch` stays on the opposite edge without teaching an extra physical alignment prop."
+            "The `RTL (Fret)` preview translates the registry-style one-row field example. `DirectionProvider(Rtl)` is sufficient here: `FieldContent` stays on the logical text side and `Switch` stays on the opposite edge without teaching an extra physical alignment prop."
         ),
         "src/ui/pages/switch.rs should record that RTL parity stays on the existing logical field composition surface"
     );
     assert!(
         switch_page.contains(
-            "Translated upstream RTL row with logical field text on inline-start and the switch on the opposite edge."
+            "Translated registry-style row with logical field text on inline-start and the switch on the opposite edge."
         ),
         "src/ui/pages/switch.rs should describe the RTL section as the translated upstream row"
     );
     assert!(
         switch_page.contains(
-            "Preview mirrors the shadcn Switch docs path first: Demo, Usage, Description, Choice Card, Disabled, Invalid, Size, RTL, including the translated upstream RTL row, with source-aligned label/control binding on the docs-path rows before `Label Association`, `Style Override`, and `API Reference` continue as explicit Fret follow-ups."
+            "Preview mirrors the current shadcn Switch docs path first: `Demo` and `Usage`."
         ),
         "src/ui/pages/switch.rs should keep the translated upstream RTL row visible in the page-level teaching summary"
     );
@@ -10870,7 +10921,7 @@ fn radio_group_page_teaches_docs_parity_parts_without_generic_children_api() {
     );
     assert!(
         radio_group_page.contains(
-            "Preview mirrors the shadcn Radio Group docs path first: Demo, Usage, Description, Choice Card, Fieldset, Disabled, Required Disabled, Invalid, RTL, and API Reference. The docs-path rows now use `into_element_parts(...)` for source-shaped composition, while `Label Association` stays as a focused Fret follow-up."
+            "Preview mirrors the current shadcn Radio Group docs path first: Demo and Usage. Description, Choice Card, Fieldset, Disabled, Required Disabled, Invalid, RTL, API Reference, and Label Association are Fret follow-ups. The composed rows use `into_element_parts(...)` for source-shaped control/label layout."
         ),
         "src/ui/pages/radio_group.rs should summarize the shift to the docs-shaped parts lane"
     );
@@ -10948,29 +10999,29 @@ fn slider_page_uses_typed_doc_sections_for_app_facing_snippets() {
         &[
             "DocSection::build(cx, \"Demo\", demo)",
             "DocSection::build(cx, \"Usage\", usage)",
-            "DocSection::build(cx, \"Range\", range)",
-            "DocSection::build(cx, \"Multiple Thumbs\", multiple)",
-            "DocSection::build(cx, \"Vertical\", vertical)",
-            "DocSection::build(cx, \"Controlled\", controlled)",
-            "DocSection::build(cx, \"Disabled\", disabled)",
-            "DocSection::build(cx, \"RTL\", rtl)",
-            "DocSection::build(cx, \"API Reference\", api_reference)",
-            "DocSection::build(cx, \"Label Association\", label)",
-            "DocSection::build(cx, \"Extras\", extras)",
+            "DocSection::build(cx, \"Range (Base/Radix)\", range)",
+            "DocSection::build(cx, \"Multiple Thumbs (Base/Radix)\", multiple)",
+            "DocSection::build(cx, \"Vertical (Base/Radix)\", vertical)",
+            "DocSection::build(cx, \"Controlled (Base/Radix)\", controlled)",
+            "DocSection::build(cx, \"Disabled (Base/Radix)\", disabled)",
+            "DocSection::build(cx, \"RTL (Fret)\", rtl)",
+            "DocSection::build(cx, \"API Reference (Fret)\", api_reference)",
+            "DocSection::build(cx, \"Label Association (Fret)\", label)",
+            "DocSection::build(cx, \"Extras (Fret)\", extras)",
             "DocSection::build(cx, \"Notes\", notes)",
         ],
         &[
             "DocSection::new(\"Demo\", demo)",
             "DocSection::new(\"Usage\", usage)",
-            "DocSection::new(\"Range\", range)",
-            "DocSection::new(\"Multiple Thumbs\", multiple)",
-            "DocSection::new(\"Vertical\", vertical)",
-            "DocSection::new(\"Controlled\", controlled)",
-            "DocSection::new(\"Disabled\", disabled)",
-            "DocSection::new(\"RTL\", rtl)",
-            "DocSection::new(\"API Reference\", api_reference)",
-            "DocSection::new(\"Label Association\", label)",
-            "DocSection::new(\"Extras\", extras)",
+            "DocSection::new(\"Range (Base/Radix)\", range)",
+            "DocSection::new(\"Multiple Thumbs (Base/Radix)\", multiple)",
+            "DocSection::new(\"Vertical (Base/Radix)\", vertical)",
+            "DocSection::new(\"Controlled (Base/Radix)\", controlled)",
+            "DocSection::new(\"Disabled (Base/Radix)\", disabled)",
+            "DocSection::new(\"RTL (Fret)\", rtl)",
+            "DocSection::new(\"API Reference (Fret)\", api_reference)",
+            "DocSection::new(\"Label Association (Fret)\", label)",
+            "DocSection::new(\"Extras (Fret)\", extras)",
             "DocSection::new(\"Notes\", notes)",
         ],
     );

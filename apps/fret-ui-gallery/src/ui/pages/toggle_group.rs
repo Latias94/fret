@@ -8,25 +8,25 @@ pub(super) fn preview_toggle_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElemen
     let demo = snippets::demo::render(cx);
     let usage = snippets::usage::render(cx);
     let outline = snippets::outline::render(cx);
-    let size = snippets::size::render(cx);
     let spacing = snippets::spacing::render(cx);
+    let single = snippets::single::render(cx);
+    let small = snippets::small::render(cx);
+    let large = snippets::large::render(cx);
     let vertical = snippets::vertical::render(cx);
     let disabled = snippets::disabled::render(cx);
     let disabled_item_action_state = snippets::disabled_item_action_state::render(cx);
     let custom = snippets::custom::render(cx);
     let rtl = snippets::rtl::render(cx);
     let children = snippets::children::render(cx);
-    let single = snippets::single::render(cx);
-    let small = snippets::small::render(cx);
-    let large = snippets::large::render(cx);
     let label = snippets::label::render(cx);
     let full_width_items = snippets::full_width_items::render(cx);
     let stretch = snippets::flex_1_items::render(cx);
 
     let api_reference = doc_layout::notes_block([
-        "Reference stack for this page: shadcn Toggle Group docs, the default registry recipe, Radix Primitives Toggle Group, and Base UI Toggle Group.",
-        "The upstream docs-path examples come from the default shadcn demo/outline/sm/lg/spacing set plus the vertical, font-weight-selector, and RTL examples.",
-        "Source anchors for that docs path: `toggle-group-demo.tsx`, `toggle-group-outline.tsx`, `toggle-group-sm.tsx`, `toggle-group-lg.tsx`, `toggle-group-spacing.tsx`, `toggle-group-vertical.tsx`, `toggle-group-font-weight-selector.tsx`, and `toggle-group-rtl.tsx`.",
+        "Reference stack for this page: current shadcn Toggle Group docs, the `new-york-v4` registry recipe, Radix Primitives Toggle Group, and Base UI Toggle Group.",
+        "Current upstream docs path: top `ComponentPreview` uses `toggle-group-spacing`, then `Usage`, `Outline`, `Single`, `Small`, `Large`, `Disabled`, `Spacing`, and `API Reference`; this gallery keeps one `Spacing` section for that repeated preview/example.",
+        "Source anchors for that current docs path: `toggle-group.tsx`, `toggle-group-spacing.tsx`, `toggle-group-outline.tsx`, `toggle-group-single.tsx`, `toggle-group-sm.tsx`, `toggle-group-lg.tsx`, and `toggle-group-disabled.tsx`.",
+        "Base/radix registry examples remain secondary references for `Vertical`, richer filter/sort/date range compositions, and orientation-specific behavior; `Demo`, `Vertical`, `Custom`, and `RTL` are explicit Fret/base-radix follow-ups rather than current new-york-v4 docs-path sections.",
         "`fret_ui_kit::primitives::toggle_group` already covers the mechanism lane (single/multiple state, roving focus, and control-id focus forwarding), so the remaining parity work here is docs/recipe alignment rather than a `fret-ui` contract gap.",
         "`ToggleGroup::single(...)`, `ToggleGroup::multiple(...)`, and their uncontrolled constructors plus `.items([...])` cover the documented docs-path root surface.",
         "`toggle_group_single(...)`, `toggle_group_single_uncontrolled(...)`, `toggle_group_multiple(...)`, and `toggle_group_multiple_uncontrolled(...)` are the builder-preserving composable-children lane when callers want to assemble items inside a closure without landing early.",
@@ -35,13 +35,14 @@ pub(super) fn preview_toggle_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElemen
         "Selection semantics, roving focus, segmented borders, and pressed-state chrome remain recipe-owned; item-root custom layout and surrounding width/flex negotiation remain caller-owned.",
         "`Disabled Item Action-State (Fret)` keeps disabled item semantics, invoke suppression, roving focus skip, and single-mode `checked_state` observable on concrete ToggleGroup items.",
         "No extra root `children([...])` or generic `compose()` API is warranted on the default lane because the helper family already covers composable item assembly without widening the recipe contract.",
-        "`Children (Fret)`, `Single (Fret)`, `Small (Fret)`, `Large (Fret)`, `Label Association (Fret)`, `Disabled Item Action-State (Fret)`, `Full Width Items (Fret)`, and `Flex-1 Items (Fret)` stay after the upstream docs path as focused Fret follow-ups and regression slices.",
+        "`Demo (Fret)`, `Vertical (Base/Radix)`, `Custom (Fret)`, `RTL (Fret)`, `Children (Fret)`, `Label Association (Fret)`, `Disabled Item Action-State (Fret)`, `Full Width Items (Fret)`, and `Flex-1 Items (Fret)` stay after the current upstream docs path as focused follow-ups and regression slices.",
     ]);
     let notes = doc_layout::notes_block([
-        "This page now keeps the upstream shadcn/Base Toggle Group docs path source-aligned on content, default values, and section order before adding focused Fret follow-ups.",
-        "Preview now mirrors the upstream Toggle Group docs path first: `Demo`, `Usage`, `Outline`, `Size`, `Spacing`, `Vertical`, `Disabled`, `Custom`, `RTL`, and `API Reference`.",
-        "Focused Fret follow-ups stay afterward: `Children (Fret)`, `Single (Fret)`, `Small (Fret)`, `Large (Fret)`, `Label Association (Fret)`, `Disabled Item Action-State (Fret)`, `Full Width Items (Fret)`, `Flex-1 Items (Fret)`, and `Notes`.",
-        "The `Size` lane now follows the upstream `toggle-group-sm` + `toggle-group-lg` examples, and `Spacing` keeps the upstream icon-plus-label composition instead of a text-only substitute.",
+        "This page keeps the current shadcn Toggle Group docs path source-aligned on content, default values, and section order before adding focused Fret/base-radix follow-ups.",
+        "Preview now mirrors the current Toggle Group docs path first: `Spacing`, `Usage`, `Outline`, `Single`, `Small`, `Large`, `Disabled`, and `API Reference`.",
+        "Focused follow-ups stay afterward: `Demo (Fret)`, `Vertical (Base/Radix)`, `Custom (Fret)`, `RTL (Fret)`, `Children (Fret)`, `Label Association (Fret)`, `Disabled Item Action-State (Fret)`, `Full Width Items (Fret)`, `Flex-1 Items (Fret)`, and `Notes`.",
+        "`Single`, `Small`, and `Large` now map the current upstream examples directly instead of being hidden inside an aggregate `Size` lane.",
+        "`Spacing` keeps the upstream icon-plus-label composition and is intentionally first because the current docs top `ComponentPreview` also points to `toggle-group-spacing`.",
         "Prefer the documented root constructors plus `.items([...])` for copyable docs-path snippets; reach for the `toggle_group_*` helper family when you want builder-preserving item composition inside a closure.",
         "Item-root refinements belong on the item call site instead of the default group chrome.",
         "The main parity risks here are roving focus, segmented borders, RTL order, and stretch/fill ownership, so stable `ui-gallery-toggle-group-*` ids remain part of the automation contract.",
@@ -55,36 +56,42 @@ pub(super) fn preview_toggle_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElemen
         .test_id_prefix("ui-gallery-toggle-group-notes")
         .description("Usage guidance and parity notes.");
 
-    let demo = DocSection::build(cx, "Demo", demo)
-        .description("Default demo matching the upstream top-of-page preview.")
-        .test_id_prefix("ui-gallery-toggle-group-demo")
-        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let spacing = DocSection::build(cx, "Spacing", spacing)
+        .description("Current top preview and spacing example with outline icon-plus-label items.")
+        .test_id_prefix("ui-gallery-toggle-group-spacing")
+        .code_rust_from_file_region(snippets::spacing::SOURCE, "example");
     let usage = DocSection::build(cx, "Usage", usage)
         .description("Minimal single-select usage matching the upstream docs example.")
         .test_id_prefix("ui-gallery-toggle-group-usage")
         .code_rust_from_file_region(snippets::usage::SOURCE, "example");
     let outline = DocSection::build(cx, "Outline", outline)
-        .description("Outline variant matching the upstream two-item example.")
+        .description("Outline variant matching the upstream multiple icon-only example.")
         .test_id_prefix("ui-gallery-toggle-group-outline")
         .code_rust_from_file_region(snippets::outline::SOURCE, "example");
-    let size = DocSection::build(cx, "Size", size)
-        .description("Small and large icon-only groups matching the upstream size examples.")
-        .test_id_prefix("ui-gallery-toggle-group-size")
-        .code_rust_from_file_region(snippets::size::SOURCE, "example");
-    let spacing = DocSection::build(cx, "Spacing", spacing)
-        .description(
-            "Outline spacing with icon-plus-label items matching the upstream docs example.",
-        )
-        .test_id_prefix("ui-gallery-toggle-group-spacing")
-        .code_rust_from_file_region(snippets::spacing::SOURCE, "example");
-    let vertical = DocSection::build(cx, "Vertical", vertical)
-        .description("Vertical orientation for side panels and inspectors.")
-        .test_id_prefix("ui-gallery-toggle-group-vertical")
-        .code_rust_from_file_region(snippets::vertical::SOURCE, "example");
+    let single = DocSection::build(cx, "Single", single)
+        .description("Current single-selection icon-only example.")
+        .test_id_prefix("ui-gallery-toggle-group-single")
+        .code_rust_from_file_region(snippets::single::SOURCE, "example");
+    let small = DocSection::build(cx, "Small", small)
+        .description("Current small icon-only example.")
+        .test_id_prefix("ui-gallery-toggle-group-small")
+        .code_rust_from_file_region(snippets::small::SOURCE, "example");
+    let large = DocSection::build(cx, "Large", large)
+        .description("Current large icon-only example.")
+        .test_id_prefix("ui-gallery-toggle-group-large")
+        .code_rust_from_file_region(snippets::large::SOURCE, "example");
     let disabled = DocSection::build(cx, "Disabled", disabled)
         .description("Disabled group matching the upstream docs example.")
         .test_id_prefix("ui-gallery-toggle-group-disabled")
         .code_rust_from_file_region(snippets::disabled::SOURCE, "example");
+    let demo = DocSection::build(cx, "Demo (Fret)", demo)
+        .description("Legacy demo retained as a Fret follow-up; current docs use Spacing as the top preview.")
+        .test_id_prefix("ui-gallery-toggle-group-demo")
+        .code_rust_from_file_region(snippets::demo::SOURCE, "example");
+    let vertical = DocSection::build(cx, "Vertical (Base/Radix)", vertical)
+        .description("Vertical orientation retained from the base/radix examples for side panels and inspectors.")
+        .test_id_prefix("ui-gallery-toggle-group-vertical")
+        .code_rust_from_file_region(snippets::vertical::SOURCE, "example");
     let disabled_item_action_state = DocSection::build(
         cx,
         "Disabled Item Action-State (Fret)",
@@ -95,11 +102,11 @@ pub(super) fn preview_toggle_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElemen
     )
     .test_id_prefix("ui-gallery-toggle-group-disabled-item-action-state")
     .code_rust_from_file_region(snippets::disabled_item_action_state::SOURCE, "example");
-    let custom = DocSection::build(cx, "Custom", custom)
+    let custom = DocSection::build(cx, "Custom (Fret)", custom)
         .description("Custom item-root sizing and rounding for a font-weight selector.")
         .test_id_prefix("ui-gallery-toggle-group-custom")
         .code_rust_from_file_region(snippets::custom::SOURCE, "example");
-    let rtl = DocSection::build(cx, "RTL", rtl)
+    let rtl = DocSection::build(cx, "RTL (Fret)", rtl)
         .description("Translated labels and item ordering under RTL.")
         .test_id_prefix("ui-gallery-toggle-group-rtl")
         .code_rust_from_file_region(snippets::rtl::SOURCE, "example");
@@ -109,18 +116,6 @@ pub(super) fn preview_toggle_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElemen
         )
         .test_id_prefix("ui-gallery-toggle-group-children")
         .code_rust_from_file_region(snippets::children::SOURCE, "example");
-    let single = DocSection::build(cx, "Single (Fret)", single)
-        .description("Focused single-selection regression example.")
-        .test_id_prefix("ui-gallery-toggle-group-single")
-        .code_rust_from_file_region(snippets::single::SOURCE, "example");
-    let small = DocSection::build(cx, "Small (Fret)", small)
-        .description("Small icon-only regression slice retained after the docs path.")
-        .test_id_prefix("ui-gallery-toggle-group-small")
-        .code_rust_from_file_region(snippets::small::SOURCE, "example");
-    let large = DocSection::build(cx, "Large (Fret)", large)
-        .description("Large icon-only regression slice retained after the docs path.")
-        .test_id_prefix("ui-gallery-toggle-group-large")
-        .code_rust_from_file_region(snippets::large::SOURCE, "example");
     let label = DocSection::build(cx, "Label Association (Fret)", label)
         .description("Use `FieldLabel::for_control`, `ToggleGroup::control_id`, and `test_id_prefix` to keep label-focus behavior and automation anchors aligned.")
         .test_id_prefix("ui-gallery-toggle-group-label")
@@ -137,25 +132,24 @@ pub(super) fn preview_toggle_group(cx: &mut AppComponentCx<'_>) -> Vec<AnyElemen
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the upstream Toggle Group docs path first: Demo, Usage, Outline, Size, Spacing, Vertical, Disabled, Custom, RTL, and API Reference. Focused Fret follow-ups stay afterward.",
+            "Preview mirrors the current shadcn Toggle Group docs path first: Spacing, Usage, Outline, Single, Small, Large, Disabled, and API Reference. Focused Fret/base-radix follow-ups stay afterward.",
         ),
         vec![
-            demo,
+            spacing,
             usage,
             outline,
-            size,
-            spacing,
-            vertical,
-            disabled,
-            disabled_item_action_state,
-            custom,
-            rtl,
-            api_reference,
-            children,
             single,
             small,
             large,
+            disabled,
+            api_reference,
+            demo,
+            vertical,
+            custom,
+            rtl,
+            children,
             label,
+            disabled_item_action_state,
             full_width_items,
             stretch,
             notes,

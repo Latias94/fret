@@ -148,6 +148,8 @@ COMPONENT_STATE_DEPTH_REQUIREMENTS = {
     "calendar": ["hover", "focus_visible", "mobile", "text_metrics", "paint_token"],
     "checkbox": ["disabled", "focus_visible", "keyboard", "rtl", "text_metrics", "paint_token"],
     "collapsible": ["disabled", "open", "keyboard", "rtl", "text_metrics", "paint_token"],
+    "command": ["disabled", "open", "keyboard", "rtl", "text_metrics", "paint_token"],
+    "empty": ["keyboard", "rtl", "text_metrics", "paint_token"],
     "combobox": ["open", "keyboard", "mobile", "text_metrics", "paint_token"],
     "context-menu": ["open", "keyboard", "paint_token"],
     "data-table": ["keyboard", "rtl", "paint_token"],
@@ -158,15 +160,48 @@ COMPONENT_STATE_DEPTH_REQUIREMENTS = {
     "hover-card": ["hover", "open", "keyboard", "paint_token"],
     "input": ["disabled", "focus_visible", "keyboard", "paint_token"],
     "input-otp": ["disabled", "focus_visible", "keyboard", "paint_token"],
+    "item": ["hover", "focus_visible", "keyboard", "rtl", "text_metrics", "paint_token"],
+    "kbd": ["keyboard", "rtl", "text_metrics", "paint_token"],
+    "label": ["disabled", "keyboard", "rtl", "text_metrics", "paint_token"],
     "menubar": ["disabled", "open", "keyboard", "paint_token"],
     "navigation-menu": ["hover", "focus_visible", "open", "keyboard", "paint_token"],
     "popover": ["open", "keyboard", "paint_token"],
     "progress": ["rtl", "paint_token"],
+    "radio-group": ["disabled", "focus_visible", "keyboard", "rtl", "text_metrics", "paint_token"],
     "resizable": ["drag", "keyboard", "rtl", "paint_token"],
+    "scroll-area": ["hover", "focus_visible", "drag", "keyboard", "rtl", "text_metrics", "paint_token"],
     "select": ["open", "keyboard", "paint_token"],
+    "separator": ["rtl", "text_metrics", "paint_token"],
     "sheet": ["open", "keyboard", "mobile", "paint_token"],
     "sidebar": ["hover", "focus_visible", "open", "keyboard", "mobile", "rtl", "paint_token"],
+    "skeleton": ["rtl", "text_metrics", "paint_token"],
+    "slider": [
+        "disabled",
+        "hover",
+        "focus_visible",
+        "drag",
+        "keyboard",
+        "rtl",
+        "text_metrics",
+        "paint_token",
+    ],
+    "sonner": ["hover", "drag", "open", "mobile", "text_metrics", "paint_token"],
+    "spinner": ["disabled", "rtl", "text_metrics", "paint_token"],
+    "switch": ["disabled", "focus_visible", "keyboard", "rtl", "text_metrics", "paint_token"],
+    "tabs": ["disabled", "focus_visible", "open", "keyboard", "rtl", "text_metrics", "paint_token"],
     "table": ["hover", "paint_token"],
+    "textarea": ["disabled", "focus_visible", "drag", "keyboard", "rtl", "text_metrics", "paint_token"],
+    "toggle": ["disabled", "hover", "focus_visible", "pressed", "keyboard", "rtl", "text_metrics", "paint_token"],
+    "toggle-group": [
+        "disabled",
+        "hover",
+        "focus_visible",
+        "pressed",
+        "keyboard",
+        "rtl",
+        "text_metrics",
+        "paint_token",
+    ],
     "tooltip": ["disabled", "hover", "focus_visible", "open", "keyboard", "paint_token"],
 }
 
@@ -389,6 +424,7 @@ def load_suite_reports(suite_report: Path) -> dict[str, list[dict[str, Any]]]:
             {
                 "id": report.get("id"),
                 "output": output,
+                "agent_status": agent.get("status", report.get("status", "")),
                 "status_counts": report.get("status_counts", {}),
                 "layer_status_counts": report.get("layer_status_counts", {}),
                 "repair_queue_count": agent.get("repair_queue_count", 0),
@@ -417,6 +453,7 @@ def load_extra_reports(paths: list[Path]) -> dict[str, list[dict[str, Any]]]:
             {
                 "id": path.stem,
                 "output": str(path.relative_to(ROOT)),
+                "agent_status": data.get("agent_packet", {}).get("status", ""),
                 "status_counts": data.get("summary", {}).get("status_counts", {}),
                 "repair_queue_count": agent_summary.get(
                     "repair_queue_count",
@@ -459,7 +496,8 @@ def _axis_coverage(
     ]
     report_summaries = [report.get("summary", {}) for report in reports]
     return {
-        "source_refs": bool(upstream_refs),
+        "source_refs": bool(upstream_refs)
+        or any(summary.get("upstream_source_ref_count", 0) for summary in report_summaries),
         "upstream_dom_snapshot": _has_snapshot_ref(upstream_refs)
         or any(summary.get("upstream_dom_snapshot_count", 0) for summary in report_summaries),
         "fret_layout": bool(fret_refs)
@@ -474,11 +512,13 @@ def _axis_coverage(
             or summary.get("fret_text_paint_fact_count", 0)
             for summary in report_summaries
         ),
-        "interaction_script": bool(_script_refs(fret_refs)),
+        "interaction_script": bool(_script_refs(fret_refs))
+        or any(summary.get("interaction_script_count", 0) for summary in report_summaries),
         "responsive_viewport": any(
             target.get("viewport_class") != "desktop_1440x900" for target in targets
         )
-        or any("responsive" in str(target.get("id", "")) for target in targets),
+        or any("responsive" in str(target.get("id", "")) for target in targets)
+        or any(summary.get("responsive_viewport_count", 0) for summary in report_summaries),
     }
 
 
@@ -574,9 +614,20 @@ def _status_for_component(
 ) -> str:
     repair_count = sum(int(report.get("repair_queue_count", 0)) for report in reports)
     hardening_count = sum(int(report.get("hardening_queue_count", 0)) for report in reports)
+    report_statuses = {
+        str(report.get("agent_status", "")).strip()
+        for report in reports
+        if str(report.get("agent_status", "")).strip()
+    }
     if repair_count:
         return "repair_needed"
     if reports and not repair_count and not hardening_count:
+        if report_statuses == {"audited_skipped"}:
+            return "audited_skipped"
+        if report_statuses == {"audited_deferred"}:
+            return "audited_deferred"
+        if report_statuses and report_statuses <= {"audited_deferred", "audited_skipped"}:
+            return "audited_deferred"
         return "regression_locked"
     if reports:
         return "harness_hardening"
@@ -599,6 +650,10 @@ def _next_gap(
 ) -> str:
     if status == "repair_needed":
         return "repair_by_owner_layer"
+    if status == "audited_deferred":
+        return "resume_when_priority_changes"
+    if status == "audited_skipped":
+        return "no_component_contract_target"
     if not axes["source_refs"]:
         return "add_upstream_source_refs"
     if not axes["upstream_dom_snapshot"]:
@@ -845,6 +900,8 @@ def write_markdown(matrix: dict[str, Any], output: Path) -> None:
             "## Interpretation",
             "",
             "- `regression_locked` means the current suite report has no repair or hardening queue for that component slice. It does not mean every state, breakpoint, DPI, font metric, and interaction path is covered.",
+            "- `audited_deferred` means the surface has a machine-readable audit packet and zero repair/hardening queues, but the owner decision is to resume only when its priority changes.",
+            "- `audited_skipped` means the surface has a machine-readable audit packet explaining why it is not a standalone component contract for this matrix.",
             "- `Depth` records state signals proven by manifest targets, component packets, validation gates, and Fret diagnostics summaries. `Missing depth` is filtered through component-specific applicability so irrelevant states are not treated as gaps.",
             "- `coverage_targeted` means a priority target exists in the manifest, but it is not yet represented as a current suite report.",
             "- `inventory_only` means the component exists in the shadcn inventory but does not yet have a harness seed.",
@@ -900,10 +957,32 @@ def main() -> int:
             "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/card_agent_packet_p0_v1.json",
             "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/checkbox_agent_packet_p0_v1.json",
             "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/collapsible_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/command_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/empty_agent_packet_p0_v1.json",
             "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/field_agent_packet_p0_v1.json",
             "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/form_agent_packet_p0_v1.json",
             "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/input_group_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/item_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/kbd_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/label_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/radio_group_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/scroll_area_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/separator_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/skeleton_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/spinner_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/textarea_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toggle_group_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/slider_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/sonner_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/switch_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/tabs_agent_packet_p0_v1.json",
             "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/pagination_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/carousel_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/chart_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/native_select_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/toast_agent_packet_p0_v1.json",
+            "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/typography_agent_packet_p0_v1.json",
         ],
         help="Additional component agent packet report to fold into the matrix. May be repeated.",
     )

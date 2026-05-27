@@ -56,9 +56,9 @@ pub(super) fn preview_kbd(cx: &mut AppComponentCx<'_>) -> Vec<AnyElement> {
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview mirrors the shadcn Kbd docs path first: Demo, Usage, Group, Button, Tooltip, Input Group, RTL, and API Reference.",
+            "Preview mirrors the current shadcn Kbd docs path first: Demo, Usage, Group, Button, Tooltip, Input Group, and API Reference. RTL is a Fret-only follow-up.",
         ),
-        vec![demo, usage, group, button, tooltip, input_group, rtl, api_reference],
+        vec![demo, usage, group, button, tooltip, input_group, api_reference, rtl],
     )
     .test_id("ui-gallery-kbd-component");
 

@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "component": "native-select",
+  "style": "new-york-v4",
+  "generated_date": "2026-05-27",
+  "generated_by": "manual audited-deferred packet v1",
+  "source_mapping": "ecosystem/fret-ui-shadcn/src/native_select.rs + apps/fret-ui-gallery/src/ui/pages/native_select.rs + tools/diag-scripts/ui-gallery/native-select/*.json",
+  "validation_gates": [
+    {
+      "command": "python -m json.tool docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/native_select_agent_packet_p0_v1.json | Out-Null",
+      "status": "pass",
+      "scope": "Native Select audited-deferred packet remains machine-readable."
+    },
+    {
+      "command": "Get-ChildItem -Path tools/diag-scripts/ui-gallery/native-select -Filter *.json | ForEach-Object { python -m json.tool $_.FullName | Out-Null }",
+      "status": "pass",
+      "scope": "Existing Native Select diagnostics scripts remain parseable as the deferred evidence set."
+    }
+  ],
+  "upstream_contexts": [
+    {
+      "id": "upstream.native-select.demo.light.vp1440x900",
+      "snapshot": "native-select-demo",
+      "theme": "light",
+      "mode": "static",
+      "variant": "docs-demo",
+      "viewport": {
+        "width_px": 1440,
+        "height_px": 900
+      }
+    }
+  ],
+  "evidence_contexts": {
+    "upstream_dom": [
+      {
+        "snapshot": "native-select-demo",
+        "theme": "light",
+        "mode": "static",
+        "variant": "docs-demo",
+        "context_id": "upstream.native-select.demo.light.vp1440x900",
+        "viewport": {
+          "width_px": 1440,
+          "height_px": 900
+        },
+        "snapshot_path": "goldens/shadcn-web/v4/new-york-v4/native-select-demo.json"
+      }
+    ],
+    "fret_layout_sidecar": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/native-select/ui-gallery-native-select-docs-screenshots.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/native-select/ui-gallery-native-select-rtl-open-screenshot.json"
+      }
+    ],
+    "fret_bundle_schema2": [
+      {
+        "script": "tools/diag-scripts/ui-gallery/native-select/ui-gallery-native-select-docs-smoke.json"
+      },
+      {
+        "script": "tools/diag-scripts/ui-gallery/native-select/ui-gallery-native-select-label-click-focus.json"
+      }
+    ]
+  },
+  "summary": {
+    "part_count": 3,
+    "status_counts": {
+      "pass_known": 3,
+      "needs_hardening": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "owner_counts": {
+      "component_recipe": 2,
+      "gallery_composition": 1,
+      "policy": 0,
+      "mechanism_core": 0,
+      "upstream_reference": 0,
+      "unknown": 0
+    },
+    "layer_counts": {
+      "recipe": 2,
+      "app_demo": 1,
+      "policy": 0,
+      "mechanism": 0,
+      "upstream": 0,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 3
+    },
+    "top_findings": [
+      "Native Select is intentionally audited_deferred, not missing: the shadcn-facing authoring surface, trigger chrome, default/sm heights, docs-path gallery, and label/focus diagnostics are already documented.",
+      "True DOM-native select parity depends on future backend-native select widgets.",
+      "Prefer Select for rich overlay behavior until platform-native select plumbing becomes active."
+    ],
+    "promotion_target_counts": {
+      "diag_script": 2,
+      "unit_test": 1,
+      "none": 0
+    },
+    "layout_sidecar_count": 2,
+    "bundle_schema2_count": 2,
+    "upstream_source_ref_count": 3,
+    "upstream_dom_snapshot_count": 1,
+    "interaction_script_count": 2,
+    "responsive_viewport_count": 1,
+    "fret_semantics_fact_count": 2,
+    "fret_interaction_fact_count": 2,
+    "fret_text_paint_fact_count": 1
+  },
+  "live_facts": {
+    "schema_version": 1,
+    "upstream_source": "repo-ref/ui/apps/v4/content/docs/components/radix/native-select.mdx + repo-ref/ui/apps/v4/registry/new-york-v4/ui/native-select.tsx + goldens/shadcn-web/v4/new-york-v4/native-select-*.json",
+    "fret_source": "ecosystem/fret-ui-shadcn/src/native_select.rs + apps/fret-ui-gallery/src/ui/pages/native_select.rs + tools/diag-scripts/ui-gallery/native-select/*.json",
+    "part_count": 3,
+    "parts": [
+      {
+        "part_id": "native_select_authoring_surface",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "docs/audits/shadcn-native-select.md",
+          "ecosystem/fret-ui-shadcn/src/native_select.rs"
+        ],
+        "facts": [
+          "NativeSelect::new covers the controlled authoring path.",
+          "NativeSelect::new_controllable covers the defaultValue/uncontrolled path.",
+          "options and optgroups are the structured equivalent of upstream option children."
+        ]
+      },
+      {
+        "part_id": "native_select_chrome_and_semantics",
+        "status": "pass_known",
+        "owner": "component_recipe",
+        "layer": "recipe",
+        "evidence_refs": [
+          "ecosystem/fret-ui-shadcn/src/native_select.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_native_select.rs",
+          "ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/native_select.rs",
+          "tools/diag-scripts/ui-gallery/native-select/ui-gallery-native-select-label-click-focus.json"
+        ],
+        "facts": [
+          "Trigger chrome follows the input recipe family.",
+          "default and sm heights are explicitly gated.",
+          "Label association and focus behavior have diagnostics coverage."
+        ]
+      },
+      {
+        "part_id": "native_select_backend_defer",
+        "status": "pass_known",
+        "owner": "gallery_composition",
+        "layer": "app_demo",
+        "evidence_refs": [
+          "docs/audits/shadcn-native-select.md",
+          "apps/fret-ui-gallery/src/ui/pages/native_select.rs"
+        ],
+        "facts": [
+          "The current Fret implementation is popover-backed and preserves shadcn authoring/form semantics.",
+          "Backend-native picker widgets are deferred.",
+          "The gallery documents Native Select vs Select as a source-aligned decision point."
+        ]
+      }
+    ]
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "audited_deferred",
+    "suite_id": "shadcn-component-parity-matrix-v1",
+    "goal": "Record Native Select as an intentionally deferred, already-audited surface rather than leaving it not_in_harness.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 0,
+    "gate_queue_count": 0,
+    "summary": {
+      "repair_queue_count": 0,
+      "hardening_queue_count": 0,
+      "gate_queue_count": 0
+    },
+    "reports": [
+      {
+        "id": "native-select.audited-deferred",
+        "component": "native-select",
+        "output": "docs/workstreams/shadcn-component-parity-matrix-v1/artifacts/native_select_agent_packet_p0_v1.json",
+        "status": "audited_deferred",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 0
+      }
+    ]
+  }
+}
