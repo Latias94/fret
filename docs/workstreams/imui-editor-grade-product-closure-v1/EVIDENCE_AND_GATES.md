@@ -2894,8 +2894,11 @@ Scope: keep `table_controls/header.rs` as the table-header coordination owner wh
 mechanism-heavy header internals into focused child owners.
 
 - `ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger.rs` now owns sortable/plain header
-  pressable trigger construction, pressable a11y props, keyboard activation lifecycle marking,
-  active-trigger response population, and sortable header visual hover/focus/pressed chrome.
+  pressable trigger construction, pressable a11y props, and sortable header visual
+  hover/focus/pressed chrome.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger/behavior.rs` now owns sortable
+  header keyboard activation lifecycle marking, clicked transient draining for plain headers, and
+  active-trigger response population.
 - `ecosystem/fret-ui-kit/src/imui/table_controls/header/resize.rs` now owns table column resize
   handle constants, pointer-region construction, resize cursor capture, pointer drag start/move/up
   handling, resize drag response population, and resize handle visual chrome.

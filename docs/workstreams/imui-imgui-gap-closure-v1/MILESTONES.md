@@ -833,6 +833,11 @@ Exit criteria:
   same private header trigger surface. Sortable headers keep button-like primary activation, while
   plain headers expose context-menu request signals without reporting left-click click/activation
   lifecycle.
+  2026-05-27 table header trigger behavior owner-split result:
+  `table_controls/header/trigger/behavior.rs` now owns active-trigger behavior installation,
+  sortable keyboard activation lifecycle marking, clicked transient draining for plain headers, and
+  `ResponseExt` population. `trigger.rs` keeps header trigger props, a11y/key-activation policy,
+  keyed surface assembly, and sortable header visual construction.
   2026-05-17 table header visibility menu wiring result:
   `table_column_visibility_header_context_menu(...)` now bridges `TableResponse` header context
   requests from both sortable and plain headers, popup placement, and column visibility menu items.

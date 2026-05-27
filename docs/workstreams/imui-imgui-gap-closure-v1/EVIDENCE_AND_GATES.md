@@ -209,6 +209,42 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Table Header Trigger Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI table header trigger behavior moved into a private owner without changing
+sortable/plain trigger props, primary activation policy, keyboard lifecycle marking, context-menu
+request propagation, plain-header click suppression, response population, or sortable header visual
+layout.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger.rs` keeps header trigger props,
+  a11y/key-activation policy, keyed surface assembly, and sortable header visual construction.
+- `ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger/behavior.rs` owns active-trigger
+  behavior installation, sortable keyboard activation lifecycle marking, clicked transient draining
+  for plain headers, and `ResponseExt` population.
+- `tools/gate_imui_workstream_source.py` now requires the table header trigger behavior owner and
+  rejects active-trigger behavior bodies from drifting back into `trigger.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib table_controls --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  composition::layout_collections::table_plain_header_left_click_does_not_activate_or_click
+  composition::layout_collections::table_plain_header_reports_context_menu_request_from_keyboard_without_clicking
+  composition::layout_collections::table_sortable_header_reports_context_menu_request_from_keyboard
+  composition::layout_collections::table_sortable_header_reports_context_menu_request_on_right_click
+  label_identity::table_headers::table_sortable_header_reports_app_owned_trigger_without_sorting_rows
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Media Paint Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug-draw media paint routing moved into private raster, rounded, and SVG owners
@@ -3747,7 +3783,9 @@ Run evidence:
   own button-like primary activation/click lifecycle, while plain headers only expose context-menu
   request signals. `TableHeaderResponse::response()` now reports right-click context-menu requests
   with a pointer anchor, plus keyboard requests from the ContextMenu key and Shift+F10; the helper
-  below consumes this response signal for the default visibility menu surface. Gates: `cargo
+  below consumes this response signal for the default visibility menu surface. 2026-05-27
+  follow-up: `trigger.rs` keeps header trigger props and sortable visuals while
+  `trigger/behavior.rs` owns active-trigger installation and response population. Gates: `cargo
   nextest run -p fret-imui table_plain_header_left_click_does_not_activate_or_click
   table_plain_header_reports_context_menu_request_from_keyboard_without_clicking
   table_column_visibility_header_context_menu_opens_from_plain_header

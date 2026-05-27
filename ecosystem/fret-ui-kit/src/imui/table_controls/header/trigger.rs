@@ -2,20 +2,18 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use fret_core::SemanticsRole;
-use fret_ui::action::ActivateReason;
 use fret_ui::element::{
     AnyElement, ContainerProps, Length, PressableA11y, PressableKeyActivation, PressableProps,
     PressableState,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 
-use crate::imui::{
-    ResponseExt, TableSortDirection, active_trigger_behavior, imui_is_disabled,
-    mark_lifecycle_instant_if_inactive,
-};
+use crate::imui::{ResponseExt, TableSortDirection, imui_is_disabled};
 
 use super::{table_header_label_text, table_sort_indicator_text};
 use crate::imui::table_controls::cell::table_cell_padding;
+
+mod behavior;
 
 pub(super) struct BuiltHeaderTrigger {
     pub(super) element: AnyElement,
@@ -58,48 +56,12 @@ where
         };
 
         cx.pressable_with_id(props, move |cx, state, element_id| {
-            let behavior = active_trigger_behavior::install_active_trigger_behavior(
-                cx,
-                element_id,
-                active_trigger_behavior::ActiveTriggerBehaviorOptions {
-                    primary_active: activates_on_primary,
-                    ..Default::default()
-                },
-            );
-            let lifecycle_model_for_activate = behavior.lifecycle_model.clone();
-
-            if enabled && activates_on_primary {
-                cx.pressable_on_activate(crate::on_activate(move |host, acx, reason| {
-                    if reason == ActivateReason::Keyboard {
-                        mark_lifecycle_instant_if_inactive(
-                            host,
-                            acx,
-                            &lifecycle_model_for_activate,
-                            false,
-                        );
-                    }
-                    host.record_transient_event(acx, crate::imui::KEY_CLICKED);
-                    host.notify(acx);
-                }));
-            }
-
-            let clicked = if activates_on_primary {
-                cx.take_transient_for(element_id, crate::imui::KEY_CLICKED)
-            } else {
-                let _ = cx.take_transient_for(element_id, crate::imui::KEY_CLICKED);
-                false
-            };
-            active_trigger_behavior::populate_active_trigger_response(
+            behavior::install_header_trigger_behavior(
                 cx,
                 element_id,
                 state,
-                &behavior,
-                active_trigger_behavior::ActiveTriggerResponseInput {
-                    enabled,
-                    clicked,
-                    changed: false,
-                    lifecycle_edited: false,
-                },
+                enabled,
+                activates_on_primary,
                 trigger,
             );
 

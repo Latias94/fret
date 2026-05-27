@@ -572,6 +572,15 @@ Last updated: 2026-05-27
       Result: `table_controls/header/labels.rs` owns visible header label parsing,
       sort-indicator text, sortable a11y labels, header content boxes, and header label text.
       `header.rs` keeps sortable/plain header-cell assembly and resize-handle wrapping.
+- [x] Split IMUI table header trigger behavior out of
+      `ecosystem/fret-ui-kit/src/imui/table_controls/header/trigger.rs` into a private owner module
+      without changing sortable/plain trigger props, primary activation policy, keyboard lifecycle
+      marking, context-menu request propagation, plain-header click suppression, response
+      population, or sortable header visual layout.
+      Result: `table_controls/header/trigger/behavior.rs` owns active-trigger behavior
+      installation, sortable keyboard activation lifecycle marking, clicked transient draining for
+      plain headers, and `ResponseExt` population. `trigger.rs` keeps header trigger props,
+      a11y/key-activation policy, keyed surface assembly, and sortable header visual construction.
 - [x] Split IMUI table row-group mechanics out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/body.rs` into a private owner module without
       changing row semantics, cell wrapping, pinned left/right grouping, horizontal center-scroll
