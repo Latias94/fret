@@ -3,6 +3,37 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Begin-Menu Trigger Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: begin-menu trigger behavior moved out of the trigger shell into a private behavior
+owner without changing menu trigger a11y, label identity, activate shortcut gating, keyboard
+lifecycle marking, menubar registry synchronization, arrow-open behavior, click response
+population, or trigger visual chrome.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior.rs` now owns
+  active-trigger behavior installation, keyboard activation lifecycle marking, activate shortcut
+  handling, menubar row registry/sync wiring, arrow-down/up open behavior, transient click reads,
+  and trigger `ResponseExt` population.
+- `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger.rs` keeps label identity,
+  `PressableA11y`, pressable shell construction, and `visual::menu_trigger_visual(...)` mounting.
+- `tools/gate_imui_workstream_source.py` now rejects active-trigger/menubar-row/response
+  population code from drifting back into `trigger.rs` and rejects a11y/visual shell code from
+  drifting into the behavior owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Switch Behavior Owner-Split Evidence - 2026-05-27
 
 Claim verified: switch pressable behavior moved out of the switch visual/model shell into a private

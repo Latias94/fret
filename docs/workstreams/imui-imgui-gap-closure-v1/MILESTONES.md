@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 begin-menu trigger behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger/behavior.rs` now owns active-trigger
+behavior installation, keyboard activation lifecycle marking, activate shortcut handling, menubar
+row registry/sync wiring, arrow-down/up open behavior, transient click reads, and trigger
+`ResponseExt` population. `trigger.rs` keeps label identity, `PressableA11y`, pressable shell
+construction, and `visual::menu_trigger_visual(...)` mounting.
+
 2026-05-27 switch behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/boolean_controls/switch/behavior.rs` now owns active-trigger
 behavior installation, activate/shortcut model toggling, lifecycle edit marking, transient

@@ -397,6 +397,16 @@ Last updated: 2026-05-27
       synchronization, post-trigger reconciliation, and `MenubarActiveTrigger` writes.
       `open_policy.rs` now keeps trigger-click toggling, open-request resolution,
       disabled-popup cleanup, and the private owner re-export.
+- [x] Split IMUI begin-menu trigger behavior out of
+      `ecosystem/fret-ui-kit/src/imui/menu_family_controls/trigger.rs` into a private owner module
+      without changing menu trigger a11y, label identity, activate shortcut gating, keyboard
+      lifecycle marking, menubar registry synchronization, arrow-open behavior, click response
+      population, or trigger visual chrome.
+      Result: `menu_family_controls/trigger/behavior.rs` owns active-trigger behavior
+      installation, keyboard activation lifecycle marking, activate shortcut handling, menubar row
+      registry/sync wiring, arrow-down/up open behavior, transient click reads, and trigger
+      `ResponseExt` population. `trigger.rs` keeps label identity, `PressableA11y`, pressable shell
+      construction, and `visual::menu_trigger_visual(...)` mounting.
 - [x] Split IMUI table header row assembly out of
       `ecosystem/fret-ui-kit/src/imui/table_controls/render.rs` into a private owner module
       without changing header visibility, sortable/plain header cells, resize response metadata,
