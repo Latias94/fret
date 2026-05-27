@@ -25,6 +25,7 @@ fn retain_non_duplicate_import_ops<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             tx.ops.retain(

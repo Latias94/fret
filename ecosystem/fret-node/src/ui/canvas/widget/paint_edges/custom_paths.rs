@@ -14,7 +14,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return HashMap::new();
         };
         let style = self.style.clone();
-        self.graph
+        self.mirrors
+            .graph
             .read_ref(host, |graph| {
                 let mut out: HashMap<EdgeId, crate::ui::edge_types::EdgeCustomPath> =
                     HashMap::new();

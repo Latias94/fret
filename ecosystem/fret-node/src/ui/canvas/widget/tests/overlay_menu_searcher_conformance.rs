@@ -150,7 +150,8 @@ fn hit_edge_at(
 ) -> Option<EdgeId> {
     let (geom, index) = canvas.canvas_derived(&*host, snapshot);
     let this = canvas;
-    this.graph
+    this.mirrors
+        .graph
         .read_ref(host, |graph| {
             let mut scratch = HitTestScratch::default();
             let mut ctx =

@@ -20,6 +20,7 @@ pub(super) fn traversal_input<H: UiHost, M: NodeGraphCanvasMiddleware>(
         .or_else(|| snapshot.selected_nodes.first().copied())
         .or_else(|| {
             canvas
+                .mirrors
                 .graph
                 .read_ref(host, |g| g.nodes.keys().next().copied())
                 .ok()
@@ -33,6 +34,7 @@ pub(super) fn traversal_input<H: UiHost, M: NodeGraphCanvasMiddleware>(
             WireDragKind::ReconnectMany { edges } => edges.first().map(|e| e.2),
         }?;
         canvas
+            .mirrors
             .graph
             .read_ref(host, |g| g.ports.get(&from_port).map(|p| p.dir))
             .ok()

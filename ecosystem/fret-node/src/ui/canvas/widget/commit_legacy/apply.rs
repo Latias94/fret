@@ -79,7 +79,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
         }
 
-        let Some(mut scratch) = self.graph.read_ref(host, |g| g.clone()).ok() else {
+        let Some(mut scratch) = self.mirrors.graph.read_ref(host, |g| g.clone()).ok() else {
             return Err(vec![Diagnostic {
                 key: "tx.graph_unavailable".to_string(),
                 severity: DiagnosticSeverity::Error,
@@ -125,7 +125,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
         };
 
-        let _ = self.graph.update(host, |g, _cx| {
+        let _ = self.mirrors.graph.update(host, |g, _cx| {
             *g = scratch;
         });
 

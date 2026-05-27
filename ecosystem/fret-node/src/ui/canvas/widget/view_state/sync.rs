@@ -11,7 +11,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 .ok()
                 .unwrap_or_else(|| self.editor_config.clone());
         }
-        if let Some(editor_config) = self.editor_config_model.as_ref() {
+        if let Some(editor_config) = self.mirrors.editor_config.as_ref() {
             return editor_config
                 .read_ref(host, |state| state.clone())
                 .ok()
@@ -36,7 +36,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 .resolved_interaction_state(),
         };
 
-        let _ = self.view_state.read(host, |_host, s| {
+        let _ = self.mirrors.view_state.read(host, |_host, s| {
             snapshot.pan = s.pan;
             snapshot.zoom = s.zoom;
             snapshot.selected_nodes = s.selected_nodes.clone();
@@ -80,14 +80,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }) else {
             return;
         };
-        let _ = self.graph.update(host, |g, _cx| {
+        let _ = self.mirrors.graph.update(host, |g, _cx| {
             *g = next_graph;
         });
-        let _ = self.view_state.update(host, |s, _cx| {
+        let _ = self.mirrors.view_state.update(host, |s, _cx| {
             *s = next_view;
         });
         self.editor_config = next_editor_config.clone();
-        if let Some(editor_config) = self.editor_config_model.as_ref() {
+        if let Some(editor_config) = self.mirrors.editor_config.as_ref() {
             let _ = editor_config.update(host, |state, _cx| {
                 *state = next_editor_config;
             });

@@ -22,6 +22,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> bool {
         let bounds = self.interaction.last_bounds.unwrap_or_default();
         let nodes = self
+            .mirrors
             .graph
             .read_ref(cx.app, graph_node_ids)
             .ok()

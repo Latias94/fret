@@ -16,6 +16,7 @@ pub(super) fn copy_selection_to_clipboard<H: UiHost, M: NodeGraphCanvasMiddlewar
     }
 
     let text = canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let fragment = GraphFragment::from_selection(

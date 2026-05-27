@@ -17,6 +17,7 @@ pub(super) fn node_hit_capabilities<H: UiHost, M: NodeGraphCanvasMiddleware>(
     node: GraphNodeId,
 ) -> NodeHitCapabilities {
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| NodeHitCapabilities {
             selectable: NodeGraphCanvasWith::<M>::node_is_selectable(

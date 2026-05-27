@@ -10,6 +10,7 @@ pub(super) fn hit_edge_context_target<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) -> Option<EdgeId> {
     let (geometry, index) = canvas.canvas_derived(&*host, snapshot);
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let mut scratch = HitTestScratch::default();

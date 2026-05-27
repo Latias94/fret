@@ -14,6 +14,7 @@ pub(super) fn focus_next_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 
     let mut edges: Vec<EdgeId> = canvas
+        .mirrors
         .graph
         .read_ref(host, |g| {
             g.edges

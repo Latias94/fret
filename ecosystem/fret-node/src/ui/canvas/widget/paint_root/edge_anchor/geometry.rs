@@ -21,6 +21,7 @@ pub(super) fn resolve_edge_anchor_target_from_geometry<H: UiHost, M: NodeGraphCa
 ) -> Option<EdgeAnchorTarget> {
     let edge_id = edge_id?;
     canvas
+        .mirrors
         .graph
         .read_ref(cx.app, |graph| {
             let edge = graph.edges.get(&edge_id)?;

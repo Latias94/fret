@@ -28,6 +28,7 @@ pub(super) fn maybe_extend_bundle_on_shift<H: UiHost, M: NodeGraphCanvasMiddlewa
     };
 
     let should_add = canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             if !NodeGraphCanvasWith::<M>::port_is_connectable_start(

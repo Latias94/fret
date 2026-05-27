@@ -28,6 +28,7 @@ fn focused_port_owner<H: UiHost, M: NodeGraphCanvasMiddleware>(
     port: PortId,
 ) -> Option<GraphNodeId> {
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| graph.ports.get(&port).map(|port| port.node))
         .ok()

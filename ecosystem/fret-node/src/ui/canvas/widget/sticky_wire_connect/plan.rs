@@ -14,6 +14,7 @@ pub(super) fn connectable_sticky_wire_target<H: UiHost, M: NodeGraphCanvasMiddle
 ) -> Option<crate::core::PortId> {
     hit_port.filter(|target| {
         canvas
+            .mirrors
             .graph
             .read_ref(host, |graph| {
                 NodeGraphCanvasWith::<M>::port_is_connectable_end(
@@ -42,6 +43,7 @@ pub(super) fn plan_sticky_wire_connect_outcome<H: UiHost, M: NodeGraphCanvasMidd
 ) -> StickyWireConnectOutcome {
     let presenter = &mut *canvas.presenter;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let plan = presenter.plan_connect(

@@ -18,6 +18,7 @@ pub(super) fn parent_changes<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) -> Vec<(GraphNodeId, Option<GroupId>, Option<GroupId>)> {
     let geom = canvas.canvas_geometry(&*host, snapshot);
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let mut changes: Vec<(GraphNodeId, Option<GroupId>, Option<GroupId>)> = Vec::new();

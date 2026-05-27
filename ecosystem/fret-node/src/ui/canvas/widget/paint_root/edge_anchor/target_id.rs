@@ -17,6 +17,7 @@ fn edge_anchor_target_reconnectable<H: UiHost, M: NodeGraphCanvasMiddleware>(
     edge_id: EdgeId,
 ) -> bool {
     canvas
+        .mirrors
         .graph
         .read_ref(cx.app, |graph| {
             let edge = graph.edges.get(&edge_id)?;

@@ -38,6 +38,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .drag_preview_rebuild_needed(DragPreviewKind::NodeResize, base_index_key);
         if rebuild {
             let node_ports = self
+                .mirrors
                 .graph
                 .read_ref(host, |g| {
                     let mut out: HashMap<GraphNodeId, Vec<PortId>> = HashMap::new();
@@ -84,7 +85,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     .map(|v| v.as_slice())
                     .unwrap_or(&[]),
                 |edge_ids| {
-                    self.graph
+                    self.mirrors
+                        .graph
                         .read_ref(host, |g| {
                             edge_ids
                                 .iter()
@@ -110,7 +112,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             });
         }
 
-        let graph_model = self.graph.clone();
+        let graph_model = self.mirrors.graph.clone();
         self.geometry
             .drag_preview_outputs_for_rev(preview_rev, |meta, geom_mut, index_mut| {
                 let prev_rect = meta.node_rects.get(&node_id).copied().unwrap_or(base_rect);

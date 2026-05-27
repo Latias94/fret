@@ -9,6 +9,7 @@ pub(super) fn pointer_is_background<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) -> bool {
     let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
     canvas
+        .mirrors
         .graph
         .read_ref(cx.host(), |graph| {
             let mut scratch = HitTestScratch::default();

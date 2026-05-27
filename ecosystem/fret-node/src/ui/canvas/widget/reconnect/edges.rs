@@ -70,7 +70,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
         }
 
-        self.graph
+        self.mirrors
+            .graph
             .read_ref(host, |graph| {
                 let mut edges = Self::yank_edges_from_port(graph, port);
                 edges.retain(|(edge_id, endpoint, _fixed)| {

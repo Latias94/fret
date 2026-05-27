@@ -19,6 +19,7 @@ pub(super) fn handle_drop<H: UiHost, M: NodeGraphCanvasMiddleware>(
 
     let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
     let edge_hit: Option<EdgeId> = canvas
+        .mirrors
         .graph
         .read_ref(cx.host(), |graph| {
             let mut scratch = HitTestScratch::default();

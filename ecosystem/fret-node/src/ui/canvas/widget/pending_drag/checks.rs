@@ -27,6 +27,7 @@ pub(super) fn primary_node_is_draggable<H: UiHost, M: NodeGraphCanvasMiddleware>
     node_id: GraphNodeId,
 ) -> bool {
     canvas
+        .mirrors
         .graph
         .read_ref(host, |g| {
             NodeGraphCanvasWith::<M>::node_is_draggable(g, &snapshot.interaction, node_id)

@@ -12,6 +12,7 @@ pub(super) fn collect_selected_nodes_render_data<M: NodeGraphCanvasMiddleware, H
 ) -> RenderData {
     let cull = render_cull_rect;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let mut out = RenderData::default();

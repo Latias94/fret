@@ -81,6 +81,7 @@ fn run_case(zoom: f32, edge_interaction_width: f32, wire_width: f32) -> (bool, b
     let pos_miss = offset_point(mid, nx, ny, hit_w_canvas * 1.1);
 
     let graph_snapshot = canvas
+        .mirrors
         .graph
         .read_ref(cx.app, |g| g.clone())
         .ok()

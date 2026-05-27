@@ -52,7 +52,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) {
         let selected_groups = snapshot.selected_groups.clone();
         let mut overlay_rects = Vec::with_capacity(selected_groups.len());
-        let _ = self.graph.read_ref(cx.app, |graph| {
+        let _ = self.mirrors.graph.read_ref(cx.app, |graph| {
             for group_id in &selected_groups {
                 let Some(group) = graph.groups.get(group_id) else {
                     continue;

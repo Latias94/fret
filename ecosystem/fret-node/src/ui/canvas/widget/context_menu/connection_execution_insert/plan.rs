@@ -34,6 +34,7 @@ pub(super) fn plan_connection_insert_menu_candidate<H: UiHost, M: NodeGraphCanva
 ) -> ConnectionInsertMenuPlan {
     let presenter = &mut *canvas.presenter;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             plan_connection_insert_menu_candidate_with_graph::<M>(

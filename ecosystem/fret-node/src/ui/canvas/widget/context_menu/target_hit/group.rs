@@ -10,6 +10,7 @@ pub(super) fn hit_group_context_target<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) -> Option<GroupId> {
     let header_height = canvas.style.geometry.node_header_height;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let order = crate::ui::canvas::geometry::group_order(graph, &snapshot.group_draw_order);

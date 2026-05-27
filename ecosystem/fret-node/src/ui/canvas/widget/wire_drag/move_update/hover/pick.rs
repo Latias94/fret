@@ -16,6 +16,7 @@ pub(super) fn pick_hover_port<H: UiHost, M: NodeGraphCanvasMiddleware>(
     };
 
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let mut scratch = HitTestScratch::default();
@@ -48,6 +49,7 @@ pub(super) fn pick_hover_edge_if_no_hover_port<H: UiHost, M: NodeGraphCanvasMidd
     }
 
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let mut scratch = HitTestScratch::default();

@@ -25,6 +25,7 @@ pub(super) fn compute_hover_convertible<H: UiHost, M: NodeGraphCanvasMiddleware>
 
     let presenter = &mut *canvas.presenter;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             if !NodeGraphCanvasWith::<M>::port_is_connectable_end(

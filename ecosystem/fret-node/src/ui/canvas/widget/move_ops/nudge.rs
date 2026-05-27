@@ -63,6 +63,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         if snap_to_grid {
             if let Some(primary) = selected_nodes.first().copied() {
                 let primary_start = self
+                    .mirrors
                     .graph
                     .read_ref(host, |g| g.nodes.get(&primary).map(|n| n.pos))
                     .ok()
@@ -80,6 +81,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 };
             } else if let Some(primary) = selected_groups.first().copied() {
                 let primary_start = self
+                    .mirrors
                     .graph
                     .read_ref(host, |g| g.groups.get(&primary).map(|gr| gr.rect.origin))
                     .ok()
@@ -104,6 +106,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let geom_for_extent = self.canvas_geometry(&*host, snapshot);
         let ops = self
+            .mirrors
             .graph
             .read_ref(host, |g| {
                 nudge_support::plan_nudge_ops(

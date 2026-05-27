@@ -71,7 +71,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let node_origin = snapshot.interaction.node_origin.normalized();
             let style = self.style.clone();
             let draw_order = snapshot.draw_order.clone();
-            let graph = self.graph.clone();
+            let graph = self.mirrors.graph.clone();
             let presenter = &mut *self.presenter;
             let overrides = self.geometry_overrides.as_deref();
 

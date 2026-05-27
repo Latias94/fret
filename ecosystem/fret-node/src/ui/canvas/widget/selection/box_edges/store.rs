@@ -57,7 +57,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
         }
 
-        self.graph
+        self.mirrors
+            .graph
             .read_ref(host, |graph| {
                 super::graph::collect_box_select_edges_from_graph_with_mode(graph, mode, nodes)
             })

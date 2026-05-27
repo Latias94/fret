@@ -13,6 +13,7 @@ pub(super) fn group_rect_ops<H: UiHost, M: NodeGraphCanvasMiddleware>(
     group_overrides: &BTreeMap<GroupId, crate::core::CanvasRect>,
 ) -> Vec<GraphOp> {
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             group_overrides

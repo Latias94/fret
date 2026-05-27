@@ -16,6 +16,7 @@ pub(super) fn collect_node_measure_inputs<H: UiHost, M: NodeGraphCanvasMiddlewar
 ) -> Option<Vec<NodeMeasureInput>> {
     let presenter: &dyn NodeGraphPresenter = &*canvas.presenter;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let mut out: Vec<NodeMeasureInput> = Vec::with_capacity(graph.nodes.len());

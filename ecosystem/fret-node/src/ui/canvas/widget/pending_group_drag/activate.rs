@@ -9,6 +9,7 @@ pub(super) fn group_drag_start_nodes<H: UiHost, M: NodeGraphCanvasMiddleware>(
     group: GroupId,
 ) -> Vec<(GraphNodeId, CanvasPoint)> {
     canvas
+        .mirrors
         .graph
         .read_ref(host, |g| {
             g.nodes

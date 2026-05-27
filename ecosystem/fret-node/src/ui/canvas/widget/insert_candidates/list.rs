@@ -7,6 +7,7 @@ pub(super) fn list_background_insert_candidates<H: UiHost, M: NodeGraphCanvasMid
     let candidates = {
         let presenter = &mut *canvas.presenter;
         canvas
+            .mirrors
             .graph
             .read_ref(host, |graph| presenter.list_insertable_nodes(graph))
             .ok()
@@ -23,6 +24,7 @@ pub(super) fn list_connection_insert_candidates<H: UiHost, M: NodeGraphCanvasMid
     let candidates = {
         let presenter = &mut *canvas.presenter;
         canvas
+            .mirrors
             .graph
             .read_ref(host, |graph| {
                 presenter.list_insertable_nodes_for_connection(graph, from)
@@ -41,6 +43,7 @@ pub(super) fn list_edge_insert_candidates<H: UiHost, M: NodeGraphCanvasMiddlewar
     let candidates = {
         let presenter = &mut *canvas.presenter;
         canvas
+            .mirrors
             .graph
             .read_ref(host, |graph| {
                 presenter.list_insertable_nodes_for_edge(graph, edge)

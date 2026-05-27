@@ -490,11 +490,15 @@ enum PortNavDir {
 /// - connect ports (LMB drag pin -> pin).
 pub type NodeGraphCanvas = NodeGraphCanvasWith<NoopNodeGraphCanvasMiddleware>;
 
-pub struct NodeGraphCanvasWith<M> {
+struct NodeGraphCanvasMirrors {
     graph: Model<Graph>,
     view_state: Model<NodeGraphViewState>,
+    editor_config: Option<Model<NodeGraphEditorConfig>>,
+}
+
+pub struct NodeGraphCanvasWith<M> {
+    mirrors: NodeGraphCanvasMirrors,
     editor_config: NodeGraphEditorConfig,
-    editor_config_model: Option<Model<NodeGraphEditorConfig>>,
     store: Option<Model<NodeGraphStore>>,
     store_rev: Option<u64>,
     presenter: Box<dyn NodeGraphPresenter>,

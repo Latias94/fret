@@ -20,6 +20,7 @@ pub(super) fn inspect_non_port_target<H: UiHost, M: NodeGraphCanvasMiddleware>(
     zoom: f32,
 ) -> StickyWireNonPortTarget {
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let on_node = geom.order.iter().rev().any(|id| {

@@ -18,6 +18,7 @@ pub(in super::super) fn hit_hover_edge_anchor<H: UiHost, M: NodeGraphCanvasMiddl
     let (geom, index) = canvas.canvas_derived(&*host, snapshot);
     let index = index.clone();
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let mut scratch = HitTestScratch::default();
@@ -41,6 +42,7 @@ pub(in super::super) fn hit_hover_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
     let (geom, index) = canvas.canvas_derived(&*host, snapshot);
     let index = index.clone();
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let mut scratch = HitTestScratch::default();

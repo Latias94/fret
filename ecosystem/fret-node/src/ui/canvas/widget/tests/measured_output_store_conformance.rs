@@ -108,6 +108,7 @@ fn measured_output_store_matches_internals_query_surfaces() {
             panic!("expected internals.port_centers_window for {port:?}");
         };
         let Some(node) = canvas
+            .mirrors
             .graph
             .read_ref(&host, |g| g.ports.get(&port).map(|p| p.node))
             .ok()

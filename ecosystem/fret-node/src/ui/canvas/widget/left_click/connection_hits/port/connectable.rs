@@ -18,6 +18,7 @@ pub(super) fn port_connectability<H: UiHost, M: NodeGraphCanvasMiddleware>(
     port: PortId,
 ) -> PortConnectability {
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let base = NodeGraphCanvasWith::<M>::port_is_connectable_base(

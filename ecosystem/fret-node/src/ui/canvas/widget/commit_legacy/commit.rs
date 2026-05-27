@@ -34,8 +34,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let snapshot = self.sync_view_state(host);
         let outcome = {
             let ctx = NodeGraphCanvasMiddlewareCx {
-                graph: &self.graph,
-                view_state: &self.view_state,
+                graph: &self.mirrors.graph,
+                view_state: &self.mirrors.view_state,
                 style: &self.style,
                 bounds: self.interaction.last_bounds,
                 pan: snapshot.pan,

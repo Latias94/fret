@@ -76,6 +76,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let presenter: &dyn NodeGraphPresenter = &*self.presenter;
         let edge_ctx = EdgePathContext::new(&style, presenter, edge_types);
         let edge_centers: Vec<(crate::core::EdgeId, Point)> = self
+            .mirrors
             .graph
             .read_ref(host, |graph| {
                 graph
@@ -123,6 +124,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let focused_port = self.interaction.focused_port;
         let focused_edge = self.interaction.focused_edge;
         let labels = self
+            .mirrors
             .graph
             .read_ref(host, |graph| {
                 let node_label = focused_node

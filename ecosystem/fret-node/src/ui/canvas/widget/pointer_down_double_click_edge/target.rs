@@ -9,6 +9,7 @@ pub(super) fn edge_double_click_target<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) -> Option<EdgeId> {
     let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
     canvas
+        .mirrors
         .graph
         .read_ref(cx.host(), |graph| {
             let mut scratch = HitTestScratch::default();

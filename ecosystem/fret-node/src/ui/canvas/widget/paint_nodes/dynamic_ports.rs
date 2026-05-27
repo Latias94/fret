@@ -75,6 +75,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let handle = geom.ports.get(&port)?;
         let bounds = handle.bounds;
         let color = self
+            .mirrors
             .graph
             .read_ref(app, |graph| {
                 let base = self.presenter.port_color(graph, port, &self.style);

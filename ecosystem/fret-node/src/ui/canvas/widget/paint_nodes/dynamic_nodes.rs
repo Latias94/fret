@@ -76,7 +76,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         focused_node: Option<GraphNodeId>,
     ) -> NodeChromeHint {
         if let Some(skin) = skin {
-            self.graph
+            self.mirrors
+                .graph
                 .read_ref(app, |graph| {
                     skin.node_chrome_hint_with_state(
                         graph,
@@ -167,6 +168,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
 
         let handles = self
+            .mirrors
             .graph
             .read_ref(cx.app, |graph| {
                 self.presenter.node_resize_handles(graph, node, &self.style)

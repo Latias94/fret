@@ -22,6 +22,7 @@ where
 
     let geom = canvas.canvas_geometry(&*cx.host(), snapshot);
     let reconnect = canvas
+        .mirrors
         .graph
         .read_ref(cx.host(), |graph| {
             canvas.pick_reconnect_endpoint(
@@ -40,6 +41,7 @@ where
         return false;
     };
     let endpoint_allowed = canvas
+        .mirrors
         .graph
         .read_ref(cx.host(), |graph| {
             NodeGraphCanvasWith::<M>::edge_endpoint_is_reconnectable(

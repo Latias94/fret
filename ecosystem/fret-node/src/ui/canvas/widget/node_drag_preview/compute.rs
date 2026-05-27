@@ -30,6 +30,7 @@ where
     let geometry = canvas.canvas_geometry(&*host, snapshot);
     let node_origin = snapshot.interaction.node_origin.normalized();
     canvas
+        .mirrors
         .graph
         .read_ref(&*host, |graph| {
             let mut next_nodes: Vec<(GraphNodeId, CanvasPoint)> =

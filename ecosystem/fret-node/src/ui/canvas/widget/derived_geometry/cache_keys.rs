@@ -8,7 +8,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> GeometryCacheKey {
         let zoom = snapshot.zoom;
         let node_origin = snapshot.interaction.node_origin.normalized();
-        let graph_rev = self.graph.revision(host).unwrap_or(0);
+        let graph_rev = self.mirrors.graph.revision(host).unwrap_or(0);
         let presenter_rev = self.presenter.geometry_revision();
         let edge_types_rev = self.edge_types.as_ref().map(|t| t.revision()).unwrap_or(0);
         let overrides_rev = self

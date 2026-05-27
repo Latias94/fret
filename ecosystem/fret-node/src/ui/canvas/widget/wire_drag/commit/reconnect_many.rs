@@ -15,6 +15,7 @@ pub(super) fn commit_reconnect_many<H: UiHost, M: NodeGraphCanvasMiddleware>(
         connect_end_target = Some(target);
         let presenter = &mut *canvas.presenter;
         let (ops_all, toast) = canvas
+            .mirrors
             .graph
             .read_ref(cx.host(), |graph| {
                 let mut scratch = graph.clone();
@@ -62,6 +63,7 @@ pub(super) fn commit_reconnect_many<H: UiHost, M: NodeGraphCanvasMiddleware>(
         }
     } else if snapshot.interaction.reconnect_on_drop_empty {
         let ops_all = canvas
+            .mirrors
             .graph
             .read_ref(cx.host(), |graph| {
                 let mut out: Vec<GraphOp> = Vec::new();

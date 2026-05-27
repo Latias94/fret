@@ -45,6 +45,7 @@ pub(super) fn plan_connection_conversion_menu_candidate<H: UiHost, M: NodeGraphC
     let style = canvas.style.clone();
     let presenter = &mut *canvas.presenter;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             plan_connection_conversion_menu_candidate_with_graph::<M>(

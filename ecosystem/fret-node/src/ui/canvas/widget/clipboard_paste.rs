@@ -44,6 +44,7 @@ pub(super) fn duplicate_selection<H: UiHost, M: NodeGraphCanvasMiddleware>(
     }
 
     let fragment = canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             GraphFragment::from_selection(graph, selected_nodes.to_vec(), selected_groups.to_vec())

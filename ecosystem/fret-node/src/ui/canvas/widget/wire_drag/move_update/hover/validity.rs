@@ -13,6 +13,7 @@ pub(super) fn compute_hover_validity_and_diag<H: UiHost, M: NodeGraphCanvasMiddl
 
     let presenter = &mut *canvas.presenter;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             if !NodeGraphCanvasWith::<M>::port_is_connectable_end(

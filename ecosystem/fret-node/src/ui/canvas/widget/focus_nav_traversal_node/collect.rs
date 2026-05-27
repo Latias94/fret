@@ -8,6 +8,7 @@ pub(super) fn ordered_selectable_nodes<M: NodeGraphCanvasMiddleware>(
     snapshot: &ViewSnapshot,
 ) -> Vec<GraphNodeId> {
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let mut out: Vec<GraphNodeId> = Vec::new();

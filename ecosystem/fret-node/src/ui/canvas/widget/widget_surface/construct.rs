@@ -9,10 +9,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> Self {
         let auto_measured = Arc::new(MeasuredGeometryStore::new());
         Self {
-            graph,
-            view_state,
+            mirrors: NodeGraphCanvasMirrors {
+                graph,
+                view_state,
+                editor_config: Some(editor_config_model),
+            },
             editor_config: NodeGraphEditorConfig::default(),
-            editor_config_model: Some(editor_config_model),
             store: None,
             store_rev: None,
             presenter: Box::new(FallbackMeasuredNodeGraphPresenter::new(
@@ -73,10 +75,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         middleware: M2,
     ) -> NodeGraphCanvasWith<M2> {
         NodeGraphCanvasWith {
-            graph: self.graph,
-            view_state: self.view_state,
+            mirrors: self.mirrors,
             editor_config: self.editor_config,
-            editor_config_model: self.editor_config_model,
             store: self.store,
             store_rev: self.store_rev,
             presenter: self.presenter,

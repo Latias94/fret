@@ -252,6 +252,7 @@ fn spatial_index_hit_edge_matches_slow_scan() {
     let pos = Point::new(Px(0.5 * (from.x.0 + to.x.0)), Px(0.5 * (from.y.0 + to.y.0)));
 
     let fast = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| {
             let mut scratch = HitTestScratch::default();
@@ -263,6 +264,7 @@ fn spatial_index_hit_edge_matches_slow_scan() {
         .flatten();
 
     let slow = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| {
             hit_edge_slow(&canvas, g, &snapshot, geom.as_ref(), pos, snapshot.zoom)
@@ -316,6 +318,7 @@ fn spatial_index_edge_focus_anchor_hit_testing_matches_slow_scan() {
     let from = geom.port_center(a_out).expect("from center should exist");
     let to = geom.port_center(b_in).expect("to center should exist");
     let route = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| canvas.edge_render_hint(g, e1).route)
         .unwrap();
@@ -323,6 +326,7 @@ fn spatial_index_edge_focus_anchor_hit_testing_matches_slow_scan() {
     let pos = a0;
 
     let fast = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| {
             let mut scratch = HitTestScratch::default();
@@ -334,6 +338,7 @@ fn spatial_index_edge_focus_anchor_hit_testing_matches_slow_scan() {
         .flatten();
 
     let slow = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| {
             hit_edge_focus_anchor_slow(&canvas, g, &snapshot, geom.as_ref(), pos, snapshot.zoom)

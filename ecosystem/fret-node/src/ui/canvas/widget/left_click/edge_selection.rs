@@ -12,6 +12,7 @@ pub(super) fn edge_is_selectable<H: UiHost, M: NodeGraphCanvasMiddleware>(
     edge: EdgeId,
 ) -> bool {
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             NodeGraphCanvasWith::<M>::edge_is_selectable(graph, &snapshot.interaction, edge)

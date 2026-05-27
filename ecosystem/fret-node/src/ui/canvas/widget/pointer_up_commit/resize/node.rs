@@ -18,6 +18,7 @@ where
     };
 
     let ops = canvas
+        .mirrors
         .graph
         .read_ref(cx.host(), |graph| {
             super::super::super::pointer_up_commit_resize::build_node_resize_ops(&resize, graph)

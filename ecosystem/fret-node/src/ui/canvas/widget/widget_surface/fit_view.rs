@@ -9,7 +9,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         host: &mut H,
         include_hidden_nodes: bool,
     ) -> Vec<GraphNodeId> {
-        self.graph
+        self.mirrors
+            .graph
             .read_ref(host, |graph| {
                 graph
                     .nodes

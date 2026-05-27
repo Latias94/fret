@@ -21,6 +21,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let geom = self.canvas_geometry(&*host, snapshot);
 
         let ops = self
+            .mirrors
             .graph
             .read_ref(host, |g| {
                 plan::plan_ops(

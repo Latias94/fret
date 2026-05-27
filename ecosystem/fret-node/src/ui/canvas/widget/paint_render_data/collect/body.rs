@@ -23,6 +23,7 @@ pub(super) fn collect_render_data<M: NodeGraphCanvasMiddleware, H: UiHost>(
 ) -> RenderData {
     let cull = render_cull_rect;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let mut out = RenderData::default();

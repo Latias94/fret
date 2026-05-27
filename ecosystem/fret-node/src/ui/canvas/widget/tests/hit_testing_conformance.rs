@@ -18,7 +18,8 @@ fn pick_target_port_at(
 ) -> Option<crate::core::PortId> {
     let (geom, index) = canvas.canvas_derived(&*host, snapshot);
     let this = canvas;
-    this.graph
+    this.mirrors
+        .graph
         .read_ref(host, |graph| {
             let mut scratch = HitTestScratch::default();
             let mut ctx =
@@ -37,7 +38,8 @@ fn hit_edge_at(
 ) -> Option<crate::core::EdgeId> {
     let (geom, index) = canvas.canvas_derived(&*host, snapshot);
     let this = canvas;
-    this.graph
+    this.mirrors
+        .graph
         .read_ref(host, |graph| {
             let mut scratch = HitTestScratch::default();
             let mut ctx =
@@ -56,7 +58,8 @@ fn hit_edge_focus_anchor_at(
 ) -> Option<(crate::core::EdgeId, EdgeEndpoint, crate::core::PortId)> {
     let (geom, index) = canvas.canvas_derived(&*host, snapshot);
     let this = canvas;
-    this.graph
+    this.mirrors
+        .graph
         .read_ref(host, |graph| {
             let mut scratch = HitTestScratch::default();
             let mut ctx =
@@ -188,7 +191,7 @@ fn loose_mode_prefers_opposite_side_when_handles_overlap() {
     let delta_x = b_handle.center.x.0 - c_handle.center.x.0;
     let delta_y = b_handle.center.y.0 - c_handle.center.y.0;
 
-    let _ = canvas.graph.update(&mut host, |g, _cx| {
+    let _ = canvas.mirrors.graph.update(&mut host, |g, _cx| {
         if let Some(node) = g.nodes.get_mut(&c) {
             node.pos.x += delta_x;
             node.pos.y += delta_y;
@@ -352,6 +355,7 @@ fn edge_focus_anchor_hit_testing_tie_breaks_by_edge_id_when_distances_match() {
     let snapshot = canvas.sync_view_state(&mut host);
 
     let route = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| canvas.edge_render_hint(g, e1).route)
         .unwrap_or_default();

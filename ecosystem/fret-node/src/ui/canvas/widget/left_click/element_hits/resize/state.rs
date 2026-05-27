@@ -39,6 +39,7 @@ fn pending_node_resize_from_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) -> PendingNodeResize {
     let start_size = start_size_from_rect(rect, zoom);
     let (start_node_pos, start_size_opt) = canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             graph

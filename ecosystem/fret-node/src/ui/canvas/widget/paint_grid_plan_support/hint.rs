@@ -6,6 +6,7 @@ pub(super) fn resolve_canvas_chrome_hint<H: UiHost, M: NodeGraphCanvasMiddleware
 ) -> crate::ui::CanvasChromeHint {
     if let Some(skin) = canvas.skin.as_ref() {
         canvas
+            .mirrors
             .graph
             .read_ref(cx.app, |graph| {
                 skin.canvas_chrome_hint(graph, &canvas.style)

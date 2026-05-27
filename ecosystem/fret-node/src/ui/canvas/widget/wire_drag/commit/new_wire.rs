@@ -33,6 +33,7 @@ pub(super) fn commit_new_wire<H: UiHost, M: NodeGraphCanvasMiddleware>(
             let presenter = &mut *canvas.presenter;
             let style = canvas.style.clone();
             canvas
+                .mirrors
                 .graph
                 .read_ref(cx.host(), |graph| {
                     let mut scratch = graph.clone();
@@ -170,7 +171,8 @@ pub(super) fn commit_new_wire<H: UiHost, M: NodeGraphCanvasMiddleware>(
             let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
             let this = &*canvas;
             let index = index.clone();
-            this.graph
+            this.mirrors
+                .graph
                 .read_ref(cx.host(), |graph| {
                     let mut scratch = HitTestScratch::default();
                     let mut ctx =

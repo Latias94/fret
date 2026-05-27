@@ -15,6 +15,7 @@ pub(super) fn resolve_resize_handle_cursor<H: UiHost, M: NodeGraphCanvasMiddlewa
     let presenter = &*canvas.presenter;
     let style = &canvas.style;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             for node_id in &snapshot.selected_nodes {

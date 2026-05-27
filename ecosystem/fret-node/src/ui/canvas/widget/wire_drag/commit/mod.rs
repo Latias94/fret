@@ -48,6 +48,7 @@ pub(in super::super) fn handle_wire_left_up_with_forced_target<
                 return true;
             }
             canvas
+                .mirrors
                 .graph
                 .read_ref(cx.host(), |graph| {
                     NodeGraphCanvasWith::<M>::port_is_connectable_start(
@@ -62,6 +63,7 @@ pub(in super::super) fn handle_wire_left_up_with_forced_target<
         .unwrap_or(false);
     let forced_target = forced_target.filter(|port| {
         canvas
+            .mirrors
             .graph
             .read_ref(cx.host(), |graph| {
                 NodeGraphCanvasWith::<M>::port_is_connectable_end(
@@ -81,7 +83,8 @@ pub(in super::super) fn handle_wire_left_up_with_forced_target<
             let (geom, index) = canvas.canvas_derived(&*cx.host(), snapshot);
             let this = &*canvas;
             let index = index.clone();
-            this.graph
+            this.mirrors
+                .graph
                 .read_ref(cx.host(), |graph| {
                     let mut scratch = HitTestScratch::default();
                     let mut ctx =

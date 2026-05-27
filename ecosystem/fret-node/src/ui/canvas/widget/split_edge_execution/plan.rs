@@ -22,6 +22,7 @@ pub(super) fn plan_canvas_split_edge_reroute<H: UiHost, M: NodeGraphCanvasMiddle
     let at = canvas.reroute_pos_for_invoked_at(invoked_at);
     let presenter = &mut *canvas.presenter;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             plan_split_edge_reroute_with_graph(presenter, graph, edge_id, at)

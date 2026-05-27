@@ -24,6 +24,7 @@ pub(super) fn drag_nodes_for_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
         &snapshot.selected_nodes,
     );
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             candidate_nodes

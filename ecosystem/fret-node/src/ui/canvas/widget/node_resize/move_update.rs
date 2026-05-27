@@ -20,7 +20,7 @@ fn resolve_min_size_px<H: UiHost, M: NodeGraphCanvasMiddleware>(
     let (mut w, mut h) = fallback;
 
     let style = canvas.style.clone();
-    let _ = canvas.graph.read_ref(host, |graph| {
+    let _ = canvas.mirrors.graph.read_ref(host, |graph| {
         let (inputs, outputs) = node_ports(graph, node);
         let (mw, mh) = node_size_default_px(inputs.len(), outputs.len(), &style);
         w = w.max(mw);
@@ -50,6 +50,7 @@ where
     };
 
     let constraints = canvas
+        .mirrors
         .graph
         .read_ref(cx.host(), |graph| {
             canvas
@@ -72,6 +73,7 @@ where
     });
 
     let max_bounds_canvas = canvas
+        .mirrors
         .graph
         .read_ref(cx.host(), |g| {
             let mut bound = snapshot.interaction.node_extent;
@@ -131,6 +133,7 @@ where
 
     let current_size_opt = Some(new_size_px);
     let current_groups: Vec<(crate::core::GroupId, CanvasRect)> = canvas
+        .mirrors
         .graph
         .read_ref(cx.host(), |g| {
             let Some(node) = g.nodes.get(&resize.node) else {

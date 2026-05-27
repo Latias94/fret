@@ -103,7 +103,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> Vec<NodeGraphContextMenuItem> {
         let presenter = &mut *self.presenter;
         let style = &self.style;
-        self.graph
+        self.mirrors
+            .graph
             .read_ref(host, |graph| {
                 let mut items = Vec::new();
                 presenter.fill_edge_context_menu(graph, edge, style, &mut items);

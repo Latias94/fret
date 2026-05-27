@@ -13,6 +13,7 @@ pub(super) fn directional_port_candidate<H: UiHost, M: NodeGraphCanvasMiddleware
 ) -> Option<PortId> {
     let (geom, _) = canvas.canvas_derived(host, snapshot);
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let mut best = None;

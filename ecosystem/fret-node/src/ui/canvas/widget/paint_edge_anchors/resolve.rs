@@ -9,6 +9,7 @@ pub(super) fn target_edge_reconnectable_flags<H: UiHost, M: NodeGraphCanvasMiddl
     target_edge_id
         .and_then(|edge_id| {
             canvas
+                .mirrors
                 .graph
                 .read_ref(host, |g| {
                     let edge = g.edges.get(&edge_id)?;

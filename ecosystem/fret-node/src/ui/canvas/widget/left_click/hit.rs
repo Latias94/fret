@@ -35,7 +35,8 @@ pub(super) fn compute_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) -> Hit {
     let (geom, index) = canvas.canvas_derived(&*cx.left_click_host(), snapshot);
     let this = &*canvas;
-    this.graph
+    this.mirrors
+        .graph
         .read_ref(cx.left_click_host(), |graph| {
             let mut scratch = HitTestScratch::default();
             let mut ctx = HitTestCtx::new(geom.as_ref(), index.as_ref(), zoom, &mut scratch);

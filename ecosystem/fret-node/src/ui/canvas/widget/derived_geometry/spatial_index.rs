@@ -126,6 +126,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let edge_ctx = EdgePathContext::new(&style, presenter, edge_types);
 
             let index = self
+                .mirrors
                 .graph
                 .read_ref(host, |graph| {
                     let mut index = CanvasSpatialDerived::build(

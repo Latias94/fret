@@ -18,6 +18,7 @@ pub(super) fn refresh_focused_port_hints<H: UiHost, M: NodeGraphCanvasMiddleware
 
     let presenter: &mut dyn NodeGraphPresenter = &mut *canvas.presenter;
     let outcome = canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             evaluate::evaluate_focused_port_hints(presenter, graph, &input)

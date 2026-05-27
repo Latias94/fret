@@ -16,6 +16,7 @@ pub(super) fn marquee_selection<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) -> Vec<GraphNodeId> {
     let (geom, _index) = canvas.canvas_derived(&*host, snapshot);
     let selection = canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             nodes_in_marquee(

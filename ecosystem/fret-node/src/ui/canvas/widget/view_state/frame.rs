@@ -59,6 +59,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
 
         let infos: Vec<crate::runtime::fit_view::FitViewNodeInfo> = self
+            .mirrors
             .graph
             .read_ref(host, |graph| {
                 let mut out: Vec<crate::runtime::fit_view::FitViewNodeInfo> = Vec::new();

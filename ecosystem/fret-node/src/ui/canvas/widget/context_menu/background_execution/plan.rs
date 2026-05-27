@@ -24,6 +24,7 @@ pub(super) fn plan_background_insert_menu_candidate<H: UiHost, M: NodeGraphCanva
 ) -> BackgroundInsertMenuPlan {
     let presenter = &mut *canvas.presenter;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             plan_background_insert_menu_candidate_with_graph::<M>(presenter, graph, candidate, at)

@@ -15,6 +15,7 @@ pub(super) fn required_port_direction_from_wire_drag<H: UiHost, M: NodeGraphCanv
             WireDragKind::ReconnectMany { edges } => edges.first().map(|edge| edge.2),
         }?;
         let source_dir = canvas
+            .mirrors
             .graph
             .read_ref(host, |graph| {
                 graph.ports.get(&source_port).map(|port| port.dir)

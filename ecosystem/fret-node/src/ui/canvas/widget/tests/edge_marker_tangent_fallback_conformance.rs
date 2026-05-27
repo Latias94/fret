@@ -181,6 +181,7 @@ fn custom_edge_marker_falls_back_to_from_to_tangent_when_path_has_no_tangents() 
     let to = geom.port_center(b_in).expect("to port center");
 
     let custom = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| {
             let hint = canvas.edge_render_hint(g, edge_id);

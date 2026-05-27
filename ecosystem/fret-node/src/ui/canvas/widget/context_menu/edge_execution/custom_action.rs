@@ -9,6 +9,7 @@ pub(super) fn apply_custom_edge_context_action<H: UiHost, M: NodeGraphCanvasMidd
     let ops = {
         let presenter = &mut *canvas.presenter;
         canvas
+            .mirrors
             .graph
             .read_ref(cx.host(), |graph| {
                 presenter.on_edge_context_menu_action(graph, edge_id, action_id)

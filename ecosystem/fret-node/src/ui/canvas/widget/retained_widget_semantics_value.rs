@@ -12,6 +12,7 @@ pub(super) fn build_semantics_value<H: UiHost, M: NodeGraphCanvasMiddleware>(
     );
     let style = canvas.style.clone();
     canvas
+        .mirrors
         .graph
         .read_ref(cx.app, |graph| {
             let mut parts: Vec<String> = vec![

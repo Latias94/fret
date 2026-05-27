@@ -14,6 +14,7 @@ pub(super) fn min_group_resize_children_size<H: UiHost, M: NodeGraphCanvasMiddle
 ) -> (f32, f32) {
     let geom = canvas.canvas_geometry(&*host, snapshot);
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             let mut max_x = new_rect.origin.x;

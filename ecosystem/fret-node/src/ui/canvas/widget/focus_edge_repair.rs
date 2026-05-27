@@ -16,6 +16,7 @@ pub(super) fn repair_focused_edge_after_graph_change<H: UiHost, M: NodeGraphCanv
     }
 
     let (edges, current_valid) = canvas
+        .mirrors
         .graph
         .read_ref(host, |g| {
             let mut edges: Vec<EdgeId> = g.edges.keys().copied().collect();

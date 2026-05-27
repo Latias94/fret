@@ -43,7 +43,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let node_hints: HashMap<GraphNodeId, NodeChromeHint> =
             if let Some(skin) = self.skin.as_ref() {
-                self.graph
+                self.mirrors
+                    .graph
                     .read_ref(cx.app, |g| {
                         render
                             .nodes

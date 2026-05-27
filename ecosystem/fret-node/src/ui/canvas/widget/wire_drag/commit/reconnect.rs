@@ -23,6 +23,7 @@ pub(super) fn commit_reconnect<H: UiHost, M: NodeGraphCanvasMiddleware>(
         let outcome = {
             let presenter = &mut *canvas.presenter;
             canvas
+                .mirrors
                 .graph
                 .read_ref(cx.host(), |graph| {
                     let plan = presenter.plan_reconnect_edge(
@@ -57,6 +58,7 @@ pub(super) fn commit_reconnect<H: UiHost, M: NodeGraphCanvasMiddleware>(
         }
     } else if snapshot.interaction.reconnect_on_drop_empty {
         let ops = canvas
+            .mirrors
             .graph
             .read_ref(cx.host(), |graph| {
                 let Some(edge_value) = graph.edges.get(&edge) else {

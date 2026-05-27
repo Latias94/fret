@@ -9,6 +9,7 @@ pub(in super::super) fn collect_selection_remove_ops<H: UiHost, M: NodeGraphCanv
     let selected_edges = snapshot.selected_edges.clone();
     let selected_groups = snapshot.selected_groups.clone();
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             NodeGraphCanvasWith::<M>::delete_selection_ops(

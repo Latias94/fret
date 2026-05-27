@@ -8,6 +8,7 @@ const UI_BINDING_RS: &str = include_str!("ui/binding.rs");
 const UI_BINDING_QUERIES_RS: &str = include_str!("ui/binding_queries.rs");
 const UI_BINDING_STORE_SYNC_RS: &str = include_str!("ui/binding_store_sync.rs");
 const UI_BINDING_VIEWPORT_RS: &str = include_str!("ui/binding_viewport.rs");
+const UI_CANVAS_WIDGET_RS: &str = include_str!("ui/canvas/widget.rs");
 const UI_CANVAS_RS: &str = include_str!("ui/canvas/widget/widget_surface.rs");
 const UI_CANVAS_BUILDERS_RS: &str = include_str!("ui/canvas/widget/widget_surface/builders.rs");
 const UI_CONTROLLER_RS: &str = include_str!("ui/controller.rs");
@@ -644,6 +645,21 @@ fn binding_surface() -> String {
     .join("\n")
 }
 
+fn struct_body<'a>(source: &'a str, name: &str) -> &'a str {
+    let start = source
+        .find(&format!("struct {name} {{"))
+        .unwrap_or_else(|| panic!("missing struct `{name}`"));
+    let body_start = source[start..]
+        .find('{')
+        .map(|offset| start + offset + 1)
+        .expect("struct should have a body");
+    let body_end = source[body_start..]
+        .find("\n}")
+        .map(|offset| body_start + offset)
+        .expect("struct body should close on its own line");
+    &source[body_start..body_end]
+}
+
 fn collect_rs_files(dir: &Path, files: &mut Vec<PathBuf>) {
     for entry in std::fs::read_dir(dir).expect("source directory should be readable") {
         let entry = entry.expect("source directory entry should be readable");
@@ -710,6 +726,20 @@ fn retained_compatibility_surface_stays_declarative_only() {
             && !UI_MOD_RS.contains("RetainedSubtreeProps"),
         "retained subtree compatibility must stay out of the public declarative node graph path"
     );
+}
+
+#[test]
+fn retained_canvas_mirror_owner_quarantines_external_models() {
+    let mirrors = struct_body(UI_CANVAS_WIDGET_RS, "NodeGraphCanvasMirrors");
+    assert!(mirrors.contains("graph: Model<Graph>,"));
+    assert!(mirrors.contains("view_state: Model<NodeGraphViewState>,"));
+    assert!(mirrors.contains("editor_config: Option<Model<NodeGraphEditorConfig>>,"));
+
+    let canvas = struct_body(UI_CANVAS_WIDGET_RS, "NodeGraphCanvasWith<M>");
+    assert!(canvas.contains("mirrors: NodeGraphCanvasMirrors,"));
+    assert!(!canvas.contains("\n    graph: Model<Graph>,"));
+    assert!(!canvas.contains("\n    view_state: Model<NodeGraphViewState>,"));
+    assert!(!canvas.contains("\n    editor_config_model: Option<Model<NodeGraphEditorConfig>>,"));
 }
 
 #[test]

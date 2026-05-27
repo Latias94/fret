@@ -10,6 +10,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return true;
         }
         let (nodes, groups, edges) = self
+            .mirrors
             .graph
             .read_ref(cx.app, |graph| {
                 let nodes = graph

@@ -270,7 +270,7 @@ fn capture_step_marker_axes(place_dx_zero: bool) -> (Point, Point, Point, Point,
         if dx.abs() <= 1.0e-3 {
             break;
         }
-        let _ = canvas.graph.update(&mut host, |g, _cx| {
+        let _ = canvas.mirrors.graph.update(&mut host, |g, _cx| {
             if let Some(node) = g.nodes.get_mut(&b) {
                 node.pos.x -= dx;
             }

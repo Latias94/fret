@@ -7,6 +7,7 @@ pub(super) fn candidate_ports<H: UiHost, M: NodeGraphCanvasMiddleware>(
     wire_dir: Option<PortDirection>,
 ) -> Vec<PortId> {
     canvas
+        .mirrors
         .graph
         .read_ref(host, |g| {
             let (inputs, outputs) = node_ports(g, focused_node);

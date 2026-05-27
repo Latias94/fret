@@ -46,7 +46,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let style = &self.style;
 
         let mut edges_to_draw: Vec<OverlayEdgeDraw> = Vec::new();
-        let _ = self.graph.read_ref(cx.app, |g| {
+        let _ = self.mirrors.graph.read_ref(cx.app, |g| {
             for edge_id in &overlay_edges {
                 let Some(edge) = g.edges.get(edge_id) else {
                     continue;

@@ -2806,6 +2806,7 @@ fn pick_target_port_respects_port_connectable_end() {
 
     let (derived, index) = canvas.canvas_derived(&host, &snapshot);
     let hit = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| {
             let mut scratch = HitTestScratch::default();
@@ -3097,6 +3098,7 @@ fn edge_reconnectable_endpoint_override_allows_anchors_even_when_global_is_disab
     let from_center = geom.port_center(from).expect("from port center");
     let to_center = geom.port_center(to).expect("to port center");
     let route = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| canvas.edge_render_hint(g, edge).route)
         .unwrap_or_default();
@@ -3105,6 +3107,7 @@ fn edge_reconnectable_endpoint_override_allows_anchors_even_when_global_is_disab
 
     let (derived, index) = canvas.canvas_derived(&host, &snapshot);
     let hit_source = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| {
             let mut scratch = HitTestScratch::default();
@@ -3121,6 +3124,7 @@ fn edge_reconnectable_endpoint_override_allows_anchors_even_when_global_is_disab
     assert!(hit_source.is_some_and(|(id, ep, _)| id == edge && ep == EdgeEndpoint::From));
 
     let hit_target = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| {
             let mut scratch = HitTestScratch::default();
@@ -3163,6 +3167,7 @@ fn edge_reconnectable_target_override_allows_only_target_anchor_when_global_disa
     let from_center = geom.port_center(from).expect("from port center");
     let to_center = geom.port_center(to).expect("to port center");
     let route = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| canvas.edge_render_hint(g, edge).route)
         .unwrap_or_default();
@@ -3171,6 +3176,7 @@ fn edge_reconnectable_target_override_allows_only_target_anchor_when_global_disa
 
     let (derived, index) = canvas.canvas_derived(&host, &snapshot);
     let hit_source = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| {
             let mut scratch = HitTestScratch::default();
@@ -3187,6 +3193,7 @@ fn edge_reconnectable_target_override_allows_only_target_anchor_when_global_disa
     assert!(hit_source.is_none(), "source anchor should be disabled");
 
     let hit_target = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| {
             let mut scratch = HitTestScratch::default();
@@ -3227,6 +3234,7 @@ fn edge_reconnectable_bool_false_disables_anchors_even_when_global_enabled() {
     let from_center = geom.port_center(from).expect("from port center");
     let to_center = geom.port_center(to).expect("to port center");
     let route = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| canvas.edge_render_hint(g, edge).route)
         .unwrap_or_default();
@@ -3236,6 +3244,7 @@ fn edge_reconnectable_bool_false_disables_anchors_even_when_global_enabled() {
     let (derived, index) = canvas.canvas_derived(&host, &snapshot);
     for anchor in [a0, a1] {
         let hit = canvas
+            .mirrors
             .graph
             .read_ref(&host, |g| {
                 let mut scratch = HitTestScratch::default();
@@ -3271,6 +3280,7 @@ fn edge_reconnectable_none_follows_global_gate_for_anchors() {
     let from_center = geom.port_center(from).expect("from port center");
     let to_center = geom.port_center(to).expect("to port center");
     let route = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| canvas.edge_render_hint(g, edge).route)
         .unwrap_or_default();
@@ -3280,6 +3290,7 @@ fn edge_reconnectable_none_follows_global_gate_for_anchors() {
     let (derived, index) = canvas.canvas_derived(&host, &snapshot);
     for anchor in [a0, a1] {
         let hit = canvas
+            .mirrors
             .graph
             .read_ref(&host, |g| {
                 let mut scratch = HitTestScratch::default();
@@ -3378,6 +3389,7 @@ fn window_focus_lost_cancels_wire_drag() {
 
     // Graph should remain unchanged (disconnect on drop empty is a separate opt-in behavior).
     let edge_still_exists = canvas
+        .mirrors
         .graph
         .read_ref(cx.app, |g| g.edges.contains_key(&edge))
         .unwrap_or(false);
@@ -3435,6 +3447,7 @@ fn pointer_left_cancels_wire_drag() {
 
     // Graph should remain unchanged (disconnect on drop empty is a separate opt-in behavior).
     let edge_still_exists = canvas
+        .mirrors
         .graph
         .read_ref(cx.app, |g| g.edges.contains_key(&edge))
         .unwrap_or(false);
@@ -3616,6 +3629,7 @@ fn missing_pointer_up_can_be_inferred_from_mouse_buttons_state_for_wire_reconnec
         "expected the inferred-up path to end the active reconnect drag"
     );
     let edge_still_exists = canvas
+        .mirrors
         .graph
         .read_ref(cx.app, |g| g.edges.contains_key(&edge))
         .unwrap_or(false);

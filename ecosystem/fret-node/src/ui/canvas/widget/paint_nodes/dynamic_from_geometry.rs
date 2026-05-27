@@ -88,7 +88,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let skin = self.skin.clone();
         let interaction_hint = if let Some(skin) = skin.as_ref() {
-            self.graph
+            self.mirrors
+                .graph
                 .read_ref(cx.app, |g| skin.interaction_chrome_hint(g, &self.style))
                 .ok()
                 .unwrap_or_default()

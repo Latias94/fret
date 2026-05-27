@@ -19,8 +19,8 @@ mod static_layer;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_root<H: UiHost>(&mut self, cx: &mut PaintCx<'_, H>) {
-        cx.observe_model(&self.graph, Invalidation::Paint);
-        cx.observe_model(&self.view_state, Invalidation::Paint);
+        cx.observe_model(&self.mirrors.graph, Invalidation::Paint);
+        cx.observe_model(&self.mirrors.view_state, Invalidation::Paint);
         let snapshot = self.sync_view_state(cx.app);
 
         let view_interacting = self.view_interacting();

@@ -8,7 +8,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) {
         if let Some(store) = self.store.as_ref() {
             let _ = store.update(host, |store, _cx| store.update_editor_config(f));
-        } else if let Some(editor_config) = self.editor_config_model.as_ref() {
+        } else if let Some(editor_config) = self.mirrors.editor_config.as_ref() {
             let _ = editor_config.update(host, |state, _cx| f(state));
         } else {
             f(&mut self.editor_config);
@@ -25,7 +25,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             if let Some(store) = self.store.as_ref() {
                 store.read_ref(host, |s| s.view_state().clone()).ok()
             } else {
-                self.view_state.read_ref(host, |s| s.clone()).ok()
+                self.mirrors.view_state.read_ref(host, |s| s.clone()).ok()
             }
         } else {
             None
@@ -56,7 +56,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 });
             });
         } else {
-            let _ = self.view_state.update(host, |s, _cx| {
+            let _ = self.mirrors.view_state.update(host, |s, _cx| {
                 f(s);
 
                 let zoom = if s.zoom.is_finite() && s.zoom > 0.0 {
@@ -75,7 +75,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self.sync_view_state(host);
 
         if let Some(before) = before {
-            let after = self.view_state.read_ref(host, |s| s.clone()).ok();
+            let after = self.mirrors.view_state.read_ref(host, |s| s.clone()).ok();
             if let Some(after) = after {
                 let mut changes: Vec<ViewChange> = Vec::new();
                 if before.pan != after.pan || (before.zoom - after.zoom).abs() > 1.0e-6 {

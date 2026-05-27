@@ -30,6 +30,7 @@ pub(super) fn drag_start_nodes<H: UiHost, M: NodeGraphCanvasMiddleware>(
     pending: &PendingNodeDrag,
 ) -> Option<(Vec<GraphNodeId>, Vec<(GraphNodeId, CanvasPoint)>)> {
     let start_nodes = canvas
+        .mirrors
         .graph
         .read_ref(host, |g| {
             pending

@@ -73,6 +73,7 @@ fn edge_types_updates_invalidate_spatial_index_and_hit_testing_uses_new_custom_p
     );
 
     let graph_snapshot = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| g.clone())
         .unwrap_or_default();

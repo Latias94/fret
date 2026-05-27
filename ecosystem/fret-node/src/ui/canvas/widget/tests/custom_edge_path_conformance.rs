@@ -67,6 +67,7 @@ fn hit_testing_uses_custom_edge_path() {
     let to = geom.port_center(b_in).expect("to port center");
 
     let custom = canvas
+        .mirrors
         .graph
         .read_ref(cx.app, |g| {
             canvas.edge_custom_path(
@@ -94,6 +95,7 @@ fn hit_testing_uses_custom_edge_path() {
     assert!(!default_aabb.contains(mid));
 
     let graph = canvas
+        .mirrors
         .graph
         .read_ref(cx.app, |g| g.clone())
         .unwrap_or_default();
@@ -169,6 +171,7 @@ fn spatial_index_includes_custom_edge_path_bounds() {
     let to = geom.port_center(b_in).expect("to port center");
 
     let custom = canvas
+        .mirrors
         .graph
         .read_ref(cx.app, |g| {
             canvas.edge_custom_path(
@@ -258,6 +261,7 @@ fn custom_edge_path_generation_is_deterministic_for_identical_inputs() {
     let to = geom.port_center(b_in).expect("to port center");
 
     let p0 = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| {
             let hint = canvas.edge_render_hint(g, edge_id);
@@ -267,6 +271,7 @@ fn custom_edge_path_generation_is_deterministic_for_identical_inputs() {
         .flatten()
         .expect("custom path must exist");
     let p1 = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| {
             let hint = canvas.edge_render_hint(g, edge_id);
@@ -286,6 +291,7 @@ fn custom_edge_path_generation_is_deterministic_for_identical_inputs() {
     assert!((zoom2 - zoom).abs() <= 1.0e-6);
 
     let p2 = canvas
+        .mirrors
         .graph
         .read_ref(&host, |g| {
             let hint = canvas.edge_render_hint(g, edge_id);

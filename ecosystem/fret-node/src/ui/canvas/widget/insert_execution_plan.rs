@@ -21,6 +21,7 @@ pub(super) fn plan_canvas_insert_candidate_ops<H: UiHost, M: NodeGraphCanvasMidd
 ) -> Option<Result<Vec<GraphOp>, Arc<str>>> {
     let presenter = &mut *canvas.presenter;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             NodeGraphCanvasWith::<M>::plan_insert_candidate_ops_with_graph(
@@ -55,6 +56,7 @@ pub(super) fn plan_canvas_split_edge_insert_candidate<H: UiHost, M: NodeGraphCan
         super::insert_execution_point::insert_candidate_canvas_point(canvas, candidate, invoked_at);
     let presenter = &mut *canvas.presenter;
     canvas
+        .mirrors
         .graph
         .read_ref(host, |graph| {
             NodeGraphCanvasWith::<M>::plan_split_edge_insert_candidate_with_graph(

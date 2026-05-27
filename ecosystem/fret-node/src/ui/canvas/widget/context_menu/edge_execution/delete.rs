@@ -7,7 +7,8 @@ pub(super) fn delete_edge<H: UiHost, M: NodeGraphCanvasMiddleware>(
 ) {
     let remove_ops = {
         let this = &*canvas;
-        this.graph
+        this.mirrors
+            .graph
             .read_ref(cx.host(), |graph| {
                 graph
                     .edges
