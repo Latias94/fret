@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 flow option owner-split result:
+`ecosystem/fret-ui-kit/src/imui/options/containers/flow.rs` is now a private module/re-export
+index. `flow/spacing.rs` owns the IMUI layout-token defaults, `flow/inline.rs` owns item-flow and
+same-line options, `flow/linear.rs` owns horizontal and vertical options, `flow/spacer.rs` owns
+dummy/spacing/indent options, and `flow/grid.rs` owns grid options.
+
 2026-05-27 debug-draw media paint owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` keeps
 `paint_debug_draw_media_command(...)` routing. `paint/media/raster.rs` owns image, image-region, and

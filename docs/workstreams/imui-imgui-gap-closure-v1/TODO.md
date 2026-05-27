@@ -388,7 +388,15 @@ Last updated: 2026-05-27
       IMUI layout-token defaults, `containers/scroll.rs` owns scroll options,
       `containers/list_box.rs` owns list-box options, and `containers/child_region.rs` owns
       child-region chrome and resize option records. The root `containers.rs` file is now a thin
-      module/re-export index.
+      module/re-export index. The 2026-05-27 flow-option owner split below further divides the
+      flow owner.
+- [x] Split IMUI flow option defaults and records out of
+      `ecosystem/fret-ui-kit/src/imui/options/containers/flow.rs` into private owner modules
+      without changing option type names, fields, defaults, token keys, or public re-export paths.
+      Result: `containers/flow.rs` is now a private module/re-export index,
+      `flow/spacing.rs` owns the IMUI layout-token defaults, `flow/inline.rs` owns item-flow and
+      same-line options, `flow/linear.rs` owns horizontal and vertical options, `flow/spacer.rs`
+      owns dummy/spacing/indent options, and `flow/grid.rs` owns grid options.
 - [x] Split IMUI floating-surface drag-kind and state ownership out of
       `ecosystem/fret-ui-kit/src/imui/floating_surface.rs` into private owner modules without
       changing floating-area, floating-window, drag, resize, activation, or collapse behavior.

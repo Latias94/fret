@@ -3,6 +3,42 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Flow Options Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI flow/layout option records and token defaults moved into narrower private
+owners without changing option type names, fields, defaults, token keys, or public re-export paths.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow.rs` is now a private module/re-export
+  index.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacing.rs` owns the IMUI layout-token
+  defaults.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/inline.rs` owns `ItemFlowOptions` and
+  `SameLineOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/linear.rs` owns `HorizontalOptions` and
+  `VerticalOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/spacer.rs` owns `DummyOptions`,
+  `SpacingOptions`, and `IndentOptions`.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow/grid.rs` owns `GridOptions`.
+- `tools/gate_imui_workstream_source.py` now requires the flow owner split and rejects option
+  records or token-default bodies from drifting back into the root flow index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib containers --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui
+  porting_sugar_items_same_line_spacing_dummy_and_indent_use_imgui_style_layout_tokens
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Media Paint Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug-draw media paint routing moved into private raster, rounded, and SVG owners
@@ -2345,9 +2381,12 @@ changing public option names, fields, defaults, or top-level re-export paths.
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/imui/options/containers/flow.rs` now owns `HorizontalOptions`,
-  `ItemFlowOptions`, `SameLineOptions`, `DummyOptions`, `SpacingOptions`, `IndentOptions`,
-  `VerticalOptions`, `GridOptions`, and the private IMUI layout-token default helpers.
+- `ecosystem/fret-ui-kit/src/imui/options/containers/flow.rs` originally owned
+  `HorizontalOptions`, `ItemFlowOptions`, `SameLineOptions`, `DummyOptions`, `SpacingOptions`,
+  `IndentOptions`, `VerticalOptions`, `GridOptions`, and the private IMUI layout-token default
+  helpers after the root container split. 2026-05-27 follow-up: `flow.rs` is now only the flow
+  option module/re-export index; the private `flow/*` owners carry the concrete records and token
+  defaults.
 - `ecosystem/fret-ui-kit/src/imui/options/containers/scroll.rs` now owns `ScrollOptions`.
 - `ecosystem/fret-ui-kit/src/imui/options/containers/list_box.rs` now owns `ListBoxOptions`,
   keeping list-box policy as layout/scroll/diagnostics semantics only.
