@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 debug-draw draw-list linear owner-split result:
+`ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear.rs` is now a private
+module index. `linear/line_poly.rs` owns line, polyline, convex polygon fill, and concave polygon
+fill command recording. `linear/rect_quad_triangle.rs` owns rect, quad, triangle, and filled
+variants.
+
 2026-05-27 table-column method-family owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs` keeps the public
 `TableColumn` storage shape and primitive re-exports.

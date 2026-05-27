@@ -44,6 +44,13 @@ Last updated: 2026-05-27
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI debug-draw draw-list linear shape authoring out of
+      `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear.rs` into private
+      line/poly and rect/quad/triangle owner modules without changing draw-list authoring method
+      names, command payloads, or summary/paint behavior.
+      Result: `draw_list_shapes/linear/line_poly.rs` owns line/polyline/filled-polygon command
+      recording, `linear/rect_quad_triangle.rs` owns rect/quad/triangle command recording, and
+      `linear.rs` is now a private module index.
 - [x] Split IMUI table-column construction, identity/accessor, visibility, sort, resize, and pin
       methods out of `ecosystem/fret-ui-kit/src/imui/options/collections/table_column.rs` into
       private owner modules without changing public `TableColumn` type names, method names, chained

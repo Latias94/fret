@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Debug-Draw Draw-List Linear Owner-Split Evidence - 2026-05-27
+
+Claim verified: debug-draw draw-list linear shape authoring moved into private line/poly and
+rect/quad/triangle owners without changing public authoring method names, command payloads,
+summary projection, or paint behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear.rs` is now a private
+  module index.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear/line_poly.rs` owns
+  line, polyline, convex polygon fill, and concave polygon fill command recording.
+- `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/draw_list_shapes/linear/rect_quad_triangle.rs`
+  owns rect, quad, triangle, and filled variant command recording.
+- `tools/gate_imui_workstream_source.py` now rejects command recording from the root linear module
+  and requires each shape-family owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib debug_draw_controls::tests::draw_list --no-fail-fast`:
+  pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_debug_draw_smoke --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Table-Column Method-Family Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI `TableColumn` construction, identity/accessor, visibility, sort, resize, and
