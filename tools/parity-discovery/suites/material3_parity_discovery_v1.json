@@ -23,6 +23,11 @@
       "id": "material3_switch_adapter",
       "mapping": "tools/parity-discovery/fixtures/material3_switch_adapter_v1.json",
       "output": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_switch_adapter_report_v1.json"
+    },
+    {
+      "id": "material3_navigation_indicator_adapter",
+      "mapping": "tools/parity-discovery/fixtures/material3_navigation_indicator_adapter_v1.json",
+      "output": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_navigation_indicator_adapter_report_v1.json"
     }
   ]
 }

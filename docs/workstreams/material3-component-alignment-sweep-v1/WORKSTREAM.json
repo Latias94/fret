@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "slug": "material3-component-alignment-sweep-v1",
+  "title": "Material 3 Component Alignment Sweep v1",
+  "status": "active",
+  "updated": "2026-05-27",
+  "scope_kind": "execution",
+  "problem": "Apply the Material 3 parity harness loop across every fret-ui-material3 component, classify each finding by layer, and refactor shared foundation/policy only when component packet evidence supports it.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/DESIGN.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/TODO.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/MILESTONES.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/material3-component-alignment-sweep-v1/HANDOFF.md"
+    }
+  ],
+  "repro": {
+    "summary": "Regenerate the existing Material Button/Select/Switch parity suite before expanding the component sweep.",
+    "commands": [
+      "python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/material3_parity_discovery_v1.json --suite-from-existing-reports --suite-output docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json",
+      "python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json | Out-Null"
+    ]
+  },
+  "gates": [
+    {
+      "name": "workstream-state-json",
+      "command": "python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/WORKSTREAM.json | Out-Null"
+    },
+    {
+      "name": "component-alignment-matrix-json",
+      "command": "python -m json.tool docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json | Out-Null"
+    },
+    {
+      "name": "workstream-catalog",
+      "command": "python tools/check_workstream_catalog.py"
+    },
+    {
+      "name": "material3-suite-from-existing-reports",
+      "command": "python tools/parity-discovery/shadcn_parity_discovery.py --suite tools/parity-discovery/suites/material3_parity_discovery_v1.json --suite-from-existing-reports --suite-output docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json"
+    },
+    {
+      "name": "material3-crate-compile",
+      "command": "cargo test -p fret-ui-material3 --lib --no-run"
+    }
+  ],
+  "evidence": [
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/component_alignment_matrix_v1.json",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_coverage_inventory_v1.json",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_parity_suite_report_v1.json",
+    "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_test_id_contract_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_selector_audit_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_navigation_indicator_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_navigation_indicator_adapter_report_v1.json",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_selector_audit_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_field_family_behavior_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
+    "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+    "tools/parity-discovery/suites/material3_parity_discovery_v1.json",
+    "ecosystem/fret-ui-material3/src",
+    "ecosystem/fret-ui-material3/tests",
+    "apps/fret-ui-gallery/src/ui/snippets/material3",
+    "tools/diag-scripts/ui-gallery/material3"
+  ],
+  "adr_refs": [
+    "docs/adr/0066-fret-ui-runtime-contract-surface.md",
+    "docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md",
+    "docs/adr/0166-interactivity-pseudoclasses-and-structural-stability.md",
+    "docs/adr/0226-material3-state-layer-and-ripple-primitives.md"
+  ],
+  "continue_policy": {
+    "default_action": "run_next_task",
+    "next_task": "M3CAS-080",
+    "notes": "M3CAS-070 is complete with known overlay follow-ons. Continue with choice controls and chips, and only consolidate shared state-layer/ripple or group semantics after packet evidence proves duplication."
+  }
+}

@@ -19,6 +19,7 @@ use fret_ui_kit::{OverlayController, OverlayPresence};
 use crate::SearchBar;
 use crate::foundation::elevation::shadow_for_elevation_with_color;
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
+use crate::foundation::test_id::part_test_id;
 use crate::search_bar::SearchBarHeaderTokens;
 use crate::tokens::{dropdown_menu as dropdown_menu_tokens, search_view as search_view_tokens};
 
@@ -138,6 +139,7 @@ impl SearchView {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
     ) -> AnyElement {
         cx.scope(|cx| {
+            let root_test_id = self.test_id.clone();
             let input_id_out: Rc<Cell<Option<GlobalElementId>>> = Rc::new(Cell::new(None));
             let input_id_out_for_bar = input_id_out.clone();
 
@@ -148,7 +150,7 @@ impl SearchView {
                 .disabled(self.disabled)
                 .placeholder_opt(self.placeholder.clone())
                 .a11y_label_opt(self.a11y_label.clone())
-                .test_id_opt(self.test_id.clone())
+                .test_id_opt(root_test_id.clone())
                 .expanded_model(self.open.clone())
                 .header_tokens(SearchBarHeaderTokens::SearchView)
                 .input_id_out(input_id_out_for_bar);
@@ -247,7 +249,10 @@ impl SearchView {
                 (container_color, container_shape, shadow, divider_color)
             };
 
-            let overlay_test_id = self.overlay_test_id.clone();
+            let overlay_test_id = self
+                .overlay_test_id
+                .clone()
+                .or_else(|| root_test_id.as_ref().map(|id| part_test_id(id, "overlay")));
             let overlay_panel = fret_ui_kit::primitives::popper_content::popper_wrapper_panel_at(
                 cx,
                 overlay_rect,

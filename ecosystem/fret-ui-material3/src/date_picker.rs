@@ -26,6 +26,7 @@ use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{Button, ButtonVariant};
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::part_test_id;
 use crate::motion;
 use crate::tokens::date_picker as date_tokens;
 use crate::tokens::date_picker::DatePickerTokenVariant;
@@ -34,6 +35,10 @@ fn default_date_picker_test_id() -> Arc<str> {
     static ID: OnceLock<Arc<str>> = OnceLock::new();
     ID.get_or_init(|| Arc::<str>::from("material3-date-picker"))
         .clone()
+}
+
+fn date_picker_cell_test_id(base: &Arc<str>, row: usize, col: usize) -> Arc<str> {
+    Arc::from(format!("{base}.cell.{row}.{col}"))
 }
 
 fn cached_day_of_month_label(day: u8) -> Arc<str> {
@@ -178,6 +183,7 @@ impl DockedDatePicker {
             container.background = Some(background);
             container.shadow = shadow;
             container.corner_radii = corner_radii;
+            let chrome_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "chrome"));
 
             let content = date_picker_body(
                 cx,
@@ -197,7 +203,13 @@ impl DockedDatePicker {
                     test_id: self.test_id.clone(),
                     ..Default::default()
                 },
-                move |cx| vec![cx.container(container, move |_cx| vec![content])],
+                move |cx| {
+                    let mut chrome = cx.container(container, move |_cx| vec![content]);
+                    if let Some(test_id) = chrome_test_id.clone() {
+                        chrome = chrome.test_id(test_id);
+                    }
+                    vec![chrome]
+                },
             )
         })
     }
@@ -460,26 +472,12 @@ impl DatePickerDialog {
                     });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
-                #[derive(Default)]
-                struct DerivedTestIds {
-                    base: Option<Arc<str>>,
-                    scrim: Option<Arc<str>>,
-                    panel: Option<Arc<str>>,
-                }
-
-                let (scrim_test_id, panel_test_id) =
-                    cx.slot_state(DerivedTestIds::default, |st| {
-                        if st.base.as_deref() != self.test_id.as_deref() {
-                            st.base = self.test_id.clone();
-                            st.scrim = st.base.as_ref().map(|id| {
-                                Arc::from(format!("{}-scrim", id.as_ref()))
-                            });
-                            st.panel = st.base.as_ref().map(|id| {
-                                Arc::from(format!("{}-panel", id.as_ref()))
-                            });
-                        }
-                        (st.scrim.clone(), st.panel.clone())
-                    });
+                let scrim_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "scrim"));
+                let scrim_chrome_test_id = scrim_test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "chrome"));
+                let panel_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "panel"));
+                let content_test_id = self.test_id.clone();
 
                 let cancel: OnActivate = {
                     let open = self.open.clone();
@@ -561,7 +559,7 @@ impl DatePickerDialog {
                                             cx.pressable_on_activate(on_activate);
                                         }
 
-                                        vec![cx.container(
+                                        let mut chrome = cx.container(
                                             ContainerProps {
                                                 layout: {
                                                     let mut l = LayoutStyle::default();
@@ -573,7 +571,11 @@ impl DatePickerDialog {
                                                 ..Default::default()
                                             },
                                             |_cx| Vec::<AnyElement>::new(),
-                                        )]
+                                        );
+                                        if let Some(test_id) = scrim_chrome_test_id.clone() {
+                                            chrome = chrome.test_id(test_id);
+                                        }
+                                        vec![chrome]
                                     },
                                 )
                             });
@@ -596,6 +598,7 @@ impl DatePickerDialog {
                                     models.draft_month.clone(),
                                     models.draft_selected.clone(),
                                     panel_test_id.clone(),
+                                    content_test_id.clone(),
                                     today,
                                     cancel.clone(),
                                     confirm.clone(),
@@ -646,6 +649,7 @@ fn date_picker_modal_panel<H: UiHost>(
     month: Model<CalendarMonth>,
     selected: Model<Option<Date>>,
     test_id: Option<Arc<str>>,
+    content_test_id: Option<Arc<str>>,
     today: Date,
     on_cancel: OnActivate,
     on_confirm: OnActivate,
@@ -701,7 +705,7 @@ fn date_picker_modal_panel<H: UiHost>(
         cx.text_props(props)
     };
 
-    let test_id_for_body = test_id.clone();
+    let test_id_for_body = content_test_id.clone();
     let body = cx.flex(
         FlexProps {
             direction: Axis::Vertical,
@@ -731,7 +735,12 @@ fn date_picker_modal_panel<H: UiHost>(
                     selected.clone(),
                     test_id_for_body.clone(),
                 ),
-                date_picker_actions(cx, on_cancel.clone(), on_confirm.clone()),
+                date_picker_actions(
+                    cx,
+                    content_test_id.clone(),
+                    on_cancel.clone(),
+                    on_confirm.clone(),
+                ),
             ]
         },
     );
@@ -748,6 +757,7 @@ fn date_picker_modal_panel<H: UiHost>(
 
 fn date_picker_actions<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    test_id: Option<Arc<str>>,
     on_cancel: OnActivate,
     on_confirm: OnActivate,
 ) -> AnyElement {
@@ -760,16 +770,24 @@ fn date_picker_actions<H: UiHost>(
     props.layout.size.width = Length::Fill;
 
     cx.flex(props, move |cx| {
+        let cancel_test_id = test_id
+            .as_ref()
+            .map(|id| part_test_id(id, "actions.cancel"))
+            .unwrap_or_else(|| Arc::<str>::from("material3-date-picker.actions.cancel"));
+        let confirm_test_id = test_id
+            .as_ref()
+            .map(|id| part_test_id(id, "actions.confirm"))
+            .unwrap_or_else(|| Arc::<str>::from("material3-date-picker.actions.confirm"));
         vec![
             Button::new("Cancel")
                 .variant(ButtonVariant::Text)
                 .on_activate(on_cancel.clone())
-                .test_id("material3-date-picker-cancel")
+                .test_id(cancel_test_id)
                 .into_element(cx),
             Button::new("OK")
                 .variant(ButtonVariant::Filled)
                 .on_activate(on_confirm.clone())
-                .test_id("material3-date-picker-confirm")
+                .test_id(confirm_test_id)
                 .into_element(cx),
         ]
     })
@@ -912,27 +930,8 @@ fn month_nav_header<H: UiHost>(
         DatePickerTokenVariant::Modal => "modal",
     };
 
-    #[derive(Default)]
-    struct DerivedNavTestIds {
-        base: Option<Arc<str>>,
-        tag: Option<&'static str>,
-        prev: Option<Arc<str>>,
-        next: Option<Arc<str>>,
-    }
-
-    let (prev_test_id, next_test_id) = cx.slot_state(DerivedNavTestIds::default, |st| {
-        if st.prev.is_none() || st.base.as_deref() != Some(base_id.as_ref()) || st.tag != Some(tag)
-        {
-            st.base = Some(base_id.clone());
-            st.tag = Some(tag);
-            st.prev = Some(Arc::from(format!("{base_id}-{tag}-prev")));
-            st.next = Some(Arc::from(format!("{base_id}-{tag}-next")));
-        }
-        (
-            st.prev.as_ref().expect("prev").clone(),
-            st.next.as_ref().expect("next").clone(),
-        )
-    });
+    let prev_test_id = part_test_id(&base_id, &format!("{tag}.prev"));
+    let next_test_id = part_test_id(&base_id, &format!("{tag}.next"));
 
     let prev = Button::new("Prev")
         .variant(ButtonVariant::Text)
@@ -1027,25 +1026,14 @@ fn dates_grid<H: UiHost>(
 
     let base_id = test_id.clone().unwrap_or_else(default_date_picker_test_id);
 
-    #[derive(Default)]
-    struct DerivedGridTestIds {
-        base: Option<Arc<str>>,
-        cell_test_ids: Option<Arc<[Arc<str>]>>,
-    }
-
-    let cell_test_ids = cx.slot_state(DerivedGridTestIds::default, |st| {
-        if st.cell_test_ids.is_none() || st.base.as_deref() != Some(base_id.as_ref()) {
-            st.base = Some(base_id.clone());
-            let mut out: Vec<Arc<str>> = Vec::with_capacity(42);
-            for row_idx in 0..6 {
-                for col_idx in 0..7 {
-                    out.push(Arc::from(format!("{base_id}-cell-{row_idx}-{col_idx}")));
-                }
-            }
-            st.cell_test_ids = Some(Arc::from(out));
-        }
-        st.cell_test_ids.as_ref().expect("cell_test_ids").clone()
-    });
+    let cell_test_ids: Arc<[Arc<str>]> = Arc::from(
+        (0..6)
+            .flat_map(|row_idx| {
+                let base_id = base_id.clone();
+                (0..7).map(move |col_idx| date_picker_cell_test_id(&base_id, row_idx, col_idx))
+            })
+            .collect::<Vec<_>>(),
+    );
 
     let mut grid = FlexProps::default();
     grid.direction = Axis::Vertical;
@@ -1280,6 +1268,7 @@ mod tests {
                     cx,
                     month_model.clone(),
                     selected_model.clone(),
+                    Some(Arc::<str>::from("m3-date-picker-modal")),
                     Some(Arc::<str>::from("m3-date-picker-modal")),
                     month,
                     noop.clone(),

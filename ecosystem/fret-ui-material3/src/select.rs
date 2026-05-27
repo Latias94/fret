@@ -12,13 +12,13 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 
 use fret_core::{
-    Axis, Color, Corners, Edges, KeyCode, Point, Px, Rect, SemanticsRole, Size, SvgFit,
-    TextOverflow, TextWrap,
+    Axis, Color, Corners, Edges, KeyCode, Point, Px, SemanticsRole, Size, SvgFit, TextOverflow,
+    TextWrap,
 };
 use fret_icons::{IconId, ids};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, CanvasProps, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
     PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, ScrollProps,
     SemanticsProps, SvgIconProps, TextProps, VisualTransformProps,
 };
@@ -37,6 +37,7 @@ use fret_ui_kit::{
 };
 
 use crate::foundation::arc_str::empty_arc_str;
+use crate::foundation::field::material_field_active_indicator_layer;
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -1132,27 +1133,12 @@ fn select_trigger_element<H: UiHost>(
                 }
 
                 let indicator_el = indicator.map(|(h, c)| {
-                    let indicator = cx.canvas(CanvasProps::default(), move |p| {
-                        let bounds = p.bounds();
-                        let y = Px(bounds.origin.y.0 + bounds.size.height.0 - h.0);
-                        let rect = Rect::new(
-                            Point::new(bounds.origin.x, y),
-                            Size::new(bounds.size.width, h),
-                        );
-                        p.scene().push(fret_core::SceneOp::Quad {
-                            order: fret_core::DrawOrder(0),
-                            rect,
-                            background: fret_core::Paint::Solid(c).into(),
-                            border: Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT.into(),
-                            corner_radii: Corners::all(Px(0.0)),
-                        });
-                    });
-                    if let Some(test_id) = active_indicator_test_id.clone() {
-                        indicator.test_id(test_id)
-                    } else {
-                        indicator
-                    }
+                    material_field_active_indicator_layer(
+                        cx,
+                        h,
+                        c,
+                        active_indicator_test_id.clone(),
+                    )
                 });
 
                 let style_override = style.clone();
@@ -1615,7 +1601,7 @@ fn estimate_select_menu_content_width<H: UiHost>(
 mod item_text_tests {
     use super::*;
     use fret_app::App;
-    use fret_core::{Point, Px, Size};
+    use fret_core::{Point, Px, Rect, Size};
     use fret_ui::element::{ElementKind, Length, TextProps};
 
     fn bounds() -> Rect {

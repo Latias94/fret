@@ -22,8 +22,26 @@ use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::test_id::part_test_id;
 use crate::tokens::search_bar as search_bar_tokens;
 use crate::tokens::search_view as search_view_tokens;
+
+#[derive(Debug, Clone)]
+struct SearchBarPartTestIds {
+    chrome: Arc<str>,
+    leading_icon: Arc<str>,
+    trailing_icon: Arc<str>,
+}
+
+impl SearchBarPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: part_test_id(base, "chrome"),
+            leading_icon: part_test_id(base, "leading-icon"),
+            trailing_icon: part_test_id(base, "trailing-icon"),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, Default)]
 pub(crate) enum SearchBarHeaderTokens {
@@ -125,6 +143,11 @@ impl SearchBar {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
+            let part_test_ids = self.test_id.as_ref().map(SearchBarPartTestIds::from_base);
+            let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+            let leading_icon_test_id = part_test_ids.as_ref().map(|ids| ids.leading_icon.clone());
+            let trailing_icon_test_id = part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone());
+
             let expanded = self
                 .expanded_model
                 .as_ref()
@@ -288,25 +311,27 @@ impl SearchBar {
 
                         let leading_icon = self.leading_icon;
                         let trailing_icon = self.trailing_icon;
+                        let leading_icon_test_id = leading_icon_test_id.clone();
+                        let trailing_icon_test_id = trailing_icon_test_id.clone();
 
                         let content = cx.flex(row, move |cx| {
                             let mut children: Vec<AnyElement> = Vec::new();
                             if let Some(icon) = leading_icon.as_ref() {
-                                children.push(material_search_bar_icon(
-                                    cx,
-                                    icon,
-                                    Px(24.0),
-                                    leading_color,
-                                ));
+                                let mut icon =
+                                    material_search_bar_icon(cx, icon, Px(24.0), leading_color);
+                                if let Some(test_id) = leading_icon_test_id.clone() {
+                                    icon = icon.test_id(test_id);
+                                }
+                                children.push(icon);
                             }
                             children.push(input);
                             if let Some(icon) = trailing_icon.as_ref() {
-                                children.push(material_search_bar_icon(
-                                    cx,
-                                    icon,
-                                    Px(24.0),
-                                    trailing_color,
-                                ));
+                                let mut icon =
+                                    material_search_bar_icon(cx, icon, Px(24.0), trailing_color);
+                                if let Some(test_id) = trailing_icon_test_id.clone() {
+                                    icon = icon.test_id(test_id);
+                                }
+                                children.push(icon);
                             }
                             children
                         });
@@ -328,7 +353,11 @@ impl SearchBar {
                         container.focus_within = true;
                         container.focus_ring = Some(focus_ring);
 
-                        vec![cx.container(container, move |_cx| vec![overlay, content])]
+                        let mut chrome = cx.container(container, move |_cx| vec![overlay, content]);
+                        if let Some(test_id) = chrome_test_id.clone() {
+                            chrome = chrome.test_id(test_id);
+                        }
+                        vec![chrome]
                     })
                 });
 

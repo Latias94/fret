@@ -22,6 +22,7 @@ use fret_ui_kit::primitives::focus_scope as focus_scope_prim;
 use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::part_test_id;
 use crate::motion;
 use crate::tokens::sheet_bottom as sheet_tokens;
 
@@ -160,10 +161,7 @@ impl DockedBottomSheet {
                 let drag_handle_test_id = cx.slot_state(DerivedDragHandleTestId::default, |st| {
                     if st.base.as_deref() != test_id_for_children.as_deref() {
                         st.base = test_id_for_children.clone();
-                        st.drag_handle = st
-                            .base
-                            .as_ref()
-                            .map(|id| Arc::from(format!("{id}-drag-handle")));
+                        st.drag_handle = st.base.as_ref().map(|id| part_test_id(id, "drag-handle"));
                     }
                     st.drag_handle.clone()
                 });
@@ -375,18 +373,26 @@ impl ModalBottomSheet {
                 struct DerivedTestIds {
                     base: Option<Arc<str>>,
                     scrim: Option<Arc<str>>,
+                    scrim_chrome: Option<Arc<str>>,
                     sheet: Option<Arc<str>>,
                 }
 
-                let (scrim_test_id, sheet_test_id) = cx.slot_state(DerivedTestIds::default, |st| {
+                let (scrim_test_id, scrim_chrome_test_id, sheet_test_id) =
+                    cx.slot_state(DerivedTestIds::default, |st| {
                     if st.base.as_deref() != test_id.as_deref() {
                         st.base = test_id.clone();
                         st.scrim =
-                            st.base.as_ref().map(|id| Arc::from(format!("{id}-scrim")));
+                            st.base.as_ref().map(|id| part_test_id(id, "scrim"));
+                        st.scrim_chrome =
+                            st.scrim.as_ref().map(|id| part_test_id(id, "chrome"));
                         st.sheet =
-                            st.base.as_ref().map(|id| Arc::from(format!("{id}-sheet")));
+                            st.base.as_ref().map(|id| part_test_id(id, "sheet"));
                     }
-                    (st.scrim.clone(), st.sheet.clone())
+                    (
+                        st.scrim.clone(),
+                        st.scrim_chrome.clone(),
+                        st.sheet.clone(),
+                    )
                 });
 
                 let overlay_root = cx.named("modal_bottom_sheet_root", |cx| {
@@ -431,7 +437,7 @@ impl ModalBottomSheet {
                                             cx.pressable_on_activate(on_activate);
                                         }
 
-                                        vec![cx.container(
+                                        let mut chrome = cx.container(
                                             ContainerProps {
                                                 layout: {
                                                     let mut l = LayoutStyle::default();
@@ -443,7 +449,11 @@ impl ModalBottomSheet {
                                                 ..Default::default()
                                             },
                                             |_cx| Vec::<AnyElement>::new(),
-                                        )]
+                                        );
+                                        if let Some(test_id) = scrim_chrome_test_id.clone() {
+                                            chrome = chrome.test_id(test_id);
+                                        }
+                                        vec![chrome]
                                     },
                                 )
                             });

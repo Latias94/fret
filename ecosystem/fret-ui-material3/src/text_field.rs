@@ -29,6 +29,7 @@ use fret_ui_kit::{
     resolve_override_slot_with,
 };
 
+use crate::foundation::field::material_field_active_indicator_layer;
 use crate::foundation::floating_label;
 use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
@@ -36,6 +37,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interactive_size::minimum_interactive_size;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::test_id::part_test_id;
 use crate::motion::SpringAnimator;
 use crate::tokens::autocomplete as autocomplete_tokens;
 use crate::tokens::text_field as text_field_tokens;
@@ -141,6 +143,29 @@ struct TextFieldRuntime {
     border_bottom: SpringAnimator,
     border_left: SpringAnimator,
     border_color: AnimatedColor,
+}
+
+#[derive(Debug, Clone)]
+struct TextFieldPartTestIds {
+    chrome: Arc<str>,
+    active_indicator: Arc<str>,
+    label: Arc<str>,
+    supporting_text: Arc<str>,
+    leading_icon: Arc<str>,
+    trailing_icon: Arc<str>,
+}
+
+impl TextFieldPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: part_test_id(base, "chrome"),
+            active_indicator: part_test_id(base, "active-indicator"),
+            label: part_test_id(base, "label"),
+            supporting_text: part_test_id(base, "supporting-text"),
+            leading_icon: part_test_id(base, "leading-icon"),
+            trailing_icon: part_test_id(base, "trailing-icon"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -550,6 +575,19 @@ impl TextField {
             } else {
                 height
             };
+            let part_test_ids = test_id.as_ref().map(TextFieldPartTestIds::from_base);
+            let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+            let active_indicator_test_id = part_test_ids
+                .as_ref()
+                .map(|ids| ids.active_indicator.clone());
+            let label_test_id = part_test_ids.as_ref().map(|ids| ids.label.clone());
+            let supporting_text_test_id = part_test_ids
+                .as_ref()
+                .map(|ids| ids.supporting_text.clone());
+            let leading_icon_test_id = leading_icon_test_id
+                .or_else(|| part_test_ids.as_ref().map(|ids| ids.leading_icon.clone()));
+            let trailing_icon_test_id = trailing_icon_test_id
+                .or_else(|| part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone()));
 
             let mut hover_layout = fret_ui::element::LayoutStyle::default();
             hover_layout.size.width = Length::Fill;
@@ -592,6 +630,7 @@ impl TextField {
                     move |cx| {
                         let mut children: Vec<AnyElement> = Vec::new();
                         let mut float_progress = 0.0f32;
+                        let mut active_indicator_el: Option<AnyElement> = None;
 
                         let input = cx.named("text_input", |cx| {
                             let populated = cx
@@ -697,10 +736,24 @@ impl TextField {
                                         TextFieldVariant::Filled => Px(0.0),
                                     };
 
+                                    let mut container_border = chrome.border;
+                                    if variant_for_children == TextFieldVariant::Filled
+                                        && chrome.border.bottom.0 > 0.0
+                                    {
+                                        active_indicator_el =
+                                            Some(material_field_active_indicator_layer(
+                                                cx,
+                                                chrome.border.bottom,
+                                                chrome.border_color,
+                                                active_indicator_test_id.clone(),
+                                            ));
+                                        container_border.bottom = Px(0.0);
+                                    }
+
                                     container.background =
                                         (chrome.background.a > 0.0).then_some(chrome.background);
                                     container.corner_radii = chrome.corner_radii;
-                                    container.border = chrome.border;
+                                    container.border = container_border;
                                     container.border_color = Some(chrome.border_color);
 
                                     chrome.background = Color::TRANSPARENT;
@@ -975,10 +1028,24 @@ impl TextField {
                                         TextFieldVariant::Filled => Px(0.0),
                                     };
 
+                                    let mut container_border = animated_border;
+                                    if variant_for_children == TextFieldVariant::Filled
+                                        && animated_border.bottom.0 > 0.0
+                                    {
+                                        active_indicator_el =
+                                            Some(material_field_active_indicator_layer(
+                                                cx,
+                                                animated_border.bottom,
+                                                animated_border_color,
+                                                active_indicator_test_id.clone(),
+                                            ));
+                                        container_border.bottom = Px(0.0);
+                                    }
+
                                     container.background =
                                         (chrome.background.a > 0.0).then_some(chrome.background);
                                     container.corner_radii = chrome.corner_radii;
-                                    container.border = animated_border;
+                                    container.border = container_border;
                                     container.border_color = Some(animated_border_color);
 
                                     chrome.background = Color::TRANSPARENT;
@@ -1094,31 +1161,7 @@ impl TextField {
                                 icon_props.layout.size.height = Length::Px(size);
                                 let icon_el = cx.svg_icon_props(icon_props);
 
-                                #[derive(Default)]
-                                struct DerivedTestIds {
-                                    base: Option<Arc<str>>,
-                                    explicit: Option<Arc<str>>,
-                                    icon: Option<Arc<str>>,
-                                }
-
-                                let icon_test_id = cx.slot_state(DerivedTestIds::default, |st| {
-                                    if st.base.as_deref() != test_id.as_deref()
-                                        || st.explicit.as_deref() != leading_icon_test_id.as_deref()
-                                    {
-                                        st.base = test_id.clone();
-                                        st.explicit = leading_icon_test_id.clone();
-                                        st.icon = st.explicit.clone().or_else(|| {
-                                            st.base.as_ref().map(|id| {
-                                                Arc::<str>::from(format!(
-                                                    "{}-leading-icon",
-                                                    id.as_ref()
-                                                ))
-                                            })
-                                        });
-                                    }
-                                    st.icon.clone()
-                                });
-
+                                let icon_test_id = leading_icon_test_id.clone();
                                 let icon_a11y_label = leading_icon_a11y_label.clone();
 
                                 let input_id_for_focus = input_id;
@@ -1271,32 +1314,7 @@ impl TextField {
                                         icon_el
                                     };
 
-                                #[derive(Default)]
-                                struct DerivedTestIds {
-                                    base: Option<Arc<str>>,
-                                    explicit: Option<Arc<str>>,
-                                    icon: Option<Arc<str>>,
-                                }
-
-                                let icon_test_id = cx.slot_state(DerivedTestIds::default, |st| {
-                                    if st.base.as_deref() != test_id.as_deref()
-                                        || st.explicit.as_deref()
-                                            != trailing_icon_test_id.as_deref()
-                                    {
-                                        st.base = test_id.clone();
-                                        st.explicit = trailing_icon_test_id.clone();
-                                        st.icon = st.explicit.clone().or_else(|| {
-                                            st.base.as_ref().map(|id| {
-                                                Arc::<str>::from(format!(
-                                                    "{}-trailing-icon",
-                                                    id.as_ref()
-                                                ))
-                                            })
-                                        });
-                                    }
-                                    st.icon.clone()
-                                });
-
+                                let icon_test_id = trailing_icon_test_id.clone();
                                 let icon_a11y_label = trailing_icon_a11y_label.clone();
 
                                 let input_id_for_focus = input_id;
@@ -1390,7 +1408,7 @@ impl TextField {
                                 )
                             });
 
-                            cx.container(container, move |cx| {
+                            let mut chrome = cx.container(container, move |cx| {
                                 if let Some(out) = field_id_out.as_ref() {
                                     out.set(Some(cx.root_id()));
                                 }
@@ -1401,8 +1419,15 @@ impl TextField {
                                 if let Some(icon) = trailing_icon_el {
                                     out.push(icon);
                                 }
+                                if let Some(indicator) = active_indicator_el {
+                                    out.push(indicator);
+                                }
                                 out
-                            })
+                            });
+                            if let Some(test_id) = chrome_test_id.clone() {
+                                chrome = chrome.test_id(test_id);
+                            }
+                            chrome
                         });
 
                         children.push(input);
@@ -1422,6 +1447,7 @@ impl TextField {
                                 input_id,
                                 input_bg,
                                 outline_width_for_notch,
+                                label_test_id.clone(),
                             ));
                         }
 
@@ -1436,6 +1462,7 @@ impl TextField {
                                 disabled,
                                 error,
                                 focused,
+                                supporting_text_test_id.clone(),
                             ));
                         }
 
@@ -1461,6 +1488,7 @@ fn text_field_label<H: UiHost>(
     input_id: GlobalElementId,
     input_bg: Color,
     outline_width: Px,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
@@ -1507,7 +1535,7 @@ fn text_field_label<H: UiHost>(
         patch.background = floated.then_some(input_bg);
     }
 
-    cx.pointer_region(
+    let mut label = cx.pointer_region(
         PointerRegionProps {
             layout,
             enabled: !disabled,
@@ -1533,7 +1561,11 @@ fn text_field_label<H: UiHost>(
                 })]
             })]
         },
-    )
+    );
+    if let Some(test_id) = test_id {
+        label = label.test_id(test_id);
+    }
+    label
 }
 
 fn text_field_supporting_text<H: UiHost>(
@@ -1546,6 +1578,7 @@ fn text_field_supporting_text<H: UiHost>(
     disabled: bool,
     error: bool,
     focused: bool,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let (style, color) = {
         let theme = Theme::global(&*cx.app);
@@ -1570,7 +1603,7 @@ fn text_field_supporting_text<H: UiHost>(
     layout.margin.left = fret_ui::element::MarginEdge::Px(Px(16.0));
     layout.margin.right = fret_ui::element::MarginEdge::Px(Px(16.0));
 
-    cx.text_props(TextProps {
+    let mut supporting_text = cx.text_props(TextProps {
         layout,
         text,
         style,
@@ -1579,7 +1612,11 @@ fn text_field_supporting_text<H: UiHost>(
         overflow: TextOverflow::Clip,
         align: fret_core::TextAlign::Start,
         ink_overflow: Default::default(),
-    })
+    });
+    if let Some(test_id) = test_id {
+        supporting_text = supporting_text.test_id(test_id);
+    }
+    supporting_text
 }
 
 fn text_field_widget_states<H: UiHost>(

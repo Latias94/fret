@@ -35,6 +35,7 @@ use fret_ui_kit::{OverlayController, OverlayPresence};
 
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::part_test_id;
 use crate::interaction::state_layer::StateLayerAnimator;
 use crate::motion::ms_to_frames;
 use crate::text_field::{TextField, TextFieldTokenNamespace, TextFieldVariant};
@@ -1022,22 +1023,7 @@ fn autocomplete_listbox_panel<H: UiHost>(
     set_query_on_select: bool,
     on_select: Option<OnAutocompleteSelect>,
 ) -> AnyElement {
-    #[derive(Default)]
-    struct DerivedTestIds {
-        base: Option<Arc<str>>,
-        listbox: Option<Arc<str>>,
-    }
-
-    let listbox_test_id = cx.slot_state(DerivedTestIds::default, |st| {
-        if st.base.as_deref() != test_id.as_deref() {
-            st.base = test_id.clone();
-            st.listbox = st
-                .base
-                .as_ref()
-                .map(|id| Arc::<str>::from(format!("{}-listbox", id.as_ref())));
-        }
-        st.listbox.clone()
-    });
+    let listbox_test_id = test_id.as_ref().map(|id| part_test_id(id, "listbox"));
 
     let sem = SemanticsProps {
         role: SemanticsRole::ListBox,
@@ -1073,11 +1059,11 @@ fn autocomplete_listbox_panel<H: UiHost>(
                     .map(|item| {
                         item.test_id.clone().or_else(|| {
                             base.map(|parent| {
-                                Arc::<str>::from(format!(
-                                    "{}-option-{}",
-                                    parent.as_ref(),
-                                    sanitize_test_id_suffix(item.value.as_ref())
-                                ))
+                                let option_base = part_test_id(parent, "option");
+                                part_test_id(
+                                    &option_base,
+                                    &sanitize_test_id_suffix(item.value.as_ref()),
+                                )
                             })
                         })
                     })
@@ -1179,9 +1165,8 @@ fn autocomplete_listbox_panel<H: UiHost>(
                         let query = query.clone();
                         let option_test_id =
                             option_test_ids.get(idx).cloned().unwrap_or(None);
-                        let option_chrome_test_id = option_test_id
-                            .as_ref()
-                            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                        let option_chrome_test_id =
+                            option_test_id.as_ref().map(|id| part_test_id(id, "chrome"));
 
                         let open_for_select = open.clone();
                         let suppress_open_for_select = suppress_open.clone();

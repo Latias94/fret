@@ -1790,7 +1790,7 @@ fn time_picker_clock_dial_drag_updates_time() {
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                if node.test_id.as_deref() == Some("time-picker-clock-dial") {
+                if node.test_id.as_deref() == Some("time-picker-docked.clock-dial") {
                     Some(node.id)
                 } else {
                     None
@@ -1874,7 +1874,7 @@ fn time_picker_selector_keyboard_arrows_step_time() {
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                if node.test_id.as_deref() == Some("time-picker-hour-selector") {
+                if node.test_id.as_deref() == Some("time-picker-docked.hour-selector") {
                     Some(node.id)
                 } else {
                     None
@@ -1903,7 +1903,7 @@ fn time_picker_selector_keyboard_arrows_step_time() {
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                if node.test_id.as_deref() == Some("time-picker-minute-selector") {
+                if node.test_id.as_deref() == Some("time-picker-docked.minute-selector") {
                     Some(node.id)
                 } else {
                     None
@@ -1967,18 +1967,20 @@ fn time_picker_time_input_replaces_and_auto_advances_hour() {
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("time-input-hour")).then_some(node.id)
+                (node.test_id.as_deref() == Some("time-picker-docked-input.input.hour"))
+                    .then_some(node.id)
             })
         })
-        .expect("expected time-input-hour in semantics snapshot");
+        .expect("expected time-picker-docked-input.input.hour in semantics snapshot");
     let minute_node: NodeId = ui
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("time-input-minute")).then_some(node.id)
+                (node.test_id.as_deref() == Some("time-picker-docked-input.input.minute"))
+                    .then_some(node.id)
             })
         })
-        .expect("expected time-input-minute in semantics snapshot");
+        .expect("expected time-picker-docked-input.input.minute in semantics snapshot");
 
     ui.set_focus(Some(hour_node));
 
@@ -4228,7 +4230,7 @@ fn dialog_focus_is_contained_and_restored_across_schemes() {
             snapshot
                 .nodes
                 .iter()
-                .any(|node| node.test_id.as_deref() == Some("dialog-scrim")),
+                .any(|node| node.test_id.as_deref() == Some("dialog.scrim")),
             "expected dialog scrim node while dialog is open ({label})"
         );
         assert_ne!(
@@ -4555,7 +4557,7 @@ fn dialog_scrim_dismisses_without_activating_underlay() {
             snapshot
                 .nodes
                 .iter()
-                .any(|node| node.test_id.as_deref() == Some("dialog-scrim")),
+                .any(|node| node.test_id.as_deref() == Some("dialog.scrim")),
             "expected dialog scrim node while dialog is open ({label})"
         );
         assert!(
@@ -5370,7 +5372,7 @@ fn tooltip_is_click_through_and_does_not_block_underlay_activation_across_scheme
 
 #[test]
 fn material3_headless_controls_suite_goldens_v1() {
-    use fret_ui::element::{ContainerProps, FlexProps, Length, TextProps};
+    use fret_ui::element::{ContainerProps, CrossAlign, FlexProps, Length, TextProps};
     use fret_ui_material3::{
         AssistChip, AssistChipVariant, Button, Card, CardVariant, Checkbox, FilterChip,
         FilterChipVariant, InputChip, Select, SelectItem, SuggestionChip, SuggestionChipVariant,
@@ -5444,6 +5446,7 @@ fn material3_headless_controls_suite_goldens_v1() {
                     let mut props = FlexProps::default();
                     props.direction = fret_core::Axis::Vertical;
                     props.gap = fret_ui::element::SpacingLength::Px(Px(16.0));
+                    props.align = CrossAlign::Start;
                     let content = cx.flex(props, |cx| {
                         let theme = Theme::global(&*cx.app).clone();
                         let body_style = theme
@@ -9068,7 +9071,7 @@ fn material3_autocomplete_semantics_v1() {
     let list = snap
         .nodes
         .iter()
-        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete-listbox"))
+        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete.listbox"))
         .expect("listbox node");
     assert!(
         input.controls.contains(&list.id),
@@ -9092,7 +9095,7 @@ fn material3_autocomplete_semantics_v1() {
     let beta = snap
         .nodes
         .iter()
-        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete-option-beta"))
+        .find(|n| n.test_id.as_deref() == Some("material3-autocomplete.option.beta"))
         .expect("expected beta option node");
     assert!(beta.flags.selected, "expected beta to be marked selected");
 
@@ -9220,14 +9223,14 @@ fn material3_autocomplete_filters_items_by_query_v1() {
     assert!(
         snap.nodes
             .iter()
-            .any(|n| { n.test_id.as_deref() == Some("material3-autocomplete-option-gamma") }),
+            .any(|n| { n.test_id.as_deref() == Some("material3-autocomplete.option.gamma") }),
         "expected gamma option after typing 'ga'"
     );
     assert!(
         !snap
             .nodes
             .iter()
-            .any(|n| { n.test_id.as_deref() == Some("material3-autocomplete-option-alpha") }),
+            .any(|n| { n.test_id.as_deref() == Some("material3-autocomplete.option.alpha") }),
         "expected alpha option to be filtered out after typing 'ga'"
     );
 }
@@ -9594,7 +9597,7 @@ fn material3_exposed_dropdown_trailing_icon_toggles_overlay_v1() {
         .semantics_snapshot()
         .and_then(|snapshot| {
             snapshot.nodes.iter().find_map(|node| {
-                (node.test_id.as_deref() == Some("material3-exposed-dropdown-trailing-icon"))
+                (node.test_id.as_deref() == Some("material3-exposed-dropdown.trailing-icon"))
                     .then_some(node.id)
             })
         })
@@ -11797,7 +11800,7 @@ fn dropdown_menu_dismisses_and_restores_focus_across_schemes() {
 
                     let mut props = fret_ui::element::FlexProps::default();
                     props.direction = fret_core::Axis::Vertical;
-                    props.gap = fret_ui::element::SpacingLength::Px(Px(24.0));
+                    props.gap = fret_ui::element::SpacingLength::Px(Px(220.0));
                     vec![cx.flex(props, move |_cx| vec![menu, underlay])]
                 })
             };

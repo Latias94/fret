@@ -29,6 +29,7 @@ use fret_ui_kit::typography::{self, TextIntent};
 
 use crate::foundation::overlay_motion::drive_overlay_open_close_motion;
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::part_test_id;
 use crate::motion::ms_to_frames;
 use crate::tokens::tooltip as tooltip_tokens;
 
@@ -582,6 +583,7 @@ pub struct PlainTooltip {
     open_delay_frames_override: Option<u32>,
     close_delay_frames_override: Option<u32>,
     disable_hoverable_content_override: Option<bool>,
+    test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for PlainTooltip {
@@ -606,6 +608,7 @@ impl std::fmt::Debug for PlainTooltip {
                 "disable_hoverable_content_override",
                 &self.disable_hoverable_content_override,
             )
+            .field("test_id", &self.test_id)
             .finish()
     }
 }
@@ -624,6 +627,7 @@ impl PlainTooltip {
             open_delay_frames_override: None,
             close_delay_frames_override: None,
             disable_hoverable_content_override: None,
+            test_id: None,
         }
     }
 
@@ -677,6 +681,11 @@ impl PlainTooltip {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let align = self.align;
@@ -688,6 +697,8 @@ impl PlainTooltip {
         let open_delay_frames_override = self.open_delay_frames_override;
         let close_delay_frames_override = self.close_delay_frames_override;
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
+        let test_id = self.test_id;
+        let chrome_test_id = test_id.as_ref().map(|id| part_test_id(id, "chrome"));
 
         let base_trigger = self.trigger;
         let content_spec = self.content;
@@ -761,7 +772,7 @@ impl PlainTooltip {
             let mut layout = LayoutStyle::default();
             layout.size.max_width = Some(Length::Px(content_max_width));
 
-            let container = cx.container(
+            let mut chrome = cx.container(
                 ContainerProps {
                     layout,
                     padding: container_padding.into(),
@@ -772,13 +783,17 @@ impl PlainTooltip {
                 },
                 move |_cx| vec![child],
             );
+            if let Some(test_id) = chrome_test_id.clone() {
+                chrome = chrome.test_id(test_id);
+            }
 
             cx.semantics(
                 SemanticsProps {
                     role: fret_core::SemanticsRole::Tooltip,
+                    test_id: test_id.clone(),
                     ..Default::default()
                 },
-                move |_cx| vec![container],
+                move |_cx| vec![chrome],
             )
         });
         let content_id = content.id;
@@ -1167,6 +1182,7 @@ pub struct RichTooltip {
     open_delay_frames_override: Option<u32>,
     close_delay_frames_override: Option<u32>,
     disable_hoverable_content_override: Option<bool>,
+    test_id: Option<Arc<str>>,
 }
 
 impl std::fmt::Debug for RichTooltip {
@@ -1191,6 +1207,7 @@ impl std::fmt::Debug for RichTooltip {
                 "disable_hoverable_content_override",
                 &self.disable_hoverable_content_override,
             )
+            .field("test_id", &self.test_id)
             .finish()
     }
 }
@@ -1212,6 +1229,7 @@ impl RichTooltip {
             open_delay_frames_override: None,
             close_delay_frames_override: None,
             disable_hoverable_content_override: None,
+            test_id: None,
         }
     }
 
@@ -1272,6 +1290,11 @@ impl RichTooltip {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let align = self.align;
@@ -1283,6 +1306,8 @@ impl RichTooltip {
         let open_delay_frames_override = self.open_delay_frames_override;
         let close_delay_frames_override = self.close_delay_frames_override;
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
+        let test_id = self.test_id;
+        let chrome_test_id = test_id.as_ref().map(|id| part_test_id(id, "chrome"));
 
         let base_trigger = self.trigger;
         let content_spec = self.content;
@@ -1390,7 +1415,7 @@ impl RichTooltip {
             let mut layout = LayoutStyle::default();
             layout.size.max_width = Some(Length::Px(content_max_width));
 
-            let container = cx.container(
+            let mut chrome = cx.container(
                 ContainerProps {
                     layout,
                     padding: container_padding.into(),
@@ -1401,13 +1426,17 @@ impl RichTooltip {
                 },
                 move |_cx| vec![child],
             );
+            if let Some(test_id) = chrome_test_id.clone() {
+                chrome = chrome.test_id(test_id);
+            }
 
             cx.semantics(
                 SemanticsProps {
                     role: fret_core::SemanticsRole::Tooltip,
+                    test_id: test_id.clone(),
                     ..Default::default()
                 },
-                move |_cx| vec![container],
+                move |_cx| vec![chrome],
             )
         });
 

@@ -39,6 +39,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::part_test_id;
 use crate::icon_button::{IconButton, IconButtonVariant};
 use crate::motion;
 use crate::tokens::time_input as time_input_tokens;
@@ -91,6 +92,10 @@ fn time_picker_minute_field_label() -> Arc<str> {
 fn time_picker_separator_text() -> Arc<str> {
     static SEP: OnceLock<Arc<str>> = OnceLock::new();
     SEP.get_or_init(|| Arc::<str>::from(":")).clone()
+}
+
+fn time_picker_part_test_id(base: &Option<Arc<str>>, part: &str) -> Option<Arc<str>> {
+    base.as_ref().map(|id| part_test_id(id, part))
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -201,6 +206,7 @@ impl DockedTimePicker {
             container.background = Some(surface.background);
             container.shadow = surface.shadow;
             container.corner_radii = corner_radii;
+            let chrome_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "chrome"));
 
             let content = time_picker_contents(
                 cx,
@@ -216,6 +222,7 @@ impl DockedTimePicker {
                 input_minute.clone(),
                 self.is_24h,
                 None,
+                self.test_id.clone(),
             );
 
             cx.semantics(
@@ -224,7 +231,13 @@ impl DockedTimePicker {
                     test_id: self.test_id.clone(),
                     ..Default::default()
                 },
-                move |cx| vec![cx.container(container, move |_cx| vec![content])],
+                move |cx| {
+                    let mut chrome = cx.container(container, move |_cx| vec![content]);
+                    if let Some(test_id) = chrome_test_id.clone() {
+                        chrome = chrome.test_id(test_id);
+                    }
+                    vec![chrome]
+                },
             )
         })
     }
@@ -498,29 +511,12 @@ impl TimePickerDialog {
                     });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
-                #[derive(Default)]
-                struct DerivedTestIds {
-                    base: Option<Arc<str>>,
-                    scrim: Option<Arc<str>>,
-                    panel: Option<Arc<str>>,
-                }
-
-                let (scrim_test_id, panel_test_id) =
-                    cx.slot_state(DerivedTestIds::default, |st| {
-                        if st.base.as_deref() != self.test_id.as_deref() {
-                            st.base = self.test_id.clone();
-                            st.scrim = st.base.as_ref().map(|id| {
-                                Arc::from(format!("{}-scrim", id.as_ref()))
-                            });
-                            st.panel = st.base.as_ref().map(|id| {
-                                Arc::from(format!("{}-panel", id.as_ref()))
-                            });
-                        }
-                        (st.scrim.clone(), st.panel.clone())
-                    });
+                let scrim_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "scrim"));
                 let scrim_chrome_test_id = scrim_test_id
                     .as_ref()
-                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                    .map(|id| part_test_id(id, "chrome"));
+                let panel_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "panel"));
+                let content_test_id = self.test_id.clone();
 
                 let overlay_root = cx.named("time_picker_overlay_root", |cx| {
                     cx.focus_scope(
@@ -626,6 +622,7 @@ impl TimePickerDialog {
                                     models.input_minute.clone(),
                                     self.is_24h,
                                     panel_test_id.clone(),
+                                    content_test_id.clone(),
                                     on_cancel.clone(),
                                     on_confirm.clone(),
                                 )
@@ -684,6 +681,7 @@ fn time_picker_modal_panel<H: UiHost>(
     input_minute: Model<String>,
     is_24h: bool,
     test_id: Option<Arc<str>>,
+    content_test_id: Option<Arc<str>>,
     on_cancel: OnActivate,
     on_confirm: OnActivate,
 ) -> AnyElement {
@@ -725,6 +723,7 @@ fn time_picker_modal_panel<H: UiHost>(
         input_minute,
         is_24h,
         Some((on_cancel, on_confirm)),
+        content_test_id,
     );
 
     cx.semantics(
@@ -751,6 +750,7 @@ fn time_picker_contents<H: UiHost>(
     input_minute: Model<String>,
     is_24h: bool,
     actions: Option<(OnActivate, OnActivate)>,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let mut props = FlexProps::default();
     props.direction = Axis::Vertical;
@@ -791,7 +791,8 @@ fn time_picker_contents<H: UiHost>(
             TimePickerDisplayMode::Dial => "Switch to input",
             TimePickerDisplayMode::Input => "Switch to dial",
         };
-        let toggle_test_id = "time-picker-mode-toggle";
+        let toggle_test_id = time_picker_part_test_id(&test_id, "mode-toggle")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.mode-toggle"));
         let on_toggle: OnActivate = Arc::new({
             let display_mode_model = display_mode_model.clone();
             let selection_model = selection_model.clone();
@@ -864,6 +865,7 @@ fn time_picker_contents<H: UiHost>(
                     selection_model.clone(),
                     selection,
                     is_24h,
+                    test_id.clone(),
                 );
 
                 let dial = time_picker_clock_dial(
@@ -874,10 +876,12 @@ fn time_picker_contents<H: UiHost>(
                     selection,
                     dial_dragging_model.clone(),
                     is_24h,
+                    test_id.clone(),
                 );
 
-                let period = (!is_24h)
-                    .then(|| time_picker_period_selector(cx, time_now, time_model.clone()));
+                let period = (!is_24h).then(|| {
+                    time_picker_period_selector(cx, time_now, time_model.clone(), test_id.clone())
+                });
 
                 let dial_and_period = cx.flex(
                     FlexProps {
@@ -909,12 +913,18 @@ fn time_picker_contents<H: UiHost>(
                     input_hour.clone(),
                     input_minute.clone(),
                     is_24h,
+                    test_id.clone(),
                 ));
             }
         }
 
         if let Some((on_cancel, on_confirm)) = actions.clone() {
-            out.push(time_picker_actions(cx, on_cancel, on_confirm));
+            out.push(time_picker_actions(
+                cx,
+                test_id.clone(),
+                on_cancel,
+                on_confirm,
+            ));
         }
 
         out
@@ -928,6 +938,7 @@ fn time_picker_display<H: UiHost>(
     selection_model: Model<TimePickerSelection>,
     selection: TimePickerSelection,
     is_24h: bool,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let (hour, minute) = time_to_display(time_now, is_24h);
     let hour_s = cached_two_digit_0_59(hour.into());
@@ -941,12 +952,16 @@ fn time_picker_display<H: UiHost>(
     props.gap = Px(8.0).into();
 
     cx.flex(props, move |cx| {
+        let hour_test_id = time_picker_part_test_id(&test_id, "hour-selector")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.hour-selector"));
+        let minute_test_id = time_picker_part_test_id(&test_id, "minute-selector")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.minute-selector"));
         let hour_el = time_selector_field(
             cx,
             time_picker_hour_field_label(),
             hour_s.clone(),
             selection == TimePickerSelection::Hour,
-            "time-picker-hour-selector",
+            hour_test_id,
             time_model.clone(),
             selection_model.clone(),
             TimePickerSelection::Hour,
@@ -971,7 +986,7 @@ fn time_picker_display<H: UiHost>(
             time_picker_minute_field_label(),
             minute_s.clone(),
             selection == TimePickerSelection::Minute,
-            "time-picker-minute-selector",
+            minute_test_id,
             time_model.clone(),
             selection_model.clone(),
             TimePickerSelection::Minute,
@@ -989,6 +1004,7 @@ fn time_picker_time_input<H: UiHost>(
     input_hour: Model<String>,
     input_minute: Model<String>,
     is_24h: bool,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     apply_time_input_models(
         cx,
@@ -1008,7 +1024,8 @@ fn time_picker_time_input<H: UiHost>(
         time_model.clone(),
         time_input_edit.clone(),
         input_hour,
-        "time-input-hour",
+        time_picker_part_test_id(&test_id, "input.hour")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.hour")),
         is_24h,
     );
     let minute_column = time_input_field_column(
@@ -1020,7 +1037,8 @@ fn time_picker_time_input<H: UiHost>(
         time_model.clone(),
         time_input_edit.clone(),
         input_minute,
-        "time-input-minute",
+        time_picker_part_test_id(&test_id, "input.minute")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.minute")),
         is_24h,
     );
 
@@ -1038,7 +1056,8 @@ fn time_picker_time_input<H: UiHost>(
     sep.overflow = TextOverflow::Clip;
     let sep_el = cx.text_props(sep);
 
-    let period = (!is_24h).then(|| time_input_period_selector(cx, time_now, time_model.clone()));
+    let period = (!is_24h)
+        .then(|| time_input_period_selector(cx, time_now, time_model.clone(), test_id.clone()));
 
     let mut row = FlexProps::default();
     row.direction = Axis::Horizontal;
@@ -1065,7 +1084,7 @@ fn time_input_field_column<H: UiHost>(
     time_model: Model<Time>,
     time_input_edit: Model<TimeInputEditState>,
     model: Model<String>,
-    test_id: &'static str,
+    test_id: Arc<str>,
     is_24h: bool,
 ) -> AnyElement {
     let field = time_input_field(
@@ -1076,7 +1095,7 @@ fn time_input_field_column<H: UiHost>(
         time_model,
         time_input_edit,
         model,
-        test_id,
+        test_id.clone(),
         is_24h,
     );
 
@@ -1111,7 +1130,7 @@ fn time_input_field<H: UiHost>(
     time_model: Model<Time>,
     time_input_edit: Model<TimeInputEditState>,
     model: Model<String>,
-    test_id: &'static str,
+    test_id: Arc<str>,
     is_24h: bool,
 ) -> AnyElement {
     let (width, height, corner_radii, focus_ring) = {
@@ -1126,7 +1145,7 @@ fn time_input_field<H: UiHost>(
         );
         (width, height, corner_radii, focus_ring)
     };
-    let chrome_test_id = Arc::<str>::from(format!("{test_id}.chrome"));
+    let chrome_test_id = part_test_id(&test_id, "chrome");
 
     let mut hover_layout = LayoutStyle::default();
     hover_layout.size.width = Length::Px(width);
@@ -1276,7 +1295,7 @@ fn time_input_field<H: UiHost>(
                 a11y: PressableA11y {
                     role: Some(SemanticsRole::TextField),
                     label: Some(a11y_label.clone()),
-                    test_id: Some(Arc::<str>::from(test_id)),
+                    test_id: Some(test_id.clone()),
                     ..Default::default()
                 },
                 layout: {
@@ -1433,7 +1452,7 @@ fn time_selector_field<H: UiHost>(
     a11y_label: Arc<str>,
     text: Arc<str>,
     selected: bool,
-    test_id: &'static str,
+    test_id: Arc<str>,
     time_model: Model<Time>,
     selection_model: Model<TimePickerSelection>,
     selection_kind: TimePickerSelection,
@@ -1447,7 +1466,7 @@ fn time_selector_field<H: UiHost>(
             material_focus_ring_for_component(theme, time_tokens::COMPONENT_PREFIX, corner_radii);
         (corner_radii, container_w, container_h, focus_ring)
     };
-    let chrome_test_id = Arc::<str>::from(format!("{test_id}.chrome"));
+    let chrome_test_id = part_test_id(&test_id, "chrome");
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = true;
@@ -1516,7 +1535,7 @@ fn time_selector_field<H: UiHost>(
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(a11y_label.clone()),
-                test_id: Some(Arc::<str>::from(test_id)),
+                test_id: Some(test_id.clone()),
                 selected,
                 ..Default::default()
             },
@@ -1636,6 +1655,7 @@ fn time_picker_clock_dial<H: UiHost>(
     selection: TimePickerSelection,
     dial_dragging_model: Model<bool>,
     is_24h: bool,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let (size, handle_size, background, corner_radii) = {
         let theme = Theme::global(&*cx.app);
@@ -1657,12 +1677,14 @@ fn time_picker_clock_dial<H: UiHost>(
     let (labels, selected_idx) = dial_labels(time_now, selection, is_24h);
     let center = size.0 * 0.5;
     let radius = center - (handle_size.0 * 0.5) - 8.0;
-    let chrome_test_id = Arc::<str>::from("time-picker-clock-dial.chrome");
+    let dial_test_id = time_picker_part_test_id(&test_id, "clock-dial")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.clock-dial"));
+    let chrome_test_id = part_test_id(&dial_test_id, "chrome");
 
     cx.semantics(
         fret_ui::element::SemanticsProps {
             role: SemanticsRole::Group,
-            test_id: Some(Arc::<str>::from("time-picker-clock-dial")),
+            test_id: Some(dial_test_id),
             ..Default::default()
         },
         move |cx| {
@@ -2022,6 +2044,7 @@ fn time_input_period_selector<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     time_now: Time,
     time_model: Model<Time>,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let (width, height, outline_width, outline_color, corner_radii) = {
         let theme = Theme::global(&*cx.app);
@@ -2052,6 +2075,11 @@ fn time_input_period_selector<H: UiHost>(
     flex.layout.size.width = Length::Fill;
     flex.layout.size.height = Length::Fill;
 
+    let am_test_id = time_picker_part_test_id(&test_id, "input.period.am")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.period.am"));
+    let pm_test_id = time_picker_part_test_id(&test_id, "input.period.pm")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.input.period.pm"));
+
     cx.container(container, move |cx| {
         let am = time_input_period_item(
             cx,
@@ -2059,6 +2087,7 @@ fn time_input_period_selector<H: UiHost>(
             current == Period::Am,
             time_model.clone(),
             Period::Am,
+            am_test_id.clone(),
         );
         let pm = time_input_period_item(
             cx,
@@ -2066,6 +2095,7 @@ fn time_input_period_selector<H: UiHost>(
             current == Period::Pm,
             time_model.clone(),
             Period::Pm,
+            pm_test_id.clone(),
         );
         vec![cx.flex(flex, move |_cx| vec![am, pm])]
     })
@@ -2077,6 +2107,7 @@ fn time_input_period_item<H: UiHost>(
     selected: bool,
     time_model: Model<Time>,
     period: Period,
+    test_id: Arc<str>,
 ) -> AnyElement {
     let corner_radii = Corners::all(Px(0.0));
     let focus_ring = {
@@ -2135,6 +2166,7 @@ fn time_input_period_item<H: UiHost>(
                 role: Some(SemanticsRole::Button),
                 label: Some(Arc::<str>::from(label)),
                 selected,
+                test_id: Some(test_id),
                 ..Default::default()
             },
             layout: {
@@ -2253,6 +2285,7 @@ fn time_picker_period_selector<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     time_now: Time,
     time_model: Model<Time>,
+    test_id: Option<Arc<str>>,
 ) -> AnyElement {
     let (width, height, outline_width, outline_color, corner_radii) = {
         let theme = Theme::global(&*cx.app);
@@ -2283,6 +2316,11 @@ fn time_picker_period_selector<H: UiHost>(
     flex.layout.size.width = Length::Fill;
     flex.layout.size.height = Length::Fill;
 
+    let am_test_id = time_picker_part_test_id(&test_id, "period.am")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.period.am"));
+    let pm_test_id = time_picker_part_test_id(&test_id, "period.pm")
+        .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.period.pm"));
+
     cx.container(container, move |cx| {
         let am = period_item(
             cx,
@@ -2290,6 +2328,7 @@ fn time_picker_period_selector<H: UiHost>(
             current == Period::Am,
             time_model.clone(),
             Period::Am,
+            am_test_id.clone(),
         );
         let pm = period_item(
             cx,
@@ -2297,6 +2336,7 @@ fn time_picker_period_selector<H: UiHost>(
             current == Period::Pm,
             time_model.clone(),
             Period::Pm,
+            pm_test_id.clone(),
         );
         vec![cx.flex(flex, move |_cx| vec![am, pm])]
     })
@@ -2308,6 +2348,7 @@ fn period_item<H: UiHost>(
     selected: bool,
     time_model: Model<Time>,
     period: Period,
+    test_id: Arc<str>,
 ) -> AnyElement {
     let corner_radii = Corners::all(Px(0.0));
     let focus_ring = {
@@ -2366,6 +2407,7 @@ fn period_item<H: UiHost>(
                 role: Some(SemanticsRole::Button),
                 label: Some(Arc::<str>::from(label)),
                 selected,
+                test_id: Some(test_id),
                 ..Default::default()
             },
             layout: {
@@ -2477,6 +2519,7 @@ fn period_item<H: UiHost>(
 
 fn time_picker_actions<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
+    test_id: Option<Arc<str>>,
     on_cancel: OnActivate,
     on_confirm: OnActivate,
 ) -> AnyElement {
@@ -2488,15 +2531,19 @@ fn time_picker_actions<H: UiHost>(
     props.gap = Px(8.0).into();
 
     cx.flex(props, move |cx| {
+        let cancel_test_id = time_picker_part_test_id(&test_id, "actions.cancel")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.actions.cancel"));
+        let confirm_test_id = time_picker_part_test_id(&test_id, "actions.confirm")
+            .unwrap_or_else(|| Arc::<str>::from("material3-time-picker.actions.confirm"));
         let cancel = Button::new("Cancel")
             .variant(ButtonVariant::Text)
             .on_activate(on_cancel.clone())
-            .test_id("time-picker-cancel")
+            .test_id(cancel_test_id)
             .into_element(cx);
         let ok = Button::new("OK")
             .variant(ButtonVariant::Text)
             .on_activate(on_confirm.clone())
-            .test_id("time-picker-ok")
+            .test_id(confirm_test_id)
             .into_element(cx);
         vec![cancel, ok]
     })
@@ -2759,6 +2806,7 @@ mod tests {
                     input_hour.clone(),
                     input_minute.clone(),
                     false,
+                    None,
                     None,
                 )
             },

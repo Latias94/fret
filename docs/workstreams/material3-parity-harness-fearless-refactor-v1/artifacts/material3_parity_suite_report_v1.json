@@ -5,10 +5,10 @@
   "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
   "source_suite": "tools/parity-discovery/suites/material3_parity_discovery_v1.json",
   "summary": {
-    "report_count": 3,
-    "part_count": 12,
+    "report_count": 4,
+    "part_count": 16,
     "status_counts": {
-      "pass_known": 12,
+      "pass_known": 16,
       "needs_live_measurement": 0,
       "mismatch": 0,
       "blocked": 0
@@ -17,7 +17,7 @@
       "runner": 1,
       "mechanism": 0,
       "policy": 2,
-      "recipe": 9,
+      "recipe": 13,
       "app_demo": 0,
       "upstream": 1,
       "unknown": 0
@@ -27,7 +27,7 @@
       "high": 0,
       "medium": 0,
       "low": 0,
-      "none": 12
+      "none": 16
     },
     "top_findings": []
   },
@@ -65,6 +65,15 @@
         "repair_queue_count": 0,
         "hardening_queue_count": 3,
         "gate_queue_count": 5
+      },
+      {
+        "id": "material3_navigation_indicator_adapter",
+        "component": "navigation_indicator",
+        "output": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_navigation_indicator_adapter_report_v1.json",
+        "status": "regression_locked",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 0,
+        "gate_queue_count": 3
       }
     ],
     "top_findings": []
@@ -259,6 +268,70 @@
         "medium": 0,
         "low": 0,
         "none": 5
+      },
+      "top_findings": []
+    },
+    {
+      "id": "material3_navigation_indicator_adapter",
+      "component": "navigation_indicator",
+      "style": "material3",
+      "output": "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_navigation_indicator_adapter_report_v1.json",
+      "status_counts": {
+        "pass_known": 4,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 4,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "triage_level_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "none": 4
       },
       "top_findings": []
     }

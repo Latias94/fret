@@ -16,19 +16,15 @@ use fret_runtime::Model;
 use fret_ui::action::{OnActivate, UiActionHostExt as _};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, Length, MainAlign, Overflow,
-    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsDecoration,
-    SemanticsProps, SvgIconProps, TextProps,
+    PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps, SemanticsProps,
+    SvgIconProps, TextProps,
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
-use fret_ui_headless::motion::spring::SpringDescription;
-use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_kit::declarative::controllable_state;
-use fret_ui_kit::declarative::motion_value::{
-    MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
-};
 use fret_ui_kit::typography::{self, TextIntent};
 
+use crate::foundation::active_indicator::{ActiveIndicatorRect, material_active_indicator_layer};
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::icon::svg_source_for_icon;
@@ -40,12 +36,47 @@ use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::part_test_id;
 use crate::tokens::navigation_bar as nav_tokens;
 use crate::{Badge, BadgePlacement, BadgeValue};
 
 #[derive(Debug, Default, Clone)]
 struct NavigationBarLayoutRuntime {
     icon_slots: LayoutProbeList,
+}
+
+#[derive(Debug, Clone)]
+struct NavigationBarPartTestIds {
+    chrome: Arc<str>,
+    active_indicator: Arc<str>,
+}
+
+impl NavigationBarPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: part_test_id(base, "chrome"),
+            active_indicator: part_test_id(base, "active-indicator"),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct NavigationBarItemPartTestIds {
+    chrome: Arc<str>,
+    icon: Arc<str>,
+    label: Arc<str>,
+    badge: Arc<str>,
+}
+
+impl NavigationBarItemPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: part_test_id(base, "chrome"),
+            icon: part_test_id(base, "icon"),
+            label: part_test_id(base, "label"),
+            badge: part_test_id(base, "badge"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -211,9 +242,11 @@ impl NavigationBar {
                 disabled,
                 ..Default::default()
             };
-            let indicator_test_id = test_id
+            let part_test_ids = test_id.as_ref().map(NavigationBarPartTestIds::from_base);
+            let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+            let indicator_test_id = part_test_ids
                 .as_ref()
-                .map(|id| Arc::<str>::from(format!("{id}-active-indicator")));
+                .map(|ids| ids.active_indicator.clone());
 
             let (container_height, container_bg, shadow, corner_radii) = {
                 let theme = Theme::global(&*cx.app);
@@ -250,7 +283,7 @@ impl NavigationBar {
             };
 
             cx.semantics(sem, move |cx| {
-                vec![cx.container(
+                let mut chrome = cx.container(
                     ContainerProps {
                         background: Some(container_bg),
                         shadow,
@@ -383,7 +416,11 @@ impl NavigationBar {
                             }),
                         ]
                     },
-                )]
+                );
+                if let Some(chrome_test_id) = chrome_test_id.clone() {
+                    chrome = chrome.test_id(chrome_test_id);
+                }
+                vec![chrome]
             })
         })
     }
@@ -405,6 +442,13 @@ fn navigation_bar_item<H: UiHost>(
     let badge = item.badge.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
+    let part_test_ids = test_id
+        .as_ref()
+        .map(NavigationBarItemPartTestIds::from_base);
+    let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+    let icon_test_id = part_test_ids.as_ref().map(|ids| ids.icon.clone());
+    let label_test_id = part_test_ids.as_ref().map(|ids| ids.label.clone());
+    let badge_test_id = part_test_ids.as_ref().map(|ids| ids.badge.clone());
 
     let (
         height,
@@ -561,33 +605,20 @@ fn navigation_bar_item<H: UiHost>(
                         rt.icon_slots.set(idx, icon_slot_id);
                     });
 
-                    let icon_el = nav_icon(cx, &icon, icon_size, icon_color);
+                    let mut icon_el = nav_icon(cx, &icon, icon_size, icon_color);
+                    if let Some(icon_test_id) = icon_test_id.clone() {
+                        icon_el = icon_el.test_id(icon_test_id);
+                    }
                     let icon_el = if let Some(badge) = badge.clone() {
-                        #[derive(Default)]
-                        struct DerivedBadgeTestId {
-                            base: Option<Arc<str>>,
-                            badge: Option<Arc<str>>,
-                        }
-
                         let badge = match badge {
                             BadgeValue::Dot => Badge::dot(),
                             BadgeValue::Text(value) => Badge::text(value),
                         };
 
-                        let badge_test_id = cx.slot_state(DerivedBadgeTestId::default, |st| {
-                            if st.base.as_deref() != test_id.as_deref() {
-                                st.base = test_id.clone();
-                                st.badge = st
-                                    .base
-                                    .as_ref()
-                                    .map(|id| Arc::<str>::from(format!("{id}-badge")));
-                            }
-                            st.badge.clone()
-                        });
                         let badge = badge
                             .placement(BadgePlacement::NavigationIcon)
                             .navigation_anchor_size(icon_size);
-                        let badge = if let Some(badge_test_id) = badge_test_id {
+                        let badge = if let Some(badge_test_id) = badge_test_id.clone() {
                             badge.test_id(badge_test_id)
                         } else {
                             badge
@@ -615,7 +646,7 @@ fn navigation_bar_item<H: UiHost>(
                     )
                 });
 
-                let label_el = {
+                let mut label_el = {
                     let mut style = label_style_base.clone();
                     style.weight = if selected {
                         label_weight_active
@@ -624,6 +655,9 @@ fn navigation_bar_item<H: UiHost>(
                     };
                     nav_label(cx, &label, style, label_color)
                 };
+                if let Some(label_test_id) = label_test_id.clone() {
+                    label_el = label_el.test_id(label_test_id);
+                }
 
                 let mut col = FlexProps::default();
                 col.layout.size.width = Length::Fill;
@@ -635,11 +669,8 @@ fn navigation_bar_item<H: UiHost>(
                 col.gap = Px(4.0).into();
                 col.padding = Edges::all(Px(0.0)).into();
 
-                let chrome_test_id = test_id
-                    .as_ref()
-                    .map(|id| Arc::<str>::from(format!("{id}.chrome")));
                 let mut chrome = cx.flex(col, move |_cx| vec![ink, icon_slot, label_el]);
-                if let Some(test_id) = chrome_test_id {
+                if let Some(test_id) = chrome_test_id.clone() {
                     chrome = chrome.test_id(test_id);
                 }
                 vec![chrome]
@@ -713,96 +744,16 @@ fn navigation_bar_active_indicator<H: UiHost>(
             (0.0, 0.0, 0.0, 0.0, Color::TRANSPARENT)
         };
 
-        let spring = SpringDescription::with_damping_ratio(
-            1.0,
-            spring.stiffness as f64,
-            spring.damping as f64,
-        );
-        let spec = MotionToSpecF32::Spring(SpringSpecF32 {
+        let target = ActiveIndicatorRect::new(target_x, target_y, target_w, target_h);
+
+        material_active_indicator_layer(
+            cx,
+            target,
+            color,
+            corner_radii,
             spring,
-            tolerance: Tolerance::default(),
-            snap_to_target: true,
-        });
-
-        let x = drive_motion_value_f32(
-            cx,
-            target_x,
-            MotionValueF32Update::To {
-                target: target_x,
-                spec,
-                kick: None,
-            },
-        );
-        let y = drive_motion_value_f32(
-            cx,
-            target_y,
-            MotionValueF32Update::To {
-                target: target_y,
-                spec,
-                kick: None,
-            },
-        );
-        let w = drive_motion_value_f32(
-            cx,
-            target_w,
-            MotionValueF32Update::To {
-                target: target_w,
-                spec,
-                kick: None,
-            },
-        );
-        let h = drive_motion_value_f32(
-            cx,
-            target_h,
-            MotionValueF32Update::To {
-                target: target_h,
-                spec,
-                kick: None,
-            },
-        );
-
-        let mut props = fret_ui::element::CanvasProps::default();
-        props.layout.position = fret_ui::element::PositionStyle::Absolute;
-        props.layout.inset.top = Some(Px(0.0)).into();
-        props.layout.inset.right = Some(Px(0.0)).into();
-        props.layout.inset.bottom = Some(Px(0.0)).into();
-        props.layout.inset.left = Some(Px(0.0)).into();
-
-        let mut indicator = cx.canvas(props, move |p| {
-            if w.value > 0.0 && h.value > 0.0 && color.a > 0.0 {
-                let bounds = p.bounds();
-                let x_px = x.value.clamp(0.0, bounds.size.width.0);
-                let y_px = y.value.clamp(0.0, bounds.size.height.0);
-                let max_w = (bounds.size.width.0 - x_px).max(0.0);
-                let max_h = (bounds.size.height.0 - y_px).max(0.0);
-                let w_px = w.value.clamp(0.0, max_w);
-                let h_px = h.value.clamp(0.0, max_h);
-
-                let rect = fret_core::Rect::new(
-                    fret_core::Point::new(
-                        Px(bounds.origin.x.0 + x_px),
-                        Px(bounds.origin.y.0 + y_px),
-                    ),
-                    fret_core::Size::new(Px(w_px), Px(h_px)),
-                );
-
-                fret_ui::paint::paint_state_layer(
-                    p.scene(),
-                    fret_core::DrawOrder(0),
-                    rect,
-                    color,
-                    1.0,
-                    corner_radii,
-                );
-            }
-        });
-
-        if let Some(test_id) = indicator_test_id.as_ref() {
-            indicator =
-                indicator.attach_semantics(SemanticsDecoration::default().test_id(test_id.clone()));
-        }
-
-        indicator
+            indicator_test_id.clone(),
+        )
     })
 }
 

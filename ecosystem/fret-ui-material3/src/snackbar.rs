@@ -52,6 +52,7 @@ pub struct Snackbar {
     pub action: Option<ToastAction>,
     pub duration: SnackbarDuration,
     pub dismissible: bool,
+    pub test_id: Option<Arc<str>>,
 }
 
 impl Snackbar {
@@ -62,6 +63,7 @@ impl Snackbar {
             action: None,
             duration: SnackbarDuration::Short,
             dismissible: true,
+            test_id: None,
         }
     }
 
@@ -93,6 +95,11 @@ impl Snackbar {
         self
     }
 
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
     pub fn into_toast_request(self) -> ToastRequest {
         let mut req = ToastRequest::new(self.message).variant(fret_ui_kit::ToastVariant::Default);
         if let Some(desc) = self.supporting_text {
@@ -103,6 +110,9 @@ impl Snackbar {
             req = req.action(action);
         }
         req = req.dismissible(self.dismissible);
+        if let Some(test_id) = self.test_id {
+            req = req.test_id(test_id);
+        }
         req
     }
 }

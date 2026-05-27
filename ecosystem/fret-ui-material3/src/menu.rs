@@ -31,6 +31,7 @@ use crate::foundation::indication::{
 };
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::part_test_id;
 use crate::tokens::menu as menu_tokens;
 
 #[derive(Debug, Clone, Default)]
@@ -258,6 +259,7 @@ impl Menu {
                 (height, surface.background, surface.shadow, corner)
             };
 
+            let chrome_test_id = test_id.as_ref().map(|id| part_test_id(id, "chrome"));
             let sem = SemanticsProps {
                 role: SemanticsRole::Menu,
                 label: a11y_label,
@@ -312,7 +314,11 @@ impl Menu {
                         ..Default::default()
                     },
                     move |cx| {
-                        vec![cx.roving_flex(roving, move |cx| {
+                        let mut children = Vec::new();
+                        if let Some(test_id) = chrome_test_id.clone() {
+                            children.push(absolute_fill_test_id_marker(cx, test_id));
+                        }
+                        children.push(cx.roving_flex(roving, move |cx| {
                             cx.roving_on_navigate(Arc::new(|_host, _cx, it| {
                                 use fret_ui::action::RovingNavigateResult;
 
@@ -400,12 +406,39 @@ impl Menu {
                                 }
                             }
                             out
-                        })]
+                        }));
+                        children
                     },
                 )]
             })
         })
     }
+}
+
+fn absolute_fill_test_id_marker<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    test_id: Arc<str>,
+) -> AnyElement {
+    let mut layout = fret_ui::element::LayoutStyle::default();
+    layout.position = fret_ui::element::PositionStyle::Absolute;
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Fill;
+    layout.inset = fret_ui::element::InsetStyle {
+        top: Some(Px(0.0)).into(),
+        right: Some(Px(0.0)).into(),
+        bottom: Some(Px(0.0)).into(),
+        left: Some(Px(0.0)).into(),
+    };
+
+    cx.semantics(
+        SemanticsProps {
+            role: SemanticsRole::Generic,
+            test_id: Some(test_id),
+            layout,
+            ..Default::default()
+        },
+        |_cx| Vec::<AnyElement>::new(),
+    )
 }
 
 fn menu_separator<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {

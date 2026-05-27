@@ -17,17 +17,13 @@ use fret_ui::element::{
 };
 use fret_ui::elements::{ElementContext, GlobalElementId};
 use fret_ui::{Invalidation, Theme, UiHost};
-use fret_ui_headless::motion::spring::SpringDescription;
-use fret_ui_headless::motion::tolerance::Tolerance;
 use fret_ui_kit::declarative::controllable_state;
-use fret_ui_kit::declarative::motion_value::{
-    MotionToSpecF32, MotionValueF32Update, SpringSpecF32, drive_motion_value_f32,
-};
 use fret_ui_kit::typography::{self, TextIntent};
 use fret_ui_kit::{
     ColorRef, OverrideSlot, WidgetStateProperty, WidgetStates, resolve_override_slot_with,
 };
 
+use crate::foundation::active_indicator::{ActiveIndicatorRect, material_active_indicator_layer};
 use crate::foundation::arc_str::empty_arc_str;
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
@@ -36,11 +32,27 @@ use crate::foundation::indication::{
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::layout_probe::LayoutProbeList;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
+use crate::foundation::test_id::part_test_id;
 use crate::tokens::tabs as tabs_tokens;
 
 #[derive(Debug, Default, Clone)]
 struct TabListLayoutRuntime {
     tabs: LayoutProbeList,
+}
+
+#[derive(Debug, Clone)]
+struct TabPartTestIds {
+    chrome: Arc<str>,
+    active_indicator: Arc<str>,
+}
+
+impl TabPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: part_test_id(base, "chrome"),
+            active_indicator: part_test_id(base, "active-indicator"),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -255,9 +267,11 @@ impl Tabs {
                 ..Default::default()
             };
 
-            let indicator_test_id = test_id
+            let part_test_ids = test_id.as_ref().map(TabPartTestIds::from_base);
+            let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+            let indicator_test_id = part_test_ids
                 .as_ref()
-                .map(|id| Arc::<str>::from(format!("{id}-active-indicator")));
+                .map(|ids| ids.active_indicator.clone());
 
             let container_states = if disabled {
                 WidgetStates::DISABLED
@@ -414,7 +428,7 @@ impl Tabs {
                                 .collect::<Vec<_>>()
                         });
 
-                        let tabs = if scrollable {
+                        let mut tabs = if scrollable {
                             let mut scroll_props = ScrollProps::default();
                             scroll_props.axis = ScrollAxis::X;
                             scroll_props.layout.size.width = Length::Fill;
@@ -423,6 +437,9 @@ impl Tabs {
                         } else {
                             roving
                         };
+                        if let Some(chrome_test_id) = chrome_test_id.clone() {
+                            tabs = tabs.test_id(chrome_test_id);
+                        }
 
                         vec![indicator, tabs]
                     },
@@ -527,9 +544,7 @@ fn material_primary_tab<H: UiHost>(
             focus_ring_bounds: None,
         };
 
-        let chrome_test_id = test_id
-            .as_ref()
-            .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+        let chrome_test_id = test_id.as_ref().map(|id| part_test_id(id, "chrome"));
 
         let mut pointer_region = cx.named("pointer_region", |cx| {
             let mut props = PointerRegionProps::default();
@@ -891,83 +906,16 @@ fn primary_tab_list_indicator<H: UiHost>(
                 spring,
             )
         };
-        let spring = SpringDescription::with_damping_ratio(
-            1.0,
-            spring.stiffness as f64,
-            spring.damping as f64,
-        );
-        let spec = MotionToSpecF32::Spring(SpringSpecF32 {
+        let target_y = (container_bounds.size.height.0 - target_height).max(0.0);
+        let target = ActiveIndicatorRect::new(target_x, target_y, target_width, target_height);
+
+        material_active_indicator_layer(
+            cx,
+            target,
+            color,
+            corner_radii,
             spring,
-            tolerance: Tolerance::default(),
-            snap_to_target: true,
-        });
-
-        let x = drive_motion_value_f32(
-            cx,
-            target_x,
-            MotionValueF32Update::To {
-                target: target_x,
-                spec,
-                kick: None,
-            },
-        );
-        let width = drive_motion_value_f32(
-            cx,
-            target_width,
-            MotionValueF32Update::To {
-                target: target_width,
-                spec,
-                kick: None,
-            },
-        );
-        let height = drive_motion_value_f32(
-            cx,
-            target_height,
-            MotionValueF32Update::To {
-                target: target_height,
-                spec,
-                kick: None,
-            },
-        );
-
-        let mut props = fret_ui::element::CanvasProps::default();
-        props.layout.position = fret_ui::element::PositionStyle::Absolute;
-        props.layout.inset.top = Some(Px(0.0)).into();
-        props.layout.inset.right = Some(Px(0.0)).into();
-        props.layout.inset.bottom = Some(Px(0.0)).into();
-        props.layout.inset.left = Some(Px(0.0)).into();
-
-        let mut indicator = cx.canvas(props, move |p| {
-            if height.value > 0.0 && width.value > 0.0 && color.a > 0.0 {
-                let bounds = p.bounds();
-
-                let x_px = x.value.clamp(0.0, bounds.size.width.0);
-                let max_width = (bounds.size.width.0 - x_px).max(0.0);
-                let width_px = width.value.clamp(0.0, max_width);
-
-                let height_px = Px(height.value);
-                let top = Px(bounds.origin.y.0 + bounds.size.height.0 - height_px.0);
-                let rect = fret_core::Rect::new(
-                    fret_core::Point::new(Px(bounds.origin.x.0 + x_px), top),
-                    fret_core::Size::new(Px(width_px), height_px),
-                );
-
-                fret_ui::paint::paint_state_layer(
-                    p.scene(),
-                    fret_core::DrawOrder(0),
-                    rect,
-                    color,
-                    1.0,
-                    corner_radii,
-                );
-            }
-        });
-
-        if let Some(test_id) = indicator_test_id.as_ref() {
-            indicator =
-                indicator.attach_semantics(SemanticsDecoration::default().test_id(test_id.clone()));
-        }
-
-        indicator
+            indicator_test_id.clone(),
+        )
     })
 }

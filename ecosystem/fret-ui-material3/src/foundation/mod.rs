@@ -8,10 +8,12 @@
 //! - shared focus-ring style defaults.
 
 pub mod action;
+pub mod active_indicator;
 pub mod arc_str;
 pub mod content;
 pub mod context;
 pub mod elevation;
+pub mod field;
 pub mod floating_label;
 pub mod focus_ring;
 pub mod geometry;
@@ -23,5 +25,6 @@ pub mod layout_probe;
 pub mod motion_scheme;
 pub mod overlay_motion;
 pub mod surface;
+pub mod test_id;
 pub mod token_resolver;
 pub mod tokens;

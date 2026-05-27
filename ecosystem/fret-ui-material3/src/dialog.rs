@@ -33,6 +33,7 @@ use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
 use crate::foundation::surface::material_surface_style;
+use crate::foundation::test_id::part_test_id;
 use crate::motion;
 use crate::tokens::dialog as dialog_tokens;
 
@@ -524,6 +525,15 @@ impl Dialog {
                     });
                 let dismiss_handler_for_request = dismiss_handler.clone();
 
+                let scrim_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "scrim"));
+                let scrim_chrome_test_id = scrim_test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "chrome"));
+                let panel_test_id = self.test_id.as_ref().map(|id| part_test_id(id, "panel"));
+                let panel_chrome_test_id = panel_test_id
+                    .as_ref()
+                    .map(|id| part_test_id(id, "chrome"));
+
                 let (
                     scrim_color,
                     container_bg,
@@ -649,22 +659,6 @@ impl Dialog {
                         },
                         move |cx| {
                             let scrim = cx.named("scrim", |cx| {
-                                #[derive(Default)]
-                                struct DerivedTestId {
-                                    base: Option<Arc<str>>,
-                                    scrim: Option<Arc<str>>,
-                                }
-
-                                let scrim_test_id = cx.slot_state(DerivedTestId::default, |st| {
-                                    if st.base.as_deref() != self.test_id.as_deref() {
-                                        st.base = self.test_id.clone();
-                                        st.scrim = st.base.as_ref().map(|id| {
-                                            Arc::from(format!("{}-scrim", id.as_ref()))
-                                        });
-                                    }
-                                    st.scrim.clone()
-                                });
-
                                 let mut l = LayoutStyle::default();
                                 l.position = PositionStyle::Absolute;
                                 l.size.width = Length::Fill;
@@ -701,7 +695,7 @@ impl Dialog {
                                             cx.pressable_on_activate(on_activate);
                                         }
 
-                                        vec![cx.container(
+                                        let mut chrome = cx.container(
                                             ContainerProps {
                                                 background: Some(scrim_color),
                                                 layout: {
@@ -713,7 +707,11 @@ impl Dialog {
                                                 ..Default::default()
                                             },
                                             |_cx| Vec::<AnyElement>::new(),
-                                        )]
+                                        );
+                                        if let Some(test_id) = scrim_chrome_test_id.clone() {
+                                            chrome = chrome.test_id(test_id);
+                                        }
+                                        vec![chrome]
                                     },
                                 )
                             });
@@ -805,8 +803,11 @@ impl Dialog {
                                                     body.push(cx.flex(row, move |_cx| actions));
                                                 }
 
+                                                let panel_test_id = panel_test_id.clone();
+                                                let panel_chrome_test_id =
+                                                    panel_chrome_test_id.clone();
                                                 vec![focus_scope_prim::focus_trap(cx, move |cx| {
-                                                    vec![cx.container(
+                                                    let chrome = cx.container(
                                                         ContainerProps {
                                                             layout: panel_layout,
                                                             background: Some(container_bg),
@@ -815,7 +816,28 @@ impl Dialog {
                                                             padding: panel_padding.into(),
                                                             ..Default::default()
                                                         },
-                                                        move |_cx| body,
+                                                        move |cx| {
+                                                            let mut children = Vec::new();
+                                                            if let Some(test_id) =
+                                                                panel_chrome_test_id.clone()
+                                                            {
+                                                                children.push(
+                                                                    absolute_fill_test_id_marker(
+                                                                        cx, test_id,
+                                                                    ),
+                                                                );
+                                                            }
+                                                            children.extend(body);
+                                                            children
+                                                        },
+                                                    );
+                                                    vec![cx.semantics(
+                                                        fret_ui::element::SemanticsProps {
+                                                            role: SemanticsRole::Dialog,
+                                                            test_id: panel_test_id.clone(),
+                                                            ..Default::default()
+                                                        },
+                                                        move |_cx| vec![chrome],
                                                     )]
                                                 })]
                                             });
@@ -856,6 +878,32 @@ impl Dialog {
 
 fn with_alpha(c: Color, a: f32) -> Color {
     Color { a, ..c }
+}
+
+fn absolute_fill_test_id_marker<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    test_id: Arc<str>,
+) -> AnyElement {
+    let mut layout = LayoutStyle::default();
+    layout.position = PositionStyle::Absolute;
+    layout.size.width = Length::Fill;
+    layout.size.height = Length::Fill;
+    layout.inset = InsetStyle {
+        top: Some(Px(0.0)).into(),
+        right: Some(Px(0.0)).into(),
+        bottom: Some(Px(0.0)).into(),
+        left: Some(Px(0.0)).into(),
+    };
+
+    cx.semantics(
+        fret_ui::element::SemanticsProps {
+            role: SemanticsRole::Generic,
+            test_id: Some(test_id),
+            layout,
+            ..Default::default()
+        },
+        |_cx| Vec::<AnyElement>::new(),
+    )
 }
 
 #[cfg(test)]

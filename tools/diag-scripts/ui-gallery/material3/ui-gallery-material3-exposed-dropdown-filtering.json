@@ -25,7 +25,7 @@
       "type": "click",
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-material3-exposed-dropdown-trailing-icon"
+        "id": "ui-gallery-material3-exposed-dropdown.trailing-icon"
       }
     },
     { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
@@ -39,7 +39,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-exposed-dropdown-listbox"
+          "id": "ui-gallery-material3-exposed-dropdown.listbox"
         }
       },
       "timeout_frames": 600
@@ -50,7 +50,7 @@
         "kind": "exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-exposed-dropdown-option-gamma"
+          "id": "ui-gallery-material3-exposed-dropdown.option.gamma"
         }
       },
       "timeout_frames": 600
@@ -61,7 +61,7 @@
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-exposed-dropdown-option-alpha"
+          "id": "ui-gallery-material3-exposed-dropdown.option.alpha"
         }
       },
       "timeout_frames": 600
@@ -73,7 +73,7 @@
         "kind": "bounds_within_window",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-exposed-dropdown-listbox"
+          "id": "ui-gallery-material3-exposed-dropdown.listbox"
         },
         "padding_px": 8.0
       }
@@ -89,7 +89,7 @@
       "type": "click",
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-material3-exposed-dropdown-trailing-icon"
+        "id": "ui-gallery-material3-exposed-dropdown.trailing-icon"
       }
     },
     { "type": "wait_frames", "n": 4 },
@@ -99,7 +99,7 @@
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-material3-exposed-dropdown-listbox"
+          "id": "ui-gallery-material3-exposed-dropdown.listbox"
         }
       },
       "timeout_frames": 600
