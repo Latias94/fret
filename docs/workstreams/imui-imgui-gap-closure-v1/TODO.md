@@ -28,6 +28,13 @@ Last updated: 2026-05-27
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI menu-item entry routing and label identity scoping out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls.rs` into a private owner module without
+      changing public menu-item, checkbox, radio, action, or submenu pressable-hook call paths.
+      Result: `menu_controls/routing.rs` owns public-in-IMUI menu item dispatch, semantic role
+      selection, `##/###` label identity parsing, item-id scoping, response assembly, and final
+      element insertion. The root file is now a thin module/re-export index beside the existing
+      element, interaction, keyboard, visual, and tests owners.
 - [x] Split shared IMUI active-trigger keyboard, pointer, and response behavior out of
       `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` into private owner modules
       without changing active-item lifecycle, right-click context-menu signaling, keyboard

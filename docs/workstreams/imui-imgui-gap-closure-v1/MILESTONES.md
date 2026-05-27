@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 menu-item routing owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs` now owns menu item entry dispatch,
+checkbox/radio/action semantic role selection, `##/###` label identity parsing, item-id scoping,
+response assembly, and final element insertion. `menu_controls.rs` is now a thin module/re-export
+index that wires routing, element, interaction, keyboard, visual, and tests owners.
+
 2026-05-27 P3 component catalog refresh result:
 `P3_COMPONENT_SURFACE_CATALOG_2026-05-06.md` no longer treats ListBox, plot adapter, or
 style/theme preset picker as open candidate-only gaps. The current map now records ListBox as a
