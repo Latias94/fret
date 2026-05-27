@@ -5,10 +5,10 @@ Last updated: 2026-05-27
 
 ## Current Focus
 
-FNDX-041 is the second concrete declarative overlay parity/conformance follow-up after the
-overlay/menu/toolbar policy-placement closure. It locks hover-tooltip anchoring under node motion:
-when portal bounds are disabled or unavailable, diagnostics hover tooltips follow the drag-adjusted
-hover-anchor store instead of stale pre-drag node bounds.
+FNDX-042 is the third concrete declarative overlay/add-on parity/conformance follow-up after the
+overlay/menu/toolbar policy-placement closure. It locks declarative portal text cancel focus-return:
+cancel commands for live portal nodes return focus to the graph surface and do not commit
+graph/store changes.
 
 ## Targeted Iteration Gates
 
@@ -68,6 +68,13 @@ cargo nextest run -p fret-node declarative_hover_tooltip_overlay_tracks_dragged_
 
 This gate proves diagnostics hover-tooltip overlay placement follows drag-adjusted hover anchors
 when portal bounds are disabled or unavailable.
+
+```bash
+cargo nextest run -p fret-node declarative_portal_text_cancel_returns_focus_to_surface_without_graph_commit
+```
+
+This gate proves declarative portal text cancel commands are available for live portal nodes, return
+focus to the graph surface, and do not commit graph/store changes.
 
 ## Package And Boundary Gates
 
