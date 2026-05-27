@@ -894,6 +894,14 @@ canonical data flow and invalidation boundaries:
     (`declarative_overlay_layer_is_input_transparent_over_canvas_region`),
     `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`
 
+- [x] **Hover tooltip anchoring under node motion**
+  - XyFlow outcome: overlays stay visually attached to the moving node/handle rather than stale
+    pre-drag bounds.
+  - Declarative surface: when portal bounds are disabled or unavailable, diagnostics hover tooltips
+    resolve from the drag-adjusted hover-anchor store.
+  - Conformance: `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    (`declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled`)
+
 ---
 
 # 9) Keyboard Shortcuts, Commands, and Focus

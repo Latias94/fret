@@ -5,10 +5,10 @@ Last updated: 2026-05-27
 
 ## Current Focus
 
-FNDX-040 is the first concrete declarative overlay parity/conformance follow-up after the
-overlay/menu/toolbar policy-placement closure. It locks the XyFlow-style "overlay root does not
-steal input" outcome for declarative overlay layers, aligned with the retained portal pointer
-passthrough conformance coverage.
+FNDX-041 is the second concrete declarative overlay parity/conformance follow-up after the
+overlay/menu/toolbar policy-placement closure. It locks hover-tooltip anchoring under node motion:
+when portal bounds are disabled or unavailable, diagnostics hover tooltips follow the drag-adjusted
+hover-anchor store instead of stale pre-drag node bounds.
 
 ## Targeted Iteration Gates
 
@@ -62,6 +62,13 @@ cargo nextest run -p fret-node declarative_overlay_layer_is_input_transparent_ov
 This gate proves declarative overlay layers stay hit-test transparent over the canvas region, so
 diagnostics-only hover/marquee overlays do not steal pointer input from the underlying surface.
 
+```bash
+cargo nextest run -p fret-node declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled
+```
+
+This gate proves diagnostics hover-tooltip overlay placement follows drag-adjusted hover anchors
+when portal bounds are disabled or unavailable.
+
 ## Package And Boundary Gates
 
 ```bash
@@ -97,6 +104,8 @@ closeout note must name those failures.
 - `ecosystem/fret-node/src/ui/overlays/toolbar_policy.rs`
 - `ecosystem/fret-node/src/ui/overlays/toolbars_declarative.rs`
 - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/hover_anchor.rs`
+- `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
 - `ecosystem/fret-node/src/ui/canvas/state/state_overlay_policy.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/ui/overlay.rs`
 - `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_pointer_passthrough_conformance.rs`
@@ -141,6 +150,13 @@ closeout note must name those failures.
     contains a pointer region.
   - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed; proves retained
     compatibility test targets still compile with the new declarative overlay behavior gate.
+  - `cargo fmt --check`: passed; proves formatting is clean after the new Rust test.
+- FNDX-041:
+  - `cargo nextest run -p fret-node declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled`:
+    passed; proves the final diagnostics hover-tooltip overlay spec tracks drag-adjusted hover
+    anchors when portal bounds are disabled.
+  - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed; proves retained
+    compatibility test targets still compile with the new motion-anchoring gate.
   - `cargo fmt --check`: passed; proves formatting is clean after the new Rust test.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.

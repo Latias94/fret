@@ -511,6 +511,8 @@ real editors.
   and the closeout gate set for the recent FNDX slices passed.
 - FNDX-040 adds the first concrete declarative overlay behavior gate after that decision:
   diagnostics-only overlay layers stay hit-test transparent over the canvas region.
+- FNDX-041 adds the next concrete declarative overlay behavior gate: diagnostics hover tooltips
+  track drag-adjusted hover anchors when portal bounds are disabled or unavailable.
 - This milestone is not fully closed by that result: the next slice should continue proving one
   observable declarative overlay behavior at a time instead of only moving policy ownership seams.
 

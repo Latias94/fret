@@ -5064,6 +5064,68 @@ fn sync_hover_anchor_store_in_models_tracks_dragged_hovered_node_rect() {
 }
 
 #[test]
+fn declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled() {
+    let mut models = ModelStore::default();
+    let hover_anchor = models.insert(HoverAnchorStore::default());
+    let node = NodeId::from_u128(9411);
+    let draws = vec![NodeRectDraw {
+        id: node,
+        rect: Rect::new(
+            Point::new(Px(10.0), Px(20.0)),
+            fret_core::Size::new(Px(120.0), Px(60.0)),
+        ),
+    }];
+    let drag = NodeDragState {
+        start_screen: Point::new(Px(0.0), Px(0.0)),
+        current_screen: Point::new(Px(40.0), Px(-20.0)),
+        phase: NodeDragPhase::Active,
+        nodes_sorted: Arc::from([node]),
+    };
+    let view = PanZoom2D {
+        pan: Point::new(Px(0.0), Px(0.0)),
+        zoom: 2.0,
+    };
+    let bounds = Rect::new(
+        Point::new(Px(100.0), Px(200.0)),
+        fret_core::Size::new(Px(800.0), Px(600.0)),
+    );
+
+    assert!(sync_hover_anchor_store_in_models(
+        &mut models,
+        &hover_anchor,
+        Some(node),
+        Some(draws.as_slice()),
+        view,
+        Some(&drag),
+    ));
+    let stored = models.read(&hover_anchor, |st| st.clone()).unwrap();
+    let anchor =
+        resolve_hover_tooltip_anchor(bounds, view, true, None, stored.hovered_canvas_bounds)
+            .expect("hover anchor should resolve when portals are disabled");
+    let spec = build_hover_tooltip_overlay_spec(
+        bounds,
+        node,
+        anchor,
+        false,
+        Arc::<str>::from("dragged"),
+        1,
+        2,
+    )
+    .expect("tooltip spec");
+
+    assert_eq!(anchor.source, HoverTooltipAnchorSource::HoverAnchorStore);
+    assert_eq!(anchor.origin_screen, Point::new(Px(160.0), Px(220.0)));
+    assert_eq!(spec.left, Px(60.0));
+    assert_eq!(
+        spec.top,
+        Px(26.0),
+        "tooltip should flip below the drag-adjusted anchor near the top edge"
+    );
+    assert_eq!(spec.width, Px(240.0));
+    assert!(!spec.hide_label_summary);
+}
+
+#[test]
 fn build_hover_tooltip_overlay_spec_flips_below_anchor_when_needed() {
     let bounds = Rect::new(
         Point::new(Px(100.0), Px(200.0)),

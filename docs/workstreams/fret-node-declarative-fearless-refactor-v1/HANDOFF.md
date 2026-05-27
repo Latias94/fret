@@ -13,14 +13,21 @@ older graph/view/controller triplets or direct retained authoring.
 
 ## Active Task
 
-- Task ID: FNDX-040.
+- Task ID: FNDX-041.
 - Owner: current Codex session.
 - Status: DONE.
-- Claim: declarative overlay layers stay input-transparent over the canvas region, matching the
-  XyFlow-style "overlay root does not steal input" outcome and the retained portal pointer
-  passthrough conformance posture.
+- Claim: diagnostics hover-tooltip overlay placement follows drag-adjusted hover anchors when portal
+  bounds are disabled or unavailable, so tooltip anchoring does not drift back to stale pre-drag
+  node bounds.
 - Review: use `review-workstream` before accepting broader lane closure.
 - Evidence:
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs` adds
+    `declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled`, which composes
+    hover-anchor sync, portal-disabled fallback, and final tooltip spec placement.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/hover_anchor.rs` remains the drag-adjusted
+    hover-anchor authority.
+  - `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs` remains the final
+    tooltip overlay spec authority.
   - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs` adds
     `declarative_overlay_layer_is_input_transparent_over_canvas_region`, which fails if an overlay
     layer can intercept pointer input before the canvas region.
@@ -29,6 +36,7 @@ older graph/view/controller triplets or direct retained authoring.
   - `docs/node-graph-xyflow-parity.md` now names declarative overlay-layer input transparency next
     to the retained portal-root input transparency contract.
   - Fresh gates passed:
+    `cargo nextest run -p fret-node declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled`,
     `cargo nextest run -p fret-node declarative_overlay_layer_is_input_transparent_over_canvas_region`,
     `cargo check -p fret-node --features compat-retained-canvas --tests`, and
     `cargo fmt --check`.
@@ -57,14 +65,16 @@ older graph/view/controller triplets or direct retained authoring.
   evidence before adding a `replace_*_with_diff` API.
 - Treat FNDX-030 as policy-placement closure, not a full declarative parity claim: remaining
   overlay behavior parity should be split into future focused conformance tasks.
-- Keep this workstream active after closeout verification and split the next step as FNDX-040
+- Keep this workstream active after closeout verification and split concrete overlay behavior gates
   instead of marking the whole lane complete.
 - FNDX-040 chose input transparency as the first concrete declarative overlay parity gate and did
   not widen the overlay policy surface.
+- FNDX-041 chose motion anchoring as the second concrete declarative overlay parity gate and kept
+  the behavior on existing hover-anchor and overlay-spec seams.
 
 ## Blockers
 
-- None for FNDX-040.
+- None for FNDX-041.
 
 ## Next Recommended Action
 

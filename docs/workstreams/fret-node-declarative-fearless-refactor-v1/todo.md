@@ -114,6 +114,27 @@ Execution companion: `design.md` (surface map + next worktree order).
     - `cargo nextest run -p fret-node declarative_overlay_layer_is_input_transparent_over_canvas_region`: passed.
     - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed.
     - `cargo fmt --check`: passed.
+- [x] FNDX-041 Lock declarative hover-tooltip anchoring under node motion with a behavior gate.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/hover_anchor.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Validation:
+    - `cargo nextest run -p fret-node declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled`
+    - `cargo check -p fret-node --features compat-retained-canvas --tests`
+    - `cargo fmt --check`
+  - Exit note: when portal bounds are disabled or unavailable, the diagnostics hover tooltip must
+    anchor to the drag-adjusted hover-anchor store instead of using a stale pre-drag node rect.
+  - Evidence:
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/tests.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/hover_anchor.rs`
+    - `ecosystem/fret-node/src/ui/declarative/paint_only/overlay_elements.rs`
+    - `docs/node-graph-xyflow-parity.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled`: passed.
+    - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed.
+    - `cargo fmt --check`: passed.
 
 ## M0 - Decision gates and internal seam map
 
