@@ -325,11 +325,11 @@
     {
       "id": "date_picker",
       "family": "field",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_day_value_selectors_known_follow_ons",
       "wave": "wave2_field_family",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "picker_after_field_foundation",
-      "first_gate_kind": "semantics_dialog_grid",
+      "first_gate_kind": "semantics_dialog_grid_value_ids",
       "selector_status": "picker_selector_ready",
       "stable_part_ids": [
         "date_picker",
@@ -339,6 +339,7 @@
         "date_picker.modal.prev",
         "date_picker.modal.next",
         "date_picker.cell.<row>.<col>",
+        "date_picker.cell.<yyyy-mm-dd>",
         "date_picker.scrim",
         "date_picker.scrim.chrome",
         "date_picker.panel",
@@ -346,13 +347,14 @@
         "date_picker.actions.confirm"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
+        "docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/artifacts/date_picker_day_cell_selectors_packet_v1.md"
       ],
       "layer_classification": [
-        "material_recipe owns month navigation, staged selected-date draft, day-grid selection, modal panel composition, and picker part ids",
+        "material_recipe owns month navigation, staged selected-date draft, day-grid selection, modal panel composition, picker part ids, and value-derived day-cell selector aliases",
         "kit_policy owns modal overlay request, scrim dismiss, focus trap, and focus restore through existing overlay/focus primitives",
         "diagnostics/test_harness owned stale modal underlay/action stretch goldens and old hyphen selector drift",
-        "follow_on covers richer calendar grid accessibility such as selectable-date disabling, locale labels, and live-region announcements"
+        "follow_on still covers selectable-date disabling, locale labels, and live-region announcements"
       ]
     },
     {
@@ -609,11 +611,11 @@
     {
       "id": "modal_navigation_drawer",
       "family": "navigation",
-      "status": "follow_on_queued_overlay_packet",
+      "status": "packet_done_overlay_closed",
       "wave": "wave1_navigation_indicator",
       "default_owner_bias": "kit_policy",
       "packet_strategy": "navigation_overlay_packet",
-      "first_gate_kind": "diag_drawer_dismiss_motion",
+      "first_gate_kind": "automation_focus_overlay_and_navigation_golden",
       "selector_status": "modal_drawer_selector_ready",
       "stable_part_ids": [
         "modal_navigation_drawer",
@@ -622,13 +624,16 @@
         "modal_navigation_drawer.panel"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_sweep_closeout_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_sweep_closeout_v1.md",
+        "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/artifacts/drawer_modal_packet_v1.md",
+        "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/artifacts/navigation_geometry_resolution_v1.md",
+        "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/CLOSEOUT_AUDIT_2026-05-27.md"
       ],
       "layer_classification": [
         "material_recipe owns modal drawer panel/scrim composition and navigation drawer panel skinning",
         "kit_policy owns overlay containment, scrim dismissal, and focus restore through existing overlay primitives",
-        "test_harness covers modal drawer focus containment and live root/scrim/panel automation selectors",
-        "follow_on covers a focused drawer/modal-drawer packet with refreshed visual evidence"
+        "test_harness covers modal drawer focus containment, live root/scrim/panel automation selectors, and refreshed navigation headless goldens",
+        "drawer/modal-drawer visual overlay packet is closed; future motion diagnostics require fresh evidence"
       ]
     },
     {
@@ -664,25 +669,31 @@
     {
       "id": "navigation_drawer",
       "family": "navigation",
-      "status": "follow_on_queued_selector_seeded",
+      "status": "packet_done_selector_completed",
       "wave": "wave1_navigation_indicator",
       "default_owner_bias": "material_recipe",
-      "packet_strategy": "navigation_packet_later",
-      "first_gate_kind": "semantics_scene",
-      "selector_status": "drawer_item_selector_seeded",
+      "packet_strategy": "navigation_selector_completion_packet",
+      "first_gate_kind": "automation_surface_part_selectors",
+      "selector_status": "drawer_selector_ready",
       "stable_part_ids": [
         "navigation_drawer",
+        "navigation_drawer.chrome",
         "navigation_drawer.item",
-        "navigation_drawer.item.chrome"
+        "navigation_drawer.item.chrome",
+        "navigation_drawer.item.icon",
+        "navigation_drawer.item.label",
+        "navigation_drawer.item.badge"
       ],
       "packet_artifacts": [
         "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_foundation_consolidation_v1.md",
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_sweep_closeout_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_sweep_closeout_v1.md",
+        "docs/workstreams/material3-navigation-drawer-overlay-packet-v1/artifacts/drawer_modal_packet_v1.md",
+        "docs/workstreams/material3-navigation-drawer-selector-completion-packet-v1/artifacts/navigation_drawer_selector_completion_packet_v1.md"
       ],
       "layer_classification": [
-        "material_recipe owns drawer item root/chrome selectors and selected item pill composition",
-        "test_harness now covers NavigationDrawer item chrome selectors in automation_surface",
-        "full NavigationDrawer and ModalNavigationDrawer visual/overlay packet remains a closeout follow-on",
+        "material_recipe owns drawer root chrome, item root/chrome/icon/label/badge selectors, and selected item pill composition",
+        "test_harness covers standard and modal NavigationDrawer selector surfaces in automation_surface",
+        "visual/overlay drift was closed by the dedicated navigation drawer overlay packet",
         "no mechanism gap found during part-id consolidation"
       ]
     },
@@ -1021,11 +1032,11 @@
     {
       "id": "time_picker",
       "family": "field",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_dial_ids_known_follow_ons",
       "wave": "wave2_field_family",
       "default_owner_bias": "material_recipe",
       "packet_strategy": "picker_after_field_foundation",
-      "first_gate_kind": "semantics_dialog_dial",
+      "first_gate_kind": "semantics_dialog_dial_value_ids",
       "selector_status": "picker_selector_ready",
       "stable_part_ids": [
         "time_picker",
@@ -1037,6 +1048,8 @@
         "time_picker.minute-selector.chrome",
         "time_picker.clock-dial",
         "time_picker.clock-dial.chrome",
+        "time_picker.clock-dial.hour.<HH>",
+        "time_picker.clock-dial.minute.<MM>",
         "time_picker.period.am",
         "time_picker.period.pm",
         "time_picker.input.hour",
@@ -1052,13 +1065,14 @@
         "time_picker.actions.confirm"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_picker_packet_v1.md",
+        "docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md"
       ],
       "layer_classification": [
-        "material_recipe owns dial/input display modes, staged time draft, selector keyboard edits, dial drag/click handling, and picker part ids",
+        "material_recipe owns dial/input display modes, staged time draft, selector keyboard edits, dial drag/click handling, picker part ids, and value-derived dial label ids",
         "kit_policy owns modal overlay request, scrim dismiss, focus trap, and focus restore through existing overlay/focus primitives",
         "diagnostics/test_harness owned stale modal underlay stretch goldens and old global selector drift",
-        "follow_on covers richer time-grid accessibility such as dial item ids, error text for invalid input, live region announcements, and 24h/localized labels"
+        "follow_on still covers invalid input error text, live region announcements, and richer 24h/localized labels"
       ]
     },
     {

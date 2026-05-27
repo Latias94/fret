@@ -12,8 +12,8 @@ use fret_core::{Axis, Color, Edges, Px, SemanticsRole, TextOverflow, TextWrap};
 use fret_runtime::Model;
 use fret_ui::action::{DismissReason, DismissRequestCx, OnActivate, OnDismissRequest};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    PressableA11y, PressableProps, TextProps,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, InsetEdge, LayoutStyle, Length, MainAlign,
+    Overflow, PressableA11y, PressableProps, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
@@ -26,7 +26,7 @@ use time::{Date, OffsetDateTime, Weekday};
 
 use crate::button::{Button, ButtonVariant};
 use crate::foundation::surface::material_surface_style;
-use crate::foundation::test_id::part_test_id;
+use crate::foundation::test_id::{absolute_region_layout, diagnostic_anchor, part_test_id};
 use crate::motion;
 use crate::tokens::date_picker as date_tokens;
 use crate::tokens::date_picker::DatePickerTokenVariant;
@@ -39,6 +39,15 @@ fn default_date_picker_test_id() -> Arc<str> {
 
 fn date_picker_cell_test_id(base: &Arc<str>, row: usize, col: usize) -> Arc<str> {
     Arc::from(format!("{base}.cell.{row}.{col}"))
+}
+
+fn date_picker_date_cell_test_id(base: &Arc<str>, date: Date) -> Arc<str> {
+    let month = u8::from(date.month());
+    Arc::from(format!(
+        "{base}.cell.{:04}-{month:02}-{:02}",
+        date.year(),
+        date.day()
+    ))
 }
 
 fn cached_day_of_month_label(day: u8) -> Arc<str> {
@@ -1050,6 +1059,7 @@ fn dates_grid<H: UiHost>(
             let selected_model = selected_model.clone();
             let label_style = label_style.clone();
             let cell_test_ids = cell_test_ids.clone();
+            let base_id_for_row = base_id.clone();
             let mut row = FlexProps::default();
             row.direction = Axis::Horizontal;
             row.justify = MainAlign::SpaceBetween;
@@ -1102,6 +1112,8 @@ fn dates_grid<H: UiHost>(
                             .get(row_idx * 7 + i)
                             .expect("cell_test_id")
                             .clone();
+                        let date_cell_test_id =
+                            date_picker_date_cell_test_id(&base_id_for_row, date);
 
                         let on_activate: OnActivate = {
                             let selected_model = selected_model.clone();
@@ -1128,9 +1140,21 @@ fn dates_grid<H: UiHost>(
                             },
                             move |cx, _st| {
                                 cx.pressable_on_activate(on_activate.clone());
-                                vec![
-                                    cx.container(props, move |cx| vec![cx.text_props(label_props)]),
-                                ]
+                                vec![cx.container(props, move |cx| {
+                                    vec![
+                                        cx.text_props(label_props),
+                                        diagnostic_anchor(
+                                            cx,
+                                            date_cell_test_id.clone(),
+                                            absolute_region_layout(
+                                                InsetEdge::Px(Px(0.0)),
+                                                InsetEdge::Px(Px(0.0)),
+                                                Length::Fill,
+                                                Length::Fill,
+                                            ),
+                                        ),
+                                    ]
+                                })]
                             },
                         )
                     })

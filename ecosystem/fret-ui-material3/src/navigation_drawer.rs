@@ -33,7 +33,9 @@ use crate::foundation::indication::{
 use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
 use crate::foundation::interactive_size::enforce_minimum_interactive_size;
 use crate::foundation::surface::material_surface_style;
-use crate::foundation::test_id::optional_chrome_part_test_id;
+use crate::foundation::test_id::{
+    optional_chrome_part_test_id, optional_part_test_id, part_test_id,
+};
 use crate::tokens::navigation_drawer as drawer_tokens;
 
 #[derive(Debug, Clone)]
@@ -201,6 +203,7 @@ impl NavigationDrawer {
                 disabled,
                 ..Default::default()
             };
+            let chrome_test_id = test_id.as_ref().map(|id| part_test_id(id, "chrome"));
 
             let (container_w, item_h_pad, container_bg, shadow, container_shape) = {
                 let theme = Theme::global(&*cx.app);
@@ -243,7 +246,7 @@ impl NavigationDrawer {
             };
 
             cx.semantics(sem, move |cx| {
-                vec![cx.container(
+                let mut chrome = cx.container(
                     ContainerProps {
                         background: Some(container_bg),
                         shadow,
@@ -353,7 +356,11 @@ impl NavigationDrawer {
                                 .collect::<Vec<_>>()
                         })]
                     },
-                )]
+                );
+                if let Some(test_id) = chrome_test_id.clone() {
+                    chrome = chrome.test_id(test_id);
+                }
+                vec![chrome]
             })
         })
     }
@@ -374,6 +381,10 @@ fn navigation_drawer_item<H: UiHost>(
     let badge_label = item.badge_label.clone();
     let a11y_label = item.a11y_label.clone();
     let test_id = item.test_id.clone();
+    let chrome_test_id = optional_chrome_part_test_id(test_id.as_ref());
+    let icon_test_id = optional_part_test_id(test_id.as_ref(), "icon");
+    let label_test_id = optional_part_test_id(test_id.as_ref(), "label");
+    let badge_test_id = optional_part_test_id(test_id.as_ref(), "badge");
 
     let (
         height,
@@ -541,8 +552,12 @@ fn navigation_drawer_item<H: UiHost>(
                     false,
                 );
 
-                let icon_el = drawer_icon(cx, &icon, icon_size, icon_color);
-                let label_el = {
+                let mut icon_el = drawer_icon(cx, &icon, icon_size, icon_color);
+                if let Some(test_id) = icon_test_id.clone() {
+                    icon_el = icon_el.test_id(test_id);
+                }
+
+                let mut label_el = {
                     let mut style = label_style_base.clone();
                     style.weight = if selected {
                         label_weight_active
@@ -551,6 +566,10 @@ fn navigation_drawer_item<H: UiHost>(
                     };
                     drawer_label(cx, &label, style, label_color)
                 };
+                if let Some(test_id) = label_test_id.clone() {
+                    label_el = label_el.test_id(test_id);
+                }
+
                 let badge_el = badge_label.as_ref().map(|text| {
                     let mut props = TextProps::new(text.clone());
                     props.style = Some(badge_style.clone());
@@ -559,7 +578,11 @@ fn navigation_drawer_item<H: UiHost>(
                     props.overflow = TextOverflow::Clip;
                     props.layout.size.min_width = Some(Length::Px(Px(0.0)));
                     props.layout.flex.shrink = 1.0;
-                    cx.text_props(props)
+                    let mut badge = cx.text_props(props);
+                    if let Some(test_id) = badge_test_id.clone() {
+                        badge = badge.test_id(test_id);
+                    }
+                    badge
                 });
 
                 let left_slot = cx.flex(
@@ -616,7 +639,6 @@ fn navigation_drawer_item<H: UiHost>(
                     move |_cx| content_children,
                 );
 
-                let chrome_test_id = optional_chrome_part_test_id(test_id.as_ref());
                 let mut chrome = cx.container(
                     ContainerProps {
                         background: selected.then_some(selected_bg),

@@ -1048,6 +1048,7 @@ fn material3_navigation_drawer_exposes_stable_part_test_ids() {
                         NavigationDrawerItem::new("search", "Search", ids::ui::SEARCH)
                             .test_id("m3-drawer-search"),
                         NavigationDrawerItem::new("settings", "Settings", ids::ui::SETTINGS)
+                            .badge_label("2")
                             .test_id("m3-drawer-settings"),
                     ])
                     .into_element(cx);
@@ -1062,10 +1063,16 @@ fn material3_navigation_drawer_exposes_stable_part_test_ids() {
 
     for id in [
         "m3-navigation-drawer",
+        "m3-navigation-drawer.chrome",
         "m3-drawer-search",
         "m3-drawer-search.chrome",
+        "m3-drawer-search.icon",
+        "m3-drawer-search.label",
         "m3-drawer-settings",
         "m3-drawer-settings.chrome",
+        "m3-drawer-settings.icon",
+        "m3-drawer-settings.label",
+        "m3-drawer-settings.badge",
     ] {
         assert!(
             live_test_id_exists(&ui, &app, window, id),
@@ -1122,6 +1129,7 @@ fn material3_modal_navigation_drawer_exposes_stable_part_test_ids() {
                                         "Settings",
                                         ids::ui::SETTINGS,
                                     )
+                                    .badge_label("4")
                                     .test_id("m3-modal-drawer-settings"),
                                 ])
                                 .into_element(cx)
@@ -1159,10 +1167,16 @@ fn material3_modal_navigation_drawer_exposes_stable_part_test_ids() {
         "m3-modal-navigation-drawer.scrim.chrome",
         "m3-modal-navigation-drawer.panel",
         "m3-modal-navigation-drawer-content",
+        "m3-modal-navigation-drawer-content.chrome",
         "m3-modal-drawer-search",
         "m3-modal-drawer-search.chrome",
+        "m3-modal-drawer-search.icon",
+        "m3-modal-drawer-search.label",
         "m3-modal-drawer-settings",
         "m3-modal-drawer-settings.chrome",
+        "m3-modal-drawer-settings.icon",
+        "m3-modal-drawer-settings.label",
+        "m3-modal-drawer-settings.badge",
     ] {
         assert!(
             live_test_id_exists(&ui, &app, window, id),
@@ -1387,6 +1401,10 @@ fn material3_date_picker_exposes_stable_part_test_ids() {
             "m3-date-picker.docked.next",
             "m3-date-picker.cell.0.0",
             "m3-date-picker.cell.5.6",
+            "m3-date-picker.cell.2025-12-29",
+            "m3-date-picker.cell.2026-01-10",
+            "m3-date-picker.cell.2026-01-15",
+            "m3-date-picker.cell.2026-02-08",
         ] {
             assert!(
                 live_test_id_exists(&ui, &app, window, id),
@@ -1456,6 +1474,8 @@ fn material3_date_picker_exposes_stable_part_test_ids() {
             "m3-date-picker-modal.modal.prev",
             "m3-date-picker-modal.modal.next",
             "m3-date-picker-modal.cell.0.0",
+            "m3-date-picker-modal.cell.2026-01-10",
+            "m3-date-picker-modal.cell.2026-01-15",
             "m3-date-picker-modal.actions.cancel",
             "m3-date-picker-modal.actions.confirm",
         ] {
@@ -1524,6 +1544,67 @@ fn material3_time_picker_exposes_stable_part_test_ids() {
             assert!(
                 live_test_id_exists(&ui, &app, window, id),
                 "expected live TimePicker dial part test_id {id}"
+            );
+        }
+
+        for id in [
+            "m3-time-picker.clock-dial.hour.12",
+            "m3-time-picker.clock-dial.hour.01",
+            "m3-time-picker.clock-dial.hour.02",
+            "m3-time-picker.clock-dial.hour.03",
+            "m3-time-picker.clock-dial.hour.04",
+            "m3-time-picker.clock-dial.hour.05",
+            "m3-time-picker.clock-dial.hour.06",
+            "m3-time-picker.clock-dial.hour.07",
+            "m3-time-picker.clock-dial.hour.08",
+            "m3-time-picker.clock-dial.hour.09",
+            "m3-time-picker.clock-dial.hour.10",
+            "m3-time-picker.clock-dial.hour.11",
+        ] {
+            assert!(
+                live_test_id_exists(&ui, &app, window, id),
+                "expected live TimePicker hour dial label test_id {id}"
+            );
+        }
+
+        let minute_selector = semantics_node_id_by_test_id(&ui, "m3-time-picker.minute-selector")
+            .expect("expected TimePicker minute selector semantics node");
+        let minute_bounds = ui
+            .debug_node_visual_bounds(minute_selector)
+            .expect("expected TimePicker minute selector bounds");
+        let click_at = Point::new(
+            Px(minute_bounds.origin.x.0 + minute_bounds.size.width.0 * 0.5),
+            Px(minute_bounds.origin.y.0 + minute_bounds.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_down(PointerId(1), click_at),
+        );
+        ui.dispatch_event(&mut app, &mut services, &pointer_up(PointerId(1), click_at));
+
+        let root = render(&mut ui, &mut app, &mut services);
+        ui.set_root(root);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        for id in [
+            "m3-time-picker.clock-dial.minute.00",
+            "m3-time-picker.clock-dial.minute.05",
+            "m3-time-picker.clock-dial.minute.10",
+            "m3-time-picker.clock-dial.minute.15",
+            "m3-time-picker.clock-dial.minute.20",
+            "m3-time-picker.clock-dial.minute.25",
+            "m3-time-picker.clock-dial.minute.30",
+            "m3-time-picker.clock-dial.minute.35",
+            "m3-time-picker.clock-dial.minute.40",
+            "m3-time-picker.clock-dial.minute.45",
+            "m3-time-picker.clock-dial.minute.50",
+            "m3-time-picker.clock-dial.minute.55",
+        ] {
+            assert!(
+                live_test_id_exists(&ui, &app, window, id),
+                "expected live TimePicker minute dial label test_id {id}"
             );
         }
     }
@@ -1635,6 +1716,7 @@ fn material3_time_picker_exposes_stable_part_test_ids() {
             "m3-time-picker-modal.actions.confirm",
             "m3-time-picker-modal.clock-dial",
             "m3-time-picker-modal.clock-dial.chrome",
+            "m3-time-picker-modal.clock-dial.hour.09",
             "m3-time-picker-modal.hour-selector",
             "m3-time-picker-modal.minute-selector",
         ] {

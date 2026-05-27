@@ -119,6 +119,18 @@ enum TimePickerSelection {
     Minute,
 }
 
+fn time_picker_clock_dial_label_test_id(
+    dial_test_id: &Arc<str>,
+    selection: TimePickerSelection,
+    label: u32,
+) -> Arc<str> {
+    let kind = match selection {
+        TimePickerSelection::Hour => "hour",
+        TimePickerSelection::Minute => "minute",
+    };
+    part_test_id(dial_test_id, &format!("{kind}.{label:02}"))
+}
+
 #[derive(Clone)]
 pub struct DockedTimePicker {
     time: Model<Time>,
@@ -1684,7 +1696,7 @@ fn time_picker_clock_dial<H: UiHost>(
     cx.semantics(
         fret_ui::element::SemanticsProps {
             role: SemanticsRole::Group,
-            test_id: Some(dial_test_id),
+            test_id: Some(dial_test_id.clone()),
             ..Default::default()
         },
         move |cx| {
@@ -1692,10 +1704,13 @@ fn time_picker_clock_dial<H: UiHost>(
                 let mut out: Vec<AnyElement> = Vec::new();
                 for (idx, (label, value)) in labels.iter().enumerate() {
                     let selected = idx == selected_idx;
+                    let label_test_id =
+                        time_picker_clock_dial_label_test_id(&dial_test_id, selection, *label);
                     out.push(dial_label(
                         cx,
                         *label,
                         *value,
+                        label_test_id,
                         idx,
                         labels.len(),
                         selected,
@@ -1885,6 +1900,7 @@ fn dial_label<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: u32,
     value: u32,
+    test_id: Arc<str>,
     idx: usize,
     len: usize,
     selected: bool,
@@ -1951,6 +1967,7 @@ fn dial_label<H: UiHost>(
             a11y: PressableA11y {
                 role: Some(SemanticsRole::Button),
                 label: Some(cached_decimal_0_59(label)),
+                test_id: Some(test_id.clone()),
                 selected,
                 ..Default::default()
             },

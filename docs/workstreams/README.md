@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 480
+- Dedicated directories: 483
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2237,9 +2237,12 @@ Rule:
 - `docs/workstreams/material3-icon-toggle-button-expressive-v1/` — first 2026-02-18, latest 2026-02-18, 3 markdown docs
 - `docs/workstreams/material3-canvas-draw-region-diagnostics-v1/` — first 2026-05-28, latest 2026-05-28, 7 markdown docs (closed follow-on for Material3 ProgressIndicator/Slider canvas draw-region diagnostics, recipe-level rectangular anchors, and named SceneOp mechanism split; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-component-alignment-sweep-v1/` — first 2026-05-27, latest 2026-05-27, 6 markdown docs (closed Material 3 all-component alignment sweep with component matrix, packet waves, foundation-escalation rules, closeout audit, and narrow follow-ons; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 DatePicker value-derived day-cell selector aliases while preserving row/column selectors; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-navigation-drawer-overlay-packet-v1/` — first 2026-05-27, latest 2026-05-27, 6 markdown docs (closed follow-on for NavigationDrawer/ModalNavigationDrawer golden drift classification, selected-pill geometry repair, overlay packet evidence, and repaired drawer diagnostic gate; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-navigation-drawer-selector-completion-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 NavigationDrawer root chrome and item icon/label/badge selector completion; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/` — first 2026-05-27, latest 2026-05-27, 6 markdown docs (closed Material 3 parity harness lane for source facts, agent packets, test harness modularization, automation-surface gates, and evidence-driven follow-ons; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-search-view-state-packet-v1/` — first 2026-05-28, latest 2026-05-28, 7 markdown docs (closed follow-on for Material3 SearchView docked/full-screen presentation state, Escape dismissal mapping, overlay-local focus routing, and headless golden coverage; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 TimePicker value-derived clock dial label selectors and picker accessibility residual-risk split; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-tooltip-rich-parts-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 RichTooltip title/supporting-text selectors, shared tooltip root/chrome wiring, and click-through mechanism boundary; includes `WORKSTREAM.json`)
 - `docs/workstreams/menu-surfaces-alignment-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/mobile-bringup-v1/` — first 2026-02-11, latest 2026-02-12, 4 markdown docs

@@ -1,7 +1,11 @@
 # Navigation Drawer And Modal Drawer Packet v1
 
-Status: packet done with geometry follow-on
+Status: Historical packet note; geometry follow-on resolved by M3ND-030/M3ND-050 closeout
 Date: 2026-05-27
+
+Current source of truth: `../CLOSEOUT_AUDIT_2026-05-27.md`. This packet captured M3ND-020 while
+selected-pill geometry was still unresolved; the same workstream later repaired and verified that
+geometry in `artifacts/navigation_geometry_resolution_v1.md`.
 
 ## Truth
 

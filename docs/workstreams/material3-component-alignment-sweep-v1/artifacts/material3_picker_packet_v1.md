@@ -46,6 +46,7 @@ DatePicker now derives stable ids from the supplied base:
 - `date_picker.modal.prev`
 - `date_picker.modal.next`
 - `date_picker.cell.<row>.<col>`
+- `date_picker.cell.<yyyy-mm-dd>`
 - `date_picker.scrim`
 - `date_picker.scrim.chrome`
 - `date_picker.panel`
@@ -63,6 +64,8 @@ TimePicker now derives stable ids from the supplied base:
 - `time_picker.minute-selector.chrome`
 - `time_picker.clock-dial`
 - `time_picker.clock-dial.chrome`
+- `time_picker.clock-dial.hour.<HH>`
+- `time_picker.clock-dial.minute.<MM>`
 - `time_picker.period.am`
 - `time_picker.period.pm`
 - `time_picker.input.hour`
@@ -85,6 +88,8 @@ The UI gallery TimePicker chrome-fill diagnostic was updated to use these base-d
 - `ecosystem/fret-ui-material3/src/time_picker.rs`
 - `ecosystem/fret-ui-material3/tests/automation_surface.rs`
 - `ecosystem/fret-ui-material3/tests/radio_alignment.rs`
+- `docs/workstreams/material3-date-picker-day-cell-selectors-packet-v1/artifacts/date_picker_day_cell_selectors_packet_v1.md`
+- `docs/workstreams/material3-time-picker-dial-accessibility-packet-v1/artifacts/time_picker_dial_accessibility_packet_v1.md`
 - `tools/diag-scripts/ui-gallery/material3/ui-gallery-material3-time-picker-chrome-fill.json`
 - `goldens/material3-headless/v1/material3-date-picker.*.json`
 - `goldens/material3-headless/v1/material3-time-picker.*.json`
@@ -113,7 +118,7 @@ python tools/check_workstream_catalog.py
 
 - DatePicker does not yet expose a full Material `SelectableDates`/disabled-date policy or
   localized day/month announcement surface.
-- TimePicker does not yet expose per-dial-label ids, invalid-input supporting/error text, or richer
-  live-region announcements.
+- TimePicker does not yet expose invalid-input supporting/error text or richer live-region
+  announcements.
 - These are accessibility depth follow-ons, not blockers for the current component/foundation
   classification. They should be split if M3CAS-070/M3CAS-080 shows a shared a11y primitive need.
