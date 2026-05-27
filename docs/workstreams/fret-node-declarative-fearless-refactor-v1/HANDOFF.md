@@ -38,6 +38,7 @@ older graph/view/controller triplets or direct retained authoring.
   - Fresh gates passed:
     `cargo nextest run -p fret-node declarative_hover_tooltip_overlay_tracks_dragged_anchor_when_portals_disabled`,
     `cargo nextest run -p fret-node declarative_overlay_layer_is_input_transparent_over_canvas_region`,
+    `cargo nextest run -p fret-node`,
     `cargo check -p fret-node --features compat-retained-canvas --tests`, and
     `cargo fmt --check`.
   - `ecosystem/fret-node/src/surface_policy_tests.rs` locks the FNDX-030 ownership boundary:

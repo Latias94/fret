@@ -158,5 +158,8 @@ closeout note must name those failures.
   - `cargo check -p fret-node --features compat-retained-canvas --tests`: passed; proves retained
     compatibility test targets still compile with the new motion-anchoring gate.
   - `cargo fmt --check`: passed; proves formatting is clean after the new Rust test.
+- Review/package follow-up after FNDX-040/FNDX-041:
+  - `cargo nextest run -p fret-node`: passed; proves the full package test suite remains green with
+    the new declarative overlay input-transparency and motion-anchoring gates.
 
 Fresh verification is required before marking a task, Codex goal, or lane complete.
