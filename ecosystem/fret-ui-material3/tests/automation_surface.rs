@@ -1984,8 +1984,8 @@ fn material3_tooltip_and_snackbar_expose_stable_part_test_ids() {
     use fret_ui::action::UiActionHostAdapter;
     use fret_ui_kit::ToastStore;
     use fret_ui_material3::{
-        Button, ButtonVariant, PlainTooltip, Snackbar, SnackbarController, SnackbarHost,
-        TooltipProvider,
+        Button, ButtonVariant, PlainTooltip, RichTooltip, Snackbar, SnackbarController,
+        SnackbarHost, TooltipProvider,
     };
 
     {
@@ -2019,7 +2019,35 @@ fn material3_tooltip_and_snackbar_expose_stable_part_test_ids() {
                                 .close_delay_frames(Some(0))
                                 .test_id("m3-tooltip")
                                 .into_element(cx);
-                            vec![with_padding(cx, Px(32.0), tooltip)]
+                            let rich_trigger = Button::new("Rich")
+                                .variant(ButtonVariant::Outlined)
+                                .test_id("m3-rich-tooltip-trigger")
+                                .into_element(cx);
+                            let rich_tooltip = RichTooltip::new(rich_trigger, "Rich supporting")
+                                .title("Rich title")
+                                .open_delay_frames(Some(0))
+                                .close_delay_frames(Some(0))
+                                .test_id("m3-rich-tooltip")
+                                .into_element(cx);
+                            let rich_no_title_trigger = Button::new("Rich / no title")
+                                .variant(ButtonVariant::Outlined)
+                                .test_id("m3-rich-tooltip-no-title-trigger")
+                                .into_element(cx);
+                            let rich_no_title = RichTooltip::new(
+                                rich_no_title_trigger,
+                                "Rich supporting without title",
+                            )
+                            .open_delay_frames(Some(0))
+                            .close_delay_frames(Some(0))
+                            .test_id("m3-rich-tooltip-no-title")
+                            .into_element(cx);
+
+                            let mut props = fret_ui::element::FlexProps::default();
+                            props.direction = fret_core::Axis::Vertical;
+                            props.gap = fret_ui::element::SpacingLength::Px(Px(12.0));
+                            let tooltips =
+                                cx.flex(props, |_cx| vec![tooltip, rich_tooltip, rich_no_title]);
+                            vec![with_padding(cx, Px(32.0), tooltips)]
                         })
                 })
             };
@@ -2070,6 +2098,96 @@ fn material3_tooltip_and_snackbar_expose_stable_part_test_ids() {
                 "expected live PlainTooltip part test_id {id}"
             );
         }
+
+        let rich_trigger = semantics_node_id_by_test_id(&ui, "m3-rich-tooltip-trigger")
+            .expect("expected m3-rich-tooltip-trigger semantics node");
+        let rich_trigger_bounds = ui
+            .debug_node_visual_bounds(rich_trigger)
+            .expect("expected rich tooltip trigger bounds");
+        let hover_at = Point::new(
+            Px(rich_trigger_bounds.origin.x.0 + rich_trigger_bounds.size.width.0 * 0.5),
+            Px(rich_trigger_bounds.origin.y.0 + rich_trigger_bounds.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_move(PointerId(1), hover_at),
+        );
+
+        for _ in 0..8 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                false,
+                |ui, app, services| render(ui, app, services),
+            );
+            if live_test_id_exists(&ui, &app, window, "m3-rich-tooltip") {
+                break;
+            }
+        }
+
+        for id in [
+            "m3-rich-tooltip",
+            "m3-rich-tooltip.chrome",
+            "m3-rich-tooltip.title",
+            "m3-rich-tooltip.supporting-text",
+        ] {
+            assert!(
+                live_test_id_exists(&ui, &app, window, id),
+                "expected live RichTooltip part test_id {id}"
+            );
+        }
+
+        let rich_no_title_trigger =
+            semantics_node_id_by_test_id(&ui, "m3-rich-tooltip-no-title-trigger")
+                .expect("expected m3-rich-tooltip-no-title-trigger semantics node");
+        let rich_no_title_trigger_bounds = ui
+            .debug_node_visual_bounds(rich_no_title_trigger)
+            .expect("expected no-title rich tooltip trigger bounds");
+        let hover_at = Point::new(
+            Px(rich_no_title_trigger_bounds.origin.x.0
+                + rich_no_title_trigger_bounds.size.width.0 * 0.5),
+            Px(rich_no_title_trigger_bounds.origin.y.0
+                + rich_no_title_trigger_bounds.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &pointer_move(PointerId(1), hover_at),
+        );
+
+        for _ in 0..8 {
+            run_overlay_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                false,
+                |ui, app, services| render(ui, app, services),
+            );
+            if live_test_id_exists(&ui, &app, window, "m3-rich-tooltip-no-title") {
+                break;
+            }
+        }
+
+        for id in [
+            "m3-rich-tooltip-no-title",
+            "m3-rich-tooltip-no-title.chrome",
+            "m3-rich-tooltip-no-title.supporting-text",
+        ] {
+            assert!(
+                live_test_id_exists(&ui, &app, window, id),
+                "expected live RichTooltip no-title part test_id {id}"
+            );
+        }
+        assert!(
+            !live_test_id_exists(&ui, &app, window, "m3-rich-tooltip-no-title.title"),
+            "no-title RichTooltip should not expose a synthetic title part"
+        );
     }
 
     {

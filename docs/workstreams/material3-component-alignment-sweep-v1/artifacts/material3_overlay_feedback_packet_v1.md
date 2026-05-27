@@ -19,8 +19,9 @@ Observable outcomes for this packet:
 - Bottom sheets expose stable scrim/sheet/drag-handle selectors. The follow-on
   `material3-bottom-sheet-chrome-alias-packet-v1` added layout-safe `bottom_sheet.chrome` and
   `modal_bottom_sheet.sheet.chrome` aliases using hidden diagnostic anchors.
-- Tooltips expose stable base and chrome selectors while preserving provider delay and safe-hover
-  policy.
+- Tooltips expose stable base/chrome selectors plus rich `title` and `supporting-text` selectors
+  while preserving provider delay, safe-hover policy, and the pointer-transparent tooltip overlay
+  boundary.
 - Snackbars pass stable root selectors into the kit toast layer instead of duplicating toast
   viewport, action, close, and live-region behavior in Material recipes.
 
@@ -32,7 +33,7 @@ Observable outcomes for this packet:
 | `DropdownMenu` | `kit_policy`, `material_recipe`, `test_harness` | Uses the shared dismissible menu path for Escape/outside dismissal and focus restore. The live menu surface inherits Material menu chrome selectors. The outside-press test was repaired because the previous underlay probe landed inside the open menu. |
 | `Dialog` | `kit_policy`, `material_recipe`, `diagnostics` | Dialog now derives dotted `scrim`, `scrim.chrome`, `panel`, and `panel.chrome` selectors from the base id. The panel now reports `SemanticsRole::Dialog`; focus trap/restore remains kit overlay policy. |
 | `BottomSheet` | `kit_policy`, `material_recipe`, `material_foundation`, `test_harness` | Modal bottom sheet derives dotted `scrim`, `scrim.chrome`, `sheet`, `sheet.chrome`, and `sheet.drag-handle` selectors; docked bottom sheet derives `chrome` and `drag-handle`. The chrome aliases are hidden layout-only diagnostic anchors, so bottom-sheet headless goldens remain stable. |
-| `Tooltip` | `kit_policy`, `material_recipe`, `mechanism_follow_on` | Plain and rich tooltips now accept `test_id` and expose `.chrome`. Provider delay/safe-hover stay in kit policy. Rich tooltip interactivity remains a mechanism follow-on because tooltip overlays are currently click-through. |
+| `Tooltip` | `kit_policy`, `material_recipe`, `mechanism_follow_on` | Plain and rich tooltips accept `test_id` and expose `.chrome`. The follow-on `material3-tooltip-rich-parts-packet-v1` added rich `.title` and `.supporting-text` selectors and de-duplicated root/chrome semantics wiring. Provider delay/safe-hover stay in kit policy. Rich tooltip action interactivity remains a mechanism follow-on because tooltip overlays are currently click-through. |
 | `Snackbar` | `kit_policy`, `material_recipe`, `test_harness` | `Snackbar::test_id` forwards to `ToastRequest::test_id`, keeping toast viewport/action/close/live-region details in `fret-ui-kit`. Subpart selectors can be added in kit if a consumer needs them. |
 
 ## Stable Selector Surface
@@ -60,15 +61,20 @@ New or confirmed selector contracts:
 - `modal_bottom_sheet.sheet.drag-handle`
 - `tooltip`
 - `tooltip.chrome`
+- `tooltip.title`
+- `tooltip.supporting-text`
 - `snackbar`
 
 Resolved by follow-on:
 
 - `bottom_sheet.chrome`
 - `modal_bottom_sheet.sheet.chrome`
+- `tooltip.title`
+- `tooltip.supporting-text`
 
-These aliases use Material3 hidden diagnostic anchors instead of visible or layout-participating
-markers.
+The bottom-sheet aliases use Material3 hidden diagnostic anchors instead of visible or
+layout-participating markers. The rich tooltip aliases attach to the live title/supporting text
+nodes only when those nodes exist.
 
 ## Implementation Anchors
 
@@ -121,7 +127,8 @@ cargo nextest run -p fret-ui-material3 --test radio_alignment material3_headless
   click-through.
 - `M3CAS-070-F3`: Add kit-level toast action/close part selectors if Snackbar consumers need
   subpart automation.
-- `M3CAS-070-F4`: De-duplicate plain/rich tooltip test-id/chrome wiring after selector behavior is
-  locked.
+- `M3CAS-070-F4`: Resolved by
+  `docs/workstreams/material3-tooltip-rich-parts-packet-v1/`; PlainTooltip and RichTooltip share
+  root/chrome semantics wiring and RichTooltip exposes title/supporting-text parts.
 - `M3CAS-070-F5`: Decide whether the docked bottom sheet headless scene should be content-sized or
   constrained by the gallery/test harness.

@@ -1064,24 +1064,27 @@
     {
       "id": "tooltip",
       "family": "overlay_feedback",
-      "status": "packet_done_known_follow_ons",
+      "status": "packet_done_rich_parts_aligned",
       "wave": "wave3_overlay_feedback",
       "default_owner_bias": "kit_policy",
-      "packet_strategy": "overlay_packet",
-      "first_gate_kind": "diag_hover_focus_delay",
+      "packet_strategy": "overlay_packet_plus_rich_parts_follow_on",
+      "first_gate_kind": "rich_parts_selector_and_click_through_boundary",
       "selector_status": "overlay_feedback_selector_ready",
       "stable_part_ids": [
         "tooltip",
-        "tooltip.chrome"
+        "tooltip.chrome",
+        "tooltip.title",
+        "tooltip.supporting-text"
       ],
       "packet_artifacts": [
-        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md"
+        "docs/workstreams/material3-component-alignment-sweep-v1/artifacts/material3_overlay_feedback_packet_v1.md",
+        "docs/workstreams/material3-tooltip-rich-parts-packet-v1/artifacts/tooltip_rich_parts_packet_v1.md"
       ],
       "layer_classification": [
-        "material_recipe owns PlainTooltip/RichTooltip content chrome and stable part ids",
+        "material_recipe owns PlainTooltip/RichTooltip content chrome, rich title/supporting-text part ids, and shared root/chrome semantics wiring",
         "kit_policy owns tooltip provider delay, hover opening, safe-hover timing, and touch suppression",
         "mechanism follow-on covers interactive rich tooltip actions because current tooltip overlays are click-through",
-        "material_recipe follow-on covers de-duplicating plain/rich test-id wiring after selector behavior is locked"
+        "no new material_foundation gap found"
       ]
     },
     {

@@ -17,7 +17,7 @@ current sequencing and active cross-workstream stance, start with:
 ## Layout Snapshot
 
 - Reorganized into dedicated workstream directories on 2026-03-12.
-- Dedicated directories: 479
+- Dedicated directories: 480
 - Standalone markdown files: 47 (see `docs/workstreams/standalone/README.md`)
 - Top-level markdown files in `docs/workstreams/`: `README.md` only
 
@@ -2240,6 +2240,7 @@ Rule:
 - `docs/workstreams/material3-navigation-drawer-overlay-packet-v1/` — first 2026-05-27, latest 2026-05-27, 6 markdown docs (closed follow-on for NavigationDrawer/ModalNavigationDrawer golden drift classification, selected-pill geometry repair, overlay packet evidence, and repaired drawer diagnostic gate; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-parity-harness-fearless-refactor-v1/` — first 2026-05-27, latest 2026-05-27, 6 markdown docs (closed Material 3 parity harness lane for source facts, agent packets, test harness modularization, automation-surface gates, and evidence-driven follow-ons; includes `WORKSTREAM.json`)
 - `docs/workstreams/material3-search-view-state-packet-v1/` — first 2026-05-28, latest 2026-05-28, 7 markdown docs (closed follow-on for Material3 SearchView docked/full-screen presentation state, Escape dismissal mapping, overlay-local focus routing, and headless golden coverage; includes `WORKSTREAM.json`)
+- `docs/workstreams/material3-tooltip-rich-parts-packet-v1/` — first 2026-05-28, latest 2026-05-28, 10 markdown docs (closed follow-on for Material3 RichTooltip title/supporting-text selectors, shared tooltip root/chrome wiring, and click-through mechanism boundary; includes `WORKSTREAM.json`)
 - `docs/workstreams/menu-surfaces-alignment-v1/` — first 2026-02-05, latest 2026-02-16, 2 markdown docs
 - `docs/workstreams/mobile-bringup-v1/` — first 2026-02-11, latest 2026-02-12, 4 markdown docs
 - `docs/workstreams/mobile-contracts-v1/` — first 2026-02-12, latest 2026-02-12, 3 markdown docs

@@ -33,6 +33,32 @@ use crate::foundation::test_id::part_test_id;
 use crate::motion::ms_to_frames;
 use crate::tokens::tooltip as tooltip_tokens;
 
+fn tooltip_part_id(test_id: &Option<Arc<str>>, part: &str) -> Option<Arc<str>> {
+    test_id.as_ref().map(|id| part_test_id(id, part))
+}
+
+fn with_optional_test_id(mut element: AnyElement, test_id: Option<Arc<str>>) -> AnyElement {
+    if let Some(test_id) = test_id {
+        element = element.test_id(test_id);
+    }
+    element
+}
+
+fn tooltip_content_root<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    test_id: Option<Arc<str>>,
+    chrome: AnyElement,
+) -> AnyElement {
+    cx.semantics(
+        SemanticsProps {
+            role: fret_core::SemanticsRole::Tooltip,
+            test_id,
+            ..Default::default()
+        },
+        move |_cx| vec![chrome],
+    )
+}
+
 fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: Color) -> AnyElement {
     match &mut element.kind {
         ElementKind::Text(props) => {
@@ -377,6 +403,36 @@ fn tooltip_policy_root<H: UiHost>(
         let trigger =
             tooltip_prim::apply_tooltip_trigger_a11y(base_trigger, update.open, content_id);
 
+        cx.pressable_add_on_pointer_down_for(
+            trigger_id,
+            Arc::new({
+                let close_requested = event_models.close_requested.clone();
+                let suppress_focus_open = event_models.suppress_focus_open.clone();
+                let has_pointer_move_opened = event_models.has_pointer_move_opened.clone();
+                let suppress_hover_open = event_models.suppress_hover_open.clone();
+                move |host, acx, down| {
+                    if down.pointer_type != PointerType::Touch {
+                        let _ = host.models_mut().update(&close_requested, |v| *v = true);
+                    }
+                    let _ = host
+                        .models_mut()
+                        .update(&suppress_focus_open, |v| *v = true);
+                    let gate = host
+                        .models_mut()
+                        .read(&has_pointer_move_opened, |v| *v)
+                        .ok()
+                        .unwrap_or(false);
+                    if gate {
+                        let _ = host
+                            .models_mut()
+                            .update(&suppress_hover_open, |v| *v = true);
+                    }
+                    host.request_redraw(acx.window);
+                    fret_ui::action::PressablePointerDownResult::Continue
+                }
+            }),
+        );
+
         cx.pressable_add_on_activate_for(
             trigger_id,
             Arc::new({
@@ -698,7 +754,7 @@ impl PlainTooltip {
         let close_delay_frames_override = self.close_delay_frames_override;
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
         let test_id = self.test_id;
-        let chrome_test_id = test_id.as_ref().map(|id| part_test_id(id, "chrome"));
+        let chrome_test_id = tooltip_part_id(&test_id, "chrome");
 
         let base_trigger = self.trigger;
         let content_spec = self.content;
@@ -713,7 +769,6 @@ impl PlainTooltip {
             container_padding,
             corner_radii,
             text_fg,
-            close_grace_frames_default,
         ) = {
             let theme = Theme::global(&*cx.app);
 
@@ -740,7 +795,6 @@ impl PlainTooltip {
                 typography::with_intent(supporting_text_style, TextIntent::Content);
             let content_max_width = tooltip_tokens::max_width(theme);
             let container_padding = tooltip_tokens::plain_container_padding(theme);
-            let close_grace_frames_default = ms_to_frames(tooltip_tokens::close_duration_ms(theme));
 
             (
                 surface.background,
@@ -750,7 +804,6 @@ impl PlainTooltip {
                 container_padding,
                 corner_radii,
                 text_fg,
-                close_grace_frames_default,
             )
         };
 
@@ -772,7 +825,7 @@ impl PlainTooltip {
             let mut layout = LayoutStyle::default();
             layout.size.max_width = Some(Length::Px(content_max_width));
 
-            let mut chrome = cx.container(
+            let chrome = cx.container(
                 ContainerProps {
                     layout,
                     padding: container_padding.into(),
@@ -783,376 +836,28 @@ impl PlainTooltip {
                 },
                 move |_cx| vec![child],
             );
-            if let Some(test_id) = chrome_test_id.clone() {
-                chrome = chrome.test_id(test_id);
-            }
-
-            cx.semantics(
-                SemanticsProps {
-                    role: fret_core::SemanticsRole::Tooltip,
-                    test_id: test_id.clone(),
-                    ..Default::default()
-                },
-                move |_cx| vec![chrome],
+            tooltip_content_root(
+                cx,
+                test_id.clone(),
+                with_optional_test_id(chrome, chrome_test_id.clone()),
             )
         });
-        let content_id = content.id;
 
-        cx.hover_region(HoverRegionProps::default(), move |cx, hovered| {
-            let focused = cx.is_focused_element(trigger_id);
-            let event_models = tooltip_trigger_event_models(cx);
-
-            let close_requested = cx
-                .watch_model(&event_models.close_requested)
-                .layout()
-                .copied()
-                .unwrap_or(false);
-            let has_pointer_move_opened = cx
-                .watch_model(&event_models.has_pointer_move_opened)
-                .layout()
-                .copied()
-                .unwrap_or(false);
-            let suppress_hover_open = cx
-                .watch_model(&event_models.suppress_hover_open)
-                .layout()
-                .copied()
-                .unwrap_or(false);
-            let suppress_focus_open = cx
-                .watch_model(&event_models.suppress_focus_open)
-                .layout()
-                .copied()
-                .unwrap_or(false);
-
-            let left_hover = cx.slot_state(TooltipTriggerHoverEdgeState::default, |st| {
-                let left = st.was_hovered && !hovered;
-                st.was_hovered = hovered;
-                left
-            });
-
-            if left_hover && (has_pointer_move_opened || suppress_hover_open) {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&event_models.has_pointer_move_opened, |v| *v = false);
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&event_models.suppress_hover_open, |v| *v = false);
-            }
-
-            if !focused && suppress_focus_open {
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&event_models.suppress_focus_open, |v| *v = false);
-            }
-
-            if close_requested {
-                if has_pointer_move_opened && !suppress_hover_open {
-                    let _ = cx
-                        .app
-                        .models_mut()
-                        .update(&event_models.suppress_hover_open, |v| *v = true);
-                }
-                if focused && !suppress_focus_open {
-                    let _ = cx
-                        .app
-                        .models_mut()
-                        .update(&event_models.suppress_focus_open, |v| *v = true);
-                }
-                let _ = cx
-                    .app
-                    .models_mut()
-                    .update(&event_models.close_requested, |v| *v = false);
-            }
-
-            let provider_cfg = tooltip_provider::current_config(cx);
-            let disable_hoverable_content = disable_hoverable_content_override
-                .unwrap_or(provider_cfg.disable_hoverable_content);
-            let last_pointer = tooltip_prim::tooltip_last_pointer_model(cx);
-
-            let primary_can_hover = fret_ui_kit::declarative::primary_pointer_can_hover(
-                cx,
-                fret_ui::Invalidation::Layout,
-                true,
-            );
-            let trigger_hovered =
-                primary_can_hover && hovered && has_pointer_move_opened && !suppress_hover_open;
-            let trigger_focused = focused && !suppress_focus_open;
-
-            let anchor_bounds = fret_ui_kit::overlay::anchor_bounds_for_element(cx, anchor_id);
-            let floating_bounds = anchor_bounds.map(|anchor| {
-                let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
-                let estimated_size = Size::new(Px(240.0), Px(32.0));
-                let content_size = last_content_size.unwrap_or(estimated_size);
-
-                let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
-                    cx,
-                    fret_ui::Invalidation::Layout,
-                    window_margin,
-                );
-
-                let align = match align {
-                    TooltipAlign::Start => Align::Start,
-                    TooltipAlign::Center => Align::Center,
-                    TooltipAlign::End => Align::End,
-                };
-                let side = match side {
-                    TooltipSide::Top => Side::Top,
-                    TooltipSide::Right => Side::Right,
-                    TooltipSide::Bottom => Side::Bottom,
-                    TooltipSide::Left => Side::Left,
-                };
-
-                let direction = direction_prim::use_direction_in_scope(cx, None);
-                let layout = popper::popper_content_layout_sized(
-                    outer,
-                    anchor,
-                    content_size,
-                    popper::PopperContentPlacement::new(direction, side, align, side_offset)
-                        .with_shift_cross_axis(true),
-                );
-
-                layout.rect
-            });
-
-            let update = tooltip_prim::tooltip_update_interaction(
-                cx,
-                trigger_hovered,
-                trigger_focused,
-                close_requested,
-                last_pointer.clone(),
-                anchor_bounds,
-                floating_bounds,
-                tooltip_prim::TooltipInteractionConfig {
-                    disable_hoverable_content,
-                    open_delay_ticks_override: open_delay_frames_override.map(|v| v as u64),
-                    close_delay_ticks_override: close_delay_frames_override.map(|v| v as u64),
-                    safe_hover_buffer: Px(5.0),
-                },
-            );
-
-            scheduling::set_continuous_frames(cx, update.wants_continuous_ticks);
-
-            let open = event_models.open.clone();
-            let open_now = cx.watch_model(&open).layout().copied().unwrap_or(false);
-            if update.open != open_now {
-                let _ = cx.app.models_mut().update(&open, |v| *v = update.open);
-            }
-
-            let trigger =
-                tooltip_prim::apply_tooltip_trigger_a11y(base_trigger, update.open, content_id);
-
-            cx.pressable_add_on_pointer_down_for(
-                trigger_id,
-                Arc::new({
-                    let close_requested = event_models.close_requested.clone();
-                    let suppress_focus_open = event_models.suppress_focus_open.clone();
-                    let has_pointer_move_opened = event_models.has_pointer_move_opened.clone();
-                    let suppress_hover_open = event_models.suppress_hover_open.clone();
-                    move |host, acx, down| {
-                        if down.pointer_type != PointerType::Touch {
-                            let _ = host.models_mut().update(&close_requested, |v| *v = true);
-                        }
-                        let _ = host
-                            .models_mut()
-                            .update(&suppress_focus_open, |v| *v = true);
-                        let gate = host
-                            .models_mut()
-                            .read(&has_pointer_move_opened, |v| *v)
-                            .ok()
-                            .unwrap_or(false);
-                        if gate {
-                            let _ =
-                                host.models_mut().update(&suppress_hover_open, |v| *v = true);
-                        }
-                        host.request_redraw(acx.window);
-                        fret_ui::action::PressablePointerDownResult::Continue
-                    }
-                }),
-            );
-
-            cx.pressable_add_on_activate_for(
-                trigger_id,
-                Arc::new({
-                    let close_requested = event_models.close_requested.clone();
-                    let suppress_focus_open = event_models.suppress_focus_open.clone();
-                    move |host, acx, _reason| {
-                        let _ = host.models_mut().update(&close_requested, |v| *v = true);
-                        let _ = host
-                            .models_mut()
-                            .update(&suppress_focus_open, |v| *v = true);
-                        host.request_redraw(acx.window);
-                    }
-                }),
-            );
-
-            cx.key_add_on_key_down_for(
-                trigger_id,
-                Arc::new({
-                    let close_requested = event_models.close_requested.clone();
-                    let suppress_focus_open = event_models.suppress_focus_open.clone();
-                    move |host, acx, down| {
-                        if down.repeat || down.key != KeyCode::Escape {
-                            return false;
-                        }
-                        let _ = host.models_mut().update(&close_requested, |v| *v = true);
-                        let _ = host
-                            .models_mut()
-                            .update(&suppress_focus_open, |v| *v = true);
-                        host.request_redraw(acx.window);
-                        true
-                    }
-                }),
-            );
-
-            let trigger = cx.pointer_region(PointerRegionProps::default(), move |cx| {
-                cx.pointer_region_on_pointer_move(Arc::new({
-                    let has_pointer_move_opened = event_models.has_pointer_move_opened.clone();
-                    let pointer_transit_geometry = event_models.pointer_transit_geometry.clone();
-                    move |host, acx, mv| {
-                        if mv.pointer_type == PointerType::Touch {
-                            return false;
-                        }
-
-                        let geometry = host
-                            .models_mut()
-                            .read(&pointer_transit_geometry, |v| *v)
-                            .ok()
-                            .flatten();
-                        if let Some((anchor, floating)) = geometry
-                            && tooltip_prim::tooltip_pointer_in_transit(
-                                mv.position,
-                                anchor,
-                                floating,
-                                Px(5.0),
-                            )
-                        {
-                            return false;
-                        }
-
-                        let already = host
-                            .models_mut()
-                            .read(&has_pointer_move_opened, |v| *v)
-                            .ok()
-                            .unwrap_or(false);
-                        if !already {
-                            let _ = host.models_mut().update(&has_pointer_move_opened, |v| {
-                                *v = true;
-                            });
-                            host.request_redraw(acx.window);
-                        }
-
-                        false
-                    }
-                }));
-
-                vec![trigger]
-            });
-
-            let close_grace_frames = Some(close_grace_frames_default);
-            let motion =
-                drive_overlay_open_close_motion(cx, update.open, close_grace_frames);
-
-            let overlay_presence = OverlayPresence {
-                present: motion.present,
-                interactive: update.open,
-            };
-
-            let out = vec![trigger];
-            if !overlay_presence.present {
-                return out;
-            }
-
-            let tooltip_id = cx.root_id();
-            let overlay_root_name = tooltip_prim::tooltip_root_name(tooltip_id);
-            let opacity = motion.alpha;
-            let scale = motion.scale;
-            let direction = direction_prim::use_direction_in_scope(cx, None);
-
-            let overlay_children = cx.with_root_name(&overlay_root_name, move |cx| {
-            let anchor = fret_ui_kit::overlay::anchor_bounds_for_element(cx, anchor_id);
-            let Some(anchor) = anchor else {
-                return Vec::new();
-            };
-
-            let scale_factor = cx.environment_scale_factor(fret_ui::Invalidation::Layout);
-            let last_content_size = cx.last_bounds_for_element(content_id).map(|r| r.size);
-            let estimated_size = Size::new(Px(240.0), Px(32.0));
-            let content_size = stabilize_popper_desired_size(
-                cx,
-                last_content_size.unwrap_or(estimated_size),
-                scale_factor,
-            );
-
-                let outer = fret_ui_kit::overlay::outer_bounds_with_window_margin_for_environment(
-                    cx,
-                    fret_ui::Invalidation::Layout,
-                    window_margin,
-                );
-
-                let align = match align {
-                    TooltipAlign::Start => Align::Start,
-                    TooltipAlign::Center => Align::Center,
-                    TooltipAlign::End => Align::End,
-                };
-                let side = match side {
-                    TooltipSide::Top => Side::Top,
-                    TooltipSide::Right => Side::Right,
-                    TooltipSide::Bottom => Side::Bottom,
-                    TooltipSide::Left => Side::Left,
-                };
-
-                let placement =
-                    popper::PopperContentPlacement::new(direction, side, align, side_offset)
-                        .with_shift_cross_axis(true)
-                        .with_hide_when_detached(hide_when_detached);
-                let reference_hidden = placement.reference_hidden(outer, anchor);
-
-                let layout = popper::popper_content_layout_sized(outer, anchor, content_size, placement);
-                let placed = layout.rect;
-
-                let wrapper = popper_content::popper_wrapper_panel_at(
-                    cx,
-                    placed,
-                    Edges::all(Px(0.0)),
-                    fret_ui::element::Overflow::Visible,
-                    move |_cx| vec![content],
-                );
-
-                let origin = popper::popper_content_transform_origin(&layout, anchor, None);
-                let origin_inv = fret_core::Point::new(Px(-origin.x.0), Px(-origin.y.0));
-                let transform = fret_core::Transform2D::translation(origin)
-                    * fret_core::Transform2D::scale_uniform(scale)
-                    * fret_core::Transform2D::translation(origin_inv);
-
-                let opacity = if reference_hidden { 0.0 } else { opacity };
-                vec![fret_ui_kit::declarative::overlay_motion::wrap_opacity_and_render_transform_gated(
-                    cx,
-                    opacity,
-                    transform,
-                    !reference_hidden,
-                    vec![wrapper],
-                )]
-            });
-
-            let mut request =
-                tooltip_prim::tooltip_request(tooltip_id, open, overlay_presence, overlay_children);
-            request.trigger = Some(trigger_id);
-            request.dismissible_on_dismiss_request = Some(dismissable_layer_prim::handler({
-                let close_requested = event_models.close_requested.clone();
-                move |host, acx, _reason| {
-                    let _ = host.models_mut().update(&close_requested, |v| *v = true);
-                    host.request_redraw(acx.window);
-                }
-            }));
-            if !disable_hoverable_content {
-                tooltip_prim::tooltip_install_pointer_move_tracker(&mut request, last_pointer);
-            }
-            tooltip_prim::request_tooltip(cx, request);
-
-            out
-        })
+        tooltip_policy_root(
+            cx,
+            base_trigger,
+            trigger_id,
+            anchor_id,
+            content,
+            align,
+            side,
+            side_offset,
+            window_margin,
+            hide_when_detached,
+            open_delay_frames_override,
+            close_delay_frames_override,
+            disable_hoverable_content_override,
+        )
     }
 }
 
@@ -1307,7 +1012,9 @@ impl RichTooltip {
         let close_delay_frames_override = self.close_delay_frames_override;
         let disable_hoverable_content_override = self.disable_hoverable_content_override;
         let test_id = self.test_id;
-        let chrome_test_id = test_id.as_ref().map(|id| part_test_id(id, "chrome"));
+        let chrome_test_id = tooltip_part_id(&test_id, "chrome");
+        let title_test_id = tooltip_part_id(&test_id, "title");
+        let supporting_text_test_id = tooltip_part_id(&test_id, "supporting-text");
 
         let base_trigger = self.trigger;
         let content_spec = self.content;
@@ -1385,7 +1092,7 @@ impl RichTooltip {
                     cx.flex(props, move |cx| {
                         let mut children = Vec::new();
                         if let Some(title) = title.clone() {
-                            children.push(cx.text_props(TextProps {
+                            let title = cx.text_props(TextProps {
                                 layout: LayoutStyle::default(),
                                 text: title,
                                 style: Some(subhead_style),
@@ -1394,9 +1101,10 @@ impl RichTooltip {
                                 overflow: TextOverflow::Clip,
                                 align: fret_core::TextAlign::Start,
                                 ink_overflow: Default::default(),
-                            }));
+                            });
+                            children.push(with_optional_test_id(title, title_test_id.clone()));
                         }
-                        children.push(cx.text_props(TextProps {
+                        let supporting_text = cx.text_props(TextProps {
                             layout: LayoutStyle::default(),
                             text: supporting_text.clone(),
                             style: Some(supporting_style),
@@ -1405,7 +1113,11 @@ impl RichTooltip {
                             overflow: TextOverflow::Clip,
                             align: fret_core::TextAlign::Start,
                             ink_overflow: Default::default(),
-                        }));
+                        });
+                        children.push(with_optional_test_id(
+                            supporting_text,
+                            supporting_text_test_id.clone(),
+                        ));
                         children
                     })
                 }
@@ -1415,7 +1127,7 @@ impl RichTooltip {
             let mut layout = LayoutStyle::default();
             layout.size.max_width = Some(Length::Px(content_max_width));
 
-            let mut chrome = cx.container(
+            let chrome = cx.container(
                 ContainerProps {
                     layout,
                     padding: container_padding.into(),
@@ -1426,17 +1138,11 @@ impl RichTooltip {
                 },
                 move |_cx| vec![child],
             );
-            if let Some(test_id) = chrome_test_id.clone() {
-                chrome = chrome.test_id(test_id);
-            }
 
-            cx.semantics(
-                SemanticsProps {
-                    role: fret_core::SemanticsRole::Tooltip,
-                    test_id: test_id.clone(),
-                    ..Default::default()
-                },
-                move |_cx| vec![chrome],
+            tooltip_content_root(
+                cx,
+                test_id.clone(),
+                with_optional_test_id(chrome, chrome_test_id.clone()),
             )
         });
 
