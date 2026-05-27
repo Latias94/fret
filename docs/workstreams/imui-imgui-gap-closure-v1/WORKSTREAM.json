@@ -616,6 +616,7 @@
     "ecosystem/fret-ui-kit/src/imui/floating_surface/drag_surface.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/kinds.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_surface/layer/z_order.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_surface/state.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_content.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_content/behavior.rs",

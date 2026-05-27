@@ -44,6 +44,15 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI floating layer z-order state and snapshot projection out of
+      `ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs` into a private owner without
+      changing floating layer child registration, bring-to-front activation, missing-window
+      pruning, rank sorting, hit-test order, absolute layer layout, or floating layer public-in-IMUI
+      APIs.
+      Result: `floating_surface/layer/z_order.rs` owns `FloatWindowLayerZOrder`, z-order
+      membership, bring-to-front reordering, missing-window pruning, and rank snapshot projection.
+      `layer.rs` keeps layer marker state, child registration, activation dispatch, layer child
+      mounting, rank sort application, and absolute fill layout.
 - [x] Split shared IMUI pressable item hook installation out of
       `ecosystem/fret-ui-kit/src/imui/item_behavior.rs` into a private install owner without
       changing shared button, checkbox/radio, selectable, combo, image-item, debug-draw pressable,

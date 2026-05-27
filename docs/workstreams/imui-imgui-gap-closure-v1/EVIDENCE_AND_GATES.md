@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Floating Layer Z-Order Owner-Split Evidence - 2026-05-28
+
+Claim verified: IMUI floating layer z-order state and snapshot projection moved into a private
+owner without changing floating layer child registration, bring-to-front activation,
+missing-window pruning, rank sorting, hit-test order, absolute layer layout, or floating layer
+public-in-IMUI APIs.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/layer.rs` keeps layer marker state, child
+  registration, activation dispatch, layer child mounting, rank sort application, and absolute fill
+  layout.
+- `ecosystem/fret-ui-kit/src/imui/floating_surface/layer/z_order.rs` owns
+  `FloatWindowLayerZOrder`, z-order membership, bring-to-front reordering, missing-window pruning,
+  and rank snapshot projection.
+- `tools/gate_imui_workstream_source.py` now rejects z-order state/snapshot bodies from drifting
+  back into `layer.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui floating::movement_z_order --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Shared Item Behavior Install Owner-Split Evidence - 2026-05-28
 
 Claim verified: shared IMUI pressable item hook installation moved into a private owner without

@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 floating layer z-order owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_surface/layer/z_order.rs` now owns
+`FloatWindowLayerZOrder`, z-order membership, bring-to-front reordering, missing-window pruning,
+and rank snapshot projection. `floating_surface/layer.rs` keeps layer marker state, child
+registration, activation dispatch, layer child mounting, rank sort application, and absolute fill
+layout.
+
 2026-05-28 shared item behavior install owner-split result:
 `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` now owns pressable pointer hook
 clearing/installation, active-item/long-press/lifecycle model capture, drag threshold wiring,
