@@ -115,11 +115,20 @@ Last updated: 2026-05-27
 - [x] Split IMUI disclosure trigger behavior and response population out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private owner module without
       changing the public collapsing-header/tree-node surface.
-      Result: `disclosure_controls/trigger.rs` owns pressable props, shortcut activation,
-      context-menu request handling, right/double-click events, hover-delay reads, enabled
-      sanitization, and trigger `ResponseExt` population. The root file keeps label identity,
-      spec/open-model wiring, content mounting, and aggregate `DisclosureResponse` open/toggled
-      state.
+      Result: `disclosure_controls/trigger.rs` owns pressable shell construction and delegates
+      trigger behavior/response population to its private behavior owner. The root file keeps label
+      identity, spec/open-model wiring, content mounting, and aggregate `DisclosureResponse`
+      open/toggled state.
+- [x] Split IMUI disclosure trigger pressable behavior and response population out of
+      `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger.rs` into a private owner module
+      without changing activation toggles, shortcut gating, context-menu keyboard requests,
+      right-click anchor capture, double-click signaling, hover-delay reads, enabled sanitization,
+      or trigger `ResponseExt` population.
+      Result: `disclosure_controls/trigger/behavior.rs` owns pressable callback installation,
+      activate shortcut/context-menu key handling, pointer down/up hooks, hover-delay reads,
+      context-menu anchor reporting, enabled sanitization, and trigger `ResponseExt` population.
+      `trigger.rs` keeps pressable props, a11y, header visual mounting, collapsible trigger
+      controls, and test-id application.
 - [x] Split IMUI disclosure header-row visual construction out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs` into a private owner module
       without changing collapsing-header/tree-node a11y, palette policy, indicator glyphs, label

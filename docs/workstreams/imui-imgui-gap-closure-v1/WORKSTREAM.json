@@ -496,6 +496,7 @@
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger.rs",
+    "ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual.rs",
     "ecosystem/fret-ui-kit/src/imui/disclosure_controls/visual/header.rs",
     "ecosystem/fret-ui-kit/src/imui/slider_controls.rs",

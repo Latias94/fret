@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Disclosure Trigger Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: disclosure trigger pressable behavior and trigger-response population moved out of
+the trigger shell into a private behavior owner without changing activation toggles, shortcut
+gating, context-menu keyboard requests, right-click anchor capture, double-click signaling,
+hover-delay reads, enabled sanitization, or trigger `ResponseExt` population.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior.rs` now owns pressable
+  callback installation, activate shortcut/context-menu key handling, pointer down/up hooks,
+  hover-delay reads, context-menu anchor reporting, enabled sanitization, and trigger
+  `ResponseExt` population.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger.rs` keeps pressable props, a11y,
+  header visual mounting, collapsible trigger controls, and test-id application.
+- `tools/gate_imui_workstream_source.py` now rejects behavior/response-population code from
+  drifting back into `trigger.rs` and rejects visual/collapsible shell code from drifting into the
+  behavior owner.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib disclosure_controls::tests
+  --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui interaction_shortcuts::disclosure_tree --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Tab-Family Selection Owner-Split Evidence - 2026-05-27
 
 Claim verified: selected-tab normalization moved out of the tab-family item/list owner into a
@@ -1401,15 +1434,16 @@ Focused gates:
 
 ## Disclosure Trigger Owner-Split Evidence - 2026-05-26
 
-Claim verified: IMUI disclosure trigger behavior and trigger-response population moved into a
-focused private owner without changing the public collapsing-header/tree-node facade, open model
-semantics, content mounting, or response accessors.
+Claim verified: IMUI disclosure trigger shell moved into a focused private owner without changing
+the public collapsing-header/tree-node facade, open model semantics, content mounting, or response
+accessors. Trigger behavior and response population were split deeper into
+`disclosure_controls/trigger/behavior.rs` on 2026-05-27.
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger.rs` now owns header pressable
-  construction, shortcut activation, context-menu key/right-click handling, double-click signaling,
-  hover-delay reads, enabled sanitization, and trigger `ResponseExt` population.
+- `ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger.rs` now owns header pressable shell
+  construction, a11y wiring, visual mounting, collapsible trigger controls, and test-id
+  application.
 - `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` keeps label identity normalization,
   spec/open-model wiring, content mounting, and aggregate `DisclosureResponse` open/toggled state.
 - `ecosystem/fret-ui-kit/src/imui/disclosure_controls/spec.rs` remains the option-to-spec owner,

@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 disclosure trigger behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/disclosure_controls/trigger/behavior.rs` now owns pressable
+callback installation, activate shortcut/context-menu key handling, pointer down/up hooks,
+hover-delay reads, context-menu anchor reporting, enabled sanitization, and trigger `ResponseExt`
+population. `trigger.rs` keeps pressable props, a11y, header visual mounting, collapsible trigger
+controls, and test-id application.
+
 2026-05-27 tab-family selected-model normalization owner-split result:
 `ecosystem/fret-ui-kit/src/imui/tab_family_controls/items/selection.rs` now owns selected model
 reads, current-tab validity checks, default-selected fallback, first-enabled fallback, and model
