@@ -24,6 +24,45 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [ ] Do not expand `NodeGraphViewState` with more policy or tuning fields.
 - [ ] Do not solve recipe/policy gaps by smuggling new defaults into mechanism code.
 
+## Current execution focus - XYFlow consumer surface proof (2026-05-27)
+
+- [x] FNDX-010 Refresh the XyFlow-style public guide so it teaches
+      `NodeGraphSurfaceBinding + node_graph_surface(...)` as the default consumer path, with
+      `NodeGraphController` as the explicit lower-level facade.
+  - Scope:
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - standard workstream continuation docs in this folder
+  - Validation:
+    - `cargo nextest run -p fret-node public_node_graph_guides_teach_binding_first_surface`
+    - `cargo fmt --check`
+  - Exit note: public docs must not drift back to the stale `Model<Graph>` / `Model<ViewState>` /
+    optional-store teaching model or direct retained canvas authoring.
+  - Evidence:
+    - `docs/node-graph-how-to-build-like-xyflow.md`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node public_node_graph_guides_teach_binding_first_surface`: passed.
+    - `cargo fmt --check`: passed.
+- [ ] FNDX-020 Decide whether diff-first controlled sync deserves a public helper now, or remains
+      deferred behind explicit transactions and full-document replacement.
+  - Scope:
+    - `docs/node-graph-controlled-mode.md`
+    - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
+    - `ecosystem/fret-node/src/runtime/apply.rs`
+  - Validation:
+    - focused controlled-mode/runtime tests proving either the deferred policy or the new helper
+      semantics.
+- [ ] FNDX-030 Finish the remaining overlay/menu/toolbar policy placement decision with one narrow
+      source-policy or conformance gate.
+  - Scope:
+    - `ecosystem/fret-node/src/ui/overlays/*`
+    - `ecosystem/fret-node/src/ui/canvas/widget/context_menu/*`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+  - Validation:
+    - focused `cargo nextest run -p fret-node --features compat-retained-canvas <policy-filter>`.
+
 ## M0 - Decision gates and internal seam map
 
 - [x] Reframe the workstream docs around architecture closure rather than a paint-only lab log.

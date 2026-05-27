@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "slug": "fret-node-declarative-fearless-refactor-v1",
+  "title": "`fret-node` Fearless Refactor (v1)",
+  "status": "active",
+  "updated": "2026-05-27",
+  "scope_kind": "execution",
+  "problem": "`fret-node` must converge on a declarative-first, controller/binding-first public consumer surface without leaking retained compatibility internals as the taught default.",
+  "authoritative_docs": [
+    {
+      "role": "design",
+      "path": "docs/workstreams/fret-node-declarative-fearless-refactor-v1/design.md"
+    },
+    {
+      "role": "execution",
+      "path": "docs/workstreams/fret-node-declarative-fearless-refactor-v1/todo.md"
+    },
+    {
+      "role": "milestones",
+      "path": "docs/workstreams/fret-node-declarative-fearless-refactor-v1/milestones.md"
+    },
+    {
+      "role": "gates",
+      "path": "docs/workstreams/fret-node-declarative-fearless-refactor-v1/EVIDENCE_AND_GATES.md"
+    },
+    {
+      "role": "handoff",
+      "path": "docs/workstreams/fret-node-declarative-fearless-refactor-v1/HANDOFF.md"
+    }
+  ],
+  "gates": [
+    "cargo nextest run -p fret-node public_node_graph_guides_teach_binding_first_surface",
+    "cargo nextest run -p fret-node --no-default-features runtime",
+    "cargo check -p fret-node --features compat-retained-canvas --tests",
+    "python3 tools/check_layering.py"
+  ],
+  "evidence": [
+    "docs/node-graph-how-to-build-like-xyflow.md",
+    "ecosystem/fret-node/README.md",
+    "ecosystem/fret-node/src/surface_policy_tests.rs",
+    "docs/workstreams/fret-node-declarative-fearless-refactor-v1/HANDOFF.md"
+  ],
+  "adr_refs": [
+    "docs/adr/0126-node-graph-editor-and-typed-connections.md"
+  ],
+  "continue_policy": {
+    "default_action": "continue",
+    "notes": "Continue this lane while the public story remains declarative-first and controller/binding-first. Split a follow-on only when work no longer fits the retained-compatibility convergence target."
+  }
+}

@@ -624,6 +624,9 @@ const FRET_EXAMPLES_CARGO_TOML: &str = include_str!("../../../apps/fret-examples
 const FRET_EXAMPLES_LIB_RS: &str = include_str!("../../../apps/fret-examples/src/lib.rs");
 const FRET_DEMO_CARGO_TOML: &str = include_str!("../../../apps/fret-demo/Cargo.toml");
 const FRETBOARD_NATIVE_RS: &str = include_str!("../../../apps/fretboard/src/dev/native.rs");
+const FRET_NODE_README_MD: &str = include_str!("../README.md");
+const NODE_GRAPH_XYFLOW_GUIDE_MD: &str =
+    include_str!("../../../docs/node-graph-how-to-build-like-xyflow.md");
 const NODE_GRAPH_DEMO_RS: &str = include_str!("../../../apps/fret-examples/src/node_graph_demo.rs");
 const UI_GALLERY_CARGO_TOML: &str = include_str!("../../../apps/fret-ui-gallery/Cargo.toml");
 const UI_GALLERY_NODE_GRAPH_CULL_TORTURE_RS: &str = include_str!(
@@ -727,6 +730,36 @@ fn retained_compatibility_surface_stays_declarative_only() {
             && !UI_MOD_RS.contains("RetainedSubtreeProps"),
         "retained subtree compatibility must stay out of the public declarative node graph path"
     );
+}
+
+#[test]
+fn public_node_graph_guides_teach_binding_first_surface() {
+    assert!(FRET_NODE_README_MD.contains("## Recommended usage (declarative-first)"));
+    assert!(FRET_NODE_README_MD.contains("NodeGraphSurfaceBinding"));
+    assert!(FRET_NODE_README_MD.contains("node_graph_surface(...)"));
+    assert!(!FRET_NODE_README_MD.contains("NodeGraphCanvas::new("));
+    assert!(!FRET_NODE_README_MD.contains("NodeGraphCanvas::with_store"));
+
+    assert!(NODE_GRAPH_XYFLOW_GUIDE_MD.contains("## Recommended (binding-first) integration"));
+    assert!(NODE_GRAPH_XYFLOW_GUIDE_MD.contains("NodeGraphSurfaceBinding::new("));
+    assert!(NODE_GRAPH_XYFLOW_GUIDE_MD.contains("node_graph_surface(cx, surface.surface_props())"));
+    assert!(NODE_GRAPH_XYFLOW_GUIDE_MD.contains("NodeGraphController::new(surface.store_model())"));
+    assert!(NODE_GRAPH_XYFLOW_GUIDE_MD.contains("dispatch_transaction*"));
+    assert!(NODE_GRAPH_XYFLOW_GUIDE_MD.contains("fit_view_nodes_in_bounds*"));
+
+    for forbidden in [
+        "The UI consumes:",
+        "`Model<Graph>` (for painting and hit-testing)",
+        "`Model<NodeGraphViewState>` (pan/zoom/selection)",
+        "optional `Model<NodeGraphStore>`",
+        "NodeGraphCanvas::new(",
+        "NodeGraphCanvas::with_store",
+    ] {
+        assert!(
+            !NODE_GRAPH_XYFLOW_GUIDE_MD.contains(forbidden),
+            "XyFlow-style guide must stay binding-first; found stale teaching text `{forbidden}`"
+        );
+    }
 }
 
 #[test]

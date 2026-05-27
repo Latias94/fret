@@ -14,28 +14,52 @@ For the parity matrix and milestones, see:
 
 1) **Headless document + ops** (`core` / `ops`): serializable graph + deterministic transactions.
 2) **Headless runtime ergonomics** (`runtime`): store, lookups, XyFlow-style apply/change helpers.
-3) **UI integration** (`ui`): canvas widget, overlays, panels, presenter, retained bridge wiring.
+3) **UI integration** (`ui`): `NodeGraphSurfaceBinding`, `node_graph_surface(...)`,
+   `NodeGraphController`, overlays, panels, presenters, and optional retained compatibility wiring.
 
 The node editor UI is intended to be “editor-grade” (multi-window, docking, overlays), so UI add-ons
 are hosted in **window space** (outside the pan/zoom render transform).
 
-## Recommended (store-driven) integration
+## Recommended (binding-first) integration
 
 This is the closest match to “useReactFlow + built-ins”:
 
 - Authoritative state lives in `runtime::store::NodeGraphStore`.
-- The UI consumes:
-  - `Model<Graph>` (for painting and hit-testing),
-  - `Model<NodeGraphViewState>` (pan/zoom/selection),
-  - optional `Model<NodeGraphStore>` (to keep view updates in sync for B-layer apps).
+- App code usually starts with `NodeGraphSurfaceBinding::new(...)`, which creates the graph,
+  view-state, editor-config, and store/controller mirrors as one app-facing bundle.
+- The declarative surface renders through `node_graph_surface(cx, surface.surface_props())`.
+- App actions should prefer the binding helpers (`dispatch_transaction*`, `set_viewport*`,
+  `fit_view_nodes_in_bounds*`, `update_node*`, `update_edge*`, `undo*`, `redo*`) before dropping to
+  an explicit controller.
+- When lower-level imperative ownership is useful, derive it explicitly with
+  `NodeGraphController::new(surface.store_model())`.
 
-High-level composition pattern:
+Minimal composition pattern:
 
-- `NodeGraphEditor` as a layering container
-  - canvas node
-  - portal host (optional)
-  - overlays (toolbars, minimap, controls)
-  - overlay host (context menus, rename dialogs, etc.)
+```rust
+use fret_node::io::{NodeGraphEditorConfig, NodeGraphViewState};
+use fret_node::ui::{NodeGraphSurfaceBinding, node_graph_surface};
+use fret_node::Graph;
+
+fn init(app: &mut fret::App, graph: Graph) -> NodeGraphSurfaceBinding {
+    NodeGraphSurfaceBinding::new(
+        app.models_mut(),
+        graph,
+        NodeGraphViewState::default(),
+        NodeGraphEditorConfig::default(),
+    )
+}
+
+fn view(cx: &mut fret_ui::ElementContext<'_, fret::App>, surface: &NodeGraphSurfaceBinding) {
+    surface.observe(cx);
+    node_graph_surface(cx, surface.surface_props());
+}
+```
+
+Use this surface as the root of the editor composition, then add optional node portals, panels,
+toolbars, minimap, controls, diagnostics, or domain actions through the binding/controller path.
+Direct retained canvas authoring is compatibility/internal territory; new app code should keep the
+declarative root surface as the taught default.
 
 Concrete example:
 
@@ -65,6 +89,10 @@ Entry points:
 - `ecosystem/fret-node/examples/controlled_mode.rs`
 - `runtime::apply` / `runtime::changes`
 
+Use full document replacement (`NodeGraphSurfaceBinding::replace_document_action_host(...)`) for
+reset-style synchronization. Diff-first controlled replacement remains a follow-on decision: keep it
+transaction-explicit until a real workload proves the helper belongs in the public surface.
+
 ## Extension points
 
 ### Presenter (UI policy + derived labels)
@@ -78,8 +106,8 @@ Use a `NodeGraphPresenter` to control:
 
 ### `nodeTypes` / portal node renderers
 
-Use `NodeGraphNodeTypes` + `NodeGraphPortalHost` to render per-node UIs (text inputs, buttons,
-custom controls) while keeping the canvas itself policy-light.
+Use `NodeGraphNodeTypes` with the declarative portal path to render per-node UIs (text inputs,
+buttons, custom controls) while keeping the canvas itself policy-light.
 
 ### `edgeTypes` / custom edge paths
 
@@ -111,6 +139,10 @@ Contract / guidance:
 Stable contract:
 
 - `docs/node-graph-addons-minimap-controls.md`
+
+Keep add-ons bound to the controller/store surface where possible. Compatibility retained plumbing
+may still host parts of the implementation, but guides and demos should not teach raw queue or
+retained widget ownership as the normal downstream API.
 
 ## Blackboard variables (symbols) and symbol references
 
