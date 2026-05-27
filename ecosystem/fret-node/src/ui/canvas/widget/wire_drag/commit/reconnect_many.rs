@@ -36,7 +36,7 @@ pub(super) fn commit_reconnect_many<H: UiHost, M: NodeGraphCanvasMiddleware>(
                                 label: None,
                                 ops: plan.ops.clone(),
                             };
-                            let _ = apply_transaction(&mut scratch, &tx);
+                            let _ = tx.apply_to(&mut scratch);
                             ops_all.extend(plan.ops);
                         }
                         ConnectDecision::Reject => {

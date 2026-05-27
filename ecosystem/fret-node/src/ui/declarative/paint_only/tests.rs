@@ -68,7 +68,7 @@ use crate::runtime::callbacks::{
     NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks, SelectionChange,
     install_callbacks,
 };
-use crate::runtime::changes::NodeGraphChanges;
+use crate::runtime::changes::NodeGraphPatch;
 use crate::runtime::store::NodeGraphStore;
 use crate::ui::measured::MEASURED_GEOMETRY_EPSILON_PX;
 use crate::ui::paint_overrides::{NodeGraphPaintOverrides, NodeGraphPaintOverridesMap};
@@ -721,14 +721,11 @@ fn commit_node_drag_transaction_notifies_store_callbacks_through_binding() {
     }
 
     impl NodeGraphCommitCallbacks for Recorder {
-        fn on_graph_commit(
-            &mut self,
-            committed: &crate::ops::GraphTransaction,
-            changes: &NodeGraphChanges,
-        ) {
+        fn on_graph_commit(&mut self, patch: &NodeGraphPatch) {
+            let changes = patch.node_edge_changes();
             self.commits
                 .borrow_mut()
-                .push((committed.label.clone(), changes.nodes.len()));
+                .push((patch.transaction.label.clone(), changes.nodes.len()));
         }
     }
 
@@ -822,7 +819,7 @@ fn declarative_node_drag_commit_supports_undo_and_redo_through_binding() {
         .undo_action_host(&mut fixture.host)
         .unwrap()
         .expect("did undo");
-    assert!(!undo.committed.ops.is_empty());
+    assert!(!undo.patch.ops().is_empty());
 
     let undone_pos = fixture
         .host
@@ -847,7 +844,7 @@ fn declarative_node_drag_commit_supports_undo_and_redo_through_binding() {
         .redo_action_host(&mut fixture.host)
         .unwrap()
         .expect("did redo");
-    assert!(!redo.committed.ops.is_empty());
+    assert!(!redo.patch.ops().is_empty());
 
     let redone_pos = fixture
         .host
@@ -880,15 +877,11 @@ struct DeclarativeCallbackRecorder {
 }
 
 impl NodeGraphCommitCallbacks for DeclarativeCallbackRecorder {
-    fn on_graph_commit(
-        &mut self,
-        committed: &crate::ops::GraphTransaction,
-        _changes: &NodeGraphChanges,
-    ) {
+    fn on_graph_commit(&mut self, patch: &NodeGraphPatch) {
         self.trace
             .borrow_mut()
             .commit_labels
-            .push(committed.label.clone());
+            .push(patch.transaction.label.clone());
     }
 }
 

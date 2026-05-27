@@ -3,7 +3,7 @@ use crate::core::{
     PortDirection, PortId, PortKey, PortKind,
 };
 use crate::interaction::NodeGraphConnectionMode;
-use crate::ops::{GraphTransaction, apply_transaction};
+use crate::ops::GraphTransaction;
 use crate::rules::{
     EdgeEndpoint, InsertNodeSpec, plan_connect, plan_connect_by_inserting_node, plan_connect_typed,
     plan_connect_with_mode, plan_reconnect_edge, plan_split_edge_by_inserting_node,
@@ -51,6 +51,17 @@ fn make_port(
     }
 }
 
+fn insert_port(graph: &mut Graph, id: PortId, port: Port) {
+    let node = port.node;
+    graph.ports.insert(id, port);
+    graph
+        .nodes
+        .get_mut(&node)
+        .expect("test port owner must exist")
+        .ports
+        .push(id);
+}
+
 #[test]
 fn plan_connect_swaps_in_out() {
     let mut graph = Graph::default();
@@ -62,7 +73,8 @@ fn plan_connect_swaps_in_out() {
 
     let out = PortId::new();
     let inn = PortId::new();
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out,
         make_port(
             a,
@@ -72,7 +84,8 @@ fn plan_connect_swaps_in_out() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         inn,
         make_port(
             b,
@@ -96,7 +109,8 @@ fn plan_connect_strict_allows_same_node_out_to_in() {
 
     let out = PortId::new();
     let inn = PortId::new();
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out,
         make_port(
             a,
@@ -106,7 +120,8 @@ fn plan_connect_strict_allows_same_node_out_to_in() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         inn,
         make_port(
             a,
@@ -133,7 +148,8 @@ fn plan_connect_loose_allows_out_to_out_and_preserves_order() {
 
     let out_a = PortId::new();
     let out_b = PortId::new();
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out_a,
         make_port(
             a,
@@ -143,7 +159,8 @@ fn plan_connect_loose_allows_out_to_out_and_preserves_order() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out_b,
         make_port(
             b,
@@ -176,7 +193,8 @@ fn plan_connect_single_input_disconnects_existing() {
     let out1 = PortId::new();
     let out2 = PortId::new();
     let inn = PortId::new();
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out1,
         make_port(
             a,
@@ -186,7 +204,8 @@ fn plan_connect_single_input_disconnects_existing() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out2,
         make_port(
             c,
@@ -196,7 +215,8 @@ fn plan_connect_single_input_disconnects_existing() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         inn,
         make_port(
             b,
@@ -213,7 +233,7 @@ fn plan_connect_single_input_disconnects_existing() {
         label: None,
         ops: plan1.ops,
     };
-    apply_transaction(&mut graph, &tx1).unwrap();
+    tx1.apply_to(&mut graph).unwrap();
     assert_eq!(graph.edges.len(), 1);
 
     // Now connect out2 -> inn; should remove old edge and add a new one.
@@ -240,7 +260,7 @@ fn plan_connect_typed_rejects_incompatible_data_types() {
         PortCapacity::Multi,
     );
     out_port.ty = Some(TypeDesc::Int);
-    graph.ports.insert(out, out_port);
+    insert_port(&mut graph, out, out_port);
 
     let mut in_port = make_port(
         b,
@@ -250,7 +270,7 @@ fn plan_connect_typed_rejects_incompatible_data_types() {
         PortCapacity::Single,
     );
     in_port.ty = Some(TypeDesc::String);
-    graph.ports.insert(inn, in_port);
+    insert_port(&mut graph, inn, in_port);
 
     let mut compat = DefaultTypeCompatibility::default();
     let plan = plan_connect_typed(
@@ -283,7 +303,7 @@ fn plan_connect_typed_accepts_int_to_float() {
         PortCapacity::Multi,
     );
     out_port.ty = Some(TypeDesc::Int);
-    graph.ports.insert(out, out_port);
+    insert_port(&mut graph, out, out_port);
 
     let mut in_port = make_port(
         b,
@@ -293,7 +313,7 @@ fn plan_connect_typed_accepts_int_to_float() {
         PortCapacity::Single,
     );
     in_port.ty = Some(TypeDesc::Float);
-    graph.ports.insert(inn, in_port);
+    insert_port(&mut graph, inn, in_port);
 
     let mut compat = DefaultTypeCompatibility::default();
     let plan = plan_connect_typed(
@@ -321,7 +341,8 @@ fn plan_reconnect_preserves_edge_id() {
     let out1 = PortId::new();
     let out2 = PortId::new();
     let inn = PortId::new();
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out1,
         make_port(
             a,
@@ -331,7 +352,8 @@ fn plan_reconnect_preserves_edge_id() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out2,
         make_port(
             c,
@@ -341,7 +363,8 @@ fn plan_reconnect_preserves_edge_id() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         inn,
         make_port(
             b,
@@ -373,7 +396,7 @@ fn plan_reconnect_preserves_edge_id() {
         label: None,
         ops: plan.ops,
     };
-    apply_transaction(&mut graph, &tx).unwrap();
+    tx.apply_to(&mut graph).unwrap();
 
     let edge = graph.edges.get(&edge_id).unwrap();
     assert_eq!(edge.from, out2);
@@ -397,7 +420,8 @@ fn plan_reconnect_single_target_disconnects_other_edges() {
     let out2 = PortId::new();
     let out3 = PortId::new();
     let inn = PortId::new();
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out1,
         make_port(
             a,
@@ -407,7 +431,8 @@ fn plan_reconnect_single_target_disconnects_other_edges() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out2,
         make_port(
             c,
@@ -417,7 +442,8 @@ fn plan_reconnect_single_target_disconnects_other_edges() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out3,
         make_port(
             d,
@@ -427,7 +453,8 @@ fn plan_reconnect_single_target_disconnects_other_edges() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         inn,
         make_port(
             b,
@@ -471,7 +498,7 @@ fn plan_reconnect_single_target_disconnects_other_edges() {
         label: None,
         ops: plan.ops,
     };
-    apply_transaction(&mut graph, &tx).unwrap();
+    tx.apply_to(&mut graph).unwrap();
 
     assert!(
         !graph.edges.contains_key(&edge_drop),
@@ -496,7 +523,8 @@ fn plan_connect_by_inserting_node_disconnects_single_target() {
     let out1 = PortId::new();
     let out2 = PortId::new();
     let inn = PortId::new();
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out1,
         make_port(
             a,
@@ -506,7 +534,8 @@ fn plan_connect_by_inserting_node_disconnects_single_target() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out2,
         make_port(
             c,
@@ -516,7 +545,8 @@ fn plan_connect_by_inserting_node_disconnects_single_target() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         inn,
         make_port(
             b,
@@ -533,7 +563,7 @@ fn plan_connect_by_inserting_node_disconnects_single_target() {
         label: None,
         ops: plan1.ops,
     };
-    apply_transaction(&mut graph, &tx1).unwrap();
+    tx1.apply_to(&mut graph).unwrap();
     assert_eq!(graph.edges.len(), 1);
 
     // Now connect out2 -> inn via an inserted node; should remove old edge and add two new edges.
@@ -579,7 +609,7 @@ fn plan_connect_by_inserting_node_disconnects_single_target() {
         label: None,
         ops: plan2.ops,
     };
-    apply_transaction(&mut graph, &tx2).unwrap();
+    tx2.apply_to(&mut graph).unwrap();
 
     assert_eq!(graph.nodes.len(), 4);
     assert_eq!(graph.edges.len(), 2);
@@ -596,7 +626,8 @@ fn plan_split_edge_by_inserting_node_preserves_edge_id() {
 
     let out = PortId::new();
     let inn = PortId::new();
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out,
         make_port(
             a,
@@ -606,7 +637,8 @@ fn plan_split_edge_by_inserting_node_preserves_edge_id() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         inn,
         make_port(
             b,
@@ -670,7 +702,7 @@ fn plan_split_edge_by_inserting_node_preserves_edge_id() {
         label: None,
         ops: plan.ops,
     };
-    apply_transaction(&mut graph, &tx).unwrap();
+    tx.apply_to(&mut graph).unwrap();
 
     assert_eq!(graph.edges.len(), 2);
     assert!(graph.edges.contains_key(&edge_id));
@@ -693,7 +725,8 @@ fn plan_reconnect_rejects_duplicate_connection() {
     let out1 = PortId::new();
     let out2 = PortId::new();
     let inn = PortId::new();
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out1,
         make_port(
             a,
@@ -703,7 +736,8 @@ fn plan_reconnect_rejects_duplicate_connection() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         out2,
         make_port(
             c,
@@ -713,7 +747,8 @@ fn plan_reconnect_rejects_duplicate_connection() {
             PortCapacity::Multi,
         ),
     );
-    graph.ports.insert(
+    insert_port(
+        &mut graph,
         inn,
         make_port(
             b,

@@ -3,7 +3,6 @@ use std::sync::Arc;
 use serde_json::json;
 
 use crate::core::{Graph, GraphId, Node, NodeId, NodeKindKey};
-use crate::ops::apply_transaction;
 use crate::schema::{NodeKindMigrateError, NodeKindMigrator, NodeRegistry, NodeSchema};
 
 struct DummyMigrator;
@@ -65,7 +64,7 @@ fn canonicalize_kinds_rewrites_aliases_to_canonical() {
     assert_eq!(plan.rewrites.len(), 1);
     assert_eq!(plan.rewrites[0].node, id);
 
-    apply_transaction(&mut graph, &plan.tx).unwrap();
+    plan.tx.apply_to(&mut graph).unwrap();
     assert_eq!(
         graph.nodes.get(&id).unwrap().kind,
         NodeKindKey::new("demo.add")
@@ -116,7 +115,7 @@ fn migrate_nodes_emits_set_node_data_and_version_and_reports_upgraded() {
     assert!(plan.report.missing_migrator.is_empty());
     assert!(plan.report.errors.is_empty());
 
-    apply_transaction(&mut graph, &plan.tx).unwrap();
+    plan.tx.apply_to(&mut graph).unwrap();
     let node = graph.nodes.get(&id).unwrap();
     assert_eq!(node.kind_version, 2);
     assert_eq!(node.data["migrated"], json!(true));

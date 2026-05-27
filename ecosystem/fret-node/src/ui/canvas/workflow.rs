@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use crate::core::{Graph, NodeId, PortDirection, PortId};
 use crate::interaction::NodeGraphConnectionMode;
-use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
+use crate::ops::{GraphOp, GraphTransaction};
 use crate::rules::{ConnectDecision, DiagnosticSeverity};
 use crate::ui::presenter::NodeGraphPresenter;
 
@@ -130,7 +130,7 @@ mod tests {
             label: None,
             ops: planned.ops,
         };
-        apply_transaction(&mut graph, &tx).expect("apply");
+        tx.apply_to(&mut graph).expect("apply");
         assert_eq!(graph.edges.len(), 1);
     }
 }

@@ -3,11 +3,13 @@
 Status: Accepted  
 Date: 2026-02-05
 
-## Implementation Status (as of 2026-02-06)
+## Implementation Status (updated 2026-05-27)
 
 The deterministic diff and patch unit are implemented:
 
-- Deterministic `graph_diff(from, to) -> GraphTransaction`: `ecosystem/fret-node/src/ops/diff.rs`
+- Public deterministic diff facade: `GraphTransaction::diff(from, to)` in
+  `ecosystem/fret-node/src/ops/mod.rs`
+- Internal deterministic diff implementation: `ecosystem/fret-node/src/ops/diff.rs`
 - Apply/invert/normalize correctness is covered by conformance tests:
   - Determinism + roundtrip: `ecosystem/fret-node/src/ops/tests.rs` (`graph_diff_is_deterministic_and_roundtrips`)
   - Cascading removals (node/port): `ecosystem/fret-node/src/ops/tests.rs`
@@ -47,7 +49,7 @@ The hard part is not "diffing JSON"; it is locking:
 
 ### 1) Patch unit is `GraphTransaction`
 
-`graph_diff(from, to)` returns a `GraphTransaction` of `GraphOp` variants.
+`GraphTransaction::diff(from, to)` returns a `GraphTransaction` of `GraphOp` variants.
 
 Normalization:
 
@@ -96,11 +98,12 @@ preserve identity when possible.
 
 For any `from`, `to` that are individually structurally valid:
 
-- applying `graph_diff(from, to)` to a clone of `from` must yield a graph that is JSON-equal to `to`.
+- applying `GraphTransaction::diff(from, to)` to a clone of `from` must yield a graph that is
+  JSON-equal to `to`.
 
 Additionally:
 
-- running `graph_diff(from, to)` multiple times must yield identical JSON for `tx.ops`.
+- running `GraphTransaction::diff(from, to)` multiple times must yield identical JSON for `tx.ops`.
 
 ## Evidence / Conformance Gates
 

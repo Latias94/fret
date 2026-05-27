@@ -20,11 +20,10 @@ pub(super) fn can_use_static_scene_cache(
 
 pub(super) fn static_scene_cache_tile_sizes(bounds: Rect, zoom: f32) -> StaticSceneCacheTileSizes {
     let viewport_max_screen_px = bounds.size.width.0.max(bounds.size.height.0);
-    let nodes_tile_size_screen_px =
-        crate::ui::canvas::widget::static_scene_cache_plan::next_power_of_two_at_least(
-            super::STATIC_SCENE_TILE_SIZE_SCREEN_PX_MIN,
-            viewport_max_screen_px * super::STATIC_NODES_TILE_MUL,
-        );
+    let nodes_tile_size_screen_px = fret_canvas::cache::next_power_of_two_at_least(
+        super::STATIC_SCENE_TILE_SIZE_SCREEN_PX_MIN,
+        viewport_max_screen_px * super::STATIC_NODES_TILE_MUL,
+    );
 
     StaticSceneCacheTileSizes {
         nodes_cache_tile_size_canvas: (nodes_tile_size_screen_px as f32 / zoom).max(1.0),
@@ -44,10 +43,7 @@ pub(super) fn static_cache_rect(
         && tile_size_canvas >= viewport_w
         && tile_size_canvas >= viewport_h
     {
-        crate::ui::canvas::widget::static_scene_cache_plan::centered_single_tile_rect(
-            viewport_rect,
-            tile_size_canvas,
-        )
+        fret_canvas::cache::centered_single_tile_rect(viewport_rect, tile_size_canvas)
     } else {
         None
     }

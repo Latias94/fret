@@ -27,7 +27,8 @@ pub use symbol_ref::{
     validate_symbol_ref_targets_are_declared,
 };
 pub use validate::{
-    GraphValidationError, GraphValidationReport, validate_graph, validate_graph_structural,
+    GraphValidationError, GraphValidationReport, validate_graph, validate_graph_storage,
+    validate_graph_structural,
 };
 
 #[cfg(test)]

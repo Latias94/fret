@@ -5,7 +5,7 @@
 //! derived edits (dynamic ports, autofixes) and diagnostics.
 
 use crate::core::Graph;
-use crate::ops::{ApplyError, GraphOp, GraphTransaction, apply_transaction};
+use crate::ops::{ApplyError, GraphOp, GraphTransaction};
 use crate::rules::{ConnectDecision, ConnectPlan, Diagnostic, DiagnosticSeverity};
 
 use super::GraphProfile;
@@ -45,7 +45,7 @@ pub fn apply_transaction_with_profile(
         ops: Vec::new(),
     };
 
-    apply_transaction(graph, tx)?;
+    tx.apply_to(graph)?;
     committed.ops.extend(tx.ops.clone());
 
     let bound = profile.concretize_bound();
@@ -73,7 +73,7 @@ pub fn apply_transaction_with_profile(
             label: None,
             ops: derived_ops.clone(),
         };
-        apply_transaction(graph, &derived_tx)?;
+        derived_tx.apply_to(graph)?;
         committed.ops.extend(derived_ops);
     }
 

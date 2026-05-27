@@ -14,10 +14,7 @@ pub(super) fn close_button_rect(pan: CanvasPoint, zoom: f32) -> Rect {
 }
 
 pub(super) fn rect_contains(rect: Rect, pos: Point) -> bool {
-    pos.x.0 >= rect.origin.x.0
-        && pos.y.0 >= rect.origin.y.0
-        && pos.x.0 <= rect.origin.x.0 + rect.size.width.0
-        && pos.y.0 <= rect.origin.y.0 + rect.size.height.0
+    fret_canvas::view::rect_contains_point(rect, pos)
 }
 
 pub(super) fn node_resize_handle_rect(

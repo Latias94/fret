@@ -14,6 +14,9 @@ pub enum GraphValidationError {
     #[error("port references missing node: port={port:?} node={node:?}")]
     PortMissingNode { port: PortId, node: NodeId },
 
+    #[error("port is missing from owner node ports list: port={port:?} node={node:?}")]
+    PortMissingFromOwner { port: PortId, node: NodeId },
+
     #[error("node parent references missing group: node={node:?} group={group:?}")]
     NodeParentMissingGroup { node: NodeId, group: GroupId },
 
@@ -114,11 +117,11 @@ pub fn validate_graph(graph: &Graph) -> GraphValidationReport {
     validate_graph_structural(graph)
 }
 
-/// Validates a graph for structural consistency (contract-level invariants).
+/// Validates graph storage invariants required by the mutation layer.
 ///
-/// This intentionally does **not** enforce editor policies such as connection direction.
-/// Direction, cycle policy, and domain-specific semantics belong in profiles/rules.
-pub fn validate_graph_structural(graph: &Graph) -> GraphValidationReport {
+/// This checks identity/reference integrity but intentionally leaves connection policy, duplicate
+/// connection semantics, and port capacity to the fuller structural/profile validators.
+pub fn validate_graph_storage(graph: &Graph) -> GraphValidationReport {
     let mut report = GraphValidationReport::default();
 
     if graph.graph_version != crate::core::model::GRAPH_VERSION {
@@ -137,6 +140,20 @@ pub fn validate_graph_structural(graph: &Graph) -> GraphValidationReport {
                 port: *port_id,
                 node: port.node,
             });
+        }
+    }
+
+    for (port_id, port) in &graph.ports {
+        let Some(node) = graph.nodes.get(&port.node) else {
+            continue;
+        };
+        if !node.ports.contains(port_id) {
+            report
+                .errors
+                .push(GraphValidationError::PortMissingFromOwner {
+                    port: *port_id,
+                    node: port.node,
+                });
         }
     }
 
@@ -195,6 +212,38 @@ pub fn validate_graph_structural(graph: &Graph) -> GraphValidationReport {
                     });
             }
         }
+    }
+
+    for (edge_id, edge) in &graph.edges {
+        if !graph.ports.contains_key(&edge.from) {
+            report.errors.push(GraphValidationError::EdgeMissingPort {
+                edge: *edge_id,
+                port: edge.from,
+            });
+        }
+        if !graph.ports.contains_key(&edge.to) {
+            report.errors.push(GraphValidationError::EdgeMissingPort {
+                edge: *edge_id,
+                port: edge.to,
+            });
+        }
+    }
+
+    report
+}
+
+/// Validates a graph for structural consistency (contract-level invariants).
+///
+/// This intentionally does **not** enforce editor policies such as connection direction.
+/// Direction, cycle policy, and domain-specific semantics belong in profiles/rules.
+pub fn validate_graph_structural(graph: &Graph) -> GraphValidationReport {
+    let mut report = validate_graph_storage(graph);
+    if report
+        .errors
+        .iter()
+        .any(|error| matches!(error, GraphValidationError::UnsupportedGraphVersion { .. }))
+    {
+        return report;
     }
 
     for (node_id, node) in &graph.nodes {
@@ -266,17 +315,9 @@ pub fn validate_graph_structural(graph: &Graph) -> GraphValidationReport {
 
     for (edge_id, edge) in &graph.edges {
         let Some(from) = graph.ports.get(&edge.from) else {
-            report.errors.push(GraphValidationError::EdgeMissingPort {
-                edge: *edge_id,
-                port: edge.from,
-            });
             continue;
         };
         let Some(to) = graph.ports.get(&edge.to) else {
-            report.errors.push(GraphValidationError::EdgeMissingPort {
-                edge: *edge_id,
-                port: edge.to,
-            });
             continue;
         };
 

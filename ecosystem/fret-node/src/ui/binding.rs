@@ -521,13 +521,13 @@ mod tests {
         let outcome = binding
             .dispatch_transaction_action_host(&mut host, &tx)
             .expect("dispatch succeeds");
-        assert_eq!(outcome.committed.ops.len(), 1);
+        assert_eq!(outcome.patch.ops().len(), 1);
         assert!(matches!(
-            outcome.committed.ops.first(),
+            outcome.patch.ops().first(),
             Some(GraphOp::AddStickyNote { id, .. }) if *id == note_id
         ));
-        assert!(outcome.changes.nodes.is_empty());
-        assert!(outcome.changes.edges.is_empty());
+        assert!(outcome.node_edge_changes.nodes.is_empty());
+        assert!(outcome.node_edge_changes.edges.is_empty());
         assert!(
             host.models
                 .read(&binding.graph_model(), |graph| graph

@@ -4,7 +4,7 @@
 
 use crate::ops::GraphTransaction;
 use crate::profile::ApplyPipelineError;
-use crate::runtime::changes::NodeGraphChanges;
+use crate::runtime::changes::{NodeGraphChanges, NodeGraphPatch};
 use crate::runtime::events::NodeGraphStoreSnapshot;
 
 pub trait NodeGraphStoreMiddleware: 'static {
@@ -19,8 +19,8 @@ pub trait NodeGraphStoreMiddleware: 'static {
     fn after_dispatch(
         &mut self,
         _snapshot: NodeGraphStoreSnapshot<'_>,
-        _committed: &GraphTransaction,
-        _changes: &NodeGraphChanges,
+        _patch: &NodeGraphPatch,
+        _node_edge_changes: &NodeGraphChanges,
     ) {
     }
 }
@@ -60,10 +60,12 @@ where
     fn after_dispatch(
         &mut self,
         snapshot: NodeGraphStoreSnapshot<'_>,
-        committed: &GraphTransaction,
-        changes: &NodeGraphChanges,
+        patch: &NodeGraphPatch,
+        node_edge_changes: &NodeGraphChanges,
     ) {
-        self.first.after_dispatch(snapshot, committed, changes);
-        self.second.after_dispatch(snapshot, committed, changes);
+        self.first
+            .after_dispatch(snapshot, patch, node_edge_changes);
+        self.second
+            .after_dispatch(snapshot, patch, node_edge_changes);
     }
 }

@@ -4,19 +4,20 @@
 //! - authoritative `Graph` (serializable document),
 //! - per-user/per-project `NodeGraphViewState` (pan/zoom/selection),
 //! - undo/redo history (`GraphHistory`),
-//! - dispatch methods that return `NodeGraphChanges` (XyFlow-style change events).
+//! - dispatch methods that return full-fidelity `NodeGraphPatch` plus XyFlow-style projections.
 
 use crate::core::Graph;
 use crate::io::{
     NodeGraphEditorConfig, NodeGraphInteractionConfig, NodeGraphInteractionState,
     NodeGraphRuntimeTuning, NodeGraphViewState,
 };
-use crate::ops::{GraphHistory, GraphTransaction, apply_transaction};
+use crate::ops::{GraphHistory, GraphTransaction};
 use crate::profile::{ApplyPipelineError, GraphProfile, apply_transaction_with_profile};
 use crate::rules::{Diagnostic, DiagnosticSeverity, DiagnosticTarget};
-use crate::runtime::changes::{ChangesToTransactionError, NodeGraphChanges};
+use crate::runtime::changes::{ChangesToTransactionError, NodeGraphChanges, NodeGraphPatch};
 use crate::runtime::events::{
-    NodeGraphStoreEvent, NodeGraphStoreSnapshot, SubscriptionToken, ViewChange,
+    NodeGraphDocumentSnapshot, NodeGraphStoreEvent, NodeGraphStoreSnapshot, SubscriptionToken,
+    ViewChange,
 };
 use crate::runtime::lookups::NodeGraphLookups;
 use crate::runtime::middleware::NodeGraphStoreMiddleware;
@@ -24,10 +25,33 @@ use crate::runtime::middleware::NodeGraphStoreMiddleware;
 /// Dispatch outcome for store actions.
 #[derive(Debug, Clone)]
 pub struct DispatchOutcome {
-    /// The transaction that was committed (includes any derived ops when using a profile pipeline).
-    pub committed: GraphTransaction,
-    /// XyFlow-style change events derived from `committed`.
-    pub changes: NodeGraphChanges,
+    /// Full-fidelity patch that was committed.
+    pub patch: NodeGraphPatch,
+    /// XyFlow-style node/edge projection derived from `patch`.
+    pub node_edge_changes: NodeGraphChanges,
+}
+
+impl DispatchOutcome {
+    pub fn new(patch: NodeGraphPatch, node_edge_changes: NodeGraphChanges) -> Self {
+        Self {
+            patch,
+            node_edge_changes,
+        }
+    }
+
+    pub fn from_committed(committed: GraphTransaction) -> Self {
+        let patch = NodeGraphPatch::new(committed);
+        let node_edge_changes = patch.node_edge_changes();
+        Self::new(patch, node_edge_changes)
+    }
+
+    pub fn committed(&self) -> &GraphTransaction {
+        self.patch.transaction()
+    }
+
+    pub fn changes(&self) -> &NodeGraphChanges {
+        &self.node_edge_changes
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -189,6 +213,7 @@ impl NodeGraphStore {
 
         let snapshot = NodeGraphStoreSnapshot {
             graph: &self.graph,
+            graph_revision: self.graph_revision,
             view_state: &self.view_state,
             interaction: &self.interaction,
             runtime_tuning: &self.runtime_tuning,
@@ -249,13 +274,56 @@ impl NodeGraphStore {
     /// This is a controlled-mode helper: callers that own graph state can swap the document
     /// without going through transactions (e.g. loading a file, switching tabs).
     ///
-    /// Note: this does not emit `NodeGraphChanges` today. Consumers should treat this as a full
-    /// reset and re-render. Selection is sanitized against the new graph.
+    /// This emits a document replacement event, not a graph commit. Selection is sanitized against
+    /// the new graph.
     pub fn replace_graph(&mut self, graph: Graph) {
+        let before_graph = self.graph.clone();
+        let before_view_state = self.view_state.clone();
+        let before_editor_config = self.editor_config();
+        let before_revision = self.graph_revision;
+
         self.graph = graph;
         self.bump_graph_revision();
         self.view_state.sanitize_for_graph(&self.graph);
         self.lookups.rebuild_from(&self.graph);
+        self.emit_document_replaced(
+            before_graph,
+            before_view_state,
+            before_editor_config,
+            before_revision,
+        );
+        self.notify_selectors();
+    }
+
+    /// Replaces the entire document snapshot in one atomic store update.
+    ///
+    /// This is the full document reset path: graph, view state, editor config, lookups, revision,
+    /// and undo/redo history are updated together, then one `DocumentReplaced` event is emitted.
+    pub fn replace_document(
+        &mut self,
+        graph: Graph,
+        mut view_state: NodeGraphViewState,
+        editor_config: NodeGraphEditorConfig,
+    ) {
+        let before_graph = self.graph.clone();
+        let before_view_state = self.view_state.clone();
+        let before_editor_config = self.editor_config();
+        let before_revision = self.graph_revision;
+
+        view_state.sanitize_for_graph(&graph);
+        self.graph = graph;
+        self.bump_graph_revision();
+        self.view_state = view_state;
+        self.interaction = editor_config.interaction;
+        self.runtime_tuning = editor_config.runtime_tuning;
+        self.history = GraphHistory::default();
+        self.lookups.rebuild_from(&self.graph);
+        self.emit_document_replaced(
+            before_graph,
+            before_view_state,
+            before_editor_config,
+            before_revision,
+        );
         self.notify_selectors();
     }
 
@@ -446,10 +514,7 @@ impl NodeGraphStore {
     ) -> Result<DispatchOutcome, DispatchError> {
         let mut tx = crate::ops::normalize_transaction(tx.clone());
         if tx.is_empty() {
-            return Ok(DispatchOutcome {
-                committed: tx,
-                changes: NodeGraphChanges::default(),
-            });
+            return Ok(DispatchOutcome::from_committed(tx));
         }
         if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
             return Err(DispatchError::Apply(Self::reject_tx(key, message)));
@@ -461,6 +526,7 @@ impl NodeGraphStore {
         if let Some(middleware) = self.middleware.as_deref_mut() {
             let snapshot = NodeGraphStoreSnapshot {
                 graph: &self.graph,
+                graph_revision: self.graph_revision,
                 view_state: &self.view_state,
                 interaction: &self.interaction,
                 runtime_tuning: &self.runtime_tuning,
@@ -470,10 +536,7 @@ impl NodeGraphStore {
         }
         tx = crate::ops::normalize_transaction(tx);
         if tx.is_empty() {
-            return Ok(DispatchOutcome {
-                committed: tx,
-                changes: NodeGraphChanges::default(),
-            });
+            return Ok(DispatchOutcome::from_committed(tx));
         }
         if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
             return Err(DispatchError::Apply(Self::reject_tx(key, message)));
@@ -491,22 +554,24 @@ impl NodeGraphStore {
         if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&committed) {
             return Err(DispatchError::Apply(Self::reject_tx(key, message)));
         }
-        let changes = self.install_committed_graph_state(scratch, &committed);
+        let node_edge_changes = self.install_committed_graph_state(scratch, &committed);
         self.history.record(committed.clone());
+        let patch = NodeGraphPatch::new(committed);
 
         if let Some(middleware) = self.middleware.as_deref_mut() {
             let snapshot = NodeGraphStoreSnapshot {
                 graph: &self.graph,
+                graph_revision: self.graph_revision,
                 view_state: &self.view_state,
                 interaction: &self.interaction,
                 runtime_tuning: &self.runtime_tuning,
                 history: &self.history,
             };
-            middleware.after_dispatch(snapshot, &committed, &changes);
+            middleware.after_dispatch(snapshot, &patch, &node_edge_changes);
         }
 
-        self.publish_graph_commit(&committed, &changes);
-        Ok(DispatchOutcome { committed, changes })
+        self.publish_graph_commit(&patch, &node_edge_changes);
+        Ok(DispatchOutcome::new(patch, node_edge_changes))
     }
 
     /// Dispatches a transaction using an externally-owned profile pipeline.
@@ -519,10 +584,7 @@ impl NodeGraphStore {
     ) -> Result<DispatchOutcome, ApplyPipelineError> {
         let mut tx = crate::ops::normalize_transaction(tx.clone());
         if tx.is_empty() {
-            return Ok(DispatchOutcome {
-                committed: tx,
-                changes: NodeGraphChanges::default(),
-            });
+            return Ok(DispatchOutcome::from_committed(tx));
         }
         if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
             return Err(Self::reject_tx(key, message));
@@ -534,6 +596,7 @@ impl NodeGraphStore {
         if let Some(middleware) = self.middleware.as_deref_mut() {
             let snapshot = NodeGraphStoreSnapshot {
                 graph: &self.graph,
+                graph_revision: self.graph_revision,
                 view_state: &self.view_state,
                 interaction: &self.interaction,
                 runtime_tuning: &self.runtime_tuning,
@@ -543,10 +606,7 @@ impl NodeGraphStore {
         }
         tx = crate::ops::normalize_transaction(tx);
         if tx.is_empty() {
-            return Ok(DispatchOutcome {
-                committed: tx,
-                changes: NodeGraphChanges::default(),
-            });
+            return Ok(DispatchOutcome::from_committed(tx));
         }
         if let Some((key, message)) = crate::ops::find_non_finite_in_tx(&tx) {
             return Err(Self::reject_tx(key, message));
@@ -564,22 +624,24 @@ impl NodeGraphStore {
         if let Some((key, message)) = crate::ops::find_invalid_size_in_tx(&committed) {
             return Err(Self::reject_tx(key, message));
         }
-        let changes = self.install_committed_graph_state(scratch, &committed);
+        let node_edge_changes = self.install_committed_graph_state(scratch, &committed);
         self.history.record(committed.clone());
+        let patch = NodeGraphPatch::new(committed);
 
         if let Some(middleware) = self.middleware.as_deref_mut() {
             let snapshot = NodeGraphStoreSnapshot {
                 graph: &self.graph,
+                graph_revision: self.graph_revision,
                 view_state: &self.view_state,
                 interaction: &self.interaction,
                 runtime_tuning: &self.runtime_tuning,
                 history: &self.history,
             };
-            middleware.after_dispatch(snapshot, &committed, &changes);
+            middleware.after_dispatch(snapshot, &patch, &node_edge_changes);
         }
 
-        self.publish_graph_commit(&committed, &changes);
-        Ok(DispatchOutcome { committed, changes })
+        self.publish_graph_commit(&patch, &node_edge_changes);
+        Ok(DispatchOutcome::new(patch, node_edge_changes))
     }
 
     /// Applies XyFlow-style changes by converting them to a reversible transaction.
@@ -610,9 +672,10 @@ impl NodeGraphStore {
         }
 
         let committed = committed.unwrap_or_default();
-        let changes = self.install_committed_graph_state(scratch, &committed);
-        self.publish_graph_commit(&committed, &changes);
-        Ok(Some(DispatchOutcome { committed, changes }))
+        let node_edge_changes = self.install_committed_graph_state(scratch, &committed);
+        let patch = NodeGraphPatch::new(committed);
+        self.publish_graph_commit(&patch, &node_edge_changes);
+        Ok(Some(DispatchOutcome::new(patch, node_edge_changes)))
     }
 
     /// Undoes the last committed transaction using an externally-owned profile pipeline.
@@ -636,9 +699,10 @@ impl NodeGraphStore {
         }
 
         let committed = committed.unwrap_or_default();
-        let changes = self.install_committed_graph_state(scratch, &committed);
-        self.publish_graph_commit(&committed, &changes);
-        Ok(Some(DispatchOutcome { committed, changes }))
+        let node_edge_changes = self.install_committed_graph_state(scratch, &committed);
+        let patch = NodeGraphPatch::new(committed);
+        self.publish_graph_commit(&patch, &node_edge_changes);
+        Ok(Some(DispatchOutcome::new(patch, node_edge_changes)))
     }
 
     /// Redoes the last undone transaction.
@@ -660,9 +724,10 @@ impl NodeGraphStore {
         }
 
         let committed = committed.unwrap_or_default();
-        let changes = self.install_committed_graph_state(scratch, &committed);
-        self.publish_graph_commit(&committed, &changes);
-        Ok(Some(DispatchOutcome { committed, changes }))
+        let node_edge_changes = self.install_committed_graph_state(scratch, &committed);
+        let patch = NodeGraphPatch::new(committed);
+        self.publish_graph_commit(&patch, &node_edge_changes);
+        Ok(Some(DispatchOutcome::new(patch, node_edge_changes)))
     }
 
     /// Redoes the last undone transaction using an externally-owned profile pipeline.
@@ -686,9 +751,10 @@ impl NodeGraphStore {
         }
 
         let committed = committed.unwrap_or_default();
-        let changes = self.install_committed_graph_state(scratch, &committed);
-        self.publish_graph_commit(&committed, &changes);
-        Ok(Some(DispatchOutcome { committed, changes }))
+        let node_edge_changes = self.install_committed_graph_state(scratch, &committed);
+        let patch = NodeGraphPatch::new(committed);
+        self.publish_graph_commit(&patch, &node_edge_changes);
+        Ok(Some(DispatchOutcome::new(patch, node_edge_changes)))
     }
 
     fn apply_to_graph(
@@ -699,7 +765,7 @@ impl NodeGraphStore {
         if let Some(profile) = self.profile.as_deref_mut() {
             apply_transaction_with_profile(graph, profile, tx)
         } else {
-            apply_transaction(graph, tx)?;
+            tx.apply_to(graph)?;
             Ok(GraphTransaction {
                 label: tx.label.clone(),
                 ops: tx.ops.clone(),
@@ -715,11 +781,18 @@ impl NodeGraphStore {
         self.graph = graph;
         self.bump_graph_revision();
         self.lookups.apply_transaction(&self.graph, committed);
-        NodeGraphChanges::from_transaction(committed)
+        committed.node_graph_changes()
     }
 
-    fn publish_graph_commit(&mut self, committed: &GraphTransaction, changes: &NodeGraphChanges) {
-        self.emit(NodeGraphStoreEvent::GraphCommitted { committed, changes });
+    fn publish_graph_commit(
+        &mut self,
+        patch: &NodeGraphPatch,
+        node_edge_changes: &NodeGraphChanges,
+    ) {
+        self.emit(NodeGraphStoreEvent::GraphCommitted {
+            patch,
+            node_edge_changes,
+        });
         self.notify_selectors();
     }
 
@@ -740,6 +813,34 @@ impl NodeGraphStore {
         self.graph_revision = self.graph_revision.saturating_add(1);
     }
 
+    fn emit_document_replaced(
+        &mut self,
+        before_graph: Graph,
+        before_view_state: NodeGraphViewState,
+        before_editor_config: NodeGraphEditorConfig,
+        before_revision: u64,
+    ) {
+        let after_graph = self.graph.clone();
+        let after_view_state = self.view_state.clone();
+        let after_editor_config = self.editor_config();
+        let after_revision = self.graph_revision;
+
+        self.emit(NodeGraphStoreEvent::DocumentReplaced {
+            before: NodeGraphDocumentSnapshot {
+                graph: &before_graph,
+                graph_revision: before_revision,
+                view_state: &before_view_state,
+                editor_config: &before_editor_config,
+            },
+            after: NodeGraphDocumentSnapshot {
+                graph: &after_graph,
+                graph_revision: after_revision,
+                view_state: &after_view_state,
+                editor_config: &after_editor_config,
+            },
+        });
+    }
+
     fn emit(&mut self, event: NodeGraphStoreEvent<'_>) {
         for (_, sub) in &mut self.event_subscriptions {
             sub(event);
@@ -752,11 +853,13 @@ impl NodeGraphStore {
         }
 
         let graph = &self.graph;
+        let graph_revision = self.graph_revision;
         let view_state = &self.view_state;
         let history = &self.history;
         for sub in &mut self.selector_subscriptions {
             let snapshot = NodeGraphStoreSnapshot {
                 graph,
+                graph_revision,
                 view_state,
                 interaction: &self.interaction,
                 runtime_tuning: &self.runtime_tuning,

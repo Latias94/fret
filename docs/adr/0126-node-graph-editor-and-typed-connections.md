@@ -817,26 +817,22 @@ Multi-view (docking) integration:
 Persistence:
 
 - Editor state is stored outside the graph asset by default and keyed by `GraphId`:
-  - project scope (recommended): `./.fret/node_graph/view_state/<graph_id>.json`
+  - project scope (recommended): `./.fret/node_graph/editor_state/<graph_id>.json`
   - user scope (optional): OS config directory per ADR 0014.
 - The persistence API supports save reasons / dirty flags (navigation/selection/position/etc.) to
   allow throttling and reduce churn (inspired by `imgui-node-editor`).
 - `fret-node` provides optional IO helpers for the default JSON shape:
-  - `NodeGraphViewStateFileV1` and `default_project_view_state_path` in `ecosystem/fret-node/src/io/mod.rs`.
+  - `NodeGraphEditorStateFile` and `default_project_editor_state_path` in `ecosystem/fret-node/src/io/mod.rs`.
 
-On-disk shape (locked, v2 wrapper):
+On-disk shape (locked editor-state wrapper):
 
 - JSON file stored at one of the default locations above.
 - Wrapper object to allow future evolution without breaking older files:
-  - `{ "graph_id": "<uuid>", "state_version": 2, "state": { ... }, "interaction": { ... }, "runtime_tuning": { ... } }`
-- `state` stores the pure view payload only (camera, selection, draw order), while `interaction`
-  and `runtime_tuning` are wrapper-owned fields.
-- Backward compatibility:
-  - loaders still accept a plain `NodeGraphViewState` root object when `graph_id` is supplied
-    out-of-band by the caller (mirrors `DockLayoutFileV1`'s wrapper tolerance),
-  - loaders accept older wrapped files where `state` still embeds `interaction`,
-  - older combined `interaction` payloads are migrated at load time into
-    `NodeGraphInteractionConfig` plus `NodeGraphRuntimeTuning`.
+  - `{ "graph_id": "<uuid>", "editor_state_version": 1, "view_state": { ... }, "editor_config": { ... } }`
+- `view_state` stores the pure view payload only (camera, selection, draw order).
+- `editor_config` stores persisted interaction policy and runtime tuning as explicit child fields.
+- The fearless-refactor lane intentionally removed historical loader compatibility from this helper;
+  callers that need to preserve old local state should run an out-of-band migration before loading.
 
 View-state schema (locked, v2 wrapper):
 

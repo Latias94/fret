@@ -13,8 +13,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 }) {
                     Ok(Ok(outcome)) => {
                         self.sync_view_state(host);
-                        self.emit_graph_callbacks(&outcome.committed, &outcome.changes);
-                        return Ok(outcome.committed);
+                        let committed = outcome.patch.transaction().clone();
+                        self.emit_graph_callbacks(&outcome.patch, &outcome.node_edge_changes);
+                        return Ok(committed);
                     }
                     Ok(Err(err)) => match &err {
                         ApplyPipelineError::Rejected {
@@ -45,8 +46,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             match store.update(host, |store, _cx| store.dispatch_transaction(tx)) {
                 Ok(Ok(outcome)) => {
                     self.sync_view_state(host);
-                    self.emit_graph_callbacks(&outcome.committed, &outcome.changes);
-                    return Ok(outcome.committed);
+                    let committed = outcome.patch.transaction().clone();
+                    self.emit_graph_callbacks(&outcome.patch, &outcome.node_edge_changes);
+                    return Ok(committed);
                 }
                 Ok(Err(err)) => {
                     let message = match &err {
@@ -107,7 +109,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 },
             }
         } else {
-            match apply_transaction(&mut scratch, tx) {
+            match tx.apply_to(&mut scratch) {
                 Ok(()) => GraphTransaction {
                     label: tx.label.clone(),
                     ops: tx.ops.clone(),
@@ -128,8 +130,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             *g = scratch;
         });
 
-        let changes = NodeGraphChanges::from_transaction(&committed);
-        self.emit_graph_callbacks(&committed, &changes);
+        let patch = NodeGraphPatch::new(committed.clone());
+        let changes = patch.node_edge_changes();
+        self.emit_graph_callbacks(&patch, &changes);
         Ok(committed)
     }
 }

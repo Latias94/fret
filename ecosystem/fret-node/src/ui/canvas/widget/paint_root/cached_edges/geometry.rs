@@ -1,11 +1,7 @@
 use crate::ui::canvas::widget::*;
 
 pub(super) fn cache_tile_rect(tile: TileCoord, tile_size_canvas: f32) -> Rect {
-    let tile_origin = tile.origin(tile_size_canvas);
-    Rect::new(
-        tile_origin,
-        Size::new(Px(tile_size_canvas), Px(tile_size_canvas)),
-    )
+    fret_canvas::cache::tile_rect(tile, tile_size_canvas)
 }
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {

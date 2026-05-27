@@ -1,4 +1,5 @@
 use super::*;
+use fret_core::{Px, Size};
 
 #[test]
 fn rect_from_points_orders_corners() {

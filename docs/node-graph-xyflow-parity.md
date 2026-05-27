@@ -171,13 +171,15 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - XyFlow: `repo-ref/xyflow/packages/react/src/utils/changes.ts` (`applyNodeChanges`, `applyEdgeChanges`)
   - fret-node:
     - reversible edit source-of-truth: `ecosystem/fret-node/src/ops/mod.rs` (`GraphOp`, `GraphTransaction`)
-    - change events + reversible mapping: `ecosystem/fret-node/src/runtime/changes.rs` (`NodeChange`, `EdgeChange`, `NodeGraphChanges`)
+    - full-fidelity patch stream: `ecosystem/fret-node/src/runtime/changes.rs` (`NodeGraphPatch`)
+    - node/edge projection + reversible mapping: `ecosystem/fret-node/src/runtime/changes.rs` (`NodeChange`, `EdgeChange`, `NodeGraphChanges`)
     - apply helpers (controlled mode): `ecosystem/fret-node/src/runtime/apply.rs` (`apply_node_changes`, `apply_edge_changes`)
-    - store dispatch emits changes: `ecosystem/fret-node/src/runtime/store.rs` (`NodeGraphStore::dispatch_*`)
-    - controlled helpers: `ecosystem/fret-node/src/runtime/store.rs` (`replace_graph`, `replace_view_state`, `update_view_state`)
+    - store dispatch emits patch + projection: `ecosystem/fret-node/src/runtime/store.rs` (`NodeGraphStore::dispatch_*`)
+    - controlled helpers: `ecosystem/fret-node/src/runtime/store.rs` (`replace_graph`, `replace_document`, `replace_view_state`, `update_view_state`)
   - Notes:
-    - view-state changes are separate: `ecosystem/fret-node/src/runtime/events.rs` (`ViewChange`)
-    - for full-fidelity controlled updates, consumers can also apply `GraphCommitted.committed` via `ops::apply_transaction`.
+    - view-state and document replacement events are separate: `ecosystem/fret-node/src/runtime/events.rs` (`ViewChange`, `DocumentReplaced`)
+    - for full-fidelity controlled updates, consumers apply `GraphCommitted.patch.transaction()` via `GraphTransaction::apply_to`.
+    - `node_edge_changes` remains a lossy XyFlow-style adapter for node/edge arrays.
 
 - [x] **ReactFlow-style callbacks (onNodesChange/onEdgesChange/onConnect/...)**
   - XyFlow: component-level callbacks + store actions
@@ -189,7 +191,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
     - declarative app path: `NodeGraphSurfaceBinding` plus
       `apps/fret-examples/src/node_graph_demo.rs`
   - Notes:
-    - Callback layers are now explicit: committed graph diffs (`NodeGraphCommitCallbacks`), view-state sync (`NodeGraphViewCallbacks`), and transient UI gesture lifecycle (`NodeGraphGestureCallbacks`).
+    - Callback layers are now explicit: committed graph patches (`NodeGraphCommitCallbacks`), view-state sync (`NodeGraphViewCallbacks`), and transient UI gesture lifecycle (`NodeGraphGestureCallbacks`).
     - UI callbacks are emitted for graph commits and view-state changes (selection/viewport).
     - Convenience hooks are provided alongside the raw streams:
       - connections: `on_connect` / `on_disconnect` / `on_reconnect` (derived from committed ops)
@@ -218,7 +220,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
       - runnable example: `ecosystem/fret-node/examples/controlled_mode.rs`
   - Notes:
     - view-state remains separate (`NodeGraphViewState`); `NodeGraphViewCallbacks` receives `ViewChange`-derived viewport/selection updates.
-    - the exact "ReactFlow-like" contract is: `GraphTransaction` (undo unit) + `NodeGraphChanges` (diff) + `ViewChange` (viewport/selection).
+    - the exact "ReactFlow-like" contract is: `NodeGraphPatch` (full commit) + `NodeGraphChanges` (lossy node/edge projection) + `ViewChange` (viewport/selection).
 
 ### Callback wiring quick sketch (fret-node)
 
@@ -376,7 +378,7 @@ These are the primary gaps between "a working canvas" and "a production-ready no
   - XyFlow: app decides; store holds `transform`
   - fret-node:
     - contract: `docs/adr/0126-node-graph-editor-and-typed-connections.md` ("Editor state persistence")
-    - IO helpers: `ecosystem/fret-node/src/io/mod.rs` (`NodeGraphViewStateFileV1`, `default_project_view_state_path`)
+    - IO helpers: `ecosystem/fret-node/src/io/mod.rs` (`NodeGraphEditorStateFile`, `default_project_editor_state_path`)
     - demo persistence: `apps/fret-examples/src/node_graph_demo.rs`
 
 ---

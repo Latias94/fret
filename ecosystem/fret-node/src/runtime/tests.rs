@@ -1,15 +1,15 @@
 use crate::core::{
-    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, EdgeReconnectable, Graph, Group,
-    GroupId, Node, NodeExtent, NodeId, NodeKindKey, Port,
+    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, EdgeReconnectable, Graph, GraphId,
+    Group, GroupId, Node, NodeExtent, NodeId, NodeKindKey, Port,
 };
 use crate::io::NodeGraphViewState;
-use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
+use crate::ops::{GraphOp, GraphTransaction};
 use crate::runtime::apply::{apply_edge_changes, apply_node_changes};
 use crate::runtime::callbacks::{
     ConnectionChange, NodeGraphCommitCallbacks, NodeGraphGestureCallbacks, NodeGraphViewCallbacks,
     connection_changes_from_transaction, install_callbacks,
 };
-use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
+use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges, NodeGraphPatch};
 use crate::runtime::events::NodeGraphStoreEvent;
 use crate::runtime::lookups::{ConnectionSide, NodeGraphLookups};
 use crate::runtime::middleware::NodeGraphStoreMiddleware;
@@ -139,7 +139,7 @@ fn changes_from_transaction_maps_ops() {
         ],
     };
 
-    let changes = NodeGraphChanges::from_transaction(&tx);
+    let changes = tx.node_graph_changes();
     assert_eq!(changes.nodes.len(), 1);
     assert_eq!(changes.edges.len(), 1);
 
@@ -387,7 +387,7 @@ fn changes_to_transaction_is_reversible_and_applicable() {
 
     let tx = changes.to_transaction(&g0).expect("tx");
     let mut g1 = g0.clone();
-    apply_transaction(&mut g1, &tx).expect("apply");
+    tx.apply_to(&mut g1).expect("apply");
 
     assert_eq!(
         g1.nodes.get(&a).unwrap().pos,
@@ -693,7 +693,7 @@ fn install_callbacks_receives_graph_and_view_events() {
     }
 
     impl NodeGraphCommitCallbacks for Recorder {
-        fn on_graph_commit(&mut self, _committed: &GraphTransaction, _changes: &NodeGraphChanges) {
+        fn on_graph_commit(&mut self, _patch: &NodeGraphPatch) {
             self.log.borrow_mut().push("commit");
         }
 
@@ -743,6 +743,66 @@ fn install_callbacks_receives_graph_and_view_events() {
     assert!(got.contains(&"commit"));
     assert!(got.contains(&"nodes"));
     assert!(got.contains(&"view"));
+}
+
+#[test]
+fn install_callbacks_receives_full_patch_for_port_only_commits() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    #[derive(Clone)]
+    struct Recorder {
+        saw_port_patch: Rc<RefCell<bool>>,
+        node_edge_counts: Rc<RefCell<Vec<(usize, usize)>>>,
+    }
+
+    impl NodeGraphCommitCallbacks for Recorder {
+        fn on_graph_commit(&mut self, patch: &NodeGraphPatch) {
+            *self.saw_port_patch.borrow_mut() = patch
+                .ops()
+                .iter()
+                .any(|op| matches!(op, GraphOp::SetPortData { .. }));
+        }
+
+        fn on_node_edge_changes(&mut self, changes: &NodeGraphChanges) {
+            self.node_edge_counts
+                .borrow_mut()
+                .push((changes.nodes.len(), changes.edges.len()));
+        }
+    }
+
+    impl NodeGraphViewCallbacks for Recorder {}
+    impl NodeGraphGestureCallbacks for Recorder {}
+
+    let (g0, _a, _b, out_port, _in_port, _eid) = make_graph();
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
+
+    let saw_port_patch = Rc::new(RefCell::new(false));
+    let node_edge_counts = Rc::new(RefCell::new(Vec::new()));
+    let recorder = Recorder {
+        saw_port_patch: saw_port_patch.clone(),
+        node_edge_counts: node_edge_counts.clone(),
+    };
+    let _token = install_callbacks(&mut store, recorder);
+
+    let tx = GraphTransaction {
+        label: Some("Port Data".into()),
+        ops: vec![GraphOp::SetPortData {
+            id: out_port,
+            from: serde_json::Value::Null,
+            to: serde_json::json!({ "unit": "kg" }),
+        }],
+    };
+    let outcome = store.dispatch_transaction(&tx).expect("dispatch");
+
+    assert!(matches!(
+        outcome.patch.ops().first(),
+        Some(GraphOp::SetPortData { id, .. }) if *id == out_port
+    ));
+    assert!(outcome.node_edge_changes.nodes.is_empty());
+    assert!(outcome.node_edge_changes.edges.is_empty());
+    assert!(*saw_port_patch.borrow());
+    assert_eq!(&*node_edge_counts.borrow(), &[(0, 0)]);
 }
 
 #[test]
@@ -1048,7 +1108,7 @@ fn store_dispatch_changes_records_history_and_supports_undo() {
     };
 
     let outcome = store.dispatch_changes(&changes).expect("dispatch");
-    assert!(!outcome.committed.ops.is_empty());
+    assert!(!outcome.patch.ops().is_empty());
     assert!(store.can_undo());
     assert_eq!(
         store.graph().nodes.get(&a).unwrap().pos,
@@ -1056,7 +1116,7 @@ fn store_dispatch_changes_records_history_and_supports_undo() {
     );
 
     let undo = store.undo().expect("undo").expect("did undo");
-    assert!(!undo.committed.ops.is_empty());
+    assert!(!undo.patch.ops().is_empty());
     assert_eq!(
         store.graph().nodes.get(&a).unwrap().pos,
         CanvasPoint { x: 0.0, y: 0.0 }
@@ -1075,15 +1135,21 @@ fn store_dispatch_pipeline_publishes_coherent_commit_state() {
         Rc::new(RefCell::new(None));
     let observed2 = observed.clone();
     store.subscribe(move |ev| {
-        if let NodeGraphStoreEvent::GraphCommitted { changes, .. } = ev {
-            let hidden = changes
+        if let NodeGraphStoreEvent::GraphCommitted {
+            node_edge_changes, ..
+        } = ev
+        {
+            let hidden = node_edge_changes
                 .nodes
                 .iter()
                 .any(|change| matches!(change, NodeChange::Hidden { hidden: true, .. }));
-            let reconnectable = changes.edges.iter().find_map(|change| match change {
-                EdgeChange::Reconnectable { reconnectable, .. } => *reconnectable,
-                _ => None,
-            });
+            let reconnectable = node_edge_changes
+                .edges
+                .iter()
+                .find_map(|change| match change {
+                    EdgeChange::Reconnectable { reconnectable, .. } => *reconnectable,
+                    _ => None,
+                });
             *observed2.borrow_mut() = Some((hidden, reconnectable));
         }
     });
@@ -1115,18 +1181,24 @@ fn store_dispatch_pipeline_publishes_coherent_commit_state() {
     assert!(store.can_undo());
     assert!(
         outcome
-            .changes
+            .node_edge_changes
             .nodes
             .iter()
             .any(|change| matches!(change, NodeChange::Hidden { id, hidden: true } if *id == a))
     );
-    assert!(outcome.changes.edges.iter().any(|change| matches!(
-        change,
-        EdgeChange::Reconnectable {
-            id,
-            reconnectable: Some(EdgeReconnectable::Bool(false))
-        } if *id == eid
-    )));
+    assert!(
+        outcome
+            .node_edge_changes
+            .edges
+            .iter()
+            .any(|change| matches!(
+                change,
+                EdgeChange::Reconnectable {
+                    id,
+                    reconnectable: Some(EdgeReconnectable::Bool(false))
+                } if *id == eid
+            ))
+    );
     assert_eq!(
         *observed.borrow(),
         Some((true, Some(EdgeReconnectable::Bool(false))))
@@ -1335,7 +1407,7 @@ fn store_middleware_can_rewrite_transactions() {
     };
 
     let outcome = store.dispatch_transaction(&tx).expect("dispatch");
-    assert!(outcome.committed.ops.is_empty());
+    assert!(outcome.patch.ops().is_empty());
     assert_eq!(
         store.graph().nodes.get(&a).unwrap().pos,
         CanvasPoint { x: 0.0, y: 0.0 }
@@ -1414,6 +1486,7 @@ fn store_subscription_receives_graph_and_view_events_and_can_unsubscribe() {
     let events2 = events.clone();
 
     let token = store.subscribe(move |ev| match ev {
+        NodeGraphStoreEvent::DocumentReplaced { .. } => events2.borrow_mut().push("document"),
         NodeGraphStoreEvent::GraphCommitted { .. } => events2.borrow_mut().push("graph"),
         NodeGraphStoreEvent::ViewChanged { changes, .. } => {
             assert!(!changes.is_empty());
@@ -1538,6 +1611,7 @@ fn store_replace_view_state_emits_view_changed_event() {
     let events: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
     let events2 = events.clone();
     store.subscribe(move |ev| match ev {
+        NodeGraphStoreEvent::DocumentReplaced { .. } => events2.borrow_mut().push("document"),
         NodeGraphStoreEvent::ViewChanged { .. } => events2.borrow_mut().push("view"),
         NodeGraphStoreEvent::GraphCommitted { .. } => events2.borrow_mut().push("graph"),
     });
@@ -1551,6 +1625,144 @@ fn store_replace_view_state_emits_view_changed_event() {
 }
 
 #[test]
+fn store_replace_document_emits_single_document_event_and_clears_history() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let (g0, a, b, _out_port, _in_port, _eid) = make_graph();
+    let replacement_node = g0.nodes.get(&b).expect("replacement node").clone();
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
+
+    let from = store.graph().nodes.get(&a).expect("node a").pos;
+    let tx = GraphTransaction {
+        label: Some("seed history".to_string()),
+        ops: vec![GraphOp::SetNodePos {
+            id: a,
+            from,
+            to: CanvasPoint {
+                x: from.x + 10.0,
+                y: from.y + 5.0,
+            },
+        }],
+    };
+    store.dispatch_transaction(&tx).expect("seed history");
+    assert!(store.can_undo());
+
+    let before_revision = store.graph_revision();
+    let events: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
+    let events2 = events.clone();
+    type DocumentEventDetail = (GraphId, GraphId, u64, u64, Vec<NodeId>, bool);
+    let details: Rc<RefCell<Option<DocumentEventDetail>>> = Rc::new(RefCell::new(None));
+    let details2 = details.clone();
+    store.subscribe(move |ev| match ev {
+        NodeGraphStoreEvent::DocumentReplaced { before, after } => {
+            events2.borrow_mut().push("document");
+            *details2.borrow_mut() = Some((
+                before.graph.graph_id,
+                after.graph.graph_id,
+                before.graph_revision,
+                after.graph_revision,
+                after.view_state.selected_nodes.clone(),
+                after
+                    .editor_config
+                    .runtime_tuning
+                    .only_render_visible_elements,
+            ));
+        }
+        NodeGraphStoreEvent::ViewChanged { .. } => events2.borrow_mut().push("view"),
+        NodeGraphStoreEvent::GraphCommitted { .. } => events2.borrow_mut().push("graph"),
+    });
+
+    let mut next_graph = Graph::new(GraphId::from_u128(2));
+    next_graph.nodes.insert(b, replacement_node);
+    let mut next_view_state = NodeGraphViewState {
+        selected_nodes: vec![a, b],
+        ..NodeGraphViewState::default()
+    };
+    next_view_state.pan = CanvasPoint { x: 8.0, y: 13.0 };
+    next_view_state.zoom = 1.75;
+    let mut next_editor_config = default_editor_config();
+    next_editor_config
+        .runtime_tuning
+        .only_render_visible_elements = false;
+
+    store.replace_document(
+        next_graph.clone(),
+        next_view_state,
+        next_editor_config.clone(),
+    );
+
+    assert_eq!(events.borrow().as_slice(), &["document"]);
+    let detail = details.borrow().clone().expect("document event detail");
+    assert_eq!(detail.0, GraphId::from_u128(1));
+    assert_eq!(detail.1, GraphId::from_u128(2));
+    assert_eq!(detail.2, before_revision);
+    assert!(detail.3 > detail.2);
+    assert_eq!(detail.4, vec![b]);
+    assert_eq!(
+        detail.5,
+        next_editor_config
+            .runtime_tuning
+            .only_render_visible_elements
+    );
+    assert_eq!(store.graph().graph_id, next_graph.graph_id);
+    assert_eq!(store.view_state().selected_nodes, vec![b]);
+    assert_eq!(store.editor_config(), next_editor_config);
+    assert!(!store.can_undo());
+    assert!(!store.can_redo());
+}
+
+#[test]
+fn store_replace_graph_emits_document_event_and_preserves_history_policy() {
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    let (g0, a, b, _out_port, _in_port, _eid) = make_graph();
+    let replacement_node = g0.nodes.get(&a).expect("replacement node").clone();
+    let mut store = NodeGraphStore::new(g0, NodeGraphViewState::default(), default_editor_config());
+    store.set_selection(vec![b], Vec::new(), Vec::new());
+
+    let from = store.graph().nodes.get(&a).expect("node a").pos;
+    let tx = GraphTransaction {
+        label: Some("seed history".to_string()),
+        ops: vec![GraphOp::SetNodePos {
+            id: a,
+            from,
+            to: CanvasPoint {
+                x: from.x + 10.0,
+                y: from.y + 5.0,
+            },
+        }],
+    };
+    store.dispatch_transaction(&tx).expect("seed history");
+    assert!(store.can_undo());
+
+    let before_revision = store.graph_revision();
+    let events: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
+    let events2 = events.clone();
+    let selected_after: Rc<RefCell<Option<Vec<NodeId>>>> = Rc::new(RefCell::new(None));
+    let selected_after2 = selected_after.clone();
+    store.subscribe(move |ev| match ev {
+        NodeGraphStoreEvent::DocumentReplaced { before, after } => {
+            events2.borrow_mut().push("document");
+            assert_eq!(before.graph_revision, before_revision);
+            assert!(after.graph_revision > before.graph_revision);
+            *selected_after2.borrow_mut() = Some(after.view_state.selected_nodes.clone());
+        }
+        NodeGraphStoreEvent::ViewChanged { .. } => events2.borrow_mut().push("view"),
+        NodeGraphStoreEvent::GraphCommitted { .. } => events2.borrow_mut().push("graph"),
+    });
+
+    let mut next_graph = Graph::new(GraphId::from_u128(3));
+    next_graph.nodes.insert(a, replacement_node);
+    store.replace_graph(next_graph);
+
+    assert_eq!(events.borrow().as_slice(), &["document"]);
+    assert_eq!(selected_after.borrow().clone(), Some(Vec::new()));
+    assert!(store.can_undo());
+}
+
+#[test]
 fn store_replace_editor_config_notifies_selectors_for_runtime_tuning_only_changes() {
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -1561,6 +1773,7 @@ fn store_replace_editor_config_notifies_selectors_for_runtime_tuning_only_change
     let events: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
     let events2 = events.clone();
     store.subscribe(move |ev| match ev {
+        NodeGraphStoreEvent::DocumentReplaced { .. } => events2.borrow_mut().push("document"),
         NodeGraphStoreEvent::ViewChanged { .. } => events2.borrow_mut().push("view"),
         NodeGraphStoreEvent::GraphCommitted { .. } => events2.borrow_mut().push("graph"),
     });
@@ -1592,6 +1805,7 @@ fn store_update_view_state_notifies_selectors_for_draw_order_only_changes() {
     let events: Rc<RefCell<Vec<&'static str>>> = Rc::new(RefCell::new(Vec::new()));
     let events2 = events.clone();
     store.subscribe(move |ev| match ev {
+        NodeGraphStoreEvent::DocumentReplaced { .. } => events2.borrow_mut().push("document"),
         NodeGraphStoreEvent::ViewChanged { .. } => events2.borrow_mut().push("view"),
         NodeGraphStoreEvent::GraphCommitted { .. } => events2.borrow_mut().push("graph"),
     });

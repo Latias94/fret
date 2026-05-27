@@ -14,7 +14,7 @@ use crate::core::{CanvasPoint, EdgeId, EdgeKind, GroupId, NodeId, PortId, Sticky
 use crate::interaction::NodeGraphConnectionMode;
 use crate::ops::{EdgeEndpoints, GraphOp, GraphTransaction};
 use crate::rules::EdgeEndpoint;
-use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges};
+use crate::runtime::changes::{EdgeChange, NodeChange, NodeGraphChanges, NodeGraphPatch};
 use crate::runtime::events::{NodeGraphStoreEvent, SubscriptionToken, ViewChange};
 use crate::runtime::store::NodeGraphStore;
 
@@ -161,17 +161,21 @@ pub struct ConnectEnd {
 /// Headless/store commit callbacks for B-layer consumers.
 ///
 /// Use this layer for controlled graph synchronization, analytics, and transaction-driven
-/// integrations that only care about committed graph diffs.
+/// integrations. `NodeGraphPatch` is the full-fidelity primary payload; node/edge changes are a
+/// lossy XyFlow-style projection.
 ///
 /// Ordering guarantees (per `GraphCommitted` store event):
 ///
 /// 1) `on_graph_commit`
-/// 2) `on_nodes_change` (if non-empty)
-/// 3) `on_edges_change` (if non-empty)
-/// 4) `on_connection_change` for each derived `ConnectionChange`
-/// 5) `on_connect`/`on_disconnect`/`on_reconnect` for each derived `ConnectionChange`
+/// 2) `on_node_edge_changes`
+/// 3) `on_nodes_change` (if non-empty)
+/// 4) `on_edges_change` (if non-empty)
+/// 5) `on_connection_change` for each derived `ConnectionChange`
+/// 6) `on_connect`/`on_disconnect`/`on_reconnect` for each derived `ConnectionChange`
 pub trait NodeGraphCommitCallbacks: 'static {
-    fn on_graph_commit(&mut self, _committed: &GraphTransaction, _changes: &NodeGraphChanges) {}
+    fn on_graph_commit(&mut self, _patch: &NodeGraphPatch) {}
+
+    fn on_node_edge_changes(&mut self, _changes: &NodeGraphChanges) {}
 
     fn on_nodes_change(&mut self, _changes: &[NodeChange]) {}
     fn on_edges_change(&mut self, _changes: &[EdgeChange]) {}
@@ -272,7 +276,7 @@ pub trait NodeGraphGestureCallbacks: 'static {
 ///
 /// Prefer implementing the smallest concern traits:
 ///
-/// - `NodeGraphCommitCallbacks` for committed graph diffs,
+/// - `NodeGraphCommitCallbacks` for committed graph patches,
 /// - `NodeGraphViewCallbacks` for viewport/selection synchronization,
 /// - `NodeGraphGestureCallbacks` for transient UI gesture lifecycle.
 ///
@@ -295,16 +299,21 @@ pub fn install_callbacks(
 ) -> SubscriptionToken {
     let mut callbacks: Box<dyn NodeGraphCallbacks> = Box::new(callbacks);
     store.subscribe(move |ev| match ev {
-        NodeGraphStoreEvent::GraphCommitted { committed, changes } => {
-            callbacks.on_graph_commit(committed, changes);
-            if !changes.nodes.is_empty() {
-                callbacks.on_nodes_change(&changes.nodes);
+        NodeGraphStoreEvent::DocumentReplaced { .. } => {}
+        NodeGraphStoreEvent::GraphCommitted {
+            patch,
+            node_edge_changes,
+        } => {
+            callbacks.on_graph_commit(patch);
+            callbacks.on_node_edge_changes(node_edge_changes);
+            if !node_edge_changes.nodes.is_empty() {
+                callbacks.on_nodes_change(&node_edge_changes.nodes);
             }
-            if !changes.edges.is_empty() {
-                callbacks.on_edges_change(&changes.edges);
+            if !node_edge_changes.edges.is_empty() {
+                callbacks.on_edges_change(&node_edge_changes.edges);
             }
 
-            for change in connection_changes_from_transaction(committed) {
+            for change in connection_changes_from_transaction(patch.transaction()) {
                 callbacks.on_connection_change(change);
                 match change {
                     ConnectionChange::Connected(conn) => callbacks.on_connect(conn),
@@ -316,7 +325,7 @@ pub fn install_callbacks(
                 }
             }
 
-            let deleted = delete_changes_from_transaction(committed);
+            let deleted = delete_changes_from_transaction(patch.transaction());
             if !deleted.nodes.is_empty() {
                 callbacks.on_nodes_delete(&deleted.nodes);
             }

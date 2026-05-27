@@ -3,10 +3,10 @@ use super::*;
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn emit_graph_callbacks(
         &mut self,
-        committed: &GraphTransaction,
-        changes: &NodeGraphChanges,
+        patch: &NodeGraphPatch,
+        node_edge_changes: &NodeGraphChanges,
     ) {
-        callbacks_graph::emit_graph_callbacks(self, committed, changes)
+        callbacks_graph::emit_graph_callbacks(self, patch, node_edge_changes)
     }
 
     pub(super) fn emit_connect_start(&mut self, snapshot: &ViewSnapshot, kind: &WireDragKind) {

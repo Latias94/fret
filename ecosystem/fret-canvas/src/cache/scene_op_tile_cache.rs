@@ -90,6 +90,47 @@ pub fn tile_cache_key(base_key: u64, tile: TileCoord) -> u64 {
     hasher.finish()
 }
 
+/// Builds the canvas-space rect covered by one tile.
+pub fn tile_rect(tile: TileCoord, tile_size_canvas: f32) -> Rect {
+    let tile_origin = tile.origin(tile_size_canvas);
+    Rect::new(
+        tile_origin,
+        fret_core::Size::new(Px(tile_size_canvas), Px(tile_size_canvas)),
+    )
+}
+
+/// Returns whether a tiled cache is useful for a viewport of the given canvas-space dimensions.
+pub fn should_use_tiled_cache(tile_size_canvas: f32, viewport_w: f32, viewport_h: f32) -> bool {
+    tile_size_canvas.is_finite()
+        && tile_size_canvas > 0.0
+        && (tile_size_canvas < viewport_w || tile_size_canvas < viewport_h)
+}
+
+/// Chooses a power-of-two screen-space tile size that is at least `min` and `value`.
+pub fn next_power_of_two_at_least(min: u32, value: f32) -> u32 {
+    let target = value.ceil().max(1.0) as u32;
+    let pow2 = target.checked_next_power_of_two().unwrap_or(0x8000_0000);
+    pow2.max(min)
+}
+
+/// Returns the single tile rect containing the center of `viewport_rect`.
+pub fn centered_single_tile_rect(viewport_rect: Rect, tile_size_canvas: f32) -> Option<Rect> {
+    if !tile_size_canvas.is_finite() || tile_size_canvas <= 0.0 {
+        return None;
+    }
+    let center_x = viewport_rect.origin.x.0 + 0.5 * viewport_rect.size.width.0;
+    let center_y = viewport_rect.origin.y.0 + 0.5 * viewport_rect.size.height.0;
+    if !center_x.is_finite() || !center_y.is_finite() {
+        return None;
+    }
+
+    let tile = TileCoord {
+        x: (center_x / tile_size_canvas).floor() as i32,
+        y: (center_y / tile_size_canvas).floor() as i32,
+    };
+    Some(tile_rect(tile, tile_size_canvas))
+}
+
 impl TileGrid2D {
     pub fn new(tile_size_canvas: f32) -> Self {
         Self { tile_size_canvas }
@@ -456,6 +497,35 @@ mod tests {
         assert!(tiles.contains(&TileCoord { x: -1, y: -1 }));
         assert!(tiles.contains(&TileCoord { x: 0, y: 0 }));
         assert!(tiles.contains(&TileCoord { x: 1, y: 1 }));
+    }
+
+    #[test]
+    fn tile_planning_helpers_are_policy_free() {
+        assert!(should_use_tiled_cache(256.0, 512.0, 128.0));
+        assert!(!should_use_tiled_cache(512.0, 256.0, 256.0));
+        assert!(!should_use_tiled_cache(f32::NAN, 512.0, 512.0));
+
+        assert_eq!(next_power_of_two_at_least(1024, 1200.0), 2048);
+        assert_eq!(next_power_of_two_at_least(1024, 16.0), 1024);
+
+        let tile = TileCoord { x: -2, y: 3 };
+        let rect = tile_rect(tile, 10.0);
+        assert_eq!(rect.origin.x.0, -20.0);
+        assert_eq!(rect.origin.y.0, 30.0);
+        assert_eq!(rect.size.width.0, 10.0);
+        assert_eq!(rect.size.height.0, 10.0);
+    }
+
+    #[test]
+    fn centered_single_tile_rect_selects_tile_containing_viewport_center() {
+        let viewport = Rect::new(
+            Point::new(Px(8.0), Px(-12.0)),
+            Size::new(Px(20.0), Px(20.0)),
+        );
+        let tile = centered_single_tile_rect(viewport, 10.0).unwrap();
+        assert_eq!(tile.origin.x.0, 10.0);
+        assert_eq!(tile.origin.y.0, -10.0);
+        assert!(centered_single_tile_rect(viewport, 0.0).is_none());
     }
 
     #[test]

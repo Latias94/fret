@@ -15,36 +15,15 @@ pub(super) fn quantize_f32(value: f32, scale: f32) -> i32 {
 }
 
 pub(super) fn rect_contains_point(rect: Rect, p: Point) -> bool {
-    let x0 = rect.origin.x.0;
-    let y0 = rect.origin.y.0;
-    let x1 = x0 + rect.size.width.0;
-    let y1 = y0 + rect.size.height.0;
-    p.x.0 >= x0 && p.x.0 <= x1 && p.y.0 >= y0 && p.y.0 <= y1
+    fret_canvas::view::rect_contains_point(rect, p)
 }
 
 pub(super) fn rect_from_points(a: Point, b: Point) -> Rect {
-    let x0 = a.x.0.min(b.x.0);
-    let x1 = a.x.0.max(b.x.0);
-    let y0 = a.y.0.min(b.y.0);
-    let y1 = a.y.0.max(b.y.0);
-    Rect::new(
-        Point::new(Px(x0), Px(y0)),
-        fret_core::Size::new(Px((x1 - x0).max(0.0)), Px((y1 - y0).max(0.0))),
-    )
+    fret_canvas::view::rect_from_points(a, b)
 }
 
 pub(super) fn rects_intersect(a: Rect, b: Rect) -> bool {
-    let ax0 = a.origin.x.0;
-    let ay0 = a.origin.y.0;
-    let ax1 = ax0 + a.size.width.0;
-    let ay1 = ay0 + a.size.height.0;
-
-    let bx0 = b.origin.x.0;
-    let by0 = b.origin.y.0;
-    let bx1 = bx0 + b.size.width.0;
-    let by1 = by0 + b.size.height.0;
-
-    ax0 <= bx1 && ax1 >= bx0 && ay0 <= by1 && ay1 >= by0
+    fret_canvas::view::rects_intersect(a, b)
 }
 
 pub(super) fn rect_approx_eq(a: Rect, b: Rect, eps: f32) -> bool {
@@ -55,28 +34,11 @@ pub(super) fn rect_approx_eq(a: Rect, b: Rect, eps: f32) -> bool {
 }
 
 pub(super) fn rect_union(a: Rect, b: Rect) -> Rect {
-    let x0 = a.origin.x.0.min(b.origin.x.0);
-    let y0 = a.origin.y.0.min(b.origin.y.0);
-    let x1 = (a.origin.x.0 + a.size.width.0).max(b.origin.x.0 + b.size.width.0);
-    let y1 = (a.origin.y.0 + a.size.height.0).max(b.origin.y.0 + b.size.height.0);
-    Rect::new(
-        Point::new(Px(x0), Px(y0)),
-        fret_core::Size::new(Px((x1 - x0).max(0.0)), Px((y1 - y0).max(0.0))),
-    )
+    fret_canvas::view::rect_union(a, b)
 }
 
 pub(super) fn rect_contains_rect(outer: Rect, inner: Rect) -> bool {
-    let ox0 = outer.origin.x.0;
-    let oy0 = outer.origin.y.0;
-    let ox1 = ox0 + outer.size.width.0;
-    let oy1 = oy0 + outer.size.height.0;
-
-    let ix0 = inner.origin.x.0;
-    let iy0 = inner.origin.y.0;
-    let ix1 = ix0 + inner.size.width.0;
-    let iy1 = iy0 + inner.size.height.0;
-
-    ix0 >= ox0 && ix1 <= ox1 && iy0 >= oy0 && iy1 <= oy1
+    fret_canvas::view::rect_contains_rect(outer, inner)
 }
 
 pub(super) fn marquee_rect_screen(marquee: &MarqueeDragState) -> Rect {

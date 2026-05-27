@@ -79,10 +79,10 @@ impl GraphHistory {
             return Ok(false);
         };
 
-        let inverse = invert_transaction(&tx);
+        let inverse = tx.inverse();
         match apply(&inverse) {
             Ok(committed) => {
-                let redo_tx = invert_transaction(&committed);
+                let redo_tx = committed.inverse();
                 self.redo.push(redo_tx);
                 Ok(true)
             }

@@ -5,21 +5,22 @@ use super::*;
 
 pub(super) fn emit_graph_callbacks<M: NodeGraphCanvasMiddleware>(
     canvas: &mut NodeGraphCanvasWith<M>,
-    committed: &GraphTransaction,
-    changes: &NodeGraphChanges,
+    patch: &NodeGraphPatch,
+    node_edge_changes: &NodeGraphChanges,
 ) {
     let Some(callbacks) = canvas.callbacks.as_mut() else {
         return;
     };
 
-    callbacks.on_graph_commit(committed, changes);
-    if !changes.nodes.is_empty() {
-        callbacks.on_nodes_change(&changes.nodes);
+    callbacks.on_graph_commit(patch);
+    callbacks.on_node_edge_changes(node_edge_changes);
+    if !node_edge_changes.nodes.is_empty() {
+        callbacks.on_nodes_change(&node_edge_changes.nodes);
     }
-    if !changes.edges.is_empty() {
-        callbacks.on_edges_change(&changes.edges);
+    if !node_edge_changes.edges.is_empty() {
+        callbacks.on_edges_change(&node_edge_changes.edges);
     }
 
-    connection::emit_connection_callbacks(callbacks.as_mut(), committed);
-    delete::emit_delete_callbacks(callbacks.as_mut(), committed);
+    connection::emit_connection_callbacks(callbacks.as_mut(), patch.transaction());
+    delete::emit_delete_callbacks(callbacks.as_mut(), patch.transaction());
 }

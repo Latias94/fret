@@ -4,12 +4,14 @@ This guide documents the **controlled-mode** integration pattern for `ecosystem/
 mirrors the React Flow / XyFlow mental model:
 
 - the application owns the authoritative graph state, and
-- the runtime emits `NodeChange` / `EdgeChange` events that the application applies.
+- the runtime emits a full-fidelity `NodeGraphPatch` plus optional XyFlow-style
+  `NodeChange` / `EdgeChange` projections that the application may apply.
 
 In `fret-node`, the canonical document is `core::Graph` (hash maps) and undo/redo is expressed as
 reversible `ops::GraphTransaction`. Controlled mode is therefore best understood as:
 
-- **Events**: `runtime::changes::NodeGraphChanges` (`NodeChange` + `EdgeChange`)
+- **Full-fidelity events**: `runtime::changes::NodeGraphPatch` (`GraphTransaction` + all `GraphOp`s)
+- **XyFlow projection**: `runtime::changes::NodeGraphChanges` (`NodeChange` + `EdgeChange`)
 - **Apply helpers**: `runtime::apply::{apply_node_changes, apply_edge_changes}`
 - **Viewport/selection**: `io::NodeGraphViewState` and `runtime::events::ViewChange`
 
@@ -33,7 +35,7 @@ copy.
 ## Building blocks (headless-safe)
 
 - Change events:
-  - `ecosystem/fret-node/src/runtime/changes.rs` (`NodeChange`, `EdgeChange`, `NodeGraphChanges`)
+  - `ecosystem/fret-node/src/runtime/changes.rs` (`NodeGraphPatch`, `NodeChange`, `EdgeChange`, `NodeGraphChanges`)
 - Apply helpers:
   - `ecosystem/fret-node/src/runtime/apply.rs` (`apply_node_changes`, `apply_edge_changes`)
 - Callback adapter:
@@ -125,10 +127,16 @@ impl NodeGraphGestureCallbacks for ControlledGraph {}
 - `apply_*_changes` is best-effort and order-preserving; it intentionally mirrors XyFlow’s
   “apply changes to your owned state” workflow.
 - If you require full-fidelity, reversible edits, prefer applying committed transactions
-  (`GraphTransaction`) via `ops::apply_transaction` instead of applying `NodeChange`/`EdgeChange`.
+  (`GraphTransaction`) via `GraphTransaction::apply_to` instead of applying
+  `NodeChange`/`EdgeChange`.
 - Viewport/selection is modeled separately:
   - app-owned view state: `io::NodeGraphViewState`
   - change events: `runtime::events::ViewChange` via `NodeGraphViewCallbacks` (`on_view_change` / `on_viewport_change`)
+- Graph commits are full-fidelity first:
+  - `NodeGraphStoreEvent::GraphCommitted { patch, node_edge_changes }` carries `NodeGraphPatch`
+    as the primary payload,
+  - `node_edge_changes` is a lossy XyFlow-style adapter and does not include ports, groups, sticky
+    notes, imports, or symbols.
 
 ### Current replace policy
 
@@ -141,16 +149,18 @@ impl NodeGraphGestureCallbacks for ControlledGraph {}
   - it applies the provided view state against the new graph,
   - it clears undo/redo history,
   - it re-syncs the external graph/view mirrors,
+  - it emits one `NodeGraphStoreEvent::DocumentReplaced` event,
   - it clears declarative local transient sessions on the next frame so preview/hover state cannot
     bleed across document swaps,
   - it does **not** emit incremental `NodeChange` / `EdgeChange` diffs.
 - `replace_graph(...)` remains available for graph-only controlled sync when the caller wants to
-  preserve existing view/history policy explicitly.
+  preserve existing view/history policy explicitly. It also emits
+  `NodeGraphStoreEvent::DocumentReplaced`, but does not clear undo/redo history.
 - Diff-first replace helpers remain intentionally deferred until we have a concrete editor-grade
   workload that proves full replace is not sufficient.
 
 FNDX-020 decision (2026-05-27): keep diff-first controlled sync out of the public helper surface
-for now. The existing `ops::graph_diff` machinery remains available to implementation code, but
+for now. `GraphTransaction::diff` remains available for explicit transaction authorship, but
 promoting a public `replace_*_with_diff` helper would force policy decisions about history,
 selection, callbacks, and transient sessions before we have workload evidence. Until that evidence
 exists, controlled integrations should choose one of three explicit paths:

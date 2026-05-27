@@ -22,7 +22,7 @@ use fret_ui::{ElementContext, ElementContextAccess, GlobalElementId, Invalidatio
 
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
-use crate::ops::{GraphTransaction, graph_diff};
+use crate::ops::GraphTransaction;
 use crate::ui::canvas::{CanvasGeometry, CanvasSpatialDerived};
 use crate::ui::declarative::view_reducer::{
     apply_pan_by_screen_delta, apply_zoom_about_screen_point, view_from_state,

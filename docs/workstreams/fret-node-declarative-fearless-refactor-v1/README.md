@@ -138,8 +138,8 @@ update rather than an incidental refactor.
     release `NodeGraphViewState`.
   - Store selector subscriptions now observe non-viewport view-state changes (draw order,
     interaction config, runtime tuning) without emitting misleading empty `ViewChanged` events.
-  - Persistence ownership is now explicit: `NodeGraphViewStateFileV1` writes pure view-state in
-    `state`, with `interaction` and `runtime_tuning` promoted to wrapper-owned fields.
+  - Persistence ownership is now explicit: `NodeGraphEditorStateFile` writes pure view-state in
+    `view_state`, with interaction policy and runtime tuning grouped under `editor_config`.
   - Example surfaces now follow that split too: retained canvas mirrors an explicit
     `NodeGraphEditorConfig`, tuning/controls overlays consume the editor-config seam from their
     constructor boundary, and

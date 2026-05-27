@@ -1,5 +1,5 @@
 use crate::core::Graph;
-use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
+use crate::ops::{GraphOp, GraphTransaction};
 use crate::ui::canvas::state::WireDragKind;
 use crate::ui::presenter::NodeGraphPresenter;
 
@@ -94,5 +94,5 @@ fn evaluate_convertible_hint(
 
 fn apply_plan_ops(graph: &mut Graph, ops: Vec<GraphOp>) {
     let tx = GraphTransaction { label: None, ops };
-    let _ = apply_transaction(graph, &tx);
+    let _ = tx.apply_to(graph);
 }

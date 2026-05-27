@@ -221,11 +221,9 @@ Execution companion: `design.md` (surface map + next worktree order).
   - cache prune tuning
   - expensive runtime knobs
 - [x] Land the first persisted split slice:
-  - `NodeGraphViewStateFileV1.state` now stores pure `NodeGraphViewState`
-  - wrapper-owned `interaction` stores `NodeGraphInteractionConfig`
-  - wrapper-owned `runtime_tuning` stores `NodeGraphRuntimeTuning`
+  - `NodeGraphEditorStateFile.view_state` stores pure `NodeGraphViewState`
+  - `NodeGraphEditorStateFile.editor_config` stores `NodeGraphInteractionConfig` plus `NodeGraphRuntimeTuning`
   - runtime/widget code resolves `NodeGraphInteractionState` from explicit editor-config seams
-  - legacy serialized `interaction` payloads still migrate at load time
 - [x] Decide where these new types live and who owns persistence for them.
 - [x] Design the migration/compat strategy for existing serialized `NodeGraphViewState` payloads.
 - [x] Update store code and tests so the new boundary is explicit in subscriptions and controlled
@@ -234,7 +232,7 @@ Execution companion: `design.md` (surface map + next worktree order).
 - [x] Move app/example persistence and overlay authoring to the explicit `NodeGraphEditorConfig`
       seam.
   - `node_graph_legacy_demo` / `node_graph_domain_demo` now load and save
-    `NodeGraphViewStateFileV1` through `new(...)`.
+    `NodeGraphEditorStateFile` through `new(...)`.
   - `NodeGraphTuningOverlay` now reads/writes `NodeGraphEditorConfig` instead of mutating
     `NodeGraphViewState`.
   - `NodeGraphControlsOverlay`, retained canvas, and declarative bindings now consume an explicit

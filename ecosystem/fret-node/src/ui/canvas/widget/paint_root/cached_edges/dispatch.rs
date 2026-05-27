@@ -5,8 +5,7 @@ pub(super) fn should_use_tiled_edges_cache(
     viewport_w: f32,
     viewport_h: f32,
 ) -> bool {
-    edges_cache_tile_size_canvas.is_finite()
-        && (edges_cache_tile_size_canvas < viewport_w || edges_cache_tile_size_canvas < viewport_h)
+    fret_canvas::cache::should_use_tiled_cache(edges_cache_tile_size_canvas, viewport_w, viewport_h)
 }
 
 #[allow(clippy::too_many_arguments)]

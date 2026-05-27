@@ -49,7 +49,7 @@ pub(crate) fn plan_wire_drop_insert(
         label: None,
         ops: insert_ops.clone(),
     };
-    if let Err(err) = apply_transaction(&mut scratch, &insert_tx) {
+    if let Err(err) = insert_tx.apply_to(&mut scratch) {
         return WireDropInsertPlan {
             ops: Vec::new(),
             created_node: None,

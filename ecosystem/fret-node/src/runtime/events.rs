@@ -3,8 +3,10 @@
 //! This is intentionally small and headless-safe.
 
 use crate::core::CanvasPoint;
-use crate::io::{NodeGraphInteractionConfig, NodeGraphRuntimeTuning, NodeGraphViewState};
-use crate::runtime::changes::NodeGraphChanges;
+use crate::io::{
+    NodeGraphEditorConfig, NodeGraphInteractionConfig, NodeGraphRuntimeTuning, NodeGraphViewState,
+};
+use crate::runtime::changes::{NodeGraphChanges, NodeGraphPatch};
 
 /// Subscription token returned by [`crate::runtime::store::NodeGraphStore::subscribe`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -20,10 +22,20 @@ impl SubscriptionToken {
 #[derive(Debug, Clone, Copy)]
 pub struct NodeGraphStoreSnapshot<'a> {
     pub graph: &'a crate::core::Graph,
+    pub graph_revision: u64,
     pub view_state: &'a crate::io::NodeGraphViewState,
     pub interaction: &'a NodeGraphInteractionConfig,
     pub runtime_tuning: &'a NodeGraphRuntimeTuning,
     pub history: &'a crate::ops::GraphHistory,
+}
+
+/// Atomic document replacement snapshot.
+#[derive(Debug, Clone, Copy)]
+pub struct NodeGraphDocumentSnapshot<'a> {
+    pub graph: &'a crate::core::Graph,
+    pub graph_revision: u64,
+    pub view_state: &'a NodeGraphViewState,
+    pub editor_config: &'a NodeGraphEditorConfig,
 }
 
 /// View-state projection change events.
@@ -50,9 +62,13 @@ pub enum ViewChange {
 /// Store event emitted to subscribers.
 #[derive(Clone, Copy)]
 pub enum NodeGraphStoreEvent<'a> {
+    DocumentReplaced {
+        before: NodeGraphDocumentSnapshot<'a>,
+        after: NodeGraphDocumentSnapshot<'a>,
+    },
     GraphCommitted {
-        committed: &'a crate::ops::GraphTransaction,
-        changes: &'a NodeGraphChanges,
+        patch: &'a NodeGraphPatch,
+        node_edge_changes: &'a NodeGraphChanges,
     },
     ViewChanged {
         before: &'a NodeGraphViewState,

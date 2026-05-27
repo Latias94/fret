@@ -1,4 +1,7 @@
-use crate::core::{Edge, EdgeId, Graph, GraphId, GroupId, NodeId, PortId, StickyNoteId, SymbolId};
+use crate::core::{
+    Edge, EdgeId, Graph, GraphId, GraphValidationError, GroupId, NodeId, PortId, StickyNoteId,
+    SymbolId, validate_graph_storage,
+};
 use crate::ops::{GraphOp, GraphTransaction};
 
 #[derive(Debug, thiserror::Error)]
@@ -57,16 +60,28 @@ pub enum ApplyError {
     },
     #[error("remove sticky note op did not match current note: {id:?}")]
     RemoveStickyNoteMismatch { id: StickyNoteId },
+    #[error("transaction result violates graph invariants: {errors:?}")]
+    InvalidTransactionResult { errors: Vec<GraphValidationError> },
 }
 
 pub fn apply_transaction(graph: &mut Graph, tx: &GraphTransaction) -> Result<(), ApplyError> {
+    let mut scratch = graph.clone();
     for op in &tx.ops {
-        apply_op(graph, op)?;
+        apply_op(&mut scratch, op)?;
     }
+
+    let report = validate_graph_storage(&scratch);
+    if !report.is_ok() {
+        return Err(ApplyError::InvalidTransactionResult {
+            errors: report.errors,
+        });
+    }
+
+    *graph = scratch;
     Ok(())
 }
 
-pub fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
+fn apply_op(graph: &mut Graph, op: &GraphOp) -> Result<(), ApplyError> {
     match op {
         GraphOp::AddNode { id, node } => {
             if graph.nodes.contains_key(id) {

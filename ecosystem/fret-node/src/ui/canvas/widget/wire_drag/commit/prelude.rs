@@ -4,7 +4,7 @@ pub(super) use fret_core::{Point, Rect};
 pub(super) use fret_ui::UiHost;
 
 pub(super) use crate::core::{EdgeId, PortId};
-pub(super) use crate::ops::{GraphOp, GraphTransaction, apply_transaction};
+pub(super) use crate::ops::{GraphOp, GraphTransaction};
 pub(super) use crate::rules::{ConnectDecision, DiagnosticSeverity, EdgeEndpoint};
 pub(super) use crate::runtime::callbacks::ConnectEndOutcome;
 pub(super) use crate::ui::presenter::InsertNodeCandidate;

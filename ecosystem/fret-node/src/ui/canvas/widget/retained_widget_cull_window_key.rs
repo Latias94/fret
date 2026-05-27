@@ -26,7 +26,7 @@ pub(super) fn build_cull_window_key(bounds: Rect, snapshot: &ViewSnapshot) -> Op
         return None;
     }
 
-    let nodes_tile_size_screen_px = static_scene_cache_plan::next_power_of_two_at_least(
+    let nodes_tile_size_screen_px = fret_canvas::cache::next_power_of_two_at_least(
         STATIC_SCENE_TILE_SIZE_SCREEN_PX_MIN,
         viewport_max_screen_px * STATIC_NODES_TILE_MUL,
     );
@@ -40,10 +40,9 @@ pub(super) fn build_cull_window_key(bounds: Rect, snapshot: &ViewSnapshot) -> Op
         },
     );
     let viewport_rect = viewport.visible_canvas_rect();
-    let Some(tile_rect) = static_scene_cache_plan::centered_single_tile_rect(
-        viewport_rect,
-        nodes_cache_tile_size_canvas,
-    ) else {
+    let Some(tile_rect) =
+        fret_canvas::cache::centered_single_tile_rect(viewport_rect, nodes_cache_tile_size_canvas)
+    else {
         return None;
     };
     let tile_x = (tile_rect.origin.x.0 / nodes_cache_tile_size_canvas).floor() as i32;

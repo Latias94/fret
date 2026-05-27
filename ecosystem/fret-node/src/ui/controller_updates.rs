@@ -206,7 +206,7 @@ where
         .expect("node existence already checked");
     draft.apply_to_node(node);
 
-    let mut tx = graph_diff(graph, &next);
+    let mut tx = GraphTransaction::diff(graph, &next);
     if !tx.is_empty() {
         tx.label = Some("Update Node".to_string());
     }
@@ -235,7 +235,7 @@ where
         .expect("edge existence already checked");
     draft.apply_to_edge(edge);
 
-    let mut tx = graph_diff(graph, &next);
+    let mut tx = GraphTransaction::diff(graph, &next);
     if !tx.is_empty() {
         tx.label = Some("Update Edge".to_string());
     }

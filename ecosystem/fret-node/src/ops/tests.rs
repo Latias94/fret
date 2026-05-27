@@ -1,3 +1,4 @@
+use super::{apply::apply_transaction, diff::graph_diff, history::invert_transaction};
 use crate::core::{
     CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, GraphImport,
     Group, GroupId, Node, NodeId, NodeKindKey, Port, PortCapacity, PortDirection, PortId, PortKey,
@@ -5,8 +6,8 @@ use crate::core::{
     subgraph_target_graph_id, symbol_ref_target_symbol_id,
 };
 use crate::ops::{
-    EdgeEndpoints, GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt, GraphTransaction,
-    IdRemapSeed, IdRemapper, PasteTuning, apply_transaction, graph_diff, invert_transaction,
+    ApplyError, EdgeEndpoints, GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt,
+    GraphTransaction, IdRemapSeed, IdRemapper, PasteTuning,
 };
 use crate::types::TypeDesc;
 use uuid::Uuid;
@@ -128,6 +129,84 @@ fn build_disconnect_port_ops_removes_incident_edges() {
     let tx = crate::ops::GraphTransaction { label: None, ops };
     apply_transaction(&mut graph, &tx).expect("apply");
     assert!(graph.edges.is_empty());
+}
+
+#[test]
+fn apply_transaction_rejects_node_with_missing_ports_atomically() {
+    let mut graph = Graph::default();
+    let before = graph.clone();
+
+    let node_id = NodeId::new();
+    let missing_port = PortId::new();
+    let mut node = make_node("core.a");
+    node.ports.push(missing_port);
+
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::AddNode { id: node_id, node }],
+    };
+
+    let err = apply_transaction(&mut graph, &tx).expect_err("invalid transaction must fail");
+    assert!(matches!(err, ApplyError::InvalidTransactionResult { .. }));
+    assert_eq!(
+        serde_json::to_value(&graph).unwrap(),
+        serde_json::to_value(&before).unwrap()
+    );
+}
+
+#[test]
+fn apply_transaction_rejects_unordered_added_port_atomically() {
+    let mut graph = Graph::default();
+    let node_id = NodeId::new();
+    graph.nodes.insert(node_id, make_node("core.a"));
+    let before = graph.clone();
+
+    let port_id = PortId::new();
+    let tx = GraphTransaction {
+        label: None,
+        ops: vec![GraphOp::AddPort {
+            id: port_id,
+            port: make_port(node_id, "out", PortDirection::Out),
+        }],
+    };
+
+    let err = apply_transaction(&mut graph, &tx).expect_err("invalid transaction must fail");
+    assert!(matches!(err, ApplyError::InvalidTransactionResult { .. }));
+    assert_eq!(
+        serde_json::to_value(&graph).unwrap(),
+        serde_json::to_value(&before).unwrap()
+    );
+}
+
+#[test]
+fn graph_transaction_facade_diff_apply_and_inverse_roundtrip() {
+    let from = Graph::default();
+
+    let node_id = NodeId::from_u128(10);
+    let port_id = PortId::from_u128(11);
+    let mut node = make_node("core.a");
+    node.ports.push(port_id);
+
+    let mut to = from.clone();
+    to.nodes.insert(node_id, node);
+    to.ports
+        .insert(port_id, make_port(node_id, "out", PortDirection::Out));
+
+    let tx = GraphTransaction::diff(&from, &to);
+    let mut patched = from.clone();
+    tx.apply_to(&mut patched).expect("apply diff facade");
+    assert_eq!(
+        serde_json::to_value(&patched).unwrap(),
+        serde_json::to_value(&to).unwrap()
+    );
+
+    tx.inverse()
+        .apply_to(&mut patched)
+        .expect("apply inverse facade");
+    assert_eq!(
+        serde_json::to_value(&patched).unwrap(),
+        serde_json::to_value(&from).unwrap()
+    );
 }
 
 #[test]

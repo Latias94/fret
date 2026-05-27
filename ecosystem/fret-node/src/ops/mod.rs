@@ -12,17 +12,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::EdgeReconnectable;
 use crate::core::{
-    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, GraphId, GraphImport, Group,
-    GroupId, Node, NodeExtent, NodeId, NodeKindKey, Port, PortId, StickyNote, StickyNoteId, Symbol,
-    SymbolId,
+    CanvasPoint, CanvasRect, CanvasSize, Edge, EdgeId, EdgeKind, Graph, GraphId, GraphImport,
+    Group, GroupId, Node, NodeExtent, NodeId, NodeKindKey, Port, PortId, StickyNote, StickyNoteId,
+    Symbol, SymbolId,
 };
 use crate::types::TypeDesc;
 
-pub use apply::{ApplyError, apply_op, apply_transaction};
+pub use apply::ApplyError;
 pub use build::GraphOpBuilderExt;
-pub use diff::graph_diff;
 pub use fragment::{GraphFragment, IdRemapSeed, IdRemapper, PasteTuning};
-pub use history::{DEFAULT_HISTORY_LIMIT, GraphHistory, invert_transaction};
+pub use history::{DEFAULT_HISTORY_LIMIT, GraphHistory};
 pub(crate) use normalize::normalize_transaction;
 pub(crate) use tx_sanity::{find_invalid_size_in_tx, find_non_finite_in_tx};
 
@@ -323,6 +322,11 @@ impl GraphTransaction {
         Self::default()
     }
 
+    /// Builds a deterministic transaction that transforms `from` into `to`.
+    pub fn diff(from: &Graph, to: &Graph) -> Self {
+        diff::graph_diff(from, to)
+    }
+
     /// Sets a label.
     pub fn with_label(mut self, label: impl Into<String>) -> Self {
         self.label = Some(label.into());
@@ -336,6 +340,16 @@ impl GraphTransaction {
 
     pub fn is_empty(&self) -> bool {
         self.ops.is_empty()
+    }
+
+    /// Applies this transaction atomically to `graph`.
+    pub fn apply_to(&self, graph: &mut Graph) -> Result<(), ApplyError> {
+        apply::apply_transaction(graph, self)
+    }
+
+    /// Builds the inverse transaction for undo/redo.
+    pub fn inverse(&self) -> Self {
+        history::invert_transaction(self)
     }
 }
 

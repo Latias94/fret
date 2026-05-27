@@ -79,6 +79,8 @@ fn validate_allows_edges_regardless_of_port_direction() {
             PortCapacity::Multi,
         ),
     );
+    graph.nodes.get_mut(&a).unwrap().ports.push(out_a);
+    graph.nodes.get_mut(&b).unwrap().ports.push(out_b);
 
     let edge_id = EdgeId::new();
     graph.edges.insert(
@@ -95,6 +97,32 @@ fn validate_allows_edges_regardless_of_port_direction() {
 
     let report = validate_graph(&graph);
     assert!(report.is_ok());
+}
+
+#[test]
+fn validate_rejects_port_missing_from_owner_ports() {
+    let mut graph = Graph::default();
+    let node_id = NodeId::new();
+    graph.nodes.insert(node_id, make_node("core.a"));
+
+    let port_id = PortId::new();
+    graph.ports.insert(
+        port_id,
+        make_port(
+            node_id,
+            "out",
+            PortDirection::Out,
+            PortKind::Data,
+            PortCapacity::Multi,
+        ),
+    );
+
+    let report = validate_graph(&graph);
+    assert!(report.errors.iter().any(|e| matches!(
+        e,
+        GraphValidationError::PortMissingFromOwner { port, node }
+            if *port == port_id && *node == node_id
+    )));
 }
 
 #[test]

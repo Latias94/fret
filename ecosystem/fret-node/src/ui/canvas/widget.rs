@@ -30,7 +30,7 @@ use crate::interaction::NodeGraphConnectionMode;
 use crate::io::{NodeGraphEditorConfig, NodeGraphInteractionState, NodeGraphViewState};
 use crate::ops::{
     GraphFragment, GraphHistory, GraphOp, GraphOpBuilderExt, GraphTransaction, IdRemapSeed,
-    IdRemapper, PasteTuning, apply_transaction,
+    IdRemapper, PasteTuning,
 };
 use crate::profile::{ApplyPipelineError, apply_transaction_with_profile};
 use crate::rules::{ConnectDecision, Diagnostic, DiagnosticSeverity, EdgeEndpoint};
@@ -39,7 +39,7 @@ use crate::runtime::callbacks::{
     NodeDragStart, ViewportMoveEnd, ViewportMoveEndOutcome, ViewportMoveKind, ViewportMoveStart,
 };
 use crate::runtime::callbacks::{NodeGraphCallbacks, connection_changes_from_transaction};
-use crate::runtime::changes::NodeGraphChanges;
+use crate::runtime::changes::{NodeGraphChanges, NodeGraphPatch};
 use crate::runtime::events::ViewChange;
 use crate::runtime::store::NodeGraphStore;
 
@@ -391,7 +391,6 @@ mod searcher_ui;
 mod secondary_pointer_move_cx;
 mod selection;
 mod split_edge_execution;
-mod static_scene_cache_plan;
 mod sticky_wire;
 mod sticky_wire_connect;
 mod sticky_wire_targets;

@@ -15,14 +15,14 @@ pub use crate::interaction::{
 /// Graph file format version (v1).
 pub const GRAPH_FILE_VERSION: u32 = 1;
 
-/// Editor view-state format version (v1).
-pub const VIEW_STATE_VERSION: u32 = 2;
+/// Editor-state file format version.
+pub const EDITOR_STATE_FILE_VERSION: u32 = 1;
 
-/// Default project-scoped view-state path for a graph.
+/// Default project-scoped editor-state path for a graph.
 ///
 /// This follows ADR 0126's recommended `.fret/` layout.
-pub fn default_project_view_state_path(graph_id: GraphId) -> PathBuf {
-    PathBuf::from(".fret/node_graph/view_state").join(format!("{graph_id}.json"))
+pub fn default_project_editor_state_path(graph_id: GraphId) -> PathBuf {
+    PathBuf::from(".fret/node_graph/editor_state").join(format!("{graph_id}.json"))
 }
 
 /// Graph persistence file (v1).
@@ -1297,156 +1297,105 @@ fn default_connection_drag_threshold() -> f32 {
     2.0
 }
 
-/// Errors for reading/writing view-state files.
+/// Errors for reading/writing editor-state files.
 #[derive(Debug, thiserror::Error)]
-pub enum NodeGraphViewStateFileError {
+pub enum NodeGraphEditorStateFileError {
     /// Read failure.
-    #[error("failed to read node graph view-state file: {path}")]
+    #[error("failed to read node graph editor-state file: {path}")]
     Read {
         path: String,
         source: std::io::Error,
     },
     /// JSON parse failure.
-    #[error("failed to parse node graph view-state file JSON: {path}")]
+    #[error("failed to parse node graph editor-state file JSON: {path}")]
     Parse {
         path: String,
         source: serde_json::Error,
     },
     /// Write failure.
-    #[error("failed to write node graph view-state file: {path}")]
+    #[error("failed to write node graph editor-state file: {path}")]
     Write {
         path: String,
         source: std::io::Error,
     },
     /// JSON serialization failure.
-    #[error("failed to serialize node graph view-state JSON: {path}")]
+    #[error("failed to serialize node graph editor-state JSON: {path}")]
     Serialize {
         path: String,
         source: serde_json::Error,
     },
     /// Wrapper id mismatch.
-    #[error("view-state file wrapper graph_id does not match requested graph_id")]
+    #[error("editor-state file wrapper graph_id does not match requested graph_id")]
     InconsistentGraphId,
+    /// Unsupported wrapper version.
+    #[error("unsupported node graph editor-state version {version}; expected {expected}")]
+    UnsupportedVersion { version: u32, expected: u32 },
 }
 
-/// View-state persistence file helper.
+/// Project-scoped editor-state persistence file.
 ///
-/// The type name is historical, but the emitted on-disk wrapper now follows `state_version = 2` and
-/// stores pure view-state separately from persisted interaction config and runtime tuning.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NodeGraphViewStateFileV1 {
+/// The graph document is saved separately by `GraphFileV1`; this file owns only user/editor state:
+/// pure canvas view state plus persisted editor policy and runtime tuning.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NodeGraphEditorStateFile {
     /// Graph id.
     pub graph_id: GraphId,
-    /// View-state schema version.
-    pub state_version: u32,
+    /// Editor-state schema version.
+    pub editor_state_version: u32,
     /// Pure view-state payload.
-    pub state: NodeGraphViewState,
-    /// Persisted editor interaction configuration.
-    #[serde(
-        default,
-        skip_serializing_if = "NodeGraphInteractionConfig::is_default"
-    )]
-    pub interaction: NodeGraphInteractionConfig,
-    /// Persisted runtime tuning.
-    #[serde(default, skip_serializing_if = "NodeGraphRuntimeTuning::is_default")]
-    pub runtime_tuning: NodeGraphRuntimeTuning,
+    pub view_state: NodeGraphViewState,
+    /// Persisted editor policy and runtime tuning.
+    pub editor_config: NodeGraphEditorConfig,
 }
 
-impl NodeGraphViewStateFileV1 {
-    /// Wraps state for a graph.
+impl NodeGraphEditorStateFile {
+    /// Wraps editor state for a graph.
     pub fn new(
         graph_id: GraphId,
-        state: NodeGraphViewState,
+        view_state: NodeGraphViewState,
         editor_config: NodeGraphEditorConfig,
     ) -> Self {
         Self {
             graph_id,
-            state_version: VIEW_STATE_VERSION,
-            state,
-            interaction: editor_config.interaction,
-            runtime_tuning: editor_config.runtime_tuning,
+            editor_state_version: EDITOR_STATE_FILE_VERSION,
+            view_state,
+            editor_config,
         }
     }
 
     /// Loads a JSON file.
-    ///
-    /// Backward compatibility: accepts both the wrapped form and a plain `NodeGraphViewState` root
-    /// object when the `graph_id` is supplied out-of-band (ADR 0126).
     pub fn load_json(
         path: impl AsRef<Path>,
         graph_id: GraphId,
-    ) -> Result<Self, NodeGraphViewStateFileError> {
+    ) -> Result<Self, NodeGraphEditorStateFileError> {
         let path = path.as_ref();
-        let bytes = std::fs::read(path).map_err(|source| NodeGraphViewStateFileError::Read {
+        let bytes = std::fs::read(path).map_err(|source| NodeGraphEditorStateFileError::Read {
             path: path.display().to_string(),
             source,
         })?;
 
-        let root: serde_json::Value = serde_json::from_slice(&bytes).map_err(|source| {
-            NodeGraphViewStateFileError::Parse {
-                path: path.display().to_string(),
-                source,
-            }
-        })?;
-
-        if root.get("graph_id").is_some() && root.get("state").is_some() {
-            #[derive(Deserialize)]
-            struct WrappedViewStateFile {
-                graph_id: GraphId,
-                state_version: u32,
-                state: serde_json::Value,
-                #[serde(default)]
-                interaction: Option<serde_json::Value>,
-                #[serde(default)]
-                runtime_tuning: Option<serde_json::Value>,
-            }
-
-            let wrapped: WrappedViewStateFile = serde_json::from_value(root).map_err(|source| {
-                NodeGraphViewStateFileError::Parse {
+        let persisted: PersistedNodeGraphEditorStateFile =
+            serde_json::from_slice(&bytes).map_err(|source| {
+                NodeGraphEditorStateFileError::Parse {
                     path: path.display().to_string(),
                     source,
                 }
             })?;
-            if wrapped.graph_id != graph_id {
-                return Err(NodeGraphViewStateFileError::InconsistentGraphId);
-            }
-            let loaded = if wrapped.state_version >= 2
-                || wrapped.interaction.is_some()
-                || wrapped.runtime_tuning.is_some()
-            {
-                parse_wrapped_view_state_json_values(
-                    wrapped.state,
-                    wrapped.interaction,
-                    wrapped.runtime_tuning,
-                )
-            } else {
-                parse_view_state_json_value(wrapped.state)
-            }
-            .map_err(|source| NodeGraphViewStateFileError::Parse {
-                path: path.display().to_string(),
-                source,
-            })?;
-            return Ok(Self {
-                graph_id: wrapped.graph_id,
-                state_version: wrapped.state_version,
-                state: loaded.state,
-                interaction: loaded.interaction,
-                runtime_tuning: loaded.runtime_tuning,
+        if persisted.graph_id != graph_id {
+            return Err(NodeGraphEditorStateFileError::InconsistentGraphId);
+        }
+        if persisted.editor_state_version != EDITOR_STATE_FILE_VERSION {
+            return Err(NodeGraphEditorStateFileError::UnsupportedVersion {
+                version: persisted.editor_state_version,
+                expected: EDITOR_STATE_FILE_VERSION,
             });
         }
 
-        let loaded = parse_view_state_json_value(root).map_err(|source| {
-            NodeGraphViewStateFileError::Parse {
-                path: path.display().to_string(),
-                source,
-            }
-        })?;
         Ok(Self {
-            graph_id,
-            state_version: VIEW_STATE_VERSION,
-            state: loaded.state,
-            interaction: loaded.interaction,
-            runtime_tuning: loaded.runtime_tuning,
+            graph_id: persisted.graph_id,
+            editor_state_version: persisted.editor_state_version,
+            view_state: NodeGraphViewState::from(persisted.view_state),
+            editor_config: persisted.editor_config,
         })
     }
 
@@ -1454,7 +1403,7 @@ impl NodeGraphViewStateFileV1 {
     pub fn load_json_if_exists(
         path: impl AsRef<Path>,
         graph_id: GraphId,
-    ) -> Result<Option<Self>, NodeGraphViewStateFileError> {
+    ) -> Result<Option<Self>, NodeGraphEditorStateFileError> {
         let path = path.as_ref();
         if !path.exists() {
             return Ok(None);
@@ -1463,30 +1412,29 @@ impl NodeGraphViewStateFileV1 {
     }
 
     /// Saves the JSON file (pretty-printed).
-    pub fn save_json(&self, path: impl AsRef<Path>) -> Result<(), NodeGraphViewStateFileError> {
+    pub fn save_json(&self, path: impl AsRef<Path>) -> Result<(), NodeGraphEditorStateFileError> {
         let path = path.as_ref();
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|source| {
-                NodeGraphViewStateFileError::Write {
+                NodeGraphEditorStateFileError::Write {
                     path: path.display().to_string(),
                     source,
                 }
             })?;
         }
-        let persisted = PersistedNodeGraphViewStateFileV2 {
+        let persisted = PersistedNodeGraphEditorStateFile {
             graph_id: self.graph_id,
-            state_version: VIEW_STATE_VERSION,
-            state: NodeGraphPureViewState::from(&self.state),
-            interaction: self.interaction.clone(),
-            runtime_tuning: self.runtime_tuning,
+            editor_state_version: EDITOR_STATE_FILE_VERSION,
+            view_state: NodeGraphPureViewState::from(&self.view_state),
+            editor_config: self.editor_config.clone(),
         };
         let bytes = serde_json::to_vec_pretty(&persisted).map_err(|source| {
-            NodeGraphViewStateFileError::Serialize {
+            NodeGraphEditorStateFileError::Serialize {
                 path: path.display().to_string(),
                 source,
             }
         })?;
-        std::fs::write(path, bytes).map_err(|source| NodeGraphViewStateFileError::Write {
+        std::fs::write(path, bytes).map_err(|source| NodeGraphEditorStateFileError::Write {
             path: path.display().to_string(),
             source,
         })
@@ -1494,121 +1442,12 @@ impl NodeGraphViewStateFileV1 {
 }
 
 #[derive(Serialize, Deserialize)]
-struct PersistedNodeGraphViewStateFileV2 {
+struct PersistedNodeGraphEditorStateFile {
     graph_id: GraphId,
-    state_version: u32,
-    state: NodeGraphPureViewState,
-    #[serde(
-        default,
-        skip_serializing_if = "NodeGraphInteractionConfig::is_default"
-    )]
-    interaction: NodeGraphInteractionConfig,
-    #[serde(default, skip_serializing_if = "NodeGraphRuntimeTuning::is_default")]
-    runtime_tuning: NodeGraphRuntimeTuning,
-}
-
-struct ParsedNodeGraphViewDocument {
-    state: NodeGraphViewState,
-    interaction: NodeGraphInteractionConfig,
-    runtime_tuning: NodeGraphRuntimeTuning,
-}
-
-fn parse_wrapped_view_state_json_values(
-    state: serde_json::Value,
-    interaction: Option<serde_json::Value>,
-    runtime_tuning: Option<serde_json::Value>,
-) -> Result<ParsedNodeGraphViewDocument, serde_json::Error> {
-    let state: NodeGraphPureViewState = serde_json::from_value(state)?;
-    let (interaction, migrated_runtime_tuning) = parse_interaction_config_json_value(interaction)?;
-    let runtime_tuning = if let Some(value) = runtime_tuning {
-        serde_json::from_value(value)?
-    } else {
-        migrated_runtime_tuning
-    };
-    let state = NodeGraphViewState::from(state);
-    Ok(ParsedNodeGraphViewDocument {
-        state,
-        interaction,
-        runtime_tuning,
-    })
-}
-
-fn parse_interaction_config_json_value(
-    value: Option<serde_json::Value>,
-) -> Result<(NodeGraphInteractionConfig, NodeGraphRuntimeTuning), serde_json::Error> {
-    let Some(value) = value else {
-        return Ok((
-            NodeGraphInteractionConfig::default(),
-            NodeGraphRuntimeTuning::default(),
-        ));
-    };
-    let looks_like_legacy_interaction_state = value.as_object().is_some_and(|map| {
-        map.contains_key("spatial_index")
-            || map.contains_key("only_render_visible_elements")
-            || map.contains_key("paint_cache_prune")
-    });
-    if looks_like_legacy_interaction_state {
-        return serde_json::from_value::<NodeGraphInteractionState>(value)
-            .map(|legacy| legacy.split());
-    }
-    match serde_json::from_value::<NodeGraphInteractionConfig>(value.clone()) {
-        Ok(config) => Ok((config, NodeGraphRuntimeTuning::default())),
-        Err(config_err) => match serde_json::from_value::<NodeGraphInteractionState>(value) {
-            Ok(legacy) => Ok(legacy.split()),
-            Err(_) => Err(config_err),
-        },
-    }
-}
-
-fn parse_view_state_json_value(
-    value: serde_json::Value,
-) -> Result<ParsedNodeGraphViewDocument, serde_json::Error> {
-    #[derive(Deserialize)]
-    struct LegacyFlatViewState {
-        #[serde(default)]
-        pan: crate::core::CanvasPoint,
-        #[serde(default = "default_zoom")]
-        zoom: f32,
-        #[serde(default)]
-        selected_nodes: Vec<NodeId>,
-        #[serde(default)]
-        selected_edges: Vec<EdgeId>,
-        #[serde(default)]
-        selected_groups: Vec<GroupId>,
-        #[serde(default)]
-        draw_order: Vec<NodeId>,
-        #[serde(default)]
-        group_draw_order: Vec<GroupId>,
-        #[serde(default)]
-        interaction: Option<serde_json::Value>,
-        #[serde(default)]
-        runtime_tuning: Option<serde_json::Value>,
-    }
-
-    let legacy: LegacyFlatViewState = serde_json::from_value(value.clone())?;
-    let (interaction, migrated_runtime_tuning) =
-        parse_interaction_config_json_value(legacy.interaction)?;
-    let runtime_tuning = if let Some(runtime_tuning) = legacy.runtime_tuning {
-        serde_json::from_value(runtime_tuning)?
-    } else {
-        migrated_runtime_tuning
-    };
-
-    let state = NodeGraphViewState {
-        pan: legacy.pan,
-        zoom: legacy.zoom,
-        selected_nodes: legacy.selected_nodes,
-        selected_edges: legacy.selected_edges,
-        selected_groups: legacy.selected_groups,
-        draw_order: legacy.draw_order,
-        group_draw_order: legacy.group_draw_order,
-    };
-
-    Ok(ParsedNodeGraphViewDocument {
-        state,
-        interaction,
-        runtime_tuning,
-    })
+    editor_state_version: u32,
+    view_state: NodeGraphPureViewState,
+    #[serde(default, skip_serializing_if = "NodeGraphEditorConfig::is_default")]
+    editor_config: NodeGraphEditorConfig,
 }
 
 #[cfg(test)]
@@ -1620,11 +1459,11 @@ mod tests {
     }
 
     #[test]
-    fn view_state_file_roundtrips() {
+    fn editor_state_file_roundtrips_split_view_and_config() {
         let graph_id = GraphId::new();
-        let path = temp_path("view_state_roundtrip", graph_id);
+        let path = temp_path("editor_state_roundtrip", graph_id);
 
-        let state = NodeGraphViewState {
+        let view_state = NodeGraphViewState {
             pan: crate::core::CanvasPoint { x: 12.5, y: -3.0 },
             zoom: 1.25,
             ..NodeGraphViewState::default()
@@ -1633,65 +1472,54 @@ mod tests {
         editor_config.interaction.selection_on_drag = true;
         editor_config.runtime_tuning.only_render_visible_elements = false;
 
-        let file = NodeGraphViewStateFileV1::new(graph_id, state.clone(), editor_config.clone());
+        let file =
+            NodeGraphEditorStateFile::new(graph_id, view_state.clone(), editor_config.clone());
         file.save_json(&path).unwrap();
 
         let root: serde_json::Value =
             serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
-        assert_eq!(root.get("state_version").and_then(|v| v.as_u64()), Some(2));
+        assert_eq!(
+            root.get("editor_state_version").and_then(|v| v.as_u64()),
+            Some(1)
+        );
         assert!(
-            root.get("state")
+            root.get("view_state")
                 .and_then(|v| v.get("interaction"))
                 .is_none()
         );
         assert!(
-            root.get("state")
+            root.get("view_state")
                 .and_then(|v| v.get("runtime_tuning"))
                 .is_none()
         );
         assert_eq!(
-            root.get("interaction")
+            root.get("editor_config")
+                .and_then(|v| v.get("interaction"))
                 .and_then(|v| v.get("selection_on_drag"))
                 .and_then(|v| v.as_bool()),
             Some(true)
         );
         assert_eq!(
-            root.get("runtime_tuning")
+            root.get("editor_config")
+                .and_then(|v| v.get("runtime_tuning"))
                 .and_then(|v| v.get("only_render_visible_elements"))
                 .and_then(|v| v.as_bool()),
             Some(false)
         );
 
-        let loaded = NodeGraphViewStateFileV1::load_json(&path, graph_id).unwrap();
+        let loaded = NodeGraphEditorStateFile::load_json(&path, graph_id).unwrap();
         assert_eq!(loaded.graph_id, graph_id);
-        assert_eq!(loaded.state.pan.x, state.pan.x);
-        assert_eq!(loaded.state.pan.y, state.pan.y);
-        assert_eq!(loaded.state.zoom, state.zoom);
-        assert!(loaded.interaction.selection_on_drag);
-        assert!(!loaded.runtime_tuning.only_render_visible_elements);
-
-        let _ = std::fs::remove_file(&path);
-    }
-
-    #[test]
-    fn view_state_file_accepts_plain_state_root() {
-        let graph_id = GraphId::new();
-        let path = temp_path("view_state_plain_root", graph_id);
-
-        let state = NodeGraphViewState {
-            pan: crate::core::CanvasPoint { x: 1.0, y: 2.0 },
-            zoom: 0.75,
-            ..NodeGraphViewState::default()
-        };
-
-        let bytes = serde_json::to_vec_pretty(&state).unwrap();
-        std::fs::write(&path, bytes).unwrap();
-
-        let loaded = NodeGraphViewStateFileV1::load_json(&path, graph_id).unwrap();
-        assert_eq!(loaded.graph_id, graph_id);
-        assert_eq!(loaded.state.pan.x, state.pan.x);
-        assert_eq!(loaded.state.pan.y, state.pan.y);
-        assert_eq!(loaded.state.zoom, state.zoom);
+        assert_eq!(loaded.editor_state_version, EDITOR_STATE_FILE_VERSION);
+        assert_eq!(loaded.view_state.pan.x, view_state.pan.x);
+        assert_eq!(loaded.view_state.pan.y, view_state.pan.y);
+        assert_eq!(loaded.view_state.zoom, view_state.zoom);
+        assert!(loaded.editor_config.interaction.selection_on_drag);
+        assert!(
+            !loaded
+                .editor_config
+                .runtime_tuning
+                .only_render_visible_elements
+        );
 
         let _ = std::fs::remove_file(&path);
     }
@@ -1715,65 +1543,51 @@ mod tests {
     }
 
     #[test]
-    fn view_state_file_migrates_legacy_runtime_tuning_from_interaction() {
+    fn editor_state_file_rejects_unsupported_version() {
         let graph_id = GraphId::new();
-        let path = temp_path("view_state_legacy_runtime_tuning", graph_id);
+        let path = temp_path("editor_state_unsupported_version", graph_id);
 
-        let mut legacy_interaction = NodeGraphInteractionState::default();
-        legacy_interaction.selection_on_drag = true;
-        legacy_interaction.only_render_visible_elements = false;
-        legacy_interaction.spatial_index.edge_aabb_pad_screen_px = 222.0;
-        legacy_interaction.paint_cache_prune.max_age_frames = 9;
-
-        let state_json = serde_json::json!({
-            "pan": { "x": 3.0, "y": 4.0 },
-            "zoom": 1.5,
-            "interaction": serde_json::to_value(&legacy_interaction).unwrap()
-        });
-        std::fs::write(&path, serde_json::to_vec_pretty(&state_json).unwrap()).unwrap();
-
-        let loaded = NodeGraphViewStateFileV1::load_json(&path, graph_id).unwrap();
-        assert_eq!(loaded.state.pan.x, 3.0);
-        assert_eq!(loaded.state.pan.y, 4.0);
-        assert_eq!(loaded.state.zoom, 1.5);
-        assert!(loaded.interaction.selection_on_drag);
-        assert!(!loaded.runtime_tuning.only_render_visible_elements);
-        assert_eq!(
-            loaded.runtime_tuning.spatial_index.edge_aabb_pad_screen_px,
-            222.0
-        );
-        assert_eq!(loaded.runtime_tuning.paint_cache_prune.max_age_frames, 9);
-
-        let resolved = NodeGraphEditorConfig {
-            interaction: loaded.interaction.clone(),
-            runtime_tuning: loaded.runtime_tuning,
-        }
-        .resolved_interaction_state();
-        assert!(resolved.selection_on_drag);
-        assert!(!resolved.only_render_visible_elements);
-        assert_eq!(resolved.spatial_index.edge_aabb_pad_screen_px, 222.0);
-        assert_eq!(resolved.paint_cache_prune.max_age_frames, 9);
-
-        let _ = std::fs::remove_file(&path);
-    }
-
-    #[test]
-    fn view_state_file_rejects_wrong_graph_id() {
-        let graph_id = GraphId::new();
-        let other = GraphId::new();
-        let path = temp_path("view_state_wrong_graph_id", graph_id);
-
-        let file = NodeGraphViewStateFileV1::new(
+        let file = NodeGraphEditorStateFile::new(
             graph_id,
             NodeGraphViewState::default(),
             NodeGraphEditorConfig::default(),
         );
         file.save_json(&path).unwrap();
 
-        let err = NodeGraphViewStateFileV1::load_json(&path, other).unwrap_err();
+        let mut root: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        root["editor_state_version"] = serde_json::json!(99);
+        std::fs::write(&path, serde_json::to_vec_pretty(&root).unwrap()).unwrap();
+
+        let err = NodeGraphEditorStateFile::load_json(&path, graph_id).unwrap_err();
         assert!(matches!(
             err,
-            NodeGraphViewStateFileError::InconsistentGraphId
+            NodeGraphEditorStateFileError::UnsupportedVersion {
+                version: 99,
+                expected: EDITOR_STATE_FILE_VERSION
+            }
+        ));
+
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn editor_state_file_rejects_wrong_graph_id() {
+        let graph_id = GraphId::new();
+        let other = GraphId::new();
+        let path = temp_path("editor_state_wrong_graph_id", graph_id);
+
+        let file = NodeGraphEditorStateFile::new(
+            graph_id,
+            NodeGraphViewState::default(),
+            NodeGraphEditorConfig::default(),
+        );
+        file.save_json(&path).unwrap();
+
+        let err = NodeGraphEditorStateFile::load_json(&path, other).unwrap_err();
+        assert!(matches!(
+            err,
+            NodeGraphEditorStateFileError::InconsistentGraphId
         ));
 
         let _ = std::fs::remove_file(&path);

@@ -13,7 +13,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 match store.update(host, |store, _cx| store.undo_with_profile(profile)) {
                     Ok(Ok(Some(outcome))) => {
                         self.sync_view_state(host);
-                        self.emit_graph_callbacks(&outcome.committed, &outcome.changes);
+                        self.emit_graph_callbacks(&outcome.patch, &outcome.node_edge_changes);
                         self.update_view_state(host, |s| {
                             s.selected_edges.clear();
                             s.selected_nodes.clear();
@@ -47,7 +47,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             match store.update(host, |store, _cx| store.undo()) {
                 Ok(Ok(Some(outcome))) => {
                     self.sync_view_state(host);
-                    self.emit_graph_callbacks(&outcome.committed, &outcome.changes);
+                    self.emit_graph_callbacks(&outcome.patch, &outcome.node_edge_changes);
                     self.update_view_state(host, |s| {
                         s.selected_edges.clear();
                         s.selected_nodes.clear();
@@ -114,7 +114,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 match store.update(host, |store, _cx| store.redo_with_profile(profile)) {
                     Ok(Ok(Some(outcome))) => {
                         self.sync_view_state(host);
-                        self.emit_graph_callbacks(&outcome.committed, &outcome.changes);
+                        self.emit_graph_callbacks(&outcome.patch, &outcome.node_edge_changes);
                         self.update_view_state(host, |s| {
                             s.selected_edges.clear();
                             s.selected_nodes.clear();
@@ -148,7 +148,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             match store.update(host, |store, _cx| store.redo()) {
                 Ok(Ok(Some(outcome))) => {
                     self.sync_view_state(host);
-                    self.emit_graph_callbacks(&outcome.committed, &outcome.changes);
+                    self.emit_graph_callbacks(&outcome.patch, &outcome.node_edge_changes);
                     self.update_view_state(host, |s| {
                         s.selected_edges.clear();
                         s.selected_nodes.clear();

@@ -124,7 +124,54 @@ pub enum EdgeChange {
     },
 }
 
-/// Split view of change events.
+/// Full-fidelity committed graph patch.
+///
+/// This is the primary commit payload for controlled integrations. It preserves every
+/// `GraphOp`, including ports, groups, sticky notes, imports, symbols, and other resources that do
+/// not fit into XyFlow's node/edge change arrays.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct NodeGraphPatch {
+    /// Reversible transaction committed by the store.
+    pub transaction: GraphTransaction,
+}
+
+impl NodeGraphPatch {
+    pub fn new(transaction: GraphTransaction) -> Self {
+        Self { transaction }
+    }
+
+    pub fn transaction(&self) -> &GraphTransaction {
+        &self.transaction
+    }
+
+    pub fn into_transaction(self) -> GraphTransaction {
+        self.transaction
+    }
+
+    pub fn ops(&self) -> &[GraphOp] {
+        &self.transaction.ops
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.transaction.is_empty()
+    }
+
+    pub fn node_edge_changes(&self) -> NodeGraphChanges {
+        self.transaction.node_graph_changes()
+    }
+}
+
+impl From<GraphTransaction> for NodeGraphPatch {
+    fn from(transaction: GraphTransaction) -> Self {
+        Self::new(transaction)
+    }
+}
+
+/// XyFlow-style node/edge projection of a graph patch.
+///
+/// This adapter is intentionally lossy: it only contains node and edge changes. Use
+/// [`NodeGraphPatch`] when a consumer must observe full graph resources such as ports, groups,
+/// sticky notes, imports, or symbols.
 #[derive(Debug, Default, Clone)]
 pub struct NodeGraphChanges {
     pub nodes: Vec<NodeChange>,
@@ -143,7 +190,7 @@ impl NodeGraphChanges {
     /// Derives change events from a reversible graph transaction.
     ///
     /// This is intended for store callbacks (e.g. "on_nodes_change") and middleware.
-    pub fn from_transaction(tx: &GraphTransaction) -> Self {
+    pub(crate) fn from_transaction(tx: &GraphTransaction) -> Self {
         let mut out = Self::default();
         for op in &tx.ops {
             match op {
@@ -612,5 +659,12 @@ impl NodeGraphChanges {
         }
 
         Ok(tx)
+    }
+}
+
+impl GraphTransaction {
+    /// Projects this graph transaction into the XyFlow-style node/edge change adapter.
+    pub fn node_graph_changes(&self) -> NodeGraphChanges {
+        NodeGraphChanges::from_transaction(self)
     }
 }

@@ -129,13 +129,13 @@ runtime tuning.
 - The retained canvas sync/runtime path no longer reconstructs editor config from
   `NodeGraphViewState` under `cfg(test)`; retained runtime, retained tests, and `--all-features`
   builds all use the same explicit editor-config seam.
-- Persistence ownership is now explicit: the file wrapper writes pure view-state under `state`, with
-  `interaction` / `runtime_tuning` stored as wrapper-owned fields in `state_version = 2`.
+- Persistence ownership is now explicit: the editor-state file wrapper writes pure view-state under
+  `view_state`, with interaction policy and runtime tuning stored under `editor_config`.
 - App/example authoring also follows the split:
   - retained canvas can mirror `NodeGraphEditorConfig`,
   - tuning/controls overlays read explicit editor-config seams, with
     `NodeGraphControlsOverlay::new(...)` now taking the editor-config model directly,
-  - example persistence restores and saves `NodeGraphViewStateFileV1` through
+  - example persistence restores and saves `NodeGraphEditorStateFile` through
     `new(...)`.
   - advanced binding seams now also require explicit editor-config mirrors, so controlled sync no
     longer falls back to default config when graph/view/controller mirrors are caller-owned.
