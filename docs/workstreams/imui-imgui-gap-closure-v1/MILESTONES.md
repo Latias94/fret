@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 input-text element owner-split result:
+`ecosystem/fret-ui-kit/src/imui/text_controls/input.rs` now owns input-text model element assembly,
+assistive semantics, response lifecycle population, select-all command emission, input filters,
+policy-command installation, and compact input chrome/style selection. `text_controls.rs` is now a
+private focus/input/policy/style/textarea module index and re-export hub.
+
 2026-05-27 menu-item routing dispatch owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/dispatch.rs` now owns public menu-item entry
 wrappers, checkbox/radio/action role selection, noop-hook routing, and identity-to-mount dispatch.

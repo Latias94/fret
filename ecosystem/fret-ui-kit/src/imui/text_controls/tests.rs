@@ -5,10 +5,10 @@ use std::sync::Arc;
 use fret_app::App;
 use fret_authoring::UiWriter;
 use fret_core::{AppWindowId, Corners, Edges, Px, Rect};
-use fret_ui::ElementContext;
 use fret_ui::element::{AnyElement, ElementKind, Length};
+use fret_ui::{ElementContext, UiHost};
 
-use crate::imui::TextAreaOptions;
+use crate::imui::{InputTextOptions, TextAreaOptions};
 
 struct TestWriter<'cx, 'a, H: UiHost> {
     cx: &'cx mut ElementContext<'a, H>,

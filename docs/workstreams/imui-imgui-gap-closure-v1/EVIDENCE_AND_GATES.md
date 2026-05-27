@@ -3,6 +3,36 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Input-Text Element Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI input-text element assembly moved into a private owner without changing
+input-text facade calls, assistive semantics wiring for text pickers, response lifecycle
+population, select-all-on-focus behavior, insert filters, submit/cancel command policy, compact
+chrome, or text style selection.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/text_controls.rs` is now a private
+  focus/input/policy/style/textarea module index and re-export hub.
+- `ecosystem/fret-ui-kit/src/imui/text_controls/input.rs` owns input-text model element assembly,
+  assistive semantics, response lifecycle population, select-all command emission, input filters,
+  policy-command installation, and compact input chrome/style selection.
+- `tools/gate_imui_workstream_source.py` now rejects input-text element/lifecycle/policy bodies
+  from drifting back into root `text_controls.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib text_controls::tests --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Menu-Item Routing Dispatch Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI menu-item routing dispatch moved into a private owner without changing public

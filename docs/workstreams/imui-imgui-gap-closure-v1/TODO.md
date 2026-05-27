@@ -264,6 +264,15 @@ Last updated: 2026-05-27
       population, select-all command emission, submit/cancel policy installation, and text-area
       chrome/text-style selection. The root file keeps input-text assembly plus shared helper
       routing for text models.
+- [x] Split IMUI input-text element assembly out of
+      `ecosystem/fret-ui-kit/src/imui/text_controls.rs` into a private input owner without changing
+      input-text facade calls, assistive semantics wiring for text pickers, response lifecycle
+      population, select-all-on-focus behavior, insert filters, submit/cancel command policy,
+      compact chrome, or text style selection.
+      Result: `text_controls/input.rs` owns input-text model element assembly, assistive semantics,
+      response lifecycle population, select-all command emission, input filters, policy-command
+      installation, and compact input chrome/style selection. `text_controls.rs` is now a private
+      focus/input/policy/style/textarea module index and re-export hub.
 - [x] Split IMUI disclosure spec construction out of
       `ecosystem/fret-ui-kit/src/imui/disclosure_controls.rs` into a private owner module without
       changing the public collapsing-header/tree-node surface.
