@@ -3,6 +3,40 @@
 Status: Active
 Last updated: 2026-05-28
 
+## Shared Item Behavior Install Owner-Split Evidence - 2026-05-28
+
+Claim verified: shared IMUI pressable item hook installation moved into a private owner without
+changing shared button, checkbox/radio, selectable, combo, image-item, debug-draw pressable,
+context-menu, pointer-click, double-click, drag, long-press, lifecycle, or response population
+behavior.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/item_behavior.rs` keeps shared data shapes plus install/response
+  re-exports.
+- `ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` owns pressable pointer hook
+  clearing/installation, active-item/long-press/lifecycle model capture, drag threshold wiring,
+  context-menu transient emission, pointer-click modifier capture, and double-click transient
+  emission.
+- `ecosystem/fret-ui-kit/src/imui/item_behavior/response.rs` continues to own shared `ResponseExt`
+  population, drag response merging, and hover query hook installation.
+- `tools/gate_imui_workstream_source.py` now rejects hook-installation and pointer transient bodies
+  from drifting back into `item_behavior.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_button_smoke --test
+  imui_combo_smoke --test imui_selectable_smoke --test imui_drag_drop_smoke --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui interaction_press interaction_drag --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Facade Floating/Popup Owner-Split Evidence - 2026-05-28
 
 Claim verified: IMUI facade floating/popup thin forwarding moved into private floating, popup,

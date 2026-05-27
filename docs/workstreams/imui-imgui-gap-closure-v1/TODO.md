@@ -44,6 +44,15 @@ Last updated: 2026-05-28
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split shared IMUI pressable item hook installation out of
+      `ecosystem/fret-ui-kit/src/imui/item_behavior.rs` into a private install owner without
+      changing shared button, checkbox/radio, selectable, combo, image-item, debug-draw pressable,
+      context-menu, pointer-click, double-click, drag, long-press, lifecycle, or response
+      population behavior.
+      Result: `item_behavior/install.rs` owns pressable pointer hook clearing/installation,
+      active-item/long-press/lifecycle model capture, drag threshold wiring, context-menu transient
+      emission, pointer-click modifier capture, and double-click transient emission. The root
+      `item_behavior.rs` keeps shared data shapes plus install/response re-exports.
 - [x] Split IMUI facade floating/popup thin forwarding out of
       `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs` into private floating,
       popup, tooltip, drag/drop, and window owner modules without changing trait method names,

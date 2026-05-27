@@ -12,6 +12,12 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-28 shared item behavior install owner-split result:
+`ecosystem/fret-ui-kit/src/imui/item_behavior/install.rs` now owns pressable pointer hook
+clearing/installation, active-item/long-press/lifecycle model capture, drag threshold wiring,
+context-menu transient emission, pointer-click modifier capture, and double-click transient
+emission. `item_behavior.rs` keeps shared data shapes plus install/response re-exports.
+
 2026-05-28 facade floating/popup owner-split result:
 `ecosystem/fret-ui-kit/src/imui/facade_writer/floating_popup.rs` is now a private module/re-export
 index. `floating_popup/floating.rs` owns floating layer/area forwarding, `popup.rs` owns popup
