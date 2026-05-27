@@ -12,6 +12,11 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 floating-window shell props owner-split result:
+`ecosystem/fret-ui-kit/src/imui/floating_window_shell/props.rs` now owns frame, title-bar, shell
+column, and clipped-body props. `floating_window_shell.rs` keeps shell composition, blocker
+mounting, and resize-stack composition.
+
 2026-05-27 menu-item routing mount owner-split result:
 `ecosystem/fret-ui-kit/src/imui/menu_controls/routing/mount.rs` now owns final menu-item element
 mounting, `ResponseExt::default()` initialization, final `ui.add(...)`, and response return.

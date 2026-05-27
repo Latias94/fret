@@ -2142,6 +2142,13 @@ opening the slice.
       Result: `window_frame_props(...)`, `shell_column_props(...)`,
       `title_bar_container_props(...)`, and `clipped_body_props(...)` now own shell frame/layout
       properties while the shell element only composes owner outputs.
+- [x] Split the floating-window shell frame/title/body props helpers out of
+      `ecosystem/fret-ui-kit/src/imui/floating_window_shell.rs` into a private props owner without
+      changing window frame sizing, title-bar clipping/padding/border radii, collapsed sizing,
+      inner content clipping, blocker mounting, resize-stack composition, or public IMUI surface.
+      Result: `floating_window_shell/props.rs` owns `window_frame_props(...)`,
+      `shell_column_props(...)`, `title_bar_container_props(...)`, and `clipped_body_props(...)`.
+      `floating_window_shell.rs` now keeps shell composition only.
 - [x] Split the floating-window title-bar `RowProps` / drag-surface `PointerRegionProps` /
       close-button props construction out of
       `ecosystem/fret-ui-kit/src/imui/floating_window_title_bar.rs::floating_window_title_bar_row(...)`

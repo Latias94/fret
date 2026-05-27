@@ -3,6 +3,38 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Floating Window Shell Props Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI floating-window shell frame/title/body props moved into a private owner
+without changing window frame sizing, title-bar clipping/padding/border radii, collapsed sizing,
+inner content clipping, blocker mounting, resize-stack composition, or public IMUI surface.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/floating_window_shell.rs` keeps shell composition, blocker
+  mounting, and resize-stack composition.
+- `ecosystem/fret-ui-kit/src/imui/floating_window_shell/props.rs` owns
+  `window_frame_props(...)`, `shell_column_props(...)`, `title_bar_container_props(...)`, and
+  `clipped_body_props(...)`.
+- `tools/gate_imui_workstream_source.py` now rejects shell props helpers from drifting back into
+  `floating_window_shell.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-imui
+  floating::window_options::floating_window_title_bar_double_click_toggles_collapsed
+  floating::movement_z_order::floating_window_close_button_sets_open_false
+  floating::input_modes::floating_window_activate_on_click_can_be_disabled_for_resize_handles
+  --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Menu-Item Routing Mount Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI menu-item final mounting and response assembly moved into a private routing

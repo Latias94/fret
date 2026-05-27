@@ -606,6 +606,8 @@
     "ecosystem/fret-ui-kit/src/imui/floating_window_content.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_content/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_content_props.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_window_shell.rs",
+    "ecosystem/fret-ui-kit/src/imui/floating_window_shell/props.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles.rs",
     "ecosystem/fret-ui-kit/src/imui/floating_window_resize/handles/layout.rs",
