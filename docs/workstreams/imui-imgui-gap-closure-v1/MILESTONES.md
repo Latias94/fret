@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 drag/drop store owner-split result:
+`ecosystem/fret-ui-kit/src/imui/drag_drop/store.rs` is now a private re-export index.
+`drag_drop/store/state.rs` owns the shared drag/drop model and active/delivered payload records.
+`store/lifecycle.rs` owns global model creation and stale session/delivery pruning.
+`store/source_response.rs` owns source response projection, while `store/target_payloads.rs` owns
+typed active/delivered payload lookup for drop targets.
+
 2026-05-27 debug-draw summary projection owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection/geometry.rs` now
 owns point/vertex/index/triangle-count summaries for geometric commands.

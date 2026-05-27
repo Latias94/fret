@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Drag/Drop Store Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI drag/drop store state, lifecycle cleanup, source response projection, and
+target payload lookup moved into private owners without changing source/target public helpers,
+payload downcast behavior, stale-session pruning, or one-tick delivered-payload expiry.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/store/state.rs` owns the shared model plus
+  active/delivered payload records.
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/store/lifecycle.rs` owns global model creation and
+  stale active-session plus delivered-payload pruning.
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/store/source_response.rs` owns source response
+  projection from the active drag store.
+- `ecosystem/fret-ui-kit/src/imui/drag_drop/store/target_payloads.rs` owns active preview payload
+  and delivered payload lookup/downcast behavior.
+- `tools/gate_imui_workstream_source.py` now requires the narrower owners and rejects state/query
+  bodies from the root `drag_drop/store.rs` re-export index.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib drag_drop --no-fail-fast`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --test imui_drag_drop_smoke --no-fail-fast`:
+  pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Summary Projection Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug-draw command summary geometry and clip-state projection moved into private

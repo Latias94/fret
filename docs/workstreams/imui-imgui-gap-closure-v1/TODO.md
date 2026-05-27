@@ -44,6 +44,14 @@ Last updated: 2026-05-27
 
 ## Owner Split Follow-Ups - 2026-05-26
 
+- [x] Split IMUI drag/drop store state, lifecycle, source-response query, and target-payload query
+      out of `ecosystem/fret-ui-kit/src/imui/drag_drop/store.rs` into private owner modules without
+      changing `drag_source_with_options(...)`, `drop_target_with_options(...)`, payload lifetime,
+      stale-session pruning, or delivered-payload expiry behavior.
+      Result: `drag_drop/store/state.rs` owns the shared model and payload records,
+      `store/lifecycle.rs` owns global model creation plus pruning, `store/source_response.rs` owns
+      source response projection, `store/target_payloads.rs` owns active/delivered typed payload
+      lookup, and `store.rs` is now a private re-export index.
 - [x] Split IMUI debug-draw command summary geometry and clip-state projection out of
       `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/commands/summary_projection.rs` into
       private owner modules without changing `DebugDrawCommandSummary` values, channel assignment,
