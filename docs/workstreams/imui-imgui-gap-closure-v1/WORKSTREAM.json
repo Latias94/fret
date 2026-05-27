@@ -513,6 +513,7 @@
     "ecosystem/fret-ui-kit/src/imui/menu_controls/routing.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/tests.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs",
+    "ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_controls/keyboard.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls.rs",
     "ecosystem/fret-ui-kit/src/imui/menu_family_controls/menu.rs",

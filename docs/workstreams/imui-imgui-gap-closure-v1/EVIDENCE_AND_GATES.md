@@ -2247,6 +2247,43 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Menu Item Behavior Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI menu-item active-trigger, activation, command dispatch, and response behavior
+moved into a nested private owner without changing menu item facade entry points, popup close
+behavior, popup menu keyboard navigation, menubar horizontal-arrow switching, command dispatch
+metadata, or row visual structure.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` keeps `MenuItemInteractionParts`,
+  `MenuItemInteraction`, enabled/action gating, pressable prop construction, and thin forwarding
+  call sites used by the element and keyboard owners.
+- `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` owns active-trigger
+  installation, activate-handler wiring, clicked transient reads, command dispatch source metadata,
+  keyboard owner wiring, and active-trigger `ResponseExt` population.
+- `tools/gate_imui_workstream_source.py` now requires the nested behavior owner and rejects inline
+  pressable activation, active-trigger installation, clicked signaling, command dispatch metadata,
+  and response population from drifting back into `menu_controls/interaction.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib menu_controls::tests --no-fail-fast`:
+  pass on retry; first run timed out before reporting a test failure, retry reported 4 passed and
+  685 skipped.
+- `cargo nextest run -p fret-imui interaction_menu_tabs::menu_activation
+  interaction_menu_tabs::submenu_shortcuts
+  interaction_shortcuts::command_metadata::menu_item_command_uses_command_metadata_shortcut_and_gating
+  popup_hover::item_keyboard --no-fail-fast`: pass; 15 tests, 171 skipped.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Text Picker Popup Owner-Split Evidence - 2026-05-26
 
 Claim verified: IMUI input-text picker popup item rendering and pick commit moved into a focused

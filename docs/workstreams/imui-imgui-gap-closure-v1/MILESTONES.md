@@ -506,6 +506,14 @@ switching. `menu_controls/interaction.rs` keeps enabled/action gating, pressable
 dispatch, and response population. Public menu item, command menu item, submenu, and menubar
 keyboard behavior remain unchanged.
 
+2026-05-27 menu-item behavior owner-split result:
+`ecosystem/fret-ui-kit/src/imui/menu_controls/interaction/behavior.rs` now owns active-trigger
+installation, activate-handler popup close/click signaling, command dispatch source metadata,
+clicked transient draining, keyboard owner wiring, and `ResponseExt` population.
+`menu_controls/interaction.rs` keeps menu-item interaction structs, enabled/action gating,
+pressable prop construction, and thin forwarding call sites for element/keyboard users. Public menu
+item, command menu item, submenu, and menubar behavior remain unchanged.
+
 2026-05-27 selectable behavior owner-split result:
 `ecosystem/fret-ui-kit/src/imui/selectable_controls/behavior.rs` now owns pressable behavior
 installation, activate-handler popup close/click signaling, keyboard owner delegation, transient

@@ -681,6 +681,15 @@ Last updated: 2026-05-27
       roving focus, menubar close-auto-focus suppression, and horizontal-arrow menu switching.
       `interaction.rs` now keeps enabled/action gating, pressable props, activation dispatch, and
       response population.
+- [x] Split IMUI menu-item active-trigger/activation/response behavior out of
+      `ecosystem/fret-ui-kit/src/imui/menu_controls/interaction.rs` into a nested private owner
+      without changing enabled/action gating, pressable props, popup close-on-activate, command
+      dispatch metadata, keyboard owner wiring, or menu-item `ResponseExt` population.
+      Result: `menu_controls/interaction/behavior.rs` owns active-trigger installation,
+      activation handler wiring, clicked transient draining, command dispatch source metadata, and
+      active-trigger response population. `interaction.rs` keeps menu-item interaction structs,
+      enabled/action gating, pressable prop construction, and thin forwarding call sites for
+      element/keyboard users.
 - [x] Split IMUI multi-select state storage and normalization out of
       `ecosystem/fret-ui-kit/src/imui/multi_select.rs` into a private owner module without
       widening the public collection helper surface.
