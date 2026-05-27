@@ -56,6 +56,40 @@ fn default_select_listbox_test_id() -> Arc<str> {
         .clone()
 }
 
+#[derive(Debug, Clone)]
+struct SelectPartTestIds {
+    chrome: Arc<str>,
+    active_indicator: Arc<str>,
+    trailing_icon: Arc<str>,
+}
+
+impl SelectPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: Arc::from(format!("{base}.chrome")),
+            active_indicator: Arc::from(format!("{base}.active-indicator")),
+            trailing_icon: Arc::from(format!("{base}.trailing-icon")),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+struct SelectItemPartTestIds {
+    chrome: Arc<str>,
+    leading_icon: Arc<str>,
+    trailing_icon: Arc<str>,
+}
+
+impl SelectItemPartTestIds {
+    fn from_base(base: &Arc<str>) -> Self {
+        Self {
+            chrome: Arc::from(format!("{base}.chrome")),
+            leading_icon: Arc::from(format!("{base}.leading-icon")),
+            trailing_icon: Arc::from(format!("{base}.trailing-icon")),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SelectVariant {
     #[default]
@@ -670,9 +704,12 @@ fn select_trigger_element<H: UiHost>(
     open_model: Model<bool>,
     style: Arc<SelectStyle>,
 ) -> SelectTriggerOutput {
-    let chrome_test_id = test_id
+    let part_test_ids = test_id.as_ref().map(SelectPartTestIds::from_base);
+    let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+    let trailing_icon_test_id = part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone());
+    let active_indicator_test_id = part_test_ids
         .as_ref()
-        .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+        .map(|ids| ids.active_indicator.clone());
     let anchor_id_out: Cell<GlobalElementId> = Cell::new(GlobalElementId(0));
     let hovered_out: Cell<bool> = Cell::new(false);
     let focused_out: Cell<bool> = Cell::new(false);
@@ -1058,6 +1095,11 @@ fn select_trigger_element<H: UiHost>(
                     trailing_icon_size,
                     chevron_progress,
                 );
+                let icon_el = if let Some(test_id) = trailing_icon_test_id.clone() {
+                    icon_el.test_id(test_id)
+                } else {
+                    icon_el
+                };
 
                 let mut row = FlexProps::default();
                 row.layout.size.width = Length::Fill;
@@ -1090,7 +1132,7 @@ fn select_trigger_element<H: UiHost>(
                 }
 
                 let indicator_el = indicator.map(|(h, c)| {
-                    cx.canvas(CanvasProps::default(), move |p| {
+                    let indicator = cx.canvas(CanvasProps::default(), move |p| {
                         let bounds = p.bounds();
                         let y = Px(bounds.origin.y.0 + bounds.size.height.0 - h.0);
                         let rect = Rect::new(
@@ -1105,7 +1147,12 @@ fn select_trigger_element<H: UiHost>(
                             border_paint: fret_core::Paint::TRANSPARENT.into(),
                             corner_radii: Corners::all(Px(0.0)),
                         });
-                    })
+                    });
+                    if let Some(test_id) = active_indicator_test_id.clone() {
+                        indicator.test_id(test_id)
+                    } else {
+                        indicator
+                    }
                 });
 
                 let style_override = style.clone();
@@ -2166,10 +2213,10 @@ fn select_list_item<H: UiHost>(
             select_tokens::menu_list_item_height(theme, variant)
         }
     };
-    let chrome_test_id = item
-        .test_id
-        .as_ref()
-        .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+    let part_test_ids = item.test_id.as_ref().map(SelectItemPartTestIds::from_base);
+    let chrome_test_id = part_test_ids.as_ref().map(|ids| ids.chrome.clone());
+    let leading_icon_test_id = part_test_ids.as_ref().map(|ids| ids.leading_icon.clone());
+    let trailing_icon_test_id = part_test_ids.as_ref().map(|ids| ids.trailing_icon.clone());
 
     cx.pressable_with_id_props(move |cx, st, pressable_id| {
         let enabled = !item.disabled;
@@ -2503,11 +2550,31 @@ fn select_list_item<H: UiHost>(
                         };
 
                         let leading_icon_el = leading_icon.as_ref().map(|icon| {
-                            select_menu_item_icon(cx, icon, leading_icon_color, leading_icon_size)
+                            let icon = select_menu_item_icon(
+                                cx,
+                                icon,
+                                leading_icon_color,
+                                leading_icon_size,
+                            );
+                            if let Some(test_id) = leading_icon_test_id.clone() {
+                                icon.test_id(test_id)
+                            } else {
+                                icon
+                            }
                         });
 
                         let trailing_icon_el = trailing_icon.as_ref().map(|icon| {
-                            select_menu_item_icon(cx, icon, trailing_icon_color, trailing_icon_size)
+                            let icon = select_menu_item_icon(
+                                cx,
+                                icon,
+                                trailing_icon_color,
+                                trailing_icon_size,
+                            );
+                            if let Some(test_id) = trailing_icon_test_id.clone() {
+                                icon.test_id(test_id)
+                            } else {
+                                icon
+                            }
                         });
 
                         let mut children = Vec::new();

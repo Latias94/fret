@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "material3-parity-discovery-v1",
+  "generated_date": "2026-05-27",
+  "reports": [
+    {
+      "id": "material3_button_adapter",
+      "mapping": "tools/parity-discovery/fixtures/material3_button_adapter_v1.json",
+      "output": "docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json",
+      "fret_bundle_schema2_dirs": [
+        "target/fret-diag-component-parity-material3-button-live-v1"
+      ],
+      "upstream_dom_snapshots": [
+        "docs/workstreams/component-parity-fact-harness-v1/artifacts/upstream-dom/material3-button-mui-contained.json"
+      ]
+    },
+    {
+      "id": "material3_select_adapter",
+      "mapping": "tools/parity-discovery/fixtures/material3_select_adapter_v1.json",
+      "output": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_select_adapter_report_v1.json"
+    },
+    {
+      "id": "material3_switch_adapter",
+      "mapping": "tools/parity-discovery/fixtures/material3_switch_adapter_v1.json",
+      "output": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_switch_adapter_report_v1.json"
+    }
+  ]
+}

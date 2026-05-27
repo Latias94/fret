@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "suite_id": "material3-parity-discovery-v1",
+  "generated_date": "2026-05-27",
+  "generated_by": "tools/parity-discovery/shadcn_parity_discovery.py",
+  "source_suite": "tools/parity-discovery/suites/material3_parity_discovery_v1.json",
+  "summary": {
+    "report_count": 3,
+    "part_count": 12,
+    "status_counts": {
+      "pass_known": 12,
+      "needs_live_measurement": 0,
+      "mismatch": 0,
+      "blocked": 0
+    },
+    "layer_counts": {
+      "runner": 1,
+      "mechanism": 0,
+      "policy": 2,
+      "recipe": 9,
+      "app_demo": 0,
+      "upstream": 1,
+      "unknown": 0
+    },
+    "triage_level_counts": {
+      "critical": 0,
+      "high": 0,
+      "medium": 0,
+      "low": 0,
+      "none": 12
+    },
+    "top_findings": []
+  },
+  "agent_packet": {
+    "schema_version": 1,
+    "status": "needs_hardening",
+    "suite_id": "material3-parity-discovery-v1",
+    "goal": "Summarize per-component repair readiness without duplicating each component report's full agent packet.",
+    "repair_queue_count": 0,
+    "hardening_queue_count": 9,
+    "reports": [
+      {
+        "id": "material3_button_adapter",
+        "component": "button",
+        "output": "docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json",
+        "status": "needs_hardening",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 3,
+        "gate_queue_count": 3
+      },
+      {
+        "id": "material3_select_adapter",
+        "component": "select",
+        "output": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_select_adapter_report_v1.json",
+        "status": "needs_hardening",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 3,
+        "gate_queue_count": 5
+      },
+      {
+        "id": "material3_switch_adapter",
+        "component": "switch",
+        "output": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_switch_adapter_report_v1.json",
+        "status": "needs_hardening",
+        "repair_queue_count": 0,
+        "hardening_queue_count": 3,
+        "gate_queue_count": 5
+      }
+    ],
+    "top_findings": []
+  },
+  "reports": [
+    {
+      "id": "material3_button_adapter",
+      "component": "button",
+      "style": "material3",
+      "output": "docs/workstreams/component-parity-fact-harness-v1/artifacts/material3_button_adapter_pilot_v1.json",
+      "status_counts": {
+        "pass_known": 2,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 1,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "triage_level_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "none": 2
+      },
+      "top_findings": []
+    },
+    {
+      "id": "material3_select_adapter",
+      "component": "select",
+      "style": "material3",
+      "output": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_select_adapter_report_v1.json",
+      "status_counts": {
+        "pass_known": 5,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 2,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 3,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "triage_level_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "none": 5
+      },
+      "top_findings": []
+    },
+    {
+      "id": "material3_switch_adapter",
+      "component": "switch",
+      "style": "material3",
+      "output": "docs/workstreams/material3-parity-harness-fearless-refactor-v1/artifacts/material3_switch_adapter_report_v1.json",
+      "status_counts": {
+        "pass_known": 5,
+        "needs_live_measurement": 0,
+        "mismatch": 0,
+        "blocked": 0
+      },
+      "layer_status_counts": {
+        "runner": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "mechanism": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "policy": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "recipe": {
+          "pass_known": 5,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "app_demo": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "upstream": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        },
+        "unknown": {
+          "pass_known": 0,
+          "needs_live_measurement": 0,
+          "mismatch": 0,
+          "blocked": 0
+        }
+      },
+      "triage_level_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "none": 5
+      },
+      "top_findings": []
+    }
+  ]
+}
