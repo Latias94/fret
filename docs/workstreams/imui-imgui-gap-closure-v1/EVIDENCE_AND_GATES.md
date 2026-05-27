@@ -39,6 +39,39 @@ Focused gates:
 - `python tools\check_workstream_catalog.py`: pass.
 - `git diff --check`: pass.
 
+## Popup Menu Panel Layout/Content Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI popup-menu panel popper/layout/chrome and content-provider nesting moved into
+private owners without changing popup panel placement, menu semantics, nav-state installation,
+IMUI child mounting, or focus target extraction.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` keeps popup open/anchor lifecycle
+  reads, keepalive updates, nav-state installation, panel id storage, and `PopupMenuBuilt`
+  assembly.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/layout.rs` owns popper placement, menu
+  semantics layout, panel palette/chrome, and panel column props.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel/content.rs` owns popup/menubar policy
+  provider nesting and IMUI child mounting.
+- `tools/gate_imui_workstream_source.py` now requires the popup panel layout/content owners and
+  rejects popper, semantics, chrome, and content rendering bodies from drifting back into
+  `panel.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui
+  popup_menu_uses_environment_viewport_bounds_for_popper_outer_bounds --no-fail-fast`: pass.
+- `cargo nextest run -p fret-imui popup_hover --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Debug-Draw Media Paint Owner-Split Evidence - 2026-05-27
 
 Claim verified: debug-draw media paint routing moved into private raster, rounded, and SVG owners
@@ -2067,13 +2100,17 @@ Evidence:
 
 - `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/policy.rs` now owns `ImUiMenuNavState`,
   `ImUiPopupMenuPolicyState`, and root submenu-policy synchronization.
-- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` now owns popper placement, menu
-  semantics, nav-state installation, panel chrome, IMUI child mounting, and initial focus targets.
+- `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` originally owned popper placement,
+  menu semantics, nav-state installation, panel chrome, IMUI child mounting, and initial focus
+  targets after the root menu split. 2026-05-27 follow-up: `panel.rs` now keeps lifecycle and
+  assembly while `panel/layout.rs` and `panel/content.rs` own the concrete layout/chrome/content
+  bodies.
 - `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu.rs` keeps begin-popup orchestration, menubar
   policy lookup, focus-outside dismissal preservation, close auto-focus suppression, and overlay
   request dispatch.
 - `ecosystem/fret-ui-kit/tests/imui_perf_guard_smoke.rs` now follows the popper viewport source
-  anchor to `popup_overlay/menu/panel.rs`, where placement policy lives after the split.
+  anchor to `popup_overlay/menu/panel/layout.rs`, where placement policy lives after the 2026-05-27
+  panel split.
 - `tools/gate_imui_workstream_source.py` now requires the split policy/panel owners and rejects
   policy-state or panel-composition bodies from drifting back into root `popup_overlay/menu.rs`.
 
@@ -2098,7 +2135,8 @@ Gate note:
 
 - The first `popup_menu_uses_environment_viewport_bounds_for_popper_outer_bounds` run failed after
   the code split because the source guard still read `popup_overlay/menu.rs`. The source anchor was
-  updated to `popup_overlay/menu/panel.rs`, and the focused test then passed.
+  updated to `popup_overlay/menu/panel.rs`, and the focused test then passed. The 2026-05-27 deeper
+  panel split moved that source anchor again to `popup_overlay/menu/panel/layout.rs`.
 
 ## Tab Family Items Owner-Split Evidence - 2026-05-26
 

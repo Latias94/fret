@@ -586,6 +586,15 @@ Last updated: 2026-05-27
       installation, content mounting, and focus targets. The root `popup_overlay/menu.rs` keeps
       overlay id/root-name setup, menubar policy lookup, dismiss/auto-focus handlers, and overlay
       request dispatch.
+- [x] Split IMUI popup-menu panel layout/chrome and content mounting out of
+      `ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` into private owner modules
+      without changing popup panel placement, menu semantics, nav-state installation, provider
+      nesting, IMUI child mounting, or focus target extraction.
+      Result: `popup_overlay/menu/panel/layout.rs` owns popper placement, menu semantics layout,
+      panel palette/chrome, and panel column props; `popup_overlay/menu/panel/content.rs` owns
+      popup/menubar policy provider nesting and IMUI child mounting. The root `panel.rs` keeps
+      open/anchor lifecycle reads, keepalive updates, nav-state installation, panel id storage, and
+      `PopupMenuBuilt` assembly.
 - [x] Split IMUI popup modal layout/chrome construction out of
       `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal.rs` into a private owner module without
       changing modal open/keepalive policy, Escape/outside-press dismissal, barrier behavior,

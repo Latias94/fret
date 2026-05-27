@@ -18,6 +18,12 @@ index. `flow/spacing.rs` owns the IMUI layout-token defaults, `flow/inline.rs` o
 same-line options, `flow/linear.rs` owns horizontal and vertical options, `flow/spacer.rs` owns
 dummy/spacing/indent options, and `flow/grid.rs` owns grid options.
 
+2026-05-27 popup-menu panel owner-split result:
+`ecosystem/fret-ui-kit/src/imui/popup_overlay/menu/panel.rs` keeps popup open/anchor lifecycle
+reads, keepalive updates, nav-state installation, panel id storage, and `PopupMenuBuilt` assembly.
+`panel/layout.rs` owns popper placement, menu semantics layout, panel palette/chrome, and column
+props. `panel/content.rs` owns popup/menubar policy provider nesting plus IMUI child mounting.
+
 2026-05-27 debug-draw media paint owner-split result:
 `ecosystem/fret-ui-kit/src/imui/debug_draw_controls/paint/media.rs` keeps
 `paint_debug_draw_media_command(...)` routing. `paint/media/raster.rs` owns image, image-region, and
@@ -443,7 +449,8 @@ popup submenu policy state, and root submenu synchronization. `popup_overlay/men
 owns popper placement, menu semantics, nav-state installation, panel chrome, IMUI child mounting,
 and focus-target extraction. `popup_overlay/menu.rs` keeps begin-popup orchestration, menubar
 policy lookup, dismiss/focus hooks, and overlay request dispatch. Popup/menu/submenu public facade
-behavior remains unchanged.
+behavior remains unchanged. The 2026-05-27 popup-menu panel follow-up above splits the concrete
+layout/chrome/content bodies behind `panel.rs`.
 
 2026-05-27 popup modal layout owner-split result:
 `ecosystem/fret-ui-kit/src/imui/popup_overlay/modal/layout.rs` now owns modal palette resolution,
