@@ -12,6 +12,13 @@ Exit criteria:
 - Move policy sub-owners behind private modules and freeze the split with source gates.
 - Run focused compile/test/source gates for each slice.
 
+2026-05-27 container element owner-split result:
+`ecosystem/fret-ui-kit/src/imui/containers.rs` is now a private module index/re-export hub.
+`ecosystem/fret-ui-kit/src/imui/containers/children.rs` owns child `ImUiFacade` mounting with build
+focus propagation. `containers/linear.rs` owns horizontal/vertical flex composition,
+`containers/scroll.rs` owns scroll-area construction, and `containers/grid.rs` owns grid row
+batching plus keyed row assembly.
+
 2026-05-27 flow option owner-split result:
 `ecosystem/fret-ui-kit/src/imui/options/containers/flow.rs` is now a private module/re-export
 index. `flow/spacing.rs` owns the IMUI layout-token defaults, `flow/inline.rs` owns item-flow and

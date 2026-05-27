@@ -4,13 +4,15 @@ use fret_app::App;
 use fret_core::{AppWindowId, Point, Px, Rect, Size};
 use fret_ui::element::{ElementKind, Length};
 
-use super::{
-    GridOptions, HorizontalOptions, ScrollOptions, grid_container_element,
-    horizontal_container_element, scroll_container_element, vertical_container_element,
-};
 use crate::LayoutRefinement;
-use crate::imui::UiWriterImUiFacadeExt as _;
-use crate::imui::VerticalOptions;
+use crate::imui::{
+    GridOptions, HorizontalOptions, ScrollOptions, UiWriterImUiFacadeExt as _, VerticalOptions,
+};
+
+use super::{
+    grid_container_element, horizontal_container_element, scroll_container_element,
+    vertical_container_element,
+};
 
 fn bounds() -> Rect {
     Rect::new(

@@ -3,6 +3,39 @@
 Status: Active
 Last updated: 2026-05-27
 
+## Container Element Owner-Split Evidence - 2026-05-27
+
+Claim verified: IMUI child building, linear container composition, scroll container composition,
+and grid row assembly moved into private owners without changing public horizontal, vertical, grid,
+and scroll helpers, option forwarding, test-id placement, viewport test-id placement, or
+build-focus propagation.
+
+Evidence:
+
+- `ecosystem/fret-ui-kit/src/imui/containers.rs` is now a private module/re-export index plus
+  tests.
+- `ecosystem/fret-ui-kit/src/imui/containers/children.rs` owns child `ImUiFacade` mounting and
+  build-focus propagation.
+- `ecosystem/fret-ui-kit/src/imui/containers/linear.rs` owns horizontal/vertical flex container
+  construction.
+- `ecosystem/fret-ui-kit/src/imui/containers/scroll.rs` owns scroll-area construction and viewport
+  test-id forwarding.
+- `ecosystem/fret-ui-kit/src/imui/containers/grid.rs` owns grid child collection, row batching,
+  keyed row assembly, and outer grid container construction.
+- The source gate rejects container implementation bodies from drifting back into `containers.rs`.
+
+Focused gates:
+
+- `cargo fmt -p fret-ui-kit`: pass.
+- `cargo check -p fret-ui-kit --features imui --lib`: pass.
+- `cargo nextest run -p fret-ui-kit --features imui --lib containers::tests --no-fail-fast`: pass.
+- `python -m py_compile tools\gate_imui_workstream_source.py`: pass.
+- `python -m json.tool docs\workstreams\imui-imgui-gap-closure-v1\WORKSTREAM.json > $null`:
+  pass.
+- `python tools\gate_imui_workstream_source.py`: pass.
+- `python tools\check_workstream_catalog.py`: pass.
+- `git diff --check`: pass.
+
 ## Floating Title-Bar Behavior Owner-Split Evidence - 2026-05-27
 
 Claim verified: IMUI floating-window title-bar behavior moved into a private owner without changing

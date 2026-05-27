@@ -128,6 +128,14 @@ Last updated: 2026-05-27
       Result: `menu_controls/routing/identity.rs` owns `parse_label_identity(...)`, visible label
       extraction, and `menu-item-label` `push_id` scoping. `routing.rs` keeps menu item entry
       dispatch, semantic role selection, response assembly, and element insertion.
+- [x] Split IMUI container child building, linear layout, scroll, and grid element composition out
+      of `ecosystem/fret-ui-kit/src/imui/containers.rs` into private owner modules without
+      changing horizontal/vertical/grid/scroll facade helpers, option forwarding, test-id
+      placement, viewport test-id placement, or child focus propagation.
+      Result: `containers/children.rs` owns child `ImUiFacade` mounting,
+      `containers/linear.rs` owns horizontal/vertical flex containers, `containers/scroll.rs` owns
+      scroll-area construction, and `containers/grid.rs` owns grid row batching/keyed rows. The
+      root `containers.rs` is now a thin module/re-export index plus tests.
 - [x] Split shared IMUI active-trigger keyboard, pointer, and response behavior out of
       `ecosystem/fret-ui-kit/src/imui/active_trigger_behavior.rs` into private owner modules
       without changing active-item lifecycle, right-click context-menu signaling, keyboard
