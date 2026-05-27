@@ -13,22 +13,29 @@ older graph/view/controller triplets or direct retained authoring.
 
 ## Active Task
 
-- Task ID: FNDX-010
+- Task ID: FNDX-020
 - Owner: current Codex session
 - Files:
-  - `docs/node-graph-how-to-build-like-xyflow.md`
+  - `docs/node-graph-controlled-mode.md`
   - `ecosystem/fret-node/src/surface_policy_tests.rs`
+  - `ecosystem/fret-node/src/runtime/tests.rs`
+  - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
+  - `ecosystem/fret-node/src/ui/controller_store_sync.rs`
   - `docs/workstreams/fret-node-declarative-fearless-refactor-v1/*`
 - Validation:
-  - `cargo nextest run -p fret-node public_node_graph_guides_teach_binding_first_surface`
-  - `cargo fmt --check`
+  - `cargo nextest run -p fret-node controlled_sync_public_surface_stays_full_replace_first_until_workload_proves_diff_helper`
+  - `cargo nextest run -p fret-node controlled_graph_can_apply_store_changes_via_callbacks`
 - Status: DONE
 - Review: use `review-workstream` before accepting broader lane closure.
 - Evidence:
-  - `docs/node-graph-how-to-build-like-xyflow.md` now teaches binding-first integration.
-  - `ecosystem/fret-node/src/surface_policy_tests.rs` now locks the public guide against stale
-    graph/view/model triplets or direct retained-canvas teaching.
-  - Both validation commands passed on 2026-05-27.
+  - `docs/node-graph-controlled-mode.md` records the FNDX-020 decision: diff-first controlled sync
+    remains deferred behind full-document replacement, graph-only replacement, and explicit
+    transactions.
+  - `ecosystem/fret-node/src/surface_policy_tests.rs` locks the public binding/controller sync
+    surface against hidden `graph_diff` use or public `replace_*_with_diff` helpers.
+  - Runtime controlled callback coverage still proves app-owned graph state can mirror store
+    `NodeChange` / `EdgeChange` events through `apply_*_changes`.
+  - Both focused validation commands passed on 2026-05-27.
 
 ## Decisions Since Last Update
 
@@ -37,12 +44,14 @@ older graph/view/controller triplets or direct retained authoring.
   plan and `docs/node-graph-xyflow-parity.md` as the detailed map.
 - Treat the current narrow task as a consumer-surface proof: binding-first docs plus a source-policy
   gate.
+- Keep diff-first controlled sync out of the public helper surface for now; require workload
+  evidence before adding a `replace_*_with_diff` API.
 
 ## Blockers
 
-- None for FNDX-010.
+- None for FNDX-020.
 
 ## Next Recommended Action
 
-- Decide whether FNDX-020 should address diff-first controlled sync now, or whether FNDX-030
-  overlay/menu/toolbar policy placement has higher payoff for the next bounded task.
+- Start FNDX-030: finish the remaining overlay/menu/toolbar policy placement decision with one
+  narrow source-policy or conformance gate.

@@ -13,6 +13,7 @@ const UI_CANVAS_RS: &str = include_str!("ui/canvas/widget/widget_surface.rs");
 const UI_CANVAS_BUILDERS_RS: &str = include_str!("ui/canvas/widget/widget_surface/builders.rs");
 const UI_CANVAS_WIDGET_COMMIT_RS: &str = include_str!("ui/canvas/widget/commit/mod.rs");
 const UI_CONTROLLER_RS: &str = include_str!("ui/controller.rs");
+const UI_CONTROLLER_STORE_SYNC_RS: &str = include_str!("ui/controller_store_sync.rs");
 const UI_CONTROLLER_UPDATES_RS: &str = include_str!("ui/controller_updates.rs");
 const UI_CONTROLLER_VIEWPORT_RS: &str = include_str!("ui/controller_viewport.rs");
 const UI_DECLARATIVE_MOD_RS: &str = include_str!("ui/declarative/mod.rs");
@@ -627,6 +628,8 @@ const FRETBOARD_NATIVE_RS: &str = include_str!("../../../apps/fretboard/src/dev/
 const FRET_NODE_README_MD: &str = include_str!("../README.md");
 const NODE_GRAPH_XYFLOW_GUIDE_MD: &str =
     include_str!("../../../docs/node-graph-how-to-build-like-xyflow.md");
+const NODE_GRAPH_CONTROLLED_MODE_MD: &str =
+    include_str!("../../../docs/node-graph-controlled-mode.md");
 const NODE_GRAPH_DEMO_RS: &str = include_str!("../../../apps/fret-examples/src/node_graph_demo.rs");
 const UI_GALLERY_CARGO_TOML: &str = include_str!("../../../apps/fret-ui-gallery/Cargo.toml");
 const UI_GALLERY_NODE_GRAPH_CULL_TORTURE_RS: &str = include_str!(
@@ -2657,6 +2660,51 @@ fn binding_surface_covers_instance_style_sync_and_history_helpers() {
     assert!(binding_surface.contains("pub fn set_selection_action_host("));
     assert!(binding_surface.contains("pub fn undo_action_host("));
     assert!(binding_surface.contains("pub fn redo_action_host("));
+}
+
+#[test]
+fn controlled_sync_public_surface_stays_full_replace_first_until_workload_proves_diff_helper() {
+    assert!(NODE_GRAPH_CONTROLLED_MODE_MD.contains("### Current replace policy"));
+    assert!(NODE_GRAPH_CONTROLLED_MODE_MD.contains("**full replace first**"));
+    assert!(NODE_GRAPH_CONTROLLED_MODE_MD.contains("NodeGraphSurfaceBinding::replace_document("));
+    assert!(
+        NODE_GRAPH_CONTROLLED_MODE_MD
+            .contains("NodeGraphController::replace_document_and_sync_models(")
+    );
+    assert!(NODE_GRAPH_CONTROLLED_MODE_MD.contains("replace_graph(...)"));
+    assert!(
+        NODE_GRAPH_CONTROLLED_MODE_MD.contains(
+            "Diff-first replace helpers remain intentionally deferred until we have a concrete"
+        ),
+        "controlled-mode docs must keep the public helper decision explicit"
+    );
+
+    let binding_surface = binding_surface();
+    let controlled_sync_sources =
+        [binding_surface.as_str(), UI_CONTROLLER_STORE_SYNC_RS].join("\n");
+
+    assert!(controlled_sync_sources.contains("pub fn replace_graph<"));
+    assert!(controlled_sync_sources.contains("pub fn replace_document<"));
+    assert!(controlled_sync_sources.contains("pub fn replace_graph_and_sync_models<"));
+    assert!(controlled_sync_sources.contains("pub fn replace_document_and_sync_models<"));
+    assert!(
+        !controlled_sync_sources.contains("graph_diff"),
+        "public controlled sync helpers should not hide diff-first replace semantics"
+    );
+
+    for forbidden in [
+        "pub fn replace_graph_with_diff",
+        "pub fn replace_document_with_diff",
+        "pub fn replace_graph_diff",
+        "pub fn replace_document_diff",
+        "pub fn apply_graph_diff",
+        "pub fn sync_graph_diff",
+    ] {
+        assert!(
+            !controlled_sync_sources.contains(forbidden),
+            "diff-first controlled sync remains deferred; found `{forbidden}`"
+        );
+    }
 }
 
 #[test]

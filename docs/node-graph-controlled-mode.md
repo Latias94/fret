@@ -149,6 +149,17 @@ impl NodeGraphGestureCallbacks for ControlledGraph {}
 - Diff-first replace helpers remain intentionally deferred until we have a concrete editor-grade
   workload that proves full replace is not sufficient.
 
+FNDX-020 decision (2026-05-27): keep diff-first controlled sync out of the public helper surface
+for now. The existing `ops::graph_diff` machinery remains available to implementation code, but
+promoting a public `replace_*_with_diff` helper would force policy decisions about history,
+selection, callbacks, and transient sessions before we have workload evidence. Until that evidence
+exists, controlled integrations should choose one of three explicit paths:
+
+- use `replace_document(...)` / `replace_document_and_sync_models(...)` for whole-document resets,
+- use `replace_graph(...)` for graph-only authoritative sync with caller-owned view/history policy,
+  or
+- submit/apply explicit `GraphTransaction` values when reversible, incremental edits matter.
+
 ## Runnable example
 
 See `ecosystem/fret-node/examples/controlled_mode.rs`.

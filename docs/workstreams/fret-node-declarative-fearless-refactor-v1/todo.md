@@ -45,7 +45,7 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Fresh gates:
     - `cargo nextest run -p fret-node public_node_graph_guides_teach_binding_first_surface`: passed.
     - `cargo fmt --check`: passed.
-- [ ] FNDX-020 Decide whether diff-first controlled sync deserves a public helper now, or remains
+- [x] FNDX-020 Decide whether diff-first controlled sync deserves a public helper now, or remains
       deferred behind explicit transactions and full-document replacement.
   - Scope:
     - `docs/node-graph-controlled-mode.md`
@@ -54,6 +54,18 @@ Execution companion: `design.md` (surface map + next worktree order).
   - Validation:
     - focused controlled-mode/runtime tests proving either the deferred policy or the new helper
       semantics.
+  - Exit note: diff-first controlled sync remains deferred; public app-facing sync stays on
+    full-document replacement, graph-only replacement, or explicit `GraphTransaction` paths until a
+    concrete editor-grade workload proves a public `replace_*_with_diff` helper is needed.
+  - Evidence:
+    - `docs/node-graph-controlled-mode.md`
+    - `ecosystem/fret-node/src/surface_policy_tests.rs`
+    - `ecosystem/fret-node/src/runtime/tests.rs`
+    - `ecosystem/fret-node/src/ui/binding_store_sync.rs`
+    - `ecosystem/fret-node/src/ui/controller_store_sync.rs`
+  - Fresh gates:
+    - `cargo nextest run -p fret-node controlled_sync_public_surface_stays_full_replace_first_until_workload_proves_diff_helper`: passed.
+    - `cargo nextest run -p fret-node controlled_graph_can_apply_store_changes_via_callbacks`: passed.
 - [ ] FNDX-030 Finish the remaining overlay/menu/toolbar policy placement decision with one narrow
       source-policy or conformance gate.
   - Scope:
@@ -409,6 +421,8 @@ Execution companion: `design.md` (surface map + next worktree order).
     semantics explicit (graph + view-state replace + history clear + mirror sync).
 - [ ] Consider adding `replace_graph_with_diff` or equivalent if full reset semantics are not enough
       for editor-grade controlled integrations.
+  - Current FNDX-020 decision: do not add this helper yet; keep it as a future workload-driven
+    question rather than a public API commitment.
 
 ## M3 - Callback surface split
 
@@ -3238,5 +3252,7 @@ Execution companion: `design.md` (surface map + next worktree order).
     surface is `NodeGraphController` plus `NodeGraphSurfaceBinding`.
 - [ ] Whether diff-first controlled sync earns a public helper after the full-replace-first path
       proves insufficient.
+  - Current FNDX-020 decision: still deferred behind full-document replacement, graph-only
+    replacement, and explicit transactions.
 - [ ] Which retained-only behaviors still need a deliberate temporary home while declarative parity
       is being built.
